@@ -38,14 +38,14 @@ describe("EIP712_Canvas", function () {
 
 			const recoveredWalletAddress = await contract.recoverAddressFromSession(
 				{
-					address_: sessionAddress,
+					userAddress: userAddress,
 					sessionAddress: sessionAddress,
 					authorizationData: {
 						signature: session.authorizationData.signature,
 					},
+					publicKey: session.publicKey,
 					blockhash: session.blockhash || "",
 					duration: session.duration || 0,
-					publicKey: session.publicKey,
 					timestamp: session.timestamp,
 				},
 				topic,
@@ -57,8 +57,9 @@ describe("EIP712_Canvas", function () {
 
 	// describe("contract.verifySessionMessage", function () {
 	// 	it("Should verify that a session has been signed by the proper address with sign", async function () {
+	// 		const { Eip712Signer, Secp256k1DelegateSigner } = await import("@canvas-js/chain-ethereum")
 	// 		const { decodeURI } = await import("@canvas-js/signatures")
-	// 		const { Eip712Signer } = await import("@canvas-js/chain-ethereum")
+	// 		const { ethers } = await import("ethers")
 
 	// 		const { contract } = await loadFixture(deployFixture)
 
@@ -72,76 +73,109 @@ describe("EIP712_Canvas", function () {
 
 	// 		signer.verify(sessionSignature, sessionMessage)
 
-	// 		// extract the public key from the URI
-	// 		const { type, publicKey } = decodeURI(sessionSignature.publicKey)
-	// 		const publicKeyHex = Buffer.from(publicKey).toString("hex")
-
-	// 		const expectedAddress = ethers.utils.computeAddress(`0x${publicKeyHex}`)
+	// 		const userAddress = session.address.split(":")[2]
+	// 		const { type: publicKeyType, publicKey: publicKeyBytes } = decodeURI(session.publicKey)
+	// 		expect(publicKeyType).to.equal(Secp256k1DelegateSigner.type)
+	// 		const sessionAddress = ethers.utils.computeAddress(ethers.utils.hexlify(publicKeyBytes))
 
 	// 		const verified = await contract.verifySessionMessage(
 	// 			{
 	// 				clock,
 	// 				parents,
 	// 				topic,
-	// 				payload: serializeSessionForContract(session),
+	// 				payload: {
+	// 					userAddress,
+	// 					sessionAddress,
+	// 					authorizationData: {
+	// 						signature: session.authorizationData.signature,
+	// 					},
+	// 					blockhash: session.blockhash || "",
+	// 					duration: session.duration || 0,
+	// 					publicKey: session.publicKey,
+	// 					timestamp: session.timestamp,
+	// 				},
 	// 			},
 	// 			sessionSignature.signature,
-	// 			expectedAddress,
+	// 			userAddress,
 	// 			topic,
 	// 		)
 	// 		expect(verified).to.equal(true)
 	// 	})
 	// })
 
-	// describe("contract.verifyActionMessage", function () {
-	// 	it("Should verify that an action has been signed by the proper address with sign", async function () {
-	// 		const { decodeURI } = await import("@canvas-js/signatures")
-	// 		const { Eip712Signer, getAbiString } = await import("@canvas-js/chain-ethereum")
+	describe("contract.verifyActionMessage", function () {
+		it("Should verify that an action has been signed by the proper address with sign", async function () {
+			const { decodeURI } = await import("@canvas-js/signatures")
+			const { Eip712Signer, Secp256k1DelegateSigner, getAbiString } = await import("@canvas-js/chain-ethereum")
 
-	// 		const { contract } = await loadFixture(deployFixture)
+			const { contract } = await loadFixture(deployFixture)
 
-	// 		const signer = new Eip712Signer()
-	// 		const session = await signer.getSession(topic, { fromCache: false })
+			const signer = new Eip712Signer()
+			const session = await signer.getSession(topic, { fromCache: false })
 
-	// 		// sign an action
-	// 		const clock = 1
-	// 		const parents = ["parent1", "parent2"]
-	// 		const action = {
-	// 			type: "action" as const,
-	// 			address: session.address,
-	// 			name: "foo",
-	// 			args: { bar: 7 },
-	// 			blockhash: null,
-	// 			timestamp: session.timestamp,
-	// 		}
-	// 		const actionMessage = { topic, clock, parents, payload: action }
-	// 		const actionSignature = await signer.sign(actionMessage)
+			// sign an action
+			const clock = 1
+			const parents = ["parent1", "parent2"]
+			const action = {
+				type: "action" as const,
+				address: session.address,
+				name: "foo",
+				args: { bar: 7 },
+				blockhash: null,
+				timestamp: session.timestamp,
+			}
+			const actionMessage = { topic, clock, parents, payload: action }
+			const actionSignature = await signer.sign(actionMessage)
 
-	// 		// verify the action offchain
-	// 		signer.verify(actionSignature, actionMessage)
+			// verify the action offchain
+			signer.verify(actionSignature, actionMessage)
 
-	// 		// extract the public key from the URI
-	// 		const { publicKey } = decodeURI(actionSignature.publicKey)
-	// 		const publicKeyHex = Buffer.from(publicKey).toString("hex")
+			const userAddress = session.address.split(":")[2]
+			const { type: publicKeyType, publicKey: publicKeyBytes } = decodeURI(session.publicKey)
+			expect(publicKeyType).to.equal(Secp256k1DelegateSigner.type)
+			const sessionAddress = ethers.utils.computeAddress(ethers.utils.hexlify(publicKeyBytes))
 
-	// 		const expectedAddress = ethers.utils.computeAddress(`0x${publicKeyHex}`)
+			const digest = await contract.hashActionMessage(
+				{
+					clock,
+					parents,
+					topic,
+					payload: {
+						userAddress,
+						sessionAddress,
+						args: getAbiString(action.args),
+						blockhash: action.blockhash || "",
+						publicKey: session.publicKey, // why session.
+						name: action.name,
+						timestamp: action.timestamp,
+					},
+				},
+				topic,
+			)
 
-	// 		// we should include the recovery parameter as part of the signature
-	// 		// and then just ignore it if we are verifying using a method that doesn't need it
-	// 		// this could be implemented inside the contract
-	// 		const verified = await contract.verifyActionMessage(
-	// 			{
-	// 				clock,
-	// 				parents,
-	// 				topic,
-	// 				// action fields
-	// 				payload: await serializeActionForContract(action),
-	// 			},
-	// 			actionSignature.signature,
-	// 			expectedAddress,
-	// 			topic,
-	// 		)
-	// 		expect(verified).to.equal(true)
-	// 	})
-	// })
+			// we should include the recovery parameter as part of the signature
+			// and then just ignore it if we are verifying using a method that doesn't need it
+			// this could be implemented inside the contract
+			const verified = await contract.verifyActionMessage(
+				{
+					clock,
+					parents,
+					topic,
+					payload: {
+						userAddress,
+						sessionAddress,
+						args: getAbiString(action.args),
+						blockhash: action.blockhash || "",
+						publicKey: session.publicKey, // why session.
+						name: action.name,
+						timestamp: action.timestamp,
+					},
+				},
+				actionSignature.signature,
+				sessionAddress,
+				topic,
+			)
+			expect(verified).to.equal(true)
+		})
+	})
 })

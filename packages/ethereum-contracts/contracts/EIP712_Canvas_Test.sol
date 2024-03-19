@@ -17,6 +17,20 @@ contract EIP712_Canvas_Test {
         return EIP712_Canvas.recoverAddressFromSession(session, name);
     }
 
+    function hashSessionMessage(
+        EIP712_Canvas.SessionMessage memory sessionMessage,
+        string memory name
+    ) public pure returns (bytes32) {
+        return EIP712_Canvas.hashSessionMessage(sessionMessage, name);
+    }
+
+    function hashActionMessage(
+        EIP712_Canvas.ActionMessage memory actionMessage,
+        string memory name
+    ) public pure returns (bytes32) {
+        return EIP712_Canvas.hashActionMessage(actionMessage, name);
+    }
+
     function verifySessionMessage(
         EIP712_Canvas.SessionMessage memory sessionMessage,
         bytes memory signature,
