@@ -30,9 +30,11 @@ library Utils {
       return Utils.bytesSlice(publicKeyBytes, varintLength, publicKeyBytes.length);
   }
 
-  // function computeAddressFromPublicKey(
-  //   bytes memory publicKey
-  // ) internal pure returns (address) {
-  //   return address(keccak256(publicKey));
-  // }
+  // TODO: use computeAddressFromPublicKey to verify address<>pubkey, either inside the EIP712_Canvas, or separately
+  // TODO: find better names for all the library components
+  function computeAddressFromPublicKey(
+    bytes memory publicKey
+  ) internal pure returns (address) {
+      return address(bytes20(keccak256(publicKey)));
+  }
 }

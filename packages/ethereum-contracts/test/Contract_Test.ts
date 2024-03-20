@@ -1,7 +1,6 @@
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers"
 import { expect } from "chai"
 import { ethers } from "hardhat"
-import { serializeActionForContract, serializeSessionForContract } from "./utils.ts"
 
 const topic = "example:contract"
 
@@ -25,7 +24,7 @@ describe("Contract_Test", function () {
 		// This function returns a function that returns the arguments needed to call `contract.claimUpvoted`
 
 		const { decodeURI } = await import("@canvas-js/signatures")
-		const { Eip712Signer } = await import("@canvas-js/chain-ethereum")
+		const { Eip712Signer, Secp256k1DelegateSigner, getAbiString } = await import("@canvas-js/chain-ethereum")
 
 		async function getArguments(args?: any) {
 			const signer = new Eip712Signer()
@@ -37,11 +36,25 @@ describe("Contract_Test", function () {
 			const sessionMessage = { topic, clock, parents, payload: session }
 			const sessionMessageSignature = await signer.sign(sessionMessage)
 
-			const { publicKey } = decodeURI(sessionMessageSignature.publicKey)
-			const publicKeyHex = Buffer.from(publicKey).toString("hex")
-			const expectedAddress = ethers.utils.computeAddress(`0x${publicKeyHex}`)
+			const userAddress = session.address.split(":")[2]
+			const { type: publicKeyType, publicKey: publicKeyBytes } = decodeURI(session.publicKey)
+			expect(publicKeyType).to.equal(Secp256k1DelegateSigner.type)
+			const sessionAddress = ethers.utils.computeAddress(ethers.utils.hexlify(publicKeyBytes))
 
-			const sessionMessageForContract = { ...sessionMessage, payload: serializeSessionForContract(session) }
+			const sessionMessageForContract = {
+				...sessionMessage,
+				payload: {
+					userAddress,
+					sessionAddress,
+					authorizationData: {
+						signature: session.authorizationData.signature,
+					},
+					blockhash: session.blockhash || "",
+					duration: session.duration || 0,
+					publicKey: session.publicKey, // TODO: check against sessionAddress
+					timestamp: session.timestamp,
+				},
+			}
 
 			const action = {
 				type: "action" as const,
@@ -53,11 +66,21 @@ describe("Contract_Test", function () {
 			}
 			const actionMessage = { topic, clock, parents, payload: action }
 			const actionMessageSignature = await signer.sign(actionMessage)
-			const actionMessageForContract = { ...actionMessage, payload: await serializeActionForContract(action) }
+			const actionMessageForContract = {
+				...actionMessage,
+				payload: {
+					userAddress,
+					sessionAddress,
+					args: getAbiString(action.args),
+					blockhash: action.blockhash || "",
+					publicKey: session.publicKey, // TODO: check against sessionAddress
+					name: action.name,
+					timestamp: action.timestamp,
+				},
+			}
 
 			return {
 				signer,
-				expectedAddress,
 				session,
 				sessionMessage,
 				sessionMessageSignature,
@@ -77,17 +100,11 @@ describe("Contract_Test", function () {
 
 			expect(await contract.upvotes("123456")).to.equal(0)
 
-			const {
-				expectedAddress,
-				sessionMessageForContract,
-				sessionMessageSignature,
-				actionMessageForContract,
-				actionMessageSignature,
-			} = await getArguments()
+			const { sessionMessageForContract, sessionMessageSignature, actionMessageForContract, actionMessageSignature } =
+				await getArguments()
 
 			// submit the upvote action
 			await contract.claimUpvoted(
-				expectedAddress,
 				sessionMessageForContract,
 				sessionMessageSignature.signature,
 				actionMessageForContract,
@@ -100,7 +117,6 @@ describe("Contract_Test", function () {
 			// If we submit the action again, it should be rejected
 			try {
 				await contract.claimUpvoted(
-					expectedAddress,
 					sessionMessageForContract,
 					sessionMessageSignature.signature,
 					actionMessageForContract,
@@ -122,23 +138,17 @@ describe("Contract_Test", function () {
 			const { getArguments } = await loadFixture(getArgumentsFixture)
 			expect(await contract.upvotes("123456")).to.equal(0)
 
-			const {
-				expectedAddress,
-				sessionMessageForContract,
-				sessionMessageSignature,
-				actionMessageForContract,
-				actionMessageSignature,
-			} = await getArguments()
+			const { sessionMessageForContract, sessionMessageSignature, actionMessageForContract, actionMessageSignature } =
+				await getArguments()
 
 			const { sessionMessageForContract: sessionMessageForContract2 } = await getArguments()
 
 			// replace the session address with an incorrect one
-			sessionMessageForContract.payload.address_ = sessionMessageForContract2.payload.address_
+			sessionMessageForContract.payload.sessionAddress = sessionMessageForContract2.payload.sessionAddress
 
 			// submit the upvote action
 			try {
 				await contract.claimUpvoted(
-					expectedAddress,
 					sessionMessageForContract,
 					sessionMessageSignature.signature,
 					actionMessageForContract,
@@ -160,18 +170,15 @@ describe("Contract_Test", function () {
 			const { contract } = await loadFixture(deployFixture)
 			expect(await contract.upvotes("123456")).to.equal(0)
 
-			const { expectedAddress, sessionMessageForContract, actionMessageForContract, actionMessageSignature } =
-				await getArguments()
+			const { sessionMessageForContract, actionMessageForContract, actionMessageSignature } = await getArguments()
 
 			const { sessionMessageSignature: sessionMessageSignature2 } = await getArguments()
 
 			// submit the upvote action
 			try {
 				await contract.claimUpvoted(
-					expectedAddress,
 					sessionMessageForContract,
-					// use the wrong session message signature
-					sessionMessageSignature2.signature,
+					sessionMessageSignature2.signature, // use the wrong session message signature
 					actionMessageForContract,
 					actionMessageSignature.signature,
 				)
@@ -190,8 +197,7 @@ describe("Contract_Test", function () {
 			const { getArguments } = await loadFixture(getArgumentsFixture)
 			const { contract } = await loadFixture(deployFixture)
 
-			const { expectedAddress, sessionMessageForContract, sessionMessageSignature, actionMessageForContract } =
-				await getArguments()
+			const { sessionMessageForContract, sessionMessageSignature, actionMessageForContract } = await getArguments()
 			const { actionMessageSignature: actionMessageSignature2 } = await getArguments()
 
 			expect(await contract.upvotes("123456")).to.equal(0)
@@ -199,12 +205,10 @@ describe("Contract_Test", function () {
 			// submit the upvote action
 			try {
 				await contract.claimUpvoted(
-					expectedAddress,
 					sessionMessageForContract,
 					sessionMessageSignature.signature,
 					actionMessageForContract,
-					// use the wrong action message signature
-					actionMessageSignature2.signature,
+					actionMessageSignature2.signature, // use the wrong action message signature
 				)
 				expect.fail()
 			} catch (e: any) {
@@ -222,7 +226,6 @@ describe("Contract_Test", function () {
 			const { contract } = await loadFixture(deployFixture)
 
 			const {
-				expectedAddress,
 				session,
 				sessionMessageForContract,
 				sessionMessageSignature,
@@ -237,7 +240,6 @@ describe("Contract_Test", function () {
 			// submit the upvote action
 			try {
 				await contract.claimUpvoted(
-					expectedAddress,
 					sessionMessageForContract,
 					sessionMessageSignature.signature,
 					actionMessageForContract,
@@ -262,18 +264,12 @@ describe("Contract_Test", function () {
 			// change the action name to an invalid value
 			const actionOverride = { action: { name: "downvote" } }
 
-			const {
-				expectedAddress,
-				sessionMessageForContract,
-				sessionMessageSignature,
-				actionMessageForContract,
-				actionMessageSignature,
-			} = await getArguments(actionOverride)
+			const { sessionMessageForContract, sessionMessageSignature, actionMessageForContract, actionMessageSignature } =
+				await getArguments(actionOverride)
 
 			// submit the upvote action
 			try {
 				await contract.claimUpvoted(
-					expectedAddress,
 					sessionMessageForContract,
 					sessionMessageSignature.signature,
 					actionMessageForContract,
@@ -297,20 +293,14 @@ describe("Contract_Test", function () {
 			// change the action args field name to an invalid value
 			const actionOverride = { action: { args: { something: "123456" } } }
 
-			const {
-				expectedAddress,
-				sessionMessageForContract,
-				sessionMessageSignature,
-				actionMessageForContract,
-				actionMessageSignature,
-			} = await getArguments(actionOverride)
+			const { sessionMessageForContract, sessionMessageSignature, actionMessageForContract, actionMessageSignature } =
+				await getArguments(actionOverride)
 
 			expect(await contract.upvotes("123456")).to.equal(0)
 
 			// submit the upvote action
 			try {
 				await contract.claimUpvoted(
-					expectedAddress,
 					sessionMessageForContract,
 					sessionMessageSignature.signature,
 					actionMessageForContract,
@@ -334,20 +324,14 @@ describe("Contract_Test", function () {
 			// change the action args value to an invalid value
 			const actionOverride = { action: { args: { post_id: 42 } } }
 
-			const {
-				expectedAddress,
-				sessionMessageForContract,
-				sessionMessageSignature,
-				actionMessageForContract,
-				actionMessageSignature,
-			} = await getArguments(actionOverride)
+			const { sessionMessageForContract, sessionMessageSignature, actionMessageForContract, actionMessageSignature } =
+				await getArguments(actionOverride)
 
 			expect(await contract.upvotes("123456")).to.equal(0)
 
 			// submit the upvote action
 			try {
 				await contract.claimUpvoted(
-					expectedAddress,
 					sessionMessageForContract,
 					sessionMessageSignature.signature,
 					actionMessageForContract,
