@@ -5,7 +5,7 @@ import type { Signature, SessionSigner, Action, Message, Session, Signer, Awaita
 import { assert, signalInvalidType } from "@canvas-js/utils"
 
 import target from "#target"
-import { equals } from "multiformats/bytes"
+import { deepEquals } from "./utils.js"
 
 export interface AbstractSessionData {
 	topic: string
@@ -28,7 +28,10 @@ export abstract class AbstractSessionSigner<AuthorizationData> implements Sessio
 	#createSigner: (init?: { type: string; privateKey: Uint8Array }) => Signer<Action | Session<AuthorizationData>>
 	#defaultDuration: number | null
 
-	public constructor(public readonly key: string, config: AbstractSessionSignerConfig<AuthorizationData>) {
+	public constructor(
+		public readonly key: string,
+		config: AbstractSessionSignerConfig<AuthorizationData>,
+	) {
 		this.log = logger(`canvas:${key}`)
 		this.#createSigner = config.createSigner
 		this.#defaultDuration = config.defaultDuration ?? null
@@ -102,7 +105,7 @@ export abstract class AbstractSessionSigner<AuthorizationData> implements Sessio
 
 			// only sign our own current sessions
 			// use a deep comparison
-			assert(equals(json.encode(message.payload), json.encode(session)))
+			assert(deepEquals(message.payload, session))
 			return signer.sign(message, options)
 		} else {
 			signalInvalidType(message.payload)
