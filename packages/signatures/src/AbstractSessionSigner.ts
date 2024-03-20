@@ -5,6 +5,7 @@ import type { Signature, SessionSigner, Action, Message, Session, Signer, Awaita
 import { assert, signalInvalidType } from "@canvas-js/utils"
 
 import target from "#target"
+import { equals } from "multiformats/bytes"
 
 export interface AbstractSessionData {
 	topic: string
@@ -100,7 +101,8 @@ export abstract class AbstractSessionSigner<AuthorizationData> implements Sessio
 			assert(signer !== undefined && session !== undefined)
 
 			// only sign our own current sessions
-			assert(message.payload === session)
+			// use a deep comparison
+			assert(equals(json.encode(message.payload), json.encode(session)))
 			return signer.sign(message, options)
 		} else {
 			signalInvalidType(message.payload)
