@@ -20,6 +20,7 @@
     { "path": "./packages/core" },
     { "path": "./packages/core/test" },
     { "path": "./packages/signatures" },
+    { "path": "./packages/signatures/test" },
     { "path": "./packages/modeldb" },
     { "path": "./packages/modeldb/test" },
     { "path": "./packages/chain-atp" },
