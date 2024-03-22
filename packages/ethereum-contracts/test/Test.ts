@@ -28,10 +28,10 @@ describe("Contract_Test", function () {
 	}
 
 	async function getArgumentsFixture() {
-		// This function returns a function that returns the arguments needed to call `contract.claimUpvoted`
-
 		const { decodeURI } = await import("@canvas-js/signatures")
 		const { Eip712Signer, Secp256k1DelegateSigner, getAbiString } = await import("@canvas-js/chain-ethereum")
+		// @ts-ignore TS2339
+		const { utils } = await import("ethers")
 
 		async function getArguments(args?: any) {
 			const signer = new Eip712Signer()
@@ -46,8 +46,8 @@ describe("Contract_Test", function () {
 			const userAddress = session.address.split(":")[2]
 			const { type: publicKeyType, publicKey: publicKeyBytes } = decodeURI(session.publicKey)
 			expect(publicKeyType).to.equal(Secp256k1DelegateSigner.type)
-			const sessionAddress = ethers.utils.computeAddress(ethers.utils.hexlify(publicKeyBytes))
-			const uncompressedPublicKeyBytes = "0x" + ethers.utils.computePublicKey(publicKeyBytes).slice(4)
+			const sessionAddress = utils.computeAddress(utils.hexlify(publicKeyBytes))
+			const uncompressedPublicKeyBytes = "0x" + utils.computePublicKey(publicKeyBytes).slice(4)
 
 			const sessionMessageForContract = {
 				...sessionMessage,
@@ -106,7 +106,7 @@ describe("Contract_Test", function () {
 			const { Eip712Signer, Secp256k1DelegateSigner } = await import("@canvas-js/chain-ethereum")
 			const { decodeURI } = await import("@canvas-js/signatures")
 			// @ts-ignore TS2339
-			const { ethers, utils } = await import("ethers")
+			const { utils } = await import("ethers")
 
 			const { contract } = await loadFixture(deployFixture)
 
@@ -119,7 +119,7 @@ describe("Contract_Test", function () {
 			const { type: publicKeyType, publicKey: publicKeyBytes } = decodeURI(session.publicKey)
 			expect(publicKeyType).to.equal(Secp256k1DelegateSigner.type)
 			const sessionAddress = utils.computeAddress(utils.hexlify(publicKeyBytes))
-			const uncompressedPublicKeyBytes = "0x" + ethers.utils.computePublicKey(publicKeyBytes).slice(4)
+			const uncompressedPublicKeyBytes = "0x" + utils.computePublicKey(publicKeyBytes).slice(4)
 
 			const recoveredWalletAddress = await contract.recoverAddressFromSession(
 				{
@@ -145,7 +145,7 @@ describe("Contract_Test", function () {
 			const { Eip712Signer, Secp256k1DelegateSigner } = await import("@canvas-js/chain-ethereum")
 			const { decodeURI } = await import("@canvas-js/signatures")
 			// @ts-ignore TS2339
-			const { ethers, utils } = await import("ethers")
+			const { utils } = await import("ethers")
 
 			const { contract } = await loadFixture(deployFixture)
 
@@ -163,7 +163,7 @@ describe("Contract_Test", function () {
 			const { type: publicKeyType, publicKey: publicKeyBytes } = decodeURI(session.publicKey)
 			expect(publicKeyType).to.equal(Secp256k1DelegateSigner.type)
 			const sessionAddress = utils.computeAddress(utils.hexlify(publicKeyBytes))
-			const uncompressedPublicKeyBytes = "0x" + ethers.utils.computePublicKey(publicKeyBytes).slice(4)
+			const uncompressedPublicKeyBytes = "0x" + utils.computePublicKey(publicKeyBytes).slice(4)
 
 			const verified = await contract.verifySessionMessageSignature(
 				{
@@ -221,7 +221,7 @@ describe("Contract_Test", function () {
 			const { type: publicKeyType, publicKey: publicKeyBytes } = decodeURI(session.publicKey)
 			expect(publicKeyType).to.equal(Secp256k1DelegateSigner.type)
 			const sessionAddress = utils.computeAddress(utils.hexlify(publicKeyBytes))
-			const uncompressedPublicKeyBytes = "0x" + ethers.utils.computePublicKey(publicKeyBytes).slice(4)
+			const uncompressedPublicKeyBytes = "0x" + utils.computePublicKey(publicKeyBytes).slice(4)
 
 			const verified = await contract.verifyActionMessageSignature(
 				{
