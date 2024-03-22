@@ -36,7 +36,7 @@ export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712Se
 			{ name: "payload", type: "Action" },
 		],
 		Action: [
-			{ name: "address", type: "address" },
+			{ name: "userAddress", type: "address" },
 			{ name: "args", type: "bytes" },
 			{ name: "name", type: "string" },
 			{ name: "timestamp", type: "uint64" },
@@ -52,7 +52,7 @@ export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712Se
 			{ name: "payload", type: "Session" },
 		],
 		Session: [
-			{ name: "address", type: "address" },
+			{ name: "userAddress", type: "address" },
 			{ name: "publicKey", type: "bytes" },
 			{ name: "authorizationData", type: "AuthorizationData" },
 			{ name: "duration", type: "uint64" },
@@ -83,7 +83,7 @@ export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712Se
 					payload: {
 						name: payload.name,
 						args: getAbiString(payload.args),
-						address: address,
+						userAddress: address,
 						timestamp: payload.timestamp,
 						blockhash: payload.blockhash ?? "",
 					},
@@ -107,7 +107,7 @@ export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712Se
 					clock: clock,
 					parents: parents,
 					payload: {
-						address: address,
+						userAddress: address,
 						publicKey: "0x" + SigningKey.computePublicKey(publicKeyBytes, false).slice(4),
 						authorizationData: payload.authorizationData,
 						duration: payload.duration ?? 0,
@@ -157,7 +157,7 @@ export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712Se
 					payload: {
 						name: payload.name,
 						args: getAbiString(payload.args),
-						address: address,
+						userAddress: address,
 						blockhash: payload.blockhash || "", // TODO: consider making blockhash mandatory for EIP-712?
 						timestamp: payload.timestamp,
 					},
@@ -177,7 +177,7 @@ export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712Se
 				clock: clock,
 				parents: parents,
 				payload: {
-					address: address,
+					userAddress: address,
 					publicKey: "0x" + SigningKey.computePublicKey(publicKeyBytes, false).slice(4),
 					authorizationData: payload.authorizationData,
 					duration: payload.duration ?? 0,

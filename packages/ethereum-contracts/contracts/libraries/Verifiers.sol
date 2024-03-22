@@ -37,12 +37,12 @@ library Verifiers {
     /**
      * Verify a [Message<Session>, Signature].
      *
-     * The Signature for a `Message<Session>` must be produced by the address
-     * corresponding to the publicKey authorized by the Session object.
+     * Enforce that the Signature for a `Message<Session>` is produced by
+     * the sessionAddress inside the Session, and also enforce that the
+     * address corresponds to the publicKey inside the Session object.
      *
-     * Note that Message<Session> is just an envelope for the actual signed Session.
-     * You should still verify that the signing user actually delegated authority
-     * to the session key, using `recoverAddressFromSession` or `verifySession`.
+     * This does *not* check the validity of the Session inside the message.
+     * You should verify that using `verifySession` above.
      */
     function verifySessionMessageSignature(
         EIP712Signer.SessionMessage memory sessionMessage,
@@ -52,7 +52,7 @@ library Verifiers {
         require(sessionMessage.payload.publicKey.length == 64, "sessionMessage.payload.publicKey must be an uncompressed 64-byte pubkey");
         require(
             address(uint160(uint256(keccak256(sessionMessage.payload.publicKey)))) == sessionMessage.payload.sessionAddress,
-            "sessionMessage.payload.sessionAddress must match sessionMessage.paylaod.publicKey"
+            "sessionMessage.payload.sessionAddress must match sessionMessage.payload.publicKey"
         );
 
         bytes32 r;

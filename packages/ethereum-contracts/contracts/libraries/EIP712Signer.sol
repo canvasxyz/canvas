@@ -26,11 +26,11 @@ library EIP712Signer {
     string constant sessionDataType = "SessionData(string topic,address sessionAddress,uint64 duration,uint64 timestamp,string blockhash)";
 
     string constant authorizationDataType = "AuthorizationData(bytes signature)";
-    string constant sessionType = "Session(address address,bytes publicKey,AuthorizationData authorizationData,uint64 duration,uint64 timestamp,string blockhash)AuthorizationData(bytes signature)";
-    string constant sessionMessageType = "Message(string topic,uint64 clock,string[] parents,Session payload)AuthorizationData(bytes signature)Session(address address,bytes publicKey,AuthorizationData authorizationData,uint64 duration,uint64 timestamp,string blockhash)";
+    string constant sessionType = "Session(address userAddress,bytes publicKey,AuthorizationData authorizationData,uint64 duration,uint64 timestamp,string blockhash)AuthorizationData(bytes signature)";
+    string constant sessionMessageType = "Message(string topic,uint64 clock,string[] parents,Session payload)AuthorizationData(bytes signature)Session(address userAddress,bytes publicKey,AuthorizationData authorizationData,uint64 duration,uint64 timestamp,string blockhash)";
 
-    string constant actionType = "Action(address address,bytes args,string name,uint64 timestamp,string blockhash)";
-    string constant actionMessageType = "Message(string topic,uint64 clock,string[] parents,Action payload)Action(address address,bytes args,string name,uint64 timestamp,string blockhash)";
+    string constant actionType = "Action(address userAddress,bytes args,string name,uint64 timestamp,string blockhash)";
+    string constant actionMessageType = "Message(string topic,uint64 clock,string[] parents,Action payload)Action(address userAddress,bytes args,string name,uint64 timestamp,string blockhash)";
 
     struct AuthorizationData {
         bytes signature;
