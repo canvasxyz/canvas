@@ -37,8 +37,8 @@ library Verifiers {
     /**
      * Verify a [Message<Session>, Signature].
      *
-     * It is defined that the Signature for a `Message<Session>` must be produced
-     * by the address corresponding to the publicKey authorized by the Session object.
+     * The Signature for a `Message<Session>` must be produced by the address
+     * corresponding to the publicKey authorized by the Session object.
      *
      * Note that Message<Session> is just an envelope for the actual signed Session.
      * You should still verify that the signing user actually delegated authority
@@ -49,7 +49,11 @@ library Verifiers {
         bytes memory signature
     ) public pure returns (bool) {
         bytes32 digest = Hashers.hashSessionMessage(sessionMessage, sessionMessage.topic);
-        // TODO: enforce sessionMessage.payload.sessionAddress matches sessionMessage.payload.publicKey
+        require(sessionMessage.payload.publicKey.length == 64, "sessionMessage.payload.publicKey must be an uncompressed 64-byte pubkey");
+        require(
+            address(uint160(uint256(keccak256(sessionMessage.payload.publicKey)))) == sessionMessage.payload.sessionAddress,
+            "sessionMessage.payload.sessionAddress must match sessionMessage.paylaod.publicKey"
+        );
 
         bytes32 r;
         bytes32 s;

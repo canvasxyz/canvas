@@ -47,6 +47,7 @@ describe("Contract_Test", function () {
 			const { type: publicKeyType, publicKey: publicKeyBytes } = decodeURI(session.publicKey)
 			expect(publicKeyType).to.equal(Secp256k1DelegateSigner.type)
 			const sessionAddress = ethers.utils.computeAddress(ethers.utils.hexlify(publicKeyBytes))
+			const uncompressedPublicKeyBytes = "0x" + ethers.utils.computePublicKey(publicKeyBytes).slice(4)
 
 			const sessionMessageForContract = {
 				...sessionMessage,
@@ -58,7 +59,7 @@ describe("Contract_Test", function () {
 					},
 					blockhash: session.blockhash || "",
 					duration: session.duration || 0,
-					publicKey: session.publicKey, // TODO: check against sessionAddress
+					publicKey: uncompressedPublicKeyBytes, // TODO: check against sessionAddress
 					timestamp: session.timestamp,
 				},
 			}
@@ -80,7 +81,7 @@ describe("Contract_Test", function () {
 					sessionAddress,
 					args: getAbiString(action.args),
 					blockhash: action.blockhash || "",
-					publicKey: session.publicKey, // TODO: check against sessionAddress
+					publicKey: uncompressedPublicKeyBytes, // TODO: check against sessionAddress
 					name: action.name,
 					timestamp: action.timestamp,
 				},
@@ -118,6 +119,7 @@ describe("Contract_Test", function () {
 			const { type: publicKeyType, publicKey: publicKeyBytes } = decodeURI(session.publicKey)
 			expect(publicKeyType).to.equal(Secp256k1DelegateSigner.type)
 			const sessionAddress = utils.computeAddress(utils.hexlify(publicKeyBytes))
+			const uncompressedPublicKeyBytes = "0x" + ethers.utils.computePublicKey(publicKeyBytes).slice(4)
 
 			const recoveredWalletAddress = await contract.recoverAddressFromSession(
 				{
@@ -126,7 +128,7 @@ describe("Contract_Test", function () {
 					authorizationData: {
 						signature: session.authorizationData.signature,
 					},
-					publicKey: session.publicKey, // TODO: check against sessionAddress
+					publicKey: uncompressedPublicKeyBytes, // TODO: check against sessionAddress
 					blockhash: session.blockhash || "",
 					duration: session.duration || 0,
 					timestamp: session.timestamp,
@@ -161,6 +163,7 @@ describe("Contract_Test", function () {
 			const { type: publicKeyType, publicKey: publicKeyBytes } = decodeURI(session.publicKey)
 			expect(publicKeyType).to.equal(Secp256k1DelegateSigner.type)
 			const sessionAddress = utils.computeAddress(utils.hexlify(publicKeyBytes))
+			const uncompressedPublicKeyBytes = "0x" + ethers.utils.computePublicKey(publicKeyBytes).slice(4)
 
 			const verified = await contract.verifySessionMessageSignature(
 				{
@@ -175,7 +178,7 @@ describe("Contract_Test", function () {
 						},
 						blockhash: session.blockhash || "",
 						duration: session.duration || 0,
-						publicKey: session.publicKey, // TODO: check against sessionAddress
+						publicKey: uncompressedPublicKeyBytes, // TODO: check against sessionAddress
 						timestamp: session.timestamp,
 					},
 				},
@@ -218,6 +221,7 @@ describe("Contract_Test", function () {
 			const { type: publicKeyType, publicKey: publicKeyBytes } = decodeURI(session.publicKey)
 			expect(publicKeyType).to.equal(Secp256k1DelegateSigner.type)
 			const sessionAddress = utils.computeAddress(utils.hexlify(publicKeyBytes))
+			const uncompressedPublicKeyBytes = "0x" + ethers.utils.computePublicKey(publicKeyBytes).slice(4)
 
 			const verified = await contract.verifyActionMessageSignature(
 				{
@@ -229,7 +233,7 @@ describe("Contract_Test", function () {
 						sessionAddress,
 						args: getAbiString(action.args),
 						blockhash: action.blockhash || "",
-						publicKey: session.publicKey, // TODO: check against sessionAddress
+						publicKey: uncompressedPublicKeyBytes, // TODO: check against sessionAddress
 						name: action.name,
 						timestamp: action.timestamp,
 					},

@@ -9,12 +9,12 @@ pragma solidity ^0.8.19;
  *
  * This package also includes typed data formats used by the
  * EIP712Signer and Secp256k1DelegateSigner signers in
- * @canvas-js/chain-ethereum, which match the signTypedData calls in
+ * packages/chain-ethereum, which match the signTypedData calls in
  * EIP712Signer.ts and Secp256k1DelegateSigner.ts.
  *
  * They *do not* exactly match the structs, nor do they match
  * the TypeScript definitions of Session, Message<Session>, and
- * Message<Action> in @canvas-js/interfaces.
+ * Message<Action> in packages/interfaces.
  *
  * TODO: Disambiguate `address` vs. `userAddress` and
  * `sessionAddress`, and `sessionAddress` vs. `publicKey`, after
@@ -26,8 +26,8 @@ library EIP712Signer {
     string constant sessionDataType = "SessionData(string topic,address sessionAddress,uint64 duration,uint64 timestamp,string blockhash)";
 
     string constant authorizationDataType = "AuthorizationData(bytes signature)";
-    string constant sessionType = "Session(address address,string publicKey,AuthorizationData authorizationData,uint64 duration,uint64 timestamp,string blockhash)AuthorizationData(bytes signature)";
-    string constant sessionMessageType = "Message(string topic,uint64 clock,string[] parents,Session payload)AuthorizationData(bytes signature)Session(address address,string publicKey,AuthorizationData authorizationData,uint64 duration,uint64 timestamp,string blockhash)";
+    string constant sessionType = "Session(address address,bytes publicKey,AuthorizationData authorizationData,uint64 duration,uint64 timestamp,string blockhash)AuthorizationData(bytes signature)";
+    string constant sessionMessageType = "Message(string topic,uint64 clock,string[] parents,Session payload)AuthorizationData(bytes signature)Session(address address,bytes publicKey,AuthorizationData authorizationData,uint64 duration,uint64 timestamp,string blockhash)";
 
     string constant actionType = "Action(address address,bytes args,string name,uint64 timestamp,string blockhash)";
     string constant actionMessageType = "Message(string topic,uint64 clock,string[] parents,Action payload)Action(address address,bytes args,string name,uint64 timestamp,string blockhash)";
@@ -41,7 +41,7 @@ library EIP712Signer {
         address sessionAddress;
         AuthorizationData authorizationData;
         string blockhash;
-        string publicKey;
+        bytes publicKey;
         uint64 duration;
         uint64 timestamp;
     }
@@ -58,7 +58,7 @@ library EIP712Signer {
         address sessionAddress;
         bytes args;
         string blockhash;
-        string publicKey;
+        bytes publicKey;
         string name;
         uint64 timestamp;
     }
