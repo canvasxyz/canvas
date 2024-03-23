@@ -34,11 +34,12 @@ async function getAncestors<Payload, Result>(
 	key: Uint8Array,
 	atOrBefore: number,
 ): Promise<Uint8Array[]> {
-	const { rows } = await log.ancestorsClient.query(`SELECT ret_results FROM get_ancestors($1, $2, '{}'::bytea[]);`, [
+	const result = await log.ancestorsClient.query<{ ret_results: Uint8Array[] }>(`SELECT ret_results FROM get_ancestors($1, $2, '{}'::bytea[]);`, [
 		key,
 		atOrBefore,
 	])
-	const row = rows[0] as { ret_results: Uint8Array[] }
+	const { rows } = result
+	const row = rows[0]
 	return row.ret_results
 }
 
@@ -62,11 +63,11 @@ async function insertUpdatingAncestors<Payload, Result>(
 	parents: Uint8Array[],
 	ancestorClocks: number[],
 ): Promise<Uint8Array[][]> {
-	const { rows } = await log.ancestorsClient.query(
+	const { rows } = await log.ancestorsClient.query<{ insert_updating_ancestors: string[][] }>(
 		`SELECT insert_updating_ancestors($1, $2, $3::bytea[], $4::integer[]);`,
 		[key, value, parents.map(Buffer.from), ancestorClocks],
 	)
-	const row = rows[0] as { insert_updating_ancestors: string[][] }
+	const row = rows[0]
 	const ancestors = row.insert_updating_ancestors.map((arr) => arr.map((id) => hexToBytes(id.replace("\\x", ""))))
 	return ancestors
 }
@@ -80,7 +81,7 @@ async function insertMessageRemovingHeads<Payload, Result>(
 	heads: Uint8Array[],
 ): Promise<void> {
 	const args = [key, value, hash, cborNull, heads.map(Buffer.from)]
-	await log.ancestorsClient.query(`CALL insert_message_removing_heads($1, $2, $3, $4, $5::bytea[]);`, args)
+	await log.ancestorsClient.query<{}>(`CALL insert_message_removing_heads($1, $2, $3, $4, $5::bytea[]);`, args)
 }
 
 async function getHeads<Payload, Result>(log: GossipLog<Payload, Result>): Promise<Uint8Array[]> {

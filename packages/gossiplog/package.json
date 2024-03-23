@@ -71,7 +71,7 @@
 		"@libp2p/peer-id-factory": "^4.0.1",
 		"@libp2p/plaintext": "^1.0.7",
 		"@libp2p/tcp": "^9.0.7",
-		"@types/pg": "^8.11.0",
+		"@types/pg": "^8.11.4",
 		"@types/pg-cursor": "^2.7.2",
 		"fake-indexeddb": "^5.0.1",
 		"libp2p": "^1.0.10",
