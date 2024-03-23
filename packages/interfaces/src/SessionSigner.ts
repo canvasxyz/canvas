@@ -26,6 +26,18 @@ export interface SessionSigner<AuthorizationData = any>
 	) => Awaitable<Session<AuthorizationData>>
 
 	/**
+	 * `getCachedSession` returns the stored `Session` and `Signer` for a given topic and
+	 * address. This can be used by applications to check if a user has already authorised
+	 * Canvas to sign actions.
+	 *
+	 * Note that `getCachedSession` does not check if the `Session` has expired.
+	 */
+	getCachedSession(
+		topic: string,
+		address: string,
+	): { session: Session; signer: Signer<Action | Session<AuthorizationData>> } | null
+
+	/**
 	 * Verify that `session.data` authorizes `session.publicKey`
 	 * to take actions on behalf of the user `${session.chain}:${session.address}`
 	 */

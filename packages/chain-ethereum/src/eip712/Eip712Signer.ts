@@ -35,6 +35,7 @@ export class Eip712Signer extends AbstractSessionSigner<Eip712SessionData> {
 		this.chainId = init.chainId ?? 1
 	}
 
+	// TODO: should be getUserAddress() or getWalletAddress()
 	protected async getAddress(): Promise<string> {
 		const walletAddress = await this.#signer.getAddress()
 		return `eip155:${this.chainId}:${walletAddress}`
@@ -69,7 +70,7 @@ export class Eip712Signer extends AbstractSessionSigner<Eip712SessionData> {
 
 	public verifySession(topic: string, session: Session<Eip712SessionData>) {
 		assert(validateEip712SessionData(session.authorizationData), "invalid session")
-		const { address: expectedAddress } = parseAddress(session.address)
+		const { address: userAddress } = parseAddress(session.address)
 
 		const { type, publicKey } = decodeURI(session.publicKey)
 		assert(type === Secp256k1DelegateSigner.type)
@@ -89,6 +90,6 @@ export class Eip712Signer extends AbstractSessionSigner<Eip712SessionData> {
 			hexlify(session.authorizationData.signature),
 		)
 
-		assert(expectedAddress === recoveredAddress, "invalid EIP-712 session data signature")
+		assert(userAddress === recoveredAddress, "invalid EIP-712 session data signature")
 	}
 }

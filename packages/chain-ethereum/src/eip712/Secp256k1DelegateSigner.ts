@@ -1,4 +1,14 @@
-import { BaseWallet, Wallet, getBytes, hexlify, TypedDataField, verifyTypedData, computeAddress } from "ethers"
+import {
+	SigningKey,
+	BaseWallet,
+	Wallet,
+	getBytes,
+	hexlify,
+	TypedDataField,
+	verifyTypedData,
+	computeAddress,
+} from "ethers"
+
 import { AbiCoder } from "ethers/abi"
 
 import type { Action, Message, Session, Signature, Signer } from "@canvas-js/interfaces"
@@ -26,7 +36,7 @@ export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712Se
 			{ name: "payload", type: "Action" },
 		],
 		Action: [
-			{ name: "address", type: "address" },
+			{ name: "userAddress", type: "address" },
 			{ name: "args", type: "bytes" },
 			{ name: "name", type: "string" },
 			{ name: "timestamp", type: "uint64" },
@@ -42,8 +52,8 @@ export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712Se
 			{ name: "payload", type: "Session" },
 		],
 		Session: [
-			{ name: "address", type: "address" },
-			{ name: "publicKey", type: "string" },
+			{ name: "userAddress", type: "address" },
+			{ name: "publicKey", type: "bytes" },
 			{ name: "authorizationData", type: "AuthorizationData" },
 			{ name: "duration", type: "uint64" },
 			{ name: "timestamp", type: "uint64" },
@@ -56,7 +66,7 @@ export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712Se
 		const { type, publicKey } = decodeURI(signature.publicKey)
 		assert(type === Secp256k1DelegateSigner.type)
 
-		const expectedAddress = computeAddress(hexlify(publicKey))
+		const sessionAddress = computeAddress(hexlify(publicKey))
 
 		const { topic, clock, parents, payload } = message
 		if (payload.type === "action") {
@@ -73,7 +83,7 @@ export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712Se
 					payload: {
 						name: payload.name,
 						args: getAbiString(payload.args),
-						address: address,
+						userAddress: address,
 						timestamp: payload.timestamp,
 						blockhash: payload.blockhash ?? "",
 					},
@@ -81,9 +91,12 @@ export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712Se
 				hexlify(signature.signature),
 			)
 
-			assert(recoveredAddress === expectedAddress, "invalid EIP-712 action signature")
+			assert(recoveredAddress === sessionAddress, "invalid EIP-712 action signature")
 		} else if (payload.type === "session") {
 			assert(signature.codec === Secp256k1DelegateSigner.eip712SessionCodec)
+
+			const { type, publicKey: publicKeyBytes } = decodeURI(payload.publicKey)
+			assert(type === Secp256k1DelegateSigner.type)
 
 			const { address } = parseAddress(payload.address)
 			const recoveredAddress = verifyTypedData(
@@ -94,8 +107,8 @@ export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712Se
 					clock: clock,
 					parents: parents,
 					payload: {
-						address: address,
-						publicKey: payload.publicKey,
+						userAddress: address,
+						publicKey: "0x" + SigningKey.computePublicKey(publicKeyBytes, false).slice(4),
 						authorizationData: payload.authorizationData,
 						duration: payload.duration ?? 0,
 						timestamp: payload.timestamp,
@@ -105,7 +118,7 @@ export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712Se
 				hexlify(signature.signature),
 			)
 
-			assert(recoveredAddress === expectedAddress, "invalid EIP-712 session signature")
+			assert(recoveredAddress === sessionAddress, "invalid EIP-712 session signature")
 		} else {
 			signalInvalidType(payload)
 		}
@@ -130,33 +143,42 @@ export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712Se
 
 	public async sign(message: Message<Action | Session<Eip712SessionData>>): Promise<Signature> {
 		const { topic, clock, parents, payload } = message
+
 		if (payload.type === "action") {
 			const { address } = parseAddress(payload.address)
 
-			const signature = await this.#wallet.signTypedData({ name: message.topic }, Secp256k1DelegateSigner.eip712ActionTypes, {
-				topic: topic,
-				clock: clock,
-				parents: parents,
-				payload: {
-					name: payload.name,
-					args: getAbiString(payload.args),
-					address: address,
-					blockhash: payload.blockhash || "", // TODO: consider making blockhash mandatory for EIP-712?
-					timestamp: payload.timestamp,
+			const signature = await this.#wallet.signTypedData(
+				{ name: message.topic },
+				Secp256k1DelegateSigner.eip712ActionTypes,
+				{
+					topic: topic,
+					clock: clock,
+					parents: parents,
+					payload: {
+						name: payload.name,
+						args: getAbiString(payload.args),
+						userAddress: address,
+						blockhash: payload.blockhash || "", // TODO: consider making blockhash mandatory for EIP-712?
+						timestamp: payload.timestamp,
+					},
 				},
-			})
+			)
 
 			return { codec: Secp256k1DelegateSigner.eip712ActionCodec, publicKey: this.uri, signature: getBytes(signature) }
 		} else if (payload.type === "session") {
 			const { address } = parseAddress(payload.address)
+
+			assert(payload.publicKey === this.uri)
+			const { type, publicKey: publicKeyBytes } = decodeURI(payload.publicKey)
+			assert(type === Secp256k1DelegateSigner.type)
 
 			const signature = await this.#wallet.signTypedData({ name: topic }, Secp256k1DelegateSigner.eip712SessionTypes, {
 				topic: topic,
 				clock: clock,
 				parents: parents,
 				payload: {
-					address: address,
-					publicKey: payload.publicKey,
+					userAddress: address,
+					publicKey: "0x" + SigningKey.computePublicKey(publicKeyBytes, false).slice(4),
 					authorizationData: payload.authorizationData,
 					duration: payload.duration ?? 0,
 					timestamp: payload.timestamp,
