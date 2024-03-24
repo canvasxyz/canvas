@@ -5,14 +5,28 @@ import { nanoid } from "nanoid"
 import type { AbstractModelDB, ModelsInit } from "@canvas-js/modeldb"
 import { ModelDB as ModelDBSqlite } from "@canvas-js/modeldb/sqlite"
 import { ModelDB as ModelDBIdb } from "@canvas-js/modeldb/idb"
+import { ModelDB as ModelDBPostgres } from "@canvas-js/modeldb/pg"
 
 export const testOnModelDB = (
 	name: string,
-	run: (t: ExecutionContext<unknown>, openDB: (models: ModelsInit) => Promise<AbstractModelDB>) => void
+	run: (t: ExecutionContext<unknown>, openDB: (models: ModelsInit) => Promise<AbstractModelDB>) => void,
 ) => {
 	const macro = test.macro(run)
+
+	const connectionConfig =
+		process.env.POSTGRES_HOST && process.env.POSTGRES_PORT
+			? {
+					user: "postgres",
+					database: "test",
+					password: "postgres",
+					port: parseInt(process.env.POSTGRES_PORT, 10),
+					host: process.env.POSTGRES_HOST,
+				}
+			: `postgresql://localhost:5432/test`
+
 	test(`Sqlite - ${name}`, macro, async (models) => new ModelDBSqlite({ path: null, models }))
 	test(`IDB - ${name}`, macro, (models) => ModelDBIdb.initialize({ name: nanoid(), models }))
+	test(`Postgres - ${name}`, macro, (models) => ModelDBPostgres.initialize({ connectionConfig, models }))
 }
 
 export const compareUnordered = (t: ExecutionContext, a: any[], b: any[]) => {

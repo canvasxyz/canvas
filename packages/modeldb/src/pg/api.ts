@@ -59,30 +59,42 @@ export class ModelAPI {
 
 	readonly #columns: string[]
 	readonly #columnNames: `"${string}"`[]
-
 	readonly #relations: Record<string, RelationAPI> = {}
 	readonly #primaryKeyName: string
 
-	public constructor(
+	constructor(
 		readonly client: pg.Client,
 		readonly model: Model,
+		columns: string[],
+		columnNames: `"${string}"`[],
+		relations: Record<string, RelationAPI> = {},
+		primaryKeyName: string,
 	) {
-		this.#columns = []
-		this.#columnNames = [] // quoted column names for non-relation properties
+		this.#columns = columns
+		this.#columnNames = columnNames // quoted column names for non-relation properties
+		this.#relations = relations
+		this.#primaryKeyName = primaryKeyName
+	}
 
+	public static async initialize(client: pg.Client, model: Model) {
 		let primaryKeyIndex: number | null = null
 		let primaryKey: PrimaryKeyProperty | null = null
+		let columns: string[] = []
+		let columnNames: `"${string}"`[] = []
+		let relations: Record<string, RelationAPI> = {}
+		let primaryKeyName: string | null
+
 		for (const [i, property] of model.properties.entries()) {
 			if (property.kind === "primary" || property.kind === "primitive" || property.kind === "reference") {
-				this.#columns.push(getPropertyColumn(property))
-				this.#columnNames.push(`"${property.name}"`)
+				columns.push(getPropertyColumn(property))
+				columnNames.push(`"${property.name}"`)
 
 				if (property.kind === "primary") {
 					primaryKeyIndex = i
 					primaryKey = property
 				}
 			} else if (property.kind === "relation") {
-				this.#relations[property.name] = new RelationAPI(client, {
+				relations[property.name] = await RelationAPI.initialize(client, {
 					source: model.name,
 					property: property.name,
 					target: property.target,
@@ -95,18 +107,22 @@ export class ModelAPI {
 
 		assert(primaryKey !== null, "expected primaryKey !== null")
 		assert(primaryKeyIndex !== null, "expected primaryKeyIndex !== null")
-		// this.#primaryKeyName = columnNames[primaryKeyIndex]
-		this.#primaryKeyName = primaryKey.name
+		// primaryKeyName = columnNames[primaryKeyIndex]
+		primaryKeyName = primaryKey.name
+
+		const api = new ModelAPI(client, model, columns, columnNames, relations, primaryKeyName)
 
 		// Create record table
-		client.query(`CREATE TABLE IF NOT EXISTS "${this.#table}" (${this.#columns.join(", ")})`)
+		client.query(`CREATE TABLE IF NOT EXISTS "${api.#table}" (${api.#columns.join(", ")})`)
 
 		// Create indexes
 		for (const index of model.indexes) {
 			const indexName = `${model.name}/${index.join("/")}`
 			const indexColumns = index.map((name) => `'${name}'`)
-			client.query(`CREATE INDEX IF NOT EXISTS "${indexName}" ON "${this.#table}" (${indexColumns.join(", ")})`)
+			client.query(`CREATE INDEX IF NOT EXISTS "${indexName}" ON "${api.#table}" (${indexColumns.join(", ")})`)
 		}
+
+		return api
 	}
 
 	public async get(key: string): Promise<ModelValue | null> {

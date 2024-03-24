@@ -3,11 +3,11 @@ import pg from "pg"
 import { AbstractModelDB } from "../AbstractModelDB.js"
 import { parseConfig } from "../config.js"
 import { ModelAPI } from "./api.js"
-import { Effect, ModelValue, ModelsInit, QueryParams } from "../types.js"
+import { Config, Effect, ModelValue, ModelsInit, QueryParams } from "../types.js"
 import { assert, signalInvalidType } from "../utils.js"
 
 export interface ModelDBOptions {
-	client: pg.Client
+	connectionConfig: string | pg.ConnectionConfig
 	models: ModelsInit
 	indexHistory?: Record<string, boolean>
 }
@@ -18,15 +18,32 @@ export class ModelDB extends AbstractModelDB {
 	#models: Record<string, ModelAPI> = {}
 	#doTransaction: (effects: Effect[]) => void
 
-	constructor({ client, models, indexHistory }: ModelDBOptions) {
-		super(parseConfig(models), { indexHistory })
+	public static async initialize({ connectionConfig, models, indexHistory }: ModelDBOptions) {
+		const client = new pg.Client(connectionConfig)
 
-		this.client = client
+		const modelDBConfig = parseConfig(models)
 
-		for (const model of Object.values(this.models)) {
-			this.#models[model.name] = new ModelAPI(this.client, model)
+		const modelDBAPIs: Record<string, ModelAPI> = {}
+		for (const model of Object.values(modelDBConfig.models)) {
+			modelDBAPIs[model.name] = await ModelAPI.initialize(client, model)
 		}
 
+		return new ModelDB(client, modelDBConfig, modelDBAPIs, indexHistory)
+	}
+
+	constructor(
+		client: pg.Client,
+		modelDBConfig: Config,
+		modelAPIs: Record<string, ModelAPI>,
+		indexHistory?: Record<string, boolean>,
+	) {
+		super(modelDBConfig, { indexHistory })
+
+		for (const model of Object.values(this.models)) {
+			this.#models[model.name] = modelAPIs[model.name]
+		}
+
+		this.client = client
 		this.#doTransaction = async (effects: Effect[]) => {
 			await client.query("BEGIN")
 			try {
@@ -45,8 +62,6 @@ export class ModelDB extends AbstractModelDB {
 			} catch (e) {
 				await client.query("ROLLBACK")
 				throw e
-			} finally {
-				// client.release() // TODO: why is this unavailable?
 			}
 		}
 	}
