@@ -1,10 +1,13 @@
 import fs from "node:fs"
+import { equals } from "uint8arrays"
 
 import { Bound, KeyValueStore } from "@canvas-js/okra"
 import { Database, Environment, Transaction, Tree } from "@canvas-js/okra-node"
 import { assert } from "@canvas-js/utils"
 
+import { KEY_LENGTH } from "../schema.js"
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
+import { cborNull } from "../utils.js"
 
 export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
 	public static async open<Payload, Result>(
@@ -65,9 +68,10 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 	public async read<T>(callback: (txn: ReadOnlyTransaction) => Promise<T>): Promise<T> {
 		this.log("opening read-only transaction")
 		return await this.env.read(async (txn) => {
-			const heads = txn.database("heads")
 			const messages = new Tree(txn, "messages")
+			const heads = txn.database("heads")
 			return await callback({
+				getHeads: () => getHeads(heads),
 				ancestors: this.indexAncestors ? GossipLog.getReadOnlyAPI(txn.database("ancestors")) : undefined,
 				messages,
 				heads: {
@@ -83,11 +87,25 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 		this.log("opening read-write transaction")
 		return await this.env.write(async (txn) => {
 			const messages = new Tree(txn, "messages")
+			const heads = txn.database("heads")
 			return await callback({
+				getHeads: () => getHeads(heads),
 				messages,
-				heads: GossipLog.getReadWriteAPI(txn.database("heads")),
+				heads: GossipLog.getReadWriteAPI(heads),
 				ancestors: this.indexAncestors ? GossipLog.getReadWriteAPI(txn.database("ancestors")) : undefined,
 			})
 		})
 	}
+}
+
+async function getHeads(heads: Database) {
+	const parents: Uint8Array[] = []
+
+	for await (const [key, value] of heads.entries()) {
+		assert(key.byteLength === KEY_LENGTH, "internal error (expected key.byteLength === KEY_LENGTH)")
+		assert(equals(value, cborNull), "internal error (unexpected parent entry value)")
+		parents.push(key)
+	}
+
+	return parents
 }

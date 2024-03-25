@@ -1,13 +1,15 @@
 import pDefer from "p-defer"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
+import { equals } from "uint8arrays"
 
 import { Bound, KeyValueStore } from "@canvas-js/okra"
 import { IDBStore, IDBTree } from "@canvas-js/okra-idb"
 import { IDBPDatabase, openDB } from "idb"
 
 import { assert } from "@canvas-js/utils"
+import { KEY_LENGTH } from "../schema.js"
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
-import { SyncDeadlockError, SyncResourceError } from "../utils.js"
+import { SyncDeadlockError, SyncResourceError, cborNull } from "../utils.js"
 
 export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
 	public static async open<Payload, Result>(init: GossipLogInit<Payload, Result>): Promise<GossipLog<Payload, Result>> {
@@ -161,7 +163,12 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			}
 
 			try {
-				result = await callback({ messages: this.messages, heads, ancestors })
+				result = await callback({
+					messages: this.messages,
+					heads,
+					ancestors,
+					getHeads: () => this.heads.read(() => getHeads(this.heads)),
+				})
 			} catch (err) {
 				if (err instanceof Error && err.name === "TransactionInactiveError") {
 					this.log.error("incoming merkle sync attempted, but transaction was invalid") // TODO: better txn handling
@@ -232,7 +239,12 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 				}
 
 				try {
-					result = await callback({ messages: this.messages, heads, ancestors })
+					result = await callback({
+						messages: this.messages,
+						heads,
+						ancestors,
+						getHeads: () => this.heads.read(() => getHeads(this.heads)),
+					})
 				} catch (err) {
 					this.log.error("error in read-write transaction: %O", err)
 					error = err as Error
@@ -253,4 +265,16 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 		return result as T
 	}
+}
+
+async function getHeads(heads: IDBStore) {
+	const parents: Uint8Array[] = []
+
+	for await (const [key, value] of heads.entries()) {
+		assert(key.byteLength === KEY_LENGTH, "internal error (expected key.byteLength === KEY_LENGTH)")
+		assert(equals(value, cborNull), "internal error (unexpected parent entry value)")
+		parents.push(key)
+	}
+
+	return parents
 }

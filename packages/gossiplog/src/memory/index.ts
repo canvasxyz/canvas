@@ -1,12 +1,14 @@
 import PQueue from "p-queue"
 import pDefer from "p-defer"
+import { equals } from "uint8arrays"
 
 import { Bound } from "@canvas-js/okra"
 import { MemoryTree, MemoryStore } from "@canvas-js/okra-memory"
 import { assert } from "@canvas-js/utils"
 
+import { KEY_LENGTH } from "../schema.js"
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
-import { SyncDeadlockError } from "../utils.js"
+import { SyncDeadlockError, cborNull } from "../utils.js"
 
 export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
 	public static async open<Payload, Result>(init: GossipLogInit<Payload, Result>): Promise<GossipLog<Payload, Result>> {
@@ -82,7 +84,12 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			}
 
 			try {
-				return await callback({ messages: this.messages, heads: this.heads, ancestors: this.ancestors })
+				return await callback({
+					getHeads: () => getHeads(this.heads),
+					messages: this.messages,
+					heads: this.heads,
+					ancestors: this.ancestors,
+				})
 			} catch (err) {
 				this.log.error("error in transaction: %O", err)
 			} finally {
@@ -112,7 +119,12 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			}
 
 			try {
-				return await callback({ messages: this.messages, heads: this.heads, ancestors: this.ancestors })
+				return await callback({
+					getHeads: () => getHeads(this.heads),
+					messages: this.messages,
+					heads: this.heads,
+					ancestors: this.ancestors,
+				})
 			} catch (err) {
 				this.log.error("error in transaction: %O", err)
 				throw err
@@ -125,4 +137,16 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 		return result as T
 	}
+}
+
+async function getHeads(heads: MemoryStore) {
+	const parents: Uint8Array[] = []
+
+	for await (const [key, value] of heads.entries()) {
+		assert(key.byteLength === KEY_LENGTH, "internal error (expected key.byteLength === KEY_LENGTH)")
+		assert(equals(value, cborNull), "internal error (unexpected parent entry value)")
+		parents.push(key)
+	}
+
+	return parents
 }

@@ -29,6 +29,8 @@ import {
 import { topicPattern, cborNull, getAncestorClocks, DelayableController } from "./utils.js"
 
 export interface ReadOnlyTransaction {
+	getHeads(): Awaitable<Uint8Array[]>
+
 	messages: Omit<KeyValueStore, "set" | "delete"> & Source
 	heads: Omit<KeyValueStore, "set" | "delete">
 	ancestors?: Omit<KeyValueStore, "set" | "delete">
@@ -37,6 +39,8 @@ export interface ReadOnlyTransaction {
 }
 
 export interface ReadWriteTransaction {
+	getHeads(): Awaitable<Uint8Array[]>
+
 	messages: KeyValueStore & Target
 	heads: KeyValueStore
 	ancestors?: KeyValueStore
@@ -54,7 +58,6 @@ export interface ReadWriteTransaction {
 		cborNull: Uint8Array,
 		heads: Uint8Array[],
 	) => Awaitable<void>
-	getHeads?: () => Awaitable<Uint8Array[]>
 }
 
 export type GossipLogConsumer<Payload = unknown, Result = void> = (
@@ -172,7 +175,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 	}
 
 	public async getClock(): Promise<[clock: number, heads: string[]]> {
-		const heads = await this.read((txn) => this.getHeads(txn))
+		const heads = await this.read((txn) => txn.getHeads())
 		const clock = getNextClock(heads)
 		return [clock, heads.map(decodeId)]
 	}
@@ -193,18 +196,6 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		return [signature, message]
 	}
 
-	private async getHeads(txn: ReadOnlyTransaction): Promise<Uint8Array[]> {
-		const parents: Uint8Array[] = []
-
-		for await (const [key, value] of txn.heads.entries()) {
-			assert(key.byteLength === KEY_LENGTH, "internal error (expected key.byteLength === KEY_LENGTH)")
-			assert(equals(value, cborNull), "internal error (unexpected parent entry value)")
-			parents.push(key)
-		}
-
-		return parents
-	}
-
 	/**
 	 * Sign and append a new *unsigned* message to the end of the log.
 	 * The currently unmerged heads of the local log are used as parents.
@@ -216,7 +207,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		const signer = options.signer ?? this.signer
 
 		const { id, signature, message, result, root } = await this.write(async (txn) => {
-			const heads = txn.getHeads ? await txn.getHeads() : await this.getHeads(txn)
+			const heads = await txn.getHeads()
 
 			const clock = getNextClock(heads)
 

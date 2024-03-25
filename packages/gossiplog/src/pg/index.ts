@@ -1,17 +1,17 @@
 import PQueue from "p-queue"
 import pDefer from "p-defer"
 
-import { Bound, KeyValueStore } from "@canvas-js/okra"
+import pg from "pg"
+import { hexToBytes } from "@noble/hashes/utils"
+import { equals } from "uint8arrays"
+
+import { Bound } from "@canvas-js/okra"
 import { PostgresTree, PostgresStore } from "@canvas-js/okra-pg"
 import { assert } from "@canvas-js/utils"
 
-import pg from "pg"
-import { hexToBytes, bytesToHex as hex } from "@noble/hashes/utils"
-import { equals } from "uint8arrays"
-
+import { KEY_LENGTH } from "../schema.js"
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
 import { cborNull } from "../utils.js"
-import { encodeId, decodeId, KEY_LENGTH } from "../schema.js"
 
 import { getAncestorsSql } from "./get_ancestors.sql.js"
 import { isAncestorSql } from "./is_ancestor.sql.js"
@@ -34,10 +34,10 @@ async function getAncestors<Payload, Result>(
 	key: Uint8Array,
 	atOrBefore: number,
 ): Promise<Uint8Array[]> {
-	const result = await log.ancestorsClient.query<{ ret_results: Uint8Array[] }>(`SELECT ret_results FROM get_ancestors($1, $2, '{}'::bytea[]);`, [
-		key,
-		atOrBefore,
-	])
+	const result = await log.ancestorsClient.query<{ ret_results: Uint8Array[] }>(
+		`SELECT ret_results FROM get_ancestors($1, $2, '{}'::bytea[]);`,
+		[key, atOrBefore],
+	)
 	const { rows } = result
 	const row = rows[0]
 	return row.ret_results
@@ -82,15 +82,6 @@ async function insertMessageRemovingHeads<Payload, Result>(
 ): Promise<void> {
 	const args = [key, value, hash, cborNull, heads.map(Buffer.from)]
 	await log.ancestorsClient.query<{}>(`CALL insert_message_removing_heads($1, $2, $3, $4, $5::bytea[]);`, args)
-}
-
-async function getHeads<Payload, Result>(log: GossipLog<Payload, Result>): Promise<Uint8Array[]> {
-	const { rows } = await log.headsClient.query(`SELECT * FROM heads ORDER BY key`)
-	return rows.map(({ key, value }: { key: Uint8Array; value: Uint8Array }) => {
-		assert(key.byteLength === KEY_LENGTH, "internal error (expected key.byteLength === KEY_LENGTH)")
-		assert(equals(value, cborNull), "internal error (unexpected parent entry value)")
-		return key
-	})
 }
 
 export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
@@ -219,6 +210,8 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 		const result = await this.queue.add(async () => {
 			// console.log("start read tx")
 			const result = await callback({
+				getHeads: async (): Promise<Uint8Array[]> => getHeads(this.headsClient),
+
 				messages: this.messages,
 				heads: this.heads,
 				ancestors: this.indexAncestors ? this.ancestors : undefined,
@@ -238,6 +231,8 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 		const result = await this.queue.add(async () => {
 			// console.log("start write tx")
 			const result = await callback({
+				getHeads: async (): Promise<Uint8Array[]> => getHeads(this.headsClient),
+
 				messages: this.messages,
 				heads: this.heads,
 				ancestors: this.indexAncestors ? this.ancestors : undefined,
@@ -259,11 +254,19 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 					const hash = this.messages.hashEntry(key, value)
 					return insertMessageRemovingHeads(this, key, value, hash, cborNull, parents)
 				},
-				getHeads: async (): Promise<Uint8Array[]> => getHeads(this),
 			})
 			// console.log("end write tx")
 			return result
 		})
 		return result as T
 	}
+}
+
+async function getHeads<Payload, Result>(heads: pg.PoolClient): Promise<Uint8Array[]> {
+	const { rows } = await heads.query(`SELECT * FROM heads ORDER BY key`)
+	return rows.map(({ key, value }: { key: Uint8Array; value: Uint8Array }) => {
+		assert(key.byteLength === KEY_LENGTH, "internal error (expected key.byteLength === KEY_LENGTH)")
+		assert(equals(value, cborNull), "internal error (unexpected parent entry value)")
+		return key
+	})
 }
