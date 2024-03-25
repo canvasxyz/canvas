@@ -3,7 +3,7 @@ import { nanoid } from "nanoid"
 import { testOnModelDB } from "./utils.js"
 
 testOnModelDB("update a value", async (t, openDB) => {
-	const db = await openDB({
+	const db = await openDB(t, {
 		user: { id: "primary", name: "string", isModerator: "boolean" },
 	})
 
@@ -15,7 +15,7 @@ testOnModelDB("update a value", async (t, openDB) => {
 })
 
 testOnModelDB("delete a value ", async (t, openDB) => {
-	const db = await openDB({
+	const db = await openDB(t, {
 		user: { id: "primary", name: "string" },
 	})
 

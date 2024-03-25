@@ -4,8 +4,7 @@ import { testOnModelDB } from "./utils.js"
 
 testOnModelDB("create modeldb with no models", async (t, openDB) => {
 	await t.notThrowsAsync(async () => {
-		const db = await openDB({})
-		await db.close()
+		await openDB(t, {})
 	})
 })
 
@@ -21,8 +20,7 @@ testOnModelDB("create modeldb with a model with valid fields", async (t, openDB)
 	} satisfies ModelsInit
 
 	await t.notThrowsAsync(async () => {
-		const db = await openDB(models)
-		await db.close()
+		await openDB(t, models)
 	})
 })
 
@@ -34,7 +32,7 @@ testOnModelDB("create modeldb with a model with invalid fields should fail", asy
 		},
 	} as ModelsInit
 
-	await t.throwsAsync(() => openDB(models), { message: `invalid property "unsupported"` })
+	await t.throwsAsync(() => openDB(t, models), { message: `invalid property "unsupported"` })
 })
 
 testOnModelDB("create modeldb with a model with an optional json field should fail", async (t, openDB) => {
@@ -45,7 +43,7 @@ testOnModelDB("create modeldb with a model with an optional json field should fa
 		},
 	} as ModelsInit
 
-	await t.throwsAsync(() => openDB(models), { message: `field "name" is invalid - json fields cannot be optional` })
+	await t.throwsAsync(() => openDB(t, models), { message: `field "name" is invalid - json fields cannot be optional` })
 })
 
 testOnModelDB("create a model without a primary key", async (t, openDB) => {
@@ -55,7 +53,7 @@ testOnModelDB("create a model without a primary key", async (t, openDB) => {
 		},
 	} satisfies ModelsInit
 
-	await t.throwsAsync(() => openDB(models))
+	await t.throwsAsync(() => openDB(t, models))
 })
 
 testOnModelDB("create a model with two primary keys", async (t, openDB) => {
@@ -67,5 +65,5 @@ testOnModelDB("create a model with two primary keys", async (t, openDB) => {
 		},
 	} satisfies ModelsInit
 
-	await t.throwsAsync(() => openDB(models))
+	await t.throwsAsync(() => openDB(t, models))
 })

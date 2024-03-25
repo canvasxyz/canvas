@@ -21,7 +21,7 @@ const models: ModelsInit = {
 }
 
 testOnModelDB("create ModelDB", async (t, openDB) => {
-	const db = await openDB(models)
+	const db = await openDB(t, models)
 
 	const userA = {
 		id: nanoid(),

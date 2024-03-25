@@ -12,7 +12,7 @@ const models: ModelsInit = {
 }
 
 testOnModelDB("subscriptions", async (t, openDB) => {
-	const db = await openDB(models)
+	const db = await openDB(t, models)
 
 	const changes: { results: ModelValue[] }[] = []
 	const { id, results } = db.subscribe("user", {}, (results) => {
@@ -33,7 +33,7 @@ testOnModelDB("subscriptions", async (t, openDB) => {
 })
 
 testOnModelDB("subscriptions (filtering on model and query)", async (t, openDB) => {
-	const db = await openDB(models)
+	const db = await openDB(t, models)
 
 	await db.set("user", { address: "a" })
 	await db.set("user", { address: "b" })

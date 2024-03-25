@@ -9,7 +9,10 @@ import { ModelDB as ModelDBPostgres } from "@canvas-js/modeldb/pg"
 
 export const testOnModelDB = (
 	name: string,
-	run: (t: ExecutionContext<unknown>, openDB: (models: ModelsInit) => Promise<AbstractModelDB>) => void,
+	run: (
+		t: ExecutionContext<unknown>,
+		openDB: (t: ExecutionContext, models: ModelsInit) => Promise<AbstractModelDB>,
+	) => void,
 ) => {
 	const macro = test.macro(run)
 
@@ -24,9 +27,21 @@ export const testOnModelDB = (
 				}
 			: `postgresql://localhost:5432/test`
 
-	test(`Sqlite - ${name}`, macro, async (models) => new ModelDBSqlite({ path: null, models }))
-	test(`IDB - ${name}`, macro, (models) => ModelDBIdb.initialize({ name: nanoid(), models }))
-	test(`Postgres - ${name}`, macro, (models) => ModelDBPostgres.initialize({ connectionConfig, models }))
+	test(`Sqlite - ${name}`, macro, async (t, models) => {
+		const mdb = new ModelDBSqlite({ path: null, models })
+		t.teardown(() => mdb.close())
+		return mdb
+	})
+	test(`IDB - ${name}`, macro, async (t, models) => {
+		const mdb = await ModelDBIdb.initialize({ name: nanoid(), models })
+		t.teardown(() => mdb.close())
+		return mdb
+	})
+	test(`Postgres - ${name}`, macro, async (t, models) => {
+		const mdb = await ModelDBPostgres.initialize({ connectionConfig, models })
+		t.teardown(() => mdb.close())
+		return mdb
+	})
 }
 
 export const compareUnordered = (t: ExecutionContext, a: any[], b: any[]) => {
