@@ -142,16 +142,20 @@ test("simulate a randomly partitioned network, logs on postgres", async (t) => {
 	t.timeout(240 * 1000)
 	const topic = randomUUID()
 
-	const getPgConfig = (db: string) =>
-		process.env.POSTGRES_HOST && process.env.POSTGRES_PORT
-			? {
-					user: "postgres",
-					database: db,
-					password: "postgres",
-					port: parseInt(process.env.POSTGRES_PORT, 10),
-					host: process.env.POSTGRES_HOST,
-			  }
-			: `postgresql://localhost:5432/${db}`
+	const getPgConfig = (db: string) => {
+		const { POSTGRES_HOST, POSTGRES_PORT } = process.env
+		if (POSTGRES_HOST && POSTGRES_PORT) {
+			return {
+				user: "postgres",
+				database: db,
+				password: "postgres",
+				port: parseInt(POSTGRES_PORT),
+				host: POSTGRES_HOST,
+			}
+		} else {
+			return `postgresql://localhost:5432/${db}`
+		}
+	}
 
 	const logs: AbstractGossipLog<string, void>[] = await Promise.all([
 		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, getPgConfig("test")),
