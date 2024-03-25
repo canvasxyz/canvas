@@ -28,8 +28,8 @@ import { isNotExpression, isLiteralExpression, isRangeExpression } from "../quer
 import { assert, mapValues, signalInvalidType, validateModelValue, zip } from "../utils.js"
 
 const primitiveColumnTypes = {
-	integer: "BIGINT",
-	float: "DOUBLE PRECISION",
+	integer: "INTEGER",
+	float: "DECIMAL",
 	string: "TEXT",
 	bytes: "BYTEA",
 	boolean: "BOOLEAN",
@@ -76,7 +76,7 @@ export class ModelAPI {
 		this.#primaryKeyName = primaryKeyName
 	}
 
-	public static async initialize(client: pg.Client, model: Model) {
+	public static async initialize(client: pg.Client, model: Model, clear: boolean = true) {
 		let primaryKeyIndex: number | null = null
 		let primaryKey: PrimaryKeyProperty | null = null
 		let columns: string[] = []
@@ -94,12 +94,16 @@ export class ModelAPI {
 					primaryKey = property
 				}
 			} else if (property.kind === "relation") {
-				relations[property.name] = await RelationAPI.initialize(client, {
-					source: model.name,
-					property: property.name,
-					target: property.target,
-					indexed: false,
-				})
+				relations[property.name] = await RelationAPI.initialize(
+					client,
+					{
+						source: model.name,
+						property: property.name,
+						target: property.target,
+						indexed: false,
+					},
+					clear,
+				)
 			} else {
 				signalInvalidType(property)
 			}
@@ -113,6 +117,9 @@ export class ModelAPI {
 		const api = new ModelAPI(client, model, columns, columnNames, relations, primaryKeyName)
 
 		// Create record table
+		if (clear) {
+			await client.query(`DROP TABLE IF EXISTS "${api.#table}"`)
+		}
 		await client.query(`CREATE TABLE IF NOT EXISTS "${api.#table}" (${api.#columns.join(", ")})`)
 
 		// Create indexes
@@ -126,17 +133,17 @@ export class ModelAPI {
 	}
 
 	public async get(key: string): Promise<ModelValue | null> {
-		const record = await this.client.query(
+		const { rows } = await this.client.query(
 			`SELECT ${this.#columnNames.join(", ")} FROM "${this.#table}" WHERE "${this.#primaryKeyName}" = $1`,
 			[key],
 		)
 
-		if (record === null) {
+		if (rows[0] === undefined) {
 			return null
 		}
 
 		return {
-			...decodeRecord(this.model, record.rows[0]),
+			...decodeRecord(this.model, rows[0]),
 			// ...mapValues(this.#relations, (api) => api.get(key)),
 			// TODO 4
 		}
@@ -169,16 +176,19 @@ export class ModelAPI {
 			}
 		}
 
-		const existingRecord = await this.client.query(
-			`SELECT ${this.#columnNames.join(", ")} FROM "${this.#table}" WHERE "${this.#primaryKeyName}" = $1`,
-			[key],
-		)
+		const existingRecord = (
+			await this.client.query(
+				`SELECT ${this.#columnNames.join(", ")} FROM "${this.#table}" WHERE "${this.#primaryKeyName}" = $1`,
+				[key],
+			)
+		).rows[0]
 
-		if (existingRecord === null) {
+		if (existingRecord === undefined) {
 			const insertNames = this.#columnNames.join(", ")
 			const insertParams = this.#columnNames.map((name: string, i: number) => `$${i + 1}`)
+
 			await this.client.query<{}, any[]>(
-				`INSERT OR IGNORE INTO "${this.#table}" (${insertNames}) VALUES (${insertParams})`,
+				`INSERT INTO "${this.#table}" (${insertNames}) VALUES (${insertParams})`,
 				values,
 			)
 		} else {
@@ -210,7 +220,7 @@ export class ModelAPI {
 
 	public async count(): Promise<number> {
 		const results = await this.client.query(`SELECT COUNT(*) AS count FROM "${this.#table}"`)
-		return results.rows[0].count ?? 0
+		return parseInt(results.rows[0].count, 10) ?? 0
 	}
 
 	public async *values(): AsyncIterable<ModelValue> {
@@ -536,11 +546,14 @@ export class RelationAPI {
 	public readonly sourceIndex = `${this.relation.source}/${this.relation.property}/source`
 	public readonly targetIndex = `${this.relation.source}/${this.relation.property}/target`
 
-	public static async initialize(client: pg.Client, relation: Relation) {
+	public static async initialize(client: pg.Client, relation: Relation, clear: boolean) {
 		// Initialize tables
 		const relationApi = new RelationAPI(client, relation)
 		const columns = [`_source TEXT NOT NULL`, `_target TEXT NOT NULL`]
 
+		if (clear) {
+			await client.query(`DROP TABLE IF EXISTS "${relationApi.table}"`)
+		}
 		await client.query(`CREATE TABLE IF NOT EXISTS "${relationApi.table}" (${columns.join(", ")})`)
 		await client.query(`CREATE INDEX IF NOT EXISTS "${relationApi.sourceIndex}" ON "${relationApi.table}" (_source)`)
 		if (relation.indexed) {
