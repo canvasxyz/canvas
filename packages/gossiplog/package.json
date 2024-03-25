@@ -17,6 +17,7 @@
 		"./node": "./lib/node/index.js",
 		"./browser": "./lib/browser/index.js",
 		"./memory": "./lib/memory/index.js",
+		"./pg": "./lib/pg/index.js",
 		"./service": "./lib/service.js"
 	},
 	"imports": {
@@ -25,7 +26,7 @@
 	"scripts": {
 		"generate": "npm run generate-sync",
 		"generate-sync": "protons ./src/protocols/sync.proto",
-		"test": "ava --concurrency 1"
+		"test": "ava --serial"
 	},
 	"peerDependencies": {
 		"@chainsafe/libp2p-gossipsub": "^11.0.1"
@@ -36,6 +37,7 @@
 		"@canvas-js/okra-idb": "^0.3.0",
 		"@canvas-js/okra-memory": "^0.3.0",
 		"@canvas-js/okra-node": "^0.6.0",
+		"@canvas-js/okra-pg": "^0.1.0",
 		"@canvas-js/signatures": "0.8.26",
 		"@canvas-js/utils": "0.8.26",
 		"@ipld/dag-cbor": "^9.0.6",
@@ -55,6 +57,8 @@
 		"multiformats": "^13.0.1",
 		"nanoid": "^5.0.4",
 		"p-queue": "^8.0.0",
+		"pg": "^8.11.3",
+		"pg-cursor": "^2.10.3",
 		"protons-runtime": "^5.2.0",
 		"uint8arraylist": "^2.4.7",
 		"uint8arrays": "^5.0.0"
@@ -67,6 +71,8 @@
 		"@libp2p/peer-id-factory": "^4.0.1",
 		"@libp2p/plaintext": "^1.0.7",
 		"@libp2p/tcp": "^9.0.7",
+		"@types/pg": "^8.11.4",
+		"@types/pg-cursor": "^2.7.2",
 		"fake-indexeddb": "^5.0.1",
 		"libp2p": "^1.0.10",
 		"p-defer": "^4.0.0",

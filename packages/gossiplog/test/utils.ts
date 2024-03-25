@@ -18,6 +18,7 @@ import { AbstractGossipLog, GossipLogInit, encodeId, decodeClock } from "@canvas
 import { GossipLog as GossipLogNode } from "@canvas-js/gossiplog/node"
 import { GossipLog as GossipLogBrowser } from "@canvas-js/gossiplog/browser"
 import { GossipLog as GossipLogMemory } from "@canvas-js/gossiplog/memory"
+import { GossipLog as GossipLogPostgres } from "@canvas-js/gossiplog/pg"
 
 // @ts-expect-error
 globalThis.AbortController = AbortController
@@ -41,9 +42,38 @@ export const testPlatforms = (
 	) => void,
 ) => {
 	const macro = test.macro(run)
-	test(`Memory - ${name}`, macro, (t, init) => GossipLogMemory.open(init))
-	test(`Browser - ${name}`, macro, (t, init) => GossipLogBrowser.open(init))
-	test(`NodeJS - ${name}`, macro, (t, init) => GossipLogNode.open(init, getDirectory(t)))
+
+	const pgUrl =
+		process.env.POSTGRES_HOST && process.env.POSTGRES_PORT
+			? {
+					user: "postgres",
+					database: "test",
+					password: "postgres",
+					port: parseInt(process.env.POSTGRES_PORT, 10),
+					host: process.env.POSTGRES_HOST,
+				}
+			: `postgresql://localhost:5432/test`
+
+	test(`Memory - ${name}`, macro, async (t, init) => {
+		const log = await GossipLogMemory.open(init)
+		t.teardown(() => log.close())
+		return log
+	})
+	test(`Browser - ${name}`, macro, async (t, init) => {
+		const log = await GossipLogBrowser.open(init)
+		t.teardown(() => log.close())
+		return log
+	})
+	test(`NodeJS - ${name}`, macro, async (t, init) => {
+		const log = await GossipLogNode.open(init, getDirectory(t))
+		t.teardown(() => log.close())
+		return log
+	})
+	test(`Postgres - ${name}`, macro, async (t, init) => {
+		const log = await GossipLogPostgres.open(init, pgUrl)
+		t.teardown(() => log.close())
+		return log
+	})
 }
 
 export const getPublicKey = <T>([id, { publicKey }, message]: [string, Signature, Message<T>]): [

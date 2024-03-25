@@ -43,6 +43,7 @@
     "veaury": "^2.3.12",
     "vitepress": "^1.0.0-rc.35",
     "vue": "^3.3.7",
+    "pg": "^8.11.3",
     "vue-markdown-render": "^2.1.1"
   },
   "optionalDependencies": {
