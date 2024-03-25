@@ -37,7 +37,7 @@
 		"@canvas-js/okra-idb": "^0.3.0",
 		"@canvas-js/okra-memory": "^0.3.0",
 		"@canvas-js/okra-node": "^0.6.0",
-		"@canvas-js/okra-pg": "0.0.1-next.2",
+		"@canvas-js/okra-pg": "^0.1.0",
 		"@canvas-js/signatures": "0.8.26",
 		"@canvas-js/utils": "0.8.26",
 		"@ipld/dag-cbor": "^9.0.6",
