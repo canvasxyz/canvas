@@ -57,9 +57,9 @@ export class ModelDB extends AbstractModelDB {
 					const model = this.models[effect.model]
 					assert(model !== undefined, `model ${effect.model} not found`)
 					if (effect.operation === "set") {
-						this.#models[effect.model].set(effect.value)
+						await this.#models[effect.model].set(effect.value)
 					} else if (effect.operation === "delete") {
-						this.#models[effect.model].delete(effect.key)
+						await this.#models[effect.model].delete(effect.key)
 					} else {
 						signalInvalidType(effect)
 					}
@@ -78,7 +78,7 @@ export class ModelDB extends AbstractModelDB {
 	}
 
 	public async apply(effects: Effect[]) {
-		this.#doTransaction(effects)
+		await this.#doTransaction(effects)
 
 		for (const { model, query, filter, callback } of this.subscriptions.values()) {
 			if (effects.some(filter)) {

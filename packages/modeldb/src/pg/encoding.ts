@@ -10,14 +10,14 @@ import type {
 
 import { assert, signalInvalidType } from "../utils.js"
 
-type PostgresPrimitiveValue = string | number | boolean | Buffer | null
+type PostgresPrimitiveValue = string | number | boolean | Uint8Array | null
 
 export function encodeRecordParams(
 	model: Model,
 	value: ModelValue,
 	params: Record<string, `p${string}`>,
-): Record<`p${string}`, string | number | boolean | Buffer | null> {
-	const values: Record<`p${string}`, string | number | boolean | Buffer | null> = {}
+): Record<`p${string}`, string | number | boolean | Uint8Array | null> {
+	const values: Record<`p${string}`, string | number | boolean | Uint8Array | null> = {}
 
 	for (const property of model.properties) {
 		const propertyValue = value[property.name]
@@ -88,7 +88,7 @@ export function encodePrimitiveValue(
 		}
 	} else if (property.type === "boolean") {
 		if (typeof value === "boolean") {
-			return value ? 1 : 0
+			return value ? true : false
 		} else {
 			throw new TypeError(`${modelName}/${property.name} must be a boolean`)
 		}
@@ -124,7 +124,7 @@ export function encodeReferenceValue(
 
 export function decodeRecord(
 	model: Model,
-	record: Record<string, string | number | boolean | Buffer | null>,
+	record: Record<string, string | number | boolean | Uint8Array | null>,
 ): ModelValue {
 	const value: ModelValue = {}
 
@@ -148,7 +148,7 @@ export function decodeRecord(
 export function decodePrimaryKeyValue(
 	modelName: string,
 	property: PrimaryKeyProperty,
-	value: string | number | boolean | Buffer | null,
+	value: string | number | boolean | Uint8Array | null,
 ): PrimaryKeyValue {
 	if (typeof value !== "string") {
 		throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected string)`)
@@ -195,8 +195,8 @@ export function decodePrimitiveValue(modelName: string, property: PrimitivePrope
 			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected Uint8Array)`)
 		}
 	} else if (property.type == "boolean") {
-		if (typeof value === "number") {
-			return value === 1
+		if (typeof value === "boolean") {
+			return value === true
 		} else {
 			console.error("expected boolean, got", value)
 			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected boolean)`)

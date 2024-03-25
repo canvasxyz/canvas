@@ -25,7 +25,7 @@ import {
 	decodeReferenceValue,
 } from "./encoding.js"
 import { isNotExpression, isLiteralExpression, isRangeExpression } from "../query.js"
-import { assert, mapValues, signalInvalidType, validateModelValue, zip } from "../utils.js"
+import { assert, mapValues, mapValuesAsync, signalInvalidType, validateModelValue, zip } from "../utils.js"
 
 const primitiveColumnTypes = {
 	integer: "INTEGER",
@@ -79,10 +79,11 @@ export class ModelAPI {
 	public static async initialize(client: pg.Client, model: Model, clear: boolean = true) {
 		let primaryKeyIndex: number | null = null
 		let primaryKey: PrimaryKeyProperty | null = null
-		let columns: string[] = []
-		let columnNames: `"${string}"`[] = []
-		let relations: Record<string, RelationAPI> = {}
 		let primaryKeyName: string | null
+
+		const columns: string[] = []
+		const columnNames: `"${string}"`[] = []
+		const relations: Record<string, RelationAPI> = {}
 
 		for (const [i, property] of model.properties.entries()) {
 			if (property.kind === "primary" || property.kind === "primitive" || property.kind === "reference") {
@@ -111,10 +112,8 @@ export class ModelAPI {
 
 		assert(primaryKey !== null, "expected primaryKey !== null")
 		assert(primaryKeyIndex !== null, "expected primaryKeyIndex !== null")
-		// primaryKeyName = columnNames[primaryKeyIndex]
-		primaryKeyName = primaryKey.name
 
-		const api = new ModelAPI(client, model, columns, columnNames, relations, primaryKeyName)
+		const api = new ModelAPI(client, model, columns, columnNames, relations, primaryKey.name)
 
 		// Create record table
 		if (clear) {
@@ -123,9 +122,10 @@ export class ModelAPI {
 		await client.query(`CREATE TABLE IF NOT EXISTS "${api.#table}" (${api.#columns.join(", ")})`)
 
 		// Create indexes
+		// TODO: optimize to single query
 		for (const index of model.indexes) {
 			const indexName = `${model.name}/${index.join("/")}`
-			const indexColumns = index.map((name) => `'${name}'`)
+			const indexColumns = index.map((name) => `"${name}"`)
 			await client.query(`CREATE INDEX IF NOT EXISTS "${indexName}" ON "${api.#table}" (${indexColumns.join(", ")})`)
 		}
 
@@ -142,10 +142,10 @@ export class ModelAPI {
 			return null
 		}
 
+		const relations = await mapValuesAsync(this.#relations, (api) => api.get(key))
 		return {
 			...decodeRecord(this.model, rows[0]),
-			// ...mapValues(this.#relations, (api) => api.get(key)),
-			// TODO 4
+			...relations,
 		}
 	}
 
@@ -155,7 +155,7 @@ export class ModelAPI {
 		assert(typeof key === "string", 'expected typeof primaryKey === "string"')
 
 		// encodeRecordParams
-		const values: Array<string | number | boolean | Buffer | null> = []
+		const values: Array<string | number | boolean | Uint8Array | null> = []
 		for (const property of this.model.properties) {
 			const propertyValue = value[property.name]
 			if (propertyValue === undefined) {
@@ -188,7 +188,7 @@ export class ModelAPI {
 			const insertParams = this.#columnNames.map((name: string, i: number) => `$${i + 1}`)
 
 			await this.client.query<{}, any[]>(
-				`INSERT INTO "${this.#table}" (${insertNames}) VALUES (${insertParams})`,
+				`INSERT INTO "${this.#table}" (${insertNames}) VALUES (${insertParams}) ON CONFLICT DO NOTHING`,
 				values,
 			)
 		} else {
@@ -201,20 +201,22 @@ export class ModelAPI {
 			)
 		}
 
+		// TODO: optimize to single query
 		for (const [name, relation] of Object.entries(this.#relations)) {
 			if (existingRecord !== null) {
-				relation.delete(key)
+				await relation.delete(key)
 			}
 
-			relation.add(key, value[name])
+			await relation.add(key, value[name])
 		}
 	}
 
 	public async delete(key: string) {
 		await this.client.query(`DELETE FROM "${this.#table}" WHERE "${this.#primaryKeyName}" = $1`, [key])
 
+		// TODO: optimize to single query
 		for (const relation of Object.values(this.#relations)) {
-			relation.delete(key)
+			await relation.delete(key)
 		}
 	}
 
@@ -230,10 +232,11 @@ export class ModelAPI {
 		for (const row of rows) {
 			const key = row[this.#primaryKeyName]
 			assert(typeof key === "string", 'expected typeof key === "string"')
+			// TODO: optimize to single query
+			const relations = await mapValuesAsync(this.#relations, (api) => api.get(key))
 			const value = {
 				...decodeRecord(this.model, row),
-				// ...mapValues(this.#relations, (api) => api.get(key)),
-				// TODO 3
+				...relations,
 			}
 
 			yield value
@@ -268,9 +271,9 @@ export class ModelAPI {
 			)
 
 			if (direction === "asc") {
-				sql.push(`ORDER BY "${name}" ASC`)
+				sql.push(`ORDER BY "${name}" ASC NULLS FIRST`)
 			} else if (direction === "desc") {
-				sql.push(`ORDER BY "${name}" DESC`)
+				sql.push(`ORDER BY "${name}" DESC NULLS LAST`)
 			} else {
 				throw new Error("invalid orderBy direction")
 			}
@@ -278,18 +281,22 @@ export class ModelAPI {
 
 		// LIMIT
 		if (typeof query.limit === "number") {
-			sql.push(`LIMIT :${params.length + 1}`)
+			sql.push(`LIMIT $${params.length + 1}`)
 			params.push(query.limit)
 		}
 
 		// OFFSET
 		if (typeof query.offset === "number") {
-			sql.push(`LIMIT :${params.length + 1}`)
+			sql.push(`LIMIT $${params.length + 1}`)
 			params.push(query.offset)
 		}
 
-		assert(typeof query.select !== "undefined", "modelDB.query must be a SELECT")
-		const results = await this.client.query<typeof query.select, any[]>(sql.join(" "), params)
+		console.log(sql.join(" "), params)
+
+		const results = await this.client.query<Record<string, string | number | boolean | Uint8Array | null>, any[]>(
+			sql.join(" "),
+			params,
+		)
 		const finalResults = []
 
 		for (const record of results.rows) {
@@ -312,6 +319,7 @@ export class ModelAPI {
 				}
 			}
 
+			// TODO: optimize to single query
 			for (const relation of relations) {
 				value[relation.property] = await this.#relations[relation.property].get(key)
 			}
@@ -370,7 +378,7 @@ export class ModelAPI {
 					}
 
 					const p = ++i
-					params[p] = expression
+					params[p - 1] = expression
 					return [`"${name}" = $${p}`]
 				} else if (isNotExpression(expression)) {
 					const { neq: value } = expression
@@ -379,7 +387,7 @@ export class ModelAPI {
 					}
 
 					const p = ++i
-					params[p] = value
+					params[p - 1] = value
 					return [`"${name}" != $${p}`]
 				} else if (isRangeExpression(expression)) {
 					const keys = Object.keys(expression) as (keyof RangeExpression)[]
@@ -390,7 +398,7 @@ export class ModelAPI {
 						}
 
 						const p = ++i
-						params[p] = value
+						params[p - 1] = value
 						switch (key) {
 							case "gt":
 								return [`"${name}" > $${p}`]
@@ -416,7 +424,7 @@ export class ModelAPI {
 						throw new Error("invalid primitive value (expected null | number | string | Uint8Array)")
 					} else {
 						const p = ++i
-						params[p] = expression instanceof Uint8Array ? Buffer.from(expression) : expression
+						params[p - 1] = expression instanceof Uint8Array ? Buffer.from(expression) : expression
 						return [`"${name}" = $${p}`]
 					}
 				} else if (isNotExpression(expression)) {
@@ -427,7 +435,7 @@ export class ModelAPI {
 						throw new Error("invalid primitive value (expected null | number | string | Uint8Array)")
 					} else {
 						const p = ++i
-						params[p] = value instanceof Uint8Array ? Buffer.from(value) : value
+						params[p - 1] = value instanceof Uint8Array ? Buffer.from(value) : value
 						if (property.optional) {
 							return [`("${name}" ISNULL OR "${name}" != $${p})`]
 						} else {
@@ -452,7 +460,7 @@ export class ModelAPI {
 						}
 
 						const p = ++i
-						params[p] = value instanceof Uint8Array ? Buffer.from(value) : value
+						params[p - 1] = value instanceof Uint8Array ? Buffer.from(value) : value
 						switch (key) {
 							case "gt":
 								return [`("${name}" NOTNULL) AND ("${name}" > $${p})`]
@@ -474,7 +482,7 @@ export class ModelAPI {
 						return [`"${name}" ISNULL`]
 					} else if (typeof reference === "string") {
 						const p = ++i
-						params[p] = reference
+						params[p - 1] = reference
 						return [`"${name}" = $${p}`]
 					} else {
 						throw new Error("invalid reference value (expected string | null)")
@@ -485,7 +493,7 @@ export class ModelAPI {
 						return [`"${name}" NOTNULL`]
 					} else if (typeof reference === "string") {
 						const p = ++i
-						params[p] = reference
+						params[p - 1] = reference
 						return [`"${name}" != $${p}`]
 					} else {
 						throw new Error("invalid reference value (expected string | null)")
@@ -504,7 +512,7 @@ export class ModelAPI {
 					for (const [j, reference] of references.entries()) {
 						assert(typeof reference === "string", "invalid relation value (expected string[])")
 						const p = ++i
-						params[p] = reference
+						params[p - 1] = reference
 						targets.push(
 							`"${this.#primaryKeyName}" IN (SELECT _source FROM "${relationTable}" WHERE (_target = $${p}))`,
 						)
@@ -517,7 +525,7 @@ export class ModelAPI {
 					for (const [j, reference] of references.entries()) {
 						assert(typeof reference === "string", "invalid relation value (expected string[])")
 						const p = ++i
-						params[p] = reference
+						params[p - 1] = reference
 						targets.push(
 							`"${this.#primaryKeyName}" NOT IN (SELECT _source FROM "${relationTable}" WHERE (_target = $${p}))`,
 						)
@@ -572,7 +580,7 @@ export class RelationAPI {
 
 	public async get(source: string): Promise<string[]> {
 		const results = await this.client.query<{ _target: string }>(
-			`SELECT _target FROM "${this.table}" WHERE _source = :$1`,
+			`SELECT _target FROM "${this.table}" WHERE _source = $1`,
 			[source],
 		)
 		return results.rows.map((result) => result._target)
@@ -580,6 +588,7 @@ export class RelationAPI {
 
 	public async add(source: string, targets: PropertyValue) {
 		assert(Array.isArray(targets), "expected string[]")
+		// TODO: optimize to single query
 		for (const target of targets) {
 			assert(typeof target === "string", "expected string[]")
 			await this.client.query(`INSERT INTO "${this.table}" (_source, _target) VALUES ($1, $2)`, [source, target])
