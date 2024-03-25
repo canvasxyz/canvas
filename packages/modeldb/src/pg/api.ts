@@ -113,13 +113,13 @@ export class ModelAPI {
 		const api = new ModelAPI(client, model, columns, columnNames, relations, primaryKeyName)
 
 		// Create record table
-		client.query(`CREATE TABLE IF NOT EXISTS "${api.#table}" (${api.#columns.join(", ")})`)
+		await client.query(`CREATE TABLE IF NOT EXISTS "${api.#table}" (${api.#columns.join(", ")})`)
 
 		// Create indexes
 		for (const index of model.indexes) {
 			const indexName = `${model.name}/${index.join("/")}`
 			const indexColumns = index.map((name) => `'${name}'`)
-			client.query(`CREATE INDEX IF NOT EXISTS "${indexName}" ON "${api.#table}" (${indexColumns.join(", ")})`)
+			await client.query(`CREATE INDEX IF NOT EXISTS "${indexName}" ON "${api.#table}" (${indexColumns.join(", ")})`)
 		}
 
 		return api
@@ -536,27 +536,29 @@ export class RelationAPI {
 	public readonly sourceIndex = `${this.relation.source}/${this.relation.property}/source`
 	public readonly targetIndex = `${this.relation.source}/${this.relation.property}/target`
 
-	public static async initialize(db: pg.Client, relation: Relation) {
+	public static async initialize(client: pg.Client, relation: Relation) {
 		// Initialize tables
-		const relationApi = new RelationAPI(db, relation)
+		const relationApi = new RelationAPI(client, relation)
 		const columns = [`_source TEXT NOT NULL`, `_target TEXT NOT NULL`]
-		await db.query(`CREATE TABLE IF NOT EXISTS "${relationApi.table}" (${columns.join(", ")})`)
-		await db.query(`CREATE INDEX IF NOT EXISTS "${relationApi.sourceIndex}" ON "${relationApi.table}" (_source)`)
+
+		await client.query(`CREATE TABLE IF NOT EXISTS "${relationApi.table}" (${columns.join(", ")})`)
+		await client.query(`CREATE INDEX IF NOT EXISTS "${relationApi.sourceIndex}" ON "${relationApi.table}" (_source)`)
 		if (relation.indexed) {
-			await db.query(`CREATE INDEX IF NOT EXISTS "${relationApi.targetIndex}" ON "${relationApi.table}" (_target)`)
+			await client.query(`CREATE INDEX IF NOT EXISTS "${relationApi.targetIndex}" ON "${relationApi.table}" (_target)`)
 		}
+
 		return relationApi
 	}
 
 	public constructor(
-		readonly db: pg.Client,
+		readonly client: pg.Client,
 		readonly relation: Relation,
 	) {
-		this.db = db
+		this.client = client
 	}
 
 	public async get(source: string): Promise<string[]> {
-		const results = await this.db.query<{ _target: string }>(
+		const results = await this.client.query<{ _target: string }>(
 			`SELECT _target FROM "${this.table}" WHERE _source = :$1`,
 			[source],
 		)
@@ -567,11 +569,11 @@ export class RelationAPI {
 		assert(Array.isArray(targets), "expected string[]")
 		for (const target of targets) {
 			assert(typeof target === "string", "expected string[]")
-			await this.db.query(`INSERT INTO "${this.table}" (_source, _target) VALUES ($1, $2)`, [source, target])
+			await this.client.query(`INSERT INTO "${this.table}" (_source, _target) VALUES ($1, $2)`, [source, target])
 		}
 	}
 
 	public async delete(source: string) {
-		await this.db.query(`DELETE FROM "${this.table}" WHERE _source = $1`, [source])
+		await this.client.query(`DELETE FROM "${this.table}" WHERE _source = $1`, [source])
 	}
 }

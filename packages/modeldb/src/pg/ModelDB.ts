@@ -20,6 +20,7 @@ export class ModelDB extends AbstractModelDB {
 
 	public static async initialize({ connectionConfig, models, indexHistory }: ModelDBOptions) {
 		const client = new pg.Client(connectionConfig)
+		await client.connect()
 
 		const modelDBConfig = parseConfig(models)
 
@@ -68,7 +69,7 @@ export class ModelDB extends AbstractModelDB {
 
 	public async close() {
 		this.log("closing")
-		this.client.end()
+		await this.client.end()
 	}
 
 	public async apply(effects: Effect[]) {
