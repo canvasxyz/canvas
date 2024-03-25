@@ -1,7 +1,7 @@
 import fs from "node:fs"
 
 import { Bound, KeyValueStore } from "@canvas-js/okra"
-import { Environment, Transaction, Tree } from "@canvas-js/okra-node"
+import { Database, Environment, Transaction, Tree } from "@canvas-js/okra-node"
 import { assert } from "@canvas-js/utils"
 
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
@@ -22,18 +22,16 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 		return gossipLog
 	}
 
-	private static getReadOnlyAPI = (txn: Transaction, dbi: number): Omit<KeyValueStore, "set" | "delete"> => ({
-		get: (key) => txn.get(key, { dbi }),
-		entries: (lowerBound = null, upperBound = null, options = {}) =>
-			txn.entries(lowerBound, upperBound, { ...options, dbi }),
+	private static getReadOnlyAPI = (db: Database): Omit<KeyValueStore, "set" | "delete"> => ({
+		get: (key) => db.get(key),
+		entries: (lowerBound = null, upperBound = null, options = {}) => db.entries(lowerBound, upperBound, options),
 	})
 
-	private static getReadWriteAPI = (txn: Transaction, dbi: number): KeyValueStore => ({
-		get: (key) => txn.get(key, { dbi }),
-		set: (key, value) => txn.set(key, value, { dbi }),
-		delete: (key) => txn.delete(key, { dbi }),
-		entries: (lowerBound = null, upperBound = null, options = {}) =>
-			txn.entries(lowerBound, upperBound, { ...options, dbi }),
+	private static getReadWriteAPI = (db: Database): KeyValueStore => ({
+		get: (key) => db.get(key),
+		set: (key, value) => db.set(key, value),
+		delete: (key) => db.delete(key),
+		entries: (lowerBound = null, upperBound = null, options = {}) => db.entries(lowerBound, upperBound, options),
 	})
 
 	private constructor(private readonly env: Environment, init: GossipLogInit<Payload, Result>) {
@@ -53,7 +51,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 		const txn = new Transaction(this.env, { readOnly: true })
 
 		try {
-			const tree = new Tree(txn, { dbi: "messages" })
+			const tree = new Tree(txn, "messages")
 			for await (const node of tree.nodes(0, lowerBound ?? { key: null, inclusive: false }, upperBound, options)) {
 				assert(node.key !== null, "expected node.key !== null")
 				assert(node.value !== undefined, "expected node.value !== undefined")
@@ -67,16 +65,15 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 	public async read<T>(callback: (txn: ReadOnlyTransaction) => Promise<T>): Promise<T> {
 		this.log("opening read-only transaction")
 		return await this.env.read(async (txn) => {
-			const headsDBI = txn.openDatabase("heads")
-			const messagesDBI = txn.openDatabase("messages")
-			const messages = new Tree(txn, { dbi: messagesDBI })
+			const heads = txn.database("heads")
+			const messages = new Tree(txn, "messages")
 			return await callback({
-				ancestors: this.indexAncestors ? GossipLog.getReadOnlyAPI(txn, txn.openDatabase("ancestors")) : undefined,
+				ancestors: this.indexAncestors ? GossipLog.getReadOnlyAPI(txn.database("ancestors")) : undefined,
 				messages,
 				heads: {
-					get: (key) => txn.get(key, { dbi: headsDBI }),
+					get: (key) => heads.get(key),
 					entries: (lowerBound = null, upperBound = null, options = {}) =>
-						txn.entries(lowerBound, upperBound, { ...options, dbi: headsDBI }),
+						heads.entries(lowerBound, upperBound, options),
 				},
 			})
 		})
@@ -85,11 +82,11 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 	public async write<T>(callback: (txn: ReadWriteTransaction) => Promise<T>): Promise<T> {
 		this.log("opening read-write transaction")
 		return await this.env.write(async (txn) => {
-			const messages = new Tree(txn, { dbi: txn.openDatabase("messages") })
+			const messages = new Tree(txn, "messages")
 			return await callback({
 				messages,
-				heads: GossipLog.getReadWriteAPI(txn, txn.openDatabase("heads")),
-				ancestors: this.indexAncestors ? GossipLog.getReadWriteAPI(txn, txn.openDatabase("ancestors")) : undefined,
+				heads: GossipLog.getReadWriteAPI(txn.database("heads")),
+				ancestors: this.indexAncestors ? GossipLog.getReadWriteAPI(txn.database("ancestors")) : undefined,
 			})
 		})
 	}
