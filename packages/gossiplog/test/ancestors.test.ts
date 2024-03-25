@@ -150,7 +150,7 @@ test("simulate a randomly partitioned network, logs on postgres", async (t) => {
 					password: "postgres",
 					port: parseInt(process.env.POSTGRES_PORT, 10),
 					host: process.env.POSTGRES_HOST,
-				}
+			  }
 			: `postgresql://localhost:5432/${db}`
 
 	const logs: AbstractGossipLog<string, void>[] = await Promise.all([

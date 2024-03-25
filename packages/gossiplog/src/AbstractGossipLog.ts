@@ -470,10 +470,10 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 						const links = new Set<string>()
 						for (const child of ancestorLinks[i - 1]) {
 							const [childClock] = decodeClock(child)
-							if (Number(childClock) <= ancestorClock) {
+							if (childClock <= ancestorClock) {
 								links.add(decodeId(child))
 							} else {
-								assert(Number(childClock) <= ancestorClocks[i - 1], "expected childClock <= ancestorClocks[i - 1]")
+								assert(childClock <= ancestorClocks[i - 1], "expected childClock <= ancestorClocks[i - 1]")
 								if (txn.getAncestors !== undefined) {
 									await this.#getAncestorsByTxn(txn, child, ancestorClock, links)
 								} else {
@@ -490,8 +490,8 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 			}
 		}
 
-		for (const [childId, signedMessage] of this.mempool.observe(id)) {
-			await this.#insert(txn, childId, signedMessage.signature, signedMessage.message)
+		for (const [childId, { signature, message }] of this.mempool.observe(id)) {
+			await this.#insert(txn, childId, signature, message)
 		}
 
 		return result
