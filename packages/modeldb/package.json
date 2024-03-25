@@ -13,7 +13,7 @@
   "types": "./lib/index.d.ts",
   "sideEffects": false,
   "scripts": {
-    "test": "ava"
+    "test": "ava --serial"
   },
   "exports": {
     ".": "./lib/index.js",

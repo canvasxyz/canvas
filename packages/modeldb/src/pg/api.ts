@@ -51,7 +51,7 @@ function getPropertyColumnType(property: Property): string {
 	}
 }
 
-const getPropertyColumn = (property: Property) => `'${property.name}' ${getPropertyColumnType(property)}`
+const getPropertyColumn = (property: Property) => `"${property.name}" ${getPropertyColumnType(property)}`
 
 export class ModelAPI {
 	#table = this.model.name

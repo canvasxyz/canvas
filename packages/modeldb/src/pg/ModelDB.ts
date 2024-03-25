@@ -22,14 +22,19 @@ export class ModelDB extends AbstractModelDB {
 		const client = new pg.Client(connectionConfig)
 		await client.connect()
 
-		const modelDBConfig = parseConfig(models)
+		try {
+			const modelDBConfig = parseConfig(models)
 
-		const modelDBAPIs: Record<string, ModelAPI> = {}
-		for (const model of Object.values(modelDBConfig.models)) {
-			modelDBAPIs[model.name] = await ModelAPI.initialize(client, model)
+			const modelDBAPIs: Record<string, ModelAPI> = {}
+			for (const model of Object.values(modelDBConfig.models)) {
+				modelDBAPIs[model.name] = await ModelAPI.initialize(client, model)
+			}
+
+			return new ModelDB(client, modelDBConfig, modelDBAPIs, indexHistory)
+		} catch (e) {
+			await client.end()
+			throw e
 		}
-
-		return new ModelDB(client, modelDBConfig, modelDBAPIs, indexHistory)
 	}
 
 	constructor(

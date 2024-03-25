@@ -3,7 +3,10 @@ import type { ModelsInit } from "@canvas-js/modeldb"
 import { testOnModelDB } from "./utils.js"
 
 testOnModelDB("create modeldb with no models", async (t, openDB) => {
-	await t.notThrowsAsync(() => openDB({}))
+	await t.notThrowsAsync(async () => {
+		const db = await openDB({})
+		await db.close()
+	})
 })
 
 testOnModelDB("create modeldb with a model with valid fields", async (t, openDB) => {
@@ -17,9 +20,10 @@ testOnModelDB("create modeldb with a model with valid fields", async (t, openDB)
 		},
 	} satisfies ModelsInit
 
-	await openDB(models)
-	t.pass()
-	// await t.notThrowsAsync(() => openDB(models))
+	await t.notThrowsAsync(async () => {
+		const db = await openDB(models)
+		await db.close()
+	})
 })
 
 testOnModelDB("create modeldb with a model with invalid fields should fail", async (t, openDB) => {
