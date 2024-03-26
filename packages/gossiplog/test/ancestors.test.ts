@@ -158,9 +158,9 @@ test("simulate a randomly partitioned network, logs on postgres", async (t) => {
 	}
 
 	const logs: AbstractGossipLog<string, void>[] = await Promise.all([
-		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, getPgConfig("test")),
-		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, getPgConfig("test2")),
-		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, getPgConfig("test3")),
+		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, getPgConfig("test"), true),
+		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, getPgConfig("test2"), true),
+		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, getPgConfig("test3"), true),
 	])
 
 	const maxMessageCount = 128

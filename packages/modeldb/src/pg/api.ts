@@ -76,7 +76,7 @@ export class ModelAPI {
 		this.#primaryKeyName = primaryKeyName
 	}
 
-	public static async initialize(client: pg.Client, model: Model, clear: boolean = true) {
+	public static async initialize(client: pg.Client, model: Model, clear: boolean = false) {
 		let primaryKeyIndex: number | null = null
 		let primaryKey: PrimaryKeyProperty | null = null
 		let primaryKeyName: string | null

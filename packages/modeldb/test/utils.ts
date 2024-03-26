@@ -37,8 +37,8 @@ export const testOnModelDB = (
 		t.teardown(() => mdb.close())
 		return mdb
 	})
-	test(`Postgres - ${name}`, macro, async (t, models) => {
-		const mdb = await ModelDBPostgres.initialize({ connectionConfig, models })
+	test.serial(`Postgres - ${name}`, macro, async (t, models) => {
+		const mdb = await ModelDBPostgres.initialize({ connectionConfig, models, clear: true })
 		t.teardown(() => mdb.close())
 		return mdb
 	})

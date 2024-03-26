@@ -10,6 +10,7 @@ export interface ModelDBOptions {
 	connectionConfig: string | pg.ConnectionConfig
 	models: ModelsInit
 	indexHistory?: Record<string, boolean>
+	clear?: boolean
 }
 
 export class ModelDB extends AbstractModelDB {
@@ -18,7 +19,7 @@ export class ModelDB extends AbstractModelDB {
 	#models: Record<string, ModelAPI> = {}
 	#doTransaction: (effects: Effect[]) => void
 
-	public static async initialize({ connectionConfig, models, indexHistory }: ModelDBOptions) {
+	public static async initialize({ connectionConfig, models, indexHistory, clear }: ModelDBOptions) {
 		const client = new pg.Client(connectionConfig)
 		await client.connect()
 
@@ -27,7 +28,7 @@ export class ModelDB extends AbstractModelDB {
 
 			const modelDBAPIs: Record<string, ModelAPI> = {}
 			for (const model of Object.values(modelDBConfig.models)) {
-				modelDBAPIs[model.name] = await ModelAPI.initialize(client, model)
+				modelDBAPIs[model.name] = await ModelAPI.initialize(client, model, clear)
 			}
 
 			return new ModelDB(client, modelDBConfig, modelDBAPIs, indexHistory)
