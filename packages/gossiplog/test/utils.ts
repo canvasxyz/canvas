@@ -69,7 +69,7 @@ export const testPlatforms = (
 		t.teardown(() => log.close())
 		return log
 	})
-	test(`Postgres - ${name}`, macro, async (t, init) => {
+	test.serial(`Postgres - ${name}`, macro, async (t, init) => {
 		const log = await GossipLogPostgres.open(init, pgUrl)
 		t.teardown(() => log.close())
 		return log
