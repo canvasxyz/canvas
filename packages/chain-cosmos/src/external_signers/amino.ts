@@ -21,7 +21,7 @@ export const createAminoSigner = (signer: AminoSigner) => ({
 	getChainId: signer.getChainId,
 	sign: async (cosmosMessage: CosmosMessage, address: string, chainId: string) => {
 		const msg = cbor.encode(cosmosMessage)
-		const signDoc = await getSessionSignatureData(msg, address)
+		const signDoc = getSessionSignatureData(msg, address)
 		const signRes = await signer.signAmino(chainId, address, signDoc)
 		const stdSig = signRes.signature
 
@@ -38,7 +38,7 @@ export const verifyAmino = async (message: CosmosMessage, { signature }: AminoSi
 
 	// the payload can either be signed directly, or encapsulated in a SignDoc
 	const encodedMessage = cbor.encode(message)
-	const signDocPayload = await getSessionSignatureData(encodedMessage, walletAddress)
+	const signDocPayload = getSessionSignatureData(encodedMessage, walletAddress)
 	const signDocDigest = sha256(serializeSignDoc(signDocPayload))
 
 	// try with both values of the recovery bit
@@ -55,3 +55,7 @@ export const verifyAmino = async (message: CosmosMessage, { signature }: AminoSi
 }
 
 export type AminoSignedSessionData = Awaited<ReturnType<ReturnType<typeof createAminoSigner>["sign"]>>
+
+export function validateAminoSignedSessionData(data: any): data is AminoSignedSessionData {
+	return data.signatureType == "amino" && data.signature instanceof Uint8Array
+}
