@@ -1,3 +1,4 @@
+import { EthereumSignedSessionData } from "./external_signers/ethereum.js"
 import type { CosmosSessionData } from "./types.js"
 
 export const addressPattern = /^cosmos:([0-9a-z\-_]+):([a-zA-Fa-f0-9]+)$/
@@ -10,16 +11,6 @@ export function parseAddress(address: string): [chain: string, walletAddress: st
 
 	const [_, chain, walletAddress] = result
 	return [chain, walletAddress]
-}
-
-export function validateSessionData(data: unknown): data is CosmosSessionData {
-	try {
-		extractSessionData(data)
-	} catch (error) {
-		return false
-	}
-
-	return true
 }
 
 function extractSessionData(data: any): CosmosSessionData {
@@ -58,6 +49,20 @@ function extractSessionData(data: any): CosmosSessionData {
 			return {
 				signatureType: "ethereum",
 				signature: signature,
+			}
+		}
+	} else if (data.signatureType == "arbitrary") {
+		const signature = data.signature
+		if (signature.pub_key instanceof Object && signature.signature instanceof Uint8Array) {
+			return {
+				signatureType: "arbitrary",
+				signature: {
+					pub_key: {
+						type: signature.pub_key.type,
+						value: signature.pub_key.value,
+					},
+					signature: signature.signature,
+				},
 			}
 		}
 	}

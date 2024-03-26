@@ -55,3 +55,7 @@ export const verifyAmino = async (message: CosmosMessage, { signature }: AminoSi
 }
 
 export type AminoSignedSessionData = Awaited<ReturnType<ReturnType<typeof createAminoSigner>["sign"]>>
+
+export function validateAminoSignedSessionData(data: any): data is AminoSignedSessionData {
+	return data.signatureType == "amino" && data.signature instanceof Uint8Array
+}
