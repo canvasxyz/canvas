@@ -115,19 +115,21 @@ export class ModelAPI {
 
 		const api = new ModelAPI(client, model, columns, columnNames, relations, primaryKey.name)
 
+		const queries = []
+
 		// Create record table
 		if (clear) {
-			await client.query(`DROP TABLE IF EXISTS "${api.#table}"`)
+			queries.push(`DROP TABLE IF EXISTS "${api.#table}"`)
 		}
-		await client.query(`CREATE TABLE IF NOT EXISTS "${api.#table}" (${api.#columns.join(", ")})`)
+		queries.push(`CREATE TABLE IF NOT EXISTS "${api.#table}" (${api.#columns.join(", ")})`)
 
 		// Create indexes
-		// TODO: optimize to single query
 		for (const index of model.indexes) {
 			const indexName = `${model.name}/${index.join("/")}`
 			const indexColumns = index.map((name) => `"${name}"`)
-			await client.query(`CREATE INDEX IF NOT EXISTS "${indexName}" ON "${api.#table}" (${indexColumns.join(", ")})`)
+			queries.push(`CREATE INDEX IF NOT EXISTS "${indexName}" ON "${api.#table}" (${indexColumns.join(", ")})`)
 		}
+		await client.query(queries.join("; "))
 
 		return api
 	}
@@ -169,13 +171,14 @@ export class ModelAPI {
 			} else if (property.kind === "reference") {
 				values.push(encodeReferenceValue(this.model.name, property, value[property.name]))
 			} else if (property.kind === "relation") {
-				assert(Array.isArray(value[property.name])) // ?
+				assert(Array.isArray(value[property.name]))
 				continue
 			} else {
 				signalInvalidType(property)
 			}
 		}
 
+		// TODO: convert to upsert for fewer queries
 		const existingRecord = (
 			await this.client.query(
 				`SELECT ${this.#columnNames.join(", ")} FROM "${this.#table}" WHERE "${this.#primaryKeyName}" = $1`,
@@ -201,7 +204,6 @@ export class ModelAPI {
 			)
 		}
 
-		// TODO: optimize to single query
 		for (const [name, relation] of Object.entries(this.#relations)) {
 			if (existingRecord !== null) {
 				await relation.delete(key)
@@ -212,9 +214,9 @@ export class ModelAPI {
 	}
 
 	public async delete(key: string) {
+		// TODO: optimize to single query
 		await this.client.query(`DELETE FROM "${this.#table}" WHERE "${this.#primaryKeyName}" = $1`, [key])
 
-		// TODO: optimize to single query
 		for (const relation of Object.values(this.#relations)) {
 			await relation.delete(key)
 		}
@@ -226,13 +228,13 @@ export class ModelAPI {
 	}
 
 	public async *values(): AsyncIterable<ModelValue> {
+		// TODO: optimize to single query
 		// TODO: use iterable query
 		const { rows } = await this.client.query(`SELECT ${this.#columnNames.join(", ")} FROM "${this.#table}"`)
 
 		for (const row of rows) {
 			const key = row[this.#primaryKeyName]
 			assert(typeof key === "string", 'expected typeof key === "string"')
-			// TODO: optimize to single query
 			const relations = await mapValuesAsync(this.#relations, (api) => api.get(key))
 			const value = {
 				...decodeRecord(this.model, row),
@@ -244,7 +246,6 @@ export class ModelAPI {
 	}
 
 	public async query(query: QueryParams): Promise<ModelValue[]> {
-		// See https://www.sqlite.org/lang_select.html for railroad diagram
 		const sql: string[] = []
 
 		// SELECT
@@ -290,8 +291,6 @@ export class ModelAPI {
 			sql.push(`LIMIT $${params.length + 1}`)
 			params.push(query.offset)
 		}
-
-		console.log(sql.join(" "), params)
 
 		const results = await this.client.query<Record<string, string | number | boolean | Uint8Array | null>, any[]>(
 			sql.join(" "),
@@ -432,7 +431,7 @@ export class ModelAPI {
 					if (value === null) {
 						return [`"${name}" NOTNULL`]
 					} else if (Array.isArray(value)) {
-						throw new Error("invalid primitive value (expected null | number | string | Uint8Array)")
+						throw new Error("invalid primitive value (expected null | number | string | boolean | Uint8Array)")
 					} else {
 						const p = ++i
 						params[p - 1] = value instanceof Uint8Array ? Buffer.from(value) : value
@@ -559,14 +558,17 @@ export class RelationAPI {
 		const relationApi = new RelationAPI(client, relation)
 		const columns = [`_source TEXT NOT NULL`, `_target TEXT NOT NULL`]
 
+		const queries = []
+
 		if (clear) {
-			await client.query(`DROP TABLE IF EXISTS "${relationApi.table}"`)
+			queries.push(`DROP TABLE IF EXISTS "${relationApi.table}"`)
 		}
-		await client.query(`CREATE TABLE IF NOT EXISTS "${relationApi.table}" (${columns.join(", ")})`)
-		await client.query(`CREATE INDEX IF NOT EXISTS "${relationApi.sourceIndex}" ON "${relationApi.table}" (_source)`)
+		queries.push(`CREATE TABLE IF NOT EXISTS "${relationApi.table}" (${columns.join(", ")})`)
+		queries.push(`CREATE INDEX IF NOT EXISTS "${relationApi.sourceIndex}" ON "${relationApi.table}" (_source)`)
 		if (relation.indexed) {
-			await client.query(`CREATE INDEX IF NOT EXISTS "${relationApi.targetIndex}" ON "${relationApi.table}" (_target)`)
+			queries.push(`CREATE INDEX IF NOT EXISTS "${relationApi.targetIndex}" ON "${relationApi.table}" (_target)`)
 		}
+		await client.query(queries.join(";\n"))
 
 		return relationApi
 	}
