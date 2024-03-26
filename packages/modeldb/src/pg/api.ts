@@ -205,7 +205,7 @@ export class ModelAPI {
 		}
 
 		for (const [name, relation] of Object.entries(this.#relations)) {
-			if (existingRecord !== null) {
+			if (existingRecord !== undefined) {
 				await relation.delete(key)
 			}
 
