@@ -3,7 +3,7 @@ import { nanoid } from "nanoid"
 import { testOnModelDB } from "./utils.js"
 
 testOnModelDB("query (select)", async (t, openDB) => {
-	const db = await openDB({
+	const db = await openDB(t, {
 		user: { id: "primary", isModerator: "boolean", name: "string?" },
 	})
 
@@ -29,7 +29,7 @@ testOnModelDB("query (select)", async (t, openDB) => {
 })
 
 testOnModelDB("query (where)", async (t, openDB) => {
-	const db = await openDB({
+	const db = await openDB(t, {
 		user: { address: "primary", name: "string?" },
 	})
 
@@ -87,7 +87,7 @@ testOnModelDB("query (where)", async (t, openDB) => {
 })
 
 testOnModelDB("query (order by)", async (t, openDB) => {
-	const db = await openDB({
+	const db = await openDB(t, {
 		user: { address: "primary", name: "string?" },
 	})
 
@@ -132,7 +132,7 @@ testOnModelDB("query (order by)", async (t, openDB) => {
 })
 
 testOnModelDB("query should not be able to query on json fields", async (t, openDB) => {
-	const db = await openDB({
+	const db = await openDB(t, {
 		user: { address: "primary", metadata: "json" },
 	})
 	await t.throwsAsync(async () => {

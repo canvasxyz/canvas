@@ -14,7 +14,7 @@ const models: ModelsInit = {
 }
 
 testOnModelDB("set and get reference and relation values", async (t, openDB) => {
-	const db = await openDB(models)
+	const db = await openDB(t, models)
 
 	await db.set("user", { address: "a" })
 	await db.set("user", { address: "b" })
@@ -27,7 +27,7 @@ testOnModelDB("set and get reference and relation values", async (t, openDB) => 
 })
 
 testOnModelDB("select reference and relation values", async (t, openDB) => {
-	const db = await openDB(models)
+	const db = await openDB(t, models)
 
 	await db.set("user", { address: "a" })
 	await db.set("user", { address: "b" })
@@ -56,7 +56,7 @@ testOnModelDB("select reference and relation values", async (t, openDB) => {
 })
 
 testOnModelDB("query reference values", async (t, openDB) => {
-	const db = await openDB(models)
+	const db = await openDB(t, models)
 
 	await db.set("user", { address: "a" })
 	await db.set("user", { address: "b" })
@@ -78,7 +78,7 @@ testOnModelDB("query reference values", async (t, openDB) => {
 })
 
 testOnModelDB("query filtering on relation values", async (t, openDB) => {
-	const db = await openDB(models)
+	const db = await openDB(t, models)
 
 	await db.set("user", { address: "a" })
 	await db.set("user", { address: "b" })

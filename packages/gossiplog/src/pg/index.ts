@@ -116,9 +116,9 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			console.error("Unexpected error on idle client", err)
 		})
 
-		const messages = await PostgresTree.initialize(messagesClient, { prefix: this.MESSAGES_TABLE_PREFIX, clear: true })
-		const heads = await PostgresStore.initialize(headsClient, { table: this.HEADS_TABLE, clear: true })
-		const ancestors = await PostgresStore.initialize(ancestorsClient, { table: this.ANCESTORS_TABLE, clear: true })
+		const messages = await PostgresTree.initialize(messagesClient, { prefix: this.MESSAGES_TABLE_PREFIX, clear: true }) // TODO: pass clear option
+		const heads = await PostgresStore.initialize(headsClient, { table: this.HEADS_TABLE, clear: true }) // TODO: pass clear option
+		const ancestors = await PostgresStore.initialize(ancestorsClient, { table: this.ANCESTORS_TABLE, clear: true }) // TODO: pass clear option
 
 		await ancestorsClient.query(initSql)
 

@@ -3,7 +3,7 @@ import { nanoid } from "nanoid"
 import { testOnModelDB } from "./utils.js"
 
 testOnModelDB("query (indexed where)", async (t, openDB) => {
-	const db = await openDB({
+	const db = await openDB(t, {
 		user: { address: "primary", name: "string?", $indexes: ["address", "name"] },
 	})
 
@@ -63,7 +63,7 @@ testOnModelDB("query (indexed where)", async (t, openDB) => {
 })
 
 testOnModelDB("query (indexed order by)", async (t, openDB) => {
-	const db = await openDB({
+	const db = await openDB(t, {
 		user: { address: "primary", name: "string?", $indexes: ["address", "name"] },
 	})
 
