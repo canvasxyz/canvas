@@ -92,10 +92,7 @@ export default defineConfig({
 						{
 							text: "Integrations",
 							collapsed: true,
-							items: [
-								{ text: "🚧 &nbsp;Next.js", link: "/readme-next.md" },
-								{ text: "🚧 &nbsp;ATSync", link: "/readme-atsync.md" },
-							],
+							items: [{ text: "🚧 &nbsp;Next.js", link: "/readme-next.md" }],
 						},
 					],
 				},
