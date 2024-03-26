@@ -45,9 +45,7 @@ export const ConnectLeap: React.FC<ConnectLeapProps> = ({ chainId }) => {
 				},
 			}),
 		)
-		console.log("5")
 		setThisIsConnected(true)
-		console.log("6")
 	}, [])
 
 	const disconnect = useCallback(async () => {

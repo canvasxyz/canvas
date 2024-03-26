@@ -5,19 +5,16 @@ import { fromBase64 } from "@cosmjs/encoding"
 import { getSessionSignatureData } from "../signatureData.js"
 
 const createSiwxMessage = (message: CosmosMessage): string => {
-	// this is a SIWX-style message that will be signed and displayed to the user when they sign in
-	// see https://github.com/ChainAgnostic/CAIPs/blob/main/CAIPs/caip-122.md
-	// there is no set format for this message, but it should be human-readable and contain all of the
-	// fields in the `CosmosMessage` object
-	return `
-	A Canvas app with Topic: ${message.topic} wants you to sign in with your Cosmos wallet.
-	Address: ${message.address}
-	Public Key: ${message.publicKey}
+	// This is a SIWX-style message that will be signed and displayed to
+	// the user when they sign in:
+	// https://github.com/ChainAgnostic/CAIPs/blob/main/CAIPs/caip-122.md
+	return `An application with topic "${message.topic}" wants you to sign in with your Cosmos account:
+${message.address}
 
-	Issued At: ${message.issuedAt}
-	Expiration Time: ${message.expirationTime}
-	Chain ID: ${message.chainId}
-	`
+URI: ${message.publicKey}
+Issued At: ${message.issuedAt}
+Expiration Time: ${message.expirationTime}
+Chain ID: ${message.chainId}`
 }
 
 export type ArbitrarySigner = {
