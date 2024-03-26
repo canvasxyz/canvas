@@ -1,8 +1,8 @@
 import { Secp256k1, Secp256k1Signature, Sha256 } from "@cosmjs/crypto"
 import { CosmosMessage } from "../types.js"
-import { getAdr036SignablePayload } from "./getAdr036SignablePayload.js"
 import { serializeSignDoc } from "@cosmjs/amino"
 import { fromBase64 } from "@cosmjs/encoding"
+import { getSessionSignatureData } from "../signatureData.js"
 
 const createSiwxMessage = (message: CosmosMessage): string => {
 	return "siwx message"
@@ -40,7 +40,7 @@ export const createArbitrarySigner = (signer: ArbitrarySigner) => ({
 export const verifyArbitrary = async (message: CosmosMessage, sessionData: ArbitrarySignedSessionData) => {
 	const siwxMessage = createSiwxMessage(message)
 	// how is the string encoded?
-	const signDoc = getAdr036SignablePayload(new TextEncoder().encode(siwxMessage), message.address)
+	const signDoc = getSessionSignatureData(new TextEncoder().encode(siwxMessage), message.address)
 
 	const { signature, pub_key } = sessionData.signature
 	const secpSignature = Secp256k1Signature.fromFixedLength(fromBase64(signature))
