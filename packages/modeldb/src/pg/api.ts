@@ -28,7 +28,7 @@ import { isNotExpression, isLiteralExpression, isRangeExpression } from "../quer
 import { assert, mapValues, mapValuesAsync, signalInvalidType, validateModelValue, zip } from "../utils.js"
 
 const primitiveColumnTypes = {
-	integer: "INTEGER",
+	integer: "BIGINT",
 	float: "DECIMAL",
 	string: "TEXT",
 	bytes: "BYTEA",

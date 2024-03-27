@@ -70,7 +70,7 @@ function encodePrimitiveValue(
 		if (typeof value === "number" && Number.isSafeInteger(value)) {
 			return value
 		} else {
-			throw new TypeError(`${modelName}/${property.name} must be an integer`)
+			throw new TypeError(`${modelName}/${property.name} must be a safely representable integer`)
 		}
 	} else if (property.type === "float") {
 		if (typeof value === "number") {
