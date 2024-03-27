@@ -7,7 +7,7 @@ import { assert } from "@canvas-js/utils"
 
 import { KEY_LENGTH, encodeId } from "../schema.js"
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
-import { getAncestors } from "../ancestors.js"
+import { getAncestors, isAncestor } from "../ancestors.js"
 import { cborNull } from "../utils.js"
 
 export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
@@ -76,6 +76,8 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 				getHeads: () => getHeads(heads),
 				getAncestors: async (key: Uint8Array, atOrBefore: number, results: Set<string>) =>
 					getAncestors(ancestors, key, atOrBefore, results),
+				isAncestor: (key: Uint8Array, ancestorKey: Uint8Array, visited = new Set<string>()) =>
+					isAncestor(ancestors, key, ancestorKey, visited),
 
 				ancestors: this.indexAncestors ? GossipLog.getReadOnlyAPI(txn.database("ancestors")) : undefined,
 				messages,
@@ -98,6 +100,8 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 				getHeads: () => getHeads(heads),
 				getAncestors: async (key: Uint8Array, atOrBefore: number, results: Set<string>) =>
 					getAncestors(ancestors, key, atOrBefore, results),
+				isAncestor: (key: Uint8Array, ancestorKey: Uint8Array, visited = new Set<string>()) =>
+					isAncestor(ancestors, key, ancestorKey, visited),
 
 				messages,
 				heads: GossipLog.getReadWriteAPI(heads),

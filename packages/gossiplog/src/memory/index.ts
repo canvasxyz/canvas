@@ -9,7 +9,7 @@ import { assert } from "@canvas-js/utils"
 import { KEY_LENGTH, encodeId } from "../schema.js"
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
 import { SyncDeadlockError, cborNull } from "../utils.js"
-import { getAncestors } from "../ancestors.js"
+import { getAncestors, isAncestor } from "../ancestors.js"
 
 export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
 	public static async open<Payload, Result>(init: GossipLogInit<Payload, Result>): Promise<GossipLog<Payload, Result>> {
@@ -89,6 +89,8 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 					getHeads: () => getHeads(this.heads),
 					getAncestors: async (key: Uint8Array, atOrBefore: number, results: Set<string>) =>
 						getAncestors(this.ancestors, key, atOrBefore, results),
+					isAncestor: (key: Uint8Array, ancestorKey: Uint8Array, visited = new Set<string>()) =>
+						isAncestor(this.ancestors, key, ancestorKey, visited),
 
 					messages: this.messages,
 					heads: this.heads,
@@ -127,6 +129,8 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 					getHeads: () => getHeads(this.heads),
 					getAncestors: async (key: Uint8Array, atOrBefore: number, results: Set<string>) =>
 						getAncestors(this.ancestors, key, atOrBefore, results),
+					isAncestor: (key: Uint8Array, ancestorKey: Uint8Array, visited = new Set<string>()) =>
+						isAncestor(this.ancestors, key, ancestorKey, visited),
 
 					messages: this.messages,
 					heads: this.heads,

@@ -7,14 +7,7 @@ import { TypeTransformerFunction } from "@ipld/schema/typed.js"
 import type { Signature, Action, Message, Session, SignerCache } from "@canvas-js/interfaces"
 
 import { AbstractModelDB, Effect, ModelValue, ModelsInit, lessThan } from "@canvas-js/modeldb"
-import {
-	AbstractGossipLog,
-	GossipLogConsumer,
-	ReadOnlyTransaction,
-	encodeId,
-	MAX_MESSAGE_ID,
-	MIN_MESSAGE_ID,
-} from "@canvas-js/gossiplog"
+import { GossipLogConsumer, ReadOnlyTransaction, encodeId, MAX_MESSAGE_ID, MIN_MESSAGE_ID } from "@canvas-js/gossiplog"
 
 import { assert, mapValues } from "../utils.js"
 
@@ -245,7 +238,7 @@ export abstract class AbstractRuntime {
 			const visited = new Set<string>()
 
 			for (const parent of context.message.parents) {
-				const isAncestor = await AbstractGossipLog.isAncestor(context.txn, parent, messageId, visited)
+				const isAncestor = await context.txn.isAncestor(encodeId(parent), encodeId(messageId), visited)
 				if (isAncestor) {
 					return cbor.decode<null | T>(value)
 				}

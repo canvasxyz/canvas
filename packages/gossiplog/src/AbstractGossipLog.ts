@@ -29,7 +29,7 @@ import { topicPattern, cborNull, getAncestorClocks, DelayableController } from "
 export interface ReadOnlyTransaction {
 	getHeads(): Awaitable<Uint8Array[]>
 	getAncestors: (key: Uint8Array, atOrBefore: number, results: Set<string>) => Awaitable<void>
-	isAncestor?: (key: Uint8Array, ancestorKey: Uint8Array) => Awaitable<boolean>
+	isAncestor: (key: Uint8Array, ancestorKey: Uint8Array, visited?: Set<string>) => Awaitable<boolean>
 
 	messages: Omit<KeyValueStore, "set" | "delete"> & Source
 	heads: Omit<KeyValueStore, "set" | "delete">
@@ -39,7 +39,7 @@ export interface ReadOnlyTransaction {
 export interface ReadWriteTransaction {
 	getHeads(): Awaitable<Uint8Array[]>
 	getAncestors: (key: Uint8Array, atOrBefore: number, results: Set<string>) => Awaitable<void>
-	isAncestor?: (key: Uint8Array, ancestorKey: Uint8Array) => Awaitable<boolean>
+	isAncestor: (key: Uint8Array, ancestorKey: Uint8Array, visited?: Set<string>) => Awaitable<boolean>
 
 	messages: KeyValueStore & Target
 	heads: KeyValueStore
@@ -278,80 +278,15 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 		const results = new Set<string>()
 		await this.read((txn) => txn.getAncestors(encodeId(id), atOrBefore, results))
+
 		this.log("getAncestors of %s atOrBefore %d: %o", id, atOrBefore, results)
 		return Array.from(results).sort()
 	}
 
 	public async isAncestor(id: string, ancestor: string): Promise<boolean> {
 		assert(messageIdPattern.test(id), "invalid message ID")
-		return await this.read((txn) =>
-			txn.isAncestor
-				? AbstractGossipLog.isAncestorByTxn(txn, id, ancestor)
-				: AbstractGossipLog.isAncestor(txn, id, ancestor),
-		)
-	}
-
-	static async isAncestorByTxn(txn: ReadOnlyTransaction, id: string, ancestor: string): Promise<boolean> {
-		assert(txn.ancestors !== undefined, "expected txn.ancestors !== undefined")
-		assert(txn.isAncestor !== undefined, "expected txn.isAncestor !== undefined")
-		assert(messageIdPattern.test(id), "invalid message ID (id)")
-		assert(messageIdPattern.test(ancestor), "invalid message ID (ancestor)")
-
-		if (id === ancestor) {
-			return true
-		}
-
-		const key = encodeId(id)
-		const ancestorKey = encodeId(ancestor)
-		const result = await txn.isAncestor(key, ancestorKey)
-
-		return result
-	}
-
-	static async isAncestor(
-		txn: ReadOnlyTransaction,
-		id: string,
-		ancestor: string,
-		visited = new Set<string>(),
-	): Promise<boolean> {
-		assert(txn.ancestors !== undefined, "expected txn.ancestors !== undefined")
-		assert(messageIdPattern.test(id), "invalid message ID (id)")
-		assert(messageIdPattern.test(ancestor), "invalid message ID (ancestor)")
-
-		if (id === ancestor) {
-			return true
-		}
-
-		const ancestorKey = encodeId(ancestor)
-		const [ancestorClock] = decodeClock(ancestorKey)
-
-		const key = encodeId(id)
-		const [clock] = decodeClock(key)
-
-		if (clock <= ancestorClock) {
-			return false
-		}
-
-		const index = Math.floor(Math.log2(clock - ancestorClock))
-		const value = await txn.ancestors.get(key)
-		assert(value !== null, "key not found in ancestor index")
-
-		const links = cbor.decode<Uint8Array[][]>(value)
-		for (const key of links[index]) {
-			const id = decodeId(key)
-
-			if (visited.has(id)) {
-				continue
-			}
-
-			visited.add(id)
-			const isAncestor = await AbstractGossipLog.isAncestor(txn, id, ancestor, visited)
-			if (isAncestor) {
-				return true
-			}
-		}
-
-		return false
+		assert(messageIdPattern.test(ancestor), "invalid message ID")
+		return await this.read((txn) => txn.isAncestor(encodeId(id), encodeId(ancestor)))
 	}
 
 	async #insert(

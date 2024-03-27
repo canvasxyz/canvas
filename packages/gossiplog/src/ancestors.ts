@@ -3,7 +3,8 @@ import * as cbor from "@ipld/dag-cbor"
 import { Awaitable } from "@canvas-js/interfaces"
 import { assert } from "@canvas-js/utils"
 import { decodeClock } from "./clock.js"
-import { decodeId } from "./schema.js"
+import { decodeId, encodeId, messageIdPattern } from "./schema.js"
+import { equals } from "uint8arrays"
 
 export async function getAncestors(
 	txn: { get(key: Uint8Array): Awaitable<Uint8Array | null> },
@@ -37,4 +38,43 @@ export async function getAncestors(
 			await getAncestors(txn, ancestorKey, atOrBefore, results, visited)
 		}
 	}
+}
+
+export async function isAncestor(
+	ancestors: { get: (key: Uint8Array) => Awaitable<Uint8Array | null> },
+	key: Uint8Array,
+	ancestorKey: Uint8Array,
+	visited = new Set<string>(),
+): Promise<boolean> {
+	if (equals(key, ancestorKey)) {
+		return true
+	}
+
+	const [clock] = decodeClock(key)
+	const [ancestorClock] = decodeClock(ancestorKey)
+
+	if (clock <= ancestorClock) {
+		return false
+	}
+
+	const index = Math.floor(Math.log2(clock - ancestorClock))
+	const value = await ancestors.get(key)
+	assert(value !== null, "key not found in ancestor index")
+
+	const links = cbor.decode<Uint8Array[][]>(value)
+	for (const key of links[index]) {
+		const id = decodeId(key)
+
+		if (visited.has(id)) {
+			continue
+		}
+
+		visited.add(id)
+		const result = await isAncestor(ancestors, key, ancestorKey, visited)
+		if (result) {
+			return true
+		}
+	}
+
+	return false
 }
