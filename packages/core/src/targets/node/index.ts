@@ -1,6 +1,6 @@
 import path from "node:path"
 import fs from "node:fs"
-import type pg from 'pg'
+import type pg from "pg"
 
 import { createEd25519PeerId, createFromProtobuf, exportToProtobuf } from "@libp2p/peer-id-factory"
 import { PeerId } from "@libp2p/interface"
@@ -18,13 +18,14 @@ import { getLibp2pOptions } from "./libp2p.js"
 
 const PEER_ID_FILENAME = ".peer-id"
 
-const isPostgres = (path: string) => path.startsWith("postgres://") || path.startsWith("postgresql://")
+const isPostgres = (path: string | pg.ConnectionConfig): path is string | pg.ConnectionConfig =>
+	typeof path !== "string" || path.startsWith("postgres://") || path.startsWith("postgresql://")
 
 export default {
 	async openDB(location: { path: string | pg.ConnectionConfig | null; topic: string }, models, { indexHistory } = {}) {
 		if (location.path === null) {
 			return new ModelDB({ path: null, models, indexHistory })
-		} else if (typeof location.path === "string" && !isPostgres(location.path)) {
+		} else if (!isPostgres(location.path)) {
 			return new ModelDB({ path: path.resolve(location.path, "db.sqlite"), models, indexHistory })
 		} else {
 			return await PostgresModelDB.initialize({ connectionConfig: location.path, models, indexHistory })
@@ -37,7 +38,7 @@ export default {
 	) {
 		if (location.path === null) {
 			return await MemoryGossipLog.open(init)
-		} else if (typeof location.path === "string" && !isPostgres(location.path)) {
+		} else if (!isPostgres(location.path)) {
 			return await GossipLog.open(init, path.resolve(location.path, "topics", init.topic))
 		} else {
 			return await PostgresGossipLog.open(init, location.path)
@@ -56,19 +57,20 @@ async function getPeerId(location: { topic: string; path: string | pg.Connection
 	}
 
 	if (location.path === null) {
+		// create ephemeral peer id
 		return await createEd25519PeerId()
-	}
+	} else if (!isPostgres(location.path)) {
+		// create peer id on disk
+		const peerIdPath = path.resolve(location.path, PEER_ID_FILENAME)
+		if (fs.existsSync(peerIdPath)) {
+			return await createFromProtobuf(Buffer.from(fs.readFileSync(peerIdPath, "utf-8"), "base64"))
+		}
 
-	if (typeof location.path !== 'string') {
-		throw new Error('unimplemented: peerId in postgres')
+		const peerId = await createEd25519PeerId()
+		fs.writeFileSync(peerIdPath, Buffer.from(exportToProtobuf(peerId)).toString("base64"))
+		return peerId
+	} else {
+		// create peer id in postgres
+		throw new Error("unimplemented: peerId in postgres")
 	}
-
-	const peerIdPath = path.resolve(location.path, PEER_ID_FILENAME)
-	if (fs.existsSync(peerIdPath)) {
-		return await createFromProtobuf(Buffer.from(fs.readFileSync(peerIdPath, "utf-8"), "base64"))
-	}
-
-	const peerId = await createEd25519PeerId()
-	fs.writeFileSync(peerIdPath, Buffer.from(exportToProtobuf(peerId)).toString("base64"))
-	return peerId
 }
