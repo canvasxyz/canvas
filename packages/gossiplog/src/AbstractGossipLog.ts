@@ -46,7 +46,6 @@ export interface ReadWriteTransaction {
 	ancestors?: KeyValueStore
 	insertUpdatingAncestors?: (
 		key: Uint8Array,
-		value: Uint8Array,
 		parents: Uint8Array[],
 		ancestorClocks: number[],
 	) => Awaitable<Uint8Array[][]>
@@ -325,7 +324,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 			const ancestorLinks: Uint8Array[][] = new Array(ancestorClocks.length)
 
 			if (txn.insertUpdatingAncestors) {
-				const ancestorLinks = await txn.insertUpdatingAncestors(key, value, parentKeys, ancestorClocks)
+				const ancestorLinks = await txn.insertUpdatingAncestors(key, parentKeys, ancestorClocks)
 				await txn.ancestors.set(key, cbor.encode(ancestorLinks))
 			} else {
 				for (const [i, ancestorClock] of ancestorClocks.entries()) {

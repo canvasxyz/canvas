@@ -59,13 +59,12 @@ async function isAncestor<Payload, Result>(
 async function insertUpdatingAncestors<Payload, Result>(
 	log: GossipLog<Payload, Result>,
 	key: Uint8Array,
-	value: Uint8Array,
 	parents: Uint8Array[],
 	ancestorClocks: number[],
 ): Promise<Uint8Array[][]> {
 	const { rows } = await log.ancestorsClient.query<{ insert_updating_ancestors: string[][] }>(
-		`SELECT insert_updating_ancestors($1, $2, $3::bytea[], $4::integer[]);`,
-		[key, value, parents.map(Buffer.from), ancestorClocks],
+		`SELECT insert_updating_ancestors($1, $2::bytea[], $3::integer[]);`,
+		[key, parents.map(Buffer.from), ancestorClocks],
 	)
 	const row = rows[0]
 	const ancestors = row.insert_updating_ancestors.map((arr) => arr.map((id) => hexToBytes(id.replace("\\x", ""))))
@@ -242,10 +241,9 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 				ancestors: this.indexAncestors ? this.ancestors : undefined,
 				insertUpdatingAncestors: (
 					key: Uint8Array,
-					value: Uint8Array,
 					parents: Uint8Array[],
 					ancestorClocks: number[],
-				): Promise<Uint8Array[][]> => insertUpdatingAncestors(this, key, value, parents, ancestorClocks),
+				): Promise<Uint8Array[][]> => insertUpdatingAncestors(this, key, parents, ancestorClocks),
 				insertMessageRemovingHeads: (
 					key: Uint8Array,
 					value: Uint8Array,

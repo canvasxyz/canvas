@@ -1,7 +1,7 @@
 export const insertSql = String.raw`
 DROP FUNCTION IF EXISTS insert_updating_ancestors(BYTEA, BYTEA, BYTEA[], INTEGER[][]);
 
-CREATE OR REPLACE FUNCTION insert_updating_ancestors(key_ BYTEA, value BYTEA, parents BYTEA[], ancestor_clocks INTEGER[]) RETURNS JSONB AS $$
+CREATE OR REPLACE FUNCTION insert_updating_ancestors(key_ BYTEA, parents BYTEA[], ancestor_clocks INTEGER[]) RETURNS JSONB AS $$
 DECLARE
   i integer := 1; -- ancestor_clocks is indexed from 1
   j integer;
