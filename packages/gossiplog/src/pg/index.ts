@@ -240,7 +240,6 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 				messages: this.messages,
 				heads: this.heads,
-				ancestors: this.indexAncestors ? this.ancestors : undefined,
 			})
 			// console.log("end read tx")
 			return result
@@ -264,7 +263,6 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 				messages: this.messages,
 				heads: this.heads,
-				ancestors: this.indexAncestors ? this.ancestors : undefined,
 
 				insertMessageRemovingHeads: (
 					key: Uint8Array,

@@ -3,8 +3,6 @@ import type { Source, Target, Node, Bound, KeyValueStore, Entry } from "@canvas-
 import { TypedEventEmitter, CustomEvent } from "@libp2p/interface"
 import { Logger, logger } from "@libp2p/logger"
 
-import * as cbor from "@ipld/dag-cbor"
-
 import { bytesToHex as hex } from "@noble/hashes/utils"
 
 import type { Signature, Signer, Message, Awaitable } from "@canvas-js/interfaces"
@@ -13,7 +11,7 @@ import { assert } from "@canvas-js/utils"
 
 import { Mempool } from "./Mempool.js"
 import { Driver } from "./sync/driver.js"
-import { decodeClock } from "./clock.js"
+
 import {
 	decodeId,
 	encodeId,
@@ -24,7 +22,7 @@ import {
 	MAX_MESSAGE_ID,
 	decodeSignedMessage,
 } from "./schema.js"
-import { topicPattern, cborNull, getAncestorClocks, DelayableController } from "./utils.js"
+import { topicPattern, cborNull, DelayableController } from "./utils.js"
 
 export interface ReadOnlyTransaction {
 	getHeads(): Awaitable<Uint8Array[]>
@@ -33,7 +31,6 @@ export interface ReadOnlyTransaction {
 
 	messages: Omit<KeyValueStore, "set" | "delete"> & Source
 	heads: Omit<KeyValueStore, "set" | "delete">
-	ancestors?: Omit<KeyValueStore, "set" | "delete">
 }
 
 export interface ReadWriteTransaction {
@@ -45,7 +42,6 @@ export interface ReadWriteTransaction {
 
 	messages: KeyValueStore & Target
 	heads: KeyValueStore
-	ancestors?: KeyValueStore
 
 	insertMessageRemovingHeads?: (
 		key: Uint8Array,

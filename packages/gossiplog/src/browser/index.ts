@@ -7,7 +7,7 @@ import { IDBStore, IDBTree } from "@canvas-js/okra-idb"
 import { IDBPDatabase, openDB } from "idb"
 
 import { assert } from "@canvas-js/utils"
-import { KEY_LENGTH, encodeId, messageIdPattern } from "../schema.js"
+import { KEY_LENGTH } from "../schema.js"
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
 import { SyncDeadlockError, SyncResourceError, cborNull } from "../utils.js"
 import { getAncestors, indexAncestors, isAncestor } from "../ancestors.js"
@@ -155,14 +155,6 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 				},
 			}
 
-			const ancestors: Omit<KeyValueStore, "set" | "delete"> = {
-				get: (key) => this.ancestors.read(() => this.ancestors.get(key)),
-				entries: (lowerBound = null, upperBound = null, options = {}) => {
-					this.ancestors.txn = this.db.transaction(this.ancestors.storeName, "readonly")
-					return this.ancestors.entries(lowerBound, upperBound, options)
-				},
-			}
-
 			try {
 				result = await callback({
 					getHeads: () => this.heads.read(() => getHeads(this.heads)),
@@ -173,7 +165,6 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 					messages: this.messages,
 					heads,
-					ancestors,
 				})
 			} catch (err) {
 				if (err instanceof Error && err.name === "TransactionInactiveError") {
@@ -234,16 +225,6 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 					},
 				}
 
-				const ancestors: KeyValueStore = {
-					get: (key) => this.ancestors.read(() => this.ancestors.get(key)),
-					set: (key, value) => this.ancestors.write(() => this.ancestors.set(key, value)),
-					delete: (key) => this.ancestors.write(() => this.ancestors.delete(key)),
-					entries: (lowerBound = null, upperBound = null, options = {}) => {
-						this.ancestors.txn = this.db.transaction(this.ancestors.storeName, "readonly")
-						return this.ancestors.entries(lowerBound, upperBound, options)
-					},
-				}
-
 				try {
 					result = await callback({
 						getHeads: () => this.heads.read(() => getHeads(this.heads)),
@@ -257,7 +238,6 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 						messages: this.messages,
 						heads,
-						ancestors,
 					})
 				} catch (err) {
 					this.log.error("error in read-write transaction: %O", err)

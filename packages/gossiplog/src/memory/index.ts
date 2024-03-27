@@ -6,7 +6,7 @@ import { Bound } from "@canvas-js/okra"
 import { MemoryTree, MemoryStore } from "@canvas-js/okra-memory"
 import { assert } from "@canvas-js/utils"
 
-import { KEY_LENGTH, encodeId } from "../schema.js"
+import { KEY_LENGTH } from "../schema.js"
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
 import { SyncDeadlockError, cborNull } from "../utils.js"
 import { getAncestors, indexAncestors, isAncestor } from "../ancestors.js"
@@ -14,21 +14,17 @@ import { getAncestors, indexAncestors, isAncestor } from "../ancestors.js"
 export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
 	public static async open<Payload, Result>(init: GossipLogInit<Payload, Result>): Promise<GossipLog<Payload, Result>> {
 		const messages = await MemoryTree.open()
-		const heads = new MemoryStore()
-		const ancestors = new MemoryStore()
-		return new GossipLog(messages, heads, ancestors, init)
+		return new GossipLog(messages, init)
 	}
+
+	private readonly heads = new MemoryStore()
+	private readonly ancestors = new MemoryStore()
 
 	private readonly queue = new PQueue({ concurrency: 1 })
 	private readonly incomingSyncPeers = new Set<string>()
 	private readonly outgoingSyncPeers = new Set<string>()
 
-	private constructor(
-		private readonly messages: MemoryTree,
-		private readonly heads: MemoryStore,
-		private readonly ancestors: MemoryStore,
-		init: GossipLogInit<Payload, Result>,
-	) {
+	private constructor(private readonly messages: MemoryTree, init: GossipLogInit<Payload, Result>) {
 		super(init)
 	}
 
@@ -94,7 +90,6 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 					messages: this.messages,
 					heads: this.heads,
-					ancestors: this.ancestors,
 				})
 			} catch (err) {
 				this.log.error("error in transaction: %O", err)
@@ -137,7 +132,6 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 					messages: this.messages,
 					heads: this.heads,
-					ancestors: this.ancestors,
 				})
 			} catch (err) {
 				this.log.error("error in transaction: %O", err)

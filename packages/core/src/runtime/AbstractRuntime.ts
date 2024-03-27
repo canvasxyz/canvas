@@ -210,7 +210,6 @@ export abstract class AbstractRuntime {
 			throw new Error("cannot call .get if indexHistory is disabled")
 		}
 
-		assert(context.txn.ancestors !== undefined, "expected txn.ancestors !== undefined")
 		if (context.modelEntries[model][key] !== undefined) {
 			return context.modelEntries[model][key] as T
 		}

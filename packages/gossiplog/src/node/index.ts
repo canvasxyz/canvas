@@ -5,7 +5,7 @@ import { Bound, KeyValueStore } from "@canvas-js/okra"
 import { Database, Environment, Transaction, Tree } from "@canvas-js/okra-node"
 import { assert } from "@canvas-js/utils"
 
-import { KEY_LENGTH, encodeId } from "../schema.js"
+import { KEY_LENGTH } from "../schema.js"
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
 import { getAncestors, indexAncestors, isAncestor } from "../ancestors.js"
 import { cborNull } from "../utils.js"
@@ -25,11 +25,6 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 		return gossipLog
 	}
-
-	private static getReadOnlyAPI = (db: Database): Omit<KeyValueStore, "set" | "delete"> => ({
-		get: (key) => db.get(key),
-		entries: (lowerBound = null, upperBound = null, options = {}) => db.entries(lowerBound, upperBound, options),
-	})
 
 	private static getReadWriteAPI = (db: Database): KeyValueStore => ({
 		get: (key) => db.get(key),
@@ -72,6 +67,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			const messages = new Tree(txn, "messages")
 			const heads = txn.database("heads")
 			const ancestors = txn.database("ancestors")
+
 			return await callback({
 				getHeads: () => getHeads(heads),
 				getAncestors: async (key: Uint8Array, atOrBefore: number, results: Set<string>) =>
@@ -79,7 +75,6 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 				isAncestor: (key: Uint8Array, ancestorKey: Uint8Array, visited = new Set<string>()) =>
 					isAncestor(ancestors, key, ancestorKey, visited),
 
-				ancestors: this.indexAncestors ? GossipLog.getReadOnlyAPI(txn.database("ancestors")) : undefined,
 				messages,
 				heads: {
 					get: (key) => heads.get(key),
@@ -107,7 +102,6 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 				messages,
 				heads: GossipLog.getReadWriteAPI(heads),
-				ancestors: this.indexAncestors ? GossipLog.getReadWriteAPI(txn.database("ancestors")) : undefined,
 			})
 		})
 	}
