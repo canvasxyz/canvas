@@ -51,7 +51,7 @@ export const testPlatforms = (
 					password: "postgres",
 					port: parseInt(process.env.POSTGRES_PORT, 10),
 					host: process.env.POSTGRES_HOST,
-				}
+			  }
 			: `postgresql://localhost:5432/test`
 
 	test(`Memory - ${name}`, macro, async (t, init) => {
@@ -139,7 +139,7 @@ export async function appendChain(
 	for (let i = 0; i < n; i++) {
 		const message: Message<string> = {
 			topic: log.topic,
-			clock: Number(clock) + i + 1,
+			clock: clock + i + 1,
 			parents: i === 0 ? [rootId] : [ids[i - 1]],
 			payload: nanoid(),
 		}
