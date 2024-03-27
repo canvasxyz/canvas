@@ -71,6 +71,25 @@ async function getPeerId(location: { topic: string; path: string | pg.Connection
 		return peerId
 	} else {
 		// create peer id in postgres
-		throw new Error("unimplemented: peerId in postgres")
+		const pg_ = await import("pg")
+		const client = new pg_.default.Client(location.path)
+		await client.connect()
+
+		// if (clear) {
+		//   await client.query("DROP TABLE IF EXISTS canvas_peerids")
+		// }
+		await client.query("CREATE TABLE IF NOT EXISTS canvas_peerids (peerid TEXT, topic TEXT)")
+		const { rows } = await client.query("SELECT peerid FROM canvas_peerids WHERE topic = $1", [location.topic])
+
+		if (rows[0] !== undefined) {
+			await client.end()
+			return await createFromProtobuf(Buffer.from(rows[0].peerid, "base64"))
+		}
+
+		const newPeerId = await createEd25519PeerId()
+		const encoded = Buffer.from(exportToProtobuf(newPeerId)).toString("base64")
+		await client.query<{}>("INSERT INTO canvas_peerids (peerid, topic) VALUES ($1, $2)", [encoded, location.topic])
+		await client.end()
+		return newPeerId
 	}
 }
