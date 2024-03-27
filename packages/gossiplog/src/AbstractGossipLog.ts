@@ -6,7 +6,6 @@ import { Logger, logger } from "@libp2p/logger"
 import * as cbor from "@ipld/dag-cbor"
 
 import { bytesToHex as hex } from "@noble/hashes/utils"
-import { equals } from "uint8arrays"
 
 import type { Signature, Signer, Message, Awaitable } from "@canvas-js/interfaces"
 import { Ed25519DelegateSigner } from "@canvas-js/signatures"
@@ -20,7 +19,6 @@ import {
 	encodeId,
 	encodeSignedMessage,
 	getNextClock,
-	KEY_LENGTH,
 	messageIdPattern,
 	MIN_MESSAGE_ID,
 	MAX_MESSAGE_ID,
@@ -30,22 +28,22 @@ import { topicPattern, cborNull, getAncestorClocks, DelayableController } from "
 
 export interface ReadOnlyTransaction {
 	getHeads(): Awaitable<Uint8Array[]>
+	getAncestors: (key: Uint8Array, atOrBefore: number, results: Set<string>) => Awaitable<void>
+	isAncestor?: (key: Uint8Array, ancestorKey: Uint8Array) => Awaitable<boolean>
 
 	messages: Omit<KeyValueStore, "set" | "delete"> & Source
 	heads: Omit<KeyValueStore, "set" | "delete">
 	ancestors?: Omit<KeyValueStore, "set" | "delete">
-	getAncestors?: (key: Uint8Array, atOrBefore: number) => Awaitable<Uint8Array[]>
-	isAncestor?: (key: Uint8Array, ancestorKey: Uint8Array) => Awaitable<boolean>
 }
 
 export interface ReadWriteTransaction {
 	getHeads(): Awaitable<Uint8Array[]>
+	getAncestors: (key: Uint8Array, atOrBefore: number, results: Set<string>) => Awaitable<void>
+	isAncestor?: (key: Uint8Array, ancestorKey: Uint8Array) => Awaitable<boolean>
 
 	messages: KeyValueStore & Target
 	heads: KeyValueStore
 	ancestors?: KeyValueStore
-	getAncestors?: (key: Uint8Array, atOrBefore: number) => Awaitable<Uint8Array[]>
-	isAncestor?: (key: Uint8Array, ancestorKey: Uint8Array) => Awaitable<boolean>
 	insertUpdatingAncestors?: (
 		key: Uint8Array,
 		value: Uint8Array,
@@ -279,11 +277,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		assert(messageIdPattern.test(id), "invalid message ID")
 
 		const results = new Set<string>()
-		await this.read((txn) => {
-			return txn.getAncestors
-				? this.#getAncestorsByTxn(txn, encodeId(id), atOrBefore, results)
-				: this.#getAncestors(txn, encodeId(id), atOrBefore, results)
-		})
+		await this.read((txn) => txn.getAncestors(encodeId(id), atOrBefore, results))
 		this.log("getAncestors of %s atOrBefore %d: %o", id, atOrBefore, results)
 		return Array.from(results).sort()
 	}
@@ -338,7 +332,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 			return false
 		}
 
-		const index = Math.floor(Math.log2(Number(clock - ancestorClock)))
+		const index = Math.floor(Math.log2(clock - ancestorClock))
 		const value = await txn.ancestors.get(key)
 		assert(value !== null, "key not found in ancestor index")
 
@@ -358,61 +352,6 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		}
 
 		return false
-	}
-
-	async #getAncestorsByTxn(
-		txn: ReadOnlyTransaction | ReadWriteTransaction,
-		key: Uint8Array,
-		atOrBefore: number,
-		results: Set<string>,
-	) {
-		assert(txn.ancestors !== undefined, "expected txn.ancestors !== undefined")
-		assert(txn.getAncestors !== undefined, "expected txn.getAncestors !== undefined")
-
-		const links = await txn.getAncestors(key, atOrBefore)
-
-		for (const ancestorKey of links) {
-			const [ancestorClock] = decodeClock(ancestorKey)
-			const ancestorId = decodeId(ancestorKey)
-			if (Number(ancestorClock) <= atOrBefore) {
-				results.add(ancestorId)
-			}
-		}
-	}
-
-	async #getAncestors(
-		txn: ReadOnlyTransaction,
-		key: Uint8Array,
-		atOrBefore: number,
-		results: Set<string>,
-		visited = new Set<string>(),
-	): Promise<void> {
-		assert(txn.ancestors !== undefined, "expected txn.ancestors !== undefined")
-		assert(atOrBefore > 0, "expected atOrBefore > 0")
-
-		const [clock] = decodeClock(key)
-		assert(atOrBefore < Number(clock), "expected atOrBefore < clock")
-
-		const index = Math.floor(Math.log2(Number(clock) - atOrBefore))
-		const value = await txn.ancestors.get(key)
-		if (value === null) {
-			throw new Error(`key ${decodeId(key)} not found in ancestor index`)
-		}
-
-		const links = cbor.decode<Uint8Array[][]>(value)
-		for (const ancestorKey of links[index]) {
-			const [ancestorClock] = decodeClock(ancestorKey)
-			const ancestorId = decodeId(ancestorKey)
-
-			if (Number(ancestorClock) <= atOrBefore) {
-				results.add(ancestorId)
-			} else if (visited.has(ancestorId)) {
-				return
-			} else {
-				visited.add(ancestorId)
-				await this.#getAncestors(txn, ancestorKey, atOrBefore, results, visited)
-			}
-		}
 	}
 
 	async #insert(
@@ -465,15 +404,11 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 								links.add(decodeId(child))
 							} else {
 								assert(childClock <= ancestorClocks[i - 1], "expected childClock <= ancestorClocks[i - 1]")
-								if (txn.getAncestors !== undefined) {
-									await this.#getAncestorsByTxn(txn, child, ancestorClock, links)
-								} else {
-									await this.#getAncestors(txn, child, ancestorClock, links)
-								}
+								await txn.getAncestors(child, ancestorClock, links)
 							}
 						}
 
-						ancestorLinks[i] = Array.from(links).map(encodeId)
+						ancestorLinks[i] = Array.from(links).map(encodeId).sort()
 					}
 				}
 

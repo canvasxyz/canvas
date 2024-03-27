@@ -9,7 +9,7 @@ import { Bound } from "@canvas-js/okra"
 import { PostgresTree, PostgresStore } from "@canvas-js/okra-pg"
 import { assert } from "@canvas-js/utils"
 
-import { KEY_LENGTH } from "../schema.js"
+import { KEY_LENGTH, decodeId } from "../schema.js"
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
 import { cborNull } from "../utils.js"
 
@@ -212,13 +212,13 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			// console.log("start read tx")
 			const result = await callback({
 				getHeads: async (): Promise<Uint8Array[]> => getHeads(this.headsClient),
+				getAncestors: (key: Uint8Array, atOrBefore: number, results: Set<string>): Promise<void> =>
+					getAncestors(this, key, atOrBefore).then((keys) => keys.forEach((key) => results.add(decodeId(key)))),
+				isAncestor: (key: Uint8Array, ancestorKey: Uint8Array): Promise<boolean> => isAncestor(this, key, ancestorKey),
 
 				messages: this.messages,
 				heads: this.heads,
 				ancestors: this.indexAncestors ? this.ancestors : undefined,
-				getAncestors: (key: Uint8Array, atOrBefore: number): Promise<Uint8Array[]> =>
-					getAncestors(this, key, atOrBefore),
-				isAncestor: (key: Uint8Array, ancestorKey: Uint8Array): Promise<boolean> => isAncestor(this, key, ancestorKey),
 			})
 			// console.log("end read tx")
 			return result
@@ -233,13 +233,13 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			// console.log("start write tx")
 			const result = await callback({
 				getHeads: async (): Promise<Uint8Array[]> => getHeads(this.headsClient),
+				getAncestors: (key: Uint8Array, atOrBefore: number, results: Set<string>): Promise<void> =>
+					getAncestors(this, key, atOrBefore).then((keys) => keys.forEach((key) => results.add(decodeId(key)))),
+				isAncestor: (key: Uint8Array, ancestorKey: Uint8Array): Promise<boolean> => isAncestor(this, key, ancestorKey),
 
 				messages: this.messages,
 				heads: this.heads,
 				ancestors: this.indexAncestors ? this.ancestors : undefined,
-				getAncestors: (key: Uint8Array, atOrBefore: number): Promise<Uint8Array[]> =>
-					getAncestors(this, key, atOrBefore),
-				isAncestor: (key: Uint8Array, ancestorKey: Uint8Array): Promise<boolean> => isAncestor(this, key, ancestorKey),
 				insertUpdatingAncestors: (
 					key: Uint8Array,
 					value: Uint8Array,

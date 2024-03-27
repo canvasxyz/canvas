@@ -6,9 +6,10 @@ import { Bound } from "@canvas-js/okra"
 import { MemoryTree, MemoryStore } from "@canvas-js/okra-memory"
 import { assert } from "@canvas-js/utils"
 
-import { KEY_LENGTH } from "../schema.js"
+import { KEY_LENGTH, encodeId } from "../schema.js"
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
 import { SyncDeadlockError, cborNull } from "../utils.js"
+import { getAncestors } from "../ancestors.js"
 
 export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
 	public static async open<Payload, Result>(init: GossipLogInit<Payload, Result>): Promise<GossipLog<Payload, Result>> {
@@ -86,6 +87,9 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			try {
 				return await callback({
 					getHeads: () => getHeads(this.heads),
+					getAncestors: async (key: Uint8Array, atOrBefore: number, results: Set<string>) =>
+						getAncestors(this.ancestors, key, atOrBefore, results),
+
 					messages: this.messages,
 					heads: this.heads,
 					ancestors: this.ancestors,
@@ -121,6 +125,9 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			try {
 				return await callback({
 					getHeads: () => getHeads(this.heads),
+					getAncestors: async (key: Uint8Array, atOrBefore: number, results: Set<string>) =>
+						getAncestors(this.ancestors, key, atOrBefore, results),
+
 					messages: this.messages,
 					heads: this.heads,
 					ancestors: this.ancestors,

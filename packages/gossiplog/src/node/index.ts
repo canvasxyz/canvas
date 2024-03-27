@@ -5,8 +5,9 @@ import { Bound, KeyValueStore } from "@canvas-js/okra"
 import { Database, Environment, Transaction, Tree } from "@canvas-js/okra-node"
 import { assert } from "@canvas-js/utils"
 
-import { KEY_LENGTH } from "../schema.js"
+import { KEY_LENGTH, encodeId } from "../schema.js"
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
+import { getAncestors } from "../ancestors.js"
 import { cborNull } from "../utils.js"
 
 export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
@@ -70,8 +71,12 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 		return await this.env.read(async (txn) => {
 			const messages = new Tree(txn, "messages")
 			const heads = txn.database("heads")
+			const ancestors = txn.database("ancestors")
 			return await callback({
 				getHeads: () => getHeads(heads),
+				getAncestors: async (key: Uint8Array, atOrBefore: number, results: Set<string>) =>
+					getAncestors(ancestors, key, atOrBefore, results),
+
 				ancestors: this.indexAncestors ? GossipLog.getReadOnlyAPI(txn.database("ancestors")) : undefined,
 				messages,
 				heads: {
@@ -88,8 +93,12 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 		return await this.env.write(async (txn) => {
 			const messages = new Tree(txn, "messages")
 			const heads = txn.database("heads")
+			const ancestors = txn.database("ancestors")
 			return await callback({
 				getHeads: () => getHeads(heads),
+				getAncestors: async (key: Uint8Array, atOrBefore: number, results: Set<string>) =>
+					getAncestors(ancestors, key, atOrBefore, results),
+
 				messages,
 				heads: GossipLog.getReadWriteAPI(heads),
 				ancestors: this.indexAncestors ? GossipLog.getReadWriteAPI(txn.database("ancestors")) : undefined,
