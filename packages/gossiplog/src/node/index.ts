@@ -7,7 +7,7 @@ import { assert } from "@canvas-js/utils"
 
 import { KEY_LENGTH, encodeId } from "../schema.js"
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
-import { getAncestors, isAncestor } from "../ancestors.js"
+import { getAncestors, indexAncestors, isAncestor } from "../ancestors.js"
 import { cborNull } from "../utils.js"
 
 export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
@@ -102,6 +102,8 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 					getAncestors(ancestors, key, atOrBefore, results),
 				isAncestor: (key: Uint8Array, ancestorKey: Uint8Array, visited = new Set<string>()) =>
 					isAncestor(ancestors, key, ancestorKey, visited),
+
+				indexAncestors: (key: Uint8Array, parentKeys: Uint8Array[]) => indexAncestors(ancestors, key, parentKeys),
 
 				messages,
 				heads: GossipLog.getReadWriteAPI(heads),

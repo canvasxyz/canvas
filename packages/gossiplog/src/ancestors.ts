@@ -3,8 +3,9 @@ import * as cbor from "@ipld/dag-cbor"
 import { Awaitable } from "@canvas-js/interfaces"
 import { assert } from "@canvas-js/utils"
 import { decodeClock } from "./clock.js"
-import { decodeId, encodeId, messageIdPattern } from "./schema.js"
+import { decodeId, encodeId } from "./schema.js"
 import { equals } from "uint8arrays"
+import { getAncestorClocks } from "./utils.js"
 
 export async function getAncestors(
 	txn: { get(key: Uint8Array): Awaitable<Uint8Array | null> },
@@ -77,4 +78,38 @@ export async function isAncestor(
 	}
 
 	return false
+}
+
+export async function indexAncestors(
+	ancestors: {
+		get: (key: Uint8Array) => Awaitable<Uint8Array | null>
+		set: (key: Uint8Array, value: Uint8Array) => Awaitable<void>
+	},
+	key: Uint8Array,
+	parentKeys: Uint8Array[],
+) {
+	const [clock] = decodeClock(key)
+	const ancestorClocks = Array.from(getAncestorClocks(clock))
+	const ancestorLinks: Uint8Array[][] = new Array(ancestorClocks.length)
+
+	for (const [i, ancestorClock] of ancestorClocks.entries()) {
+		if (i === 0) {
+			ancestorLinks[i] = parentKeys
+		} else {
+			const links = new Set<string>()
+			for (const child of ancestorLinks[i - 1]) {
+				const [childClock] = decodeClock(child)
+				if (childClock <= ancestorClock) {
+					links.add(decodeId(child))
+				} else {
+					assert(childClock <= ancestorClocks[i - 1], "expected childClock <= ancestorClocks[i - 1]")
+					await getAncestors(ancestors, child, ancestorClock, links)
+				}
+			}
+
+			ancestorLinks[i] = Array.from(links).map(encodeId).sort()
+		}
+	}
+
+	await ancestors.set(key, cbor.encode(ancestorLinks))
 }

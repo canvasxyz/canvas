@@ -41,14 +41,12 @@ export interface ReadWriteTransaction {
 	getAncestors: (key: Uint8Array, atOrBefore: number, results: Set<string>) => Awaitable<void>
 	isAncestor: (key: Uint8Array, ancestorKey: Uint8Array, visited?: Set<string>) => Awaitable<boolean>
 
+	indexAncestors: (key: Uint8Array, parentKeys: Uint8Array[]) => Awaitable<void>
+
 	messages: KeyValueStore & Target
 	heads: KeyValueStore
 	ancestors?: KeyValueStore
-	insertUpdatingAncestors?: (
-		key: Uint8Array,
-		parents: Uint8Array[],
-		ancestorClocks: number[],
-	) => Awaitable<Uint8Array[][]>
+
 	insertMessageRemovingHeads?: (
 		key: Uint8Array,
 		value: Uint8Array,
@@ -318,36 +316,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		}
 
 		if (this.indexAncestors) {
-			assert(txn.ancestors !== undefined, "expected txn.ancestors !== undefined")
-
-			const ancestorClocks = Array.from(getAncestorClocks(message.clock))
-			const ancestorLinks: Uint8Array[][] = new Array(ancestorClocks.length)
-
-			if (txn.insertUpdatingAncestors) {
-				const ancestorLinks = await txn.insertUpdatingAncestors(key, parentKeys, ancestorClocks)
-				await txn.ancestors.set(key, cbor.encode(ancestorLinks))
-			} else {
-				for (const [i, ancestorClock] of ancestorClocks.entries()) {
-					if (i === 0) {
-						ancestorLinks[i] = parentKeys
-					} else {
-						const links = new Set<string>()
-						for (const child of ancestorLinks[i - 1]) {
-							const [childClock] = decodeClock(child)
-							if (childClock <= ancestorClock) {
-								links.add(decodeId(child))
-							} else {
-								assert(childClock <= ancestorClocks[i - 1], "expected childClock <= ancestorClocks[i - 1]")
-								await txn.getAncestors(child, ancestorClock, links)
-							}
-						}
-
-						ancestorLinks[i] = Array.from(links).map(encodeId).sort()
-					}
-				}
-
-				await txn.ancestors.set(key, cbor.encode(ancestorLinks))
-			}
+			await txn.indexAncestors(key, parentKeys)
 		}
 
 		for (const [childId, { signature, message }] of this.mempool.observe(id)) {

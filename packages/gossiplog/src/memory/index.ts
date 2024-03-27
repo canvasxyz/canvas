@@ -9,7 +9,7 @@ import { assert } from "@canvas-js/utils"
 import { KEY_LENGTH, encodeId } from "../schema.js"
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
 import { SyncDeadlockError, cborNull } from "../utils.js"
-import { getAncestors, isAncestor } from "../ancestors.js"
+import { getAncestors, indexAncestors, isAncestor } from "../ancestors.js"
 
 export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
 	public static async open<Payload, Result>(init: GossipLogInit<Payload, Result>): Promise<GossipLog<Payload, Result>> {
@@ -131,6 +131,9 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 						getAncestors(this.ancestors, key, atOrBefore, results),
 					isAncestor: (key: Uint8Array, ancestorKey: Uint8Array, visited = new Set<string>()) =>
 						isAncestor(this.ancestors, key, ancestorKey, visited),
+
+					indexAncestors: (key: Uint8Array, parentKeys: Uint8Array[]) =>
+						indexAncestors(this.ancestors, key, parentKeys),
 
 					messages: this.messages,
 					heads: this.heads,
