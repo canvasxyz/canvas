@@ -19,6 +19,7 @@ import { GossipLog as GossipLogNode } from "@canvas-js/gossiplog/node"
 import { GossipLog as GossipLogBrowser } from "@canvas-js/gossiplog/browser"
 import { GossipLog as GossipLogMemory } from "@canvas-js/gossiplog/memory"
 import { GossipLog as GossipLogPostgres } from "@canvas-js/gossiplog/pg"
+import { PoolConfig } from "pg"
 
 // @ts-expect-error
 globalThis.AbortController = AbortController
@@ -29,6 +30,22 @@ if (globalThis.navigator === undefined) {
 } else {
 	// @ts-expect-error
 	globalThis.navigator.locks = locks
+}
+
+const { POSTGRES_HOST, POSTGRES_PORT } = process.env
+
+function getPgConfig(): string | PoolConfig {
+	if (POSTGRES_HOST && POSTGRES_PORT) {
+		return {
+			user: "postgres",
+			database: "test",
+			password: "postgres",
+			port: parseInt(POSTGRES_PORT),
+			host: POSTGRES_HOST,
+		}
+	} else {
+		return `postgresql://localhost:5432/test`
+	}
 }
 
 export const testPlatforms = (
@@ -42,17 +59,6 @@ export const testPlatforms = (
 	) => void,
 ) => {
 	const macro = test.macro(run)
-
-	const pgUrl =
-		process.env.POSTGRES_HOST && process.env.POSTGRES_PORT
-			? {
-					user: "postgres",
-					database: "test",
-					password: "postgres",
-					port: parseInt(process.env.POSTGRES_PORT, 10),
-					host: process.env.POSTGRES_HOST,
-			  }
-			: `postgresql://localhost:5432/test`
 
 	test(`Memory - ${name}`, macro, async (t, init) => {
 		const log = await GossipLogMemory.open(init)
@@ -70,7 +76,7 @@ export const testPlatforms = (
 		return log
 	})
 	test.serial(`Postgres - ${name}`, macro, async (t, init) => {
-		const log = await GossipLogPostgres.open(init, pgUrl, true)
+		const log = await GossipLogPostgres.open(init, getPgConfig(), true)
 		t.teardown(() => log.close())
 		return log
 	})
