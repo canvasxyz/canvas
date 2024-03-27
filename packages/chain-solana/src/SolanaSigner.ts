@@ -93,7 +93,7 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 
 	protected getAddress(): string {
 		const walletAddress = this.#signer.address
-		return `${this.chainId}:${walletAddress}`
+		return `solana:${this.chainId}:${walletAddress}`
 	}
 
 	protected async newSession(data: AbstractSessionData): Promise<Session<SolanaSessionData>> {
