@@ -66,7 +66,7 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 		}
 
 		// 5ey... is the solana mainnet genesis hash
-		this.chainId = chainId ?? "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
+		this.chainId = chainId ?? "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
 		this.sessionDuration = sessionDuration ?? null
 		this.key = `SolanaSigner-${signer ? "extension" : "burner"}`
 	}
