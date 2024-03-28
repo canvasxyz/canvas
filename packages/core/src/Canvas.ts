@@ -4,6 +4,8 @@ import { logger } from "@libp2p/logger"
 import * as cbor from "@ipld/dag-cbor"
 import { hexToBytes } from "@noble/hashes/utils"
 
+import type pg from "pg"
+
 import { Signature, Action, Session, Message, Signer, SessionSigner, SignerCache } from "@canvas-js/interfaces"
 import { AbstractModelDB, Model } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
@@ -45,8 +47,8 @@ export interface CanvasConfig<T extends Contract = Contract> extends NetworkConf
 	contract: string | T
 	signers?: SessionSigner[]
 
-	/** data directory path (NodeJS only) */
-	path?: string | null
+	/** data directory path (NodeJS/sqlite), or postgres connection config (NodeJS/pg) */
+	path?: string | pg.ConnectionConfig | null
 
 	/** provide an existing libp2p instance instead of creating a new one */
 	libp2p?: Libp2p<ServiceMap>
@@ -145,8 +147,8 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		[K in keyof T["actions"]]: T["actions"][K] extends ActionImplementationFunction<infer Args, infer Result>
 			? ActionAPI<Args, Result>
 			: T["actions"][K] extends ActionImplementationObject<infer Args, infer Result>
-			? ActionAPI<Args, Result>
-			: never
+				? ActionAPI<Args, Result>
+				: never
 	}
 
 	public readonly connections: Connections = {}

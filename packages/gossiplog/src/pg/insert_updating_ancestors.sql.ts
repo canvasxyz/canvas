@@ -53,7 +53,7 @@ BEGIN
       END LOOP;
 
       SELECT array_to_json(array_agg(DISTINCT encode(tbl, 'hex')))::jsonb FROM unnest(links) AS tbl INTO tmp;
-      ancestor_links := jsonb_set(ancestor_links, array[i-1]::text[], tmp);
+      ancestor_links := jsonb_set(ancestor_links, array[i-1]::text[], COALESCE(tmp, '[]'::jsonb));
     END IF;
 
     i := i + 1;

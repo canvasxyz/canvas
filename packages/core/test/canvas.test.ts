@@ -2,6 +2,7 @@ import assert from "node:assert"
 import test, { ExecutionContext } from "ava"
 
 import { ethers } from "ethers"
+import pg from "pg"
 
 import type { Message } from "@canvas-js/interfaces"
 import { Ed25519DelegateSigner } from "@canvas-js/signatures"
@@ -50,6 +51,28 @@ const init = async (t: ExecutionContext) => {
 
 const initEIP712 = async (t: ExecutionContext) => {
 	const app = await Canvas.initialize({ contract, offline: true, signers: [new Eip712Signer()] })
+	t.teardown(() => app.close())
+	return app
+}
+
+const initPostgres = async (t: ExecutionContext) => {
+	const pgUrl =
+		process.env.POSTGRES_HOST && process.env.POSTGRES_PORT
+			? ({
+					user: "postgres",
+					database: "test",
+					password: "postgres",
+					port: parseInt(process.env.POSTGRES_PORT, 10),
+					host: process.env.POSTGRES_HOST,
+				} as pg.ConnectionConfig)
+			: `postgresql://localhost:5432/test`
+
+	const app = await Canvas.initialize({
+		path: pgUrl,
+		contract,
+		offline: true,
+		signers: [new Eip712Signer()],
+	})
 	t.teardown(() => app.close())
 	return app
 }
@@ -269,6 +292,34 @@ test("validate action args using IPLD schemas", async (t) => {
 
 test("apply an action and read a record from the database using eip712", async (t) => {
 	const app = await initEIP712(t)
+
+	const { id, result: postId } = await app.actions.createPost({
+		content: "hello world",
+		isVisible: true,
+		something: -1,
+		metadata: 0,
+	})
+
+	t.log(`applied action ${id} and got result`, postId)
+	assert(typeof postId === "string")
+	const value = await app.db.get("posts", postId)
+	t.is(value?.content, "hello world")
+
+	const { id: id2, result: postId2 } = await app.actions.createPost({
+		content: "foo bar",
+		isVisible: true,
+		something: -1,
+		metadata: 0,
+	})
+
+	t.log(`applied action ${id2} and got result`, postId)
+	assert(typeof postId2 === "string")
+	const value2 = await app.db.get("posts", postId2)
+	t.is(value2?.content, "foo bar")
+})
+
+test("apply an action and read a record from the database using postgres", async (t) => {
+	const app = await initPostgres(t)
 
 	const { id, result: postId } = await app.actions.createPost({
 		content: "hello world",
