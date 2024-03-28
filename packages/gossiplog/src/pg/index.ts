@@ -10,7 +10,7 @@ import { Bound } from "@canvas-js/okra"
 import { PostgresTree, PostgresStore } from "@canvas-js/okra-pg"
 import { assert } from "@canvas-js/utils"
 
-import { KEY_LENGTH, decodeId } from "../schema.js"
+import { KEY_LENGTH, decodeId, encodeId, encodeSignedMessage } from "../schema.js"
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
 import { cborNull, getAncestorClocks } from "../utils.js"
 
@@ -21,6 +21,7 @@ import { pgCborSql } from "./pg_cbor.sql.js"
 import { insertSql } from "./insert_updating_ancestors.sql.js"
 import { insertMessageRemovingHeadsSql } from "./insert_message_removing_heads.sql.js"
 import { decodeClock } from "../clock.js"
+import { Message, Signature } from "@canvas-js/interfaces"
 
 const initSql = [
 	getAncestorsSql,
@@ -58,7 +59,7 @@ async function isAncestor<Payload, Result>(
 	return row.ret_result
 }
 
-async function indexAncestors<Payload, Result>(
+async function insertUpdatingAncestors<Payload, Result>(
 	client: pg.PoolClient,
 	ancestors: PostgresStore,
 	key: Uint8Array,
@@ -78,21 +79,6 @@ async function indexAncestors<Payload, Result>(
 
 	await ancestors.set(key, cbor.encode(ancestorLinks))
 }
-
-// async function insertUpdatingAncestors<Payload, Result>(
-// 	client: pg.PoolClient,
-// 	key: Uint8Array,
-// 	parentKeys: Uint8Array[],
-// 	ancestorClocks: number[],
-// ): Promise<Uint8Array[][]> {
-// 	const { rows } = await client.query<{ insert_updating_ancestors: string[][] }>(
-// 		`SELECT insert_updating_ancestors($1, $2::bytea[], $3::integer[]);`,
-// 		[key, parentKeys.map(Buffer.from), ancestorClocks],
-// 	)
-// 	const row = rows[0]
-// 	const ancestors = row.insert_updating_ancestors.map((arr) => arr.map((id) => hexToBytes(id.replace("\\x", ""))))
-// 	return ancestors
-// }
 
 async function insertMessageRemovingHeads<Payload, Result>(
 	log: GossipLog<Payload, Result>,
@@ -239,7 +225,6 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 				isAncestor: (key: Uint8Array, ancestorKey: Uint8Array): Promise<boolean> => isAncestor(this, key, ancestorKey),
 
 				messages: this.messages,
-				heads: this.heads,
 			})
 			// console.log("end read tx")
 			return result
@@ -258,21 +243,22 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 					getAncestors(this, key, atOrBefore).then((keys) => keys.forEach((key) => results.add(decodeId(key)))),
 				isAncestor: (key: Uint8Array, ancestorKey: Uint8Array): Promise<boolean> => isAncestor(this, key, ancestorKey),
 
-				indexAncestors: async (key: Uint8Array, parentKeys: Uint8Array[]) =>
-					indexAncestors(this.ancestorsClient, this.ancestors, key, parentKeys),
+				insert: async (
+					id: string,
+					signature: Signature,
+					message: Message,
+					[key, value] = encodeSignedMessage(signature, message),
+				) => {
+					const parentKeys = message.parents.map(encodeId)
+					const hash = this.messages.hashEntry(key, value)
+					await insertMessageRemovingHeads(this, key, value, hash, cborNull, parentKeys)
+
+					if (this.indexAncestors) {
+						await insertUpdatingAncestors(this.ancestorsClient, this.ancestors, key, parentKeys)
+					}
+				},
 
 				messages: this.messages,
-				heads: this.heads,
-
-				insertMessageRemovingHeads: (
-					key: Uint8Array,
-					value: Uint8Array,
-					cborNull: Uint8Array,
-					parents: Uint8Array[],
-				): Promise<void> => {
-					const hash = this.messages.hashEntry(key, value)
-					return insertMessageRemovingHeads(this, key, value, hash, cborNull, parents)
-				},
 			})
 			// console.log("end write tx")
 			return result

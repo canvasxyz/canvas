@@ -5,10 +5,11 @@ import { Bound, KeyValueStore } from "@canvas-js/okra"
 import { Database, Environment, Transaction, Tree } from "@canvas-js/okra-node"
 import { assert } from "@canvas-js/utils"
 
-import { KEY_LENGTH } from "../schema.js"
+import { KEY_LENGTH, encodeId, encodeSignedMessage } from "../schema.js"
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
 import { getAncestors, indexAncestors, isAncestor } from "../ancestors.js"
 import { cborNull } from "../utils.js"
+import { Message, Signature } from "@canvas-js/interfaces"
 
 export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
 	public static async open<Payload, Result>(
@@ -25,13 +26,6 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 		return gossipLog
 	}
-
-	private static getReadWriteAPI = (db: Database): KeyValueStore => ({
-		get: (key) => db.get(key),
-		set: (key, value) => db.set(key, value),
-		delete: (key) => db.delete(key),
-		entries: (lowerBound = null, upperBound = null, options = {}) => db.entries(lowerBound, upperBound, options),
-	})
 
 	private constructor(private readonly env: Environment, init: GossipLogInit<Payload, Result>) {
 		super(init)
@@ -76,11 +70,6 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 					isAncestor(ancestors, key, ancestorKey, visited),
 
 				messages,
-				heads: {
-					get: (key) => heads.get(key),
-					entries: (lowerBound = null, upperBound = null, options = {}) =>
-						heads.entries(lowerBound, upperBound, options),
-				},
 			})
 		})
 	}
@@ -98,10 +87,27 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 				isAncestor: (key: Uint8Array, ancestorKey: Uint8Array, visited = new Set<string>()) =>
 					isAncestor(ancestors, key, ancestorKey, visited),
 
-				indexAncestors: (key: Uint8Array, parentKeys: Uint8Array[]) => indexAncestors(ancestors, key, parentKeys),
+				insert: async (
+					id: string,
+					signature: Signature,
+					message: Message,
+					[key, value] = encodeSignedMessage(signature, message),
+				) => {
+					messages.set(key, value)
+
+					const parentKeys = message.parents.map(encodeId)
+
+					heads.set(key, cborNull)
+					for (const parentKey of parentKeys) {
+						heads.delete(parentKey)
+					}
+
+					if (this.indexAncestors) {
+						await indexAncestors(ancestors, key, parentKeys)
+					}
+				},
 
 				messages,
-				heads: GossipLog.getReadWriteAPI(heads),
 			})
 		})
 	}

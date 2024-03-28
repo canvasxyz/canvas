@@ -6,10 +6,11 @@ import { Bound } from "@canvas-js/okra"
 import { MemoryTree, MemoryStore } from "@canvas-js/okra-memory"
 import { assert } from "@canvas-js/utils"
 
-import { KEY_LENGTH } from "../schema.js"
+import { KEY_LENGTH, encodeId, encodeSignedMessage } from "../schema.js"
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
 import { SyncDeadlockError, cborNull } from "../utils.js"
 import { getAncestors, indexAncestors, isAncestor } from "../ancestors.js"
+import { Message, Signature } from "@canvas-js/interfaces"
 
 export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
 	public static async open<Payload, Result>(init: GossipLogInit<Payload, Result>): Promise<GossipLog<Payload, Result>> {
@@ -89,7 +90,6 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 						isAncestor(this.ancestors, key, ancestorKey, visited),
 
 					messages: this.messages,
-					heads: this.heads,
 				})
 			} catch (err) {
 				this.log.error("error in transaction: %O", err)
@@ -127,11 +127,27 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 					isAncestor: (key: Uint8Array, ancestorKey: Uint8Array, visited = new Set<string>()) =>
 						isAncestor(this.ancestors, key, ancestorKey, visited),
 
-					indexAncestors: (key: Uint8Array, parentKeys: Uint8Array[]) =>
-						indexAncestors(this.ancestors, key, parentKeys),
+					insert: async (
+						id: string,
+						signature: Signature,
+						message: Message,
+						[key, value] = encodeSignedMessage(signature, message),
+					) => {
+						await this.messages.set(key, value)
+
+						const parentKeys = message.parents.map(encodeId)
+
+						await this.heads.set(key, cborNull)
+						for (const parentKey of parentKeys) {
+							await this.heads.delete(parentKey)
+						}
+
+						if (this.indexAncestors) {
+							await indexAncestors(this.ancestors, key, parentKeys)
+						}
+					},
 
 					messages: this.messages,
-					heads: this.heads,
 				})
 			} catch (err) {
 				this.log.error("error in transaction: %O", err)

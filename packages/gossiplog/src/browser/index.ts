@@ -2,15 +2,16 @@ import pDefer from "p-defer"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 import { equals } from "uint8arrays"
 
-import { Bound, KeyValueStore } from "@canvas-js/okra"
+import { Bound, Entry, KeyValueStore } from "@canvas-js/okra"
 import { IDBStore, IDBTree } from "@canvas-js/okra-idb"
 import { IDBPDatabase, openDB } from "idb"
 
 import { assert } from "@canvas-js/utils"
-import { KEY_LENGTH } from "../schema.js"
+import { KEY_LENGTH, encodeId, encodeSignedMessage } from "../schema.js"
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
 import { SyncDeadlockError, SyncResourceError, cborNull } from "../utils.js"
 import { getAncestors, indexAncestors, isAncestor } from "../ancestors.js"
+import { Message, Signature } from "@canvas-js/interfaces"
 
 export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
 	public static async open<Payload, Result>(init: GossipLogInit<Payload, Result>): Promise<GossipLog<Payload, Result>> {
@@ -164,7 +165,6 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 						this.ancestors.read(() => isAncestor(this.ancestors, key, ancestorKey, visited)),
 
 					messages: this.messages,
-					heads,
 				})
 			} catch (err) {
 				if (err instanceof Error && err.name === "TransactionInactiveError") {
@@ -233,11 +233,29 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 						isAncestor: (key: Uint8Array, ancestorKey: Uint8Array, visited = new Set<string>()) =>
 							this.ancestors.read(() => isAncestor(this.ancestors, key, ancestorKey, visited)),
 
-						indexAncestors: (key: Uint8Array, parentKeys: Uint8Array[]) =>
-							this.ancestors.write(() => indexAncestors(this.ancestors, key, parentKeys)),
+						insert: async (
+							id: string,
+							signature: Signature,
+							message: Message,
+							[key, value] = encodeSignedMessage(signature, message),
+						) => {
+							await this.messages.set(key, value)
+
+							const parentKeys = message.parents.map(encodeId)
+
+							await this.heads.write(async () => {
+								await this.heads.set(key, cborNull)
+								for (const parentKey of parentKeys) {
+									await this.heads.delete(parentKey)
+								}
+							})
+
+							if (this.indexAncestors) {
+								await this.ancestors.write(() => indexAncestors(this.ancestors, key, parentKeys))
+							}
+						},
 
 						messages: this.messages,
-						heads,
 					})
 				} catch (err) {
 					this.log.error("error in read-write transaction: %O", err)
