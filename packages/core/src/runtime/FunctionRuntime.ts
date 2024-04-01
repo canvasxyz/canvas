@@ -4,10 +4,9 @@ import type pg from "pg"
 
 import type { SignerCache } from "@canvas-js/interfaces"
 import { AbstractModelDB, ModelValue, validateModelValue } from "@canvas-js/modeldb"
+import { assert, mapEntries } from "@canvas-js/utils"
 
 import target from "#target"
-
-import { assert, mapEntries } from "../utils.js"
 
 import { ActionImplementationFunction, Contract, ModelAPI } from "../types.js"
 import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"

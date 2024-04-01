@@ -4,14 +4,11 @@ import { fromDSL } from "@ipld/schema/from-dsl.js"
 import type pg from "pg"
 
 import type { SignerCache } from "@canvas-js/interfaces"
-
 import { AbstractModelDB, ModelValue, ModelsInit, validateModelValue } from "@canvas-js/modeldb"
-
 import { VM } from "@canvas-js/vm"
+import { assert, mapEntries } from "@canvas-js/utils"
 
 import target from "#target"
-
-import { assert, mapEntries } from "../utils.js"
 
 import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
 import { sha256 } from "@noble/hashes/sha256"

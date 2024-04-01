@@ -12,23 +12,25 @@ import { GossipLog as MemoryGossipLog } from "@canvas-js/gossiplog/memory"
 import { GossipLog as PostgresGossipLog } from "@canvas-js/gossiplog/pg"
 import { ModelDB } from "@canvas-js/modeldb/sqlite"
 import { ModelDB as PostgresModelDB } from "@canvas-js/modeldb/pg"
+import { assert } from "@canvas-js/utils"
 
 import type { PlatformTarget } from "../interface.js"
 import { getLibp2pOptions } from "./libp2p.js"
 
 const PEER_ID_FILENAME = ".peer-id"
 
-const isPostgres = (path: string | pg.ConnectionConfig): path is string | pg.ConnectionConfig =>
+const isPostgres = (path: string | pg.ConnectionConfig): boolean =>
 	typeof path !== "string" || path.startsWith("postgres://") || path.startsWith("postgresql://")
 
 export default {
 	async openDB(location: { path: string | pg.ConnectionConfig | null; topic: string }, models, { indexHistory } = {}) {
 		if (location.path === null) {
 			return new ModelDB({ path: null, models, indexHistory })
-		} else if (!isPostgres(location.path)) {
-			return new ModelDB({ path: path.resolve(location.path, "db.sqlite"), models, indexHistory })
-		} else {
+		} else if (isPostgres(location.path)) {
 			return await PostgresModelDB.initialize({ connectionConfig: location.path, models, indexHistory })
+		} else {
+			assert(typeof location.path === "string", 'expected typeof location.path === "string"')
+			return new ModelDB({ path: path.resolve(location.path, "db.sqlite"), models, indexHistory })
 		}
 	},
 
@@ -38,10 +40,11 @@ export default {
 	) {
 		if (location.path === null) {
 			return await MemoryGossipLog.open(init)
-		} else if (!isPostgres(location.path)) {
-			return await GossipLog.open(init, path.resolve(location.path, "topics", init.topic))
-		} else {
+		} else if (isPostgres(location.path)) {
 			return await PostgresGossipLog.open(init, location.path)
+		} else {
+			assert(typeof location.path === "string", 'expected typeof location.path === "string"')
+			return await GossipLog.open(init, path.resolve(location.path, "topics", init.topic))
 		}
 	},
 
@@ -59,17 +62,7 @@ async function getPeerId(location: { topic: string; path: string | pg.Connection
 	if (location.path === null) {
 		// create ephemeral peer id
 		return await createEd25519PeerId()
-	} else if (!isPostgres(location.path)) {
-		// create peer id on disk
-		const peerIdPath = path.resolve(location.path, PEER_ID_FILENAME)
-		if (fs.existsSync(peerIdPath)) {
-			return await createFromProtobuf(Buffer.from(fs.readFileSync(peerIdPath, "utf-8"), "base64"))
-		}
-
-		const peerId = await createEd25519PeerId()
-		fs.writeFileSync(peerIdPath, Buffer.from(exportToProtobuf(peerId)).toString("base64"))
-		return peerId
-	} else {
+	} else if (isPostgres(location.path)) {
 		// create peer id in postgres
 		const pg_ = await import("pg")
 		const client = new pg_.default.Client(location.path)
@@ -91,5 +84,17 @@ async function getPeerId(location: { topic: string; path: string | pg.Connection
 		await client.query<{}>("INSERT INTO canvas_peerids (peerid, topic) VALUES ($1, $2)", [encoded, location.topic])
 		await client.end()
 		return newPeerId
+	} else {
+		// create peer id on disk
+		assert(typeof location.path === "string", 'expected typeof location.path === "string"')
+
+		const peerIdPath = path.resolve(location.path, PEER_ID_FILENAME)
+		if (fs.existsSync(peerIdPath)) {
+			return await createFromProtobuf(Buffer.from(fs.readFileSync(peerIdPath, "utf-8"), "base64"))
+		}
+
+		const peerId = await createEd25519PeerId()
+		fs.writeFileSync(peerIdPath, Buffer.from(exportToProtobuf(peerId)).toString("base64"))
+		return peerId
 	}
 }

@@ -3,8 +3,9 @@ import { bytesToHex } from "@noble/hashes/utils"
 import { sha256 } from "@noble/hashes/sha256"
 import { logger } from "@libp2p/logger"
 
+import { assert, mapValues } from "@canvas-js/utils"
+
 import { JSFunction, JSFunctionAsync, JSValue } from "./values.js"
-import { assert, mapValues } from "./utils.js"
 import { VMError } from "./error.js"
 
 export interface VMOptions {

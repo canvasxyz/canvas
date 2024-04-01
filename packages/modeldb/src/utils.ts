@@ -1,29 +1,11 @@
+import { assert, signalInvalidType } from "@canvas-js/utils"
+
 import type { Model, ModelValue, Property, PropertyValue } from "./types.js"
 
 export type Awaitable<T> = T | Promise<T>
 
 // eslint-disable-next-line no-useless-escape
 export const namePattern = /^[a-zA-Z0-9$:_\-\.]+$/
-
-export function assert(condition: boolean, message?: string): asserts condition {
-	if (!condition) {
-		throw new Error(message ?? `assertion failed`)
-	}
-}
-
-export function signalInvalidType(type: never): never {
-	console.error(type)
-	throw new TypeError("internal error: invalid type")
-}
-
-export const mapEntries = <K extends string, S, T>(object: Record<K, S>, map: (entry: [key: K, value: S]) => T) =>
-	Object.fromEntries(Object.entries<S>(object).map(([key, value]) => [key, map([key as K, value])])) as Record<K, T>
-
-export const mapKeys = <K extends string, S, T>(object: Record<K, S>, map: (key: K) => T) =>
-	Object.fromEntries(Object.entries<S>(object).map(([key, value]) => [key, map(key as K)])) as Record<K, T>
-
-export const mapValues = <K extends string, S, T>(object: Record<K, S>, map: (value: S) => T) =>
-	Object.fromEntries(Object.entries<S>(object).map(([key, value]) => [key, map(value)])) as Record<K, T>
 
 export const mapValuesAsync = async <K extends string, S, T>(object: Record<K, S>, map: (value: S) => Promise<T>) => {
 	const values = await Promise.all(Object.values<S>(object).map((value) => map(value)))
@@ -106,24 +88,3 @@ export function validatePropertyValue(modelName: string, property: Property, val
 		signalInvalidType(property)
 	}
 }
-
-// export const defaultResolver: Resolver = {
-// 	lessThan({ version: a }, { version: b }) {
-// 		if (b === null) {
-// 			return false
-// 		} else if (a === null) {
-// 			return true
-// 		}
-
-// 		let x = a.length
-// 		let y = b.length
-// 		for (let i = 0, len = Math.min(x, y); i < len; ++i) {
-// 			if (a[i] !== b[i]) {
-// 				x = a[i]
-// 				y = b[i]
-// 				break
-// 			}
-// 		}
-// 		return x < y
-// 	},
-// }

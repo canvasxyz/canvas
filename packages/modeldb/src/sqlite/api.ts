@@ -1,5 +1,7 @@
 import { Database } from "better-sqlite3"
 
+import { assert, signalInvalidType, mapValues } from "@canvas-js/utils"
+
 import {
 	Property,
 	Relation,
@@ -23,7 +25,7 @@ import {
 } from "./encoding.js"
 import { Method, Query } from "./utils.js"
 import { isNotExpression, isLiteralExpression, isRangeExpression } from "../query.js"
-import { assert, mapValues, signalInvalidType, validateModelValue, zip } from "../utils.js"
+import { validateModelValue, zip } from "../utils.js"
 
 type RecordValue = Record<string, string | number | Buffer | null>
 type Params = Record<`p${string}`, string | number | Buffer | null>

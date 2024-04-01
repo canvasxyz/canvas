@@ -8,7 +8,7 @@ import type {
 	ReferenceProperty,
 } from "../types.js"
 
-import { assert, signalInvalidType } from "../utils.js"
+import { assert, signalInvalidType } from "@canvas-js/utils"
 
 // this is the type of a primitive value as stored in sqlite
 // this may not match onto the types in the model

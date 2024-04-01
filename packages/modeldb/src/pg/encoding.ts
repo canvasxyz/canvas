@@ -1,3 +1,5 @@
+import { assert, signalInvalidType } from "@canvas-js/utils"
+
 import type {
 	Model,
 	ModelValue,
@@ -7,8 +9,6 @@ import type {
 	PropertyValue,
 	ReferenceProperty,
 } from "../types.js"
-
-import { assert, signalInvalidType } from "../utils.js"
 
 type PostgresPrimitiveValue = string | number | boolean | Uint8Array | null
 

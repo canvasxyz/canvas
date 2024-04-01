@@ -8,8 +8,7 @@ import type { Signature, Action, Message, Session, SignerCache } from "@canvas-j
 
 import { AbstractModelDB, Effect, ModelValue, ModelsInit, lessThan } from "@canvas-js/modeldb"
 import { GossipLogConsumer, ReadOnlyTransaction, encodeId, MAX_MESSAGE_ID, MIN_MESSAGE_ID } from "@canvas-js/gossiplog"
-
-import { assert, mapValues } from "../utils.js"
+import { assert, mapValues } from "@canvas-js/utils"
 
 export type ExecutionContext = {
 	txn: ReadOnlyTransaction
