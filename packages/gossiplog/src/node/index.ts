@@ -1,15 +1,15 @@
 import fs from "node:fs"
 import { equals } from "uint8arrays"
 
-import { Bound, KeyValueStore } from "@canvas-js/okra"
+import { Bound } from "@canvas-js/okra"
 import { Database, Environment, Transaction, Tree } from "@canvas-js/okra-node"
+import { Message, Signature } from "@canvas-js/interfaces"
 import { assert } from "@canvas-js/utils"
 
 import { KEY_LENGTH, encodeId, encodeSignedMessage } from "../schema.js"
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
 import { getAncestors, indexAncestors, isAncestor } from "../ancestors.js"
 import { cborNull } from "../utils.js"
-import { Message, Signature } from "@canvas-js/interfaces"
 
 export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
 	public static async open<Payload, Result>(

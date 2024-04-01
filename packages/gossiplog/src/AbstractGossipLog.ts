@@ -22,7 +22,7 @@ import {
 	MAX_MESSAGE_ID,
 	decodeSignedMessage,
 } from "./schema.js"
-import { topicPattern, cborNull, DelayableController } from "./utils.js"
+import { topicPattern, DelayableController } from "./utils.js"
 
 export interface ReadOnlyTransaction {
 	getHeads(): Awaitable<Uint8Array[]>
@@ -34,8 +34,8 @@ export interface ReadOnlyTransaction {
 
 export interface ReadWriteTransaction {
 	getHeads(): Awaitable<Uint8Array[]>
-	getAncestors: (key: Uint8Array, atOrBefore: number, results: Set<string>) => Awaitable<void>
 	isAncestor: (key: Uint8Array, ancestorKey: Uint8Array, visited?: Set<string>) => Awaitable<boolean>
+	getAncestors: (key: Uint8Array, atOrBefore: number, results: Set<string>) => Awaitable<void>
 
 	insert: (id: string, signature: Signature, message: Message, entry?: Entry) => Awaitable<void>
 

@@ -1,17 +1,17 @@
 import pDefer from "p-defer"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 import { equals } from "uint8arrays"
+import { IDBPDatabase, openDB } from "idb"
 
 import { Bound, Entry, KeyValueStore } from "@canvas-js/okra"
 import { IDBStore, IDBTree } from "@canvas-js/okra-idb"
-import { IDBPDatabase, openDB } from "idb"
-
+import { Message, Signature } from "@canvas-js/interfaces"
 import { assert } from "@canvas-js/utils"
+
 import { KEY_LENGTH, encodeId, encodeSignedMessage } from "../schema.js"
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
 import { SyncDeadlockError, SyncResourceError, cborNull } from "../utils.js"
 import { getAncestors, indexAncestors, isAncestor } from "../ancestors.js"
-import { Message, Signature } from "@canvas-js/interfaces"
 
 export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
 	public static async open<Payload, Result>(init: GossipLogInit<Payload, Result>): Promise<GossipLog<Payload, Result>> {

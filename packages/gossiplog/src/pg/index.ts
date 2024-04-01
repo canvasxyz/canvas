@@ -8,6 +8,7 @@ import { equals } from "uint8arrays"
 
 import { Bound } from "@canvas-js/okra"
 import { PostgresTree, PostgresStore } from "@canvas-js/okra-pg"
+import { Message, Signature } from "@canvas-js/interfaces"
 import { assert } from "@canvas-js/utils"
 
 import { KEY_LENGTH, decodeId, encodeId, encodeSignedMessage } from "../schema.js"
@@ -21,7 +22,6 @@ import { pgCborSql } from "./pg_cbor.sql.js"
 import { insertSql } from "./insert_updating_ancestors.sql.js"
 import { insertMessageRemovingHeadsSql } from "./insert_message_removing_heads.sql.js"
 import { decodeClock } from "../clock.js"
-import { Message, Signature } from "@canvas-js/interfaces"
 
 const initSql = [
 	getAncestorsSql,
