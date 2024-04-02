@@ -23,26 +23,37 @@ const isPostgres = (path: string | pg.ConnectionConfig): boolean =>
 	typeof path !== "string" || path.startsWith("postgres://") || path.startsWith("postgresql://")
 
 export default {
-	async openDB(location: { path: string | pg.ConnectionConfig | null; topic: string }, models, { indexHistory } = {}) {
+	async openDB(
+		location: { path: string | pg.ConnectionConfig | null; topic: string; clear?: boolean },
+		models,
+		{ indexHistory } = {},
+	) {
 		if (location.path === null) {
 			return new ModelDB({ path: null, models, indexHistory })
 		} else if (isPostgres(location.path)) {
-			return await PostgresModelDB.initialize({ connectionConfig: location.path, models, indexHistory })
+			return await PostgresModelDB.initialize({
+				connectionConfig: location.path,
+				models,
+				indexHistory,
+				clear: location.clear,
+			})
 		} else {
 			assert(typeof location.path === "string", 'expected typeof location.path === "string"')
+			// TODO: delete db.sqlite
 			return new ModelDB({ path: path.resolve(location.path, "db.sqlite"), models, indexHistory })
 		}
 	},
 
 	async openGossipLog<Payload, Result>(
-		location: { path: string | pg.ConnectionConfig | null; topic: string },
+		location: { path: string | pg.ConnectionConfig | null; topic: string; clear?: boolean },
 		init: GossipLogInit<Payload, Result>,
 	) {
 		if (location.path === null) {
 			return await MemoryGossipLog.open(init)
 		} else if (isPostgres(location.path)) {
-			return await PostgresGossipLog.open(init, location.path)
+			return await PostgresGossipLog.open(init, location.path, location.clear)
 		} else {
+			// TODO: delete topics/
 			assert(typeof location.path === "string", 'expected typeof location.path === "string"')
 			return await GossipLog.open(init, path.resolve(location.path, "topics", init.topic))
 		}
@@ -54,7 +65,11 @@ export default {
 	},
 } satisfies PlatformTarget
 
-async function getPeerId(location: { topic: string; path: string | pg.ConnectionConfig | null }): Promise<PeerId> {
+async function getPeerId(location: {
+	topic: string
+	path: string | pg.ConnectionConfig | null
+	clear?: boolean
+}): Promise<PeerId> {
 	if (process.env.PEER_ID !== undefined) {
 		return createFromProtobuf(Buffer.from(process.env.PEER_ID, "base64"))
 	}
@@ -68,9 +83,9 @@ async function getPeerId(location: { topic: string; path: string | pg.Connection
 		const client = new pg_.default.Client(location.path)
 		await client.connect()
 
-		// if (clear) {
-		//   await client.query("DROP TABLE IF EXISTS canvas_peerids")
-		// }
+		if (location.clear) {
+			await client.query("DROP TABLE IF EXISTS canvas_peerids")
+		}
 		await client.query("CREATE TABLE IF NOT EXISTS canvas_peerids (peerid TEXT, topic TEXT)")
 		const { rows } = await client.query("SELECT peerid FROM canvas_peerids WHERE topic = $1", [location.topic])
 
