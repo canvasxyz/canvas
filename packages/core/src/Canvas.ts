@@ -127,7 +127,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			return signer.verify(signature, message)
 		}
 
-		const runtime = await createRuntime(path, signers, contract, { runtimeMemoryLimit, ignoreMissingActions })
+		const runtime = await createRuntime(path, signers, contract, { runtimeMemoryLimit, ignoreMissingActions, clearModelDB: reset })
 
 		const topic = runtime.topic
 

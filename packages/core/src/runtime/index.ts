@@ -12,7 +12,7 @@ export async function createRuntime(
 	location: string | pg.ConnectionConfig | null,
 	signers: SignerCache,
 	contract: string | Contract,
-	options: { runtimeMemoryLimit?: number; indexHistory?: boolean; ignoreMissingActions?: boolean } = {},
+	options: { runtimeMemoryLimit?: number; indexHistory?: boolean; ignoreMissingActions?: boolean, clearModelDB?: boolean } = {},
 ): Promise<AbstractRuntime> {
 	if (typeof contract === "string") {
 		return ContractRuntime.init(location, signers, contract, options)
