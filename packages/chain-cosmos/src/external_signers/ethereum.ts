@@ -30,11 +30,15 @@ export const createEthereumSigner = (signer: EthereumSigner, bech32Prefix: strin
 	getChainId: signer.getChainId,
 	sign: async (cosmosMessage: CosmosMessage, signerAddress: string, chainId: string) => {
 		const encodedMessage = encodeReadableEthereumMessage(cosmosMessage)
-
 		const ethAddress = `0x${bytesToHex(fromBech32(signerAddress).data)}`
-		const hexSignature = await signer.signEthereum(chainId, ethAddress, encodedMessage)
+		let signature = await signer.signEthereum(chainId, ethAddress, encodedMessage)
+		// some signers prepend the `0x` in the signature result (metamask) and some don't (keplr)
+		// we want to return the signature without this 0x prefix
+		if (signature.slice(0, 2) === "0x") {
+			signature = signature.slice(2)
+		}
 		return {
-			signature: hexToBytes(hexSignature.substring(2)),
+			signature: hexToBytes(signature),
 			signatureType: "ethereum" as const,
 		}
 	},
