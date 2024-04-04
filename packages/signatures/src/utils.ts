@@ -41,6 +41,10 @@ export function deepEquals<T>(obj1: T, obj2: T) {
 		return false
 	}
 
+	if (obj1 instanceof Uint8Array && obj2 instanceof Uint8Array) {
+		return Buffer.compare(Buffer.from(obj1), Buffer.from(obj2)) === 0
+	}
+
 	const keys1 = Object.keys(obj1)
 	const keys2 = Object.keys(obj2)
 
