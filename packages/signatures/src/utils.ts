@@ -59,12 +59,7 @@ export function deepEquals<T>(obj1: T, obj2: T) {
 
 		const val1 = (obj1 as any)[key]
 		const val2 = (obj2 as any)[key]
-
-		if (typeof val1 === "object" && typeof val2 === "object") {
-			if (!deepEquals(obj1, obj2)) {
-				return false
-			}
-		} else if (obj1 !== obj2) {
+		if (!deepEquals(val1, val2)) {
 			return false
 		}
 	}

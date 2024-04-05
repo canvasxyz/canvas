@@ -2,6 +2,7 @@ import test from "ava"
 
 import { base58btc } from "multiformats/bases/base58"
 import { encodeURI, decodeURI, deepEquals } from "@canvas-js/signatures"
+import { Session } from "@canvas-js/interfaces"
 
 // https://github.com/w3c-ccg/did-method-key/blob/main/test-vectors/secp256k1.json
 const testVector = {
@@ -68,6 +69,31 @@ test("deepEquals correctly validates primitive types, objects, arrays, and Uint8
 	t.is(deepEquals(undefined, undefined), true)
 	t.is(deepEquals(null, null), true)
 	t.is(deepEquals(new Uint8Array([1, 2, 3]), new Uint8Array([1, 2, 3])), true)
+	t.is(deepEquals({ a: "hello" }, { a: "hello" }), true)
+	t.is(deepEquals({ a: new Uint8Array([1, 2, 3]) }, { a: new Uint8Array([1, 2, 3]) }), true)
+	const session1: Session = {
+		type: "session",
+		address: "cosmos:osmosis-1:osmo1atbcdevrem3nczu6dgjd2dd8wuumywkf0w9car",
+		authorizationData: {
+			signature: new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
+		},
+		blockhash: null,
+		duration: null,
+		publicKey: "did:key:z6aaa4mG17JUSscuTaCKhbM3nkS49maSpzSxPCE2qDqbM5mg",
+		timestamp: 1712329014279,
+	}
+	const session2: Session = {
+		type: "session",
+		address: "cosmos:osmosis-1:osmo1atbcdevrem3nczu6dgjd2dd8wuumywkf0w9car",
+		authorizationData: {
+			signature: new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
+		},
+		blockhash: null,
+		duration: null,
+		publicKey: "did:key:z6aaa4mG17JUSscuTaCKhbM3nkS49maSpzSxPCE2qDqbM5mg",
+		timestamp: 1712329014279,
+	}
+	t.is(deepEquals(session1, session2), true)
 
 	t.is(deepEquals(1, 2), false)
 	t.is(deepEquals(1n as any, 1), false)
@@ -85,6 +111,8 @@ test("deepEquals correctly validates primitive types, objects, arrays, and Uint8
 	t.is(deepEquals([], [2]), false)
 	t.is(deepEquals(undefined, null), false)
 	t.is(deepEquals(new Uint8Array([1, 2, 3]), new Uint8Array([1, 2])), false)
+	t.is(deepEquals({ a: "hello" }, { a: "goodbye" }), false)
+	t.is(deepEquals({ a: new Uint8Array([1, 2, 3]) }, { a: new Uint8Array([1, 2, 4]) }), false)
 
 	t.is(deepEquals(Symbol.for("b"), Symbol.for("b")), true)
 	t.is(deepEquals(Symbol("a"), Symbol("a")), false)
