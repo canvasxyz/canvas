@@ -1,6 +1,6 @@
 import { fromBech32, toBech32 } from "@cosmjs/encoding"
 import { CosmosMessage } from "../types.js"
-import { verifyMessage, getBytes, toQuantity } from "ethers"
+import { verifyMessage, getBytes, hexlify } from "ethers"
 
 export function encodeReadableEthereumMessage(message: CosmosMessage): string {
 	return `
@@ -29,7 +29,7 @@ export const createEthereumSigner = (signer: EthereumSigner, bech32Prefix: strin
 	getChainId: signer.getChainId,
 	sign: async (cosmosMessage: CosmosMessage, signerAddress: string, chainId: string) => {
 		const encodedMessage = encodeReadableEthereumMessage(cosmosMessage)
-		const ethAddress = toQuantity(fromBech32(signerAddress).data)
+		const ethAddress = hexlify(fromBech32(signerAddress).data)
 		const signature = await signer.signEthereum(chainId, ethAddress, encodedMessage)
 		// signature is a hex string prefixed by 0x
 		return {
@@ -43,7 +43,7 @@ export const verifyEthereum = (message: CosmosMessage, sessionData: EthereumSign
 	const walletAddress = message.address
 	const encodedReadableMessage = encodeReadableEthereumMessage(message)
 	// validate ethereum signature
-	const recoveredAddress = verifyMessage(encodedReadableMessage, toQuantity(sessionData.signature))
+	const recoveredAddress = verifyMessage(encodedReadableMessage, hexlify(sessionData.signature))
 	const { prefix } = fromBech32(walletAddress)
 
 	if (toBech32(prefix, getBytes(recoveredAddress)) !== walletAddress) {
