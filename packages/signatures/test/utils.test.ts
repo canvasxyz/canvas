@@ -68,6 +68,8 @@ test("deepEquals correctly validates primitive types, objects, arrays, and Uint8
 	t.is(deepEquals(undefined, undefined), true)
 	t.is(deepEquals(null, null), true)
 	t.is(deepEquals(new Uint8Array([1, 2, 3]), new Uint8Array([1, 2, 3])), true)
+	t.is(deepEquals({ a: "hello" }, { a: "hello" }), true)
+	t.is(deepEquals({ a: new Uint8Array([1, 2, 3]) }, { a: new Uint8Array([1, 2, 3]) }), true)
 
 	t.is(deepEquals(1, 2), false)
 	t.is(deepEquals(1n as any, 1), false)
@@ -85,6 +87,8 @@ test("deepEquals correctly validates primitive types, objects, arrays, and Uint8
 	t.is(deepEquals([], [2]), false)
 	t.is(deepEquals(undefined, null), false)
 	t.is(deepEquals(new Uint8Array([1, 2, 3]), new Uint8Array([1, 2])), false)
+	t.is(deepEquals({ a: "hello" }, { a: "goodbye" }), false)
+	t.is(deepEquals({ a: new Uint8Array([1, 2, 3]) }, { a: new Uint8Array([1, 2, 4]) }), false)
 
 	t.is(deepEquals(Symbol.for("b"), Symbol.for("b")), true)
 	t.is(deepEquals(Symbol("a"), Symbol("a")), false)
