@@ -1,4 +1,8 @@
-// set up postgres databases for tests
+// Set up Postgres database for tests.
+//
+// This requires a user called postgres, with the ability to create databases.
+// If you are running it in a development environment, you can use:
+// `createuser postgres --createdb`
 
 const { Client } = require("pg")
 
@@ -12,7 +16,7 @@ const pgclient = new Client({
 
 pgclient.connect()
 
-// we have to nest each query because otherwise pg.Client treats them as a transaction
+// Nest each query because otherwise pg.Client treats them as a transaction
 pgclient.query("CREATE DATABASE test", (err, res) => {
 	if (err) throw err
 	pgclient.query("CREATE DATABASE test2", (err2, res2) => {
