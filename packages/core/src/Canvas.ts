@@ -127,7 +127,11 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			return signer.verify(signature, message)
 		}
 
-		const runtime = await createRuntime(path, signers, contract, { runtimeMemoryLimit, ignoreMissingActions, clearModelDB: reset })
+		const runtime = await createRuntime(path, signers, contract, {
+			runtimeMemoryLimit,
+			ignoreMissingActions,
+			clearModelDB: reset,
+		})
 
 		const topic = runtime.topic
 
@@ -400,8 +404,10 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 	}
 
 	/**
-	 * Append a new message to the end of the log (ie an action generated locally)
+	 * Append a new unsigned message to the end of the log (ie an action generated locally)
 	 * Low-level utility method for internal and debugging use.
+	 *
+	 * The default signer on the message log will be used if none is provided.
 	 * The normal way to apply actions is to use the `Canvas.actions[name](...)` functions.
 	 */
 	public async append(
