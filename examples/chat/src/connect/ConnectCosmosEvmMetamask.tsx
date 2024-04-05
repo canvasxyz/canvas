@@ -46,7 +46,7 @@ export const ConnectCosmosEvmMetamask: React.FC<ConnectCosmosEvmMetamaskProps> =
 					getAddress: async () => thisAddress,
 					getChainId: async () => chainId,
 				},
-			})
+			}),
 		)
 		setThisIsConnected(true)
 	}, [])

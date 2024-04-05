@@ -28,10 +28,7 @@ export abstract class AbstractSessionSigner<AuthorizationData> implements Sessio
 	#createSigner: (init?: { type: string; privateKey: Uint8Array }) => Signer<Action | Session<AuthorizationData>>
 	#defaultDuration: number | null
 
-	public constructor(
-		public readonly key: string,
-		config: AbstractSessionSignerConfig<AuthorizationData>,
-	) {
+	public constructor(public readonly key: string, config: AbstractSessionSignerConfig<AuthorizationData>) {
 		this.log = logger(`canvas:${key}`)
 		this.#createSigner = config.createSigner
 		this.#defaultDuration = config.defaultDuration ?? null
