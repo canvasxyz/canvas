@@ -110,6 +110,16 @@ function runTestSuite({ createSigner, name }: SignerImplementation) {
 		t.notThrows(() => signer.verify(sessionSignature, message))
 	})
 
+	test(`${name} - session address is matched by the signer`, async (t) => {
+		const topic = "example:signer"
+		const signer = await createSigner()
+
+		const session = await signer.getSession(topic)
+		const addressParts = session.address.split(":")
+		t.is(addressParts.length, 3)
+		t.true(signer.match(session.address))
+	})
+
 	test(`${name} - refuse to sign foreign sessions`, async (t) => {
 		const topic = "example:signer"
 		const [a, b] = await Promise.all([createSigner(), createSigner()])
