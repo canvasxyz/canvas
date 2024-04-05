@@ -1,15 +1,17 @@
 import pDefer from "p-defer"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 import { equals } from "uint8arrays"
-
-import { Bound, KeyValueStore } from "@canvas-js/okra"
-import { IDBStore, IDBTree } from "@canvas-js/okra-idb"
 import { IDBPDatabase, openDB } from "idb"
 
+import { Bound, Entry, KeyValueStore } from "@canvas-js/okra"
+import { IDBStore, IDBTree } from "@canvas-js/okra-idb"
+import { Message, Signature } from "@canvas-js/interfaces"
 import { assert } from "@canvas-js/utils"
-import { KEY_LENGTH } from "../schema.js"
+
+import { KEY_LENGTH, encodeId, encodeSignedMessage } from "../schema.js"
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
 import { SyncDeadlockError, SyncResourceError, cborNull } from "../utils.js"
+import { getAncestors, indexAncestors, isAncestor } from "../ancestors.js"
 
 export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
 	public static async open<Payload, Result>(init: GossipLogInit<Payload, Result>): Promise<GossipLog<Payload, Result>> {
@@ -154,20 +156,15 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 				},
 			}
 
-			const ancestors: Omit<KeyValueStore, "set" | "delete"> = {
-				get: (key) => this.ancestors.read(() => this.ancestors.get(key)),
-				entries: (lowerBound = null, upperBound = null, options = {}) => {
-					this.ancestors.txn = this.db.transaction(this.ancestors.storeName, "readonly")
-					return this.ancestors.entries(lowerBound, upperBound, options)
-				},
-			}
-
 			try {
 				result = await callback({
-					messages: this.messages,
-					heads,
-					ancestors,
 					getHeads: () => this.heads.read(() => getHeads(this.heads)),
+					getAncestors: (key: Uint8Array, atOrBefore: number, results: Set<string>) =>
+						this.ancestors.read(() => getAncestors(this.ancestors, key, atOrBefore, results)),
+					isAncestor: (key: Uint8Array, ancestorKey: Uint8Array, visited = new Set<string>()) =>
+						this.ancestors.read(() => isAncestor(this.ancestors, key, ancestorKey, visited)),
+
+					messages: this.messages,
 				})
 			} catch (err) {
 				if (err instanceof Error && err.name === "TransactionInactiveError") {
@@ -228,22 +225,37 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 					},
 				}
 
-				const ancestors: KeyValueStore = {
-					get: (key) => this.ancestors.read(() => this.ancestors.get(key)),
-					set: (key, value) => this.ancestors.write(() => this.ancestors.set(key, value)),
-					delete: (key) => this.ancestors.write(() => this.ancestors.delete(key)),
-					entries: (lowerBound = null, upperBound = null, options = {}) => {
-						this.ancestors.txn = this.db.transaction(this.ancestors.storeName, "readonly")
-						return this.ancestors.entries(lowerBound, upperBound, options)
-					},
-				}
-
 				try {
 					result = await callback({
-						messages: this.messages,
-						heads,
-						ancestors,
 						getHeads: () => this.heads.read(() => getHeads(this.heads)),
+						getAncestors: (key: Uint8Array, atOrBefore: number, results: Set<string>) =>
+							this.ancestors.read(() => getAncestors(this.ancestors, key, atOrBefore, results)),
+						isAncestor: (key: Uint8Array, ancestorKey: Uint8Array, visited = new Set<string>()) =>
+							this.ancestors.read(() => isAncestor(this.ancestors, key, ancestorKey, visited)),
+
+						insert: async (
+							id: string,
+							signature: Signature,
+							message: Message,
+							[key, value] = encodeSignedMessage(signature, message),
+						) => {
+							await this.messages.set(key, value)
+
+							const parentKeys = message.parents.map(encodeId)
+
+							await this.heads.write(async () => {
+								await this.heads.set(key, cborNull)
+								for (const parentKey of parentKeys) {
+									await this.heads.delete(parentKey)
+								}
+							})
+
+							if (this.indexAncestors) {
+								await this.ancestors.write(() => indexAncestors(this.ancestors, key, parentKeys))
+							}
+						},
+
+						messages: this.messages,
 					})
 				} catch (err) {
 					this.log.error("error in read-write transaction: %O", err)

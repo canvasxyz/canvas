@@ -1,13 +1,17 @@
 import type { Session } from "@canvas-js/interfaces"
 import { AbstractSessionData, AbstractSessionSigner, Ed25519DelegateSigner } from "@canvas-js/signatures"
-import { assert, signalInvalidType } from "@canvas-js/utils"
 
-import { validateSessionData, addressPattern, parseAddress } from "./utils.js"
+import { addressPattern, parseAddress } from "./utils.js"
 import { CosmosMessage, CosmosSessionData, ExternalCosmosSigner } from "./types.js"
 import { createDefaultSigner } from "./external_signers/default.js"
-import { createEthereumSigner, verifyEthereum } from "./external_signers/ethereum.js"
-import { createAminoSigner, verifyAmino } from "./external_signers/amino.js"
-import { createBytesSigner, verifyBytes } from "./external_signers/bytes.js"
+import { createEthereumSigner, validateEthereumSignedSessionData, verifyEthereum } from "./external_signers/ethereum.js"
+import { createAminoSigner, validateAminoSignedSessionData, verifyAmino } from "./external_signers/amino.js"
+import { createBytesSigner, validateBytesSignedSessionData, verifyBytes } from "./external_signers/bytes.js"
+import {
+	createArbitrarySigner,
+	validateArbitrarySignedSessionData,
+	verifyArbitrary,
+} from "./external_signers/arbitrary.js"
 
 export interface CosmosSignerInit {
 	signer?: ExternalCosmosSigner
@@ -39,6 +43,8 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 			this.#signer = createAminoSigner(signer)
 		} else if (signer.type == "bytes") {
 			this.#signer = createBytesSigner(signer)
+		} else if (signer.type == "arbitrary") {
+			this.#signer = createArbitrarySigner(signer)
 		} else {
 			throw new Error("invalid signer")
 		}
@@ -50,7 +56,6 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 	public async verifySession(topic: string, session: Session) {
 		const { publicKey, address, authorizationData: data, timestamp, duration } = session
 
-		assert(validateSessionData(data), "invalid session")
 		const [chainId, walletAddress] = parseAddress(address)
 
 		const message: CosmosMessage = {
@@ -64,13 +69,27 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 
 		// select verification method based on the signing method
 		if (data.signatureType == "ethereum") {
+			if (!validateEthereumSignedSessionData(data)) {
+				throw new Error("invalid ethereum session data")
+			}
 			verifyEthereum(message, data)
 		} else if (data.signatureType == "amino") {
+			if (!validateAminoSignedSessionData(data)) {
+				throw new Error("invalid amino session data")
+			}
 			await verifyAmino(message, data)
 		} else if (data.signatureType == "bytes") {
+			if (!validateBytesSignedSessionData(data)) {
+				throw new Error("invalid bytes session data")
+			}
 			verifyBytes(message, data)
+		} else if (data.signatureType == "arbitrary") {
+			if (!validateArbitrarySignedSessionData(data)) {
+				throw new Error("invalid arbitrary session data")
+			}
+			await verifyArbitrary(message, data)
 		} else {
-			signalInvalidType(data.signatureType)
+			throw new Error("invalid signature type")
 		}
 	}
 

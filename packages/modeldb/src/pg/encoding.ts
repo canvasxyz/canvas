@@ -1,3 +1,5 @@
+import { assert, signalInvalidType } from "@canvas-js/utils"
+
 import type {
 	Model,
 	ModelValue,
@@ -7,8 +9,6 @@ import type {
 	PropertyValue,
 	ReferenceProperty,
 } from "../types.js"
-
-import { assert, signalInvalidType } from "../utils.js"
 
 type PostgresPrimitiveValue = string | number | boolean | Uint8Array | null
 
@@ -66,7 +66,7 @@ export function encodePrimitiveValue(
 		if (typeof value === "number" && Number.isSafeInteger(value)) {
 			return value
 		} else {
-			throw new TypeError(`${modelName}/${property.name} must be an integer`)
+			throw new TypeError(`${modelName}/${property.name} must be a safely representable integer`)
 		}
 	} else if (property.type === "float") {
 		if (typeof value === "number") {
@@ -167,8 +167,8 @@ export function decodePrimitiveValue(modelName: string, property: PrimitivePrope
 	}
 
 	if (property.type === "integer") {
-		if (typeof value === "number" && Number.isSafeInteger(value)) {
-			return value
+		if (typeof value === "string" && Number.isSafeInteger(parseInt(value, 10))) {
+			return parseInt(value, 10)
 		} else {
 			console.error("expected integer, got", value)
 			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected integer)`)

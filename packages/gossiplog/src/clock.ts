@@ -29,7 +29,7 @@ export function encodeClock(key: Uint8Array, clock: number): number {
 
 	const sets: number[] = []
 	while (clock > 0) {
-		sets.push(Number(clock & 0x7f))
+		sets.push(clock & 0x7f)
 		clock >>= 7
 	}
 

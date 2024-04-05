@@ -14,6 +14,7 @@ import { ConnectPolkadot } from "./ConnectPolkadot.js"
 import { ConnectSolana } from "./ConnectSolana.js"
 import { ConnectNEAR } from "./ConnectNEAR.js"
 import { ConnectMagic } from "./ConnectMagic.js"
+import { ConnectLeap } from "./ConnectLeap.js"
 
 export const Connect: React.FC<{}> = ({}) => {
 	const [method, setMethod] = useState("burner")
@@ -38,6 +39,7 @@ export const Connect: React.FC<{}> = ({}) => {
 				<option value="terra">Terra</option>
 				<option value="cosmos-evm">Cosmos/EVM</option>
 				<option value="bluesky">BlueSky</option>
+				<option value="leap">Leap</option>
 				<option value="magic">Magic</option>
 			</select>
 			<Method method={method} />
@@ -73,6 +75,8 @@ const Method: React.FC<{ method: string }> = (props) => {
 			return <ConnectCosmosEvmMetamask chainId="osmosis-1" />
 		case "bluesky":
 			return <ConnectATP />
+		case "leap":
+			return <ConnectLeap chainId="osmosis-1" />
 		case "magic":
 			return (
 				<ConnectMagic

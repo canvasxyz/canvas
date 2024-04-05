@@ -29,7 +29,8 @@ import PQueue from "p-queue"
 
 import type { SignerCache } from "@canvas-js/interfaces"
 
-import { assert, second } from "./utils.js"
+import { assert } from "@canvas-js/utils"
+import { second } from "./utils.js"
 
 export interface DiscoveryServiceComponents {
 	peerId: PeerId
@@ -134,10 +135,7 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 	#heartbeatTimer: NodeJS.Timeout | null = null
 	#evictionTimer: NodeJS.Timeout | null = null
 
-	constructor(
-		public readonly components: DiscoveryServiceComponents,
-		init: DiscoveryServiceInit,
-	) {
+	constructor(public readonly components: DiscoveryServiceComponents, init: DiscoveryServiceInit) {
 		super()
 		this.pubsub = DiscoveryService.extractGossipSub(components)
 		this.fetch = DiscoveryService.extractFetchService(components)

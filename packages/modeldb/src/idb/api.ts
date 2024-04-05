@@ -1,11 +1,12 @@
 import { IDBPIndex, IDBPTransaction } from "idb"
-
 import { logger } from "@libp2p/logger"
+
+import { assert, signalInvalidType } from "@canvas-js/utils"
 
 import { Model, ModelValue, NotExpression, Property, PropertyValue, QueryParams, RangeExpression } from "../types.js"
 
 import { getCompare, getFilter, isNotExpression, isLiteralExpression, isRangeExpression } from "../query.js"
-import { assert, signalInvalidType, validateModelValue } from "../utils.js"
+import { validateModelValue } from "../utils.js"
 import { getIndexName } from "./utils.js"
 
 type ObjectPropertyValue = PropertyValue | PropertyValue[]

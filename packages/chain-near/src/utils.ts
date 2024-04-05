@@ -19,11 +19,6 @@ export const generateHumanReadableNearMessage = (message: NEARMessage): string =
   - Expiration Time: ${message.expirationTime}
   `
 
-export function signalInvalidType(type: never): never {
-	console.error(type)
-	throw new TypeError("internal error: invalid type")
-}
-
 export function validateSessionData(data: any): data is NEARSessionData {
 	if (!(data.signature instanceof Uint8Array)) {
 		return false

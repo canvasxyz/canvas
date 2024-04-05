@@ -4,30 +4,28 @@ import { equals } from "uint8arrays"
 
 import { Bound } from "@canvas-js/okra"
 import { MemoryTree, MemoryStore } from "@canvas-js/okra-memory"
+import { Message, Signature } from "@canvas-js/interfaces"
 import { assert } from "@canvas-js/utils"
 
-import { KEY_LENGTH } from "../schema.js"
+import { KEY_LENGTH, encodeId, encodeSignedMessage } from "../schema.js"
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
 import { SyncDeadlockError, cborNull } from "../utils.js"
+import { getAncestors, indexAncestors, isAncestor } from "../ancestors.js"
 
 export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
 	public static async open<Payload, Result>(init: GossipLogInit<Payload, Result>): Promise<GossipLog<Payload, Result>> {
 		const messages = await MemoryTree.open()
-		const heads = new MemoryStore()
-		const ancestors = new MemoryStore()
-		return new GossipLog(messages, heads, ancestors, init)
+		return new GossipLog(messages, init)
 	}
+
+	private readonly heads = new MemoryStore()
+	private readonly ancestors = new MemoryStore()
 
 	private readonly queue = new PQueue({ concurrency: 1 })
 	private readonly incomingSyncPeers = new Set<string>()
 	private readonly outgoingSyncPeers = new Set<string>()
 
-	private constructor(
-		private readonly messages: MemoryTree,
-		private readonly heads: MemoryStore,
-		private readonly ancestors: MemoryStore,
-		init: GossipLogInit<Payload, Result>,
-	) {
+	private constructor(private readonly messages: MemoryTree, init: GossipLogInit<Payload, Result>) {
 		super(init)
 	}
 
@@ -86,9 +84,12 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			try {
 				return await callback({
 					getHeads: () => getHeads(this.heads),
+					getAncestors: async (key: Uint8Array, atOrBefore: number, results: Set<string>) =>
+						getAncestors(this.ancestors, key, atOrBefore, results),
+					isAncestor: (key: Uint8Array, ancestorKey: Uint8Array, visited = new Set<string>()) =>
+						isAncestor(this.ancestors, key, ancestorKey, visited),
+
 					messages: this.messages,
-					heads: this.heads,
-					ancestors: this.ancestors,
 				})
 			} catch (err) {
 				this.log.error("error in transaction: %O", err)
@@ -121,9 +122,32 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			try {
 				return await callback({
 					getHeads: () => getHeads(this.heads),
+					getAncestors: async (key: Uint8Array, atOrBefore: number, results: Set<string>) =>
+						getAncestors(this.ancestors, key, atOrBefore, results),
+					isAncestor: (key: Uint8Array, ancestorKey: Uint8Array, visited = new Set<string>()) =>
+						isAncestor(this.ancestors, key, ancestorKey, visited),
+
+					insert: async (
+						id: string,
+						signature: Signature,
+						message: Message,
+						[key, value] = encodeSignedMessage(signature, message),
+					) => {
+						await this.messages.set(key, value)
+
+						const parentKeys = message.parents.map(encodeId)
+
+						await this.heads.set(key, cborNull)
+						for (const parentKey of parentKeys) {
+							await this.heads.delete(parentKey)
+						}
+
+						if (this.indexAncestors) {
+							await indexAncestors(this.ancestors, key, parentKeys)
+						}
+					},
+
 					messages: this.messages,
-					heads: this.heads,
-					ancestors: this.ancestors,
 				})
 			} catch (err) {
 				this.log.error("error in transaction: %O", err)

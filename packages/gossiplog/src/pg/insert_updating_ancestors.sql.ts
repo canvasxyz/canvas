@@ -1,7 +1,7 @@
 export const insertSql = String.raw`
 DROP FUNCTION IF EXISTS insert_updating_ancestors(BYTEA, BYTEA, BYTEA[], INTEGER[][]);
 
-CREATE OR REPLACE FUNCTION insert_updating_ancestors(key_ BYTEA, value BYTEA, parents BYTEA[], ancestor_clocks INTEGER[]) RETURNS JSONB AS $$
+CREATE OR REPLACE FUNCTION insert_updating_ancestors(key_ BYTEA, parents BYTEA[], ancestor_clocks INTEGER[]) RETURNS JSONB AS $$
 DECLARE
   i integer := 1; -- ancestor_clocks is indexed from 1
   j integer;
@@ -53,7 +53,7 @@ BEGIN
       END LOOP;
 
       SELECT array_to_json(array_agg(DISTINCT encode(tbl, 'hex')))::jsonb FROM unnest(links) AS tbl INTO tmp;
-      ancestor_links := jsonb_set(ancestor_links, array[i-1]::text[], tmp);
+      ancestor_links := jsonb_set(ancestor_links, array[i-1]::text[], COALESCE(tmp, '[]'::jsonb));
     END IF;
 
     i := i + 1;

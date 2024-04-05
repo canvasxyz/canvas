@@ -1,16 +1,14 @@
 import { QuickJSHandle } from "quickjs-emscripten"
 import { TypeTransformerFunction, create } from "@ipld/schema/typed.js"
 import { fromDSL } from "@ipld/schema/from-dsl.js"
+import type pg from "pg"
 
 import type { SignerCache } from "@canvas-js/interfaces"
-
 import { AbstractModelDB, ModelValue, ModelsInit, validateModelValue } from "@canvas-js/modeldb"
-
 import { VM } from "@canvas-js/vm"
+import { assert, mapEntries } from "@canvas-js/utils"
 
 import target from "#target"
-
-import { assert, mapEntries } from "../utils.js"
 
 import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
 import { sha256 } from "@noble/hashes/sha256"
@@ -18,10 +16,10 @@ import { bytesToHex } from "@noble/hashes/utils"
 
 export class ContractRuntime extends AbstractRuntime {
 	public static async init(
-		path: string | null,
+		path: string | pg.ConnectionConfig | null,
 		signers: SignerCache,
 		contract: string,
-		options: { runtimeMemoryLimit?: number; indexHistory?: boolean; ignoreMissingActions?: boolean } = {},
+		options: { runtimeMemoryLimit?: number; indexHistory?: boolean; ignoreMissingActions?: boolean, clearModelDB?: boolean } = {},
 	): Promise<ContractRuntime> {
 		const { runtimeMemoryLimit, indexHistory = true, ignoreMissingActions = false } = options
 
@@ -77,7 +75,7 @@ export class ContractRuntime extends AbstractRuntime {
 		assert(modelsHandle !== undefined, "missing `models` export")
 		const modelsInit = modelsHandle.consume(vm.context.dump) as ModelsInit
 
-		const db = await target.openDB({ path, topic }, AbstractRuntime.getModelSchema(modelsInit, { indexHistory }))
+		const db = await target.openDB({ path, topic, clear: options.clearModelDB }, AbstractRuntime.getModelSchema(modelsInit, { indexHistory }))
 		return new ContractRuntime(topic, signers, db, vm, actions, argsTransformers, indexHistory, ignoreMissingActions)
 	}
 

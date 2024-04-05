@@ -1,5 +1,7 @@
+import { assert } from "@canvas-js/utils"
+
 import { Config, Model, ModelsInit, PrimitiveType, Property, PropertyType, Relation } from "./types.js"
-import { assert, namePattern } from "./utils.js"
+import { namePattern } from "./utils.js"
 
 export function parseConfig(init: ModelsInit): Config {
 	const relations: Relation[] = []

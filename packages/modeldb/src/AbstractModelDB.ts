@@ -1,8 +1,10 @@
 import { logger } from "@libp2p/logger"
 
+import { assert } from "@canvas-js/utils"
+
 import { Config, ModelValue, Effect, Model, QueryParams } from "./types.js"
 import { getFilter } from "./query.js"
-import { Awaitable, assert } from "./utils.js"
+import { Awaitable } from "./utils.js"
 
 type Subscription = {
 	model: string

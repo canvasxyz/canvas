@@ -52,3 +52,7 @@ export const verifyEthereum = (message: CosmosMessage, sessionData: EthereumSign
 }
 
 export type EthereumSignedSessionData = Awaited<ReturnType<ReturnType<typeof createEthereumSigner>["sign"]>>
+
+export function validateEthereumSignedSessionData(data: any): data is EthereumSignedSessionData {
+	return data.signatureType == "ethereum" && data.signature instanceof Uint8Array
+}

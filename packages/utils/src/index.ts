@@ -1,3 +1,6 @@
 export * from "./assert.js"
 export * from "./signalInvalidType.js"
 export * from "./CacheMap.js"
+export * from "./mapEntries.js"
+export * from "./mapKeys.js"
+export * from "./mapValues.js"

@@ -1,9 +1,11 @@
 import { IDBPDatabase, IDBPTransaction, openDB } from "idb"
 
+import { assert, signalInvalidType } from "@canvas-js/utils"
+
 import { AbstractModelDB } from "../AbstractModelDB.js"
 import { Config, Effect, ModelValue, ModelsInit, QueryParams } from "../types.js"
 import { parseConfig } from "../config.js"
-import { Awaitable, assert, signalInvalidType } from "../utils.js"
+import { Awaitable } from "../utils.js"
 
 import { ModelAPI } from "./api.js"
 import { getIndexName, checkForMissingObjectStores } from "./utils.js"

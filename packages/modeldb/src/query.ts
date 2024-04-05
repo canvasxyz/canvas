@@ -1,4 +1,7 @@
 import { equals } from "uint8arrays"
+
+import { assert, signalInvalidType } from "@canvas-js/utils"
+
 import {
 	Model,
 	ModelValue,
@@ -12,7 +15,7 @@ import {
 	WhereCondition,
 } from "./types.js"
 
-import { assert, signalInvalidType, validatePropertyValue } from "./utils.js"
+import { validatePropertyValue } from "./utils.js"
 
 export function lessThan(a: Uint8Array | null, b: Uint8Array | null) {
 	if (a === null || b === null) {

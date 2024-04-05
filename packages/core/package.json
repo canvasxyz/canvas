@@ -72,6 +72,7 @@
 		"microcbor": "^0.3.0",
 		"multiformats": "^13.0.1",
 		"p-queue": "^8.0.0",
+		"pg": "^8.11.3",
 		"prom-client": "^15.0.0",
 		"quickjs-emscripten": "^0.26.0",
 		"uint8arraylist": "^2.4.7",
@@ -79,6 +80,7 @@
 	},
 	"devDependencies": {
 		"@types/node": "^20.10.4",
+		"@types/pg": "^8.11.4",
 		"dotenv": "^16.3.1",
 		"nanoid": "^5.0.4",
 		"p-defer": "^4.0.0",

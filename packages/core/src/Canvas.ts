@@ -4,6 +4,8 @@ import { logger } from "@libp2p/logger"
 import * as cbor from "@ipld/dag-cbor"
 import { hexToBytes } from "@noble/hashes/utils"
 
+import type pg from "pg"
+
 import { Signature, Action, Session, Message, Signer, SessionSigner, SignerCache } from "@canvas-js/interfaces"
 import { AbstractModelDB, Model } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
@@ -45,16 +47,22 @@ export interface CanvasConfig<T extends Contract = Contract> extends NetworkConf
 	contract: string | T
 	signers?: SessionSigner[]
 
-	/** data directory path (NodeJS only) */
-	path?: string | null
+	/** data directory path (NodeJS/sqlite), or postgres connection config (NodeJS/pg) */
+	path?: string | pg.ConnectionConfig | null
 
 	/** provide an existing libp2p instance instead of creating a new one */
 	libp2p?: Libp2p<ServiceMap>
 
 	/** set to `false` to disable history indexing and db.get(..) within actions */
 	indexHistory?: boolean
+
+	/** set a memory limit for the quickjs runtime, only used if `contract` is a string */
 	runtimeMemoryLimit?: number
+
+	/** don't throw an error when invalid messages are received */
 	ignoreMissingActions?: boolean
+
+	reset?: boolean
 }
 
 export type ActionOptions = { signer?: SessionSigner }
@@ -109,6 +117,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			ignoreMissingActions = false,
 			offline,
 			disablePing,
+			reset = false,
 		} = config
 
 		const signers = new SignerCache(initSigners.length === 0 ? [new SIWESigner()] : initSigners)
@@ -118,14 +127,14 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			return signer.verify(signature, message)
 		}
 
-		const runtime = await createRuntime(path, signers, contract, { runtimeMemoryLimit, ignoreMissingActions })
+		const runtime = await createRuntime(path, signers, contract, { runtimeMemoryLimit, ignoreMissingActions, clearModelDB: reset })
 
 		const topic = runtime.topic
 
 		const libp2p = await Promise.resolve(config.libp2p ?? target.createLibp2p({ topic, path }, { ...config, signers }))
 
 		const gossipLog = await target.openGossipLog<Action | Session, void | any>(
-			{ topic, path },
+			{ topic, path, clear: reset },
 			{
 				topic: runtime.topic,
 				apply: runtime.getConsumer(),
@@ -145,8 +154,8 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		[K in keyof T["actions"]]: T["actions"][K] extends ActionImplementationFunction<infer Args, infer Result>
 			? ActionAPI<Args, Result>
 			: T["actions"][K] extends ActionImplementationObject<infer Args, infer Result>
-			? ActionAPI<Args, Result>
-			: never
+				? ActionAPI<Args, Result>
+				: never
 	}
 
 	public readonly connections: Connections = {}

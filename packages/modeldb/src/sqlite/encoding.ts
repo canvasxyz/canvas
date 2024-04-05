@@ -8,7 +8,7 @@ import type {
 	ReferenceProperty,
 } from "../types.js"
 
-import { assert, signalInvalidType } from "../utils.js"
+import { assert, signalInvalidType } from "@canvas-js/utils"
 
 // this is the type of a primitive value as stored in sqlite
 // this may not match onto the types in the model
@@ -70,7 +70,7 @@ function encodePrimitiveValue(
 		if (typeof value === "number" && Number.isSafeInteger(value)) {
 			return value
 		} else {
-			throw new TypeError(`${modelName}/${property.name} must be an integer`)
+			throw new TypeError(`${modelName}/${property.name} must be a safely representable integer`)
 		}
 	} else if (property.type === "float") {
 		if (typeof value === "number") {

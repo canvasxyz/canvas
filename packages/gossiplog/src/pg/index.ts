@@ -1,5 +1,6 @@
 import PQueue from "p-queue"
 import pDefer from "p-defer"
+import * as cbor from "@ipld/dag-cbor"
 
 import pg from "pg"
 import { hexToBytes } from "@noble/hashes/utils"
@@ -7,11 +8,12 @@ import { equals } from "uint8arrays"
 
 import { Bound } from "@canvas-js/okra"
 import { PostgresTree, PostgresStore } from "@canvas-js/okra-pg"
+import { Message, Signature } from "@canvas-js/interfaces"
 import { assert } from "@canvas-js/utils"
 
-import { KEY_LENGTH } from "../schema.js"
+import { KEY_LENGTH, decodeId, encodeId, encodeSignedMessage } from "../schema.js"
 import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransaction } from "../AbstractGossipLog.js"
-import { cborNull } from "../utils.js"
+import { cborNull, getAncestorClocks } from "../utils.js"
 
 import { getAncestorsSql } from "./get_ancestors.sql.js"
 import { isAncestorSql } from "./is_ancestor.sql.js"
@@ -19,6 +21,7 @@ import { decodeClockSql } from "./decode_clock.sql.js"
 import { pgCborSql } from "./pg_cbor.sql.js"
 import { insertSql } from "./insert_updating_ancestors.sql.js"
 import { insertMessageRemovingHeadsSql } from "./insert_message_removing_heads.sql.js"
+import { decodeClock } from "../clock.js"
 
 const initSql = [
 	getAncestorsSql,
@@ -57,19 +60,24 @@ async function isAncestor<Payload, Result>(
 }
 
 async function insertUpdatingAncestors<Payload, Result>(
-	log: GossipLog<Payload, Result>,
+	client: pg.PoolClient,
+	ancestors: PostgresStore,
 	key: Uint8Array,
-	value: Uint8Array,
-	parents: Uint8Array[],
-	ancestorClocks: number[],
-): Promise<Uint8Array[][]> {
-	const { rows } = await log.ancestorsClient.query<{ insert_updating_ancestors: string[][] }>(
-		`SELECT insert_updating_ancestors($1, $2, $3::bytea[], $4::integer[]);`,
-		[key, value, parents.map(Buffer.from), ancestorClocks],
+	parentKeys: Uint8Array[],
+) {
+	const [clock] = decodeClock(key)
+	const ancestorClocks = Array.from(getAncestorClocks(clock))
+
+	const { rows } = await client.query<{ insert_updating_ancestors: string[][] }>(
+		`SELECT insert_updating_ancestors($1, $2::bytea[], $3::integer[]);`,
+		[key, parentKeys.map(Buffer.from), ancestorClocks],
 	)
-	const row = rows[0]
-	const ancestors = row.insert_updating_ancestors.map((arr) => arr.map((id) => hexToBytes(id.replace("\\x", ""))))
-	return ancestors
+
+	assert(rows.length > 0)
+	const [{ insert_updating_ancestors: result }] = rows
+	const ancestorLinks = result.map((arr) => arr.map((id) => hexToBytes(id.replace("\\x", ""))))
+
+	await ancestors.set(key, cbor.encode(ancestorLinks))
 }
 
 async function insertMessageRemovingHeads<Payload, Result>(
@@ -212,13 +220,11 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			// console.log("start read tx")
 			const result = await callback({
 				getHeads: async (): Promise<Uint8Array[]> => getHeads(this.headsClient),
+				getAncestors: (key: Uint8Array, atOrBefore: number, results: Set<string>): Promise<void> =>
+					getAncestors(this, key, atOrBefore).then((keys) => keys.forEach((key) => results.add(decodeId(key)))),
+				isAncestor: (key: Uint8Array, ancestorKey: Uint8Array): Promise<boolean> => isAncestor(this, key, ancestorKey),
 
 				messages: this.messages,
-				heads: this.heads,
-				ancestors: this.indexAncestors ? this.ancestors : undefined,
-				getAncestors: (key: Uint8Array, atOrBefore: number): Promise<Uint8Array[]> =>
-					getAncestors(this, key, atOrBefore),
-				isAncestor: (key: Uint8Array, ancestorKey: Uint8Array): Promise<boolean> => isAncestor(this, key, ancestorKey),
 			})
 			// console.log("end read tx")
 			return result
@@ -233,28 +239,26 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			// console.log("start write tx")
 			const result = await callback({
 				getHeads: async (): Promise<Uint8Array[]> => getHeads(this.headsClient),
+				getAncestors: (key: Uint8Array, atOrBefore: number, results: Set<string>): Promise<void> =>
+					getAncestors(this, key, atOrBefore).then((keys) => keys.forEach((key) => results.add(decodeId(key)))),
+				isAncestor: (key: Uint8Array, ancestorKey: Uint8Array): Promise<boolean> => isAncestor(this, key, ancestorKey),
+
+				insert: async (
+					id: string,
+					signature: Signature,
+					message: Message,
+					[key, value] = encodeSignedMessage(signature, message),
+				) => {
+					const parentKeys = message.parents.map(encodeId)
+					const hash = this.messages.hashEntry(key, value)
+					await insertMessageRemovingHeads(this, key, value, hash, cborNull, parentKeys)
+
+					if (this.indexAncestors) {
+						await insertUpdatingAncestors(this.ancestorsClient, this.ancestors, key, parentKeys)
+					}
+				},
 
 				messages: this.messages,
-				heads: this.heads,
-				ancestors: this.indexAncestors ? this.ancestors : undefined,
-				getAncestors: (key: Uint8Array, atOrBefore: number): Promise<Uint8Array[]> =>
-					getAncestors(this, key, atOrBefore),
-				isAncestor: (key: Uint8Array, ancestorKey: Uint8Array): Promise<boolean> => isAncestor(this, key, ancestorKey),
-				insertUpdatingAncestors: (
-					key: Uint8Array,
-					value: Uint8Array,
-					parents: Uint8Array[],
-					ancestorClocks: number[],
-				): Promise<Uint8Array[][]> => insertUpdatingAncestors(this, key, value, parents, ancestorClocks),
-				insertMessageRemovingHeads: (
-					key: Uint8Array,
-					value: Uint8Array,
-					cborNull: Uint8Array,
-					parents: Uint8Array[],
-				): Promise<void> => {
-					const hash = this.messages.hashEntry(key, value)
-					return insertMessageRemovingHeads(this, key, value, hash, cborNull, parents)
-				},
 			})
 			// console.log("end write tx")
 			return result

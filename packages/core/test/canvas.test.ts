@@ -2,6 +2,7 @@ import assert from "node:assert"
 import test, { ExecutionContext } from "ava"
 
 import { ethers } from "ethers"
+import pg from "pg"
 
 import type { Message } from "@canvas-js/interfaces"
 import { Ed25519DelegateSigner } from "@canvas-js/signatures"
@@ -43,13 +44,36 @@ export const actions = {
 `.trim()
 
 const init = async (t: ExecutionContext) => {
-	const app = await Canvas.initialize({ contract, offline: true })
+	const app = await Canvas.initialize({ contract, offline: true, reset: true })
 	t.teardown(() => app.close())
 	return app
 }
 
 const initEIP712 = async (t: ExecutionContext) => {
-	const app = await Canvas.initialize({ contract, offline: true, signers: [new Eip712Signer()] })
+	const app = await Canvas.initialize({ contract, offline: true, reset: true, signers: [new Eip712Signer()] })
+	t.teardown(() => app.close())
+	return app
+}
+
+const initPostgres = async (t: ExecutionContext, options: { reset: boolean } = { reset: true }) => {
+	const pgUrl =
+		process.env.POSTGRES_HOST && process.env.POSTGRES_PORT
+			? ({
+					user: "postgres",
+					database: "test",
+					password: "postgres",
+					port: parseInt(process.env.POSTGRES_PORT, 10),
+					host: process.env.POSTGRES_HOST,
+				} as pg.ConnectionConfig)
+			: `postgresql://localhost:5432/test`
+
+	const app = await Canvas.initialize({
+		path: pgUrl,
+		contract,
+		offline: true,
+		reset: options.reset,
+		signers: [new Eip712Signer()],
+	})
 	t.teardown(() => app.close())
 	return app
 }
@@ -293,4 +317,66 @@ test("apply an action and read a record from the database using eip712", async (
 	assert(typeof postId2 === "string")
 	const value2 = await app.db.get("posts", postId2)
 	t.is(value2?.content, "foo bar")
+})
+
+test.serial("apply an action and read a record from the database using postgres", async (t) => {
+	const app = await initPostgres(t)
+
+	const { id, result: postId } = await app.actions.createPost({
+		content: "hello world",
+		isVisible: true,
+		something: -1,
+		metadata: 0,
+	})
+
+	t.log(`applied action ${id} and got result`, postId)
+	assert(typeof postId === "string")
+	const value = await app.db.get("posts", postId)
+	t.is(value?.content, "hello world")
+
+	const { id: id2, result: postId2 } = await app.actions.createPost({
+		content: "foo bar",
+		isVisible: true,
+		something: -1,
+		metadata: 0,
+	})
+
+	t.log(`applied action ${id2} and got result`, postId)
+	assert(typeof postId2 === "string")
+	const value2 = await app.db.get("posts", postId2)
+	t.is(value2?.content, "foo bar")
+})
+
+test.serial("reset app to clear modeldb and gossiplog", async (t) => {
+	const app = await initPostgres(t)
+
+	const { id, result: postId } = await app.actions.createPost({
+		content: "hello world",
+		isVisible: true,
+		something: -1,
+		metadata: 0,
+	})
+
+	const [clock1] = await app.messageLog.getClock()
+	t.is(clock1, 3)
+
+	const value1 = await app.db.get("posts", postId)
+	t.is(value1?.content, "hello world")
+
+	const [clock2] = await app.messageLog.getClock()
+	t.is(clock2, 3)
+
+	const app2 = await initPostgres(t, { reset: false })
+	const value2 = await app2.db.get("posts", postId)
+	t.is(value2?.content, "hello world")
+
+	const [clock3] = await app2.messageLog.getClock()
+	t.is(clock3, 3)
+
+	const app3 = await initPostgres(t, { reset: true })
+	const value3 = await app3.db.get("posts", postId)
+	t.is(value3?.content, undefined)
+
+	const [clock4] = await app3.messageLog.getClock()
+	t.is(clock4, 1)
 })

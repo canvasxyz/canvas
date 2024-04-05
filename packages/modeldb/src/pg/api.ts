@@ -1,5 +1,7 @@
 import pg from "pg"
 
+import { assert, signalInvalidType, mapValues } from "@canvas-js/utils"
+
 import {
 	Property,
 	Relation,
@@ -25,10 +27,10 @@ import {
 	decodeReferenceValue,
 } from "./encoding.js"
 import { isNotExpression, isLiteralExpression, isRangeExpression } from "../query.js"
-import { assert, mapValues, mapValuesAsync, signalInvalidType, validateModelValue, zip } from "../utils.js"
+import { mapValuesAsync, validateModelValue, zip } from "../utils.js"
 
 const primitiveColumnTypes = {
-	integer: "INTEGER",
+	integer: "BIGINT",
 	float: "DECIMAL",
 	string: "TEXT",
 	bytes: "BYTEA",
@@ -199,7 +201,9 @@ export class ModelAPI {
 			const updateEntries = zip(this.#columnNames, updateParams).map(([name, param]) => `${name} = ${param}`)
 
 			await this.client.query<{}, any[]>(
-				`UPDATE "${this.#table}" SET ${updateEntries.join(", ")} WHERE "${this.#primaryKeyName}" = $${updateParams.length + 1}`,
+				`UPDATE "${this.#table}" SET ${updateEntries.join(", ")} WHERE "${this.#primaryKeyName}" = $${
+					updateParams.length + 1
+				}`,
 				values.concat([key]),
 			)
 		}
@@ -573,10 +577,7 @@ export class RelationAPI {
 		return relationApi
 	}
 
-	public constructor(
-		readonly client: pg.Client,
-		readonly relation: Relation,
-	) {
+	public constructor(readonly client: pg.Client, readonly relation: Relation) {
 		this.client = client
 	}
 

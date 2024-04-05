@@ -1,12 +1,12 @@
 import { TypeTransformerFunction, create } from "@ipld/schema/typed.js"
 import { fromDSL } from "@ipld/schema/from-dsl.js"
+import type pg from "pg"
 
 import type { SignerCache } from "@canvas-js/interfaces"
 import { AbstractModelDB, ModelValue, validateModelValue } from "@canvas-js/modeldb"
+import { assert, mapEntries } from "@canvas-js/utils"
 
 import target from "#target"
-
-import { assert, mapEntries } from "../utils.js"
 
 import { ActionImplementationFunction, Contract, ModelAPI } from "../types.js"
 import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
@@ -15,10 +15,10 @@ const identity = (x: any) => x
 
 export class FunctionRuntime extends AbstractRuntime {
 	public static async init(
-		path: string | null,
+		path: string | pg.ConnectionConfig | null,
 		signers: SignerCache,
 		contract: Contract,
-		options: { indexHistory?: boolean; ignoreMissingActions?: boolean } = {},
+		options: { indexHistory?: boolean; ignoreMissingActions?: boolean, clearModelDB?: boolean } = {},
 	): Promise<FunctionRuntime> {
 		assert(contract.actions !== undefined, "contract initialized without actions")
 		assert(contract.models !== undefined, "contract initialized without models")
@@ -26,7 +26,7 @@ export class FunctionRuntime extends AbstractRuntime {
 
 		const { indexHistory = true, ignoreMissingActions = false } = options
 		const models = AbstractRuntime.getModelSchema(contract.models, { indexHistory })
-		const db = await target.openDB({ path, topic: contract.topic }, models)
+		const db = await target.openDB({ path, topic: contract.topic, clear: options.clearModelDB }, models)
 
 		const argsTransformers: Record<
 			string,
