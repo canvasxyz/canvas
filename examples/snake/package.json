@@ -1,7 +1,7 @@
 {
   "name": "@canvas-js/example-snake",
   "private": true,
-  "version": "0.8.26",
+  "version": "0.9.0-next.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,10 +10,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@canvas-js/chain-ethereum": "0.8.26",
-    "@canvas-js/core": "0.8.26",
-    "@canvas-js/hooks": "0.8.26",
-    "@canvas-js/templates": "0.8.26",
+    "@canvas-js/chain-ethereum": "0.9.0-next.1",
+    "@canvas-js/core": "0.9.0-next.1",
+    "@canvas-js/hooks": "0.9.0-next.1",
+    "@canvas-js/templates": "0.9.0-next.1",
     "ethers": "^6.9.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"

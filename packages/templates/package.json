@@ -1,17 +1,17 @@
 {
-	"name": "@canvas-js/templates",
-	"version": "0.8.26",
-	"type": "module",
-	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
-	"main": "lib/index.js",
-	"types": "lib/index.d.ts",
-	"files": [
-		"lib"
-	],
-	"exports": {
-		".": "./lib/index.js"
-	},
-	"devDependencies": {
-		"@canvas-js/core": "0.8.26"
-	}
+  "name": "@canvas-js/templates",
+  "version": "0.9.0-next.1",
+  "type": "module",
+  "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "files": [
+    "lib"
+  ],
+  "exports": {
+    ".": "./lib/index.js"
+  },
+  "devDependencies": {
+    "@canvas-js/core": "0.9.0-next.1"
+  }
 }
