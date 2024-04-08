@@ -4,7 +4,7 @@ kill_timeout = 30
 processes = []
 
 [env]
-  BOOTSTRAP_LIST = "/dns6/canvas-chat-discovery-p0.internal/tcp/8080/ws/p2p/12D3KooWFtS485QGEZwquMQbq7MZTMxiuHs6xUKEi664i4yWUhWa /dns6/canvas-chat-discovery-p2.internal/tcp/8080/ws/p2p/12D3KooWPix1mT8QavTjfiha3hWy85dQDgPb9VWaxRhY8Yq3cC7L"
+  BOOTSTRAP_LIST = "/dns6/canvas-chat-discovery-staging-p0.internal/tcp/8080/ws/p2p/12D3KooWFtS485QGEZwquMQbq7MZTMxiuHs6xUKEi664i4yWUhWa /dns6/canvas-chat-discovery-staging-p2.internal/tcp/8080/ws/p2p/12D3KooWPix1mT8QavTjfiha3hWy85dQDgPb9VWaxRhY8Yq3cC7L"
   LISTEN         = "/ip6/::/tcp/8080/ws"
   ANNOUNCE       = "/dns4/canvas-chat-discovery-staging-p1.fly.dev/tcp/443/wss"
   DEBUG          = "libp2p:*:error,canvas:*:error,canvas:gossipsub:*"
