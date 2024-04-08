@@ -1,6 +1,7 @@
 import React, { useCallback, useContext, useState } from "react"
 
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
+import { fromBech32 } from "@cosmjs/encoding"
 
 import { AppContext } from "../AppContext.js"
 
@@ -32,11 +33,13 @@ export const ConnectLeap: React.FC<ConnectLeapProps> = ({ chainId }) => {
 		await leap.enable(chainId)
 
 		const key = await leap.getKey(chainId)
+		const { prefix } = fromBech32(key.bech32Address)
 
 		setAddress(key.bech32Address)
 
 		setSessionSigner(
 			new CosmosSigner({
+				bech32Prefix: prefix,
 				signer: {
 					type: "arbitrary",
 					signArbitrary: (msg) => leap.signArbitrary(chainId, key.bech32Address, msg),
