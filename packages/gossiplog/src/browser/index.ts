@@ -3,7 +3,7 @@ import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 import { equals } from "uint8arrays"
 import { IDBPDatabase, openDB } from "idb"
 
-import { Bound, Entry, KeyValueStore } from "@canvas-js/okra"
+import { Bound } from "@canvas-js/okra"
 import { IDBStore, IDBTree } from "@canvas-js/okra-idb"
 import { Message, Signature } from "@canvas-js/interfaces"
 import { assert } from "@canvas-js/utils"
@@ -148,17 +148,8 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 				this.incomingSyncPeers.add(targetId)
 			}
 
-			const heads: Omit<KeyValueStore, "set" | "delete"> = {
-				get: (key) => this.heads.read(() => this.heads.get(key)),
-				entries: (lowerBound = null, upperBound = null, options = {}) => {
-					this.heads.txn = this.db.transaction(this.heads.storeName, "readonly")
-					return this.heads.entries(lowerBound, upperBound, options)
-				},
-			}
-
 			try {
 				result = await callback({
-					getRoot: () => this.messages.getRoot(),
 					getHeads: () => this.heads.read(() => getHeads(this.heads)),
 					getAncestors: (key: Uint8Array, atOrBefore: number, results: Set<string>) =>
 						this.ancestors.read(() => getAncestors(this.ancestors, key, atOrBefore, results)),
@@ -216,19 +207,8 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 					this.outgoingSyncPeers.add(sourceId)
 				}
 
-				const heads: KeyValueStore = {
-					get: (key) => this.heads.read(() => this.heads.get(key)),
-					set: (key, value) => this.heads.write(() => this.heads.set(key, value)),
-					delete: (key) => this.heads.write(() => this.heads.delete(key)),
-					entries: (lowerBound = null, upperBound = null, options = {}) => {
-						this.heads.txn = this.db.transaction(this.heads.storeName, "readonly")
-						return this.heads.entries(lowerBound, upperBound, options)
-					},
-				}
-
 				try {
 					result = await callback({
-						getRoot: () => this.messages.getRoot(),
 						getHeads: () => this.heads.read(() => getHeads(this.heads)),
 						getAncestors: (key: Uint8Array, atOrBefore: number, results: Set<string>) =>
 							this.ancestors.read(() => getAncestors(this.ancestors, key, atOrBefore, results)),

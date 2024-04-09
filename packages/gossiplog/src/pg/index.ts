@@ -219,7 +219,6 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 		const result = await this.queue.add(async () => {
 			// console.log("start read tx")
 			const result = await callback({
-				getRoot: () => this.messages.getRoot(),
 				getHeads: async (): Promise<Uint8Array[]> => getHeads(this.headsClient),
 				getAncestors: (key: Uint8Array, atOrBefore: number, results: Set<string>): Promise<void> =>
 					getAncestors(this, key, atOrBefore).then((keys) => keys.forEach((key) => results.add(decodeId(key)))),
@@ -239,7 +238,6 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 		const result = await this.queue.add(async () => {
 			// console.log("start write tx")
 			const result = await callback({
-				getRoot: () => this.messages.getRoot(),
 				getHeads: async (): Promise<Uint8Array[]> => getHeads(this.headsClient),
 				getAncestors: (key: Uint8Array, atOrBefore: number, results: Set<string>): Promise<void> =>
 					getAncestors(this, key, atOrBefore).then((keys) => keys.forEach((key) => results.add(decodeId(key)))),

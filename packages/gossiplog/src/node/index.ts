@@ -63,7 +63,6 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			const ancestors = txn.database("ancestors")
 
 			return await callback({
-				getRoot: () => messages.getRoot(),
 				getHeads: () => getHeads(heads),
 				getAncestors: async (key: Uint8Array, atOrBefore: number, results: Set<string>) =>
 					getAncestors(ancestors, key, atOrBefore, results),
@@ -82,7 +81,6 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			const heads = txn.database("heads")
 			const ancestors = txn.database("ancestors")
 			return await callback({
-				getRoot: () => messages.getRoot(),
 				getHeads: () => getHeads(heads),
 				getAncestors: async (key: Uint8Array, atOrBefore: number, results: Set<string>) =>
 					getAncestors(ancestors, key, atOrBefore, results),
