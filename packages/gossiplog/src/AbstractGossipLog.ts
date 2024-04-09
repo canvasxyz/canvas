@@ -32,14 +32,8 @@ export interface ReadOnlyTransaction {
 	messages: Target
 }
 
-export interface ReadWriteTransaction {
-	getHeads: () => Awaitable<Uint8Array[]>
-	isAncestor: (key: Uint8Array, ancestorKey: Uint8Array, visited?: Set<string>) => Awaitable<boolean>
-	getAncestors: (key: Uint8Array, atOrBefore: number, results: Set<string>) => Awaitable<void>
-
+export interface ReadWriteTransaction extends ReadOnlyTransaction {
 	insert: (id: string, signature: Signature, message: Message, entry?: Entry) => Awaitable<void>
-
-	messages: Target
 }
 
 export type GossipLogConsumer<Payload = unknown, Result = void> = (
