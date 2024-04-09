@@ -7,10 +7,10 @@ import { topic, models, actions } from './contract.canvas.mjs';
 import { Canvas, defaultBootstrapList } from '@canvas-js/core';
 
 const dev = process.env.NODE_ENV !== 'production';
-const app = next({ dev });
-const handle = app.getRequestHandler();
+const nextApp = next({ dev });
+const handle = nextApp.getRequestHandler();
 
-app.prepare().then(async () => {
+nextApp.prepare().then(async () => {
   const canvasApp = await Canvas.initialize({
     path: 'postgresql://postgres:postgres@localhost:5432/chat_postgres',
     contract: {
@@ -34,6 +34,16 @@ app.prepare().then(async () => {
   });
 
   canvasApp.libp2p.start();
+
+  // Creating an action object 
+  // Just make an object with the type 'Action'
+  // There are helpers for this
+  // Creating a signer
+
+  // Send both "action"
+  // You wanna use insert
+
+  // (Use vscode and click through app.actions)
 
   const expressApp = express();
   expressApp.set('json spaces', 2);
