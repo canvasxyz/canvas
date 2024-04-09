@@ -55,20 +55,25 @@ const initEIP712 = async (t: ExecutionContext) => {
 	return app
 }
 
-const initPostgres = async (t: ExecutionContext, options: { reset: boolean } = { reset: true }) => {
-	const pgUrl =
-		process.env.POSTGRES_HOST && process.env.POSTGRES_PORT
-			? ({
-					user: "postgres",
-					database: "test",
-					password: "postgres",
-					port: parseInt(process.env.POSTGRES_PORT, 10),
-					host: process.env.POSTGRES_HOST,
-			  } as pg.ConnectionConfig)
-			: `postgresql://localhost:5432/test`
+const { POSTGRES_HOST, POSTGRES_PORT } = process.env
 
+function getPgConfig(): pg.ConnectionConfig | string {
+	if (POSTGRES_HOST && POSTGRES_PORT) {
+		return {
+			user: "postgres",
+			database: "test",
+			password: "postgres",
+			port: parseInt(POSTGRES_PORT),
+			host: process.env.POSTGRES_HOST,
+		}
+	} else {
+		return `postgresql://localhost:5432/test`
+	}
+}
+
+const initPostgres = async (t: ExecutionContext, options: { reset: boolean } = { reset: true }) => {
 	const app = await Canvas.initialize({
-		path: pgUrl,
+		path: getPgConfig(),
 		contract,
 		offline: true,
 		reset: options.reset,
