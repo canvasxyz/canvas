@@ -67,15 +67,15 @@ export interface CanvasConfig<T extends Contract = Contract> extends NetworkConf
 
 export type ActionOptions = { signer?: SessionSigner }
 
-export type ActionAPI<Args = any, Result = any> = (
+export type ActionAPI<Args = any> = (
 	args: Args,
 	options?: ActionOptions,
-) => Promise<{ id: string; result: Result; recipients: Promise<PeerId[]> }>
+) => Promise<{ id: string; signature: Signature; message: Message<Action>; recipients: Promise<PeerId[]> }>
 
 export type ConnectionsInfo = { connections: Connections; status: AppConnectionStatus }
 export type PresenceInfo = { peer: PeerId; peers: PresenceStore }
 
-export interface CanvasEvents extends GossipLogEvents<Action | Session, unknown> {
+export interface CanvasEvents extends GossipLogEvents<Action | Session> {
 	close: Event
 	connect: CustomEvent<{ peer: PeerId }>
 	disconnect: CustomEvent<{ peer: PeerId }>
@@ -90,7 +90,6 @@ export type CanvasLogEvent = CustomEvent<{
 	id: string
 	signature: unknown
 	message: Message<Action | Session>
-	result: unknown
 }>
 
 export type ApplicationData = {
@@ -137,7 +136,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 
 		const libp2p = await Promise.resolve(config.libp2p ?? target.createLibp2p({ topic, path }, { ...config, signers }))
 
-		const gossipLog = await target.openGossipLog<Action | Session, void | any>(
+		const gossipLog = await target.openGossipLog<Action | Session>(
 			{ topic, path, clear: reset },
 			{
 				topic: runtime.topic,
@@ -155,11 +154,11 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 
 	public readonly db: AbstractModelDB
 	public readonly actions = {} as {
-		[K in keyof T["actions"]]: T["actions"][K] extends ActionImplementationFunction<infer Args, infer Result>
-			? ActionAPI<Args, Result>
-			: T["actions"][K] extends ActionImplementationObject<infer Args, infer Result>
-				? ActionAPI<Args, Result>
-				: never
+		[K in keyof T["actions"]]: T["actions"][K] extends ActionImplementationFunction<infer Args>
+			? ActionAPI<Args>
+			: T["actions"][K] extends ActionImplementationObject<infer Args>
+			? ActionAPI<Args>
+			: never
 	}
 
 	public readonly connections: Connections = {}
@@ -178,7 +177,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 	private constructor(
 		public readonly signers: SignerCache,
 		public readonly libp2p: Libp2p<ServiceMap>,
-		public readonly messageLog: AbstractGossipLog<Action | Session, void | any>,
+		public readonly messageLog: AbstractGossipLog<Action | Session>,
 		private readonly runtime: Runtime,
 		offline?: boolean,
 		disablePing?: boolean,
@@ -332,14 +331,14 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 				const representation = argsTransformer.toRepresentation(args)
 				assert(representation !== undefined, "action args did not validate the provided schema type")
 
-				const { id, result, recipients } = await this.append(
+				const { id, signature, message, recipients } = await this.append<Action>(
 					{ type: "action", address, name, args: representation, blockhash: null, timestamp },
 					{ signer },
 				)
 
-				this._log("applied action %s and got result %o", id, result)
+				this._log("applied action %s", id)
 
-				return { id, result, recipients }
+				return { id, signature, message, recipients }
 			}
 
 			Object.assign(this.actions, { [name]: action })
@@ -410,10 +409,10 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 	 * The default signer on the message log will be used if none is provided.
 	 * The normal way to apply actions is to use the `Canvas.actions[name](...)` functions.
 	 */
-	public async append(
-		payload: Session | Action,
-		options: { signer?: Pick<Signer<Session | Action>, "sign" | "verify"> },
-	): Promise<{ id: string; result: void | any; recipients: Promise<PeerId[]> }> {
+	public async append<Payload extends Session | Action>(
+		payload: Payload,
+		options: { signer?: Pick<Signer<Payload>, "sign" | "verify"> },
+	): Promise<{ id: string; signature: Signature; message: Message<Payload>; recipients: Promise<PeerId[]> }> {
 		return this.libp2p.services.gossiplog.append(this.topic, payload, options)
 	}
 

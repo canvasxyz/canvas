@@ -32,8 +32,8 @@ const initSql = [
 	insertMessageRemovingHeadsSql,
 ].join("\n")
 
-async function getAncestors<Payload, Result>(
-	log: GossipLog<Payload, Result>,
+async function getAncestors<Payload>(
+	log: GossipLog<Payload>,
 	key: Uint8Array,
 	atOrBefore: number,
 ): Promise<Uint8Array[]> {
@@ -46,8 +46,8 @@ async function getAncestors<Payload, Result>(
 	return row.ret_results
 }
 
-async function isAncestor<Payload, Result>(
-	log: GossipLog<Payload, Result>,
+async function isAncestor<Payload>(
+	log: GossipLog<Payload>,
 	key: Uint8Array,
 	ancestorKey: Uint8Array,
 ): Promise<boolean> {
@@ -59,7 +59,7 @@ async function isAncestor<Payload, Result>(
 	return row.ret_result
 }
 
-async function insertUpdatingAncestors<Payload, Result>(
+async function insertUpdatingAncestors<Payload>(
 	client: pg.PoolClient,
 	ancestors: PostgresStore,
 	key: Uint8Array,
@@ -80,8 +80,8 @@ async function insertUpdatingAncestors<Payload, Result>(
 	await ancestors.set(key, cbor.encode(ancestorLinks))
 }
 
-async function insertMessageRemovingHeads<Payload, Result>(
-	log: GossipLog<Payload, Result>,
+async function insertMessageRemovingHeads<Payload>(
+	log: GossipLog<Payload>,
 	key: Uint8Array,
 	value: Uint8Array,
 	hash: Uint8Array,
@@ -92,7 +92,7 @@ async function insertMessageRemovingHeads<Payload, Result>(
 	await log.ancestorsClient.query<{}>(`CALL insert_message_removing_heads($1, $2, $3, $4, $5::bytea[]);`, args)
 }
 
-export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
+export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 	private pool: pg.Pool
 	public messagesClient: pg.PoolClient
 	public headsClient: pg.PoolClient
@@ -107,11 +107,11 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 	private static HEADS_TABLE = "heads"
 	private static ANCESTORS_TABLE = "ancestors"
 
-	public static async open<Payload, Result>(
-		init: GossipLogInit<Payload, Result>,
+	public static async open<Payload>(
+		init: GossipLogInit<Payload>,
 		connectionConfig: string | pg.PoolConfig,
 		clear: boolean = false,
-	): Promise<GossipLog<Payload, Result>> {
+	): Promise<GossipLog<Payload>> {
 		const pool =
 			typeof connectionConfig === "string"
 				? new pg.Pool({ connectionString: connectionConfig })
@@ -131,7 +131,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 		await ancestorsClient.query(initSql)
 
-		const gossipLog = new GossipLog(
+		const gossipLog = new GossipLog<Payload>(
 			{
 				pool,
 				messagesClient,
@@ -167,7 +167,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			heads: PostgresStore
 			ancestors: PostgresStore
 		},
-		init: GossipLogInit<Payload, Result>,
+		init: GossipLogInit<Payload>,
 	) {
 		super(init)
 		this.pool = pool
@@ -267,7 +267,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 	}
 }
 
-async function getHeads<Payload, Result>(heads: pg.PoolClient): Promise<Uint8Array[]> {
+async function getHeads(heads: pg.PoolClient): Promise<Uint8Array[]> {
 	const { rows } = await heads.query(`SELECT * FROM heads ORDER BY key`)
 	return rows.map(({ key, value }: { key: Uint8Array; value: Uint8Array }) => {
 		assert(key.byteLength === KEY_LENGTH, "internal error (expected key.byteLength === KEY_LENGTH)")

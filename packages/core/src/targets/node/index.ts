@@ -44,9 +44,9 @@ export default {
 		}
 	},
 
-	async openGossipLog<Payload, Result>(
+	async openGossipLog<Payload>(
 		location: { path: string | pg.ConnectionConfig | null; topic: string; clear?: boolean },
-		init: GossipLogInit<Payload, Result>,
+		init: GossipLogInit<Payload>,
 	) {
 		if (location.path === null) {
 			return await MemoryGossipLog.open(init)

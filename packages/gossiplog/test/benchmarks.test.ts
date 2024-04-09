@@ -48,7 +48,7 @@ test("append messages (memory, linear, 100)", async (t) => {
 // 	await append(t, log, 100_000)
 // })
 
-async function append(t: ExecutionContext, log: AbstractGossipLog<string, void>, n: number) {
+async function append(t: ExecutionContext, log: AbstractGossipLog<string>, n: number) {
 	const start = performance.now()
 
 	for (let i = 0; i < n; i++) {

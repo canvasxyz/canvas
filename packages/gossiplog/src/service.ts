@@ -24,7 +24,7 @@ export interface GossipLogServiceInit {
 	sync?: boolean
 }
 
-export class GossipLogService extends TypedEventEmitter<GossipLogEvents<unknown, unknown>> implements Startable {
+export class GossipLogService extends TypedEventEmitter<GossipLogEvents<unknown>> implements Startable {
 	private static extractGossipSub(components: GossipLogServiceComponents): GossipSub {
 		const { pubsub } = components
 		assert(pubsub !== undefined, "pubsub service not found")
@@ -39,8 +39,8 @@ export class GossipLogService extends TypedEventEmitter<GossipLogEvents<unknown,
 
 	#started = false
 
-	#messageLogs = new Map<string, AbstractGossipLog<unknown, unknown>>()
-	#syncServices = new Map<string, SyncService<unknown, unknown>>()
+	#messageLogs = new Map<string, AbstractGossipLog<unknown>>()
+	#syncServices = new Map<string, SyncService<unknown>>()
 	#pubsub: GossipSub
 
 	constructor(private readonly components: GossipLogServiceComponents, init: GossipLogServiceInit) {
@@ -84,19 +84,16 @@ export class GossipLogService extends TypedEventEmitter<GossipLogEvents<unknown,
 		this.#started = false
 	}
 
-	public async subscribe<Payload, Result>(
-		messageLog: AbstractGossipLog<Payload, Result>,
-		options: SyncOptions = {},
-	): Promise<void> {
+	public async subscribe<Payload>(messageLog: AbstractGossipLog<Payload>, options: SyncOptions = {}): Promise<void> {
 		this.log("subscribing to %s", messageLog.topic)
-		this.#messageLogs.set(messageLog.topic, messageLog as AbstractGossipLog<unknown, unknown>)
+		this.#messageLogs.set(messageLog.topic, messageLog as AbstractGossipLog<unknown>)
 		messageLog.addEventListener("sync", this.forwardEvent)
 		messageLog.addEventListener("commit", this.forwardEvent)
 		messageLog.addEventListener("message", this.forwardEvent)
 
 		if (this.sync) {
 			const syncService = new SyncService(this.components, messageLog, options)
-			this.#syncServices.set(messageLog.topic, syncService as SyncService<unknown, unknown>)
+			this.#syncServices.set(messageLog.topic, syncService as SyncService<unknown>)
 
 			if (this.#started) {
 				await syncService.start()
@@ -131,17 +128,17 @@ export class GossipLogService extends TypedEventEmitter<GossipLogEvents<unknown,
 	}
 
 	private forwardEvent = (event: CustomEvent) =>
-		this.safeDispatchEvent(event.type as keyof GossipLogEvents<unknown, unknown>, event)
+		this.safeDispatchEvent(event.type as keyof GossipLogEvents<unknown>, event)
 
-	public async append<Payload, Result>(
+	public async append<Payload>(
 		topic: string,
 		payload: Payload,
 		options: { signer?: Pick<Signer<Payload>, "sign" | "verify"> } = {},
-	): Promise<{ id: string; result: Result; recipients: Promise<PeerId[]> }> {
-		const messageLog = this.#messageLogs.get(topic) as AbstractGossipLog<Payload, Result> | undefined
+	): Promise<{ id: string; signature: Signature; message: Message<Payload>; recipients: Promise<PeerId[]> }> {
+		const messageLog = this.#messageLogs.get(topic) as AbstractGossipLog<Payload> | undefined
 		assert(messageLog !== undefined, "no subscription for topic")
 
-		const { id, signature, message, result } = await messageLog.append(payload, options)
+		const { id, signature, message } = await messageLog.append(payload, options)
 
 		if (this.#started) {
 			const [key, value] = messageLog.encode(signature, message)
@@ -158,17 +155,17 @@ export class GossipLogService extends TypedEventEmitter<GossipLogEvents<unknown,
 				},
 			)
 
-			return { id, result, recipients }
+			return { id, signature, message, recipients }
 		} else {
-			return { id, result, recipients: Promise.resolve([]) }
+			return { id, signature, message, recipients: Promise.resolve([]) }
 		}
 	}
 
-	public async insert<Payload, Result = unknown>(
+	public async insert<Payload>(
 		signature: Signature,
 		message: Message<Payload>,
 	): Promise<{ id: string; recipients: Promise<PeerId[]> }> {
-		const messageLog = this.#messageLogs.get(message.topic) as AbstractGossipLog<Payload, Result> | undefined
+		const messageLog = this.#messageLogs.get(message.topic) as AbstractGossipLog<Payload> | undefined
 		assert(messageLog !== undefined, "topic not found")
 
 		const { id } = await messageLog.insert(signature, message)

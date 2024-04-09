@@ -4,7 +4,7 @@ import type { Fetch as FetchService } from "@libp2p/fetch"
 import type { PubSub } from "@libp2p/interface"
 import type { GossipsubEvents } from "@chainsafe/libp2p-gossipsub"
 
-import type pg from 'pg'
+import type pg from "pg"
 
 import type { AbstractModelDB, ModelsInit } from "@canvas-js/modeldb"
 import type { AbstractGossipLog, GossipLogInit } from "@canvas-js/gossiplog"
@@ -26,10 +26,10 @@ export interface PlatformTarget {
 		options?: { indexHistory?: Record<string, boolean> },
 	) => Promise<AbstractModelDB>
 
-	openGossipLog: <Payload, Result>(
+	openGossipLog: <Payload>(
 		location: { path: string | pg.ConnectionConfig | null; topic: string },
-		init: GossipLogInit<Payload, Result>,
-	) => Promise<AbstractGossipLog<Payload, Result>>
+		init: GossipLogInit<Payload>,
+	) => Promise<AbstractGossipLog<Payload>>
 }
 
 export type ServiceMap = {

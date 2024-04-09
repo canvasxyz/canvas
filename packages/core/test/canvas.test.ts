@@ -26,7 +26,6 @@ export const actions = {
   async createPost(db, { content, isVisible, metadata }, { id, address, timestamp }) {
     const postId = [address, id].join("/")
     await db.set("posts", { id: postId, content, isVisible, timestamp, metadata });
-    return postId
   },
 
   async deletePost(db, key, { address }) {
@@ -44,7 +43,8 @@ export const actions = {
 `.trim()
 
 const init = async (t: ExecutionContext) => {
-	const app = await Canvas.initialize({ contract, offline: true, reset: true })
+	const signer = new SIWESigner()
+	const app = await Canvas.initialize({ contract, offline: true, reset: true, signers: [signer] })
 	t.teardown(() => app.close())
 	return app
 }
@@ -64,7 +64,7 @@ const initPostgres = async (t: ExecutionContext, options: { reset: boolean } = {
 					password: "postgres",
 					port: parseInt(process.env.POSTGRES_PORT, 10),
 					host: process.env.POSTGRES_HOST,
-				} as pg.ConnectionConfig)
+			  } as pg.ConnectionConfig)
 			: `postgresql://localhost:5432/test`
 
 	const app = await Canvas.initialize({
@@ -86,15 +86,15 @@ test("open and close an app", async (t) => {
 test("apply an action and read a record from the database", async (t) => {
 	const app = await init(t)
 
-	const { id, result: postId } = await app.actions.createPost({
+	const { id, message } = await app.actions.createPost({
 		content: "hello world",
 		isVisible: true,
 		something: null,
 		metadata: {},
 	})
 
-	t.log(`applied action ${id} and got result`, postId)
-	assert(typeof postId === "string")
+	t.log(`applied action ${id}`)
+	const postId = [message.payload.address, id].join("/")
 	const value = await app.db.get("posts", postId)
 	t.is(value?.content, "hello world")
 })
@@ -102,12 +102,13 @@ test("apply an action and read a record from the database", async (t) => {
 test("create and delete a post", async (t) => {
 	const app = await init(t)
 
-	const { result: postId } = await app.actions.createPost({
+	const { id, message } = await app.actions.createPost({
 		content: "hello world",
 		isVisible: true,
 		metadata: { author: "me" },
 	})
-	assert(typeof postId === "string")
+
+	const postId = [message.payload.address, id].join("/")
 	const value = await app.db.get("posts", postId)
 	t.is(value?.content, "hello world")
 	// TODO: better type inference for the result of db.get
@@ -158,11 +159,9 @@ test("create an app with an inline contract", async (t) => {
 				},
 			},
 			actions: {
-				async createPost(db, args, { id, address, timestamp }) {
-					const { content } = args as { content: string }
+				async createPost(db, { content }: { content: string }, { id, address, timestamp }) {
 					const postId = [address, id].join("/")
 					await db.set("posts", { id: postId, content, timestamp, address })
-					return postId
 				},
 			},
 		},
@@ -172,10 +171,11 @@ test("create an app with an inline contract", async (t) => {
 
 	t.teardown(() => app.close())
 
-	const { id, result: postId } = await app.actions.createPost({ content: "hello world" })
+	const { id, message } = await app.actions.createPost({ content: "hello world" })
 
-	t.log(`applied action ${id} and got result`, postId)
-	assert(typeof postId === "string")
+	t.log(`applied action ${id}`)
+
+	const postId = [message.payload.address, id].join("/")
 	const value = await app.db.get("posts", postId)
 	t.is(value?.content, "hello world")
 	t.is(value?.address, `eip155:1:${wallet.address}`)
@@ -266,7 +266,6 @@ test("validate action args using IPLD schemas", async (t) => {
 					) => {
 						const postId = [address, id].join("/")
 						await db.set("posts", { id: postId, content, timestamp, address })
-						return postId
 					},
 				},
 			},
@@ -294,27 +293,28 @@ test("validate action args using IPLD schemas", async (t) => {
 test("apply an action and read a record from the database using eip712", async (t) => {
 	const app = await initEIP712(t)
 
-	const { id, result: postId } = await app.actions.createPost({
+	const { id, message } = await app.actions.createPost({
 		content: "hello world",
 		isVisible: true,
 		something: -1,
 		metadata: 0,
 	})
 
-	t.log(`applied action ${id} and got result`, postId)
-	assert(typeof postId === "string")
+	t.log(`applied action ${id}`)
+
+	const postId = [message.payload.address, id].join("/")
 	const value = await app.db.get("posts", postId)
 	t.is(value?.content, "hello world")
 
-	const { id: id2, result: postId2 } = await app.actions.createPost({
+	const { id: id2, message: message2 } = await app.actions.createPost({
 		content: "foo bar",
 		isVisible: true,
 		something: -1,
 		metadata: 0,
 	})
 
-	t.log(`applied action ${id2} and got result`, postId)
-	assert(typeof postId2 === "string")
+	t.log(`applied action ${id2}`)
+	const postId2 = [message2.payload.address, id2].join("/")
 	const value2 = await app.db.get("posts", postId2)
 	t.is(value2?.content, "foo bar")
 })
@@ -322,27 +322,27 @@ test("apply an action and read a record from the database using eip712", async (
 test.serial("apply an action and read a record from the database using postgres", async (t) => {
 	const app = await initPostgres(t)
 
-	const { id, result: postId } = await app.actions.createPost({
+	const { id, message } = await app.actions.createPost({
 		content: "hello world",
 		isVisible: true,
 		something: -1,
 		metadata: 0,
 	})
 
-	t.log(`applied action ${id} and got result`, postId)
-	assert(typeof postId === "string")
+	t.log(`applied action ${id}`)
+	const postId = [message.payload.address, id].join("/")
 	const value = await app.db.get("posts", postId)
 	t.is(value?.content, "hello world")
 
-	const { id: id2, result: postId2 } = await app.actions.createPost({
+	const { id: id2, message: message2 } = await app.actions.createPost({
 		content: "foo bar",
 		isVisible: true,
 		something: -1,
 		metadata: 0,
 	})
 
-	t.log(`applied action ${id2} and got result`, postId)
-	assert(typeof postId2 === "string")
+	t.log(`applied action ${id2}`)
+	const postId2 = [message2.payload.address, id2].join("/")
 	const value2 = await app.db.get("posts", postId2)
 	t.is(value2?.content, "foo bar")
 })
@@ -350,7 +350,7 @@ test.serial("apply an action and read a record from the database using postgres"
 test.serial("reset app to clear modeldb and gossiplog", async (t) => {
 	const app = await initPostgres(t)
 
-	const { id, result: postId } = await app.actions.createPost({
+	const { id, message } = await app.actions.createPost({
 		content: "hello world",
 		isVisible: true,
 		something: -1,
@@ -360,6 +360,7 @@ test.serial("reset app to clear modeldb and gossiplog", async (t) => {
 	const [clock1] = await app.messageLog.getClock()
 	t.is(clock1, 3)
 
+	const postId = [message.payload.address, id].join("/")
 	const value1 = await app.db.get("posts", postId)
 	t.is(value1?.content, "hello world")
 
@@ -375,7 +376,7 @@ test.serial("reset app to clear modeldb and gossiplog", async (t) => {
 
 	const app3 = await initPostgres(t, { reset: true })
 	const value3 = await app3.db.get("posts", postId)
-	t.is(value3?.content, undefined)
+	t.is(value3, null)
 
 	const [clock4] = await app3.messageLog.getClock()
 	t.is(clock4, 1)

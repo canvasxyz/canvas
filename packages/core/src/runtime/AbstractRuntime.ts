@@ -85,7 +85,7 @@ export abstract class AbstractRuntime {
 	private static isSession = (message: Message<Action | Session>): message is Message<Session> =>
 		message.payload.type === "session"
 
-	public getConsumer(): GossipLogConsumer<Action | Session, void | any> {
+	public getConsumer(): GossipLogConsumer<Action | Session> {
 		// eslint-disable-next-line @typescript-eslint/no-this-alias
 		const runtime = this
 

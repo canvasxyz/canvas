@@ -26,12 +26,11 @@ test("send a message from one peer to another via gossipsub", async (t) => {
 
 	const payload = nanoid()
 
-	const [{ message }, { result }] = await Promise.all([
+	const [{ message }] = await Promise.all([
 		waitForMessageDelivery(t, network, (id, signature, message) => message.payload === payload),
 		network.a.services.gossiplog.append(topic, payload),
 	])
 
-	t.is(result, undefined)
 	t.deepEqual(message.parents, [])
 })
 

@@ -62,7 +62,7 @@ export interface SyncServiceComponents {
  * interpolating that topic (`/canvas/sync/v1/${init.topic}`). By default, it schedules
  * a merkle sync for every new connection with a peer supporting the same topic.
  */
-export class SyncService<Payload = unknown, Result = void> implements Startable {
+export class SyncService<Payload = unknown> implements Startable {
 	private readonly protocol: string
 	private readonly topologyPeers = new Set<string>()
 
@@ -83,7 +83,7 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 
 	constructor(
 		private readonly components: SyncServiceComponents,
-		private readonly messages: AbstractGossipLog<Payload, Result>,
+		private readonly messages: AbstractGossipLog<Payload>,
 		options: SyncOptions,
 	) {
 		this.log = logger(`canvas:gossiplog:[${this.topic}]:sync`)

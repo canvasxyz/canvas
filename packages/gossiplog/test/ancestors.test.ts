@@ -125,7 +125,7 @@ test("simulate a randomly partitioned network, logs on disk", async (t) => {
 	t.timeout(30 * 1000)
 	const topic = randomUUID()
 
-	const logs: AbstractGossipLog<string, void>[] = await Promise.all([
+	const logs: AbstractGossipLog<string>[] = await Promise.all([
 		GossipLog.open({ topic, apply, indexAncestors: true }, getDirectory(t)),
 		GossipLog.open({ topic, apply, indexAncestors: true }, getDirectory(t)),
 		GossipLog.open({ topic, apply, indexAncestors: true }, getDirectory(t)),
@@ -157,7 +157,7 @@ test("simulate a randomly partitioned network, logs on postgres", async (t) => {
 		}
 	}
 
-	const logs: AbstractGossipLog<string, void>[] = await Promise.all([
+	const logs: AbstractGossipLog<string>[] = await Promise.all([
 		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, getPgConfig("test"), true),
 		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, getPgConfig("test2"), true),
 		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, getPgConfig("test3"), true),
@@ -171,7 +171,7 @@ test("simulate a randomly partitioned network, logs on postgres", async (t) => {
 export const simulateRandomNetwork = async (
 	t: ExecutionContext<unknown>,
 	topic: string,
-	logs: AbstractGossipLog<string, void>[],
+	logs: AbstractGossipLog<string>[],
 	maxMessageCount: number,
 	maxChainLength: number,
 ) => {

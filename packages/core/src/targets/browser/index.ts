@@ -14,8 +14,7 @@ export default {
 	openDB: ({ topic }, models, { indexHistory } = {}) =>
 		ModelDB.initialize({ name: `canvas/${topic}/db`, models, indexHistory }),
 
-	openGossipLog: <Payload, Result>({ topic }: { topic: string }, init: GossipLogInit<Payload, Result>) =>
-		GossipLog.open(init),
+	openGossipLog: <Payload>({ topic }: { topic: string }, init: GossipLogInit<Payload>) => GossipLog.open(init),
 
 	async createLibp2p(location, config) {
 		const peerId = await getPeerId(location)
