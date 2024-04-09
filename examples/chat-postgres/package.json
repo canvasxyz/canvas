@@ -1,6 +1,6 @@
 {
   "name": "chat-postgres",
-  "version": "0.1.0",
+  "version": "0.9.0-next.1",
   "private": true,
   "scripts": {
     "dev": "node server.mjs",
@@ -9,8 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@canvas-js/chain-ethereum": "^0.8.26",
-    "@canvas-js/core": "^0.8.26",
+    "@canvas-js/chain-ethereum": "0.9.0-next.1",
+    "@canvas-js/core": "0.9.0-next.1",
     "next": "14.1.4",
     "react": "^18",
     "react-dom": "^18"
