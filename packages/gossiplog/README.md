@@ -147,9 +147,9 @@ All three are configured with the same `init` object:
 ```ts
 import type { Signature, Signer, Message } from "@canvas-js/interfaces"
 
-interface GossipLogInit<Payload = unknown, Result = void> {
+interface GossipLogInit<Payload = unknown> {
   topic: string
-  apply: (id: string, signature: Signature, message: Message<Payload>) => Result | Promise<Result>
+  apply: (id: string, signature: Signature, message: Message<Payload>) => Awaitable<void>
   validate: (payload: unknown) => payload is Payload
 
   signer?: Signer<Payload>
@@ -159,7 +159,7 @@ interface GossipLogInit<Payload = unknown, Result = void> {
 
 The `topic` is the global topic string identifying the log - we recommend using NSIDs like `com.example.my-app`. Topics must match `/^[a-zA-Z0-9\.\-]+$/`.
 
-Logs are generic in two parameters, `Payload` and `Result`. You must provide a `validate` method as a TypeScript type predicate that synchronously validates an `unknown` value as a `Payload` (it is only guaranteed to be an IPLD data model value). Only use `validate` for type/schema validation, not for authentication or authorization.
+Logs are generic in a `Payload` parameter. You must provide a `validate` method as a TypeScript type predicate that synchronously validates an `unknown` value as a `Payload` (it is only guaranteed to be an IPLD data model value). Only use `validate` for type/schema validation, not for authentication or authorization.
 
 The `apply` function is the main attraction. It is invoked once\* for every message, both for messages appended locally and for messages received from other peers. It is called with the message ID, the signature, and the message itself. If `apply` throws an error, then the message will be discarded and not persisted.
 
@@ -194,11 +194,11 @@ Calling `append` executes the following steps:
 2. Look up the current `parents: string[]` and `clock: number` to create the message object `{ topic, clock, parents, payload }`.
 3. Sign the message using the provided `signer` to get a `signature: Signature`.
 4. Serialize the signed message and compute its message ID.
-5. Call `apply(id, signature, message)` and save its return value as `result`. If `apply` throws, abort the transaction and re-throw the error.
+5. Call `apply(id, signature, message)`. If if throws, abort the transaction and re-throw the error.
 6. Write the serialized signed message to the database, using the message ID as the key.
    - If there are messages in the mempool waiting on this message, apply them and save them to the database as well
 7. Commit the transaction.
-8. Return `{ id, signature, message, result }`.
+8. Return `{ id, signature, message }`.
 
 In a peer-to-peer context, the `signature` and `message` can be sent to other peers, who can insert them directly using `gossipLog.insert`.
 
@@ -211,7 +211,7 @@ Given an existing `signature: Signature` and `message: Message<Payload>` - such 
 3. Serialize the signed message and compute its message ID.
 4. Verify that all of the message's parents already exist in the database.
    - If not, add the signed message to the mempool, abort the transaction, and return `{ id }`.
-5. Call `apply(id, signature, message)` and save its return value as `result`. If `apply` throws, abort the transaction and re-throw the error.
+5. Call `apply(id, signature, message)`. If it throws, abort the transaction and re-throw the error.
 6. Write the serialized signed message to the database, using the message ID as the key.
    - If there are messages in the mempool waiting on this message, apply them and save them to the database as well.
 7. Commit the transaction.
@@ -284,9 +284,9 @@ Topics must match `/^[a-zA-Z0-9\.\-]+$/`.
 ```ts
 import type { Signature, Signer Message, Awaitable } from "@canvas-js/interfaces"
 
-interface GossipLogInit<Payload = unknown, Result = void> {
+interface GossipLogInit<Payload = unknown> {
   topic: string
-  apply: (id: string, signature: Signature, message: Message<Payload>) => Awaitable<Result>
+  apply: (id: string, signature: Signature, message: Message<Payload>) => Awaitable<void>
   validate: (payload: unknown) => payload is Payload
 
   signer?: Signer<Payload>
@@ -294,14 +294,14 @@ interface GossipLogInit<Payload = unknown, Result = void> {
   indexAncestors?: boolean
 }
 
-type GossipLogEvents<Payload, Result> = {
-  message: CustomEvent<{ id: string; signature: Signature; message: Message<Payload>; result: Result }>
+type GossipLogEvents<Payload> = {
+  message: CustomEvent<{ id: string; signature: Signature; message: Message<Payload> }>
   commit: CustomEvent<{ root: Node }>
   sync: CustomEvent<{ peerId: PeerId }>
 }
 
-interface AbstractGossipLog<Payload = unknown, Result = unknown>
-  extends EventEmitter<GossipLogEvents<Payload, Result>> {
+interface AbstractGossipLog<Payload = unknown>
+  extends EventEmitter<GossipLogEvents<Payload>> {
   readonly topic: string
 
   public close(): Promise<void>
@@ -309,7 +309,7 @@ interface AbstractGossipLog<Payload = unknown, Result = unknown>
   public append(
     payload: Payload,
     options?: { signer?: Signer<Payload> }
-  ): Promise<{ id: string; signature: Signature; message: Message<Payload>; result: Result }>
+  ): Promise<{ id: string; signature: Signature; message: Message<Payload> }>
 
   public insert(signature: Signature, message: Message<Payload>): Promise<{ id: string }>
 

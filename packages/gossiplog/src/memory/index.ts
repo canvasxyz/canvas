@@ -12,8 +12,8 @@ import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransac
 import { SyncDeadlockError, cborNull } from "../utils.js"
 import { getAncestors, indexAncestors, isAncestor } from "../ancestors.js"
 
-export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
-	public static async open<Payload, Result>(init: GossipLogInit<Payload, Result>): Promise<GossipLog<Payload, Result>> {
+export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
+	public static async open<Payload>(init: GossipLogInit<Payload>): Promise<GossipLog<Payload>> {
 		const messages = await MemoryTree.open()
 		return new GossipLog(messages, init)
 	}
@@ -25,7 +25,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 	private readonly incomingSyncPeers = new Set<string>()
 	private readonly outgoingSyncPeers = new Set<string>()
 
-	private constructor(private readonly messages: MemoryTree, init: GossipLogInit<Payload, Result>) {
+	private constructor(private readonly messages: MemoryTree, init: GossipLogInit<Payload>) {
 		super(init)
 	}
 

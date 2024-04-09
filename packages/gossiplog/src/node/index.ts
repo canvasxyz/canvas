@@ -11,11 +11,8 @@ import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransac
 import { getAncestors, indexAncestors, isAncestor } from "../ancestors.js"
 import { cborNull } from "../utils.js"
 
-export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
-	public static async open<Payload, Result>(
-		init: GossipLogInit<Payload, Result>,
-		path: string,
-	): Promise<GossipLog<Payload, Result>> {
+export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
+	public static async open<Payload>(init: GossipLogInit<Payload>, path: string): Promise<GossipLog<Payload>> {
 		if (!fs.existsSync(path)) {
 			fs.mkdirSync(path, { recursive: true })
 		}
@@ -27,7 +24,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 		return gossipLog
 	}
 
-	private constructor(private readonly env: Environment, init: GossipLogInit<Payload, Result>) {
+	private constructor(private readonly env: Environment, init: GossipLogInit<Payload>) {
 		super(init)
 	}
 

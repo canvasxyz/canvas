@@ -13,8 +13,8 @@ import { AbstractGossipLog, GossipLogInit, ReadOnlyTransaction, ReadWriteTransac
 import { SyncDeadlockError, SyncResourceError, cborNull } from "../utils.js"
 import { getAncestors, indexAncestors, isAncestor } from "../ancestors.js"
 
-export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Result> {
-	public static async open<Payload, Result>(init: GossipLogInit<Payload, Result>): Promise<GossipLog<Payload, Result>> {
+export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
+	public static async open<Payload>(init: GossipLogInit<Payload>): Promise<GossipLog<Payload>> {
 		const storeNames = ["messages", "heads", "ancestors"]
 		const db = await openDB(`canvas/${init.topic}/log`, 2, {
 			upgrade: (db, oldVersion, newVersion) => {
@@ -45,7 +45,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 		private readonly messages: IDBTree,
 		private readonly heads: IDBStore,
 		private readonly ancestors: IDBStore,
-		init: GossipLogInit<Payload, Result>,
+		init: GossipLogInit<Payload>,
 	) {
 		super(init)
 
