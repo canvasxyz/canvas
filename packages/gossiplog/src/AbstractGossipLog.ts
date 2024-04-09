@@ -25,6 +25,7 @@ import {
 import { topicPattern, DelayableController } from "./utils.js"
 
 export interface ReadOnlyTransaction {
+	getRoot(): Awaitable<Node>
 	getHeads(): Awaitable<Uint8Array[]>
 	getAncestors: (key: Uint8Array, atOrBefore: number, results: Set<string>) => Awaitable<void>
 	isAncestor: (key: Uint8Array, ancestorKey: Uint8Array, visited?: Set<string>) => Awaitable<boolean>
@@ -33,6 +34,7 @@ export interface ReadOnlyTransaction {
 }
 
 export interface ReadWriteTransaction {
+	getRoot(): Awaitable<Node>
 	getHeads(): Awaitable<Uint8Array[]>
 	isAncestor: (key: Uint8Array, ancestorKey: Uint8Array, visited?: Set<string>) => Awaitable<boolean>
 	getAncestors: (key: Uint8Array, atOrBefore: number, results: Set<string>) => Awaitable<void>
@@ -200,8 +202,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 			const id = decodeId(key)
 			this.log("appending message %s: %O", id, message)
-			const result = await this.#insert(txn, id, signature, message, [key, value])
-			const root = await txn.messages.getRoot()
+			const { result, root } = await this.#insert(txn, id, signature, message, [key, value])
 			return { id, signature, message, result, root }
 		})
 
@@ -243,8 +244,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 				return { id }
 			}
 
-			await this.#insert(txn, id, signature, message, [key, value])
-			const root = await txn.messages.getRoot()
+			const { root } = await this.#insert(txn, id, signature, message, [key, value])
 
 			return { id, root }
 		})
@@ -279,7 +279,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		signature: Signature,
 		message: Message<Payload>,
 		[key, value]: Entry = this.encode(signature, message),
-	): Promise<Result> {
+	): Promise<{ result: Result; root: Node }> {
 		this.log("applying %s %O", id, message)
 		let result
 		try {
@@ -296,7 +296,8 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 			await this.#insert(txn, childId, signature, message)
 		}
 
-		return result
+		const root = await txn.getRoot()
+		return { result, root }
 	}
 
 	/**
@@ -337,7 +338,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 				}
 			}
 
-			return await txn.messages.getRoot()
+			return await txn.getRoot()
 		}, options)
 
 		const duration = Math.ceil(performance.now() - start)

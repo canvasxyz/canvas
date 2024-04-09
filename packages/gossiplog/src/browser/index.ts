@@ -158,6 +158,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 			try {
 				result = await callback({
+					getRoot: () => this.messages.getRoot(),
 					getHeads: () => this.heads.read(() => getHeads(this.heads)),
 					getAncestors: (key: Uint8Array, atOrBefore: number, results: Set<string>) =>
 						this.ancestors.read(() => getAncestors(this.ancestors, key, atOrBefore, results)),
@@ -227,6 +228,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 				try {
 					result = await callback({
+						getRoot: () => this.messages.getRoot(),
 						getHeads: () => this.heads.read(() => getHeads(this.heads)),
 						getAncestors: (key: Uint8Array, atOrBefore: number, results: Set<string>) =>
 							this.ancestors.read(() => getAncestors(this.ancestors, key, atOrBefore, results)),
