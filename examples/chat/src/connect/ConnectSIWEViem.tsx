@@ -21,7 +21,7 @@ export const ConnectSIWEViem: React.FC<ConnectSIWEViemProps> = ({}) => {
 
 		const client = createWalletClient({
 			chain: mainnet,
-			transport: custom(window.ethereum),
+			transport: custom(window.ethereum as any),
 		})
 
 		const chainId = await client.getChainId()

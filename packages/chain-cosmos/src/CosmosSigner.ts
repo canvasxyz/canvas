@@ -12,6 +12,7 @@ import {
 	validateArbitrarySignedSessionData,
 	verifyArbitrary,
 } from "./external_signers/arbitrary.js"
+import { fromBech32, toBech32 } from "@cosmjs/encoding"
 
 export interface CosmosSignerInit {
 	signer?: ExternalCosmosSigner
@@ -27,18 +28,19 @@ type GenericSigner = {
 
 export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 	public readonly codecs = [Ed25519DelegateSigner.cborCodec, Ed25519DelegateSigner.jsonCodec]
+	public readonly bech32Prefix: string
 
 	#signer: GenericSigner
 
 	public constructor({ signer, sessionDuration, bech32Prefix }: CosmosSignerInit = {}) {
 		super("chain-cosmos", { createSigner: (init) => new Ed25519DelegateSigner(init), defaultDuration: sessionDuration })
 
-		const bech32Prefix_ = bech32Prefix == undefined ? "cosmos" : bech32Prefix
+		this.bech32Prefix = bech32Prefix == undefined ? "cosmos" : bech32Prefix
 
 		if (signer == undefined) {
-			this.#signer = createDefaultSigner(bech32Prefix_)
+			this.#signer = createDefaultSigner(this.bech32Prefix)
 		} else if (signer.type == "ethereum") {
-			this.#signer = createEthereumSigner(signer, bech32Prefix_)
+			this.#signer = createEthereumSigner(signer, this.bech32Prefix)
 		} else if (signer.type == "amino") {
 			this.#signer = createAminoSigner(signer)
 		} else if (signer.type == "bytes") {
@@ -96,7 +98,9 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 	protected async getAddress(): Promise<string> {
 		const chainId = await this.#signer.getChainId()
 		const walletAddress = await this.#signer.getAddress(chainId)
-		return `cosmos:${chainId}:${walletAddress}`
+		const { data } = fromBech32(walletAddress)
+		const walletAddressWithPrefix = toBech32(this.bech32Prefix, data)
+		return `cosmos:${chainId}:${walletAddressWithPrefix}`
 	}
 
 	protected async newSession(data: AbstractSessionData): Promise<Session<CosmosSessionData>> {

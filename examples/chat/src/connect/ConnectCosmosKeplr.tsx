@@ -37,13 +37,14 @@ export const ConnectCosmosKeplr: React.FC<ConnectCosmosKeplrProps> = ({ chainId 
 		setAddress(address)
 		setSessionSigner(
 			new CosmosSigner({
+				bech32Prefix: "osmo",
 				signer: {
 					type: "amino",
 					signAmino: keplr.signAmino,
 					getAddress: async () => address,
 					getChainId: async () => chainId,
 				},
-			})
+			}),
 		)
 		setThisIsConnected(true)
 	}, [])
