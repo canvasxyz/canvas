@@ -25,21 +25,15 @@ import {
 import { topicPattern, DelayableController } from "./utils.js"
 
 export interface ReadOnlyTransaction {
-	getHeads(): Awaitable<Uint8Array[]>
+	getHeads: () => Awaitable<Uint8Array[]>
 	getAncestors: (key: Uint8Array, atOrBefore: number, results: Set<string>) => Awaitable<void>
 	isAncestor: (key: Uint8Array, ancestorKey: Uint8Array, visited?: Set<string>) => Awaitable<boolean>
 
-	messages: Omit<KeyValueStore, "set" | "delete"> & Source
+	messages: Target
 }
 
-export interface ReadWriteTransaction {
-	getHeads(): Awaitable<Uint8Array[]>
-	isAncestor: (key: Uint8Array, ancestorKey: Uint8Array, visited?: Set<string>) => Awaitable<boolean>
-	getAncestors: (key: Uint8Array, atOrBefore: number, results: Set<string>) => Awaitable<void>
-
+export interface ReadWriteTransaction extends ReadOnlyTransaction {
 	insert: (id: string, signature: Signature, message: Message, entry?: Entry) => Awaitable<void>
-
-	messages: KeyValueStore & Target
 }
 
 export type GossipLogConsumer<Payload = unknown, Result = void> = (
@@ -114,9 +108,12 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 	public async replay() {
 		await this.read(async (txn) => {
-			for await (const [key, value] of txn.messages.entries()) {
-				const [id, signature, message] = this.decode(value)
-				assert(id === decodeId(key), "expected id === decodeId(key)")
+			for await (const leaf of txn.messages.nodes(0, { key: null, inclusive: false })) {
+				assert(leaf.key !== null, "expected leaf.key !== null")
+				assert(leaf.value !== undefined, "expected leaf.value !== undefined")
+
+				const [id, signature, message] = this.decode(leaf.value)
+				assert(id === decodeId(leaf.key), "expected id === decodeId(key)")
 				await this.#apply.apply(txn, [id, signature, message])
 			}
 		})
@@ -164,18 +161,23 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 	public async has(id: string): Promise<boolean> {
 		assert(messageIdPattern.test(id), "invalid message ID")
-		return await this.read(({ messages }) => messages.get(encodeId(id)) !== null)
+		const leaf = await this.read((txn) => txn.messages.getNode(0, encodeId(id)))
+		return leaf !== null
 	}
 
 	public async get(id: string): Promise<[signature: Signature, message: Message<Payload>] | [null, null]> {
 		assert(messageIdPattern.test(id), "invalid message ID")
-		const value = await this.read(({ messages }) => messages.get(encodeId(id)))
-		if (value === null) {
+		const leaf = await this.read((txn) => txn.messages.getNode(0, encodeId(id)))
+		if (leaf === null) {
 			return [null, null]
 		}
 
-		const [_, signature, message] = this.decode(value)
-		return [signature, message]
+		assert(leaf.value !== undefined, "expected leaf.value !== undefined")
+
+		const [recoveredId, signature, message] = decodeSignedMessage(leaf.value)
+		assert(recoveredId === id, "expected recoveredId === id")
+
+		return [signature, message as Message<Payload>]
 	}
 
 	/**
@@ -200,8 +202,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 			const id = decodeId(key)
 			this.log("appending message %s: %O", id, message)
-			const result = await this.#insert(txn, id, signature, message, [key, value])
-			const root = await txn.messages.getRoot()
+			const { result, root } = await this.#insert(txn, id, signature, message, [key, value])
 			return { id, signature, message, result, root }
 		})
 
@@ -228,12 +229,12 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 			this.log("looking up %s parents", message.parents.length)
 			for (const parentId of message.parents) {
 				// TODO: txn.messages.getMany
-				const parent = await txn.messages.get(encodeId(parentId))
-				if (parent === null) {
+				const leaf = await txn.messages.getNode(0, encodeId(parentId))
+				if (leaf !== null) {
+					this.log("found parent %s", parentId)
+				} else {
 					this.log("missing parent %s", parentId)
 					missingParents.add(parentId)
-				} else {
-					this.log("found parent %s", parentId)
 				}
 			}
 
@@ -243,8 +244,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 				return { id }
 			}
 
-			await this.#insert(txn, id, signature, message, [key, value])
-			const root = await txn.messages.getRoot()
+			const { root } = await this.#insert(txn, id, signature, message, [key, value])
 
 			return { id, root }
 		})
@@ -279,7 +279,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		signature: Signature,
 		message: Message<Payload>,
 		[key, value]: Entry = this.encode(signature, message),
-	): Promise<Result> {
+	): Promise<{ result: Result; root: Node }> {
 		this.log("applying %s %O", id, message)
 		let result
 		try {
@@ -296,7 +296,8 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 			await this.#insert(txn, childId, signature, message)
 		}
 
-		return result
+		const root = await txn.messages.getRoot()
+		return { result, root }
 	}
 
 	/**
@@ -315,13 +316,12 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 				assert(id === decodeId(key), "expected id === decodeId(key)")
 				await this.#verifySignature(signature, message)
 
-				const existingMessage = await txn.messages.get(key)
-				if (existingMessage === null) {
+				const leaf = await txn.messages.getNode(0, encodeId(id))
+				if (leaf === null) {
 					for (const parent of message.parents) {
 						// TODO: txn.messages.getMany
-						const parentKey = encodeId(parent)
-						const parentValue = await txn.messages.get(parentKey)
-						if (parentValue === null) {
+						const leaf = await txn.messages.getNode(0, encodeId(parent))
+						if (leaf === null) {
 							this.log.error("missing parent %s of message %s: %O", parent, id, message)
 							if (this.indexAncestors) {
 								throw new Error(`missing parent ${parent} of message ${id}`)

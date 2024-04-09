@@ -1,4 +1,4 @@
-import { AbstractSigner, Wallet, verifyMessage, hexlify, getBytes } from "ethers"
+import { Wallet, verifyMessage, hexlify, getBytes } from "ethers"
 import * as siwe from "siwe"
 
 import type { Session } from "@canvas-js/interfaces"
@@ -13,6 +13,11 @@ import {
 	parseAddress,
 	addressPattern,
 } from "./utils.js"
+
+type AbstractSigner = {
+	getAddress(): Promise<string>
+	signMessage(message: string): Promise<string>
+}
 
 export interface SIWESignerInit {
 	chainId?: number

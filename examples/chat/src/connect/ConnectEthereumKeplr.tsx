@@ -25,6 +25,11 @@ export const ConnectEthereumKeplr: React.FC<ConnectEthereumKeplrProps> = ({ chai
 	const [error, setError] = useState<Error | null>(null)
 
 	const connect = useCallback(async () => {
+		if (app === null) {
+			setError(new Error("app not initialized"))
+			return
+		}
+
 		const keplr = window.keplr
 		if (!keplr) {
 			setError(new Error("window.keplr not found"))
@@ -32,26 +37,29 @@ export const ConnectEthereumKeplr: React.FC<ConnectEthereumKeplrProps> = ({ chai
 		}
 
 		await keplr.enable(chainId)
-		const offlineSigner = await keplr.getOfflineSignerAuto(chainId)
-		const accounts = await offlineSigner.getAccounts()
-		const address = accounts[0].address
-		const { prefix, data: addressData } = fromBech32(address)
-		const ethAddress = `0x${bytesToHex(addressData)}`
 
-		setAddress(address)
-		setSessionSigner(
-			new CosmosSigner({
-				signer: {
-					type: "ethereum",
-					signEthereum: async (chainId: string, signerAddress: string, message: string) => {
-						const signatureBytes = await keplr.signEthereum(chainId, address, message, EthSignType.MESSAGE)
-						return `0x${bytesToHex(signatureBytes)}`
-					},
-					getAddress: async () => ethAddress,
-					getChainId: async () => chainId,
+		const signer = new CosmosSigner({
+			bech32Prefix: "evmos",
+			signer: {
+				type: "ethereum",
+				signEthereum: async (chainId: string, signerAddress: string, message: string) => {
+					const signatureBytes = await keplr.signEthereum(chainId, signerAddress, message, EthSignType.MESSAGE)
+					return `0x${bytesToHex(signatureBytes)}`
 				},
-			})
-		)
+				getAddress: async () => {
+					const offlineSigner = await keplr.getOfflineSignerAuto(chainId)
+					const accounts = await offlineSigner.getAccounts()
+					const address = accounts[0].address
+					const { data: addressData } = fromBech32(address)
+					return `0x${bytesToHex(addressData)}`
+				},
+				getChainId: async () => chainId,
+			},
+		})
+
+		const { address } = await signer.getSession(app.topic)
+		setAddress(address)
+		setSessionSigner(signer)
 		setThisIsConnected(true)
 	}, [])
 

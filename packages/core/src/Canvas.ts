@@ -55,8 +55,14 @@ export interface CanvasConfig<T extends Contract = Contract> extends NetworkConf
 
 	/** set to `false` to disable history indexing and db.get(..) within actions */
 	indexHistory?: boolean
+
+	/** set a memory limit for the quickjs runtime, only used if `contract` is a string */
 	runtimeMemoryLimit?: number
+
+	/** don't throw an error when invalid messages are received */
 	ignoreMissingActions?: boolean
+
+	reset?: boolean
 }
 
 export type ActionOptions = { signer?: SessionSigner }
@@ -111,6 +117,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			ignoreMissingActions = false,
 			offline,
 			disablePing,
+			reset = false,
 		} = config
 
 		const signers = new SignerCache(initSigners.length === 0 ? [new SIWESigner()] : initSigners)
@@ -120,14 +127,18 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			return signer.verify(signature, message)
 		}
 
-		const runtime = await createRuntime(path, signers, contract, { runtimeMemoryLimit, ignoreMissingActions })
+		const runtime = await createRuntime(path, signers, contract, {
+			runtimeMemoryLimit,
+			ignoreMissingActions,
+			clearModelDB: reset,
+		})
 
 		const topic = runtime.topic
 
 		const libp2p = await Promise.resolve(config.libp2p ?? target.createLibp2p({ topic, path }, { ...config, signers }))
 
 		const gossipLog = await target.openGossipLog<Action | Session, void | any>(
-			{ topic, path },
+			{ topic, path, clear: reset },
 			{
 				topic: runtime.topic,
 				apply: runtime.getConsumer(),
@@ -393,8 +404,10 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 	}
 
 	/**
-	 * Append a new message to the end of the log (ie an action generated locally)
+	 * Append a new unsigned message to the end of the log (ie an action generated locally)
 	 * Low-level utility method for internal and debugging use.
+	 *
+	 * The default signer on the message log will be used if none is provided.
 	 * The normal way to apply actions is to use the `Canvas.actions[name](...)` functions.
 	 */
 	public async append(
