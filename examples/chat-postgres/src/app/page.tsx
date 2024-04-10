@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BrowserProvider } from "ethers";
 import { SIWESigner } from "@canvas-js/chain-ethereum";
 import { topic } from '../../contract.canvas.mjs';
@@ -8,6 +8,13 @@ import { topic } from '../../contract.canvas.mjs';
 interface User {
   signer: SIWESigner;
   id: string;
+}
+
+interface Message {
+  id: string;
+  address: string;
+  content: string;
+  timestamp: number;
 }
 
 export default function Home() {
@@ -20,18 +27,19 @@ export default function Home() {
   }, []);
 
   const [mmUser, setMMUser] = useState<User>();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputValue, setInputValue] = useState<string>('');
 
+  // const date = new Date(timestamp / 1000); // Convert to milliseconds
+  // const options = { hour: 'numeric', minute: 'numeric', hour12: true };
+  // const timeString = date.toLocaleTimeString('en-US', options);
+
+  // Check on page load whether a user is signed in with MM
   useEffect(() => {
     if (window.ethereum) {
-
-      console.log('running eth stuff :>> ');
-
       window.ethereum.request({ method: 'eth_accounts' })
         .then(async (accounts: any) => {
           if (accounts.length > 0) {
-            console.log('accounts.length :>> ', accounts.length);
-            console.log('Connected account:', accounts[0]);
-
             const ethSigner = await provider.getSigner();
             const network = await provider.getNetwork();
 
@@ -54,6 +62,26 @@ export default function Home() {
     }
   }, []);
 
+  // Long-poll the server for new messages
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      fetch('/read')
+        .then(response => response.json())
+        .then(data => {
+          setMessages(data.messages)
+        })
+        .catch(error => {
+          console.error('Error fetching messages:', error);
+        });
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, []);
+
+  useEffect(() => {
+    console.log('messages :>> ', messages);
+  }, [messages]);
+
   const connectEth = async () => {
     try {
       // This call actually prompts the user to connect via metamask,
@@ -70,6 +98,40 @@ export default function Home() {
       console.log('err :>> ', err);
     }
   }
+
+  const sendMessage = async () => {
+    if (inputValue.trim() !== '') {
+      try {
+        const response = await fetch('/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ message: inputValue }),
+        });
+
+        if (response.ok) {
+          setInputValue(''); // Clear the input after sending
+          console.log('Message sent!');
+        } else {
+          console.error('Failed to send message');
+        }
+      } catch (error) {
+        console.error('Error sending message:', error);
+      }
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      console.log('sending message :>>', inputValue);
+      sendMessage();
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputValue(e.target.value);
+  };
 
   return (
     <div className="w-[600px] p-4 flex flex-col h-screen">
@@ -97,11 +159,19 @@ export default function Home() {
         )}
       </section>
       <section className="chat-section border border-gray-300 flex-grow overflow-auto flex flex-col">
-        <div className="chat-messages">
+        <div className="chat-messages flex-grow">
 
         </div>
-        <div className="chat-input">
-
+        <div className="chat-input flex-none border-t-2">
+          <input
+            type="text"
+            placeholder="Type a message..."
+            className="w-full p-2 border border-gray-300 focus:outline-none focus:ring-2 focus:border-transparent"
+            value={inputValue}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+          // Add your event handlers like onChange, onKeyDown, etc.
+          />
         </div>
       </section>
     </div>
