@@ -30,10 +30,6 @@ export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState<string>('');
 
-  // const date = new Date(timestamp / 1000); // Convert to milliseconds
-  // const options = { hour: 'numeric', minute: 'numeric', hour12: true };
-  // const timeString = date.toLocaleTimeString('en-US', options);
-
   // Check on page load whether a user is signed in with MM
   useEffect(() => {
     if (window.ethereum) {
@@ -122,6 +118,31 @@ export default function Home() {
     }
   };
 
+  const formatMessageTime = (timestamp: number) => {
+    const date = new Date(timestamp);
+    let timeString = date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+    const amPm = date.getHours() >= 12 ? 'pm' : 'am';
+    return timeString.replace(' ', '') + amPm;
+  }
+
+  const getMessages = () => {
+    return messages.map((message) => {
+      return (
+        <div className="mb-1 flex items-center">
+          <span className="text-gray-500 text-sm mr-1 font-mono">[{formatMessageTime(message.timestamp)}]</span>
+          <span className="flex">
+            <span className="text-sm flex-none font-mono mr-2">{message.address.slice(9, 15)}:</span>
+            <span className="text-sm flex-grow">{message.content}</span>
+          </span>
+        </div>
+      )
+    });
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       console.log('sending message :>>', inputValue);
@@ -159,8 +180,8 @@ export default function Home() {
         )}
       </section>
       <section className="chat-section border border-gray-300 flex-grow overflow-auto flex flex-col">
-        <div className="chat-messages flex-grow">
-
+        <div className="chat-messages flex-grow p-2">
+          {getMessages()}
         </div>
         <div className="chat-input flex-none border-t-2">
           <input
