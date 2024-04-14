@@ -2,7 +2,8 @@ FROM node:20-alpine
 
 WORKDIR /app
 COPY package.json package.json
-COPY lib/peer/ lib/
+COPY lib/dashboard/server lib/
+COPY dist/ dist/
 RUN npm install --omit-dev
 
 ENTRYPOINT ["node"]

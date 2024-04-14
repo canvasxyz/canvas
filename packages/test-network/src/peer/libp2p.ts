@@ -1,15 +1,16 @@
 import { createLibp2p } from "libp2p"
 import { identify as identifyService } from "@libp2p/identify"
 
+import { Multiaddr } from "@multiformats/multiaddr"
 import { webSockets } from "@libp2p/websockets"
 import { all } from "@libp2p/websockets/filters"
 import { noise } from "@chainsafe/libp2p-noise"
 import { mplex } from "@libp2p/mplex"
 import { bootstrap } from "@libp2p/bootstrap"
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
+import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 
 import { bootstrapList, listen, announce, peerId } from "./config.js"
-import { Multiaddr } from "@multiformats/multiaddr"
 
 export const libp2p = await createLibp2p({
 	peerId: peerId,
@@ -24,8 +25,35 @@ export const libp2p = await createLibp2p({
 
 	streamMuxers: [mplex()],
 	connectionEncryption: [noise()],
-	metrics: prometheusMetrics(),
+	// metrics: prometheusMetrics(),
 	services: {
 		identify: identifyService({ protocolPrefix: "canvas" }),
+		pubsub: gossipsub({
+			fallbackToFloodsub: false,
+			allowPublishToZeroPeers: true,
+			globalSignaturePolicy: "StrictNoSign",
+			metricsTopicStrToLabel: new Map<string, string>([["test-network-example", "test-network-example"]]),
+			metricsRegister: {
+				gauge(config) {
+					return {
+						inc: () => {},
+						set: () => {},
+						addCollect: () => {},
+					}
+				},
+				histogram(config) {
+					return {
+						startTimer: () => () => {},
+						observe: () => {},
+						reset: () => {},
+					}
+				},
+				avgMinMax(config) {
+					return {
+						set: () => {},
+					}
+				},
+			},
+		}),
 	},
 })

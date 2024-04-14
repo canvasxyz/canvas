@@ -5,6 +5,7 @@
 		"rootDir": "src",
 		"outDir": "lib",
 		"module": "Node16",
-		"moduleResolution": "Node16"
+		"moduleResolution": "Node16",
+		"jsx": "react"
 	}
 }

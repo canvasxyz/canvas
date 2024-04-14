@@ -1,5 +1,13 @@
 version: "3.8"
 services:
+  dashboard:
+    init: true
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
+    ports:
+      - "8000:8000"
+
   bootstrap:
     init: true
     build: .
