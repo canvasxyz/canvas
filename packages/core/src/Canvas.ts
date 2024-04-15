@@ -156,10 +156,10 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 	public readonly db: AbstractModelDB
 	public readonly actions = {} as {
 		[K in keyof T["actions"]]: T["actions"][K] extends ActionImplementationFunction<infer Args, infer Result>
-			? ActionAPI<Args, Result>
-			: T["actions"][K] extends ActionImplementationObject<infer Args, infer Result>
-				? ActionAPI<Args, Result>
-				: never
+		? ActionAPI<Args, Result>
+		: T["actions"][K] extends ActionImplementationObject<infer Args, infer Result>
+		? ActionAPI<Args, Result>
+		: never
 	}
 
 	public readonly connections: Connections = {}
@@ -429,5 +429,24 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		options: { reverse?: boolean } = {},
 	): AsyncIterable<[id: string, signature: Signature, message: Message<Action | Session>]> {
 		yield* this.messageLog.iterate(lowerBound, upperBound, options)
+	}
+
+	/**
+	 * Get an existing session 
+	 */
+	public async getSession(query: { address: string, publicKey: string, timestamp?: number }): Promise<string | null> {
+		const sessions = await this.db.query<{ message_id: string }>("$sessions", {
+			where: {
+				public_key: query.publicKey,
+				address: query.address,
+				expiration: { gte: query.timestamp ?? 0 },
+			},
+		});
+
+		if (sessions.length === 0) {
+			return null;
+		} else {
+			return sessions[0].message_id;
+		}
 	}
 }
