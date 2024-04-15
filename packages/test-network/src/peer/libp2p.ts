@@ -9,6 +9,7 @@ import { mplex } from "@libp2p/mplex"
 import { bootstrap } from "@libp2p/bootstrap"
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
 import { gossipsub } from "@chainsafe/libp2p-gossipsub"
+import { kadDHT } from "@libp2p/kad-dht"
 
 import { bootstrapList, listen, announce, peerId } from "./config.js"
 
@@ -30,6 +31,7 @@ export const libp2p = await createLibp2p({
 	// metrics: prometheusMetrics(),
 	services: {
 		identify: identifyService({ protocolPrefix: "canvas" }),
+		dht: kadDHT({}),
 		pubsub: gossipsub({
 			fallbackToFloodsub: false,
 			allowPublishToZeroPeers: true,
