@@ -170,7 +170,7 @@ export default function Home() {
 
   const formatMessageTime = (timestamp: number) => {
     const date = new Date(timestamp);
-    let timeString = date.toLocaleTimeString('en-US', {
+    const timeString = date.toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
       hour12: false
