@@ -5,6 +5,7 @@ import next from "next";
 
 import { topic, models, actions } from './contract.canvas.mjs';
 import { Canvas, defaultBootstrapList } from '@canvas-js/core';
+import { SIWESigner, Secp256k1DelegateSigner } from "@canvas-js/chain-ethereum";
 
 const dev = process.env.NODE_ENV !== 'production';
 const nextApp = next({ dev });
@@ -18,6 +19,7 @@ nextApp.prepare().then(async () => {
       models,
       actions
     },
+    signers: [new Secp256k1DelegateSigner(), new SIWESigner()],
     indexHistory: false,
     discoveryTopic: "canvas-discovery",
     trackAllPeers: true,
@@ -72,15 +74,39 @@ nextApp.prepare().then(async () => {
 
     const messageContent = req.body.message || 'Default message';
 
-    console.log('you sent :>> ', messageContent);
-
     try {
       await canvasApp.actions.createMessage({ content: messageContent });
+
       res.json({ message: messageContent });
     } catch (error) {
       console.error('Error creating message:', error);
       res.status(500).json({ error: 'Internal Server Error' });
     }
+  });
+
+  expressApp.get("/getClock", async (_, res) => {
+    try {
+      const [nextClockValue, parentMessageIds] = await canvasApp.messageLog.getClock();
+
+      res.json({ nextClockValue, parentMessageIds });
+    } catch (error) {
+      console.error('Error fetching clock values:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
+  expressApp.post("/insert", async (req, res) => {
+    const signature = {
+      ...req.body.signature,
+      signature: new Uint8Array(req.body.signature.signature)
+    };
+    const message = req.body.message;
+
+    if (!signature || !message) {
+      console.log('~~ message didnt come through ~~');
+    }
+
+    canvasApp.insert(signature, message);
   });
 
   expressApp.all('*', (req, res) => {

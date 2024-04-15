@@ -4,13 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import { BrowserProvider } from "ethers";
 import { SIWESigner } from "@canvas-js/chain-ethereum";
 import { topic } from '../../contract.canvas.mjs';
+import { Action, Message } from "@canvas-js/interfaces";
 
 interface User {
   signer: SIWESigner;
   id: string;
 }
 
-interface Message {
+interface ChatMessage {
   id: string;
   address: string;
   content: string;
@@ -27,7 +28,7 @@ export default function Home() {
   }, []);
 
   const [mmUser, setMMUser] = useState<User>();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState<string>('');
 
   // Check on page load whether a user is signed in with MM
@@ -95,22 +96,71 @@ export default function Home() {
     }
   }
 
+  const getClockValues = async () => {
+    try {
+      const response = await fetch('/getClock');
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      const data = await response.json();
+      return { nextClockValue: data.nextClockValue, parentMessageIds: data.parentMessageIds };
+    } catch (error) {
+      console.error('Error fetching clock values:', error);
+    }
+  };
+
+  const makeCanvasAction = async ({ messageContent }: { messageContent: string }) => {
+    const activeSigner = mmUser?.signer || burnerWallet;
+    const session = await activeSigner.getSession(topic);
+
+    const clockValues = await getClockValues();
+    if (!clockValues) return null;
+
+    const actionPayload: Action = {
+      type: "action",
+      address: session.address,
+      name: "createMessage",
+      args: { content: messageContent },
+      timestamp: Date.now(),
+      blockhash: null
+    };
+
+    const message: Message<Action> = {
+      topic: topic,
+      clock: clockValues.nextClockValue,
+      parents: clockValues.parentMessageIds,
+      payload: actionPayload
+    };
+
+    const signature = await activeSigner.sign(message);
+
+    return { signer: activeSigner, signature, message };
+  }
+
   const sendMessage = async () => {
     if (inputValue.trim() !== '') {
       try {
-        const response = await fetch('/send', {
+        const canvasAction = await makeCanvasAction({ messageContent: inputValue });
+
+        if (!canvasAction) return;
+
+        const response = await fetch('/insert', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ message: inputValue }),
+          body: JSON.stringify({
+            signature: {
+              ...canvasAction?.signature,
+              signature: Array.from(canvasAction.signature.signature),
+            },
+            message: canvasAction?.message
+          })
         });
 
+        console.log('response :>> ', response);
         if (response.ok) {
-          setInputValue(''); // Clear the input after sending
-          console.log('Message sent!');
-        } else {
-          console.error('Failed to send message');
+          setInputValue('');
         }
       } catch (error) {
         console.error('Error sending message:', error);
@@ -145,7 +195,6 @@ export default function Home() {
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      console.log('sending message :>>', inputValue);
       sendMessage();
     }
   };
@@ -169,7 +218,6 @@ export default function Home() {
             <div>
               <span>Not signed in, using: </span>
               <span className="text-teal-500">{burnerWallet.key}</span>
-              {/* <span className="text-teal-500">burner</span> */}
             </div>
             <div>
               <button onClick={connectEth} className="btn bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-sm">
@@ -191,7 +239,6 @@ export default function Home() {
             value={inputValue}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-          // Add your event handlers like onChange, onKeyDown, etc.
           />
         </div>
       </section>
