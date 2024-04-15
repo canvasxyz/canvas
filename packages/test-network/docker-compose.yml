@@ -35,3 +35,12 @@ services:
       - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
       - ANNOUNCE=/dns4/web-2/tcp/8080/ws
       - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
+
+  web-3:
+    init: true
+    build: .
+    environment:
+      - SERVICE_NAME=web-3
+      - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+      - ANNOUNCE=/dns4/web-3/tcp/8080/ws
+      - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
