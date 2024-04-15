@@ -17,7 +17,7 @@ nextApp.prepare().then(async () => {
       models,
       actions
     },
-    signers: [new Secp256k1DelegateSigner(), new SIWESigner()],
+    signers: [new SIWESigner()],
     indexHistory: false,
     discoveryTopic: "canvas-discovery",
     trackAllPeers: true,
