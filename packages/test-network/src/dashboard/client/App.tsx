@@ -1,14 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Graph } from "./Graph.js"
-
-type Event =
-	| { type: "start"; id: string; t: number; detail: {} }
-	| { type: "connection:open"; id: string; t: number; detail: { id: string; remotePeer: string; remoteAddr: string } }
-	| { type: "connection:close"; id: string; t: number; detail: { id: string; remotePeer: string; remoteAddr: string } }
-	| { type: "gossipsub:mesh:update"; id: string; t: number; detail: { topic: string; peers: string[] } }
+import React, { useCallback, useEffect, useMemo, useState } from "react"
+import type { Event } from "../shared/types.js"
+import { Graph, width } from "./Graph.js"
 
 type State = {
-	mesh: Map<string, string[]>
+	mesh: Record<string, string[]>
 	nodes: { id: string }[]
 	links: { id: string; source: string; target: string }[]
 }
@@ -33,7 +28,7 @@ function reduce({ mesh, nodes, links }: State, event: Event): State {
 		return { mesh, nodes, links: links.filter((link) => link.id !== event.detail.id) }
 	} else if (event.type === "gossipsub:mesh:update") {
 		if (event.detail.topic === topic) {
-			mesh.set(event.id, event.detail.peers)
+			return { mesh: { ...mesh, [event.id]: event.detail.peers }, nodes, links }
 		}
 	}
 
@@ -41,82 +36,70 @@ function reduce({ mesh, nodes, links }: State, event: Event): State {
 }
 
 export const App: React.FC<{}> = ({}) => {
-	const mesh = useMemo(() => new Map<string, string[]>(), [])
+	const [state, setState] = useState<State>({ mesh: {}, nodes: [], links: [] })
+	const [messages, setMessages] = useState<{ peerId: string; data: string }[]>([])
+
 	const events = useMemo<Array<Event | null>>(() => [], [])
-	const [digest, setDigest] = useState(0n)
-
-	const [nodes, setNodes] = useState<{ id: string }[]>([])
-	const nodesRef = useRef(nodes)
-
-	const [links, setLinks] = useState<{ id: string; source: string; target: string }[]>([])
-	const linksRef = useRef(links)
+	const [eventCount, setEventCount] = useState(0)
 
 	useEffect(() => {
-		const eventSource = new EventSource("/events")
+		const eventSource = new EventSource("/api/events")
 		eventSource.addEventListener("error", (event) => console.error("error in event source", event))
 		eventSource.addEventListener("close", (event) => console.log("closed event source", event))
 		eventSource.addEventListener("message", ({ data }) => {
-			const { index, ...event } = JSON.parse(data) as Event & { index: number }
-
-			if (index < events.length) {
-				events[index] = event
-			} else if (index === events.length) {
-				events.push(event)
+			const event = JSON.parse(data) as Event
+			if (event.type === "gossipsub:message") {
+				const message = { peerId: event.id, data: event.detail.data }
+				setMessages((messages) => [...messages, message])
+				setTimeout(() => setMessages((messages) => messages.filter((m) => m !== message)), 2000)
 			} else {
-				const start = events.length
-				events.length = index + 1
-				events.fill(null, start)
-				events[index] = event
+				setEventCount(events.push(event))
+				setState((prev) => reduce(prev, event))
 			}
-
-			const digest = events.reduce((prev, curr, i) => {
-				const bit = curr === null ? 0n : 1n
-				return prev | (bit << BigInt(i))
-			}, 0n)
-
-			setDigest(digest)
-
-			const { nodes, links } = reduce({ mesh, nodes: nodesRef.current, links: linksRef.current }, event)
-			setNodes((nodesRef.current = nodes))
-			setLinks((linksRef.current = links))
 		})
 
 		return () => eventSource.close()
 	}, [])
 
-	const [min, max] = useMemo(() => {
-		let [min, max] = [Infinity, 0]
+	// const [min, max] = useMemo(() => {
+	// 	let [min, max] = [Infinity, 0]
 
-		for (const event of events) {
-			if (event === null) continue
-			if (event.t < min) min = event.t
-			if (event.t > max) max = event.t
-		}
+	// 	for (const event of events) {
+	// 		if (event === null) continue
+	// 		if (event.t < min) min = event.t
+	// 		if (event.t > max) max = event.t
+	// 	}
 
-		return [min, max]
-	}, [digest])
+	// 	return [min, max]
+	// }, [eventCount])
 
-	// const [range, setRange] = useState<null | number>(null)
+	// const [maxIndex, setMaxIndex] = useState<null | number>(null)
 	// const handleRangeChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
 	// 	const rangeValue = parseInt(event.target.value)
-	// 	const range = rangeValue === 100 ? null : rangeValue
+	// 	if (rangeValue === 100) {
+	// 		setMaxIndex(null)
+	// 	} else {
+	// 		setMaxIndex(Math.round(events.length * (rangeValue / 100)))
+	// 	}
 	// }, [])
 
-	// const rangeValue = range === null ? 100 :
+	// const rangeValue = events.length === 0 ? 100 : Math.round(100 * ((maxIndex ?? events.length) / events.length))
+
+	const handleClick = useCallback((id: string) => {
+		fetch(`/api/boop/${id}`, { method: "POST" }).then((res) => {
+			if (res.ok) {
+				res.json().then((recipients) => console.log("recipients", recipients))
+			} else {
+				res.text().then((err) => console.error(`[${res.status} ${res.statusText}]`, err))
+			}
+		})
+	}, [])
 
 	return (
 		<>
 			<section>
-				<Graph mesh={mesh} nodes={nodes} links={links} bootstrapPeerIds={bootstrapPeerIds} />
-				{/* 
-				<input
-					style={{ width: "100%" }}
-					type="range"
-					min={0}
-					max={100}
-					value={rangeValue}
-					onChange={handleRangeChange}
-				/> */}
+				<Graph {...state} messages={messages} bootstrapPeerIds={bootstrapPeerIds} onClick={handleClick} />
+				{/* <input style={{ width }} type="range" min={0} max={100} value={rangeValue} onChange={handleRangeChange} /> */}
 			</section>
 
 			<hr />

@@ -11,30 +11,27 @@ services:
   bootstrap:
     init: true
     build: .
-    ports:
-      - "8080:8080"
     environment:
+      - SERVICE_NAME=bootstrap
       # 12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
       - PEER_ID=CiYAJAgBEiC9yHdvmtjGZW9Q2lSLKlgmNYW9bxRK7uyo4g0aS0hFzxIkCAESIL3Id2+a2MZlb1DaVIsqWCY1hb1vFEru7KjiDRpLSEXPGkQIARJA8STx22fxKw7avM9/YjP3elT1YKBfA4wCIgnfs4yl/4G9yHdvmtjGZW9Q2lSLKlgmNYW9bxRK7uyo4g0aS0hFzw==
       - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
-      - ANNOUNCE=/dns4/host.docker.internal/tcp/8080/ws
+      - ANNOUNCE=/dns4/bootstrap/tcp/8080/ws
 
   web-1:
     init: true
     build: .
-    ports:
-      - "8081:8080"
     environment:
+      - SERVICE_NAME=web-1
       - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
-      - ANNOUNCE=/dns4/host.docker.internal/tcp/8081/ws
-      - BOOTSTRAP_LIST=/dns4/host.docker.internal/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
+      - ANNOUNCE=/dns4/web-1/tcp/8080/ws
+      - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
 
   web-2:
     init: true
     build: .
-    ports:
-      - "8082:8080"
     environment:
+      - SERVICE_NAME=web-2
       - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
-      - ANNOUNCE=/dns4/host.docker.internal/tcp/8082/ws
-      - BOOTSTRAP_LIST=/dns4/host.docker.internal/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
+      - ANNOUNCE=/dns4/web-2/tcp/8080/ws
+      - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn

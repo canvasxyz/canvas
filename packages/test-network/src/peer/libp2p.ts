@@ -12,6 +12,8 @@ import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 
 import { bootstrapList, listen, announce, peerId } from "./config.js"
 
+export const topic = "test-network-example"
+
 export const libp2p = await createLibp2p({
 	peerId: peerId,
 	start: false,
@@ -32,7 +34,7 @@ export const libp2p = await createLibp2p({
 			fallbackToFloodsub: false,
 			allowPublishToZeroPeers: true,
 			globalSignaturePolicy: "StrictNoSign",
-			metricsTopicStrToLabel: new Map<string, string>([["test-network-example", "test-network-example"]]),
+			metricsTopicStrToLabel: new Map<string, string>([[topic, topic]]),
 			metricsRegister: {
 				gauge(config) {
 					return {
