@@ -44,3 +44,111 @@ services:
       - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
       - ANNOUNCE=/dns4/web-3/tcp/8080/ws
       - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
+
+  web-4:
+    init: true
+    build: .
+    environment:
+      - SERVICE_NAME=web-4
+      - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+      - ANNOUNCE=/dns4/web-4/tcp/8080/ws
+      - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
+
+  web-5:
+    init: true
+    build: .
+    environment:
+      - SERVICE_NAME=web-5
+      - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+      - ANNOUNCE=/dns4/web-5/tcp/8080/ws
+      - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
+
+  web-6:
+    init: true
+    build: .
+    environment:
+      - SERVICE_NAME=web-6
+      - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+      - ANNOUNCE=/dns4/web-6/tcp/8080/ws
+      - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
+
+  web-7:
+    init: true
+    build: .
+    environment:
+      - SERVICE_NAME=web-7
+      - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+      - ANNOUNCE=/dns4/web-7/tcp/8080/ws
+      - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
+
+  # web-8:
+  #   init: true
+  #   build: .
+  #   environment:
+  #     - SERVICE_NAME=web-8
+  #     - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+  #     - ANNOUNCE=/dns4/web-8/tcp/8080/ws
+  #     - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
+
+  # web-9:
+  #   init: true
+  #   build: .
+  #   environment:
+  #     - SERVICE_NAME=web-9
+  #     - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+  #     - ANNOUNCE=/dns4/web-9/tcp/8080/ws
+  #     - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
+
+  # web-10:
+  #   init: true
+  #   build: .
+  #   environment:
+  #     - SERVICE_NAME=web-10
+  #     - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+  #     - ANNOUNCE=/dns4/web-10/tcp/8080/ws
+  #     - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
+
+  # web-11:
+  #   init: true
+  #   build: .
+  #   environment:
+  #     - SERVICE_NAME=web-11
+  #     - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+  #     - ANNOUNCE=/dns4/web-11/tcp/8080/ws
+  #     - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
+
+  # web-12:
+  #   init: true
+  #   build: .
+  #   environment:
+  #     - SERVICE_NAME=web-12
+  #     - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+  #     - ANNOUNCE=/dns4/web-12/tcp/8080/ws
+  #     - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
+
+  # web-13:
+  #   init: true
+  #   build: .
+  #   environment:
+  #     - SERVICE_NAME=web-13
+  #     - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+  #     - ANNOUNCE=/dns4/web-13/tcp/8080/ws
+  #     - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
+
+  # web-14:
+  #   init: true
+  #   build: .
+  #   environment:
+  #     - SERVICE_NAME=web-14
+  #     - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+  #     - ANNOUNCE=/dns4/web-14/tcp/8080/ws
+  #     - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
+
+  # web-15:
+  #   init: true
+  #   build: .
+  #   environment:
+  #     - SERVICE_NAME=web-15
+  #     - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+  #     - ANNOUNCE=/dns4/web-15/tcp/8080/ws
+  #     - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
