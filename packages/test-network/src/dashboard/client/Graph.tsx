@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import * as d3 from "d3"
 
 interface Node extends d3.SimulationNodeDatum {
@@ -37,8 +37,11 @@ export const Graph: React.FC<GraphProps> = ({
 	const [svg, setSvg] = useState<d3.Selection<SVGSVGElement, unknown, null, undefined> | null>(null)
 	const [simulation, setSimulation] = useState<d3.Simulation<Node, { source: Node; target: Node }> | null>(null)
 
-	// Initialize simulation
 	useEffect(() => {
+		if (svgRef.current === null) {
+			return
+		}
+
 		const simulation = d3
 			.forceSimulation<Node>()
 			.force(
@@ -51,16 +54,8 @@ export const Graph: React.FC<GraphProps> = ({
 			.force("charge", d3.forceManyBody().strength(-400))
 			.force("x", d3.forceX(width / 2))
 			.force("y", d3.forceY(height / 2))
-		// .force("center", d3.forceCenter(width / 2, height / 2))
 
 		setSimulation(simulation)
-		return () => void simulation.stop()
-	}, [])
-
-	useEffect(() => {
-		if (svgRef.current === null) {
-			return
-		}
 
 		const svg = d3.select(svgRef.current).attr("width", width).attr("height", height)
 
@@ -86,6 +81,8 @@ export const Graph: React.FC<GraphProps> = ({
 		svg.append("g").attr("class", "nodes").attr("stroke", "#fff").attr("stroke-width", 2)
 
 		setSvg(svg)
+
+		return () => void simulation.stop()
 	}, [])
 
 	useEffect(() => {
@@ -99,24 +96,8 @@ export const Graph: React.FC<GraphProps> = ({
 			target: nodes.find((n) => n.id === link.target)!,
 		}))
 
-		const resolvedMessages = messages.map(({ data, peerId }) => ({ data, node: nodes.find((n) => n.id === peerId)! }))
-
-		simulation.nodes(nodes)
 		simulation.force<d3.ForceLink<Node, { id: string; source: Node; target: Node }>>("link")!.links(resolvedLinks)
 		simulation.alpha(1).restart()
-
-		const oldMessages = svg
-			.select<SVGGElement>(".messages")
-			.selectAll<SVGCircleElement, { data: string; node: Node }>("circle")
-			.data(resolvedMessages, (d) => `${d.node.id}/${d.data}`)
-
-		oldMessages.exit().remove()
-		const newMessages = oldMessages
-			.enter()
-			.append("circle")
-			.attr("r", nodeRadius * 1.5)
-			.attr("fill", (d) => "#007")
-			.merge(oldMessages)
 
 		const oldLinks = svg
 			.select<SVGGElement>(".links")
@@ -134,20 +115,7 @@ export const Graph: React.FC<GraphProps> = ({
 		oldMarkers.exit().remove()
 		const newMarkers = oldMarkers.enter().append("line").attr("stroke", "none").merge(oldMarkers)
 
-		const oldNodes = svg
-			.select<SVGGElement>(".nodes")
-			.selectAll<SVGCircleElement, Node>("circle")
-			.data(nodes, (d) => d.id)
-
-		const newNodes = oldNodes
-			.enter()
-			.append("circle")
-			.attr("r", nodeRadius)
-			.attr("fill", (d) => (bootstrapPeerIds.includes(d.id) ? "#070" : "#700"))
-			.on("click", (event, node) => onClick(node.id))
-			.merge(oldNodes)
-
-		simulation.on("tick", () => {
+		simulation.on("tick.links", () => {
 			newLinks
 				.attr("x1", (d) => d.source.x!)
 				.attr("y1", (d) => d.source.y!)
@@ -166,13 +134,68 @@ export const Graph: React.FC<GraphProps> = ({
 						return null
 					}
 				})
+		})
 
+		return () => void simulation.on("tick.links", null)
+	}, [svg, simulation, links, mesh])
+
+	useEffect(() => {
+		if (svg === null || simulation === null) {
+			return
+		}
+
+		simulation.nodes(nodes)
+		simulation.alpha(1).restart()
+
+		const oldNodes = svg
+			.select<SVGGElement>(".nodes")
+			.selectAll<SVGCircleElement, Node>("circle")
+			.data(nodes, (d) => d.id)
+
+		oldNodes.exit().remove()
+
+		const newNodes = oldNodes
+			.enter()
+			.append("circle")
+			.attr("r", nodeRadius)
+			.attr("fill", (d) => (bootstrapPeerIds.includes(d.id) ? "#070" : "#700"))
+			.on("click", (event, node) => onClick(node.id))
+			.merge(oldNodes)
+
+		simulation.on("tick.nodes", () => {
 			newNodes.attr("cx", (d) => d.x!).attr("cy", (d) => d.y!)
+		})
+
+		return () => void simulation.on("tick.nodes", null)
+	}, [svg, simulation, nodes])
+
+	useEffect(() => {
+		if (svg === null || simulation === null) {
+			return
+		}
+
+		const resolvedMessages = messages.map(({ data, peerId }) => ({ data, node: nodes.find((n) => n.id === peerId)! }))
+
+		const oldMessages = svg
+			.select<SVGGElement>(".messages")
+			.selectAll<SVGCircleElement, { data: string; node: Node }>("circle")
+			.data(resolvedMessages, (d) => `${d.node.id}/${d.data}`)
+
+		oldMessages.exit().remove()
+
+		const newMessages = oldMessages
+			.enter()
+			.append("circle")
+			.attr("r", nodeRadius * 1.5)
+			.attr("fill", (d) => "#007")
+			.merge(oldMessages)
+
+		simulation.on("tick.messages", () => {
 			newMessages.attr("cx", (d) => d.node.x!).attr("cy", (d) => d.node.y!)
 		})
 
-		return () => void simulation.on("tick", null)
-	}, [svg, simulation, mesh, nodes, links, messages])
+		return () => void simulation.on("tick.messages", null)
+	}, [svg, simulation, messages])
 
 	return <svg width={width} height={height} ref={svgRef}></svg>
 }
