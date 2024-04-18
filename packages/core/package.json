@@ -53,7 +53,6 @@
     "@libp2p/peer-id-factory": "^4.0.1",
     "@libp2p/ping": "^1.0.6",
     "@libp2p/prometheus-metrics": "^3.0.7",
-    "@libp2p/webrtc": "^4.0.10",
     "@libp2p/websockets": "^8.0.7",
     "@multiformats/multiaddr": "^12.1.11",
     "@multiformats/multiaddr-matcher": "^1.1.0",

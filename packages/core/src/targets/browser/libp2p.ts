@@ -3,15 +3,14 @@ import type { PeerId } from "@libp2p/interface"
 import { ping as pingService } from "@libp2p/ping"
 import { identify as identifyService } from "@libp2p/identify"
 import { fetch as fetchService } from "@libp2p/fetch"
-import { circuitRelayTransport } from "@libp2p/circuit-relay-v2"
+// import { circuitRelayTransport } from "@libp2p/circuit-relay-v2"
 
-import { WebRTC, WebSockets, WebSocketsSecure } from "@multiformats/multiaddr-matcher"
+import { WebSockets, WebSocketsSecure } from "@multiformats/multiaddr-matcher"
 
 import { webSockets } from "@libp2p/websockets"
 import { all } from "@libp2p/websockets/filters"
 import { noise } from "@chainsafe/libp2p-noise"
 import { mplex } from "@libp2p/mplex"
-import { webRTC } from "@libp2p/webrtc"
 import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
@@ -32,8 +31,7 @@ export function getLibp2pOptions(
 	options: NetworkConfig & { signers: SignerCache },
 ): Libp2pOptions<ServiceMap> {
 	const announce = options.announce ?? []
-	const enableWebRTC = options.enableWebRTC ?? false
-	const listen = options.listen ?? (enableWebRTC ? ["/webrtc"] : [])
+	const listen = options.listen ?? []
 	const bootstrapList = options.bootstrapList ?? defaultBootstrapList
 
 	for (const address of announce) {
@@ -68,10 +66,7 @@ export function getLibp2pOptions(
 			autoDialConcurrency: DIAL_CONCURRENCY,
 		},
 
-		transports: [
-			webSockets({ filter: all }),
-			...(enableWebRTC ? [circuitRelayTransport({ discoverRelays: bootstrapList.length }), webRTC({})] : []),
-		],
+		transports: [webSockets({ filter: all })],
 
 		connectionEncryption: [noise()],
 		streamMuxers: [mplex({ disconnectThreshold: 20 })],
@@ -112,8 +107,7 @@ export function getLibp2pOptions(
 				trackAllPeers: options.trackAllPeers,
 				evictionThreshold: options.presenceTimeout,
 				topicFilter: (topic) => topic.startsWith(GossipLogService.topicPrefix),
-				addressFilter: (addr) =>
-					WebSockets.matches(addr) || WebSocketsSecure.matches(addr) || (enableWebRTC && WebRTC.matches(addr)),
+				addressFilter: (addr) => WebSockets.matches(addr) || WebSocketsSecure.matches(addr),
 				signers: options.signers,
 				appTopic,
 			}),
