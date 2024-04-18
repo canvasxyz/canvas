@@ -3,7 +3,8 @@ import next from "next";
 
 import { topic, models, actions } from './contract.canvas.mjs';
 import { Canvas, defaultBootstrapList } from '@canvas-js/core';
-import { SIWESigner, Secp256k1DelegateSigner } from "@canvas-js/chain-ethereum";
+import { SIWESigner } from "@canvas-js/chain-ethereum";
+import { encode, decode } from "@ipld/dag-json";
 
 const dev = process.env.NODE_ENV !== 'production';
 const nextApp = next({ dev });
@@ -35,16 +36,6 @@ nextApp.prepare().then(async () => {
 
   canvasApp.libp2p.start();
 
-  // Creating an action object 
-  // Just make an object with the type 'Action'
-  // There are helpers for this
-  // Creating a signer
-
-  // Send both "action"
-  // You wanna use insert
-
-  // (Use vscode and click through app.actions)
-
   const expressApp = express();
   expressApp.use(express.json());
   expressApp.set('json spaces', 2);
@@ -67,10 +58,8 @@ nextApp.prepare().then(async () => {
     }
   });
 
-  expressApp.post("/send", async (req, res) => {
-    console.log('req.body :>> ', req.body);
-
-    const messageContent = req.body.message || 'Default message';
+  expressApp.get("/send", async (req, res) => {
+    const messageContent = req.body.message || '<debug>';
 
     try {
       await canvasApp.actions.createMessage({ content: messageContent });
@@ -94,17 +83,27 @@ nextApp.prepare().then(async () => {
   });
 
   expressApp.post("/insert", async (req, res) => {
-    const signature = {
-      ...req.body.signature,
-      signature: new Uint8Array(req.body.signature.signature)
-    };
-    const message = req.body.message;
+    const data = decode(encode(req.body));
 
-    if (!signature || !message) {
+    if (!data.signature || !data.message) {
       console.log('~~ message didnt come through ~~');
     }
 
-    canvasApp.insert(signature, message);
+    try {
+      const resp = await canvasApp.insert(data.signature, data.message);
+      res.status(200).json({ message_id: resp.id });
+    } catch (err) {
+      console.log('Canvas insert error :>> ', err);
+      res.status(200).json({ message_id: null });
+    }
+  });
+
+  expressApp.post("/getSession", async (req, res) => {
+    const session = req.body.session;
+
+    const message_id = await canvasApp.getSession(session);
+
+    res.status(200).json({ message_id: message_id });
   });
 
   expressApp.all('*', (req, res) => {

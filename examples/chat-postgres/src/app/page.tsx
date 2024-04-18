@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { BrowserProvider } from "ethers";
 import { SIWESigner } from "@canvas-js/chain-ethereum";
 import { topic } from '../../contract.canvas.mjs';
-import { Action, Message } from "@canvas-js/interfaces";
+import { Action, Message, Session } from "@canvas-js/interfaces";
+import { stringify } from "@ipld/dag-json";
 
 interface User {
   signer: SIWESigner;
@@ -106,22 +107,48 @@ export default function Home() {
       return { nextClockValue: data.nextClockValue, parentMessageIds: data.parentMessageIds };
     } catch (error) {
       console.error('Error fetching clock values:', error);
+      throw error;
     }
   };
 
-  const makeCanvasAction = async ({ messageContent }: { messageContent: string }) => {
+  const checkSession = async () => {
     const activeSigner = mmUser?.signer || burnerWallet;
-    const session = await activeSigner.getSession(topic);
+    const timestamp = Date.now();
 
-    const clockValues = await getClockValues();
-    if (!clockValues) return null;
+    const session = await activeSigner.getSession(topic, { timestamp });
+
+    const response = await fetch('/getSession', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: stringify({
+        session: {
+          publicKey: session.publicKey,
+          address: session.address,
+          timestamp: session.timestamp,
+        }
+      })
+    });
+
+    const body: { message_id: string | null } = await response.json();
+
+    return {
+      messageId: body.message_id,
+      session,
+    }
+  }
+
+  const insertChatMessage = async ({ clockValues, session }: any) => {
+    const activeSigner = mmUser?.signer || burnerWallet;
+    const timestamp = Date.now();
 
     const actionPayload: Action = {
       type: "action",
       address: session.address,
       name: "createMessage",
-      args: { content: messageContent },
-      timestamp: Date.now(),
+      args: { content: inputValue },
+      timestamp,
       blockhash: null
     };
 
@@ -132,36 +159,73 @@ export default function Home() {
       payload: actionPayload
     };
 
+
     const signature = await activeSigner.sign(message);
 
-    return { signer: activeSigner, signature, message };
+    const response = await fetch('/insert', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: stringify({
+        signature,
+        message,
+      })
+    });
+
+    return { response };
+  };
+
+  const registerSessionAndInsertChatMessage = async ({ clockValues, session }: any) => {
+    const message: Message<Session> = {
+      topic: topic,
+      clock: clockValues.nextClockValue,
+      parents: clockValues.parentMessageIds,
+      payload: session,
+    };
+
+    const activeSigner = mmUser?.signer || burnerWallet;
+    const signature = await activeSigner.sign(message);
+
+    const response = await fetch('/insert', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: stringify({
+        signature,
+        message,
+      })
+    });
+
+    const { message_id }: { message_id: string | null } = await response.json();
+
+    if (message_id === null) {
+      console.log('Failed to insert session message');
+      return;
+    }
+
+    const newClockValues = {
+      nextClockValue: clockValues.nextClockValue + 1,
+      parentMessageIds: [message_id],
+    }
+
+    insertChatMessage({ session, clockValues: newClockValues });
   }
 
   const sendMessage = async () => {
     if (inputValue.trim() !== '') {
       try {
-        const canvasAction = await makeCanvasAction({ messageContent: inputValue });
+        const sessionData = await checkSession();
+        const clockValues = await getClockValues();
 
-        if (!canvasAction) return;
-
-        const response = await fetch('/insert', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            signature: {
-              ...canvasAction?.signature,
-              signature: Array.from(canvasAction.signature.signature),
-            },
-            message: canvasAction?.message
-          })
-        });
-
-        console.log('response :>> ', response);
-        if (response.ok) {
-          setInputValue('');
+        if (sessionData.messageId === null) {
+          await registerSessionAndInsertChatMessage({ session: sessionData.session, clockValues });
+        } else {
+          await insertChatMessage({ session: sessionData.session, clockValues });
         }
+
+        setInputValue('');
       } catch (error) {
         console.error('Error sending message:', error);
       }
