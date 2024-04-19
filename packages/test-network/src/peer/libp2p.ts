@@ -10,10 +10,19 @@ import { bootstrap } from "@libp2p/bootstrap"
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
 import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { kadDHT } from "@libp2p/kad-dht"
+import { gossiplog } from "@canvas-js/gossiplog/service"
 
 import { bootstrapList, listen, announce, peerId } from "./config.js"
 
 export const topic = "test-network-example"
+
+const { MIN_CONNECTIONS, MAX_CONNECTIONS } = process.env
+
+let minConnections: number | undefined = undefined
+let maxConnections: number | undefined = undefined
+
+if (MIN_CONNECTIONS !== undefined) minConnections = parseInt(MIN_CONNECTIONS)
+if (MAX_CONNECTIONS !== undefined) maxConnections = parseInt(MAX_CONNECTIONS)
 
 export const libp2p = await createLibp2p({
 	peerId: peerId,
@@ -24,6 +33,8 @@ export const libp2p = await createLibp2p({
 		denyDialMultiaddr: (addr: Multiaddr) => false,
 	},
 
+	connectionManager: { minConnections, maxConnections },
+
 	peerDiscovery: bootstrapList.length > 0 ? [bootstrap({ list: bootstrapList })] : [],
 
 	streamMuxers: [mplex()],
@@ -32,6 +43,7 @@ export const libp2p = await createLibp2p({
 	services: {
 		identify: identifyService({ protocolPrefix: "canvas" }),
 		dht: kadDHT({}),
+
 		pubsub: gossipsub({
 			fallbackToFloodsub: false,
 			allowPublishToZeroPeers: true,
@@ -59,5 +71,7 @@ export const libp2p = await createLibp2p({
 				},
 			},
 		}),
+
+		gossiplog: gossiplog({}),
 	},
 })

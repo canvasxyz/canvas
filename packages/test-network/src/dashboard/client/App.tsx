@@ -8,7 +8,7 @@ type State = {
 	links: { id: string; source: string; target: string }[]
 }
 
-const topic = "test-network-example"
+const topic = "canvas/test-network-example"
 const bootstrapPeerIds = ["12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn"]
 
 function reduce({ mesh, nodes, links }: State, event: Event): State {
@@ -36,11 +36,18 @@ function reduce({ mesh, nodes, links }: State, event: Event): State {
 }
 
 export const App: React.FC<{}> = ({}) => {
+	const [events, setEvents] = useState<Event[]>([])
 	const [state, setState] = useState<State>({ mesh: {}, nodes: [], links: [] })
 	const [messages, setMessages] = useState<{ peerId: string; data: string }[]>([])
 
-	const events = useMemo<Array<Event | null>>(() => [], [])
-	const [eventCount, setEventCount] = useState(0)
+	// console.log("state", state)
+	;(window as any).foo = () => {
+		const state = events.reduce<State>((state, event) => reduce(state, event), { mesh: {}, nodes: [], links: [] })
+		console.log(events, state)
+	}
+
+	// const events = useMemo<Array<Event | null>>(() => [], [])
+	// const [eventCount, setEventCount] = useState(0)
 
 	useEffect(() => {
 		const eventSource = new EventSource("/api/events")
@@ -53,8 +60,9 @@ export const App: React.FC<{}> = ({}) => {
 				setMessages((messages) => [...messages, message])
 				setTimeout(() => setMessages((messages) => messages.filter((m) => m !== message)), 2000)
 			} else {
-				setEventCount(events.push(event))
-				setState((prev) => reduce(prev, event))
+				setEvents((events) => [...events, event])
+				// setEventCount(events.push(event))
+				setState((state) => reduce(state, event))
 			}
 		})
 
@@ -85,7 +93,8 @@ export const App: React.FC<{}> = ({}) => {
 
 	// const rangeValue = events.length === 0 ? 100 : Math.round(100 * ((maxIndex ?? events.length) / events.length))
 
-	const handleClick = useCallback((id: string) => {
+	const handleNodeClick = useCallback((id: string) => {
+		console.log("NodeClick", id)
 		fetch(`/api/boop/${id}`, { method: "POST" }).then((res) => {
 			if (res.ok) {
 				res.json().then((recipients) => console.log("recipients", recipients))
@@ -95,32 +104,53 @@ export const App: React.FC<{}> = ({}) => {
 		})
 	}, [])
 
+	const handleLinkClick = useCallback((source: string, target: string) => {
+		console.log("LinkClick", source, target)
+
+		fetch(`/api/disconnect/${source}/${target}`, { method: "POST" }).then((res) => {
+			if (res.ok) {
+				console.log("disconnected")
+			} else {
+				res.text().then((err) => console.error(`[${res.status} ${res.statusText}]`, err))
+			}
+		})
+	}, [])
+
 	return (
 		<>
 			<section>
-				<Graph {...state} messages={messages} bootstrapPeerIds={bootstrapPeerIds} onClick={handleClick} />
+				<Graph
+					{...state}
+					messages={messages}
+					bootstrapPeerIds={bootstrapPeerIds}
+					onNodeClick={handleNodeClick}
+					onLinkClick={handleLinkClick}
+				/>
 				{/* <input style={{ width }} type="range" min={0} max={100} value={rangeValue} onChange={handleRangeChange} /> */}
 			</section>
 
 			<hr />
 
-			<pre>
-				{events.map((event, index) => {
-					if (event === null) {
-						return null
-					}
+			<details>
+				<summary>Event log</summary>
+				<pre>
+					{events.map((event, index) => {
+						if (event === null) {
+							return null
+						}
 
-					const { type, id, t, detail } = event
-					const time = new Date(t).toISOString().slice(11, -1)
-					return (
-						<div key={index}>
-							<code>
-								[{time}] [{id}] {type} {JSON.stringify(detail, null, "  ")}
-							</code>
-						</div>
-					)
-				})}
-			</pre>
+						const { type, id, t, detail } = event
+						const time = new Date(t).toISOString().slice(11, -1)
+						return (
+							<div key={index}>
+								<code>
+									[{time}] [{id}] {type} {JSON.stringify(detail, null, "  ")}
+								</code>
+							</div>
+						)
+					})}
+				</pre>
+			</details>
 		</>
 	)
 }

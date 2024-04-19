@@ -23,29 +23,52 @@ app.use(express.text())
 
 app.use(express.static("dist"))
 
+app.post("/api/disconnect/:source/:target", (req, res) => {
+	const { source, target } = req.params
+	console.log(`disconnect ${source} from ${target}`)
+
+	const startEvent = events.find((event) => event.type === "start" && event.id === source)
+	if (startEvent === undefined) {
+		return res.status(404).end()
+	}
+
+	assert(startEvent.type === "start")
+	const { hostname } = startEvent.detail
+
+	fetch(`http://${hostname}/api/disconnect/${target}`, { method: "POST" }).then(
+		(upstreamRes) =>
+			upstreamRes.ok ? res.status(200).end() : upstreamRes.text().then((err) => res.status(502).end(err)),
+		(err) => {
+			console.error("FAILED TO POST", `http://${hostname}/api/disconnect/${target}`)
+			res.status(500).end(`${err}`)
+		},
+	)
+})
+
 app.post("/api/boop/:id", (req, res) => {
 	console.log("BOOP", req.params.id)
 
 	const startEvent = events.find((event) => event.type === "start" && event.id === req.params.id)
 	if (startEvent === undefined) {
-		res.status(404).end()
-	} else {
-		assert(startEvent.type === "start")
-		const { hostname } = startEvent.detail
-		fetch(`http://${hostname}/api/boop`, { method: "POST" }).then(
-			(upstreamRes) => {
-				if (upstreamRes.ok) {
-					upstreamRes.json().then((recipients) => res.status(200).json(recipients))
-				} else {
-					upstreamRes.text().then((err) => res.status(502).end(err))
-				}
-			},
-			(err) => {
-				console.error("FAILED TO POST", `http://${hostname}/api/boop`)
-				res.status(500).end(`${err}`)
-			},
-		)
+		return res.status(404).end()
 	}
+
+	assert(startEvent.type === "start")
+	const { hostname } = startEvent.detail
+
+	fetch(`http://${hostname}/api/boop`, { method: "POST" }).then(
+		(upstreamRes) => {
+			if (upstreamRes.ok) {
+				upstreamRes.json().then((recipients) => res.status(200).json(recipients))
+			} else {
+				upstreamRes.text().then((err) => res.status(502).end(err))
+			}
+		},
+		(err) => {
+			console.error("FAILED TO POST", `http://${hostname}/api/boop`)
+			res.status(500).end(`${err}`)
+		},
+	)
 })
 
 app.post("/api/events", (req, res) => {

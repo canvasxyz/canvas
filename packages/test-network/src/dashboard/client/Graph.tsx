@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import * as d3 from "d3"
 
 interface Node extends d3.SimulationNodeDatum {
@@ -18,7 +18,8 @@ export interface GraphProps {
 
 	bootstrapPeerIds?: string[]
 	messages?: { peerId: string; data: string }[]
-	onClick?: (id: string) => void
+	onNodeClick?: (id: string) => void
+	onLinkClick?: (source: string, target: string) => void
 }
 
 export const nodeRadius = 10
@@ -31,7 +32,8 @@ export const Graph: React.FC<GraphProps> = ({
 	links,
 	bootstrapPeerIds = [],
 	messages = [],
-	onClick = () => {},
+	onNodeClick = () => {},
+	onLinkClick = () => {},
 }) => {
 	const svgRef = useRef<SVGSVGElement>(null)
 	const [svg, setSvg] = useState<d3.Selection<SVGSVGElement, unknown, null, undefined> | null>(null)
@@ -76,7 +78,7 @@ export const Graph: React.FC<GraphProps> = ({
 			.style("fill", "#222")
 
 		svg.append("g").attr("class", "messages").attr("stroke-width", 0)
-		svg.append("g").attr("class", "links").attr("stroke", "#999").attr("stroke-opacity", 1).attr("stroke-width", 1.5)
+		svg.append("g").attr("class", "links").attr("stroke", "#999").attr("stroke-opacity", 1).attr("stroke-width", 4)
 		svg.append("g").attr("class", "markers")
 		svg.append("g").attr("class", "nodes").attr("stroke", "#fff").attr("stroke-width", 2)
 
@@ -84,6 +86,9 @@ export const Graph: React.FC<GraphProps> = ({
 
 		return () => void simulation.stop()
 	}, [])
+
+	const [isMouseDown, setIsMouseDown] = useState(false)
+	const isMouseDownRef = useRef(isMouseDown)
 
 	useEffect(() => {
 		if (svg === null || simulation === null) {
@@ -105,7 +110,16 @@ export const Graph: React.FC<GraphProps> = ({
 			.data(resolvedLinks, (d) => d.id)
 
 		oldLinks.exit().remove()
-		const newLinks = oldLinks.enter().append("line").merge(oldLinks)
+		const newLinks = oldLinks
+			.enter()
+			.append("line")
+			.on("click", (event, { source, target }) => onLinkClick(source.id, target.id))
+			.on("mouseenter", (event, { source, target }) => {
+				if (isMouseDownRef.current) {
+					onLinkClick(source.id, target.id)
+				}
+			})
+			.merge(oldLinks)
 
 		const oldMarkers = svg
 			.select<SVGGElement>(".markers")
@@ -159,7 +173,7 @@ export const Graph: React.FC<GraphProps> = ({
 			.append("circle")
 			.attr("r", nodeRadius)
 			.attr("fill", (d) => (bootstrapPeerIds.includes(d.id) ? "#070" : "#700"))
-			.on("click", (event, node) => onClick(node.id))
+			.on("click", (event, node) => onNodeClick(node.id))
 			.merge(oldNodes)
 
 		simulation.on("tick.nodes", () => {
@@ -188,6 +202,8 @@ export const Graph: React.FC<GraphProps> = ({
 			.append("circle")
 			.attr("r", nodeRadius * 1.5)
 			.attr("fill", (d) => "#007")
+			.attr("cx", (d) => d.node.x!)
+			.attr("cy", (d) => d.node.y!)
 			.merge(oldMessages)
 
 		simulation.on("tick.messages", () => {
@@ -197,5 +213,15 @@ export const Graph: React.FC<GraphProps> = ({
 		return () => void simulation.on("tick.messages", null)
 	}, [svg, simulation, messages])
 
-	return <svg width={width} height={height} ref={svgRef}></svg>
+	return (
+		<svg
+			style={{ cursor: isMouseDown ? "crosshair" : "initial" }}
+			width={width}
+			height={height}
+			ref={svgRef}
+			onMouseDown={() => setIsMouseDown((isMouseDownRef.current = true))}
+			onMouseUp={() => setIsMouseDown((isMouseDownRef.current = false))}
+			onMouseLeave={() => setIsMouseDown((isMouseDownRef.current = false))}
+		></svg>
+	)
 }
