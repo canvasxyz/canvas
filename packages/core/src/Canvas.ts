@@ -154,11 +154,11 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 
 	public readonly db: AbstractModelDB
 	public readonly actions = {} as {
-		[K in keyof T["actions"]]: T["actions"][K] extends ActionImplementationFunction<infer Args, infer Result>
-			? ActionAPI<Args, Result>
-			: T["actions"][K] extends ActionImplementationObject<infer Args, infer Result>
-			? ActionAPI<Args, Result>
-			: never
+		[K in keyof T["actions"]]: T["actions"][K] extends ActionImplementationFunction<infer Args>
+			? ActionAPI<Args>
+			: T["actions"][K] extends ActionImplementationObject<infer Args>
+				? ActionAPI<Args>
+				: never
 	}
 
 	public readonly connections: Connections = {}
