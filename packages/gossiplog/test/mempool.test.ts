@@ -10,7 +10,7 @@ const mempoolTest = async (
 	t: ExecutionContext<unknown>,
 	results: { id: string; payload: string }[],
 	topic: string,
-	log: AbstractGossipLog<string, void>,
+	log: AbstractGossipLog<string>,
 ) => {
 	const signer = new Ed25519DelegateSigner()
 

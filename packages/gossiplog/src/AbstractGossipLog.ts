@@ -36,15 +36,15 @@ export interface ReadWriteTransaction extends ReadOnlyTransaction {
 	insert: (id: string, signature: Signature, message: Message, entry?: Entry) => Awaitable<void>
 }
 
-export type GossipLogConsumer<Payload = unknown, Result = void> = (
+export type GossipLogConsumer<Payload = unknown> = (
 	id: string,
 	signature: Signature,
 	message: Message<Payload>,
-) => Awaitable<Result>
+) => Awaitable<void>
 
-export interface GossipLogInit<Payload = unknown, Result = void> {
+export interface GossipLogInit<Payload = unknown> {
 	topic: string
-	apply: GossipLogConsumer<Payload, Result>
+	apply: GossipLogConsumer<Payload>
 	validatePayload?: (payload: unknown) => payload is Payload
 	verifySignature?: (signature: Signature, message: Message<Payload>) => Awaitable<void>
 
@@ -52,16 +52,14 @@ export interface GossipLogInit<Payload = unknown, Result = void> {
 	indexAncestors?: boolean
 }
 
-export type GossipLogEvents<Payload = unknown, Result = void> = {
-	message: CustomEvent<{ id: string; signature: Signature; message: Message<Payload>; result: Result }>
+export type GossipLogEvents<Payload = unknown> = {
+	message: CustomEvent<{ id: string; signature: Signature; message: Message<Payload> }>
 	commit: CustomEvent<{ root: Node }>
 	sync: CustomEvent<{ peer?: string; duration: number; messageCount: number }>
 	error: CustomEvent<{ error: Error }>
 }
 
-export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> extends TypedEventEmitter<
-	GossipLogEvents<Payload, Result>
-> {
+export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmitter<GossipLogEvents<Payload>> {
 	public abstract close(): Promise<void>
 
 	protected abstract entries(
@@ -89,9 +87,9 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 	readonly #validatePayload: (payload: unknown) => payload is Payload
 	readonly #verifySignature: (signature: Signature, message: Message<Payload>) => Awaitable<void>
-	readonly #apply: GossipLogConsumer<Payload, Result>
+	readonly #apply: GossipLogConsumer<Payload>
 
-	protected constructor(init: GossipLogInit<Payload, Result>) {
+	protected constructor(init: GossipLogInit<Payload>) {
 		super()
 		assert(topicPattern.test(init.topic), "invalid topic (must match [a-zA-Z0-9\\.\\-])")
 
@@ -187,10 +185,10 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 	public async append(
 		payload: Payload,
 		options: { signer?: Pick<Signer<Payload>, "sign" | "verify"> } = {},
-	): Promise<{ id: string; signature: Signature; message: Message<Payload>; result: Result }> {
+	): Promise<{ id: string; signature: Signature; message: Message<Payload> }> {
 		const signer = options.signer ?? this.signer
 
-		const { id, signature, message, result, root } = await this.write(async (txn) => {
+		const { id, signature, message, root } = await this.write(async (txn) => {
 			const heads = await txn.getHeads()
 
 			const clock = getNextClock(heads)
@@ -202,14 +200,14 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 
 			const id = decodeId(key)
 			this.log("appending message %s: %O", id, message)
-			const { result, root } = await this.#insert(txn, id, signature, message, [key, value])
-			return { id, signature, message, result, root }
+			const { root } = await this.#insert(txn, id, signature, message, [key, value])
+			return { id, signature, message, root }
 		})
 
 		this.dispatchEvent(new CustomEvent("commit", { detail: { topic: this.topic, root } }))
 		this.log("commited root %s", hex(root.hash))
 
-		return { id, signature, message, result }
+		return { id, signature, message }
 	}
 
 	/**
@@ -279,17 +277,17 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		signature: Signature,
 		message: Message<Payload>,
 		[key, value]: Entry = this.encode(signature, message),
-	): Promise<{ result: Result; root: Node }> {
+	): Promise<{ root: Node }> {
 		this.log("applying %s %O", id, message)
-		let result
+
 		try {
-			result = await this.#apply.apply(txn, [id, signature, message])
+			await this.#apply.apply(txn, [id, signature, message])
 		} catch (error) {
 			this.dispatchEvent(new CustomEvent("error", { detail: { error } }))
 			throw error
 		}
 
-		this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message, result } }))
+		this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message } }))
 		await txn.insert(id, signature, message, [key, value])
 
 		for (const [childId, { signature, message }] of this.mempool.observe(id)) {
@@ -297,7 +295,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		}
 
 		const root = await txn.messages.getRoot()
-		return { result, root }
+		return { root }
 	}
 
 	/**

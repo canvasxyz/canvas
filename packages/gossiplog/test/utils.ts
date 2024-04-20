@@ -52,10 +52,7 @@ export const testPlatforms = (
 	name: string,
 	run: (
 		t: ExecutionContext<unknown>,
-		openGossipLog: <Payload, Results>(
-			t: ExecutionContext,
-			init: GossipLogInit<Payload, Results>,
-		) => Promise<AbstractGossipLog<Payload, Results>>,
+		openGossipLog: <Payload>(t: ExecutionContext, init: GossipLogInit<Payload>) => Promise<AbstractGossipLog<Payload>>,
 	) => void,
 ) => {
 	const macro = test.macro(run)
@@ -123,7 +120,7 @@ export function shuffle<T>(array: T[]) {
 }
 
 export async function appendChain(
-	log: AbstractGossipLog<string, void>,
+	log: AbstractGossipLog<string>,
 	rootId: string,
 	n: number,
 	options: { signer?: Signer<string> } = {},
