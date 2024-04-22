@@ -24,7 +24,7 @@ nextApp.prepare().then(async () => {
         },
       },
       actions: {
-        async createMessage(db: any, { content }: { content: string }, { id, address, timestamp }: { id: string, address: string, timestamp: number }) {
+        async createMessage(db, { content }, { id, address, timestamp }) {
           await db.set("message", { id, address, content, timestamp })
         },
       }
@@ -52,8 +52,6 @@ nextApp.prepare().then(async () => {
   expressApp.set("json spaces", 2)
 
   expressApp.get("/read", async (_, res) => {
-    console.log("canvasApp.status :>> ", canvasApp.status)
-
     try {
       const results = await canvasApp.db.query("message", {})
       const connections = canvasApp.libp2p.getConnections()
@@ -97,14 +95,14 @@ nextApp.prepare().then(async () => {
     const data = decode(encode(req.body))
 
     if (!data.signature || !data.message) {
-      console.log("~~ message didnt come through ~~")
+      console.error("~~ message didnt come through ~~")
     }
 
     try {
       const resp = await canvasApp.insert(data.signature, data.message)
       res.status(200).json({ message_id: resp.id })
     } catch (err) {
-      console.log("Canvas insert error :>> ", err)
+      console.error("Canvas insert error :>> ", err)
       res.status(200).json({ message_id: null })
     }
   })
