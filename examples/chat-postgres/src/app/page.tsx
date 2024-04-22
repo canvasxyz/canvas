@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { BrowserProvider } from "ethers"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
-import { topic } from "../../contract.canvas.mjs"
+import { topic } from "../../contract.canvas.js"
 import { Action, Message, Session } from "@canvas-js/interfaces"
 import { stringify } from "@ipld/dag-json"
 

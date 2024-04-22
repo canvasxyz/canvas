@@ -1,7 +1,6 @@
 import express from "express"
 import next from "next"
 
-import { topic, models, actions } from "./contract.canvas.mjs"
 import { Canvas, defaultBootstrapList } from "@canvas-js/core"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { encode, decode } from "@ipld/dag-json"
@@ -14,9 +13,21 @@ nextApp.prepare().then(async () => {
   const canvasApp = await Canvas.initialize({
     path: "postgresql://postgres:postgres@localhost:5432/chat_postgres",
     contract: {
-      topic,
-      models,
-      actions,
+      topic: "chat-example.canvas.xyz",
+      models: {
+        message: {
+          id: "primary",
+          address: "string",
+          content: "string",
+          timestamp: "integer",
+          $indexes: ["address", "timestamp"],
+        },
+      },
+      actions: {
+        async createMessage(db: any, { content }: { content: string }, { id, address, timestamp }: { id: string, address: string, timestamp: number }) {
+          await db.set("message", { id, address, content, timestamp })
+        },
+      }
     },
     signers: [new SIWESigner()],
     indexHistory: false,
@@ -110,8 +121,7 @@ nextApp.prepare().then(async () => {
     return handle(req, res)
   })
 
-  expressApp.listen(3000, (err) => {
-    if (err) throw err
+  expressApp.listen(3000, () => {
     console.log("> Ready on http://localhost:3000")
   })
 })
