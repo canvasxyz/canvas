@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsc --build --watch",
-    "build": "tsc --build",
+    "build": "iconv -c -f utf-8 -t ascii node_modules/@cosmjs/encoding/build/utf8.d.ts > node_modules/@cosmjs/encoding/build/utf8.d.ts && tsc --build",
     "clean": "tsc --build --clean",
     "clean-all": "rm -rf packages/*/lib/* packages/*/test/lib/* packages/*/tsconfig.tsbuildinfo packages/ethereum-contracts/artifacts/* packages/ethereum-contracts/typechain-types/* examples/*/lib/* examples/*/tsconfig.tsbuildinfo examples/*/tsconfig.node.tsbuildinfo",
     "lint": "eslint .",
