@@ -22,7 +22,7 @@
     "@ipld/dag-cbor": "^9.2.0",
     "@ipld/dag-json": "^10.1.5",
     "@libp2p/logger": "^4.0.2",
-    "@noble/hashes": "^1.3.3",
+    "@noble/hashes": "^1.4.0",
     "multiformats": "^13.0.1"
   },
   "devDependencies": {

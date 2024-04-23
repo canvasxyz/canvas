@@ -47,7 +47,7 @@
     "@libp2p/logger": "^4.0.2",
     "@libp2p/peer-id": "^4.0.2",
     "@multiformats/multiaddr": "^12.1.11",
-    "@noble/hashes": "^1.3.3",
+    "@noble/hashes": "^1.4.0",
     "any-signal": "^4.1.1",
     "idb": "^8.0.0",
     "it-length-prefixed": "^9.0.3",

@@ -17,7 +17,7 @@
     "@ipld/dag-json": "^10.1.5",
     "@libp2p/logger": "^4.0.2",
     "@near-js/crypto": "^0.0.5",
-    "@noble/curves": "^1.3.0",
+    "@noble/curves": "^1.4.0",
     "bs58": "^5.0.0",
     "multiformats": "^13.0.1",
     "near-api-js": "^2.1.4"
