@@ -20,7 +20,8 @@
     "@types/chai": "^4.3.14",
     "@types/mocha": "^10.0.6",
     "hardhat": "^2.12.7",
-    "multiformats": "^13.0.1"
+    "multiformats": "^13.0.1",
+    "ts-node": "^10.9.2"
   },
   "optionalDependencies": {
     "@nomicfoundation/solidity-analyzer-darwin-arm64": "0.1.1",
