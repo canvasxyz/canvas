@@ -17,13 +17,17 @@
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.6",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.10",
     "@nomicfoundation/hardhat-toolbox": "^2.0.0",
+    "@nomiclabs/hardhat-etherscan": "^3.1.8",
     "@types/chai": "^4.3.14",
     "@types/mocha": "^10.0.6",
     "chai-as-promised": "^7.1.1",
     "hardhat": "^2.12.7",
+    "hardhat-gas-reporter": "^1.0.10",
     "multiformats": "^13.0.1",
     "ordinal": "^1.0.3",
-    "ts-node": "^10.9.2"
+    "solidity-coverage": "^0.8.12",
+    "ts-node": "^10.9.2",
+    "typechain": "^8.3.2"
   },
   "optionalDependencies": {
     "@nomicfoundation/solidity-analyzer-darwin-arm64": "0.1.1",
