@@ -4,6 +4,7 @@ import type { Window as KeplrWindow } from "@keplr-wallet/types"
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
 
 import { AppContext } from "../AppContext.js"
+import { fromBech32 } from "@cosmjs/encoding"
 
 declare global {
 	// eslint-disable-next-line @typescript-eslint/no-empty-interface
@@ -11,11 +12,10 @@ declare global {
 }
 
 export interface ConnectCosmosKeplrProps {
-	bech32Prefix: string
 	chainId: string
 }
 
-export const ConnectCosmosKeplr: React.FC<ConnectCosmosKeplrProps> = ({ bech32Prefix, chainId }) => {
+export const ConnectCosmosKeplr: React.FC<ConnectCosmosKeplrProps> = ({ chainId }) => {
 	const { app, sessionSigner, setSessionSigner, address, setAddress } = useContext(AppContext)
 
 	// true if this signing method is being used
@@ -34,6 +34,7 @@ export const ConnectCosmosKeplr: React.FC<ConnectCosmosKeplrProps> = ({ bech32Pr
 		const offlineSigner = await keplr.getOfflineSignerAuto(chainId)
 		const accounts = await offlineSigner.getAccounts()
 		const address = accounts[0].address
+		const { prefix: bech32Prefix } = fromBech32(address)
 
 		setAddress(address)
 		setSessionSigner(
@@ -51,7 +52,7 @@ export const ConnectCosmosKeplr: React.FC<ConnectCosmosKeplrProps> = ({ bech32Pr
 			}),
 		)
 		setThisIsConnected(true)
-	}, [bech32Prefix, chainId])
+	}, [chainId])
 
 	const disconnect = useCallback(async () => {
 		setAddress(null)
