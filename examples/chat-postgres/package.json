@@ -1,12 +1,12 @@
 {
-  "name": "chat-postgres",
+  "name": "@canvas-js/chat-postgres",
   "version": "0.9.0-next.1",
   "type": "module",
   "private": true,
   "scripts": {
     "dev": "tsx server.ts",
     "build": "next build",
-    "start": "NODE_ENV=production ts-node --esm server.ts",
+    "start": "NODE_ENV=production tsx server.ts",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {

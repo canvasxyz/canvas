@@ -16,7 +16,8 @@
     "docs:preview": "vitepress preview docs",
     "contracts:build": "npm run build -w packages/ethereum-contracts",
     "contracts:clean": "npm run clean -w packages/ethereum-contracts",
-    "contracts:test": "npm run test -w packages/ethereum-contracts"
+    "contracts:test": "npm run test -w packages/ethereum-contracts",
+    "start:chat": "npm run dev -w @canvas-js/chat-postgres"
   },
   "workspaces": [
     "packages/*",
