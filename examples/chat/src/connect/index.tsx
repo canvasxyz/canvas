@@ -64,19 +64,19 @@ const Method: React.FC<{ method: string }> = (props) => {
 		case "solana":
 			return <ConnectSolana />
 		case "cosmos-keplr":
-			return <ConnectCosmosKeplr chainId="osmosis-1" />
+			return <ConnectCosmosKeplr chainId="cosmoshub-4" />
 		case "ethereum-keplr":
 			return <ConnectEthereumKeplr chainId="evmos_9001-2" />
 		case "near":
-			return <ConnectNEAR contractId="something.near" network="mainnet" recipient="somebody" />
+			return <ConnectNEAR contractId="example.near" network="mainnet" recipient="somebody" />
 		case "terra":
 			return <ConnectTerra />
 		case "cosmos-evm":
-			return <ConnectCosmosEvmMetamask chainId="osmosis-1" />
+			return <ConnectCosmosEvmMetamask chainId="cosmoshub-4" />
 		case "bluesky":
 			return <ConnectATP />
 		case "leap":
-			return <ConnectLeap chainId="osmosis-1" />
+			return <ConnectLeap chainId="cosmoshub-4" />
 		case "magic":
 			return (
 				<ConnectMagic

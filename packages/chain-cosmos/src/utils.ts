@@ -1,7 +1,28 @@
 import { EthereumSignedSessionData } from "./external_signers/ethereum.js"
-import type { CosmosSessionData } from "./types.js"
+import type { CosmosSessionData, CosmosMessage } from "./types.js"
 
 export const addressPattern = /^cosmos:([0-9a-z\-_]+):([a-zA-Fa-f0-9]+)$/
+
+// Later we may want to accept a version of this message that includes
+// the domain we're signing in from. Wallets don't seem to check right now,
+// so we can probably commit to accepting both formats as valid signatures.
+// We may also want to have each signer pass an "ecosystem" string to follow
+// the CAIP-122 recommendation, but inferring the ecosystem from the message is
+// nontrivially difficult.
+export function constructSiwxMessage(message: CosmosMessage): string {
+	return `This website wants you to sign in with your Cosmos account:
+${message.address}
+
+Allow it to read and write to the application on your behalf?
+
+URI: ${message.topic}
+Version: 1
+Issued At: ${message.issuedAt}
+Expiration Time: ${message.expirationTime}
+Chain ID: ${message.chainId}
+Resources:
+- ${message.publicKey}`
+}
 
 export function parseAddress(address: string): [chain: string, walletAddress: string] {
 	const result = addressPattern.exec(address)

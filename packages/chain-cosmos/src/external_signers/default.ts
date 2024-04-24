@@ -1,8 +1,9 @@
 import { toBech32 } from "@cosmjs/encoding"
 import { hexToBytes } from "@noble/hashes/utils"
 import { Wallet } from "ethers"
+
 import { CosmosMessage } from "../types.js"
-import { encodeReadableEthereumMessage } from "./ethereum.js"
+import { constructSiwxMessage } from "../utils.js"
 
 export const createDefaultSigner = (bech32Prefix: string) => {
 	const wallet = Wallet.createRandom()
@@ -11,7 +12,7 @@ export const createDefaultSigner = (bech32Prefix: string) => {
 		getChainId: async () => "no_chain-id-100",
 		getAddress: async () => toBech32(bech32Prefix, hexToBytes(wallet.address.substring(2))),
 		sign: async (cosmosMessage: CosmosMessage) => {
-			const msg = encodeReadableEthereumMessage(cosmosMessage)
+			const msg = constructSiwxMessage(cosmosMessage)
 			const hexSignature = (await wallet.signMessage(msg)).substring(2)
 			return {
 				signature: hexToBytes(hexSignature),

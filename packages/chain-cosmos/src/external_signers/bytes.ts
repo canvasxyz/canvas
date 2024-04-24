@@ -1,9 +1,10 @@
-import * as cbor from "@ipld/dag-cbor"
 import { base64 } from "multiformats/bases/base64"
 import { pubkeyType } from "@cosmjs/amino"
-import { CosmosMessage } from "../types.js"
 import { sha256 } from "@noble/hashes/sha256"
 import { secp256k1 } from "@noble/curves/secp256k1"
+
+import { CosmosMessage } from "../types.js"
+import { constructSiwxMessage } from "../utils.js"
 
 export type BytesSigner = {
 	type: "bytes"
@@ -19,7 +20,7 @@ export const createBytesSigner = (signer: BytesSigner) => ({
 	getAddress: signer.getAddress,
 	getChainId: signer.getChainId,
 	sign: async (cosmosMessage: CosmosMessage) => {
-		const msg = cbor.encode(cosmosMessage)
+		const msg = new TextEncoder().encode(constructSiwxMessage(cosmosMessage))
 		const { public_key, signature } = await signer.signBytes(msg)
 		return {
 			signature: {
@@ -41,7 +42,7 @@ export const verifyBytes = (message: CosmosMessage, sessionData: BytesSignedSess
 	if (pub_key.type !== pubkeyType.secp256k1) throw Error(`invalid public key type ${pub_key.type}`)
 
 	// signBytes signs the sha256 hash of the message
-	const encodedMessage = cbor.encode(message)
+	const encodedMessage = new TextEncoder().encode(constructSiwxMessage(message))
 	const hash = sha256(encodedMessage)
 	if (!secp256k1.verify(signature, hash, pub_key.value)) throw Error("invalid signature")
 }
