@@ -11,6 +11,22 @@ import { assert } from "@canvas-js/utils"
 import { validateSessionData, addressPattern, parseAddress } from "./utils.js"
 import { SolanaMessage, SolanaSessionData } from "./types.js"
 
+// Tested against Phantom SIWS: https://github.com/phantom/sign-in-with-solana
+export const encodeSolanaMessage = (message: SolanaMessage) => {
+	return new TextEncoder().encode(`This website wants you to sign in with your Solana account:
+${message.address}
+
+Allow it to read and write to the application on your behalf?
+
+URI: ${message.topic}
+Version: 1
+Chain ID: mainnet
+Issued At: ${message.issuedAt}
+Expiration Time: ${message.expirationTime}
+Resources:
+- ${message.publicKey}`)
+}
+
 // Solana doesn't publish TypeScript signatures for injected wallets, but we can assume
 // most wallets expose a Phantom-like API and use their injected `window.solana` objects directly:
 // https://github.com/solana-labs/wallet-adapter/commit/5a274e0a32c55d4376d63a802f0d512947b087af
@@ -78,6 +94,7 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 		const [_, walletAddress] = parseAddress(address)
 
 		const message: SolanaMessage = {
+			address: walletAddress,
 			topic,
 			publicKey,
 			issuedAt: new Date(timestamp).toISOString(),
@@ -86,7 +103,7 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 
 		const signingPublicKey = base58btc.baseDecode(walletAddress)
 
-		const valid = ed25519.verify(data.signature, json.encode(message), signingPublicKey)
+		const valid = ed25519.verify(data.signature, encodeSolanaMessage(message), signingPublicKey)
 		// get the address who signed this, this is solana specific?
 		assert(valid, "invalid signature")
 	}
@@ -101,7 +118,10 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 
 		const issuedAt = new Date(timestamp)
 
+		const [_, walletAddress] = parseAddress(address)
+
 		const message: SolanaMessage = {
+			address: walletAddress,
 			topic,
 			publicKey: publicKey,
 			issuedAt: issuedAt.toISOString(),
@@ -109,13 +129,11 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 		}
 
 		if (duration !== null) {
-			console.log(issuedAt)
 			const expirationTime = new Date(timestamp + duration)
-			console.log(expirationTime)
 			message.expirationTime = expirationTime.toISOString()
 		}
 
-		const signature = await this.#signer.sign(json.encode(message))
+		const signature = await this.#signer.sign(encodeSolanaMessage(message))
 
 		return {
 			type: "session",

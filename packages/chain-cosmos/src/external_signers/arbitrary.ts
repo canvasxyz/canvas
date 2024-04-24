@@ -1,21 +1,10 @@
 import { Secp256k1, Secp256k1Signature, Sha256 } from "@cosmjs/crypto"
-import { CosmosMessage } from "../types.js"
 import { serializeSignDoc } from "@cosmjs/amino"
 import { fromBase64 } from "@cosmjs/encoding"
+
+import { CosmosMessage } from "../types.js"
 import { getSessionSignatureData } from "../signatureData.js"
-
-const createSiwxMessage = (message: CosmosMessage): string => {
-	// This is a SIWX-style message that will be signed and displayed to
-	// the user when they sign in:
-	// https://github.com/ChainAgnostic/CAIPs/blob/main/CAIPs/caip-122.md
-	return `An application with topic "${message.topic}" wants you to sign in with your Cosmos account:
-${message.address}
-
-URI: ${message.publicKey}
-Issued At: ${message.issuedAt}
-Expiration Time: ${message.expirationTime}
-Chain ID: ${message.chainId}`
-}
+import { constructSiwxMessage } from "../utils.js"
 
 export type ArbitrarySigner = {
 	type: "arbitrary"
@@ -35,7 +24,7 @@ export const createArbitrarySigner = (signer: ArbitrarySigner) => ({
 	getChainId: signer.getChainId,
 	sign: async (cosmosMessage: CosmosMessage) => {
 		// make SIWx message
-		const siwxMessage = createSiwxMessage(cosmosMessage)
+		const siwxMessage = constructSiwxMessage(cosmosMessage)
 		// call sign
 		return {
 			signature: await signer.signArbitrary(siwxMessage),
@@ -45,8 +34,7 @@ export const createArbitrarySigner = (signer: ArbitrarySigner) => ({
 })
 
 export const verifyArbitrary = async (message: CosmosMessage, sessionData: ArbitrarySignedSessionData) => {
-	const siwxMessage = createSiwxMessage(message)
-	// how is the string encoded?
+	const siwxMessage = constructSiwxMessage(message)
 	const signDoc = getSessionSignatureData(new TextEncoder().encode(siwxMessage), message.address)
 
 	const { signature, pub_key } = sessionData.signature

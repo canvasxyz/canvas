@@ -1,13 +1,13 @@
-import * as cbor from "@ipld/dag-cbor"
 import { AminoSignResponse, StdSignDoc } from "@keplr-wallet/types"
 import { base64 } from "multiformats/bases/base64"
 import { rawSecp256k1PubkeyToRawAddress, serializeSignDoc } from "@cosmjs/amino"
-
-import { CosmosMessage } from "../types.js"
-import { getSessionSignatureData } from "../signatureData.js"
 import { fromBech32, toBech32 } from "@cosmjs/encoding"
 import { sha256 } from "@noble/hashes/sha256"
 import { secp256k1 } from "@noble/curves/secp256k1"
+
+import { CosmosMessage } from "../types.js"
+import { getSessionSignatureData } from "../signatureData.js"
+import { constructSiwxMessage } from "../utils.js"
 
 export type AminoSigner = {
 	type: "amino"
@@ -20,7 +20,7 @@ export const createAminoSigner = (signer: AminoSigner) => ({
 	getAddress: signer.getAddress,
 	getChainId: signer.getChainId,
 	sign: async (cosmosMessage: CosmosMessage, address: string, chainId: string) => {
-		const msg = cbor.encode(cosmosMessage)
+		const msg = new TextEncoder().encode(constructSiwxMessage(cosmosMessage))
 		const signDoc = getSessionSignatureData(msg, address)
 		const signRes = await signer.signAmino(chainId, address, signDoc)
 		const stdSig = signRes.signature
@@ -37,7 +37,7 @@ export const verifyAmino = async (message: CosmosMessage, { signature }: AminoSi
 	const { prefix } = fromBech32(walletAddress)
 
 	// the payload can either be signed directly, or encapsulated in a SignDoc
-	const encodedMessage = cbor.encode(message)
+	const encodedMessage = new TextEncoder().encode(constructSiwxMessage(message))
 	const signDocPayload = getSessionSignatureData(encodedMessage, walletAddress)
 	const signDocDigest = sha256(serializeSignDoc(signDocPayload))
 

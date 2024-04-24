@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/discovery",
-  "version": "0.9.0-next.1",
+  "version": "0.9.0",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "type": "module",
   "files": [
@@ -10,9 +10,9 @@
   "types": "./lib/index.d.ts",
   "sideEffects": false,
   "dependencies": {
-    "@canvas-js/interfaces": "0.9.0-next.1",
-    "@canvas-js/utils": "0.9.0-next.1",
-    "@ipld/dag-cbor": "^9.0.6",
+    "@canvas-js/interfaces": "0.9.0",
+    "@canvas-js/utils": "0.9.0",
+    "@ipld/dag-cbor": "^9.2.0",
     "@libp2p/fetch": "^1.0.5",
     "@libp2p/interface": "^1.0.2",
     "@libp2p/interface-internal": "^1.0.3",
