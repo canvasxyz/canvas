@@ -43,9 +43,11 @@ app.post("/api/disconnect/:peerId", (req, res) => {
 app.post("/api/boop", (req, res) => {
 	if (libp2p.status !== "started") {
 		return res.status(500).end("libp2p not started")
+		// } else if (topic === null) {
+		// 	return res.status(500).end("not subscribed to topic")
 	}
 
-	libp2p.services.gossiplog.append(topic, randomBytes(16)).then(
+	libp2p.services.gossiplog.append(topic!, randomBytes(16)).then(
 		({ recipients }) =>
 			recipients.then(
 				(peers) => res.status(200).json(peers),
@@ -127,7 +129,7 @@ process.addListener("SIGINT", () => {
 })
 
 async function apply(id: string, signature: Signature, message: Message<string>) {
-	post("gossipsub:message", { topic, data: id })
+	post("gossiplog:message", { topic: message.topic, id })
 }
 
 let delay = 0
@@ -135,8 +137,19 @@ if (SERVICE_NAME !== "bootstrap") {
 	delay = 1000 + Math.random() * 20000
 }
 
-setTimeout(() => {
-	Promise.resolve(libp2p.start())
-		.then(() => GossipLog.open({ topic, apply }, "data"))
-		.then((log) => libp2p.services.gossiplog.subscribe(log))
+setTimeout(async () => {
+	await libp2p.start()
+	if (topic !== null) {
+		const log = await GossipLog.open({ topic, apply }, "data")
+
+		log.addEventListener("commit", ({ detail: { root } }) => {
+			post("gossiplog:commit", {
+				topic: log.topic,
+				rootLevel: root.level,
+				rootHash: bytesToHex(root.hash),
+			})
+		})
+
+		await libp2p.services.gossiplog.subscribe(log)
+	}
 }, delay)

@@ -6,43 +6,60 @@ type State = {
 	mesh: Record<string, string[]>
 	nodes: { id: string }[]
 	links: { id: string; source: string; target: string }[]
+	roots: Record<string, string>
 }
 
-const topic = "canvas/test-network-example"
+const topic = "test-network-example"
 const bootstrapPeerIds = ["12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn"]
 
-function reduce({ mesh, nodes, links }: State, event: Event): State {
+function reduce(state: State, event: Event): State {
 	if (event.type === "start") {
-		if (nodes.every((node) => node.id !== event.id)) {
-			return { mesh, nodes: [...nodes, { id: event.id }], links }
+		if (state.nodes.every((node) => node.id !== event.id)) {
+			return {
+				...state,
+				nodes: [...state.nodes, { id: event.id }],
+				roots: { ...state.roots, [event.id]: "e3b0c44298fc1c149afbf4c8996fb924" },
+			}
 		}
 	} else if (event.type === "connection:open") {
-		if (links.every((link) => link.id !== event.detail.id)) {
+		if (state.links.every((link) => link.id !== event.detail.id)) {
 			return {
-				mesh,
-				nodes,
-				links: [...links, { id: event.detail.id, source: event.id, target: event.detail.remotePeer }],
+				...state,
+				links: [...state.links, { id: event.detail.id, source: event.id, target: event.detail.remotePeer }],
 			}
 		}
 	} else if (event.type === "connection:close") {
-		return { mesh, nodes, links: links.filter((link) => link.id !== event.detail.id) }
+		return { ...state, links: state.links.filter((link) => link.id !== event.detail.id) }
 	} else if (event.type === "gossipsub:mesh:update") {
+		if (event.detail.topic === `canvas/${topic}`) {
+			return { ...state, mesh: { ...state.mesh, [event.id]: event.detail.peers } }
+		}
+	} else if (event.type === "gossiplog:commit") {
 		if (event.detail.topic === topic) {
-			return { mesh: { ...mesh, [event.id]: event.detail.peers }, nodes, links }
+			return {
+				...state,
+				roots: { ...state.roots, [event.id]: event.detail.rootHash },
+			}
 		}
 	}
 
-	return { mesh, nodes, links }
+	return state
 }
 
 export const App: React.FC<{}> = ({}) => {
 	const [events, setEvents] = useState<Event[]>([])
-	const [state, setState] = useState<State>({ mesh: {}, nodes: [], links: [] })
+	const [state, setState] = useState<State>({ nodes: [], links: [], roots: {}, mesh: {} })
 	const [messages, setMessages] = useState<{ peerId: string; data: string }[]>([])
 
 	// console.log("state", state)
 	;(window as any).foo = () => {
-		const state = events.reduce<State>((state, event) => reduce(state, event), { mesh: {}, nodes: [], links: [] })
+		const state = events.reduce<State>((state, event) => reduce(state, event), {
+			nodes: [],
+			links: [],
+			mesh: {},
+			roots: {},
+		})
+
 		console.log(events, state)
 	}
 
@@ -55,10 +72,12 @@ export const App: React.FC<{}> = ({}) => {
 		eventSource.addEventListener("close", (event) => console.log("closed event source", event))
 		eventSource.addEventListener("message", ({ data }) => {
 			const event = JSON.parse(data) as Event
-			if (event.type === "gossipsub:message") {
-				const message = { peerId: event.id, data: event.detail.data }
+			if (event.type === "gossiplog:message") {
+				const message = { peerId: event.id, data: event.detail.id }
 				setMessages((messages) => [...messages, message])
-				setTimeout(() => setMessages((messages) => messages.filter((m) => m !== message)), 2000)
+				setTimeout(() => {
+					setMessages((messages) => messages.filter((m) => m.peerId !== message.peerId && m.data !== message.data))
+				}, 2000)
 			} else {
 				setEvents((events) => [...events, event])
 				// setEventCount(events.push(event))

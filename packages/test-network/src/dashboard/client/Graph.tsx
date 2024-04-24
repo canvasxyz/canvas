@@ -15,6 +15,7 @@ export interface GraphProps {
 	mesh: Record<string, string[]>
 	nodes: Node[]
 	links: Link[]
+	roots: Record<string, string>
 
 	bootstrapPeerIds?: string[]
 	messages?: { peerId: string; data: string }[]
@@ -30,6 +31,7 @@ export const Graph: React.FC<GraphProps> = ({
 	mesh,
 	nodes,
 	links,
+	roots,
 	bootstrapPeerIds = [],
 	messages = [],
 	onNodeClick = () => {},
@@ -153,6 +155,8 @@ export const Graph: React.FC<GraphProps> = ({
 		return () => void simulation.on("tick.links", null)
 	}, [svg, simulation, links, mesh])
 
+	const rootsRef = useRef(roots)
+
 	useEffect(() => {
 		if (svg === null || simulation === null) {
 			return
@@ -172,7 +176,8 @@ export const Graph: React.FC<GraphProps> = ({
 			.enter()
 			.append("circle")
 			.attr("r", nodeRadius)
-			.attr("fill", (d) => (bootstrapPeerIds.includes(d.id) ? "#070" : "#700"))
+			.attr("data-id", (d) => d.id)
+			.attr("fill", (d) => rootsRef.current[d.id] ?? "#fff")
 			.on("click", (event, node) => onNodeClick(node.id))
 			.merge(oldNodes)
 
@@ -182,6 +187,26 @@ export const Graph: React.FC<GraphProps> = ({
 
 		return () => void simulation.on("tick.nodes", null)
 	}, [svg, simulation, nodes])
+
+	useEffect(() => {
+		if (svg === null) {
+			return
+		}
+
+		rootsRef.current = roots
+
+		svg
+			.select<SVGGElement>(".nodes")
+			.selectAll<SVGCircleElement, Node>("circle")
+			.attr("fill", (d, idx, elems) => {
+				const id = elems[idx].getAttribute("data-id")
+				if (id && roots[id]) {
+					return `#${roots[id].slice(0, 6)}`
+				} else {
+					return "#000"
+				}
+			})
+	}, [svg, roots])
 
 	useEffect(() => {
 		if (svg === null || simulation === null) {
@@ -211,7 +236,7 @@ export const Graph: React.FC<GraphProps> = ({
 		})
 
 		return () => void simulation.on("tick.messages", null)
-	}, [svg, simulation, messages])
+	}, [svg, simulation, nodes, messages])
 
 	return (
 		<svg
