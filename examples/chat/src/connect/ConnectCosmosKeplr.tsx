@@ -11,10 +11,11 @@ declare global {
 }
 
 export interface ConnectCosmosKeplrProps {
+	bech32Prefix: string
 	chainId: string
 }
 
-export const ConnectCosmosKeplr: React.FC<ConnectCosmosKeplrProps> = ({ chainId }) => {
+export const ConnectCosmosKeplr: React.FC<ConnectCosmosKeplrProps> = ({ bech32Prefix, chainId }) => {
 	const { app, sessionSigner, setSessionSigner, address, setAddress } = useContext(AppContext)
 
 	// true if this signing method is being used
@@ -37,17 +38,20 @@ export const ConnectCosmosKeplr: React.FC<ConnectCosmosKeplrProps> = ({ chainId 
 		setAddress(address)
 		setSessionSigner(
 			new CosmosSigner({
-				bech32Prefix: "osmo",
+				bech32Prefix,
 				signer: {
 					type: "amino",
-					signAmino: keplr.signAmino,
+					signAmino: async (chainId, signer, signDoc) => {
+						console.log("signAmino", chainId, signer, signDoc)
+						return keplr.signAmino(chainId, signer, signDoc)
+					},
 					getAddress: async () => address,
 					getChainId: async () => chainId,
 				},
 			}),
 		)
 		setThisIsConnected(true)
-	}, [])
+	}, [bech32Prefix, chainId])
 
 	const disconnect = useCallback(async () => {
 		setAddress(null)

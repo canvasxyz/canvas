@@ -64,7 +64,7 @@ const Method: React.FC<{ method: string }> = (props) => {
 		case "solana":
 			return <ConnectSolana />
 		case "cosmos-keplr":
-			return <ConnectCosmosKeplr chainId="cosmoshub-4" />
+			return <ConnectCosmosKeplr bech32Prefix="cosmos" chainId="cosmoshub-4" />
 		case "ethereum-keplr":
 			return <ConnectEthereumKeplr chainId="evmos_9001-2" />
 		case "near":
