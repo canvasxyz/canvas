@@ -13,6 +13,10 @@ import { assert } from "@canvas-js/utils"
 import type { SubstrateMessage, SubstrateSessionData } from "./types.js"
 import { validateSessionData, randomKeypair, parseAddress, addressPattern } from "./utils.js"
 
+const constructSubstrateMessage = (message: SubstrateMessage) => {
+	return json.encode(message)
+}
+
 type SubstrateSignerInit = {
 	sessionDuration?: number
 	extension?: InjectedExtension
@@ -40,7 +44,10 @@ export class SubstrateSigner extends AbstractSessionSigner<SubstrateSessionData>
 	#signer: AbstractSigner
 
 	public constructor({ sessionDuration, substrateKeyType, extension }: SubstrateSignerInit = {}) {
-		super("chain-substrate", { createSigner: (init) => new Ed25519DelegateSigner(init), defaultDuration: sessionDuration })
+		super("chain-substrate", {
+			createSigner: (init) => new Ed25519DelegateSigner(init),
+			defaultDuration: sessionDuration,
+		})
 		if (extension) {
 			const signRaw = extension.signer.signRaw
 			if (signRaw === undefined) {
@@ -159,7 +166,7 @@ export class SubstrateSigner extends AbstractSessionSigner<SubstrateSessionData>
 		}).addFromAddress(decodedAddress)
 
 		const { nonce, signature } = authorizationData.signatureResult
-		const signedData = bytesToHex(nonce) + bytesToHex(json.encode(message))
+		const signedData = bytesToHex(nonce) + bytesToHex(constructSubstrateMessage(message))
 
 		const valid = signerKeyring.verify(signedData, signature, decodedAddress)
 
@@ -187,7 +194,7 @@ export class SubstrateSigner extends AbstractSessionSigner<SubstrateSessionData>
 			expirationTime: null,
 		}
 
-		const signatureResult = await this.#signer.signMessage(json.encode(message))
+		const signatureResult = await this.#signer.signMessage(constructSubstrateMessage(message))
 		const substrateKeyType = await this.#signer.getSubstrateKeyType()
 
 		return {
