@@ -38,21 +38,21 @@ export const ConnectEthereumKeplr: React.FC<ConnectEthereumKeplrProps> = ({ chai
 
 		await keplr.enable(chainId)
 
+		const offlineSigner = await keplr.getOfflineSignerAuto(chainId)
+		const accounts = await offlineSigner.getAccounts()
+		const accountAddress = accounts[0].address
+		const { prefix: bech32Prefix, data: addressData } = fromBech32(accountAddress)
+		const ethAddress = `0x${bytesToHex(addressData)}`
+
 		const signer = new CosmosSigner({
-			bech32Prefix: "evmos",
+			bech32Prefix,
 			signer: {
 				type: "ethereum",
 				signEthereum: async (chainId: string, signerAddress: string, message: string) => {
 					const signatureBytes = await keplr.signEthereum(chainId, signerAddress, message, EthSignType.MESSAGE)
 					return `0x${bytesToHex(signatureBytes)}`
 				},
-				getAddress: async () => {
-					const offlineSigner = await keplr.getOfflineSignerAuto(chainId)
-					const accounts = await offlineSigner.getAccounts()
-					const address = accounts[0].address
-					const { data: addressData } = fromBech32(address)
-					return `0x${bytesToHex(addressData)}`
-				},
+				getAddress: async () => ethAddress,
 				getChainId: async () => chainId,
 			},
 		})
@@ -61,7 +61,7 @@ export const ConnectEthereumKeplr: React.FC<ConnectEthereumKeplrProps> = ({ chai
 		setAddress(address)
 		setSessionSigner(signer)
 		setThisIsConnected(true)
-	}, [])
+	}, [chainId])
 
 	const disconnect = useCallback(async () => {
 		setAddress(null)
