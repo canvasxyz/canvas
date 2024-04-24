@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "next build",
+    "build": "pwd",
     "start": "NODE_ENV=production tsx server.ts",
     "start:chat": "NODE_ENV=production tsx server.ts",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
