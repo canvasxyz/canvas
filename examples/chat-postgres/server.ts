@@ -13,6 +13,8 @@ const handle = nextApp.getRequestHandler()
 process.on('uncaughtException', (error) => {
   console.error('Unhandled Exception:', error);
   console.log(inspect(error));
+
+  throw error;
 });
 
 nextApp.prepare().then(async () => {
