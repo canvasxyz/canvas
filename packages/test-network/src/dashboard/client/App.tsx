@@ -112,15 +112,36 @@ export const App: React.FC<{}> = ({}) => {
 
 	// const rangeValue = events.length === 0 ? 100 : Math.round(100 * ((maxIndex ?? events.length) / events.length))
 
-	const handleNodeClick = useCallback((id: string) => {
-		console.log("NodeClick", id)
-		fetch(`/api/boop/${id}`, { method: "POST" }).then((res) => {
-			if (res.ok) {
-				res.json().then((recipients) => console.log("recipients", recipients))
-			} else {
-				res.text().then((err) => console.error(`[${res.status} ${res.statusText}]`, err))
-			}
-		})
+	const handleNodeClick = useCallback((id: string, shiftKey: boolean, metaKey: boolean) => {
+		if (shiftKey && metaKey) {
+		} else if (metaKey) {
+			console.log("provide", id)
+			fetch(`/api/provide/${id}`, { method: "POST" }).then((res) => {
+				if (res.ok) {
+					res.json().then((results) => console.log("provide results", results))
+				} else {
+					res.text().then((err) => console.error(`[${res.status} ${res.statusText}]`, err))
+				}
+			})
+		} else if (shiftKey) {
+			console.log("query", id)
+			fetch(`/api/query/${id}`, { method: "POST" }).then((res) => {
+				if (res.ok) {
+					res.json().then((results) => console.log("query results", results))
+				} else {
+					res.text().then((err) => console.error(`[${res.status} ${res.statusText}]`, err))
+				}
+			})
+		} else {
+			console.log("boop", id)
+			fetch(`/api/boop/${id}`, { method: "POST" }).then((res) => {
+				if (res.ok) {
+					res.json().then((recipients) => console.log("recipients", recipients))
+				} else {
+					res.text().then((err) => console.error(`[${res.status} ${res.statusText}]`, err))
+				}
+			})
+		}
 	}, [])
 
 	const handleLinkClick = useCallback((source: string, target: string) => {
