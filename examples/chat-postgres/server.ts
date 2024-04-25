@@ -4,10 +4,16 @@ import next from "next"
 import { Canvas, defaultBootstrapList } from "@canvas-js/core"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { encode, decode } from "@ipld/dag-json"
+import { inspect } from "util"
 
 const dev = process.env.NODE_ENV !== "production"
 const nextApp = next({ dev })
 const handle = nextApp.getRequestHandler()
+
+process.on('uncaughtException', (error) => {
+  console.error('Unhandled Exception:', error);
+  console.log(inspect(error));
+});
 
 nextApp.prepare().then(async () => {
   const canvasApp = await Canvas.initialize({
