@@ -114,6 +114,7 @@ export const App: React.FC<{}> = ({}) => {
 
 	const handleNodeClick = useCallback((id: string, shiftKey: boolean, metaKey: boolean) => {
 		if (shiftKey && metaKey) {
+			//
 		} else if (metaKey) {
 			console.log("provide", id)
 			fetch(`/api/provide/${id}`, { method: "POST" }).then((res) => {
