@@ -1,10 +1,10 @@
 import http from "node:http"
+import assert from "node:assert"
 
 import express from "express"
 import PQueue from "p-queue"
 
 import type { Event } from "../shared/types.js"
-import assert from "node:assert"
 
 const events: Event[] = []
 const queues = new Map<express.Response, PQueue>()

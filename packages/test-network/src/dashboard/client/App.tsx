@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react"
 import type { Event } from "../shared/types.js"
 import { Graph, width } from "./Graph.js"
+import { EventLog } from "./EventLog.js"
 
 type State = {
 	mesh: Record<string, string[]>
@@ -157,6 +158,8 @@ export const App: React.FC<{}> = ({}) => {
 		})
 	}, [])
 
+	const [eventLogVisible, setEventLogVisible] = useState(false)
+
 	return (
 		<>
 			<section>
@@ -172,26 +175,7 @@ export const App: React.FC<{}> = ({}) => {
 
 			<hr />
 
-			<details>
-				<summary>Event log</summary>
-				<pre>
-					{events.map((event, index) => {
-						if (event === null) {
-							return null
-						}
-
-						const { type, id, t, detail } = event
-						const time = new Date(t).toISOString().slice(11, -1)
-						return (
-							<div key={index}>
-								<code>
-									[{time}] [{id}] {type} {JSON.stringify(detail, null, "  ")}
-								</code>
-							</div>
-						)
-					})}
-				</pre>
-			</details>
+			<EventLog events={events} />
 		</>
 	)
 }
