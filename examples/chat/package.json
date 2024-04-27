@@ -21,7 +21,7 @@
     "@canvas-js/hooks": "0.9.0",
     "@canvas-js/interfaces": "0.9.0",
     "@canvas-js/modeldb": "0.9.0",
-    "@cosmjs/encoding": "^0.30.1",
+    "@cosmjs/encoding": "^0.32.3",
     "@keplr-wallet/types": "^0.11.64",
     "@libp2p/interface": "^1.0.2",
     "@magic-ext/auth": "^4.3.2",
