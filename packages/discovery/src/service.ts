@@ -78,6 +78,7 @@ export const defaultResponseHeartbeatThreshold = 15 * 1000 // send response hear
 export interface DiscoveryServiceEvents extends PeerDiscoveryEvents {
 	"peer:topics": CustomEvent<{
 		peerId: PeerId
+		connections: Connection[]
 		env: PeerEnv
 		address: string | null
 		topics: string[]
@@ -225,12 +226,20 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 				assert(Array.isArray(topics), "expected Array.isArray(topics)")
 				assert(peerRecordEnvelope instanceof Uint8Array, "expected peerRecordEnvelope instanceof Uint8Array")
 				const { peerId, multiaddrs } = await this.openPeerRecord(peerRecordEnvelope)
+				const connections = this.components.connectionManager.getConnections(peerId)
 
 				// emit an active discovery event for peers on other topics
 				this.log("received heartbeat from %s with topics %o", peerId, topics)
 				this.dispatchEvent(
 					new CustomEvent("peer:topics", {
-						detail: { peerId, address, env, topics, isUniversalReplication: isUniversalReplication ?? false },
+						detail: {
+							peerId,
+							connections,
+							address,
+							env,
+							topics,
+							isUniversalReplication: isUniversalReplication ?? false,
+						},
 					}),
 				)
 				this.handlePeerEvent(peerId, multiaddrs, env, address, topics, "active")

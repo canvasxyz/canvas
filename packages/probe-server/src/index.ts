@@ -27,9 +27,10 @@ libp2p.addEventListener("connection:close", ({ detail: connection }) => {
 })
 
 libp2p.services.discovery.addEventListener("peer:topics", ({ detail }) => {
-	const { peerId, address, env, topics, isUniversalReplication } = detail
+	const { peerId, connections, address, env, topics, isUniversalReplication } = detail
+	const remoteAddrs = connections.map((conn) => conn.remoteAddr.toString()).join(",")
 	console.log(
-		`[probe-server] [${new Date()}] [${env}${isUniversalReplication ? "-shared" : ""}] ${topics.length} topics at ${address}`,
+		`[probe-server] [${new Date()}] [${env}${isUniversalReplication ? "-shared" : ""}] ${topics.length} topics at ${remoteAddrs}`,
 	)
 })
 
