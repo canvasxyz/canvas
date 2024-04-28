@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/discovery",
-  "version": "0.8.27-patch.2",
+  "version": "0.8.27-patch.3",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "type": "module",
   "files": [
@@ -10,7 +10,7 @@
   "types": "./lib/index.d.ts",
   "sideEffects": false,
   "dependencies": {
-    "@canvas-js/interfaces": "0.8.27-patch.2",
+    "@canvas-js/interfaces": "0.8.27-patch.3",
     "@ipld/dag-cbor": "^9.0.6",
     "@libp2p/fetch": "^1.0.5",
     "@libp2p/interface": "^1.0.2",
