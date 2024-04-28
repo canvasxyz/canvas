@@ -75,7 +75,7 @@ export const defaultEvictionThreshold = 90 * 1000 // only if they haven't been s
 export const defaultResponseHeartbeatThreshold = 15 * 1000 // send response heartbeat upon new peers joining the mesh, up to once every 60 seconds
 
 export interface DiscoveryServiceEvents extends PeerDiscoveryEvents {
-	"peer:topics": CustomEvent<{ peerId: PeerId; topics: string[] }>
+	"peer:topics": CustomEvent<{ peerId: PeerId; topics: string[]; topicsLastActive?: Record<string, number> }>
 	"presence:join": CustomEvent<{
 		peerId: PeerId
 		env: PeerEnv
@@ -202,6 +202,7 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 
 				const payload = cbor.decode<{
 					topics: string[]
+					topicsLastActive?: Record<string, number>
 					address: string | null
 					env: "browser" | "server"
 					peerRecordEnvelope: Uint8Array
@@ -210,7 +211,7 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 
 				if (payload instanceof Uint8Array) return // ignore legacy discovery payloads
 
-				const { topics, address, env, peerRecordEnvelope } = payload
+				const { topics, topicsLastActive, address, env, peerRecordEnvelope } = payload
 
 				assert(Array.isArray(topics), "expected Array.isArray(topics)")
 				assert(peerRecordEnvelope instanceof Uint8Array, "expected peerRecordEnvelope instanceof Uint8Array")
@@ -218,7 +219,7 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 
 				// emit an active discovery event for peers on other topics
 				this.log("received heartbeat from %s with topics %o", peerId, topics)
-				this.dispatchEvent(new CustomEvent("peer:topics", { detail: { peerId, topics } }))
+				this.dispatchEvent(new CustomEvent("peer:topics", { detail: { peerId, topics, topicsLastActive } }))
 				this.handlePeerEvent(peerId, multiaddrs, env, address, topics, "active")
 
 				const topicIntersection = this.pubsub.getTopics().filter((topic) => topics.includes(topic))
@@ -293,6 +294,7 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 		}
 
 		const topics = this.pubsub.getTopics().filter((topic) => this.topicFilter(topic))
+		const topicsLastActive: Record<string, number> = Object.fromEntries(topics.map((topic: string) => [topic, 0]))
 
 		const multiaddrs = this.components.addressManager
 			.getAddresses()
@@ -322,7 +324,7 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 
 		const env = typeof window === "object" ? "browser" : "server"
 
-		const payload = { topics, address, env, peerRecordEnvelope: envelope.marshal() }
+		const payload = { topics, topicsLastActive, address, env, peerRecordEnvelope: envelope.marshal() }
 		this.pubsub.publish(this.discoveryTopic, cbor.encode(payload)).then(
 			({ recipients }) => this.log("published heartbeat to %d recipients", recipients.length),
 			(err) => this.log.error("failed to publish heartbeat: %o", err),
@@ -381,7 +383,12 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 
 		const results = new Map<
 			PeerId,
-			{ topics: string[]; address: string | null; env: PeerEnv; peerRecordEnvelope: Uint8Array }
+			{
+				topics: string[]
+				address: string | null
+				env: PeerEnv
+				peerRecordEnvelope: Uint8Array
+			}
 		>()
 		for (const peerId of peers) {
 			const { peerRecordEnvelope } = await this.components.peerStore.get(peerId)
@@ -429,6 +436,7 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 
 					type Peer = {
 						topics: string[]
+						topicsLastActive?: Record<string, number>
 						address: string | null
 						env: PeerEnv
 						peerRecordEnvelope: Uint8Array
