@@ -346,7 +346,14 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 
 		const env = typeof window === "object" ? "browser" : "server"
 
-		const payload = { topics, topicsLastActive, address, env, peerRecordEnvelope: envelope.marshal() }
+		const payload = {
+			topics,
+			topicsLastActive,
+			address,
+			env,
+			peerRecordEnvelope: envelope.marshal(),
+			isUniversalReplication: this.isUniversalReplication,
+		}
 		this.pubsub.publish(this.discoveryTopic, cbor.encode(payload)).then(
 			({ recipients }) => this.log("published heartbeat to %d recipients", recipients.length),
 			(err) => this.log.error("failed to publish heartbeat: %o", err),
