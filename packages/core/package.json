@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/core",
-  "version": "0.8.27-patch.4",
+  "version": "0.8.27-patch.5",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "type": "module",
   "engines": {
@@ -29,13 +29,13 @@
     "test": "ava"
   },
   "dependencies": {
-    "@canvas-js/chain-ethereum": "0.8.27-patch.4",
-    "@canvas-js/discovery": "0.8.27-patch.4",
-    "@canvas-js/gossiplog": "0.8.27-patch.4",
-    "@canvas-js/interfaces": "0.8.27-patch.4",
-    "@canvas-js/modeldb": "0.8.27-patch.4",
-    "@canvas-js/signed-cid": "0.8.27-patch.4",
-    "@canvas-js/vm": "0.8.27-patch.4",
+    "@canvas-js/chain-ethereum": "0.8.27-patch.5",
+    "@canvas-js/discovery": "0.8.27-patch.5",
+    "@canvas-js/gossiplog": "0.8.27-patch.5",
+    "@canvas-js/interfaces": "0.8.27-patch.5",
+    "@canvas-js/modeldb": "0.8.27-patch.5",
+    "@canvas-js/signed-cid": "0.8.27-patch.5",
+    "@canvas-js/vm": "0.8.27-patch.5",
     "@chainsafe/libp2p-gossipsub": "^11.0.1",
     "@chainsafe/libp2p-noise": "^14.1.0",
     "@ipld/dag-cbor": "^9.0.6",
