@@ -76,7 +76,13 @@ export const defaultEvictionThreshold = 90 * 1000 // only if they haven't been s
 export const defaultResponseHeartbeatThreshold = 15 * 1000 // send response heartbeat upon new peers joining the mesh, up to once every 60 seconds
 
 export interface DiscoveryServiceEvents extends PeerDiscoveryEvents {
-	"peer:topics": CustomEvent<{ peerId: PeerId; topics: string[]; isUniversalReplication?: boolean }>
+	"peer:topics": CustomEvent<{
+		peerId: PeerId
+		env: PeerEnv
+		address: string | null
+		topics: string[]
+		isUniversalReplication?: boolean
+	}>
 	"presence:join": CustomEvent<{
 		peerId: PeerId
 		env: PeerEnv
@@ -224,7 +230,7 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 				this.log("received heartbeat from %s with topics %o", peerId, topics)
 				this.dispatchEvent(
 					new CustomEvent("peer:topics", {
-						detail: { peerId, topics, isUniversalReplication: isUniversalReplication ?? false },
+						detail: { peerId, address, env, topics, isUniversalReplication: isUniversalReplication ?? false },
 					}),
 				)
 				this.handlePeerEvent(peerId, multiaddrs, env, address, topics, "active")

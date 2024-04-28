@@ -26,8 +26,11 @@ libp2p.addEventListener("connection:close", ({ detail: connection }) => {
 	console.log(`[probe-server] closed connection ${connection.id} to ${connection.remotePeer}`)
 })
 
-libp2p.services.discovery.addEventListener("peer:topics", ({ detail: { peerId, topics, isUniversalReplication } }) => {
-	console.log(`[probe-server] [${new Date()}] received ${topics.length} topics from ${peerId.toString()} ${isUniversalReplication ? '[shared]' : ''}`)
+libp2p.services.discovery.addEventListener("peer:topics", ({ detail }) => {
+	const { peerId, address, env, topics, isUniversalReplication } = detail
+	console.log(
+		`[probe-server] [${new Date()}] [${env}${isUniversalReplication ? "-shared" : ""}] ${topics.length} topics at ${address}`,
+	)
 })
 
 await libp2p.start()
