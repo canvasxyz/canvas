@@ -59,6 +59,7 @@ export interface DiscoveryServiceInit {
 	appTopic?: string
 
 	trackAllPeers?: boolean
+	isUniversalReplication?: boolean
 }
 
 export type PeerEnv = "browser" | "server"
@@ -75,7 +76,7 @@ export const defaultEvictionThreshold = 90 * 1000 // only if they haven't been s
 export const defaultResponseHeartbeatThreshold = 15 * 1000 // send response heartbeat upon new peers joining the mesh, up to once every 60 seconds
 
 export interface DiscoveryServiceEvents extends PeerDiscoveryEvents {
-	"peer:topics": CustomEvent<{ peerId: PeerId; topics: string[]; topicsLastActive?: Record<string, number> }>
+	"peer:topics": CustomEvent<{ peerId: PeerId; topics: string[]; isUniversalReplication?: boolean }>
 	"presence:join": CustomEvent<{
 		peerId: PeerId
 		env: PeerEnv
@@ -126,6 +127,7 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 	private readonly signers: SignerCache | null
 	private readonly appTopic: string | null
 	private readonly trackAllPeers: boolean // fetch and emit presence events for all peers on the discovery topic
+	private readonly isUniversalReplication: boolean
 
 	readonly #discoveryQueue = new PQueue({ concurrency: 1 })
 	readonly #dialQueue = new PQueue({ concurrency: 5 })
@@ -154,6 +156,7 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 		this.signers = init.signers ?? null
 		this.appTopic = init.appTopic ?? null
 		this.trackAllPeers = init.trackAllPeers ?? false
+		this.isUniversalReplication = init.isUniversalReplication ?? false
 	}
 
 	get [peerDiscoverySymbol](): PeerDiscovery {
@@ -202,16 +205,16 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 
 				const payload = cbor.decode<{
 					topics: string[]
-					topicsLastActive?: Record<string, number>
 					address: string | null
 					env: "browser" | "server"
 					peerRecordEnvelope: Uint8Array
+					isUniversalReplication?: boolean
 				}>(message.data)
 				assert(typeof payload === "object", 'typeof payload === "object"')
 
 				if (payload instanceof Uint8Array) return // ignore legacy discovery payloads
 
-				const { topics, topicsLastActive, address, env, peerRecordEnvelope } = payload
+				const { topics, isUniversalReplication, address, env, peerRecordEnvelope } = payload
 
 				assert(Array.isArray(topics), "expected Array.isArray(topics)")
 				assert(peerRecordEnvelope instanceof Uint8Array, "expected peerRecordEnvelope instanceof Uint8Array")
@@ -219,7 +222,11 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 
 				// emit an active discovery event for peers on other topics
 				this.log("received heartbeat from %s with topics %o", peerId, topics)
-				this.dispatchEvent(new CustomEvent("peer:topics", { detail: { peerId, topics, topicsLastActive } }))
+				this.dispatchEvent(
+					new CustomEvent("peer:topics", {
+						detail: { peerId, topics, isUniversalReplication: isUniversalReplication ?? false },
+					}),
+				)
 				this.handlePeerEvent(peerId, multiaddrs, env, address, topics, "active")
 
 				const topicIntersection = this.pubsub.getTopics().filter((topic) => topics.includes(topic))

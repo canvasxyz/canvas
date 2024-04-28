@@ -103,6 +103,7 @@ export const options: Libp2pOptions<ServiceMap> = {
 		discovery: discovery({
 			discoveryTopic: discoveryTopic,
 			addressFilter: (addr) => WebSockets.matches(addr) || WebSocketsSecure.matches(addr),
+			isUniversalReplication: true,
 		}),
 	},
 }

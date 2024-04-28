@@ -26,10 +26,12 @@ libp2p.addEventListener("connection:close", ({ detail: connection }) => {
 	console.log(`[replication-server] closed connection ${connection.id} to ${connection.remotePeer}`)
 })
 
-libp2p.services.discovery.addEventListener("peer:topics", ({ detail: { topics, topicsLastActive } }) => {
-	console.log("received peer:topics", topics.length, topicsLastActive)
+libp2p.services.discovery.addEventListener("peer:topics", ({ detail: { topics, isUniversalReplication } }) => {
 	for (const topic of topics) {
 		if (!topic.startsWith(GossipLogService.topicPrefix)) {
+			continue
+		}
+		if (isUniversalReplication) {
 			continue
 		}
 
