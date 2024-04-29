@@ -33,13 +33,13 @@ export const ConnectLeap: React.FC<ConnectLeapProps> = ({ chainId }) => {
 		await leap.enable(chainId)
 
 		const key = await leap.getKey(chainId)
-		const { prefix } = fromBech32(key.bech32Address)
+		const { prefix: bech32Prefix } = fromBech32(key.bech32Address)
 
 		setAddress(key.bech32Address)
 
 		setSessionSigner(
 			new CosmosSigner({
-				bech32Prefix: prefix,
+				bech32Prefix,
 				signer: {
 					type: "arbitrary",
 					signArbitrary: (msg) => leap.signArbitrary(chainId, key.bech32Address, msg),

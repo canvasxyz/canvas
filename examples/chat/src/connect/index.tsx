@@ -72,7 +72,7 @@ const Method: React.FC<{ method: string }> = (props) => {
 		case "terra":
 			return <ConnectTerra />
 		case "cosmos-evm":
-			return <ConnectCosmosEvmMetamask chainId="cosmoshub-4" />
+			return <ConnectCosmosEvmMetamask bech32Prefix="cosmos" chainId="cosmoshub-4" />
 		case "bluesky":
 			return <ConnectATP />
 		case "leap":
