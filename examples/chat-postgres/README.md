@@ -8,7 +8,7 @@ This app demonstrates how a hybrid client/server implementation of Canvas can wo
 
 ### Workspaces
 
-This project uses NPM workspaces, and all commands are assumed to be executed in the root of the `<canvas>/` repo. For commands specific to this chat project, use `-w` to specify the project name `@canvas-js/chat-postgres`
+This project uses NPM workspaces, and all commands are assumed to be executed in the root of the workspace. For commands specific to this chat project, use `-w` to specify the project name `@canvas-js/chat-postgres`
 
 ```
 cd canvas/
@@ -33,7 +33,7 @@ You need a Postgres instance running locally or remotely that conforms to a stan
 
 ### Run 
 
-To run, navigate to the root `<canvas>/` directory and install dependencies:
+To run, navigate to the root of the workspace and install dependencies:
   - `npm i`
 
 Run the development server for compiling Canvas runtime files:

@@ -5,6 +5,7 @@ import { BrowserProvider } from "ethers"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { Action, Message, Session } from "@canvas-js/interfaces"
 import { stringify } from "@ipld/dag-json"
+import { assert } from "@canvas-js/utils"
 
 const topic = "chat-example.canvas.xyz";
 
@@ -109,7 +110,7 @@ export default function Home() {
       const data = await response.json()
       return { nextClockValue: data.nextClockValue, parentMessageIds: data.parentMessageIds }
     } catch (error) {
-      console.error("Error fetching clock values:", error)
+      console.error("Error fetching clock values: ", error)
       throw error
     }
   }
@@ -139,6 +140,7 @@ export default function Home() {
     return {
       messageId: body.message_id,
       session,
+      response,
     }
   }
 
@@ -202,9 +204,9 @@ export default function Home() {
 
     const { message_id }: { message_id: string | null } = await response.json()
 
-    if (message_id === null) {
-      console.log("Failed to insert session message")
-      return
+    if (!response.ok || message_id === null) {
+      console.error("Failed to register new session")
+      return;
     }
 
     const newClockValues = {
@@ -219,6 +221,7 @@ export default function Home() {
     if (inputValue.trim() !== "") {
       try {
         const sessionData = await checkSession()
+        if (!sessionData.response.ok) throw new Error("Problem retrieving session details from server");
         const clockValues = await getClockValues()
 
         if (sessionData.messageId === null) {

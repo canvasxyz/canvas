@@ -5,6 +5,7 @@ import { Canvas, defaultBootstrapList } from "@canvas-js/core"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { encode, decode } from "@ipld/dag-json"
 import { inspect } from "util"
+import { assert } from "@canvas-js/utils"
 
 const dev = process.env.NODE_ENV !== "production"
 const nextApp = next({ dev })
@@ -15,22 +16,11 @@ const HTTP_ADDR = "0.0.0.0";
 
 process.on('uncaughtException', (error) => {
   console.error('Unhandled Exception:', error);
-  console.log(inspect(error));
-
-  throw error;
 });
-
-const getPostgresUrl = () => {
-  const DATABASE_URL = process.env.DATABASE_URL
-  if (DATABASE_URL) return DATABASE_URL;
-
-  // If no DATABASE_URL is provided, return local chat_postgres db connection
-  return "postgresql://postgres:postgres@localhost:5432/chat_postgres";
-}
 
 nextApp.prepare().then(async () => {
   const canvasApp = await Canvas.initialize({
-    path: getPostgresUrl(),
+    path: process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/chat_postgres",
     contract: {
       topic: "chat-example.canvas.xyz",
       models: {
@@ -86,19 +76,6 @@ nextApp.prepare().then(async () => {
     }
   })
 
-  expressApp.get("/send", async (req, res) => {
-    const messageContent = req.body.message || "<debug>"
-
-    try {
-      await canvasApp.actions.createMessage({ content: messageContent })
-
-      res.json({ message: messageContent })
-    } catch (error) {
-      console.error("Error creating message:", error)
-      res.status(500).json({ error: "Internal Server Error" })
-    }
-  })
-
   expressApp.get("/getClock", async (_, res) => {
     try {
       const [nextClockValue, parentMessageIds] = await canvasApp.messageLog.getClock()
@@ -113,25 +90,33 @@ nextApp.prepare().then(async () => {
   expressApp.post("/insert", async (req, res) => {
     const data = decode(encode(req.body))
 
-    if (!data.signature || !data.message) {
-      console.error("~~ message didnt come through ~~")
-    }
-
     try {
+      assert(data.signature, "POST /insert must provide 'signature'")
+      assert(data.message, "POST /insert must provide 'message'")
+
       const resp = await canvasApp.insert(data.signature, data.message)
       res.status(200).json({ message_id: resp.id })
     } catch (err) {
       console.error("Canvas insert error :>> ", err)
-      res.status(200).json({ message_id: null })
+      res.status(400).json({ message_id: null })
     }
   })
 
   expressApp.post("/getSession", async (req, res) => {
-    const session = req.body.session
+    try {
+      const session = req.body.session
 
-    const message_id = await canvasApp.getSession(session)
+      assert(session, "POST /insert must provide 'session'")
+      assert(session.address, "POST /insert must provide 'session.address'")
+      assert(session.publicKey, "POST /insert must provide 'session.publicKey'")
+      assert(session.timestamp, "POST /insert must provide 'session.timestamp'")
 
-    res.status(200).json({ message_id: message_id })
+      const message_id = await canvasApp.getSession(session)
+
+      res.status(200).json({ message_id: message_id })
+    } catch (err) {
+      res.status(400).json({ message_id: null })
+    }
   })
 
   expressApp.all("*", (req, res) => {
