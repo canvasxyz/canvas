@@ -17,9 +17,20 @@ process.on('uncaughtException', (error) => {
   throw error;
 });
 
+const getPostgresUrl = () => {
+  const DATABASE_URL = process.env.DATABASE_URL
+
+  console.log('process.env.DATABASE_URL :>> ', process.env.DATABASE_URL);
+
+  if (DATABASE_URL) return DATABASE_URL;
+
+  // By default, return local chat_postgres db connection
+  return "postgresql://postgres:postgres@localhost:5432/chat_postgres";
+}
+
 nextApp.prepare().then(async () => {
   const canvasApp = await Canvas.initialize({
-    path: "postgresql://postgres:postgres@localhost:5432/chat_postgres",
+    path: getPostgresUrl(),
     contract: {
       topic: "chat-example.canvas.xyz",
       models: {
