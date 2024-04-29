@@ -30,8 +30,7 @@ jobs:
         image: postgres
         env:
           POSTGRES_PASSWORD: postgres
-        options:
-          --health-cmd pg_isready
+        options: --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -87,8 +86,8 @@ jobs:
       - name: Run @canvas-js/interfaces interface tests
         run: npm run test --workspace=@canvas-js/interfaces
 
-      # - name: Run @canvas-js/ethereum-contracts tests
-      #   run: npm run test --workspace=@canvas-js/ethereum-contracts
+      - name: Run @canvas-js/ethereum-contracts tests
+        run: npm run test --workspace=@canvas-js/ethereum-contracts
 
       - name: Run @canvas-js/chain-ethereum tests
         run: npm run test --workspace=@canvas-js/chain-ethereum
