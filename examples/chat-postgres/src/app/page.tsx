@@ -21,9 +21,14 @@ interface ChatMessage {
 }
 
 export default function Home() {
+
   const provider = useMemo(() => {
-    return new BrowserProvider(window.ethereum)
-  }, [])
+    if (typeof window !== "undefined" && window.ethereum) {
+      return new BrowserProvider(window.ethereum);
+    }
+
+    return undefined;
+  }, []);
 
   const burnerWallet = useMemo(() => {
     return new SIWESigner({ chainId: 1 })
@@ -35,7 +40,7 @@ export default function Home() {
 
   // Check on page load whether a user is signed in with MM
   useEffect(() => {
-    if (window.ethereum) {
+    if (typeof window !== 'undefined' && window.ethereum && provider) {
       window.ethereum.request({ method: "eth_accounts" }).then(async (accounts: any) => {
         if (accounts.length > 0) {
           const ethSigner = await provider.getSigner()
@@ -81,6 +86,10 @@ export default function Home() {
   }, [messages])
 
   const connectEth = async () => {
+    if (!provider) {
+      return;
+    }
+
     try {
       // This call actually prompts the user to connect via metamask,
       // *only* during the first activation, when accounts :>> []
@@ -276,7 +285,7 @@ export default function Home() {
           </div>
         )}
 
-        {!mmUser && (
+        {!mmUser && provider && (
           <div className="flex justify-between align-middle">
             <div>
               <span>Not signed in, using: </span>
