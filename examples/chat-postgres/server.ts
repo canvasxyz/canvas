@@ -10,7 +10,7 @@ const dev = process.env.NODE_ENV !== "production"
 const nextApp = next({ dev })
 const handle = nextApp.getRequestHandler()
 
-const HTTP_PORT = process.env.PORT ? Number(process.env.PORT) : 4000
+const HTTP_PORT = process.env.PORT ? Number(process.env.PORT) : 3000
 const HTTP_ADDR = "0.0.0.0";
 
 process.on('uncaughtException', (error) => {
