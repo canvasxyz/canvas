@@ -1,5 +1,15 @@
 # @canvas-js/test-network
 
+Build the dashboard client bundle
+
 ```
-SERVER_COUNT=1 CLIENT_COUNT=3 npm run start
+$ npm run dashboard:client:build
 ```
+
+Then start the simulation
+
+```
+$ docker-compose up --build
+```
+
+Then open the dashboard at http://localhost:8000

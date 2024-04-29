@@ -1,6 +1,6 @@
 import React, { useCallback, useContext, useState } from "react"
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
-import { toBase64 } from "@cosmjs/encoding"
+import { fromBech32, toBase64 } from "@cosmjs/encoding"
 
 import { AppContext } from "../AppContext.js"
 
@@ -29,10 +29,11 @@ export const ConnectTerra: React.FC<ConnectTerraProps> = ({}) => {
 		}
 
 		const accountAddr = accountData?.address
+		const { prefix: bech32Prefix } = fromBech32(accountAddr)
 		setAddress(accountAddr)
 		setSessionSigner(
 			new CosmosSigner({
-				bech32Prefix: "terra",
+				bech32Prefix,
 				signer: {
 					type: "bytes",
 					getAddress: async () => accountData.address,

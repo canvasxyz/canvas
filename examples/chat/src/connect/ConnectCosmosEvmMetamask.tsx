@@ -6,10 +6,13 @@ import { CosmosSigner } from "@canvas-js/chain-cosmos"
 import { AppContext } from "../AppContext.js"
 
 export interface ConnectCosmosEvmMetamaskProps {
+	bech32Prefix: string
 	chainId: string
 }
 
-export const ConnectCosmosEvmMetamask: React.FC<ConnectCosmosEvmMetamaskProps> = ({ chainId }) => {
+export const ConnectCosmosEvmMetamask: React.FC<ConnectCosmosEvmMetamaskProps> = ({ bech32Prefix, chainId }) => {
+	// The Cosmos EVM Metamask login method needs a `bech32Prefix` argument because we can't
+	// infer the prefix from the chain (because we are using MetaMask to sign the messages, not a Cosmos wallet)
 	const { sessionSigner, setSessionSigner, address, setAddress } = useContext(AppContext)
 
 	// true if this signing method is being used
@@ -39,7 +42,7 @@ export const ConnectCosmosEvmMetamask: React.FC<ConnectCosmosEvmMetamaskProps> =
 		setAddress(thisAddress)
 		setSessionSigner(
 			new CosmosSigner({
-				bech32Prefix: "evmos",
+				bech32Prefix,
 				signer: {
 					type: "ethereum",
 					signEthereum: (chainId: string, signerAddress: string, message: string) =>
@@ -50,7 +53,7 @@ export const ConnectCosmosEvmMetamask: React.FC<ConnectCosmosEvmMetamaskProps> =
 			}),
 		)
 		setThisIsConnected(true)
-	}, [])
+	}, [bech32Prefix, chainId])
 
 	const disconnect = useCallback(async () => {
 		setAddress(null)

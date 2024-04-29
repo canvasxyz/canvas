@@ -28,9 +28,10 @@ async function getPeerId({ topic }: { topic: string }): Promise<PeerId> {
 	let peerId: PeerId
 
 	if (item === null) {
-		peerId = await createEd25519PeerId()
-		const privateKey = exportToProtobuf(peerId as Ed25519PeerId)
+		const ed25519PeerId = await createEd25519PeerId()
+		const privateKey = exportToProtobuf(ed25519PeerId as Ed25519PeerId)
 		localStorage.setItem(localStorageKey, base64.baseEncode(privateKey))
+		peerId = ed25519PeerId
 	} else {
 		peerId = await createFromProtobuf(base64.baseDecode(item))
 	}
