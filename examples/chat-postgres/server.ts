@@ -11,7 +11,6 @@ const nextApp = next({ dev })
 const handle = nextApp.getRequestHandler()
 
 const HTTP_PORT = process.env.PORT ? Number(process.env.PORT) : 4000
-console.log('process.env.PORT :>> ', process.env.PORT);
 const HTTP_ADDR = "0.0.0.0";
 
 process.on('uncaughtException', (error) => {
@@ -23,12 +22,9 @@ process.on('uncaughtException', (error) => {
 
 const getPostgresUrl = () => {
   const DATABASE_URL = process.env.DATABASE_URL
-
-  console.log('process.env.DATABASE_URL :>> ', process.env.DATABASE_URL);
-
   if (DATABASE_URL) return DATABASE_URL;
 
-  // By default, return local chat_postgres db connection
+  // If no DATABASE_URL is provided, return local chat_postgres db connection
   return "postgresql://postgres:postgres@localhost:5432/chat_postgres";
 }
 
@@ -143,9 +139,6 @@ nextApp.prepare().then(async () => {
   })
 
   expressApp.listen(HTTP_PORT, HTTP_ADDR, () => {
-    console.log('HTTP_ADDR :>> ', HTTP_ADDR);
-    console.log('HTTP_PORT :>> ', HTTP_PORT);
-    console.log('typeof HTTP_PORT :>> ', typeof HTTP_PORT);
     console.log(`> Ready on http://${HTTP_ADDR}:${HTTP_PORT}`)
   })
 })

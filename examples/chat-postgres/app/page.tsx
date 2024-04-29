@@ -56,8 +56,6 @@ export default function Home() {
       })
 
       window.ethereum.on("accountsChanged", (accounts: any) => {
-        console.log("accounts :>> ", accounts)
-
         if (accounts.length === 0) {
           setMMUser(undefined)
         }
@@ -80,10 +78,6 @@ export default function Home() {
 
     return () => clearInterval(intervalId)
   }, [])
-
-  useEffect(() => {
-    console.log("messages :>> ", messages)
-  }, [messages])
 
   const connectEth = async () => {
     if (!provider) {
