@@ -4,7 +4,6 @@ import next from "next"
 import { Canvas, defaultBootstrapList } from "@canvas-js/core"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { encode, decode } from "@ipld/dag-json"
-import { inspect } from "util"
 import { assert } from "@canvas-js/utils"
 
 const dev = process.env.NODE_ENV !== "production"

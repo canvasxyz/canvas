@@ -5,7 +5,6 @@ import { BrowserProvider } from "ethers"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { Action, Message, Session } from "@canvas-js/interfaces"
 import { stringify } from "@ipld/dag-json"
-import { assert } from "@canvas-js/utils"
 
 const topic = "chat-example.canvas.xyz";
 
@@ -86,10 +85,10 @@ export default function Home() {
     }
 
     try {
-      // This call actually prompts the user to connect via metamask,
-      // *only* during the first activation, when accounts :>> []
-      // If this call does not throw an exception, we can assume
-      // `ethSigner` has a value
+      // `provider.getSigner()` prompts the metamask extension to 
+      // open the accounts screen, but only when the accounts
+      // array is empty. If it doesn't throw an exception, we can
+      // assume `ethSigner` has a value
       const ethSigner = await provider.getSigner()
       const network = await provider.getNetwork()
 
