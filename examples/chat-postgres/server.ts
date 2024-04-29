@@ -10,6 +10,9 @@ const dev = process.env.NODE_ENV !== "production"
 const nextApp = next({ dev })
 const handle = nextApp.getRequestHandler()
 
+const HTTP_PORT = process.env.port || 3000
+console.log('HTTP_PORT :>> ', HTTP_PORT);
+
 process.on('uncaughtException', (error) => {
   console.error('Unhandled Exception:', error);
   console.log(inspect(error));
@@ -138,7 +141,7 @@ nextApp.prepare().then(async () => {
     return handle(req, res)
   })
 
-  expressApp.listen(3000, () => {
+  expressApp.listen(HTTP_PORT, () => {
     console.log("> Ready on http://localhost:3000")
   })
 })
