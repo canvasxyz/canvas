@@ -6,7 +6,7 @@ import { secp256k1 } from "@noble/curves/secp256k1"
 import { Action, Message, Session, SessionSigner as Signer } from "@canvas-js/interfaces"
 
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
-import { NEARSigner } from "@canvas-js/chain-near"
+// import { NEARSigner } from "@canvas-js/chain-near"
 import { SIWESigner, Eip712Signer } from "@canvas-js/chain-ethereum"
 import { SIWESignerViem } from "@canvas-js/chain-ethereum-viem"
 import { SolanaSigner } from "@canvas-js/chain-solana"
@@ -37,10 +37,10 @@ const SIGNER_IMPLEMENTATIONS: SignerImplementation[] = [
 			})
 		},
 	},
-	{
-		name: "chain-near",
-		createSigner: async () => new NEARSigner(),
-	},
+	// {
+	// 	name: "chain-near",
+	// 	createSigner: async () => new NEARSigner(),
+	// },
 	{
 		name: "chain-ethereum",
 		createSigner: async () => new SIWESigner(),
