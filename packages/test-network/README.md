@@ -9,5 +9,7 @@ $ npm run dashboard:client:build
 Then start the simulation
 
 ```
-$ docker-compose up
+$ docker-compose up --build
 ```
+
+Then open the dashboard at http://localhost:8000
