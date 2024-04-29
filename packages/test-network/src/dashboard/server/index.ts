@@ -1,10 +1,10 @@
 import http from "node:http"
+import assert from "node:assert"
 
 import express from "express"
 import PQueue from "p-queue"
 
 import type { Event } from "../shared/types.js"
-import assert from "node:assert"
 
 const events: Event[] = []
 const queues = new Map<express.Response, PQueue>()
@@ -40,6 +40,58 @@ app.post("/api/disconnect/:source/:target", (req, res) => {
 			upstreamRes.ok ? res.status(200).end() : upstreamRes.text().then((err) => res.status(502).end(err)),
 		(err) => {
 			console.error("FAILED TO POST", `http://${hostname}/api/disconnect/${target}`)
+			res.status(500).end(`${err}`)
+		},
+	)
+})
+
+app.post("/api/provide/:id", (req, res) => {
+	console.log("PROVIDE", req.params.id)
+
+	const startEvent = events.find((event) => event.type === "start" && event.id === req.params.id)
+	if (startEvent === undefined) {
+		return res.status(404).end()
+	}
+
+	assert(startEvent.type === "start")
+	const { hostname } = startEvent.detail
+
+	fetch(`http://${hostname}/api/provide`, { method: "POST" }).then(
+		(upstreamRes) => {
+			if (upstreamRes.ok) {
+				upstreamRes.json().then((result) => res.status(200).json(result))
+			} else {
+				upstreamRes.text().then((err) => res.status(502).end(err))
+			}
+		},
+		(err) => {
+			console.error("FAILED TO POST", `http://${hostname}/api/provide`)
+			res.status(500).end(`${err}`)
+		},
+	)
+})
+
+app.post("/api/query/:id", (req, res) => {
+	console.log("QUERY", req.params.id)
+
+	const startEvent = events.find((event) => event.type === "start" && event.id === req.params.id)
+	if (startEvent === undefined) {
+		return res.status(404).end()
+	}
+
+	assert(startEvent.type === "start")
+	const { hostname } = startEvent.detail
+
+	fetch(`http://${hostname}/api/query`, { method: "POST" }).then(
+		(upstreamRes) => {
+			if (upstreamRes.ok) {
+				upstreamRes.json().then((result) => res.status(200).json(result))
+			} else {
+				upstreamRes.text().then((err) => res.status(502).end(err))
+			}
+		},
+		(err) => {
+			console.error("FAILED TO POST", `http://${hostname}/api/query`)
 			res.status(500).end(`${err}`)
 		},
 	)

@@ -2,9 +2,10 @@ FROM node:20-alpine
 
 WORKDIR /app
 COPY package.json package.json
-COPY lib/dashboard/server lib/
-COPY dist/ dist/
 RUN npm install --omit-dev
+
+COPY lib/dashboard/server lib/
+COPY dist/dashboard/client dist/
 
 ENTRYPOINT ["node"]
 CMD ["lib/index.js"]

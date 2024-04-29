@@ -1,4 +1,3 @@
-version: "3.8"
 services:
   dashboard:
     init: true
@@ -32,7 +31,7 @@ services:
       - ANNOUNCE=/dns4/web-1/tcp/8080/ws
       - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
       - MIN_CONNECTIONS=3
-      - MAX_CONNECTIONS=5
+      # - MAX_CONNECTIONS=5
 
   web-2:
     init: true
@@ -45,7 +44,7 @@ services:
       - ANNOUNCE=/dns4/web-2/tcp/8080/ws
       - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
       - MIN_CONNECTIONS=3
-      - MAX_CONNECTIONS=5
+      # - MAX_CONNECTIONS=5
 
   web-3:
     init: true
@@ -58,7 +57,7 @@ services:
       - ANNOUNCE=/dns4/web-3/tcp/8080/ws
       - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
       - MIN_CONNECTIONS=3
-      - MAX_CONNECTIONS=5
+      # - MAX_CONNECTIONS=5
 
   web-4:
     init: true
@@ -71,7 +70,7 @@ services:
       - ANNOUNCE=/dns4/web-4/tcp/8080/ws
       - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
       - MIN_CONNECTIONS=3
-      - MAX_CONNECTIONS=5
+      # - MAX_CONNECTIONS=5
 
   web-5:
     init: true
@@ -84,7 +83,7 @@ services:
       - ANNOUNCE=/dns4/web-5/tcp/8080/ws
       - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
       - MIN_CONNECTIONS=3
-      - MAX_CONNECTIONS=5
+      # - MAX_CONNECTIONS=5
 
   web-6:
     init: true
@@ -97,7 +96,7 @@ services:
       - ANNOUNCE=/dns4/web-6/tcp/8080/ws
       - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
       - MIN_CONNECTIONS=3
-      - MAX_CONNECTIONS=5
+      # - MAX_CONNECTIONS=5
 
   web-7:
     init: true
@@ -110,7 +109,7 @@ services:
       - ANNOUNCE=/dns4/web-7/tcp/8080/ws
       - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
       - MIN_CONNECTIONS=3
-      - MAX_CONNECTIONS=5
+      # - MAX_CONNECTIONS=5
 
   web-8:
     init: true
@@ -123,7 +122,7 @@ services:
       - ANNOUNCE=/dns4/web-8/tcp/8080/ws
       - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
       - MIN_CONNECTIONS=3
-      - MAX_CONNECTIONS=5
+      # - MAX_CONNECTIONS=5
 
   web-9:
     init: true
@@ -136,7 +135,7 @@ services:
       - ANNOUNCE=/dns4/web-9/tcp/8080/ws
       - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
       - MIN_CONNECTIONS=3
-      - MAX_CONNECTIONS=5
+      # - MAX_CONNECTIONS=5
 
   web-10:
     init: true
@@ -149,7 +148,7 @@ services:
       - ANNOUNCE=/dns4/web-10/tcp/8080/ws
       - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
       - MIN_CONNECTIONS=3
-      - MAX_CONNECTIONS=5
+      # - MAX_CONNECTIONS=5
 
   web-11:
     init: true
@@ -162,7 +161,7 @@ services:
       - ANNOUNCE=/dns4/web-11/tcp/8080/ws
       - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
       - MIN_CONNECTIONS=3
-      - MAX_CONNECTIONS=5
+      # - MAX_CONNECTIONS=5
 
   web-12:
     init: true
@@ -175,7 +174,7 @@ services:
       - ANNOUNCE=/dns4/web-12/tcp/8080/ws
       - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
       - MIN_CONNECTIONS=3
-      - MAX_CONNECTIONS=5
+      # - MAX_CONNECTIONS=5
 
   web-13:
     init: true
@@ -188,7 +187,7 @@ services:
       - ANNOUNCE=/dns4/web-13/tcp/8080/ws
       - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
       - MIN_CONNECTIONS=3
-      - MAX_CONNECTIONS=5
+      # - MAX_CONNECTIONS=5
 
   web-14:
     init: true
@@ -201,7 +200,7 @@ services:
       - ANNOUNCE=/dns4/web-14/tcp/8080/ws
       - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
       - MIN_CONNECTIONS=3
-      - MAX_CONNECTIONS=5
+      # - MAX_CONNECTIONS=5
 
   web-15:
     init: true
@@ -214,4 +213,4 @@ services:
       - ANNOUNCE=/dns4/web-15/tcp/8080/ws
       - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
       - MIN_CONNECTIONS=3
-      - MAX_CONNECTIONS=5
+      # - MAX_CONNECTIONS=5

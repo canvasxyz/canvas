@@ -20,9 +20,8 @@ import { bootstrapList, listen, announce, peerId } from "./config.js"
 const { MIN_CONNECTIONS, MAX_CONNECTIONS, SERVICE_NAME } = process.env
 const serviceNameHash = sha256(SERVICE_NAME ?? new Uint8Array([]))
 
-export const topic = serviceNameHash[0] < 128 ? "test-network-example" : null
-
-// export const topic = "test-network-example"
+// export const topic = SERVICE_NAME === "bootstrap" || serviceNameHash[0] < 128 ? "test-network-example" : null
+export const topic = SERVICE_NAME !== "bootstrap" && serviceNameHash[0] < 128 ? "test-network-example" : null
 
 let minConnections: number | undefined = undefined
 let maxConnections: number | undefined = undefined
@@ -50,13 +49,10 @@ export const libp2p = await createLibp2p({
 		identify: identifyService({ protocolPrefix: "canvas" }),
 		globalDHT: kadDHT({
 			kBucketSize: 2,
-			validators: { "": () => Promise.reject("storing DHT records is not supported") },
+			protocol: "/canvas/kad/1.0.0",
 		}),
 
-		// topicDHT: kadDHT({
-		// 	kBucketSize: 5,
-		// 	validators: { "": () => Promise.reject("storing DHT records is not supported") },
-		// }),
+		...(topic === null ? {} : { topicDHT: kadDHT({ protocol: `/canvas/kad/${topic}/1.0.0` }) }),
 
 		pubsub: gossipsub({
 			fallbackToFloodsub: false,
