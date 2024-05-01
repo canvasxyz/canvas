@@ -1,11 +1,10 @@
 import solw3 from "@solana/web3.js"
 import { base58btc } from "multiformats/bases/base58"
-import * as json from "@ipld/dag-json"
 
 import { ed25519 } from "@noble/curves/ed25519"
 
-import type { Session } from "@canvas-js/interfaces"
-import { AbstractSessionData, AbstractSessionSigner, Ed25519DelegateSigner } from "@canvas-js/signatures"
+import type { Session, AbstractSessionData } from "@canvas-js/interfaces"
+import { AbstractSessionSigner, Ed25519DelegateSigner } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
 import { validateSessionData, addressPattern, parseAddress } from "./utils.js"
@@ -58,7 +57,7 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 	#signer: GenericSigner
 
 	public constructor({ signer, sessionDuration, chainId }: SolanaSignerInit = {}) {
-		super("chain-solana", { createSigner: (init) => new Ed25519DelegateSigner(init), defaultDuration: sessionDuration })
+		super("chain-solana", { createSigner: (init) => new Ed25519DelegateSigner(init), sessionDuration: sessionDuration })
 
 		if (signer) {
 			if (!signer.publicKey) {
@@ -108,12 +107,12 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 		assert(valid, "invalid signature")
 	}
 
-	protected getAddress(): string {
+	public getAddress(): string {
 		const walletAddress = this.#signer.address
 		return `solana:${this.chainId}:${walletAddress}`
 	}
 
-	protected async newSession(data: AbstractSessionData): Promise<Session<SolanaSessionData>> {
+	public async newSession(data: AbstractSessionData): Promise<Session<SolanaSessionData>> {
 		const { topic, address, publicKey, timestamp, duration } = data
 
 		const issuedAt = new Date(timestamp)

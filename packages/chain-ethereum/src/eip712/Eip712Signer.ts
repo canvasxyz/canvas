@@ -1,8 +1,8 @@
 import { AbstractSigner, Wallet, computeAddress, getBytes, hexlify, TypedDataField, verifyTypedData } from "ethers"
-import { Session } from "@canvas-js/interfaces"
+import { Session, AbstractSessionData } from "@canvas-js/interfaces"
 import { assert } from "@canvas-js/utils"
 
-import { AbstractSessionData, AbstractSessionSigner, decodeURI } from "@canvas-js/signatures"
+import { AbstractSessionSigner, decodeURI } from "@canvas-js/signatures"
 
 import { Eip712SessionData } from "./types.js"
 import { Secp256k1DelegateSigner } from "./Secp256k1DelegateSigner.js"
@@ -36,12 +36,12 @@ export class Eip712Signer extends AbstractSessionSigner<Eip712SessionData> {
 	}
 
 	// TODO: should be getUserAddress() or getWalletAddress()
-	protected async getAddress(): Promise<string> {
+	public async getAddress(): Promise<string> {
 		const walletAddress = await this.#signer.getAddress()
 		return `eip155:${this.chainId}:${walletAddress}`
 	}
 
-	protected async newSession(sessionData: AbstractSessionData): Promise<Session<Eip712SessionData>> {
+	public async newSession(sessionData: AbstractSessionData): Promise<Session<Eip712SessionData>> {
 		const { topic, address, publicKey, timestamp, duration } = sessionData
 
 		const { type, publicKey: publicKeyBytes } = decodeURI(publicKey)

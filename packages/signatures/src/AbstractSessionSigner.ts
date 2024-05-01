@@ -1,37 +1,41 @@
 import { Logger, logger } from "@libp2p/logger"
 import * as json from "@ipld/dag-json"
 
-import type { Signature, SessionSigner, Action, Message, Session, Signer, Awaitable } from "@canvas-js/interfaces"
+import type {
+	Signature,
+	SessionSigner,
+	AbstractSessionData,
+	Action,
+	Message,
+	Session,
+	Signer,
+	Awaitable,
+} from "@canvas-js/interfaces"
 import { assert, signalInvalidType } from "@canvas-js/utils"
 
 import target from "#target"
 import { deepEquals } from "./utils.js"
-
-export interface AbstractSessionData {
-	topic: string
-	address: string
-	publicKey: string
-	timestamp: number
-	duration: number | null
-}
+import { SignerStore } from "./targets/index.js"
 
 export interface AbstractSessionSignerConfig<AuthorizationData> {
-	defaultDuration?: number | null
+	sessionDuration?: number | null
 	createSigner: (init?: { type: string; privateKey: Uint8Array }) => Signer<Action | Session<AuthorizationData>>
 }
 
 export abstract class AbstractSessionSigner<AuthorizationData> implements SessionSigner<AuthorizationData> {
 	public readonly target = target
+	public readonly sessionDuration: number | null
 
 	protected readonly log: Logger
 
+	#signerStore: SignerStore<AuthorizationData>
 	#createSigner: (init?: { type: string; privateKey: Uint8Array }) => Signer<Action | Session<AuthorizationData>>
-	#defaultDuration: number | null
 
 	public constructor(public readonly key: string, config: AbstractSessionSignerConfig<AuthorizationData>) {
 		this.log = logger(`canvas:${key}`)
+		this.#signerStore = target.getSignerStore<AuthorizationData>(config)
 		this.#createSigner = config.createSigner
-		this.#defaultDuration = config.defaultDuration ?? null
+		this.sessionDuration = config.sessionDuration ?? null
 	}
 
 	public abstract codecs: string[]
@@ -39,8 +43,19 @@ export abstract class AbstractSessionSigner<AuthorizationData> implements Sessio
 	public abstract verify: (signature: Signature, message: Message<Action | Session<AuthorizationData>>) => void
 	public abstract verifySession(topic: string, session: Session<AuthorizationData>): Awaitable<void>
 
-	protected abstract getAddress(): Awaitable<string>
-	protected abstract newSession(data: AbstractSessionData): Awaitable<Session<AuthorizationData>>
+	public abstract getAddress(): Awaitable<string>
+
+	public abstract newSession(data: AbstractSessionData): Awaitable<Session<AuthorizationData>>
+
+	public getDelegateSigner(topic: string, address: string) {
+		return this.#signerStore.get(topic, address)
+	}
+
+	public newDelegateSigner(topic: string, address: string) {
+		const signer = this.#createSigner()
+		this.#signerStore.set(topic, address, signer)
+		return signer
+	}
 
 	public async getSession(
 		topic: string,
@@ -76,7 +91,7 @@ export abstract class AbstractSessionSigner<AuthorizationData> implements Sessio
 			address,
 			publicKey: signer.uri,
 			timestamp,
-			duration: this.#defaultDuration,
+			duration: this.sessionDuration,
 		})
 
 		this.setCachedSession(topic, address, session, signer)

@@ -4,8 +4,8 @@ import * as ATP from "@atproto/api"
 // to publish ESM modules (please, it's been ten years since ES6)
 const BskyAgent = ATP.BskyAgent ?? ATP["default"].BskyAgent
 
-import type { Session } from "@canvas-js/interfaces"
-import { AbstractSessionData, AbstractSessionSigner, Ed25519DelegateSigner } from "@canvas-js/signatures"
+import type { Session, AbstractSessionData } from "@canvas-js/interfaces"
+import { AbstractSessionSigner, Ed25519DelegateSigner } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
 import { unpackArchive } from "./mst.js"
@@ -60,7 +60,7 @@ export class ATPSigner extends AbstractSessionSigner<ATPSessionData> {
 		assert(record.text === message, "invalid app.bsky.feed.post record text")
 	}
 
-	protected async getAddress(): Promise<string> {
+	public async getAddress(): Promise<string> {
 		if (this.#session !== null) {
 			return this.#session.did
 		}
@@ -96,7 +96,7 @@ export class ATPSigner extends AbstractSessionSigner<ATPSessionData> {
 		this.target.set("canvas-chain-atp/jwt", JSON.stringify(data))
 	}
 
-	protected async newSession(data: AbstractSessionData): Promise<Session<ATPSessionData>> {
+	public async newSession(data: AbstractSessionData): Promise<Session<ATPSessionData>> {
 		const { topic, address, publicKey, timestamp, duration } = data
 		this.log("fetching plc operation log for %s", address)
 		const plcOperationLog = await fetch(`https://plc.directory/${address}/log`).then((res) => res.json())

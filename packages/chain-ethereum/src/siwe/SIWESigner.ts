@@ -1,8 +1,8 @@
 import { Wallet, verifyMessage, hexlify, getBytes } from "ethers"
 import * as siwe from "siwe"
 
-import type { Session } from "@canvas-js/interfaces"
-import { AbstractSessionData, AbstractSessionSigner, Ed25519DelegateSigner } from "@canvas-js/signatures"
+import type { Session, AbstractSessionData } from "@canvas-js/interfaces"
+import { AbstractSessionSigner, Ed25519DelegateSigner } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
 import type { SIWESessionData, SIWEMessage } from "./types.js"
@@ -43,12 +43,12 @@ export class SIWESigner extends AbstractSessionSigner<SIWESessionData> {
 		this.key = `SIWESigner-${init.signer ? "signer" : "burner"}`
 	}
 
-	protected async getAddress(): Promise<string> {
+	public async getAddress(): Promise<string> {
 		const walletAddress = await this.#signer.getAddress()
 		return `eip155:${this.chainId}:${walletAddress}`
 	}
 
-	protected async newSession(sessionData: AbstractSessionData): Promise<Session<SIWESessionData>> {
+	public async newSession(sessionData: AbstractSessionData): Promise<Session<SIWESessionData>> {
 		const { topic, address, timestamp, duration, publicKey } = sessionData
 
 		const nonce = siwe.generateNonce()

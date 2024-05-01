@@ -3,8 +3,8 @@ import { toHex, toBytes, WalletClient, PrivateKeyAccount, verifyMessage } from "
 
 import * as siwe from "siwe"
 
-import type { Session } from "@canvas-js/interfaces"
-import { AbstractSessionData, AbstractSessionSigner, Ed25519DelegateSigner } from "@canvas-js/signatures"
+import type { Session, AbstractSessionData } from "@canvas-js/interfaces"
+import { AbstractSessionSigner, Ed25519DelegateSigner } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
 import type { SIWESessionData, SIWEMessage } from "./types.js"
@@ -104,12 +104,12 @@ export class SIWESignerViem extends AbstractSessionSigner<SIWESessionData> {
 		assert(isValid, "invalid SIWE signature")
 	}
 
-	protected async getAddress(): Promise<string> {
+	public async getAddress(): Promise<string> {
 		const walletAddress = await this.#account.getAddress()
 		return `eip155:${this.chainId}:${walletAddress}`
 	}
 
-	protected async newSession(data: AbstractSessionData): Promise<Session<SIWESessionData>> {
+	public async newSession(data: AbstractSessionData): Promise<Session<SIWESessionData>> {
 		const { topic, address, publicKey, timestamp, duration } = data
 		const domain = this.target.getDomain()
 		const nonce = siwe.generateNonce()

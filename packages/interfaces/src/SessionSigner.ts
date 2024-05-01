@@ -2,40 +2,27 @@ import type { Signer } from "./Signer.js"
 import type { Session } from "./Session.js"
 import type { Action } from "./Action.js"
 import type { Awaitable } from "./Awaitable.js"
+import { Signature } from "./Signature.js"
+import { Message } from "./Message.js"
 
-export interface SessionSigner<AuthorizationData = any>
-	extends Pick<Signer<Action | Session<AuthorizationData>>, "codecs" | "sign" | "verify"> {
+export interface AbstractSessionData {
+	topic: string
+	address: string
+	publicKey: string
+	timestamp: number
+	duration: number | null
+}
+
+export interface SessionSigner<AuthorizationData = any> {
+	codecs: string[]
 	match: (address: string) => boolean
+	verify: (signature: Signature, message: Message<Action | Session<AuthorizationData>>) => Awaitable<void>
 
-	/**
-	 * `getSession` is called by the Canvas runtime for every new action appended
-	 * to the log (ie for new actions taken by local users, not existing messages
-	 * received from other peers via merkle sync or GossipSub).
-	 *
-	 * It's responsible for returning a `Session` that matches the given parameters,
-	 * either by looking up a cached session, or by getting user authorization to create
-	 * a new one (and then caching it).
-	 *
-	 * "Matching the given parameters" means that the caller passes a `topic: string`
-	 * and an optional `timestamp?: number`, and `getSession` must return a `Session`
-	 * authorized for that topic, and that is valid for the given timestamp.
-	 */
-	getSession: (
-		topic: string,
-		options?: { timestamp?: number; fromCache?: boolean },
-	) => Awaitable<Session<AuthorizationData>>
+	getAddress: () => Awaitable<string>
+	newDelegateSigner: (topic: string, address: string) => Signer<Action | Session<AuthorizationData>>
+	getDelegateSigner: (topic: string, address: string) => Signer<Action | Session<AuthorizationData>> | null
 
-	/**
-	 * `getCachedSession` returns the stored `Session` and `Signer` for a given topic and
-	 * address. This can be used by applications to check if a user has already authorised
-	 * Canvas to sign actions.
-	 *
-	 * Note that `getCachedSession` does not check if the `Session` has expired.
-	 */
-	getCachedSession(
-		topic: string,
-		address: string,
-	): { session: Session; signer: Signer<Action | Session<AuthorizationData>> } | null
+	newSession: (data: AbstractSessionData) => Awaitable<Session<AuthorizationData>>
 
 	/**
 	 * Verify that `session.data` authorizes `session.publicKey`
