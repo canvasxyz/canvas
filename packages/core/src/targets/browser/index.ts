@@ -1,5 +1,5 @@
 import { createEd25519PeerId, createFromProtobuf, exportToProtobuf } from "@libp2p/peer-id-factory"
-import { PeerId } from "@libp2p/interface"
+import { PeerId, Ed25519PeerId } from "@libp2p/interface"
 import { base64 } from "multiformats/bases/base64"
 import { createLibp2p } from "libp2p"
 
@@ -30,7 +30,7 @@ async function getPeerId({ topic }: { topic: string }): Promise<PeerId> {
 
 	if (item === null) {
 		peerId = await createEd25519PeerId()
-		const privateKey = exportToProtobuf(peerId)
+		const privateKey = exportToProtobuf(peerId as Ed25519PeerId)
 		localStorage.setItem(localStorageKey, base64.baseEncode(privateKey))
 	} else {
 		peerId = await createFromProtobuf(base64.baseDecode(item))
