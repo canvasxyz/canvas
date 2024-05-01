@@ -4,7 +4,7 @@ import * as json from "@ipld/dag-json"
 
 import { ed25519 } from "@noble/curves/ed25519"
 
-import type { Session } from "@canvas-js/interfaces"
+import type { Awaitable, Session } from "@canvas-js/interfaces"
 import { AbstractSessionData, AbstractSessionSigner, Ed25519DelegateSigner } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
@@ -32,7 +32,7 @@ Resources:
 // https://github.com/solana-labs/wallet-adapter/commit/5a274e0a32c55d4376d63a802f0d512947b087af
 interface SolanaWindowSigner {
 	publicKey?: solw3.PublicKey
-	signMessage(message: Uint8Array): Promise<{ signature: Uint8Array }>
+	signMessage(message: Uint8Array): Awaitable<{ signature: Uint8Array }>
 }
 
 export interface SolanaSignerInit {

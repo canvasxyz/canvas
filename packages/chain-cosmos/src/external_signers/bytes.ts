@@ -5,12 +5,13 @@ import { secp256k1 } from "@noble/curves/secp256k1"
 
 import { CosmosMessage } from "../types.js"
 import { constructSiwxMessage } from "../utils.js"
+import { Awaitable } from "@canvas-js/interfaces"
 
 export type BytesSigner = {
 	type: "bytes"
-	getAddress: (chainId: string) => Promise<string>
-	getChainId: () => Promise<string>
-	signBytes: (msg: Uint8Array) => Promise<{
+	getAddress: (chainId: string) => Awaitable<string>
+	getChainId: () => Awaitable<string>
+	signBytes: (msg: Uint8Array) => Awaitable<{
 		public_key: string
 		signature: string
 	}>
