@@ -82,6 +82,8 @@ export const options: Libp2pOptions<ServiceMap> = {
 			fallbackToFloodsub: false,
 			allowPublishToZeroPeers: true,
 			globalSignaturePolicy: "StrictNoSign",
+			maxInboundStreams: 256,
+			maxOutboundStreams: 64,
 			directPeers: bootstrapList.map(multiaddr).map((addr) => {
 				const id = addr.getPeerId()
 				assert(id !== null)
