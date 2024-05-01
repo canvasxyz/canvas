@@ -1,4 +1,4 @@
-import type { Session } from "@canvas-js/interfaces"
+import type { Awaitable, Session } from "@canvas-js/interfaces"
 import { AbstractSessionData, AbstractSessionSigner, Ed25519DelegateSigner } from "@canvas-js/signatures"
 
 import { addressPattern, parseAddress } from "./utils.js"
@@ -21,9 +21,9 @@ export interface CosmosSignerInit {
 }
 
 type GenericSigner = {
-	getChainId: () => Promise<string>
-	getAddress: (chainId: string) => Promise<string>
-	sign: (msg: CosmosMessage, signerAddress: string, chainId: string) => Promise<CosmosSessionData>
+	getChainId: () => Awaitable<string>
+	getAddress: (chainId: string) => Awaitable<string>
+	sign: (msg: CosmosMessage, signerAddress: string, chainId: string) => Awaitable<CosmosSessionData>
 }
 
 export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {

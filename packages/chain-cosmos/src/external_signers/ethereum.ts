@@ -2,12 +2,13 @@ import { fromBech32, toBech32 } from "@cosmjs/encoding"
 import { verifyMessage, getBytes, hexlify } from "ethers"
 import { CosmosMessage } from "../types.js"
 import { constructSiwxMessage } from "../utils.js"
+import { Awaitable } from "@canvas-js/interfaces"
 
 export type EthereumSigner = {
 	type: "ethereum"
-	getAddress: (chainId: string) => Promise<string>
-	getChainId: () => Promise<string>
-	signEthereum: (chainId: string, signerAddress: string, message: string) => Promise<string>
+	getAddress: (chainId: string) => Awaitable<string>
+	getChainId: () => Awaitable<string>
+	signEthereum: (chainId: string, signerAddress: string, message: string) => Awaitable<string>
 }
 
 export const createEthereumSigner = (signer: EthereumSigner, bech32Prefix: string) => ({

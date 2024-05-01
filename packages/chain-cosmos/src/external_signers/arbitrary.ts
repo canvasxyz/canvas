@@ -5,12 +5,13 @@ import { fromBase64 } from "@cosmjs/encoding"
 import { CosmosMessage } from "../types.js"
 import { getSessionSignatureData } from "../signatureData.js"
 import { constructSiwxMessage } from "../utils.js"
+import { Awaitable } from "@canvas-js/interfaces"
 
 export type ArbitrarySigner = {
 	type: "arbitrary"
-	getAddress: (chainId: string) => Promise<string>
-	getChainId: () => Promise<string>
-	signArbitrary: (msg: string) => Promise<{
+	getAddress: (chainId: string) => Awaitable<string>
+	getChainId: () => Awaitable<string>
+	signArbitrary: (msg: string) => Awaitable<{
 		pub_key: {
 			type: string
 			value: string
