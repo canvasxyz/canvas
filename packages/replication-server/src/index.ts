@@ -32,7 +32,7 @@ libp2p.services.discovery.addEventListener("peer:topics", ({ detail: { topics, i
 		if (!topic.startsWith(GossipLogService.topicPrefix)) {
 			continue
 		}
-		if (topics.length > maxTopics) {
+		if (apps.size > maxTopics) {
 			console.error(`[replication-server] Received topic ${topic} but over max topics: ${topics.length}/${maxTopics}`)
 			return
 		}
