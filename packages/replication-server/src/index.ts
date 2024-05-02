@@ -10,7 +10,8 @@ import { Canvas } from "@canvas-js/core"
 
 import { Multiaddr } from "@multiformats/multiaddr"
 import { options } from "./libp2p.js"
-import { restartAt, dataDirectory, discoveryTopic } from "./config.js"
+import { port, restartAt, dataDirectory, discoveryTopic } from "./config.js"
+import { getAPI } from "./api.js"
 
 const apps = new Map<string, Canvas>()
 
@@ -79,8 +80,19 @@ console.log(
 
 console.log("[replication-server] subscribed to discovery topic", discoveryTopic)
 
+const server = getAPI(libp2p)
+
+server.listen(port, "::", () => {
+	const host = `http://localhost:${port}`
+	console.log(`[replication-server] API server listening on ${host}`)
+	console.log(`GET  ${host}/connections`)
+	console.log(`GET  ${host}/subscribers/:topic`)
+	console.log(`POST ${host}/ping/:peerId`)
+})
+
 process.on("SIGINT", async () => {
 	console.log("\nReceived SIGINT. Attempting to shut down gracefully.")
+	server.close()
 	await libp2p.stop()
 	await Promise.all(Array.from(apps.values()).map((app) => app.close()))
 	apps.clear()
