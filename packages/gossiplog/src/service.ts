@@ -44,7 +44,10 @@ export class GossipLogService extends TypedEventEmitter<GossipLogEvents<unknown,
 	#syncServices = new Map<string, SyncService<unknown, unknown>>()
 	#pubsub: GossipSub
 
-	constructor(private readonly components: GossipLogServiceComponents, init: GossipLogServiceInit) {
+	constructor(
+		private readonly components: GossipLogServiceComponents,
+		init: GossipLogServiceInit,
+	) {
 		super()
 		this.sync = init.sync ?? true
 		this.#pubsub = GossipLogService.extractGossipSub(components)

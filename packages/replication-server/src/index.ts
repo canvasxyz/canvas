@@ -9,12 +9,13 @@ import { GossipLogService } from "@canvas-js/gossiplog/service"
 import { Canvas } from "@canvas-js/core"
 
 import { options } from "./libp2p.js"
-import { port, restartAt, dataDirectory, discoveryTopic, maxTopics } from "./config.js"
+import { port, restartAt, dataDirectory, discoveryTopic, maxTopics, sleepTimeout } from "./config.js"
 import { getAPI } from "./api.js"
 
 const apps = new Map<string, Canvas>()
+const lastActive = new Map<string, number>()
 
-const queue = new PQueue({ concurrency: 1, interval: 1000, intervalCap: 1 })
+const startQueue = new PQueue({ concurrency: 1, interval: 300, intervalCap: 1 })
 
 const libp2p = await createLibp2p(options)
 
@@ -33,7 +34,7 @@ libp2p.services.discovery.addEventListener("peer:topics", ({ detail: { topics, i
 			continue
 		}
 		if (apps.size > maxTopics) {
-			console.error(`[replication-server] Received topic ${topic} but over max topics: ${topics.length}/${maxTopics}`)
+			console.error(`[replication-server] Received topic ${topic} but over max topics: ${apps.size}/${maxTopics}`)
 			return
 		}
 
@@ -43,7 +44,9 @@ libp2p.services.discovery.addEventListener("peer:topics", ({ detail: { topics, i
 			continue
 		}
 
-		queue.add(async () => {
+		lastActive.set(appTopic, new Date().getTime())
+
+		startQueue.add(async () => {
 			if (apps.has(appTopic)) {
 				return
 			}
@@ -56,19 +59,41 @@ libp2p.services.discovery.addEventListener("peer:topics", ({ detail: { topics, i
 				fs.mkdirSync(directory, { recursive: true })
 			}
 
-			const app = await Canvas.initialize({
-				path: directory,
-				contract: { topic: appTopic, models: {}, actions: {} },
-				libp2p,
-				indexHistory: false,
-				ignoreMissingActions: true,
-				disablePing: true,
-			})
-
-			apps.set(appTopic, app)
+			try {
+				const app = await Canvas.initialize({
+					path: directory,
+					contract: { topic: appTopic, models: {}, actions: {} },
+					libp2p,
+					indexHistory: false,
+					ignoreMissingActions: true,
+					disablePing: true,
+				})
+				apps.set(appTopic, app)
+				lastActive.set(appTopic, new Date().getTime())
+			} catch (err) {
+				console.log("[replication-server] ERROR:", err)
+			}
 		})
 	}
 })
+
+const resetTimer = setInterval(() => {
+	for (const appTopic of apps.keys()) {
+		const app = apps.get(appTopic)
+		const lastActiveTime = lastActive.get(appTopic)
+
+		if (lastActiveTime === undefined || app === undefined) {
+			continue
+		}
+
+		if (lastActiveTime < new Date().getTime() - sleepTimeout) {
+			console.log(`[replication-server] Stopping app ${appTopic} after inactivity`)
+			apps.delete(appTopic)
+			lastActive.delete(appTopic)
+			app.close()
+		}
+	}
+}, 5000)
 
 await libp2p.start()
 
@@ -95,6 +120,7 @@ process.on("SIGINT", async () => {
 	server.close()
 	await libp2p.stop()
 	await Promise.all(Array.from(apps.values()).map((app) => app.close()))
+	clearInterval(resetTimer)
 	apps.clear()
 	process.exit(0)
 })

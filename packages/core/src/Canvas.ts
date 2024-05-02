@@ -349,11 +349,13 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		return this.messageLog.topic
 	}
 
-	public async close() {
+	public async close(stopLibp2p = false) {
 		if (this.#open) {
 			this.#open = false
 			this.controller.abort()
-			await this.libp2p.stop()
+			if (stopLibp2p) {
+				await this.libp2p.stop()
+			}
 			await this.messageLog.close()
 			await this.runtime.close()
 			this.dispatchEvent(new CustomEvent("connections:updated", { detail: { connections: {} } }))
