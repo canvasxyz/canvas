@@ -9,11 +9,11 @@ import { GossipLogService } from "@canvas-js/gossiplog/service"
 import { Canvas } from "@canvas-js/core"
 
 import { options } from "./libp2p.js"
-import { port, restartAt, dataDirectory, discoveryTopic, maxTopics, sleepTimeout } from "./config.js"
-import { getAPI } from "./api.js"
+import { port, metricsPort, restartAt, dataDirectory, discoveryTopic, maxTopics, sleepTimeout } from "./config.js"
+import { getAPI, getMetricsAPI } from "./api.js"
 
-const apps = new Map<string, Canvas>()
-const lastActive = new Map<string, number>()
+export const apps = new Map<string, Canvas>()
+export const lastActive = new Map<string, number>()
 
 const startQueue = new PQueue({ concurrency: 1, interval: 300, intervalCap: 1 })
 
@@ -110,18 +110,27 @@ console.log(
 console.log("[replication-server] subscribed to discovery topic", discoveryTopic)
 
 const server = getAPI(libp2p)
+const metricsServer = getMetricsAPI(libp2p)
 
 server.listen(port, "::", () => {
 	const host = `http://localhost:${port}`
 	console.log(`[replication-server] API server listening on ${host}`)
 	console.log(`GET  ${host}/connections`)
 	console.log(`GET  ${host}/subscribers/:topic`)
+	console.log(`GET  ${host}/topics`)
 	console.log(`POST ${host}/ping/:peerId`)
+})
+
+metricsServer.listen(metricsPort, "::", () => {
+	const host = `http://localhost:${metricsPort}`
+	console.log(`[replication-server] Metrics server listening on ${host}`)
+	console.log(`GET  ${host}/metrics`)
 })
 
 process.on("SIGINT", async () => {
 	console.log("\nReceived SIGINT. Attempting to shut down gracefully.")
 	server.close()
+	metricsServer.close()
 	await libp2p.stop()
 	await Promise.all(Array.from(apps.values()).map((app) => app.close()))
 	clearInterval(resetTimer)

@@ -19,6 +19,7 @@ const {
 	DATA_DIRECTORY,
 	RESTART_AT,
 	PORT,
+	METRICS_PORT,
 	MAX_TOPICS,
 	SLEEP_TIMEOUT,
 } = process.env
@@ -30,6 +31,7 @@ export const sleepTimeout = 15 * 60 * 1000 ?? SLEEP_TIMEOUT
 console.log("[replication-server] Initializing with max topics:", maxTopics)
 
 export const port = parseInt(PORT ?? "8000")
+export const metricsPort = parseInt(METRICS_PORT ?? "8001")
 
 export const restartAt = RESTART_AT ?? null
 

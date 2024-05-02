@@ -13,8 +13,9 @@ import { peerIdFromString } from "@libp2p/peer-id"
 
 import { PING_TIMEOUT } from "./constants.js"
 import { ServiceMap } from "./libp2p.js"
+import { apps } from "./index.js"
 
-export function getAPI(libp2p: Libp2p<ServiceMap>) {
+export function getMetricsAPI(libp2p: Libp2p<ServiceMap>) {
 	const api = express()
 	api.set("query parser", "simple")
 	api.use(express.json())
@@ -31,6 +32,20 @@ export function getAPI(libp2p: Libp2p<ServiceMap>) {
 			console.error(err)
 			res.status(StatusCodes.INTERNAL_SERVER_ERROR).end()
 		}
+	})
+
+	return http.createServer(api)
+}
+
+export function getAPI(libp2p: Libp2p<ServiceMap>) {
+	const api = express()
+	api.set("query parser", "simple")
+	api.use(express.json())
+
+	api.get("/", async (req, res) => res.json({}))
+
+	api.get("/topics", (req, res) => {
+		return res.json({ count: apps.size, topics: Array.from(apps.keys()) })
 	})
 
 	api.get("/connections", (req, res) => {

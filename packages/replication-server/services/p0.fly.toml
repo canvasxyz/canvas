@@ -3,6 +3,9 @@ kill_signal = "SIGINT"
 kill_timeout = 30
 processes = []
 
+[[vm]]
+  memory = "2gb"
+
 [env]
   BOOTSTRAP_LIST = "/dns6/canvas-chat-discovery-p1.internal/tcp/8080/ws/p2p/12D3KooWNfH4Z4ayppVFyTKv8BBYLLvkR1nfWkjcSTqYdS4gTueq /dns6/canvas-chat-discovery-p2.internal/tcp/8080/ws/p2p/12D3KooWRBdFp5T1fgjWdPSCf9cDqcCASMBgcLqjzzBvptjAfAxN"
   LISTEN         = "/ip6/::/tcp/8080/ws"
@@ -21,9 +24,18 @@ processes = []
     type = "connections"
 
   [[services.ports]]
-    handlers = ["tls", "http"]
+    handlers = ["http", "tls"]
     port = 443
 
+[[services]]
+  internal_port = 8000
+  processes = ["app"]
+  protocol = "tcp"
+
+  [[services.ports]]
+    handlers = ["http"]
+    port = 8000
+
 [metrics]
-port = 8000
+port = 8001
 path = "/metrics"
