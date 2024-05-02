@@ -303,13 +303,13 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 
 				// check that a session for the delegate signer exists in the log and hasn't expired
 				if (session !== null && delegateSigner !== null) {
-					const id = await this.getSession({
+					const sessionIds = await this.getSessions({
 						address: session.address,
 						publicKey: delegateSigner.publicKey,
-						timestamp,
+						minExpiration: timestamp,
 					})
 
-					if (id === null) {
+					if (sessionIds.length === 0) {
 						;[session, delegateSigner] = [null, null]
 					}
 				}
@@ -342,22 +342,33 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 	}
 
 	/**
-	 * Get an existing session
+	 * Get existing sessions
 	 */
-	public async getSession(query: { address: string; publicKey: string; timestamp?: number }): Promise<string | null> {
-		const sessions = await this.db.query<{ message_id: string }>("$sessions", {
+	public async getSessions(query: {
+		address: string
+		publicKey: string
+		minExpiration?: number
+	}): Promise<{ id: string; address: string; publicKey: string; expiration: number | null }[]> {
+		const sessions = await this.db.query<{
+			message_id: string
+			public_key: string
+			address: string
+			expiration: number
+		}>("$sessions", {
+			select: { message_id: true, public_key: true, address: true, expiration: true },
 			where: {
 				public_key: query.publicKey,
 				address: query.address,
-				expiration: { gte: query.timestamp ?? 0 },
+				expiration: { gte: query.minExpiration ?? 0 },
 			},
 		})
 
-		if (sessions.length === 0) {
-			return null
-		} else {
-			return sessions[0].message_id
-		}
+		return sessions.map(({ message_id, public_key, address, expiration }) => ({
+			id: message_id,
+			publicKey: public_key,
+			address,
+			expiration: expiration === Number.MAX_SAFE_INTEGER ? null : expiration,
+		}))
 	}
 
 	public updateSigners(signers: SessionSigner[]) {

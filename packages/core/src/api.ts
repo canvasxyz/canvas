@@ -103,13 +103,27 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 		}
 
 		try {
-			const { signature, message } = json.parse<{ id: string; signature: Signature; message: Message }>(data)
+			const { signature, message } = json.parse<{ signature: Signature; message: Message }>(data)
 			const { id } = await app.insert(signature, message as Message<Action | Session>)
 			return res.status(StatusCodes.CREATED).setHeader("Location", `messages/${id}`).end()
 		} catch (e) {
 			console.error(e)
 			return res.status(StatusCodes.BAD_REQUEST).end()
 		}
+	})
+
+	api.get("/sessions", async (req, res) => {
+		const { address, publicKey, minExpiration } = req.query
+		assert(typeof address === "string", "missing address query parameter")
+		assert(typeof publicKey === "string", "missing publicKey query parameter")
+
+		let minExpirationValue: number | undefined = undefined
+		if (typeof minExpiration === "string") {
+			minExpirationValue = parseInt(minExpiration)
+		}
+
+		const sessions = await app.getSessions({ address, publicKey, minExpiration: minExpirationValue })
+		return res.json(sessions)
 	})
 
 	api.get("/clock", async (req, res) => {
