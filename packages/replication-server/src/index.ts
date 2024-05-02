@@ -28,14 +28,17 @@ libp2p.addEventListener("connection:close", ({ detail: connection }) => {
 })
 
 libp2p.services.discovery.addEventListener("peer:topics", ({ detail: { topics, isUniversalReplication, peerId } }) => {
+	if (isUniversalReplication) {
+		console.log(`[replication-server] Received topic list from universal replication server ${peerId}, ignoring`)
+		return
+	}
+
 	for (const topic of topics) {
 		if (!topic.startsWith(GossipLogService.topicPrefix)) {
 			continue
 		}
-		if (isUniversalReplication) {
-			continue
-		}
 		if (topics.length > maxTopics) {
+			console.error(`[replication-server] Received topic ${topic} but over max topics: ${topics.length}/${maxTopics}`)
 			return
 		}
 
