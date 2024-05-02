@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto"
 import type { Signature, Message } from "@canvas-js/interfaces"
-import { Ed25519SignatureScheme } from "@canvas-js/signatures"
+import { ed25519 } from "@canvas-js/signatures"
 import { AbstractGossipLog, decodeId } from "@canvas-js/gossiplog"
 
 import { testPlatforms } from "./utils.js"
@@ -12,7 +12,7 @@ const mempoolTest = async (
 	topic: string,
 	log: AbstractGossipLog<string>,
 ) => {
-	const signer = Ed25519SignatureScheme.create()
+	const signer = ed25519.create()
 
 	const messageA = { topic, clock: 1, parents: [], payload: "foo" }
 	const signatureA = signer.sign(messageA)

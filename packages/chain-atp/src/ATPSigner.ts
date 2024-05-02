@@ -5,7 +5,7 @@ import * as ATP from "@atproto/api"
 const BskyAgent = ATP.BskyAgent ?? ATP["default"].BskyAgent
 
 import type { Session, AbstractSessionData } from "@canvas-js/interfaces"
-import { AbstractSessionSigner, Ed25519SignatureScheme } from "@canvas-js/signatures"
+import { AbstractSessionSigner, ed25519 } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
 import { unpackArchive } from "./mst.js"
@@ -36,7 +36,7 @@ export class ATPSigner extends AbstractSessionSigner<ATPSessionData> {
 	#session: ATP.AtpSessionData | null = null
 
 	public constructor(private readonly options: ATPSignerOptions = {}) {
-		super("chain-atp", Ed25519SignatureScheme, {})
+		super("chain-atp", ed25519, {})
 	}
 
 	public readonly match = (address: string) => address.startsWith("did:plc:") || address.startsWith("did:web:")
@@ -93,7 +93,7 @@ export class ATPSigner extends AbstractSessionSigner<ATPSessionData> {
 		this.target.set("canvas-chain-atp/jwt", JSON.stringify(data))
 	}
 
-	public async newSession(data: AbstractSessionData): Promise<Session<ATPSessionData>> {
+	public async authorize(data: AbstractSessionData): Promise<Session<ATPSessionData>> {
 		const { topic, address, publicKey, timestamp, duration } = data
 		this.log("fetching plc operation log for %s", address)
 		const plcOperationLog = await fetch(`https://plc.directory/${address}/log`).then((res) => res.json())

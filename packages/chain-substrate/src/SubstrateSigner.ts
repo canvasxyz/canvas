@@ -7,7 +7,7 @@ import { cryptoWaitReady, decodeAddress } from "@polkadot/util-crypto"
 import { KeypairType } from "@polkadot/util-crypto/types"
 
 import type { Session, AbstractSessionData } from "@canvas-js/interfaces"
-import { AbstractSessionSigner, Ed25519SignatureScheme } from "@canvas-js/signatures"
+import { AbstractSessionSigner, ed25519 } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
 import type { SubstrateMessage, SubstrateSessionData } from "./types.js"
@@ -42,7 +42,7 @@ export class SubstrateSigner extends AbstractSessionSigner<SubstrateSessionData>
 	#signer: AbstractSigner
 
 	public constructor({ sessionDuration, substrateKeyType, extension }: SubstrateSignerInit = {}) {
-		super("chain-substrate", Ed25519SignatureScheme, { sessionDuration })
+		super("chain-substrate", ed25519, { sessionDuration })
 		if (extension) {
 			const signRaw = extension.signer.signRaw
 			if (signRaw === undefined) {
@@ -174,7 +174,7 @@ export class SubstrateSigner extends AbstractSessionSigner<SubstrateSessionData>
 		return `polkadot:${chainId}:${walletAddress}`
 	}
 
-	public async newSession(data: AbstractSessionData): Promise<Session<SubstrateSessionData>> {
+	public async authorize(data: AbstractSessionData): Promise<Session<SubstrateSessionData>> {
 		const { topic, address, publicKey, timestamp, duration } = data
 		const issuedAt = new Date(timestamp).toISOString()
 

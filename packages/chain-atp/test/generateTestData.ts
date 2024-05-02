@@ -1,6 +1,6 @@
 import * as ATP from "@atproto/api"
 import { ATPSigner } from "@canvas-js/chain-atp"
-import { Ed25519SignatureScheme } from "@canvas-js/signatures"
+import { ed25519 } from "@canvas-js/signatures"
 import { randomUUID } from "crypto"
 import { writeFile } from "fs/promises"
 import { stdin, stdout } from "process"
@@ -21,7 +21,7 @@ const address = agent.session!.did
 
 const topic = randomUUID()
 
-const signer = Ed25519SignatureScheme.create()
+const signer = ed25519.create()
 const message = ATPSigner.createAuthenticationMessage(topic, signer.publicKey, address)
 const { uri, cid } = await agent.post({ text: message })
 

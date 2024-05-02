@@ -16,10 +16,16 @@ export interface SessionSigner<AuthorizationData = any> {
 	match: (address: string) => boolean
 
 	getAddress: () => Awaitable<string>
-	newDelegateSigner: (topic: string, address: string) => Signer<Action | Session<AuthorizationData>>
-	getDelegateSigner: (topic: string, address: string) => Signer<Action | Session<AuthorizationData>> | null
 
-	newSession: (data: AbstractSessionData) => Awaitable<Session<AuthorizationData>>
+	hasSession: (topic: string, address: string) => boolean
+	getSession: (
+		topic: string,
+	) => Awaitable<
+		[session: Session<AuthorizationData>, signer: Signer<Action | Session<AuthorizationData>>] | [null, null]
+	>
+	newSession: (
+		topic: string,
+	) => Awaitable<[session: Session<AuthorizationData>, signer: Signer<Action | Session<AuthorizationData>>]>
 
 	/**
 	 * Verify that `session.data` authorizes `session.publicKey`

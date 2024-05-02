@@ -4,7 +4,7 @@ import { base58btc } from "multiformats/bases/base58"
 import { ed25519 } from "@noble/curves/ed25519"
 
 import type { Session, AbstractSessionData } from "@canvas-js/interfaces"
-import { AbstractSessionSigner, Ed25519SignatureScheme } from "@canvas-js/signatures"
+import { AbstractSessionSigner, ed25519 as Ed25519SignatureScheme } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
 import { validateSessionData, addressPattern, parseAddress } from "./utils.js"
@@ -105,7 +105,7 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 		return `solana:${this.chainId}:${walletAddress}`
 	}
 
-	public async newSession(data: AbstractSessionData): Promise<Session<SolanaSessionData>> {
+	public async authorize(data: AbstractSessionData): Promise<Session<SolanaSessionData>> {
 		const { topic, address, publicKey, timestamp, duration } = data
 
 		const issuedAt = new Date(timestamp)

@@ -4,7 +4,7 @@ import { PublicKey } from "@near-js/crypto"
 import { ed25519 } from "@noble/curves/ed25519"
 
 import type { Session, AbstractSessionData } from "@canvas-js/interfaces"
-import { AbstractSessionSigner, Ed25519SignatureScheme } from "@canvas-js/signatures"
+import { AbstractSessionSigner, ed25519 as Ed25519SignatureScheme } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
 import { NEARMessage, NEARSessionData } from "./types.js"
@@ -61,7 +61,7 @@ export class NEARSigner extends AbstractSessionSigner<NEARSessionData> {
 		return `${this.chainId}:${walletAddress}`
 	}
 
-	public async newSession(data: AbstractSessionData): Promise<Session<NEARSessionData>> {
+	public async authorize(data: AbstractSessionData): Promise<Session<NEARSessionData>> {
 		const { topic, address, publicKey, timestamp, duration } = data
 		const issuedAt = new Date(timestamp)
 

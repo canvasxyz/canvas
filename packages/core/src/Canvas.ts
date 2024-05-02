@@ -299,29 +299,25 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 				const sessionSigner = (options.signer ?? signers.getFirst()) as AbstractSessionSigner<any>
 				assert(sessionSigner !== undefined, "signer not found")
 
-				const address = await sessionSigner.getAddress()
-
-				let delegateSigner = sessionSigner.getDelegateSigner(this.topic, address)
+				let [session, delegateSigner] = await sessionSigner.getSession(this.topic)
 
 				// check that a session for the delegate signer exists in the log and hasn't expired
-				let existingSessionId: string | null = null
-				if (delegateSigner !== null) {
-					existingSessionId = await this.getSession({ address, publicKey: delegateSigner.publicKey, timestamp })
+				if (session !== null && delegateSigner !== null) {
+					const id = await this.getSession({
+						address: session.address,
+						publicKey: delegateSigner.publicKey,
+						timestamp,
+					})
+
+					if (id === null) {
+						;[session, delegateSigner] = [null, null]
+					}
 				}
 
 				// if the delegate signer doesn't exist, or if the session expired,
 				// create and append a new one
-				if (delegateSigner === null || existingSessionId === null) {
-					delegateSigner = sessionSigner.newDelegateSigner(this.topic, address)
-
-					const session = await sessionSigner.newSession({
-						topic: this.topic,
-						address,
-						publicKey: delegateSigner.publicKey,
-						timestamp,
-						duration: sessionSigner.sessionDuration,
-					})
-
+				if (session === null || delegateSigner === null) {
+					;[session, delegateSigner] = await sessionSigner.newSession(this.topic)
 					await this.append(session, { signer: delegateSigner })
 				}
 
@@ -332,7 +328,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 				assert(argsRepresentation !== undefined, "action args did not validate the provided schema type")
 
 				const { id, signature, message, recipients } = await this.append<Action>(
-					{ type: "action", address, name, args: argsRepresentation, blockhash: null, timestamp },
+					{ type: "action", address: session.address, name, args: argsRepresentation, blockhash: null, timestamp },
 					{ signer: delegateSigner },
 				)
 

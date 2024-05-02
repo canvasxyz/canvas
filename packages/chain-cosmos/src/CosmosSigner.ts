@@ -1,5 +1,5 @@
 import type { Session, AbstractSessionData } from "@canvas-js/interfaces"
-import { AbstractSessionSigner, Ed25519SignatureScheme } from "@canvas-js/signatures"
+import { AbstractSessionSigner, ed25519 } from "@canvas-js/signatures"
 
 import { addressPattern, parseAddress } from "./utils.js"
 import { CosmosMessage, CosmosSessionData, ExternalCosmosSigner } from "./types.js"
@@ -33,7 +33,7 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 	#signer: GenericSigner
 
 	public constructor({ signer, sessionDuration, bech32Prefix }: CosmosSignerInit = {}) {
-		super("chain-cosmos", Ed25519SignatureScheme, { sessionDuration })
+		super("chain-cosmos", ed25519, { sessionDuration })
 
 		this.bech32Prefix = bech32Prefix == undefined ? "cosmos" : bech32Prefix
 
@@ -100,7 +100,7 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 		return `cosmos:${chainId}:${walletAddressWithPrefix}`
 	}
 
-	public async newSession(data: AbstractSessionData): Promise<Session<CosmosSessionData>> {
+	public async authorize(data: AbstractSessionData): Promise<Session<CosmosSessionData>> {
 		const { topic, address, timestamp, publicKey, duration } = data
 		const [chainId, walletAddress] = parseAddress(address)
 

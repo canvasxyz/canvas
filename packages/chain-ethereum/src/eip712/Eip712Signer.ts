@@ -39,7 +39,7 @@ export class Eip712Signer extends AbstractSessionSigner<Eip712SessionData> {
 		return `eip155:${this.chainId}:${walletAddress}`
 	}
 
-	public async newSession(sessionData: AbstractSessionData): Promise<Session<Eip712SessionData>> {
+	public async authorize(sessionData: AbstractSessionData): Promise<Session<Eip712SessionData>> {
 		const { topic, address, publicKey, timestamp, duration } = sessionData
 
 		const { type, publicKey: publicKeyBytes } = decodeURI(publicKey)

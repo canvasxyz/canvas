@@ -1,9 +1,6 @@
 import type { PlatformTarget } from "../index.js"
 
 export default {
-	getSignerStore(options: {}) {
-		throw new Error("unsupported platform")
-	},
 	get(key: string) {
 		throw new Error("unsupported platform")
 	},

@@ -7,17 +7,14 @@ import { assert } from "@canvas-js/utils"
 
 import { decodeURI, encodeURI } from "./utils.js"
 
-export const codecs = {
-	cbor: "dag-cbor",
-	json: "dag-json",
-}
+const codecs = { cbor: "dag-cbor", json: "dag-json" }
 
 /**
- * Ed25519DelegateSigner only supports the following codecs:
+ * Ed25519Signer only supports the following codecs:
  * - dag-cbor
  * - dag-json
  */
-export class Ed25519DelegateSigner<Payload = unknown> implements Signer<Payload> {
+class Ed25519Signer<Payload = unknown> implements Signer<Payload> {
 	public readonly publicKey: string
 	public readonly scheme: SignatureScheme<any> = Ed25519SignatureScheme
 
@@ -50,7 +47,7 @@ export class Ed25519DelegateSigner<Payload = unknown> implements Signer<Payload>
 			const signature = ed25519.sign(bytes, this.#privateKey)
 			return { codec, publicKey: this.publicKey, signature }
 		} else {
-			throw new Error("Ed25519Delegate only supports dag-cbor and dag-json codecs")
+			throw new Error("Ed25519Delegate only supports 'dag-cbor' and 'dag-json' codecs")
 		}
 	}
 
@@ -63,7 +60,7 @@ export const Ed25519SignatureScheme = {
 	type: "ed25519",
 	codecs: [codecs.cbor, codecs.json],
 
-	verify<Payload = unknown>(signature: Signature, message: Message<Payload>) {
+	verify: (signature: Signature, message: Message<any>) => {
 		const { type, publicKey } = decodeURI(signature.publicKey)
 		assert(type === Ed25519SignatureScheme.type)
 		if (signature.codec === codecs.cbor) {
@@ -73,9 +70,9 @@ export const Ed25519SignatureScheme = {
 			const bytes = json.encode(message)
 			assert(ed25519.verify(signature.signature, bytes, publicKey), "invalid ed25519 dag-json signature")
 		} else {
-			throw new Error("ed25519 only supports dag-cbor and dag-json codecs")
+			throw new Error("ed25519 only supports 'dag-cbor' and 'dag-json' codecs")
 		}
 	},
 
-	create: (init?: { type: string; privateKey: Uint8Array }) => new Ed25519DelegateSigner(init),
+	create: <Payload>(init?: { type: string; privateKey: Uint8Array }) => new Ed25519Signer<Payload>(init),
 } satisfies SignatureScheme<any>

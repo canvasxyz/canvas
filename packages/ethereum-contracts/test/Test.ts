@@ -35,13 +35,13 @@ describe("Contract_Test", function () {
 
 		async function getArguments(args?: any) {
 			const signer = new Eip712Signer()
-
-			const session = (args && args.session) || (await signer.getSession(topic))
+			const [session, delegateSigner] = await signer.newSession(topic)
+			// const session = (args && args.session) || (await signer.newSession(topic))
 
 			const clock = 1
 			const parents = ["parent1", "parent2"]
 			const sessionMessage = { topic, clock, parents, payload: session }
-			const sessionMessageSignature = await signer.sign(sessionMessage)
+			const sessionMessageSignature = await delegateSigner.sign(sessionMessage)
 
 			const userAddress = session.address.split(":")[2]
 			const { type: publicKeyType, publicKey: publicKeyBytes } = decodeURI(session.publicKey)
@@ -73,7 +73,7 @@ describe("Contract_Test", function () {
 				timestamp: session.timestamp,
 			}
 			const actionMessage = { topic, clock, parents, payload: action }
-			const actionMessageSignature = await signer.sign(actionMessage)
+			const actionMessageSignature = await delegateSigner.sign(actionMessage)
 			const actionMessageForContract = {
 				...actionMessage,
 				payload: {
@@ -112,7 +112,7 @@ describe("Contract_Test", function () {
 
 			const signer = new Eip712Signer()
 
-			const session = await signer.getSession(topic)
+			const [session] = await signer.newSession(topic)
 			signer.verifySession(topic, session)
 
 			const userAddress = session.address.split(":")[2]
@@ -150,12 +150,12 @@ describe("Contract_Test", function () {
 			const { contract } = await loadFixture(deployFixture)
 
 			const signer = new Eip712Signer()
-			const session = await signer.getSession(topic, { fromCache: false })
+			const [session, delegateSigner] = await signer.newSession(topic)
 
 			const clock = 1
 			const parents = ["parent1", "parent2"]
 			const sessionMessage = { topic, clock, parents, payload: session }
-			const sessionSignature = await signer.sign(sessionMessage)
+			const sessionSignature = await delegateSigner.sign(sessionMessage)
 
 			signer.scheme.verify(sessionSignature, sessionMessage)
 
@@ -198,7 +198,7 @@ describe("Contract_Test", function () {
 			const { contract } = await loadFixture(deployFixture)
 
 			const signer = new Eip712Signer()
-			const session = await signer.getSession(topic, { fromCache: false })
+			const [session, delegateSigner] = await signer.newSession(topic)
 
 			// sign an action
 			const clock = 1
@@ -212,7 +212,7 @@ describe("Contract_Test", function () {
 				timestamp: session.timestamp,
 			}
 			const actionMessage = { topic, clock, parents, payload: action }
-			const actionSignature = await signer.sign(actionMessage)
+			const actionSignature = await delegateSigner.sign(actionMessage)
 
 			// verify the action offchain
 			signer.scheme.verify(actionSignature, actionMessage)

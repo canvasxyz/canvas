@@ -1,4 +1,4 @@
-import { Awaitable } from "./Awaitable.js"
+import type { Awaitable } from "./Awaitable.js"
 import type { Message } from "./Message.js"
 import type { Signature } from "./Signature.js"
 
