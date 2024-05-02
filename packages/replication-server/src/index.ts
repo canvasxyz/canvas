@@ -8,14 +8,13 @@ import { topicPattern } from "@canvas-js/gossiplog"
 import { GossipLogService } from "@canvas-js/gossiplog/service"
 import { Canvas } from "@canvas-js/core"
 
-import { Multiaddr } from "@multiformats/multiaddr"
 import { options } from "./libp2p.js"
-import { port, restartAt, dataDirectory, discoveryTopic } from "./config.js"
+import { port, restartAt, dataDirectory, discoveryTopic, maxTopics } from "./config.js"
 import { getAPI } from "./api.js"
 
 const apps = new Map<string, Canvas>()
 
-const queue = new PQueue({ concurrency: 1 })
+const queue = new PQueue({ concurrency: 1, interval: 1000, intervalCap: 1 })
 
 const libp2p = await createLibp2p(options)
 
@@ -35,6 +34,9 @@ libp2p.services.discovery.addEventListener("peer:topics", ({ detail: { topics, i
 		}
 		if (isUniversalReplication) {
 			continue
+		}
+		if (topics.length > maxTopics) {
+			return
 		}
 
 		const appTopic = topic.slice(GossipLogService.topicPrefix.length)

@@ -10,7 +10,9 @@ import dotenv from "dotenv"
 
 dotenv.config()
 
-const { PEER_ID, BOOTSTRAP_LIST, LISTEN, ANNOUNCE, DISCOVERY_TOPIC, DATA_DIRECTORY, RESTART_AT, PORT } = process.env
+const { PEER_ID, BOOTSTRAP_LIST, LISTEN, ANNOUNCE, DISCOVERY_TOPIC, DATA_DIRECTORY, RESTART_AT, PORT, MAX_TOPICS } = process.env
+
+export const maxTopics = 30 ?? MAX_TOPICS
 
 export const port = parseInt(PORT ?? "8000")
 
