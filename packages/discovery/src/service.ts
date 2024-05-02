@@ -79,6 +79,7 @@ export interface DiscoveryServiceEvents extends PeerDiscoveryEvents {
 	"peer:topics": CustomEvent<{
 		peerId: PeerId
 		connections: Connection[]
+		multiaddrs: Multiaddr[]
 		env: PeerEnv
 		address: string | null
 		topics: string[]
@@ -235,6 +236,7 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 						detail: {
 							peerId,
 							connections,
+							multiaddrs,
 							address,
 							env,
 							topics,

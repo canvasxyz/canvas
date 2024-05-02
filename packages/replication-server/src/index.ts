@@ -8,6 +8,7 @@ import { topicPattern } from "@canvas-js/gossiplog"
 import { GossipLogService } from "@canvas-js/gossiplog/service"
 import { Canvas } from "@canvas-js/core"
 
+import { Multiaddr } from "@multiformats/multiaddr"
 import { options } from "./libp2p.js"
 import { restartAt, dataDirectory, discoveryTopic } from "./config.js"
 
@@ -26,7 +27,7 @@ libp2p.addEventListener("connection:close", ({ detail: connection }) => {
 	console.log(`[replication-server] closed connection ${connection.id} to ${connection.remotePeer}`)
 })
 
-libp2p.services.discovery.addEventListener("peer:topics", ({ detail: { topics, isUniversalReplication, connections } }) => {
+libp2p.services.discovery.addEventListener("peer:topics", ({ detail: { topics, isUniversalReplication, peerId } }) => {
 	for (const topic of topics) {
 		if (!topic.startsWith(GossipLogService.topicPrefix)) {
 			continue
@@ -35,7 +36,6 @@ libp2p.services.discovery.addEventListener("peer:topics", ({ detail: { topics, i
 			continue
 		}
 
-		const appConnection = connections.map((conn) => conn.remoteAddr.toString()).join(',')
 		const appTopic = topic.slice(GossipLogService.topicPrefix.length)
 		if (!topicPattern.test(appTopic)) {
 			console.error("[replication-server] received invalid topic", topic)
@@ -47,7 +47,7 @@ libp2p.services.discovery.addEventListener("peer:topics", ({ detail: { topics, i
 				return
 			}
 
-			console.log(`[replication-server] Starting app ${appTopic} via ${appConnection}`)
+			console.log(`[replication-server] Starting app ${appTopic} from ${peerId}`)
 
 			const directory = path.resolve(dataDirectory, appTopic)
 			if (!fs.existsSync(directory)) {
