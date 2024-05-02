@@ -1,12 +1,12 @@
 import * as json from "@ipld/dag-json"
 
-import { Action, Session, Signer } from "@canvas-js/interfaces"
+import { Action, Session, SignatureScheme, Signer } from "@canvas-js/interfaces"
 import { assert } from "@canvas-js/utils"
 
 import type { PlatformTarget, SignerStore } from "../index.js"
 
 export default {
-	getSignerStore: (options) => new BrowserSignerStore(options),
+	getSignerStore: (scheme) => new BrowserSignerStore(scheme),
 
 	get(key: string): string | null {
 		return window.localStorage.getItem(key)
@@ -35,13 +35,8 @@ const getKey = (topic: string, address: string) => `canvas/${topic}/${address}`
 
 class BrowserSignerStore<AuthorizationData> implements SignerStore<AuthorizationData> {
 	#cache = new Map<string, Signer<Action | Session<AuthorizationData>>>()
-	#createSigner: (init?: { type: string; privateKey: Uint8Array }) => Signer<Action | Session<AuthorizationData>>
 
-	constructor(options: {
-		createSigner: (init?: { type: string; privateKey: Uint8Array }) => Signer<Action | Session<AuthorizationData>>
-	}) {
-		this.#createSigner = options.createSigner
-	}
+	constructor(public readonly scheme: SignatureScheme<Action | Session<AuthorizationData>>) {}
 
 	get(topic: string, address: string): Signer<Action | Session<AuthorizationData>> | null {
 		const key = getKey(topic, address)
@@ -59,7 +54,7 @@ class BrowserSignerStore<AuthorizationData> implements SignerStore<Authorization
 			assert(typeof type === "string", 'expected typeof type === "string"')
 			assert(privateKey instanceof Uint8Array, "expected privateKey instanceof Uint8Array")
 
-			const signer = this.#createSigner({ type, privateKey })
+			const signer = this.scheme.create({ type, privateKey })
 			this.#cache.set(key, signer)
 			return signer
 		}

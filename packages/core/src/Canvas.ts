@@ -122,9 +122,9 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 
 		const signers = new SignerCache(initSigners.length === 0 ? [new SIWESigner()] : initSigners)
 		const verifySignature = (signature: Signature, message: Message<Action | Session>) => {
-			const signer = signers.getAll().find((signer) => signer.codecs.includes(signature.codec))
+			const signer = signers.getAll().find((signer) => signer.scheme.codecs.includes(signature.codec))
 			assert(signer !== undefined, "no matching signer found")
-			return signer.verify(signature, message)
+			return signer.scheme.verify(signature, message)
 		}
 
 		const runtime = await createRuntime(path, signers, contract, {
@@ -430,7 +430,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 	 */
 	public async append<Payload extends Session | Action>(
 		payload: Payload,
-		options: { signer?: Pick<Signer<Payload>, "sign" | "verify"> },
+		options: { signer?: Signer<Payload> },
 	): Promise<{ id: string; signature: Signature; message: Message<Payload>; recipients: Promise<PeerId[]> }> {
 		return this.libp2p.services.gossiplog.append(this.topic, payload, options)
 	}

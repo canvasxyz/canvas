@@ -5,7 +5,7 @@ import { assert } from "@canvas-js/utils"
 import { AbstractSessionSigner, decodeURI } from "@canvas-js/signatures"
 
 import { Eip712SessionData } from "./types.js"
-import { Secp256k1DelegateSigner } from "./Secp256k1DelegateSigner.js"
+import { Secp256k1SignatureScheme } from "./Secp256k1DelegateSigner.js"
 import { validateEip712SessionData, addressPattern, parseAddress } from "./utils.js"
 
 export class Eip712Signer extends AbstractSessionSigner<Eip712SessionData> {
@@ -22,15 +22,13 @@ export class Eip712Signer extends AbstractSessionSigner<Eip712SessionData> {
 		],
 	} satisfies Record<string, TypedDataField[]>
 
-	public readonly codecs = [Secp256k1DelegateSigner.eip712ActionCodec, Secp256k1DelegateSigner.eip712SessionCodec]
 	public readonly match = (address: string) => addressPattern.test(address)
-	public readonly verify = Secp256k1DelegateSigner.verify
 
 	public readonly chainId: number
 	#signer: AbstractSigner
 
 	constructor(init: { signer?: AbstractSigner; chainId?: number } = {}) {
-		super("chain-ethereum-eip712", { createSigner: (init) => new Secp256k1DelegateSigner(init) })
+		super("chain-ethereum-eip712", Secp256k1SignatureScheme)
 		this.#signer = init.signer ?? Wallet.createRandom()
 		this.chainId = init.chainId ?? 1
 	}
@@ -45,7 +43,7 @@ export class Eip712Signer extends AbstractSessionSigner<Eip712SessionData> {
 		const { topic, address, publicKey, timestamp, duration } = sessionData
 
 		const { type, publicKey: publicKeyBytes } = decodeURI(publicKey)
-		assert(type === Secp256k1DelegateSigner.type)
+		assert(type === Secp256k1SignatureScheme.type)
 
 		const sessionAddress = computeAddress(hexlify(publicKeyBytes))
 
@@ -73,7 +71,7 @@ export class Eip712Signer extends AbstractSessionSigner<Eip712SessionData> {
 		const { address: userAddress } = parseAddress(session.address)
 
 		const { type, publicKey } = decodeURI(session.publicKey)
-		assert(type === Secp256k1DelegateSigner.type)
+		assert(type === Secp256k1SignatureScheme.type)
 
 		const sessionAddress = computeAddress(hexlify(publicKey))
 

@@ -1,9 +1,7 @@
-import type { Signer } from "./Signer.js"
+import type { SignatureScheme, Signer } from "./Signer.js"
 import type { Session } from "./Session.js"
 import type { Action } from "./Action.js"
 import type { Awaitable } from "./Awaitable.js"
-import { Signature } from "./Signature.js"
-import { Message } from "./Message.js"
 
 export interface AbstractSessionData {
 	topic: string
@@ -14,9 +12,8 @@ export interface AbstractSessionData {
 }
 
 export interface SessionSigner<AuthorizationData = any> {
-	codecs: string[]
+	scheme: SignatureScheme<Action | Session<AuthorizationData>>
 	match: (address: string) => boolean
-	verify: (signature: Signature, message: Message<Action | Session<AuthorizationData>>) => Awaitable<void>
 
 	getAddress: () => Awaitable<string>
 	newDelegateSigner: (topic: string, address: string) => Signer<Action | Session<AuthorizationData>>

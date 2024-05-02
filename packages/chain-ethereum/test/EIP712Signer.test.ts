@@ -12,7 +12,7 @@ test("create and verify session", async (t) => {
 
 	const sessionMessage = { topic, clock: 1, parents: [], payload: session }
 	const sessionSignature = await signer.sign(sessionMessage)
-	t.notThrows(() => signer.verify(sessionSignature, sessionMessage))
+	t.notThrows(() => signer.scheme.verify(sessionSignature, sessionMessage))
 
 	t.pass()
 })
@@ -25,7 +25,7 @@ test("create and verify session and action", async (t) => {
 
 	const sessionMessage = { topic, clock: 1, parents: [], payload: session }
 	const sessionSignature = await signer.sign(sessionMessage)
-	t.notThrows(() => signer.verify(sessionSignature, sessionMessage))
+	t.notThrows(() => signer.scheme.verify(sessionSignature, sessionMessage))
 
 	const action: Action = {
 		type: "action",
@@ -38,7 +38,7 @@ test("create and verify session and action", async (t) => {
 
 	const actionMessage = { topic, clock: 1, parents: [], payload: action }
 	const actionSignature = await signer.sign(actionMessage)
-	t.notThrows(() => signer.verify(actionSignature, actionMessage))
+	t.notThrows(() => signer.scheme.verify(actionSignature, actionMessage))
 })
 
 test("reject corrupt session signature", async (t) => {

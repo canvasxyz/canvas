@@ -48,7 +48,7 @@ export interface GossipLogInit<Payload = unknown> {
 	validatePayload?: (payload: unknown) => payload is Payload
 	verifySignature?: (signature: Signature, message: Message<Payload>) => Awaitable<void>
 
-	signer?: Pick<Signer<Payload>, "sign" | "verify">
+	signer?: Signer<Payload>
 	indexAncestors?: boolean
 }
 
@@ -80,7 +80,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 	public readonly topic: string
 	public readonly indexAncestors: boolean
-	public readonly signer: Pick<Signer<Payload>, "sign" | "verify">
+	public readonly signer: Signer<Payload>
 
 	protected readonly log: Logger
 	protected readonly mempool = new Mempool<{ signature: Signature; message: Message<Payload> }>()
@@ -99,7 +99,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 		this.#apply = init.apply
 		this.#validatePayload = init.validatePayload ?? ((payload: unknown): payload is Payload => true)
-		this.#verifySignature = init.verifySignature ?? this.signer.verify
+		this.#verifySignature = init.verifySignature ?? this.signer.scheme.verify
 
 		this.log = logger(`canvas:gossiplog:[${this.topic}]`)
 	}
@@ -184,7 +184,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 	 */
 	public async append(
 		payload: Payload,
-		options: { signer?: Pick<Signer<Payload>, "sign" | "verify"> } = {},
+		options: { signer?: Signer<Payload> } = {},
 	): Promise<{ id: string; signature: Signature; message: Message<Payload> }> {
 		const signer = options.signer ?? this.signer
 

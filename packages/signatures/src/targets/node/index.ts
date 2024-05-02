@@ -1,7 +1,7 @@
 import os from "node:os"
 
+import type { Action, Session, Signer } from "@canvas-js/interfaces"
 import type { PlatformTarget, SignerStore } from "../index.js"
-import { Action, Session, Signer } from "@canvas-js/interfaces"
 
 const cache = new Map<string, string>()
 

@@ -122,7 +122,7 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 
 		const message: Message<Session> = { topic, clock: 0, parents: [], payload: session }
 		const sessionSignature = await delegateSigner.sign(message)
-		t.notThrows(() => sessionSigner.verify(sessionSignature, message))
+		t.notThrows(() => sessionSigner.scheme.verify(sessionSignature, message))
 	})
 
 	test(`${name} - session address is matched by the signer`, async (t) => {
@@ -167,7 +167,7 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 
 		const sessionMessage = { topic, clock: 1, parents: [], payload: session }
 		const sessionSignature = await delegateSigner.sign(sessionMessage)
-		t.notThrows(() => delegateSigner.verify(sessionSignature, sessionMessage))
+		t.notThrows(() => delegateSigner.scheme.verify(sessionSignature, sessionMessage))
 
 		const action: Action = {
 			type: "action",
@@ -180,7 +180,7 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 
 		const actionMessage = { topic, clock: 1, parents: [], payload: action }
 		const actionSignature = await delegateSigner.sign(actionMessage)
-		t.notThrows(() => delegateSigner.verify(actionSignature, actionMessage))
+		t.notThrows(() => delegateSigner.scheme.verify(actionSignature, actionMessage))
 	})
 }
 

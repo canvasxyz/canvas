@@ -2,39 +2,26 @@ import { ed25519 } from "@noble/curves/ed25519"
 import * as cbor from "@ipld/dag-cbor"
 import * as json from "@ipld/dag-json"
 
-import type { Message, Signature, Signer } from "@canvas-js/interfaces"
+import type { Message, Signature, SignatureScheme, Signer } from "@canvas-js/interfaces"
 import { assert } from "@canvas-js/utils"
 
 import { decodeURI, encodeURI } from "./utils.js"
 
+export const codecs = {
+	cbor: "dag-cbor",
+	json: "dag-json",
+}
+
 /**
- * Ed25519DelegateSigner ONLY supports the following codecs:
+ * Ed25519DelegateSigner only supports the following codecs:
  * - dag-cbor
  * - dag-json
  */
 export class Ed25519DelegateSigner<Payload = unknown> implements Signer<Payload> {
-	public static type = "ed25519" as const
-	public static cborCodec = "dag-cbor" as const
-	public static jsonCodec = "dag-json" as const
-
 	public readonly uri: string
-	public readonly codecs = [Ed25519DelegateSigner.cborCodec, Ed25519DelegateSigner.jsonCodec]
+	public readonly scheme: SignatureScheme<any> = Ed25519SignatureScheme
 
 	readonly #privateKey: Uint8Array
-
-	public static verify<Payload = unknown>(signature: Signature, message: Message<Payload>) {
-		const { type, publicKey } = decodeURI(signature.publicKey)
-		assert(type === Ed25519DelegateSigner.type)
-		if (signature.codec === Ed25519DelegateSigner.cborCodec) {
-			const bytes = cbor.encode(message)
-			assert(ed25519.verify(signature.signature, bytes, publicKey), "invalid ed25519 dag-cbor signature")
-		} else if (signature.codec === Ed25519DelegateSigner.jsonCodec) {
-			const bytes = json.encode(message)
-			assert(ed25519.verify(signature.signature, bytes, publicKey), "invalid ed25519 dag-json signature")
-		} else {
-			throw new Error(`Ed25519Delegate only supports dag-cbor and dag-json codecs`)
-		}
-	}
 
 	/**
 	 * @param privateKey 32-byte ed25519 private key
@@ -43,35 +30,52 @@ export class Ed25519DelegateSigner<Payload = unknown> implements Signer<Payload>
 		if (init === undefined) {
 			this.#privateKey = ed25519.utils.randomPrivateKey()
 		} else {
-			assert(init.type === Ed25519DelegateSigner.type)
+			assert(init.type === Ed25519SignatureScheme.type)
 			assert(init.privateKey.length === 32)
 			this.#privateKey = init.privateKey
 		}
 
 		const publicKey = ed25519.getPublicKey(this.#privateKey)
-		this.uri = encodeURI(Ed25519DelegateSigner.type, publicKey)
+		this.uri = encodeURI(Ed25519SignatureScheme.type, publicKey)
 	}
 
 	public sign(message: Message<Payload>, options: { codec?: string } = {}): Signature {
-		const codec = options.codec ?? Ed25519DelegateSigner.cborCodec
-		if (codec === Ed25519DelegateSigner.cborCodec) {
+		const codec = options.codec ?? codecs.cbor
+		if (codec === codecs.cbor) {
 			const bytes = cbor.encode(message)
 			const signature = ed25519.sign(bytes, this.#privateKey)
 			return { codec, publicKey: this.uri, signature }
-		} else if (codec === Ed25519DelegateSigner.jsonCodec) {
+		} else if (codec === codecs.json) {
 			const bytes = json.encode(message)
 			const signature = ed25519.sign(bytes, this.#privateKey)
 			return { codec, publicKey: this.uri, signature }
 		} else {
-			throw new Error(`Ed25519Delegate only supports dag-cbor and dag-json codecs`)
+			throw new Error("Ed25519Delegate only supports dag-cbor and dag-json codecs")
 		}
 	}
 
-	public verify(signature: Signature, message: Message<Payload>) {
-		Ed25519DelegateSigner.verify(signature, message)
-	}
-
 	public export(): { type: string; privateKey: Uint8Array } {
-		return { type: Ed25519DelegateSigner.type, privateKey: this.#privateKey }
+		return { type: Ed25519SignatureScheme.type, privateKey: this.#privateKey }
 	}
 }
+
+export const Ed25519SignatureScheme = {
+	type: "ed25519",
+	codecs: [codecs.cbor, codecs.json],
+
+	verify<Payload = unknown>(signature: Signature, message: Message<Payload>) {
+		const { type, publicKey } = decodeURI(signature.publicKey)
+		assert(type === Ed25519SignatureScheme.type)
+		if (signature.codec === codecs.cbor) {
+			const bytes = cbor.encode(message)
+			assert(ed25519.verify(signature.signature, bytes, publicKey), "invalid ed25519 dag-cbor signature")
+		} else if (signature.codec === codecs.json) {
+			const bytes = json.encode(message)
+			assert(ed25519.verify(signature.signature, bytes, publicKey), "invalid ed25519 dag-json signature")
+		} else {
+			throw new Error("ed25519 only supports dag-cbor and dag-json codecs")
+		}
+	},
+
+	create: (init) => new Ed25519DelegateSigner(init),
+} satisfies SignatureScheme<any>

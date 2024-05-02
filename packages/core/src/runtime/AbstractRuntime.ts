@@ -97,7 +97,7 @@ export abstract class AbstractRuntime {
 
 				const signer = runtime.signers
 					.getAll()
-					.find((signer) => signer.codecs.includes(signature.codec) && signer.match(address))
+					.find((signer) => signer.scheme.codecs.includes(signature.codec) && signer.match(address))
 
 				assert(signer !== undefined, "no matching signer found")
 

@@ -10,6 +10,7 @@ import type {
 	Session,
 	Signer,
 	Awaitable,
+	SignatureScheme,
 } from "@canvas-js/interfaces"
 import { assert, signalInvalidType } from "@canvas-js/utils"
 
@@ -17,9 +18,8 @@ import target from "#target"
 import { deepEquals } from "./utils.js"
 import { SignerStore } from "./targets/index.js"
 
-export interface AbstractSessionSignerConfig<AuthorizationData> {
+export interface AbstractSessionSignerOptions {
 	sessionDuration?: number | null
-	createSigner: (init?: { type: string; privateKey: Uint8Array }) => Signer<Action | Session<AuthorizationData>>
 }
 
 export abstract class AbstractSessionSigner<AuthorizationData> implements SessionSigner<AuthorizationData> {
@@ -29,18 +29,18 @@ export abstract class AbstractSessionSigner<AuthorizationData> implements Sessio
 	protected readonly log: Logger
 
 	#signerStore: SignerStore<AuthorizationData>
-	#createSigner: (init?: { type: string; privateKey: Uint8Array }) => Signer<Action | Session<AuthorizationData>>
 
-	public constructor(public readonly key: string, config: AbstractSessionSignerConfig<AuthorizationData>) {
+	public constructor(
+		public readonly key: string,
+		public readonly scheme: SignatureScheme<Action | Session<AuthorizationData>>,
+		options: AbstractSessionSignerOptions = {},
+	) {
 		this.log = logger(`canvas:${key}`)
-		this.#signerStore = target.getSignerStore<AuthorizationData>(config)
-		this.#createSigner = config.createSigner
-		this.sessionDuration = config.sessionDuration ?? null
+		this.#signerStore = target.getSignerStore<AuthorizationData>(scheme)
+		this.sessionDuration = options.sessionDuration ?? null
 	}
 
-	public abstract codecs: string[]
 	public abstract match: (address: string) => boolean
-	public abstract verify: (signature: Signature, message: Message<Action | Session<AuthorizationData>>) => void
 	public abstract verifySession(topic: string, session: Session<AuthorizationData>): Awaitable<void>
 
 	public abstract getAddress(): Awaitable<string>
@@ -52,7 +52,7 @@ export abstract class AbstractSessionSigner<AuthorizationData> implements Sessio
 	}
 
 	public newDelegateSigner(topic: string, address: string) {
-		const signer = this.#createSigner()
+		const signer = this.scheme.create()
 		this.#signerStore.set(topic, address, signer)
 		return signer
 	}
@@ -81,7 +81,7 @@ export abstract class AbstractSessionSigner<AuthorizationData> implements Sessio
 
 		if (options.fromCache) return Promise.reject()
 
-		const signer = await this.#createSigner()
+		const signer = await this.scheme.create()
 		this.log("created new signer with public key %s", signer.uri)
 
 		this.log("creating new session for %s", address)
@@ -147,7 +147,7 @@ export abstract class AbstractSessionSigner<AuthorizationData> implements Sessio
 		}
 
 		const { type, privateKey, session } = json.parse<{ session: Session; type: string; privateKey: Uint8Array }>(value)
-		const signer = this.#createSigner({ type, privateKey })
+		const signer = this.scheme.create({ type, privateKey })
 		this.#sessionCache.set(address, { session, signer })
 		return { session, signer }
 	}

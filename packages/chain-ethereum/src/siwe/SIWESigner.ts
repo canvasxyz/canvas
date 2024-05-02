@@ -2,7 +2,7 @@ import { Wallet, verifyMessage, hexlify, getBytes } from "ethers"
 import * as siwe from "siwe"
 
 import type { Session, AbstractSessionData } from "@canvas-js/interfaces"
-import { AbstractSessionSigner, Ed25519DelegateSigner } from "@canvas-js/signatures"
+import { AbstractSessionSigner, Ed25519DelegateSigner, Ed25519SignatureScheme } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
 import type { SIWESessionData, SIWEMessage } from "./types.js"
@@ -26,17 +26,15 @@ export interface SIWESignerInit {
 }
 
 export class SIWESigner extends AbstractSessionSigner<SIWESessionData> {
-	public readonly codecs = [Ed25519DelegateSigner.cborCodec, Ed25519DelegateSigner.jsonCodec]
 	public readonly match = (address: string) => addressPattern.test(address)
-	public readonly verify = Ed25519DelegateSigner.verify
 
 	public readonly key: string
 	public readonly chainId: number
 
 	#signer: AbstractSigner
 
-	public constructor(init: SIWESignerInit = {}) {
-		super("chain-ethereum", { createSigner: (init) => new Ed25519DelegateSigner(init) })
+	public constructor({ sessionDuration, ...init }: SIWESignerInit = {}) {
+		super("chain-ethereum", Ed25519SignatureScheme, { sessionDuration })
 
 		this.#signer = init.signer ?? Wallet.createRandom()
 		this.chainId = init.chainId ?? 1
