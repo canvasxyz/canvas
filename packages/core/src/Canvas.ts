@@ -306,7 +306,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 				// check that a session for the delegate signer exists in the log and hasn't expired
 				let existingSessionId: string | null = null
 				if (delegateSigner !== null) {
-					existingSessionId = await this.getSession({ address, publicKey: delegateSigner.uri, timestamp })
+					existingSessionId = await this.getSession({ address, publicKey: delegateSigner.publicKey, timestamp })
 				}
 
 				// if the delegate signer doesn't exist, or if the session expired,
@@ -317,7 +317,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 					const session = await sessionSigner.newSession({
 						topic: this.topic,
 						address,
-						publicKey: delegateSigner.uri,
+						publicKey: delegateSigner.publicKey,
 						timestamp,
 						duration: sessionSigner.sessionDuration,
 					})

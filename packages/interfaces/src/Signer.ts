@@ -12,7 +12,7 @@ export interface SignatureScheme<Payload = unknown> {
 export interface Signer<Payload = unknown> {
 	scheme: SignatureScheme<Payload>
 
-	uri: string // did:key URI
+	publicKey: string // did:key URI
 
 	sign(message: Message<Payload>, options?: { codec?: string }): Awaitable<Signature>
 

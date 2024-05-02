@@ -64,7 +64,7 @@ export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712Se
 	} satisfies Record<string, TypedDataField[]>
 
 	public readonly scheme: SignatureScheme<Action | Session<Eip712SessionData>> = Secp256k1SignatureScheme
-	public readonly uri: string
+	public readonly publicKey: string
 
 	readonly #wallet: BaseWallet
 
@@ -77,7 +77,7 @@ export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712Se
 		}
 
 		const publicKey = getBytes(this.#wallet.signingKey.compressedPublicKey)
-		this.uri = encodeURI(Secp256k1SignatureScheme.type, publicKey)
+		this.publicKey = encodeURI(Secp256k1SignatureScheme.type, publicKey)
 	}
 
 	public async sign(message: Message<Action | Session<Eip712SessionData>>): Promise<Signature> {
@@ -103,11 +103,11 @@ export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712Se
 				},
 			)
 
-			return { codec: codecs.action, publicKey: this.uri, signature: getBytes(signature) }
+			return { codec: codecs.action, publicKey: this.publicKey, signature: getBytes(signature) }
 		} else if (payload.type === "session") {
 			const { address } = parseAddress(payload.address)
 
-			assert(payload.publicKey === this.uri)
+			assert(payload.publicKey === this.publicKey)
 			const { type, publicKey: publicKeyBytes } = decodeURI(payload.publicKey)
 			assert(type === Secp256k1SignatureScheme.type)
 
@@ -124,7 +124,7 @@ export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712Se
 					blockhash: payload.blockhash ?? "", // TODO: consider making blockhash mandatory for EIP-712?
 				},
 			})
-			return { codec: codecs.session, publicKey: this.uri, signature: getBytes(signature) }
+			return { codec: codecs.session, publicKey: this.publicKey, signature: getBytes(signature) }
 		} else {
 			signalInvalidType(payload)
 		}

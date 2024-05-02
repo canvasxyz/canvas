@@ -22,7 +22,7 @@ const address = agent.session!.did
 const topic = randomUUID()
 
 const signer = new Ed25519DelegateSigner()
-const message = ATPSigner.createAuthenticationMessage(topic, signer.uri, address)
+const message = ATPSigner.createAuthenticationMessage(topic, signer.publicKey, address)
 const { uri, cid } = await agent.post({ text: message })
 
 const prefix = `at://${address}/`
@@ -34,7 +34,7 @@ await agent.deletePost(uri)
 
 const testFixture = {
 	address,
-	signingKey: signer.uri,
+	signingKey: signer.publicKey,
 	topic,
 	archives: {
 		[`test/archives/${rkey}.car`]: uri,

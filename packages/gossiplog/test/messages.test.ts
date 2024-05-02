@@ -18,9 +18,9 @@ testPlatforms("append messages", async (t, openGossipLog) => {
 	const { id: idC } = await log.append("baz", { signer })
 
 	t.deepEqual(await collect(log.iterate(), getPublicKey), [
-		[idA, signer.uri, { topic, clock: 1, parents: [], payload: "foo" }],
-		[idB, signer.uri, { topic, clock: 2, parents: [idA], payload: "bar" }],
-		[idC, signer.uri, { topic, clock: 3, parents: [idB], payload: "baz" }],
+		[idA, signer.publicKey, { topic, clock: 1, parents: [], payload: "foo" }],
+		[idB, signer.publicKey, { topic, clock: 2, parents: [idA], payload: "bar" }],
+		[idC, signer.publicKey, { topic, clock: 3, parents: [idB], payload: "baz" }],
 	])
 })
 
@@ -38,9 +38,9 @@ testPlatforms("insert concurrent messages", async (t, openGossipLog) => {
 	const { id: idC } = await log.insert(signer.sign(c), c)
 
 	const entries: [string, string, Message<string>][] = [
-		[idA, signer.uri, a],
-		[idB, signer.uri, b],
-		[idC, signer.uri, c],
+		[idA, signer.publicKey, a],
+		[idB, signer.publicKey, b],
+		[idC, signer.publicKey, c],
 	]
 
 	entries.sort(([a], [b]) => (a < b ? -1 : b < a ? 1 : 0))
@@ -62,9 +62,9 @@ testPlatforms("append to multiple parents", async (t, openGossipLog) => {
 	const { id: idC } = await log.insert(signer.sign(c), c)
 
 	const entries: [string, string, Message<string>][] = [
-		[idA, signer.uri, a],
-		[idB, signer.uri, b],
-		[idC, signer.uri, c],
+		[idA, signer.publicKey, a],
+		[idB, signer.publicKey, b],
+		[idC, signer.publicKey, c],
 	]
 
 	entries.sort(([a], [b]) => (a < b ? -1 : b < a ? 1 : 0))
@@ -73,5 +73,5 @@ testPlatforms("append to multiple parents", async (t, openGossipLog) => {
 	const { id } = await log.append(payload, { signer })
 	const [_, message] = await log.get(id)
 	t.deepEqual(message, { topic, clock: 2, parents: entries.map(([id]) => id), payload })
-	t.deepEqual(await collect(log.iterate(), getPublicKey), [...entries, [id, signer.uri, message]])
+	t.deepEqual(await collect(log.iterate(), getPublicKey), [...entries, [id, signer.publicKey, message]])
 })

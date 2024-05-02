@@ -18,7 +18,7 @@ export const codecs = {
  * - dag-json
  */
 export class Ed25519DelegateSigner<Payload = unknown> implements Signer<Payload> {
-	public readonly uri: string
+	public readonly publicKey: string
 	public readonly scheme: SignatureScheme<any> = Ed25519SignatureScheme
 
 	readonly #privateKey: Uint8Array
@@ -36,7 +36,7 @@ export class Ed25519DelegateSigner<Payload = unknown> implements Signer<Payload>
 		}
 
 		const publicKey = ed25519.getPublicKey(this.#privateKey)
-		this.uri = encodeURI(Ed25519SignatureScheme.type, publicKey)
+		this.publicKey = encodeURI(Ed25519SignatureScheme.type, publicKey)
 	}
 
 	public sign(message: Message<Payload>, options: { codec?: string } = {}): Signature {
@@ -44,11 +44,11 @@ export class Ed25519DelegateSigner<Payload = unknown> implements Signer<Payload>
 		if (codec === codecs.cbor) {
 			const bytes = cbor.encode(message)
 			const signature = ed25519.sign(bytes, this.#privateKey)
-			return { codec, publicKey: this.uri, signature }
+			return { codec, publicKey: this.publicKey, signature }
 		} else if (codec === codecs.json) {
 			const bytes = json.encode(message)
 			const signature = ed25519.sign(bytes, this.#privateKey)
-			return { codec, publicKey: this.uri, signature }
+			return { codec, publicKey: this.publicKey, signature }
 		} else {
 			throw new Error("Ed25519Delegate only supports dag-cbor and dag-json codecs")
 		}

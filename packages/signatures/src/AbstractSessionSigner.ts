@@ -82,14 +82,14 @@ export abstract class AbstractSessionSigner<AuthorizationData> implements Sessio
 		if (options.fromCache) return Promise.reject()
 
 		const signer = await this.scheme.create()
-		this.log("created new signer with public key %s", signer.uri)
+		this.log("created new signer with public key %s", signer.publicKey)
 
 		this.log("creating new session for %s", address)
 		const timestamp = options.timestamp ?? Date.now()
 		const session = await this.newSession({
 			topic,
 			address,
-			publicKey: signer.uri,
+			publicKey: signer.publicKey,
 			timestamp,
 			duration: this.sessionDuration,
 		})

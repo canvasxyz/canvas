@@ -84,7 +84,7 @@ async function createSession(
 	const session = await sessionSigner.newSession({
 		topic,
 		address,
-		publicKey: delegateSigner.uri,
+		publicKey: delegateSigner.publicKey,
 		timestamp: Date.now(),
 		duration: null,
 	})
