@@ -10,9 +10,12 @@ import dotenv from "dotenv"
 
 dotenv.config()
 
-const { PEER_ID, BOOTSTRAP_LIST, LISTEN, ANNOUNCE, DISCOVERY_TOPIC, DATA_DIRECTORY, RESTART_AT, PORT, MAX_TOPICS } = process.env
+const { PEER_ID, BOOTSTRAP_LIST, LISTEN, ANNOUNCE, DISCOVERY_TOPIC, DATA_DIRECTORY, RESTART_AT, PORT, MAX_TOPICS } =
+	process.env
 
-export const maxTopics = 30 ?? MAX_TOPICS
+export const maxTopics = 90 ?? MAX_TOPICS
+
+console.log("[replication-server] Initializing with max topics:", maxTopics)
 
 export const port = parseInt(PORT ?? "8000")
 
