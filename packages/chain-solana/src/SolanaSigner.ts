@@ -4,7 +4,7 @@ import { base58btc } from "multiformats/bases/base58"
 import { ed25519 } from "@noble/curves/ed25519"
 
 import type { Session, AbstractSessionData } from "@canvas-js/interfaces"
-import { AbstractSessionSigner, Ed25519DelegateSigner, Ed25519SignatureScheme } from "@canvas-js/signatures"
+import { AbstractSessionSigner, Ed25519SignatureScheme } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
 import { validateSessionData, addressPattern, parseAddress } from "./utils.js"

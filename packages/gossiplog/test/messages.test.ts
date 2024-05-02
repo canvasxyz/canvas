@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto"
 import { nanoid } from "nanoid"
 
 import { Signature, Message } from "@canvas-js/interfaces"
-import { Ed25519DelegateSigner } from "@canvas-js/signatures"
+import { Ed25519SignatureScheme } from "@canvas-js/signatures"
 
 import { collect, getPublicKey, testPlatforms } from "./utils.js"
 
@@ -12,7 +12,7 @@ testPlatforms("append messages", async (t, openGossipLog) => {
 	const topic = randomUUID()
 	const log = await openGossipLog(t, { topic, apply })
 
-	const signer = new Ed25519DelegateSigner()
+	const signer = Ed25519SignatureScheme.create()
 	const { id: idA } = await log.append("foo", { signer })
 	const { id: idB } = await log.append("bar", { signer })
 	const { id: idC } = await log.append("baz", { signer })
@@ -28,7 +28,7 @@ testPlatforms("insert concurrent messages", async (t, openGossipLog) => {
 	const topic = randomUUID()
 	const log = await openGossipLog(t, { topic, apply })
 
-	const signer = new Ed25519DelegateSigner()
+	const signer = Ed25519SignatureScheme.create()
 	const a = { topic, clock: 1, parents: [], payload: nanoid() }
 	const b = { topic, clock: 1, parents: [], payload: nanoid() }
 	const c = { topic, clock: 1, parents: [], payload: nanoid() }
@@ -52,7 +52,7 @@ testPlatforms("append to multiple parents", async (t, openGossipLog) => {
 	const topic = randomUUID()
 	const log = await openGossipLog(t, { topic, apply })
 
-	const signer = new Ed25519DelegateSigner()
+	const signer = Ed25519SignatureScheme.create()
 	const a = { topic, clock: 1, parents: [], payload: nanoid() }
 	const b = { topic, clock: 1, parents: [], payload: nanoid() }
 	const c = { topic, clock: 1, parents: [], payload: nanoid() }

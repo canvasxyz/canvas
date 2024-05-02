@@ -6,7 +6,7 @@ import { Logger, logger } from "@libp2p/logger"
 import { bytesToHex as hex } from "@noble/hashes/utils"
 
 import type { Signature, Signer, Message, Awaitable } from "@canvas-js/interfaces"
-import { Ed25519DelegateSigner } from "@canvas-js/signatures"
+import { Ed25519SignatureScheme } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
 import { Mempool } from "./Mempool.js"
@@ -95,7 +95,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 		this.topic = init.topic
 		this.indexAncestors = init.indexAncestors ?? false
-		this.signer = init.signer ?? new Ed25519DelegateSigner<Payload>()
+		this.signer = init.signer ?? Ed25519SignatureScheme.create()
 
 		this.#apply = init.apply
 		this.#validatePayload = init.validatePayload ?? ((payload: unknown): payload is Payload => true)

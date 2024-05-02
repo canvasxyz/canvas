@@ -77,5 +77,5 @@ export const Ed25519SignatureScheme = {
 		}
 	},
 
-	create: (init) => new Ed25519DelegateSigner(init),
+	create: (init?: { type: string; privateKey: Uint8Array }) => new Ed25519DelegateSigner(init),
 } satisfies SignatureScheme<any>

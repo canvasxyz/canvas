@@ -5,7 +5,7 @@ import { ethers } from "ethers"
 import pg from "pg"
 
 import type { Message } from "@canvas-js/interfaces"
-import { Ed25519DelegateSigner } from "@canvas-js/signatures"
+import { Ed25519SignatureScheme } from "@canvas-js/signatures"
 import { SIWESigner, Eip712Signer } from "@canvas-js/chain-ethereum"
 import { Canvas } from "@canvas-js/core"
 
@@ -136,7 +136,7 @@ test("insert a message created by another app", async (t) => {
 test("reject an invalid message", async (t) => {
 	const app = await init(t)
 
-	const signer = new Ed25519DelegateSigner()
+	const signer = Ed25519SignatureScheme.create()
 	const invalidMessage: Message<{ type: "fjdskl" }> = {
 		topic: app.topic,
 		clock: 1,

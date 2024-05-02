@@ -12,7 +12,7 @@ import { bytesToHex } from "@noble/hashes/utils"
 import { Key, Node } from "@canvas-js/okra"
 
 import type { Signature, Signer, Message } from "@canvas-js/interfaces"
-import { Ed25519DelegateSigner } from "@canvas-js/signatures"
+import { Ed25519SignatureScheme } from "@canvas-js/signatures"
 
 import { AbstractGossipLog, GossipLogInit, encodeId, decodeClock } from "@canvas-js/gossiplog"
 import { GossipLog as GossipLogNode } from "@canvas-js/gossiplog/node"
@@ -125,7 +125,7 @@ export async function appendChain(
 	n: number,
 	options: { signer?: Signer<string> } = {},
 ): Promise<string[]> {
-	const signer = options.signer ?? new Ed25519DelegateSigner()
+	const signer = options.signer ?? Ed25519SignatureScheme.create()
 
 	const [clock] = decodeClock(encodeId(rootId))
 

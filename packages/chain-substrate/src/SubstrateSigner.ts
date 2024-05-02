@@ -7,7 +7,7 @@ import { cryptoWaitReady, decodeAddress } from "@polkadot/util-crypto"
 import { KeypairType } from "@polkadot/util-crypto/types"
 
 import type { Session, AbstractSessionData } from "@canvas-js/interfaces"
-import { AbstractSessionSigner, Ed25519DelegateSigner, Ed25519SignatureScheme } from "@canvas-js/signatures"
+import { AbstractSessionSigner, Ed25519SignatureScheme } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
 import type { SubstrateMessage, SubstrateSessionData } from "./types.js"

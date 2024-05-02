@@ -5,7 +5,7 @@ import * as ATP from "@atproto/api"
 const BskyAgent = ATP.BskyAgent ?? ATP["default"].BskyAgent
 
 import type { Session, AbstractSessionData } from "@canvas-js/interfaces"
-import { AbstractSessionSigner, Ed25519DelegateSigner, Ed25519SignatureScheme } from "@canvas-js/signatures"
+import { AbstractSessionSigner, Ed25519SignatureScheme } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
 import { unpackArchive } from "./mst.js"
