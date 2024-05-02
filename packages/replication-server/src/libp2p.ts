@@ -66,7 +66,13 @@ export const options: Libp2pOptions<ServiceMap> = {
 	connectionEncryption: [noise()],
 	metrics: prometheusMetrics(),
 	services: {
-		identify: identifyService({ protocolPrefix: "canvas" }),
+		identify: identifyService({
+			protocolPrefix: "canvas",
+			maxInboundStreams: 256,
+			maxOutboundStreams: 64,
+			maxPushIncomingStreams: 64,
+			maxPushOutgoingStreams: 32,
+		}),
 
 		ping: pingService({
 			protocolPrefix: "canvas",
@@ -100,7 +106,9 @@ export const options: Libp2pOptions<ServiceMap> = {
 			},
 		}),
 
-		fetch: fetchService({ protocolPrefix: "canvas" }),
+		fetch: fetchService({
+			protocolPrefix: "canvas",
+		}),
 		gossiplog: gossiplog({}),
 		discovery: discovery({
 			discoveryTopic: discoveryTopic,
