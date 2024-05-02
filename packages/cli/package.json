@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/cli",
-  "version": "0.8.27-patch.14",
+  "version": "0.8.27-patch.15",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "type": "module",
   "main": "dist/index.js",
@@ -11,13 +11,13 @@
     "canvas": "dist/index.js"
   },
   "dependencies": {
-    "@canvas-js/chain-atp": "0.8.27-patch.14",
-    "@canvas-js/chain-cosmos": "0.8.27-patch.14",
-    "@canvas-js/chain-ethereum": "0.8.27-patch.14",
-    "@canvas-js/chain-solana": "0.8.27-patch.14",
-    "@canvas-js/chain-substrate": "0.8.27-patch.14",
-    "@canvas-js/core": "0.8.27-patch.14",
-    "@canvas-js/interfaces": "0.8.27-patch.14",
+    "@canvas-js/chain-atp": "0.8.27-patch.15",
+    "@canvas-js/chain-cosmos": "0.8.27-patch.15",
+    "@canvas-js/chain-ethereum": "0.8.27-patch.15",
+    "@canvas-js/chain-solana": "0.8.27-patch.15",
+    "@canvas-js/chain-substrate": "0.8.27-patch.15",
+    "@canvas-js/core": "0.8.27-patch.15",
+    "@canvas-js/interfaces": "0.8.27-patch.15",
     "@ipld/dag-json": "^10.1.5",
     "@libp2p/peer-id": "^4.0.2",
     "@multiformats/multiaddr": "^12.1.11",
