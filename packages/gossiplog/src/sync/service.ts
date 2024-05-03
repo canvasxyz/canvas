@@ -188,7 +188,8 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 
 			this.log("closed incoming stream %s from peer %p", stream.id, peerId)
 		} catch (err) {
-			this.log.error("aborting incoming stream %s from peer %p: %O", stream.id, peerId, err)
+			const message = (err as any)?.message
+			this.log.error("aborting incoming stream %s from peer %p: %s", stream.id, peerId, message)
 			if (err instanceof Error) {
 				stream.abort(err)
 			} else {
@@ -237,9 +238,10 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 
 				for (let n = 0; n < SYNC_RETRY_LIMIT; n++) {
 					try {
+						this.log("dialing %p:", peerId)
 						const stream = await this.dial(peerId)
 						if (stream === null) {
-							throw new Error("failed to open stream")
+							throw new Error("failed to open stream with " + peerId.toString())
 						}
 
 						return await this.sync(peerId, stream)
