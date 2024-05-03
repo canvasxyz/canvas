@@ -9,9 +9,8 @@ import type { Signature, Message, Signer } from "@canvas-js/interfaces"
 import { assert } from "@canvas-js/utils"
 
 import { AbstractGossipLog, GossipLogEvents } from "./AbstractGossipLog.js"
-
-import { decodeId } from "./schema.js"
 import { SyncService, SyncOptions } from "./sync/service.js"
+import { decodeId } from "./schema.js"
 
 export type GossipLogServiceComponents = {
 	peerId: PeerId
@@ -133,7 +132,7 @@ export class GossipLogService extends TypedEventEmitter<GossipLogEvents<unknown>
 	public async append<Payload>(
 		topic: string,
 		payload: Payload,
-		options: { signer?: Pick<Signer<Payload>, "sign" | "verify"> } = {},
+		options: { signer?: Signer<Payload> } = {},
 	): Promise<{ id: string; signature: Signature; message: Message<Payload>; recipients: Promise<PeerId[]> }> {
 		const messageLog = this.#messageLogs.get(topic) as AbstractGossipLog<Payload> | undefined
 		assert(messageLog !== undefined, "no subscription for topic")

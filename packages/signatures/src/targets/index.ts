@@ -1,10 +1,4 @@
-import { Action, Session, Signer } from "@canvas-js/interfaces"
-
-export interface SessionStore<AuthorizationData> {
-	get(topic: string, address: string): { session: Session; signer: Signer<Action | Session<AuthorizationData>> } | null
-	set(topic: string, address: string, session: Session, signer: Signer<Action | Session<AuthorizationData>>): void
-	clear(topic: string): void
-}
+import type { Action, Session, SignatureScheme, Signer } from "@canvas-js/interfaces"
 
 export interface PlatformTarget {
 	get(key: string): string | null

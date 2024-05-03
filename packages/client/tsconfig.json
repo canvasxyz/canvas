@@ -2,11 +2,10 @@
 	"include": ["src"],
 	"extends": "../../tsconfig.base.json",
 	"compilerOptions": {
-		"rootDir": "src",
-		"outDir": "lib",
 		"module": "Node16",
 		"moduleResolution": "Node16",
-		"jsx": "react"
+		"rootDir": "src",
+		"outDir": "lib"
 	},
-	"references": [{ "path": "../gossiplog" }, { "path": "../interfaces" }]
+	"references": [{ "path": "../interfaces" }, { "path": "../signatures" }, { "path": "../utils" }]
 }

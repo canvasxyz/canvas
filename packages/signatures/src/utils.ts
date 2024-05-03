@@ -22,7 +22,7 @@ export function decodeURI(uri: string): { type: "ed25519" | "secp256k1"; publicK
 	return { type, publicKey: bytes.subarray(codeLength) }
 }
 
-export function encodeURI(type: "ed25519" | "secp256k1", publicKey: Uint8Array) {
+export function encodeURI(type: string, publicKey: Uint8Array) {
 	const { code } = didKeyTypes.find((keyType) => keyType.type === type) ?? {}
 	assert(code !== undefined, "invalid did:key type")
 	const encodingLength = varint.encodingLength(code)

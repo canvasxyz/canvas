@@ -7,9 +7,9 @@ import { all } from "@libp2p/websockets/filters"
 import { noise } from "@chainsafe/libp2p-noise"
 import { mplex } from "@libp2p/mplex"
 import { bootstrap } from "@libp2p/bootstrap"
-import { prometheusMetrics } from "@libp2p/prometheus-metrics"
 import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { kadDHT } from "@libp2p/kad-dht"
+import { fetch } from "@libp2p/fetch"
 
 import { Multiaddr } from "@multiformats/multiaddr"
 
@@ -20,7 +20,6 @@ import { bootstrapList, listen, announce, peerId } from "./config.js"
 const { MIN_CONNECTIONS, MAX_CONNECTIONS, SERVICE_NAME } = process.env
 const serviceNameHash = sha256(SERVICE_NAME ?? new Uint8Array([]))
 
-// export const topic = SERVICE_NAME === "bootstrap" || serviceNameHash[0] < 128 ? "test-network-example" : null
 export const topic = SERVICE_NAME !== "bootstrap" && serviceNameHash[0] < 128 ? "test-network-example" : null
 
 let minConnections: number | undefined = undefined
@@ -28,6 +27,8 @@ let maxConnections: number | undefined = undefined
 
 if (MIN_CONNECTIONS !== undefined) minConnections = parseInt(MIN_CONNECTIONS)
 if (MAX_CONNECTIONS !== undefined) maxConnections = parseInt(MAX_CONNECTIONS)
+
+export const getTopicDHTProtocol = (topic: string) => `/canvas/kad/${topic}/1.0.0`
 
 export const libp2p = await createLibp2p({
 	peerId: peerId,
@@ -44,20 +45,19 @@ export const libp2p = await createLibp2p({
 
 	streamMuxers: [mplex()],
 	connectionEncryption: [noise()],
-	// metrics: prometheusMetrics(),
 	services: {
 		identify: identifyService({ protocolPrefix: "canvas" }),
-		globalDHT: kadDHT({
-			kBucketSize: 2,
-			protocol: "/canvas/kad/1.0.0",
-		}),
+		// globalDHT: kadDHT({
+		// 	kBucketSize: 2,
+		// 	protocol: "/canvas/kad/1.0.0",
+		// }),
 
-		...(topic === null ? {} : { topicDHT: kadDHT({ protocol: `/canvas/kad/${topic}/1.0.0` }) }),
+		...(topic === null ? {} : { topicDHT: kadDHT({ protocol: getTopicDHTProtocol(topic) }) }),
 
 		pubsub: gossipsub({
 			fallbackToFloodsub: false,
 			allowPublishToZeroPeers: true,
-			globalSignaturePolicy: "StrictNoSign",
+			globalSignaturePolicy: "StrictSign",
 			metricsTopicStrToLabel: new Map<string, string>(topic ? [[topic, topic]] : []),
 			metricsRegister: {
 				gauge({}) {
@@ -82,6 +82,7 @@ export const libp2p = await createLibp2p({
 			},
 		}),
 
+		fetch: fetch({ protocolPrefix: "canvas" }),
 		gossiplog: gossiplog({}),
 	},
 })

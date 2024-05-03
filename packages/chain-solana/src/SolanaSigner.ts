@@ -1,11 +1,10 @@
 import solw3 from "@solana/web3.js"
 import { base58btc } from "multiformats/bases/base58"
-import * as json from "@ipld/dag-json"
 
 import { ed25519 } from "@noble/curves/ed25519"
 
-import type { Session } from "@canvas-js/interfaces"
-import { AbstractSessionData, AbstractSessionSigner, Ed25519DelegateSigner } from "@canvas-js/signatures"
+import type { Awaitable, Session, AbstractSessionData } from "@canvas-js/interfaces"
+import { AbstractSessionSigner, ed25519 as Ed25519SignatureScheme } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
 import { validateSessionData, addressPattern, parseAddress } from "./utils.js"
@@ -32,7 +31,7 @@ Resources:
 // https://github.com/solana-labs/wallet-adapter/commit/5a274e0a32c55d4376d63a802f0d512947b087af
 interface SolanaWindowSigner {
 	publicKey?: solw3.PublicKey
-	signMessage(message: Uint8Array): Promise<{ signature: Uint8Array }>
+	signMessage(message: Uint8Array): Awaitable<{ signature: Uint8Array }>
 }
 
 export interface SolanaSignerInit {
@@ -47,18 +46,13 @@ type GenericSigner = {
 }
 
 export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
-	public readonly codecs = [Ed25519DelegateSigner.cborCodec, Ed25519DelegateSigner.jsonCodec]
 	public readonly match = (chain: string) => addressPattern.test(chain)
-	public readonly verify = Ed25519DelegateSigner.verify
-
-	public readonly key: string
-	public readonly sessionDuration: number | null
 	public readonly chainId: string
 
 	#signer: GenericSigner
 
 	public constructor({ signer, sessionDuration, chainId }: SolanaSignerInit = {}) {
-		super("chain-solana", { createSigner: (init) => new Ed25519DelegateSigner(init), defaultDuration: sessionDuration })
+		super("chain-solana", Ed25519SignatureScheme, { sessionDuration })
 
 		if (signer) {
 			if (!signer.publicKey) {
@@ -83,8 +77,6 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 
 		// 5ey... is the solana mainnet genesis hash
 		this.chainId = chainId ?? "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
-		this.sessionDuration = sessionDuration ?? null
-		this.key = `SolanaSigner-${signer ? "extension" : "burner"}`
 	}
 
 	public verifySession(topic: string, session: Session) {
@@ -108,12 +100,12 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 		assert(valid, "invalid signature")
 	}
 
-	protected getAddress(): string {
+	public getAddress(): string {
 		const walletAddress = this.#signer.address
 		return `solana:${this.chainId}:${walletAddress}`
 	}
 
-	protected async newSession(data: AbstractSessionData): Promise<Session<SolanaSessionData>> {
+	public async authorize(data: AbstractSessionData): Promise<Session<SolanaSessionData>> {
 		const { topic, address, publicKey, timestamp, duration } = data
 
 		const issuedAt = new Date(timestamp)
