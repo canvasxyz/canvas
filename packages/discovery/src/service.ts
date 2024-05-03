@@ -60,6 +60,7 @@ export interface DiscoveryServiceInit {
 
 	trackAllPeers?: boolean
 	isUniversalReplication?: boolean
+	bannedTopics?: () => string[]
 }
 
 export type PeerEnv = "browser" | "server"
@@ -135,6 +136,7 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 	private readonly signers: SignerCache | null
 	private readonly appTopic: string | null
 	private readonly trackAllPeers: boolean // fetch and emit presence events for all peers on the discovery topic
+	private readonly bannedTopics: () => string[]
 	private readonly isUniversalReplication: boolean
 
 	readonly #discoveryQueue = new PQueue({ concurrency: 1 })
@@ -164,6 +166,7 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 		this.signers = init.signers ?? null
 		this.appTopic = init.appTopic ?? null
 		this.trackAllPeers = init.trackAllPeers ?? false
+		this.bannedTopics = init.bannedTopics ?? (() => [])
 		this.isUniversalReplication = init.isUniversalReplication ?? false
 	}
 
@@ -229,8 +232,10 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 				const { peerId, multiaddrs } = await this.openPeerRecord(peerRecordEnvelope)
 				const connections = this.components.connectionManager.getConnections(peerId)
 
+				const filteredTopics = topics.filter((t) => this.bannedTopics().indexOf(t) === -1)
+
 				// emit an active discovery event for peers on other topics
-				this.log("received heartbeat from %s with topics %o", peerId, topics)
+				this.log("received heartbeat from %s with topics %o", peerId, filteredTopics)
 				this.dispatchEvent(
 					new CustomEvent("peer:topics", {
 						detail: {
@@ -239,14 +244,14 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 							multiaddrs,
 							address,
 							env,
-							topics,
+							topics: filteredTopics,
 							isUniversalReplication: isUniversalReplication ?? false,
 						},
 					}),
 				)
-				this.handlePeerEvent(peerId, multiaddrs, env, address, topics, "active")
+				this.handlePeerEvent(peerId, multiaddrs, env, address, filteredTopics, "active")
 
-				const topicIntersection = this.pubsub.getTopics().filter((topic) => topics.includes(topic))
+				const topicIntersection = this.pubsub.getTopics().filter((topic) => filteredTopics.includes(topic))
 				if (topicIntersection.length === 0) {
 					return
 				}
@@ -348,14 +353,14 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 
 		const env = typeof window === "object" ? "browser" : "server"
 
-		const filteredTopics = topics.filter((t) => topicsLastActive[t] !== 0)
+		const filteredTopics = topics.filter((t) => this.bannedTopics().indexOf(t) === -1)
 		const filteredTopicsLastActive = Object.fromEntries(
-			Object.entries(topicsLastActive).filter(([topic, lastActive]) => lastActive !== 0),
+			Object.entries(topicsLastActive).filter(([topic, lastActive]) => this.bannedTopics().indexOf(topic) === -1),
 		)
 
 		const payload = {
-			topics: topics.length <= 50 ? topics : filteredTopics,
-			topicsLastActive: topics.length <= 50 ? topicsLastActive : filteredTopicsLastActive,
+			topics: filteredTopics,
+			topicsLastActive: filteredTopicsLastActive,
 			address,
 			env,
 			peerRecordEnvelope: envelope.marshal(),
