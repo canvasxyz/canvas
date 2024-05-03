@@ -33,7 +33,7 @@ export class Client {
 		if (session === null || delegateSigner === null) {
 			;[session, delegateSigner] = await this.signer.newSession(this.topic)
 
-			const sessionId = await this.postMessage(delegateSigner, {
+			const sessionId = await this.insert(delegateSigner, {
 				topic: this.topic,
 				clock: head.clock,
 				parents: head.parents,
@@ -44,7 +44,7 @@ export class Client {
 			head.parents = [sessionId]
 		}
 
-		await this.postMessage(delegateSigner, {
+		await this.insert(delegateSigner, {
 			topic: this.topic,
 			clock: head.clock,
 			parents: head.parents,
@@ -52,10 +52,7 @@ export class Client {
 		})
 	}
 
-	private async postMessage(
-		delegateSigner: Signer<Action | Session>,
-		message: Message<Action | Session>,
-	): Promise<string> {
+	private async insert(delegateSigner: Signer<Action | Session>, message: Message<Action | Session>): Promise<string> {
 		const signature = await delegateSigner.sign(message)
 
 		const res = await fetch(`${this.host}/messages`, {
