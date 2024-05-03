@@ -12,13 +12,17 @@ import { Canvas } from "@canvas-js/core"
 import { options } from "./libp2p.js"
 import { port, metricsPort, restartAt, dataDirectory, discoveryTopic, maxTopics, sleepTimeout } from "./config.js"
 import { getAPI, getMetricsAPI } from "./api.js"
+import { initFinishedMatches } from "./indexer.js"
 
 export const apps = new Map<string, Canvas>()
 export const lastActive = new Map<string, number>()
+export const bannedApps = new Set<string>()
 
 const startQueue = new PQueue({ concurrency: 1, interval: 300, intervalCap: 1 })
 
 const libp2p = await createLibp2p(options)
+
+await initFinishedMatches()
 
 const topicsGauge = new client.Gauge({
 	name: "canvas_replication_server_topics",
@@ -66,6 +70,9 @@ libp2p.services.discovery.addEventListener("peer:topics", ({ detail: { topics, i
 
 		startQueue.add(async () => {
 			if (apps.has(appTopic)) {
+				return
+			}
+			if (bannedApps.has(appTopic)) {
 				return
 			}
 
