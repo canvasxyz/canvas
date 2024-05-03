@@ -39,6 +39,7 @@
     { "path": "./packages/hooks" },
     { "path": "./packages/templates" },
     { "path": "./packages/test-network" },
-    { "path": "./packages/utils" }
+    { "path": "./packages/utils" },
+    { "path": "./packages/network-explorer" }
   ]
 }
