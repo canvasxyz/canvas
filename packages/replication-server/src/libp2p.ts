@@ -2,8 +2,8 @@ import assert from "node:assert"
 
 import { Libp2pOptions } from "libp2p"
 import { PingService, ping as pingService } from "@libp2p/ping"
-import { Identify as IdentifyService, identify as identifyService } from "@libp2p/identify"
 import { Fetch as FetchService, fetch as fetchService } from "@libp2p/fetch"
+import { Identify as IdentifyService, identify as identifyService } from "./identify/index.js"
 
 import { WebSockets, WebSocketsSecure } from "@multiformats/multiaddr-matcher"
 
@@ -72,6 +72,7 @@ export const options: Libp2pOptions<ServiceMap> = {
 			maxOutboundStreams: 64,
 			maxPushIncomingStreams: 64,
 			maxPushOutgoingStreams: 32,
+			maxIdentifyMessageSize: 8192 * 4, // for incoming identify messages
 		}),
 
 		ping: pingService({
