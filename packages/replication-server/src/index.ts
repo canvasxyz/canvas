@@ -50,10 +50,6 @@ libp2p.services.discovery.addEventListener("peer:topics", ({ detail: { topics, i
 		if (!topic.startsWith(GossipLogService.topicPrefix)) {
 			continue
 		}
-		if (apps.size > maxTopics) {
-			console.error(`[replication-server] Received topic ${topic} but over max topics: ${apps.size}/${maxTopics}`)
-			return
-		}
 
 		const appTopic = topic.slice(GossipLogService.topicPrefix.length)
 		if (!topicPattern.test(appTopic)) {
@@ -62,6 +58,11 @@ libp2p.services.discovery.addEventListener("peer:topics", ({ detail: { topics, i
 		}
 
 		lastActive.set(appTopic, new Date().getTime())
+
+		if (apps.size > maxTopics && !apps.has(appTopic)) {
+			console.error(`[replication-server] Received topic ${topic} but over max topics: ${apps.size}/${maxTopics}`)
+			return
+		}
 
 		startQueue.add(async () => {
 			if (apps.has(appTopic)) {
