@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/templates",
-  "version": "0.8.27-patch.19",
+  "version": "0.8.27-patch.20",
   "type": "module",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "main": "lib/index.js",
@@ -12,6 +12,6 @@
     ".": "./lib/index.js"
   },
   "devDependencies": {
-    "@canvas-js/core": "0.8.27-patch.19"
+    "@canvas-js/core": "0.8.27-patch.20"
   }
 }

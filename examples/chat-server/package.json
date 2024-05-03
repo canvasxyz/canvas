@@ -1,12 +1,12 @@
 {
   "private": true,
   "name": "@canvas-js/example-chat-server",
-  "version": "0.8.27-patch.19",
+  "version": "0.8.27-patch.20",
   "type": "module",
   "scripts": {
     "dev": "canvas run --port 8080 --disableHistoryIndexing contract.canvas.js"
   },
   "dependencies": {
-    "@canvas-js/cli": "0.8.27-patch.19"
+    "@canvas-js/cli": "0.8.27-patch.20"
   }
 }
