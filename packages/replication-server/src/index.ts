@@ -3,6 +3,7 @@ import path from "node:path"
 
 import { createLibp2p } from "libp2p"
 import PQueue from "p-queue"
+import client from "prom-client"
 
 import { topicPattern } from "@canvas-js/gossiplog"
 import { GossipLogService } from "@canvas-js/gossiplog/service"
@@ -18,6 +19,18 @@ export const lastActive = new Map<string, number>()
 const startQueue = new PQueue({ concurrency: 1, interval: 300, intervalCap: 1 })
 
 const libp2p = await createLibp2p(options)
+
+const topicsGauge = new client.Gauge({
+	name: "canvas_replication_server_topics",
+	help: "canvas_replication_server_topics",
+	collect() {
+		this.set(apps.size)
+	},
+})
+const restartErrorsGauge = new client.Gauge({
+	name: "canvas_replication_server_restart_errors",
+	help: "canvas_replication_server_restart_errors",
+})
 
 libp2p.addEventListener("connection:open", ({ detail: connection }) => {
 	const addr = connection.remoteAddr.decapsulateCode(421).toString()
@@ -76,6 +89,7 @@ libp2p.services.discovery.addEventListener("peer:topics", ({ detail: { topics, i
 				lastActive.set(appTopic, new Date().getTime())
 			} catch (err) {
 				console.log("[replication-server] ERROR:", err)
+				restartErrorsGauge.inc()
 			}
 		})
 	}
