@@ -249,7 +249,7 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 						} else if (err instanceof SyncDeadlockError) {
 							this.log("started merkle sync concurrently with %p, retrying to break deadlock", peerId)
 						} else {
-							this.log.error("failed to sync with peer: %O", err)
+							this.log.error("failed to sync with peer: %O")
 						}
 
 						if (this.#controller.signal.aborted) {
