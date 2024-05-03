@@ -348,9 +348,14 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 
 		const env = typeof window === "object" ? "browser" : "server"
 
+		const filteredTopics = topics.filter((t) => topicsLastActive[t] !== 0)
+		const filteredTopicsLastActive = Object.fromEntries(
+			Object.entries(topicsLastActive).filter(([topic, lastActive]) => lastActive !== 0),
+		)
+
 		const payload = {
-			topics,
-			topicsLastActive,
+			topics: topics.length <= 50 ? topics : filteredTopics,
+			topicsLastActive: topics.length <= 50 ? topicsLastActive : filteredTopicsLastActive,
 			address,
 			env,
 			peerRecordEnvelope: envelope.marshal(),

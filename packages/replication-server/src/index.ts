@@ -73,7 +73,7 @@ libp2p.services.discovery.addEventListener("peer:topics", ({ detail: { topics, i
 				return
 			}
 			if (bannedApps.has(appTopic)) {
-				console.log(`[replication-server] Ignoring banned app ${appTopic} from ${peerId}`)
+				// console.log(`[replication-server] Ignoring banned app ${appTopic} from ${peerId}`)
 				return
 			}
 
