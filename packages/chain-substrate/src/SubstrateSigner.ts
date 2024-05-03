@@ -6,7 +6,7 @@ import { InjectedExtension } from "@polkadot/extension-inject/types"
 import { cryptoWaitReady, decodeAddress } from "@polkadot/util-crypto"
 import { KeypairType } from "@polkadot/util-crypto/types"
 
-import type { Session, AbstractSessionData } from "@canvas-js/interfaces"
+import type { Awaitable, Session, AbstractSessionData } from "@canvas-js/interfaces"
 import { AbstractSessionSigner, ed25519 } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
@@ -25,10 +25,10 @@ type SubstrateSignerInit = {
 
 type AbstractSigner = {
 	// substrate wallets support a variety of key pair types, such as sr25519, ed25519, and ecdsa
-	getSubstrateKeyType: () => Promise<KeypairType>
-	getAddress: () => Promise<string>
-	getChainId: () => Promise<string>
-	signMessage(message: Uint8Array): Promise<{
+	getSubstrateKeyType: () => Awaitable<KeypairType>
+	getAddress: () => Awaitable<string>
+	getChainId: () => Awaitable<string>
+	signMessage(message: Uint8Array): Awaitable<{
 		signature: Uint8Array
 		nonce: Uint8Array
 	}>

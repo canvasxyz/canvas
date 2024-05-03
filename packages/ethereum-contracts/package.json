@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/ethereum-contracts",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -12,7 +12,9 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@canvas-js/signatures": "0.9.0",
+    "@canvas-js/signatures": "0.9.1",
+    "@ethersproject/abi": "^5.7.0",
+    "@ethersproject/providers": "^5.7.2",
     "@noble/hashes": "^1.4.0",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.6",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.10",
@@ -21,6 +23,7 @@
     "@types/chai": "^4.3.14",
     "@types/mocha": "^10.0.6",
     "chai-as-promised": "^7.1.1",
+    "ethers": "5.7.2",
     "hardhat": "^2.12.7",
     "hardhat-gas-reporter": "^1.0.10",
     "multiformats": "^13.0.1",
@@ -42,7 +45,7 @@
     "@nomicfoundation/solidity-analyzer-win32-x64-msvc": "0.1.1"
   },
   "dependencies": {
-    "@canvas-js/chain-ethereum": "0.9.0",
+    "@canvas-js/chain-ethereum": "0.9.1",
     "@lazyledger/protobuf3-solidity-lib": "^0.6.0",
     "@openzeppelin/contracts": "^4.8.1",
     "base58-solidity": "^1.0.2"

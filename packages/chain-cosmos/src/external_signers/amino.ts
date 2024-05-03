@@ -8,12 +8,13 @@ import { secp256k1 } from "@noble/curves/secp256k1"
 import { CosmosMessage } from "../types.js"
 import { getSessionSignatureData } from "../signatureData.js"
 import { constructSiwxMessage } from "../utils.js"
+import { Awaitable } from "@canvas-js/interfaces"
 
 export type AminoSigner = {
 	type: "amino"
-	getAddress: (chainId: string) => Promise<string>
-	getChainId: () => Promise<string>
-	signAmino(chainId: string, signer: string, signDoc: StdSignDoc): Promise<AminoSignResponse>
+	getAddress: (chainId: string) => Awaitable<string>
+	getChainId: () => Awaitable<string>
+	signAmino(chainId: string, signer: string, signDoc: StdSignDoc): Awaitable<AminoSignResponse>
 }
 
 export const createAminoSigner = (signer: AminoSigner) => ({
