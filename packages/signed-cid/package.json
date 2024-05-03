@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/signed-cid",
-  "version": "0.8.27-patch.20",
+  "version": "0.8.26",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "type": "module",
   "engines": {
@@ -16,8 +16,8 @@
     "test": "ava"
   },
   "devDependencies": {
-    "@canvas-js/interfaces": "0.8.27-patch.20",
-    "@canvas-js/signed-cid": "0.8.27-patch.20"
+    "@canvas-js/interfaces": "0.8.26",
+    "@canvas-js/signed-cid": "0.8.26"
   },
   "dependencies": {
     "@ipld/dag-cbor": "^9.0.6",
