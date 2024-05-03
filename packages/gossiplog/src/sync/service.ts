@@ -251,7 +251,7 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 						} else if (err instanceof SyncDeadlockError) {
 							this.log("started merkle sync concurrently with %p, retrying to break deadlock", peerId)
 						} else {
-							this.log.error("failed to sync with peer: %O")
+							this.log.error("failed to sync with peer: %p", peerId)
 						}
 
 						if (this.#controller.signal.aborted) {
@@ -265,10 +265,10 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 					}
 				}
 
-				throw new Error("exceeded sync retry limit")
+				throw new Error("exceeded sync retry limit: " + peerId.toString())
 			})
 			.then(() => this.syncHistory.set(id, performance.now()))
-			.catch((err) => this.log.error("sync failed: %O", err))
+			.catch((err) => this.log.error("sync failed: %O", err.message))
 			.finally(() => this.syncQueuePeers.delete(id))
 	}
 
