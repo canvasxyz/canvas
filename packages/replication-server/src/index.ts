@@ -31,6 +31,13 @@ const topicsGauge = new client.Gauge({
 		this.set(apps.size)
 	},
 })
+const bannedAppsGauge = new client.Gauge({
+	name: "canvas_replication_server_banned_apps",
+	help: "canvas_replication_server_banned_apps",
+	collect() {
+		this.set(bannedApps.size)
+	},
+})
 const restartErrorsGauge = new client.Gauge({
 	name: "canvas_replication_server_restart_errors",
 	help: "canvas_replication_server_restart_errors",

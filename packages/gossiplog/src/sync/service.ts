@@ -188,8 +188,13 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 
 			this.log("closed incoming stream %s from peer %p", stream.id, peerId)
 		} catch (err) {
-			const message = (err as any)?.message
-			this.log.error("aborting incoming stream %s from peer %p: %s", stream.id, peerId, message)
+			this.log.error(
+				"aborting incoming stream %s from peer %p: %s: %s",
+				stream.id,
+				peerId,
+				(err as any)?.name,
+				(err as any)?.message,
+			)
 			if (err instanceof Error) {
 				stream.abort(err)
 			} else {
@@ -251,7 +256,7 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 						} else if (err instanceof SyncDeadlockError) {
 							this.log("started merkle sync concurrently with %p, retrying to break deadlock", peerId)
 						} else {
-							this.log.error("failed to sync with peer: %p", peerId)
+							this.log.error("failed to sync with peer %p: %s: %s", peerId, (err as any)?.name, (err as any)?.message)
 						}
 
 						if (this.#controller.signal.aborted) {
