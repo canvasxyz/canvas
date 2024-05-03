@@ -8,6 +8,7 @@ import { Counter, Gauge, Summary, Registry, register } from "prom-client"
 import type { PeerId } from "@libp2p/interface"
 import { peerIdFromString } from "@libp2p/peer-id"
 import * as json from "@ipld/dag-json"
+import * as cbor from "@ipld/dag-cbor"
 
 import { Action, Message, Session, Signature } from "@canvas-js/interfaces"
 
@@ -25,19 +26,18 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 	const api = express()
 
 	api.set("query parser", "simple")
-	api.use(express.json())
-	api.use(express.text())
+	api.use(express.raw({ type: "*/*" }))
 
-	api.get("/", (req, res) => res.json(app.getApplicationData()))
+	api.get("/", (req, res) => send(req, res, app.getApplicationData()))
 
 	if (options.exposeModels) {
 		api.get("/models/:model/:key", async (req, res) => {
 			const { model, key } = req.params
 			if (app.db.models[model] === undefined) {
-				return res.status(StatusCodes.NOT_FOUND).end()
+				res.status(StatusCodes.NOT_FOUND).end()
 			} else {
 				const value = await app.db.get(model, key)
-				return res.json(value)
+				send(req, res, value)
 			}
 		})
 
@@ -54,7 +54,7 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 			return res.status(StatusCodes.NOT_FOUND).end()
 		}
 
-		return res.status(StatusCodes.OK).contentType("application/json").end(json.encode({ id, signature, message }))
+		send(req, res, { id, signature, message })
 	})
 
 	api.get("/messages", async (req, res) => {
@@ -91,21 +91,27 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 			}
 		}
 
-		return res.status(StatusCodes.OK).contentType("application/json").end(json.encode(results))
+		send(req, res, results)
 	})
 
 	api.post("/messages", async (req, res) => {
-		let data: string
-		if (req.headers["content-type"] === "application/json") {
-			data = JSON.stringify(req.body)
+		assert(req.body instanceof Uint8Array, "expected req.body instanceof Uint8Array")
+
+		let signedMessage: { signature: Signature; message: Message<Action | Session> }
+		if (req.headers["content-type"] === "application/cbor") {
+			signedMessage = cbor.decode(req.body)
+		} else if (req.headers["content-type"] === "application/json") {
+			signedMessage = json.decode(req.body)
 		} else {
 			return res.status(StatusCodes.UNSUPPORTED_MEDIA_TYPE).end()
 		}
 
 		try {
-			const { signature, message } = json.parse<{ id: string; signature: Signature; message: Message }>(data)
-			const { id } = await app.insert(signature, message as Message<Action | Session>)
-			return res.status(StatusCodes.CREATED).setHeader("Location", `messages/${id}`).end()
+			const { signature, message } = signedMessage
+			const { id } = await app.insert(signature, message)
+			res.status(StatusCodes.CREATED)
+			res.setHeader("Location", `messages/${id}`)
+			res.end()
 		} catch (e) {
 			console.error(e)
 			return res.status(StatusCodes.BAD_REQUEST).end()
@@ -114,7 +120,7 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 
 	api.get("/clock", async (req, res) => {
 		const [clock, parents] = await app.messageLog.getClock()
-		return res.status(StatusCodes.OK).json({ topic: app.topic, clock, parents })
+		send(req, res, { clock, parents })
 	})
 
 	if (options.exposeP2P) {
@@ -134,7 +140,7 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 				}
 			}
 
-			return res.status(StatusCodes.OK).json(result)
+			send(req, res, result)
 		})
 
 		api.get("/peers", (req, res) => {
@@ -143,8 +149,8 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 				return
 			}
 
-			const peers = app.libp2p.services.pubsub.getPeers()
-			res.status(StatusCodes.OK).json(peers.map((peerId) => peerId.toString()))
+			const peers = app.libp2p.services.pubsub.getPeers().map((peerId) => peerId.toString())
+			send(req, res, peers)
 		})
 
 		api.post("/ping/:peerId", async (req, res) => {
@@ -181,6 +187,17 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 	}
 
 	return api
+}
+
+function send(req: express.Request, res: express.Response, data: any) {
+	res.status(StatusCodes.OK)
+	if (req.headers["accept"] === "application/cbor") {
+		res.contentType("application/cbor")
+		res.end(cbor.encode(data))
+	} else {
+		res.contentType("application/json")
+		res.end(json.encode(data))
+	}
 }
 
 export function createMetricsAPI(app: Canvas): express.Express {
