@@ -28,7 +28,6 @@
     { "path": "./packages/chain-solana/test" },
     { "path": "./packages/chain-substrate" },
     { "path": "./packages/replication-server" },
-    { "path": "./packages/probe-server" },
     { "path": "./packages/hooks" },
     { "path": "./packages/templates" },
     { "path": "./packages/test-network" }
