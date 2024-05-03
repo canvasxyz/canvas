@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@canvas-js/example-notes",
-  "version": "0.8.27-patch.16",
+  "version": "0.8.27-patch.17",
   "description": "",
   "main": "index.js",
   "scripts": {
