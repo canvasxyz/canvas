@@ -4,14 +4,14 @@
   "version": "0.8.27-patch.20",
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
   "type": "module",
-  "main": "lib/index.js",
   "files": [
     "lib"
   ],
   "scripts": {
-    "build": "npx webpack --config webpack.config.js",
-    "build:watch": "npx webpack --config webpack.config.js --watch",
-    "start": "node server.js"
+    "bundle:build": "npx webpack --config webpack.config.js",
+    "bundle:watch": "npx webpack --config webpack.config.js --watch",
+    "clean": "rm lib/*",
+    "start": "node lib/server.js"
   },
   "dependencies": {
     "@canvas-js/chain-ethereum": "0.8.27-patch.20",

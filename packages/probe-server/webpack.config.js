@@ -4,7 +4,7 @@ import webpack from "webpack"
 
 export default {
 	mode: "production",
-	entry: "./src/client.ts",
+	entry: "./src/bundle.ts",
 	module: {
 		rules: [
 			{
@@ -15,8 +15,8 @@ export default {
 		],
 	},
 	output: {
-		filename: "client.js",
-		path: path.resolve(dirname(fileURLToPath(import.meta.url)), "dist"),
+		filename: "bundle-compiled.js",
+		path: path.resolve(dirname(fileURLToPath(import.meta.url)), "lib"),
 		publicPath: "",
 	},
 	plugins: [

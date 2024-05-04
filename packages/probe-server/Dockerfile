@@ -13,7 +13,5 @@ RUN wget --quiet --output-document=- https://dl-ssl.google.com/linux/linux_signi
   rm -rf /var/lib/apt/lists/*
 
 COPY lib/ lib/
-COPY dist/ dist/
-COPY server.js server.js
 
 CMD ["npm", "run", "start"]

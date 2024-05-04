@@ -2,6 +2,8 @@ import fs from "node:fs"
 import http from "node:http"
 import puppeteer from "puppeteer"
 
+import { Connection } from "@libp2p/interface"
+
 import express from "express"
 import { StatusCodes } from "http-status-codes"
 import { AbortError } from "abortable-iterator"
@@ -43,7 +45,7 @@ server.listen(port, "::", () => {
 })
 
 const checkConnections = async () => {
-	const clientJs = fs.readFileSync("./dist/client.js", { encoding: "utf8" })
+	const clientJs = fs.readFileSync("./lib/bundle-compiled.js", { encoding: "utf8" })
 	const browser = await puppeteer.launch({
 		dumpio: true,
 		headless: "new",
@@ -54,8 +56,8 @@ const checkConnections = async () => {
 
 	let connections = {}
 
-	await page.exposeFunction("updateConnections", (_connections) => (connections = _connections))
-	await page.exposeFunction("log", (...args) => console.log(...args))
+	await page.exposeFunction("updateConnections", (_connections: Connection[]) => (connections = _connections))
+	await page.exposeFunction("log", (...args: any[]) => console.log(...args))
 	await page.evaluate(clientJs)
 	await new Promise((resolve) => setTimeout(resolve, 5000))
 
