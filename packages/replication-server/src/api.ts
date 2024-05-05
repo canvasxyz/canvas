@@ -44,6 +44,18 @@ export function getAPI(libp2p: Libp2p<ServiceMap>) {
 
 	api.get("/", async (req, res) => res.json({}))
 
+	api.get("/metrics", async (req, res) => {
+		try {
+			const result = await client.register.metrics()
+			res.status(StatusCodes.OK)
+			res.contentType(client.register.contentType)
+			res.end(result)
+		} catch (err: any) {
+			console.error(err)
+			res.status(StatusCodes.INTERNAL_SERVER_ERROR).end()
+		}
+	})
+
 	api.get("/topics", (req, res) => {
 		return res.json({ count: apps.size, topics: Array.from(apps.keys()) })
 	})
