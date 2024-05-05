@@ -11,7 +11,7 @@ import { Canvas } from "@canvas-js/core"
 
 import { options } from "./libp2p.js"
 import { port, metricsPort, restartAt, dataDirectory, discoveryTopic, maxTopics, sleepTimeout } from "./config.js"
-import { getAPI, getMetricsAPI } from "./api.js"
+import { getAPI } from "./api.js"
 import { initFinishedMatches } from "./indexer.js"
 
 export const apps = new Map<string, Canvas>()
@@ -140,7 +140,6 @@ console.log(
 console.log("[replication-server] subscribed to discovery topic", discoveryTopic)
 
 const server = getAPI(libp2p)
-const metricsServer = getMetricsAPI(libp2p)
 
 server.listen(port, "::", () => {
 	const host = `http://localhost:${port}`
@@ -151,16 +150,9 @@ server.listen(port, "::", () => {
 	console.log(`POST ${host}/ping/:peerId`)
 })
 
-metricsServer.listen(metricsPort, "::", () => {
-	const host = `http://localhost:${metricsPort}`
-	console.log(`[replication-server] Metrics server listening on ${host}`)
-	console.log(`GET  ${host}/metrics`)
-})
-
 process.on("SIGINT", async () => {
 	console.log("\nReceived SIGINT. Attempting to shut down gracefully.")
 	server.close()
-	metricsServer.close()
 	await libp2p.stop()
 	await Promise.all(Array.from(apps.values()).map((app) => app.close()))
 	clearInterval(resetTimer)

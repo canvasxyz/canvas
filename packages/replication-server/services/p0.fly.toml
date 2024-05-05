@@ -52,7 +52,6 @@ processes = []
     protocol = "http"
     timeout = 2000
 
-# prometheus stats server
 [metrics]
-port = 8001
+port = 8000
 path = "/metrics"
