@@ -1,7 +1,7 @@
 {
   "name": "@canvas-js/probe-server",
   "private": true,
-  "version": "0.8.27-patch.20",
+  "version": "0.8.27",
   "author": "Canvas Technology Corporation (https://canvas.xyz)",
   "type": "module",
   "files": [
@@ -14,10 +14,10 @@
     "start": "node lib/server.js"
   },
   "dependencies": {
-    "@canvas-js/chain-ethereum": "0.8.27-patch.20",
-    "@canvas-js/core": "0.8.27-patch.20",
-    "@canvas-js/discovery": "0.8.27-patch.20",
-    "@canvas-js/gossiplog": "0.8.27-patch.20",
+    "@canvas-js/chain-ethereum": "0.8.27",
+    "@canvas-js/core": "0.8.27",
+    "@canvas-js/discovery": "0.8.27",
+    "@canvas-js/gossiplog": "0.8.27",
     "@chainsafe/libp2p-gossipsub": "^11.0.1",
     "@chainsafe/libp2p-noise": "^14.1.0",
     "@libp2p/bootstrap": "^10.0.7",
