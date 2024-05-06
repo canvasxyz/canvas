@@ -18,7 +18,7 @@
     "@canvas-js/core": "0.8.26",
     "@canvas-js/interfaces": "0.8.26",
     "@canvas-js/modeldb": "0.8.26",
-    "@keplr-wallet/types": "^0.11.64",
+    "@keplr-wallet/types": "^0.12.84",
     "@magic-ext/auth": "^4.3.2",
     "@metamask/providers": "^14.0.2",
     "@polkadot/extension-dapp": "^0.46.6",
