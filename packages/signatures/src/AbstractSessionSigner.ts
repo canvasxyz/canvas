@@ -74,10 +74,8 @@ export abstract class AbstractSessionSigner<AuthorizationData> implements Sessio
 
 		const value = target.get(key)
 		if (value !== null) {
-			const {
-				session,
-				signer: { type, privateKey },
-			} = json.parse<{ session: Session; signer: { type: string; privateKey: Uint8Array } }>(value)
+			const entry = json.parse<{ type: string; privateKey: Uint8Array; session: Session }>(value)
+			const { type, privateKey, session } = entry
 
 			const signer = this.scheme.create({ type, privateKey })
 			return { payload: session, signer }
