@@ -299,26 +299,26 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 				const sessionSigner = (options.signer ?? signers.getFirst()) as AbstractSessionSigner<any>
 				assert(sessionSigner !== undefined, "signer not found")
 
-				let [session, delegateSigner] = await sessionSigner.getSession(this.topic)
+				let session = await sessionSigner.getSession(this.topic)
 
 				// check that a session for the delegate signer exists in the log and hasn't expired
-				if (session !== null && delegateSigner !== null) {
+				if (session !== null) {
 					const sessionIds = await this.getSessions({
-						address: session.address,
-						publicKey: delegateSigner.publicKey,
+						address: session.payload.address,
+						publicKey: session.signer.publicKey,
 						minExpiration: timestamp,
 					})
 
 					if (sessionIds.length === 0) {
-						;[session, delegateSigner] = [null, null]
+						session = null
 					}
 				}
 
 				// if the delegate signer doesn't exist, or if the session expired,
 				// create and append a new one
-				if (session === null || delegateSigner === null) {
-					;[session, delegateSigner] = await sessionSigner.newSession(this.topic)
-					await this.append(session, { signer: delegateSigner })
+				if (session === null) {
+					session = await sessionSigner.newSession(this.topic)
+					await this.append(session.payload, { signer: session.signer })
 				}
 
 				const argsTransformer = runtime.argsTransformers[name]
@@ -328,8 +328,15 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 				assert(argsRepresentation !== undefined, "action args did not validate the provided schema type")
 
 				const { id, signature, message, recipients } = await this.append<Action>(
-					{ type: "action", address: session.address, name, args: argsRepresentation, blockhash: null, timestamp },
-					{ signer: delegateSigner },
+					{
+						type: "action",
+						address: session.payload.address,
+						name,
+						args: argsRepresentation,
+						blockhash: null,
+						timestamp,
+					},
+					{ signer: session.signer },
 				)
 
 				this._log("applied action %s", id)

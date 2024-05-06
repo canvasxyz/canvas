@@ -9,7 +9,7 @@ import { SolanaSigner, validateSessionData } from "@canvas-js/chain-solana"
 test("create and verify session", async (t) => {
 	const topic = "example:signer"
 	const signer = new SolanaSigner()
-	const [session, delegateSigner] = await signer.newSession(topic)
+	const { payload: session, signer: delegateSigner } = await signer.newSession(topic)
 	t.notThrows(() => signer.verifySession(topic, session))
 
 	const sessionMessage = { topic, clock: 1, parents: [], payload: session }
@@ -20,7 +20,7 @@ test("create and verify session", async (t) => {
 test("create and verify session and action", async (t) => {
 	const topic = "example:signer"
 	const signer = new SolanaSigner()
-	const [session, delegateSigner] = await signer.newSession(topic)
+	const { payload: session, signer: delegateSigner } = await signer.newSession(topic)
 	t.notThrows(() => signer.verifySession(topic, session))
 
 	const sessionMessage = { topic, clock: 1, parents: [], payload: session }
@@ -44,7 +44,7 @@ test("create and verify session and action", async (t) => {
 test("reject corrupt session signature", async (t) => {
 	const topic = "example:signer"
 	const signer = new SolanaSigner()
-	const [session] = await signer.newSession(topic)
+	const { payload: session } = await signer.newSession(topic)
 
 	// corrupt the session signature
 	session.authorizationData.signature[0] = 1

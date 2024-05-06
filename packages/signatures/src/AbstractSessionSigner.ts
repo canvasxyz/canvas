@@ -43,7 +43,7 @@ export abstract class AbstractSessionSigner<AuthorizationData> implements Sessio
 
 	public async newSession(
 		topic: string,
-	): Promise<[session: Session<AuthorizationData>, signer: Signer<Action | Session<AuthorizationData>>]> {
+	): Promise<{ payload: Session<AuthorizationData>; signer: Signer<Action | Session<AuthorizationData>> }> {
 		const signer = this.scheme.create()
 		const address = await this.getAddress()
 		const session = await this.authorize({
@@ -58,20 +58,18 @@ export abstract class AbstractSessionSigner<AuthorizationData> implements Sessio
 		this.#cache.set(key, { session, signer })
 		target.set(key, json.stringify({ session, signer: signer.export() }))
 
-		return [session, signer]
+		return { payload: session, signer }
 	}
 
 	public async getSession(
 		topic: string,
-	): Promise<
-		[session: Session<AuthorizationData>, signer: Signer<Action | Session<AuthorizationData>>] | [null, null]
-	> {
+	): Promise<{ payload: Session<AuthorizationData>; signer: Signer<Action | Session<AuthorizationData>> } | null> {
 		const address = await this.getAddress()
 		const key = `canvas/${topic}/${address}`
 
 		if (this.#cache.has(key)) {
 			const { session, signer } = this.#cache.get(key)!
-			return [session, signer]
+			return { payload: session, signer }
 		}
 
 		const value = target.get(key)
@@ -82,10 +80,10 @@ export abstract class AbstractSessionSigner<AuthorizationData> implements Sessio
 			} = json.parse<{ session: Session; signer: { type: string; privateKey: Uint8Array } }>(value)
 
 			const signer = this.scheme.create({ type, privateKey })
-			return [session, signer]
+			return { payload: session, signer }
 		}
 
-		return [null, null]
+		return null
 	}
 
 	public hasSession(topic: string, address: string): boolean {
