@@ -11,44 +11,46 @@ export class Client {
 		const timestamp = Date.now()
 
 		// first check for an existing session
-		let [session, delegateSigner] = await this.signer.getSession(this.topic)
-		if (session !== null && delegateSigner !== null) {
+		let session = await this.signer.getSession(this.topic)
+		if (session !== null) {
 			// then check that it exists in the log and hasn't expired
-			const query = { address: session.address, publicKey: delegateSigner.publicKey, minExpiration: timestamp }
-			const queryComponents = Object.entries(query)
-				.map((query) => query.join("="))
+			const query = Object.entries({
+				address: session.payload.address,
+				publicKey: session.signer.publicKey,
+				minExpiration: timestamp,
+			})
+				.map((entry) => entry.join("="))
 				.join("&")
 
-			const sessions: { id: string; expiration: number | null }[] = await fetch(
-				`${this.host}/sessions?${queryComponents}`,
-			).then((res) => res.json())
+			const res = await fetch(`${this.host}/sessions?${query}`)
+			assert(res.status === StatusCodes.OK)
 
+			const sessions: { id: string; expiration: number | null }[] = await res.json()
 			if (sessions.length === 0) {
-				;[session, delegateSigner] = [null, null]
+				session = null
 			}
 		}
 
 		const head: { clock: number; parents: string[] } = await fetch(`${this.host}/clock`).then((res) => res.json())
 
-		if (session === null || delegateSigner === null) {
-			;[session, delegateSigner] = await this.signer.newSession(this.topic)
-
-			const sessionId = await this.insert(delegateSigner, {
+		if (session === null) {
+			session = await this.signer.newSession(this.topic)
+			const sessionId = await this.insert(session.signer, {
 				topic: this.topic,
 				clock: head.clock,
 				parents: head.parents,
-				payload: session,
+				payload: session.payload,
 			})
 
 			head.clock += 1
 			head.parents = [sessionId]
 		}
 
-		await this.insert(delegateSigner, {
+		await this.insert(session.signer, {
 			topic: this.topic,
 			clock: head.clock,
 			parents: head.parents,
-			payload: { type: "action", address: session.address, name, args, blockhash: null, timestamp },
+			payload: { type: "action", address: session.payload.address, name, args, blockhash: null, timestamp },
 		})
 	}
 

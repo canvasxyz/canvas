@@ -25,7 +25,9 @@ export const ConnectEIP712Burner: React.FC<ConnectEIP712BurnerProps> = ({}) => {
 		}
 
 		const signer = new Eip712Signer()
-		const [{ address }] = await signer.newSession(app.topic)
+		const {
+			payload: { address },
+		} = await signer.newSession(app.topic)
 		setAddress(address)
 		setSessionSigner(signer)
 	}, [app, provider])

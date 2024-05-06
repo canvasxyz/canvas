@@ -79,7 +79,7 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 	test(`${name} - create and verify session`, async (t) => {
 		const topic = "example:signer"
 		const sessionSigner = await createSessionSigner()
-		const [session] = await sessionSigner.newSession(topic)
+		const { payload: session } = await sessionSigner.newSession(topic)
 		await t.notThrowsAsync(() => Promise.resolve(sessionSigner.verifySession(topic, session)))
 	})
 
@@ -87,7 +87,7 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 		const topic = "example:signer"
 		const sessionSigner = await createSessionSigner()
 
-		const [session] = await sessionSigner.newSession(topic)
+		const { payload: session } = await sessionSigner.newSession(topic)
 		// tamper with the session
 		session.timestamp = 0
 		try {
@@ -102,7 +102,7 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 		const topic = "example:signer"
 		const sessionSigner = await createSessionSigner()
 
-		const [session, delegateSigner] = await sessionSigner.newSession(topic)
+		const { payload: session, signer: delegateSigner } = await sessionSigner.newSession(topic)
 
 		const message: Message<Session> = { topic, clock: 0, parents: [], payload: session }
 		const sessionSignature = await delegateSigner.sign(message)
@@ -113,7 +113,7 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 		const topic = "example:signer"
 		const sessionSigner = await createSessionSigner()
 
-		const [session] = await sessionSigner.newSession(topic)
+		const { payload: session } = await sessionSigner.newSession(topic)
 		const addressParts = session.address.split(":")
 		t.is(addressParts.length, 3)
 		t.true(sessionSigner.match(session.address))
@@ -136,8 +136,8 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 		const topic = "example:signer"
 		const [a, b] = await Promise.all([createSessionSigner(), createSessionSigner()])
 
-		const [sessionA] = await a.newSession(topic)
-		const [sessionB] = await b.newSession(topic)
+		const { payload: sessionA } = await a.newSession(topic)
+		const { payload: sessionB } = await b.newSession(topic)
 
 		await t.notThrowsAsync(async () => a.verifySession(topic, sessionB))
 		await t.notThrowsAsync(async () => b.verifySession(topic, sessionA))
@@ -146,7 +146,7 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 	test(`${name} - create and verify session and action`, async (t) => {
 		const topic = "example:signer"
 		const sessionSigner = await createSessionSigner()
-		const [session, delegateSigner] = await sessionSigner.newSession(topic)
+		const { payload: session, signer: delegateSigner } = await sessionSigner.newSession(topic)
 		t.notThrows(() => sessionSigner.verifySession(topic, session))
 
 		const sessionMessage = { topic, clock: 1, parents: [], payload: session }
@@ -177,7 +177,7 @@ test(`ethereum - ethers signer can verify ethereum viem signed data`, async (t) 
 	const signingSigner = new SIWESignerViem()
 	const verifyingSigner = new SIWESigner()
 
-	const [session] = await signingSigner.newSession(topic)
+	const { payload: session } = await signingSigner.newSession(topic)
 	await t.notThrowsAsync(() => Promise.resolve(verifyingSigner.verifySession(topic, session)))
 })
 
@@ -186,6 +186,6 @@ test(`ethereum - viem signer can verify ethers signed data`, async (t) => {
 	const signingSigner = new SIWESigner()
 	const verifyingSigner = new SIWESignerViem()
 
-	const [session] = await signingSigner.newSession(topic)
+	const { payload: session } = await signingSigner.newSession(topic)
 	await t.notThrowsAsync(() => Promise.resolve(verifyingSigner.verifySession(topic, session)))
 })

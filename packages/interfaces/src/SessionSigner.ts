@@ -20,12 +20,10 @@ export interface SessionSigner<AuthorizationData = any> {
 	hasSession: (topic: string, address: string) => boolean
 	getSession: (
 		topic: string,
-	) => Awaitable<
-		[session: Session<AuthorizationData>, signer: Signer<Action | Session<AuthorizationData>>] | [null, null]
-	>
+	) => Awaitable<{ payload: Session<AuthorizationData>; signer: Signer<Action | Session<AuthorizationData>> } | null>
 	newSession: (
 		topic: string,
-	) => Awaitable<[session: Session<AuthorizationData>, signer: Signer<Action | Session<AuthorizationData>>]>
+	) => Awaitable<{ payload: Session<AuthorizationData>; signer: Signer<Action | Session<AuthorizationData>> }>
 
 	/**
 	 * Verify that `session.data` authorizes `session.publicKey`

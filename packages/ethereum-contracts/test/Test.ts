@@ -35,7 +35,7 @@ describe("Contract_Test", function () {
 
 		async function getArguments(args?: any) {
 			const signer = new Eip712Signer()
-			const [session, delegateSigner] = await signer.newSession(topic)
+			const { payload: session, signer: delegateSigner } = await signer.newSession(topic)
 			// const session = (args && args.session) || (await signer.newSession(topic))
 
 			const clock = 1
@@ -112,7 +112,7 @@ describe("Contract_Test", function () {
 
 			const signer = new Eip712Signer()
 
-			const [session] = await signer.newSession(topic)
+			const { payload: session } = await signer.newSession(topic)
 			signer.verifySession(topic, session)
 
 			const userAddress = session.address.split(":")[2]
@@ -150,7 +150,7 @@ describe("Contract_Test", function () {
 			const { contract } = await loadFixture(deployFixture)
 
 			const signer = new Eip712Signer()
-			const [session, delegateSigner] = await signer.newSession(topic)
+			const { payload: session, signer: delegateSigner } = await signer.newSession(topic)
 
 			const clock = 1
 			const parents = ["parent1", "parent2"]
@@ -198,7 +198,7 @@ describe("Contract_Test", function () {
 			const { contract } = await loadFixture(deployFixture)
 
 			const signer = new Eip712Signer()
-			const [session, delegateSigner] = await signer.newSession(topic)
+			const { payload: session, signer: delegateSigner } = await signer.newSession(topic)
 
 			// sign an action
 			const clock = 1
