@@ -48,8 +48,13 @@ const checkConnections = async () => {
 	const clientJs = fs.readFileSync("./lib/bundle-compiled.js", { encoding: "utf8" })
 	const browser = await puppeteer.launch({
 		dumpio: true,
-		headless: "new",
-		args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-extensions"],
+		// headless: "new",
+		args: [
+			"--no-sandbox",
+			"--disable-setuid-sandbox",
+			"--disable-extensions",
+			"--enable-chrome-browser-cloud-management",
+		],
 	})
 	const page = await browser.newPage()
 	await page.goto("https:example.com")
