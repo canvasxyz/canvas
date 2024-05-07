@@ -1,5 +1,6 @@
 import assert from "node:assert"
 import express from "express"
+import ipld from "express-ipld"
 import { StatusCodes } from "http-status-codes"
 import { AbortError } from "abortable-iterator"
 import { anySignal } from "any-signal"
@@ -7,8 +8,6 @@ import { Counter, Gauge, Summary, Registry, register } from "prom-client"
 
 import type { PeerId } from "@libp2p/interface"
 import { peerIdFromString } from "@libp2p/peer-id"
-import * as json from "@ipld/dag-json"
-import * as cbor from "@ipld/dag-cbor"
 
 import { Action, Message, Session, Signature } from "@canvas-js/interfaces"
 
@@ -26,9 +25,8 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 	const api = express()
 
 	api.set("query parser", "simple")
-	api.use(express.raw({ type: "*/*" }))
 
-	api.get("/", (req, res) => send(req, res, app.getApplicationData()))
+	api.get("/", (req, res) => res.json(app.getApplicationData()))
 
 	if (options.exposeModels) {
 		api.get("/models/:model/:key", async (req, res) => {
@@ -37,7 +35,7 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 				res.status(StatusCodes.NOT_FOUND).end()
 			} else {
 				const value = await app.db.get(model, key)
-				send(req, res, value)
+				res.json(value)
 			}
 		})
 
@@ -54,7 +52,7 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 			return res.status(StatusCodes.NOT_FOUND).end()
 		}
 
-		send(req, res, { id, signature, message })
+		res.json({ id, signature, message })
 	})
 
 	api.get("/messages", async (req, res) => {
@@ -91,23 +89,12 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 			}
 		}
 
-		send(req, res, results)
+		res.json(results)
 	})
 
-	api.post("/messages", async (req, res) => {
-		assert(req.body instanceof Uint8Array, "expected req.body instanceof Uint8Array")
-
-		let signedMessage: { signature: Signature; message: Message<Action | Session> }
-		if (req.headers["content-type"] === "application/cbor") {
-			signedMessage = cbor.decode(req.body)
-		} else if (req.headers["content-type"] === "application/json") {
-			signedMessage = json.decode(req.body)
-		} else {
-			return res.status(StatusCodes.UNSUPPORTED_MEDIA_TYPE).end()
-		}
-
+	api.post("/messages", ipld(), async (req, res) => {
 		try {
-			const { signature, message } = signedMessage
+			const { signature, message }: { signature: Signature; message: Message<Action | Session> } = req.body
 			const { id } = await app.insert(signature, message)
 			res.status(StatusCodes.CREATED)
 			res.setHeader("Location", `messages/${id}`)
@@ -134,7 +121,7 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 
 	api.get("/clock", async (req, res) => {
 		const [clock, parents] = await app.messageLog.getClock()
-		send(req, res, { clock, parents })
+		res.json({ clock, parents })
 	})
 
 	if (options.exposeP2P) {
@@ -154,7 +141,7 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 				}
 			}
 
-			send(req, res, result)
+			res.json(result)
 		})
 
 		api.get("/peers", (req, res) => {
@@ -164,7 +151,7 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 			}
 
 			const peers = app.libp2p.services.pubsub.getPeers().map((peerId) => peerId.toString())
-			send(req, res, peers)
+			res.json(peers)
 		})
 
 		api.post("/ping/:peerId", async (req, res) => {
@@ -201,17 +188,6 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 	}
 
 	return api
-}
-
-function send(req: express.Request, res: express.Response, data: any) {
-	res.status(StatusCodes.OK)
-	if (req.headers["accept"] === "application/cbor") {
-		res.contentType("application/cbor")
-		res.end(cbor.encode(data))
-	} else {
-		res.contentType("application/json")
-		res.end(json.encode(data))
-	}
 }
 
 export function createMetricsAPI(app: Canvas): express.Express {
