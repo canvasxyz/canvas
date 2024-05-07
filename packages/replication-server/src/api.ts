@@ -10,6 +10,7 @@ import client from "prom-client"
 import type { Libp2p } from "libp2p"
 import type { PeerId } from "@libp2p/interface"
 import { peerIdFromString } from "@libp2p/peer-id"
+import { GossipLogService } from "@canvas-js/gossiplog/service"
 
 import { PING_TIMEOUT } from "./constants.js"
 import { ServiceMap } from "./libp2p.js"
@@ -53,7 +54,7 @@ export function getAPI(libp2p: Libp2p<ServiceMap>) {
 	})
 
 	api.get("/subscribers/:topic", async (req, res) => {
-		const subscribers = libp2p.services.pubsub.getSubscribers(req.params.topic)
+		const subscribers = libp2p.services.pubsub.getSubscribers(GossipLogService.topicPrefix + req.params.topic)
 		return res.json(subscribers.map((peer) => peer.toString()))
 	})
 
