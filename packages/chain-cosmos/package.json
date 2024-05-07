@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/chain-cosmos",
-  "version": "0.8.26",
+  "version": "0.8.27-patch.20",
   "type": "module",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "main": "lib/index.js",
@@ -16,8 +16,8 @@
     }
   },
   "dependencies": {
-    "@canvas-js/interfaces": "0.8.26",
-    "@canvas-js/signed-cid": "0.8.26",
+    "@canvas-js/interfaces": "0.8.27-patch.20",
+    "@canvas-js/signed-cid": "0.8.27-patch.20",
     "@cosmjs/amino": "^0.32.3",
     "@cosmjs/crypto": "^0.32.3",
     "@cosmjs/encoding": "^0.32.3",
