@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { BrowserProvider } from "ethers"
 
 import { SIWESigner } from "@canvas-js/chain-ethereum"
-import { Action, Message, Session } from "@canvas-js/interfaces"
 import { Client } from "@canvas-js/client"
 
 const topic = "chat-example.canvas.xyz"
@@ -108,7 +107,7 @@ export default function Home() {
 	const getMessages = () => {
 		return messages.map((message) => {
 			return (
-				<div className="mb-1 flex items-center">
+				<div key={message.id} className="mb-1 flex items-center">
 					<span className="text-gray-500 text-sm mr-1 font-mono">[{formatMessageTime(message.timestamp)}]</span>
 					<span className="flex">
 						<span className="text-sm flex-none font-mono mr-2">{message.address.slice(9, 15)}:</span>
