@@ -56,7 +56,7 @@ export abstract class AbstractSessionSigner<AuthorizationData> implements Sessio
 
 		const key = `canvas/${topic}/${address}`
 		this.#cache.set(key, { session, signer })
-		target.set(key, json.stringify({ session, signer: signer.export() }))
+		target.set(key, json.stringify({ session, ...signer.export() }))
 
 		return { payload: session, signer }
 	}
