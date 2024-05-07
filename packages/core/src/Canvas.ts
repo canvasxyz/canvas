@@ -1,8 +1,6 @@
 import { PeerId, TypedEventEmitter, CustomEvent, Connection } from "@libp2p/interface"
 import { Libp2p } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
-import * as cbor from "@ipld/dag-cbor"
-import { hexToBytes } from "@noble/hashes/utils"
 
 import type pg from "pg"
 
@@ -158,8 +156,8 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		[K in keyof T["actions"]]: T["actions"][K] extends ActionImplementationFunction<infer Args>
 			? ActionAPI<Args>
 			: T["actions"][K] extends ActionImplementationObject<infer Args>
-				? ActionAPI<Args>
-				: never
+			? ActionAPI<Args>
+			: never
 	}
 
 	public readonly connections: Connections = {}
