@@ -1,14 +1,9 @@
 import useSWR from "swr"
-import { Action, Message, Session, Signature } from "@canvas-js/interfaces"
-import { parse } from "@ipld/dag-json"
+import { Action, Session } from "@canvas-js/interfaces"
+import { Link } from "react-router-dom"
 import ArgsPopout from "./ArgsPopout"
-
-const fetchAndIpldParseJson = async <T,>(path: string) => {
-	const response = await fetch(`http://localhost:3000${path}`)
-	const json = await response.text()
-	return parse(json) as T
-}
-type Result<T> = [string, Signature, Message<T>]
+import Navbar from "./Navbar"
+import { Result, fetchAndIpldParseJson } from "./utils"
 
 function HomePage() {
 	const { data, error } = useSWR("/api/messages", fetchAndIpldParseJson<Result<Action | Session>[]>, {
@@ -22,10 +17,7 @@ function HomePage() {
 
 	return (
 		<>
-			<div className="flex flex-row max-w-4xl bg-blue-400 gap-10 p-5">
-				<div className="font-bold">Canvas Explorer</div>
-				<div>Applications</div>
-			</div>
+			<Navbar />
 			<div className="max-w-4xl bg-green-100">
 				This explorer provides information about signed interactions on Canvas applications.
 			</div>
@@ -64,7 +56,9 @@ function HomePage() {
 						</thead>
 						<tbody>
 							<tr key={"chat-example.canvas.xyz"}>
-								<td>{"chat-example.canvas.xyz"}</td>
+								<td>
+									<Link to="application/1">{"chat-example.canvas.xyz"}</Link>
+								</td>
 								<td>{1538}</td>
 								<td>{445}</td>
 								<td>{48}</td>
