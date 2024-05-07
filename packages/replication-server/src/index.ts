@@ -178,8 +178,9 @@ if (loopback !== undefined) {
 	const doHealthCheck = async () => {
 		console.log("[replication-server] health check starting")
 		const connections: Record<string, Connection> = {}
+		const randId = Math.floor(Math.random() * 0xffffff).toString(16)
 		const app = await Canvas.initialize({
-			contract: { topic: "room-1.canvas.xyz", models: {}, actions: {} },
+			contract: { topic: `healthcheck-${randId}.canvas.xyz`, models: {}, actions: {} },
 			indexHistory: false,
 			ignoreMissingActions: true,
 			disablePing: true,
