@@ -1,153 +1,101 @@
-import { Logger, logger } from "@libp2p/logger"
 import * as json from "@ipld/dag-json"
+import { Logger, logger } from "@libp2p/logger"
 
-import type { Signature, SessionSigner, Action, Message, Session, Signer, Awaitable } from "@canvas-js/interfaces"
-import { assert, signalInvalidType } from "@canvas-js/utils"
+import type {
+	Action,
+	Session,
+	Signer,
+	Awaitable,
+	SignatureScheme,
+	AbstractSessionData,
+	SessionSigner,
+} from "@canvas-js/interfaces"
 
 import target from "#target"
-import { deepEquals } from "./utils.js"
 
-export interface AbstractSessionData {
-	topic: string
-	address: string
-	publicKey: string
-	timestamp: number
-	duration: number | null
-}
-
-export interface AbstractSessionSignerConfig<AuthorizationData> {
-	defaultDuration?: number | null
-	createSigner: (init?: { type: string; privateKey: Uint8Array }) => Signer<Action | Session<AuthorizationData>>
+export interface AbstractSessionSignerOptions {
+	sessionDuration?: number | null
 }
 
 export abstract class AbstractSessionSigner<AuthorizationData> implements SessionSigner<AuthorizationData> {
 	public readonly target = target
+	public readonly sessionDuration: number | null
 
 	protected readonly log: Logger
 
-	#createSigner: (init?: { type: string; privateKey: Uint8Array }) => Signer<Action | Session<AuthorizationData>>
-	#defaultDuration: number | null
+	#cache = new Map<string, { session: Session; signer: Signer<Action | Session<AuthorizationData>> }>()
 
-	public constructor(public readonly key: string, config: AbstractSessionSignerConfig<AuthorizationData>) {
+	public constructor(
+		public readonly key: string,
+		public readonly scheme: SignatureScheme<Action | Session<AuthorizationData>>,
+		options: AbstractSessionSignerOptions = {},
+	) {
 		this.log = logger(`canvas:${key}`)
-		this.#createSigner = config.createSigner
-		this.#defaultDuration = config.defaultDuration ?? null
+		this.sessionDuration = options.sessionDuration ?? null
 	}
 
-	public abstract codecs: string[]
 	public abstract match: (address: string) => boolean
-	public abstract verify: (signature: Signature, message: Message<Action | Session<AuthorizationData>>) => void
 	public abstract verifySession(topic: string, session: Session<AuthorizationData>): Awaitable<void>
 
-	protected abstract getAddress(): Awaitable<string>
-	protected abstract newSession(data: AbstractSessionData): Awaitable<Session<AuthorizationData>>
+	public abstract getAddress(): Awaitable<string>
+
+	public abstract authorize(data: AbstractSessionData): Awaitable<Session<AuthorizationData>>
+
+	public async newSession(
+		topic: string,
+	): Promise<{ payload: Session<AuthorizationData>; signer: Signer<Action | Session<AuthorizationData>> }> {
+		const signer = this.scheme.create()
+		const address = await this.getAddress()
+		const session = await this.authorize({
+			topic,
+			address,
+			publicKey: signer.publicKey,
+			timestamp: Date.now(),
+			duration: null,
+		})
+
+		const key = `canvas/${topic}/${address}`
+		this.#cache.set(key, { session, signer })
+		target.set(key, json.stringify({ session, signer: signer.export() }))
+
+		return { payload: session, signer }
+	}
 
 	public async getSession(
 		topic: string,
-		options: { timestamp?: number; fromCache?: boolean } = {},
-	): Promise<Session<AuthorizationData>> {
+	): Promise<{ payload: Session<AuthorizationData>; signer: Signer<Action | Session<AuthorizationData>> } | null> {
 		const address = await this.getAddress()
+		const key = `canvas/${topic}/${address}`
 
-		this.log("getting session for %s", address)
-
-		{
-			const { session, signer } = this.getCachedSession(topic, address) ?? {}
-			if (session !== undefined && signer !== undefined) {
-				const { timestamp, duration } = session
-				const t = options.timestamp ?? timestamp
-				if (timestamp <= t && t <= timestamp + (duration ?? Infinity)) {
-					this.log("found session for %s in store: %o", address, session)
-					return session
-				} else {
-					this.log("stored session for %s has expired", address)
-				}
-			}
+		if (this.#cache.has(key)) {
+			const { session, signer } = this.#cache.get(key)!
+			return { payload: session, signer }
 		}
 
-		if (options.fromCache) return Promise.reject()
+		const value = target.get(key)
+		if (value !== null) {
+			const entry = json.parse<{ type: string; privateKey: Uint8Array; session: Session }>(value)
+			const { type, privateKey, session } = entry
 
-		const signer = await this.#createSigner()
-		this.log("created new signer with public key %s", signer.uri)
+			const signer = this.scheme.create({ type, privateKey })
+			return { payload: session, signer }
+		}
 
-		this.log("creating new session for %s", address)
-		const timestamp = options.timestamp ?? Date.now()
-		const session = await this.newSession({
-			topic,
-			address,
-			publicKey: signer.uri,
-			timestamp,
-			duration: this.#defaultDuration,
-		})
-
-		this.setCachedSession(topic, address, session, signer)
-
-		this.log("created new session for %s: %o", address, session)
-		return session
+		return null
 	}
 
-	public sign(message: Message<Action | Session>, options?: { codec?: string }): Awaitable<Signature> {
-		if (message.payload.type === "action") {
-			const { address, timestamp } = message.payload
-			const { signer, session } = this.getCachedSession(message.topic, address) ?? {}
-			assert(signer !== undefined && session !== undefined)
-
-			assert(address === session.address)
-			assert(timestamp >= session.timestamp)
-			assert(timestamp <= session.timestamp + (session.duration ?? Infinity))
-
-			return signer.sign(message, options)
-		} else if (message.payload.type === "session") {
-			const { signer, session } = this.getCachedSession(message.topic, message.payload.address) ?? {}
-			assert(signer !== undefined && session !== undefined)
-
-			// only sign our own current sessions
-			// use a deep comparison
-			assert(deepEquals(message.payload, session))
-			return signer.sign(message, options)
-		} else {
-			signalInvalidType(message.payload)
-		}
+	public hasSession(topic: string, address: string): boolean {
+		const key = `canvas/${topic}/${address}`
+		return this.#cache.has(key) || target.get(key) !== null
 	}
 
 	public async clear(topic: string) {
-		this.#sessionCache.clear()
-		target.clear(this.getSessionKey(topic, ""))
-	}
+		const prefix = `canvas/${topic}/`
 
-	#sessionCache = new Map<string, { session: Session; signer: Signer<Action | Session<AuthorizationData>> }>()
-
-	protected getSessionKey = (topic: string, address: string) => `canvas/${topic}/${address}`
-
-	public getCachedSession(
-		topic: string,
-		address: string,
-	): { session: Session; signer: Signer<Action | Session<AuthorizationData>> } | null {
-		if (this.#sessionCache.has(address)) {
-			return this.#sessionCache.get(address)!
+		for (const key of this.#cache.keys()) {
+			if (key.startsWith(prefix)) {
+				this.#cache.delete(key)
+			}
 		}
-
-		const value = target.get(this.getSessionKey(topic, address))
-		if (value === null) {
-			return null
-		}
-
-		const { type, privateKey, session } = json.parse<{ session: Session; type: string; privateKey: Uint8Array }>(value)
-		const signer = this.#createSigner({ type, privateKey })
-		this.#sessionCache.set(address, { session, signer })
-		return { session, signer }
-	}
-
-	private setCachedSession(
-		topic: string,
-		address: string,
-		session: Session,
-		signer: Signer<Action | Session<AuthorizationData>>,
-	): void {
-		this.#sessionCache.set(address, { session, signer })
-
-		const { type, privateKey } = signer.export()
-		const key = this.getSessionKey(topic, address)
-		const value = json.stringify({ type, privateKey, session })
-		target.set(key, value)
 	}
 }

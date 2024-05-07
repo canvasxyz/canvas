@@ -57,7 +57,9 @@ export const ConnectEthereumKeplr: React.FC<ConnectEthereumKeplrProps> = ({ chai
 			},
 		})
 
-		const { address } = await signer.getSession(app.topic)
+		const {
+			payload: { address },
+		} = await signer.newSession(app.topic)
 		setAddress(address)
 		setSessionSigner(signer)
 		setThisIsConnected(true)

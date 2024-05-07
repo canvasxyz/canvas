@@ -3,7 +3,7 @@ import test from "ava"
 import { Secp256k1Wallet, StdSignDoc } from "@cosmjs/amino"
 import { secp256k1 } from "@noble/curves/secp256k1"
 
-import { Action, Message, Session, SessionSigner as Signer } from "@canvas-js/interfaces"
+import { Action, Message, Session, SessionSigner, Signer } from "@canvas-js/interfaces"
 
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
 // import { NEARSigner } from "@canvas-js/chain-near"
@@ -13,16 +13,16 @@ import { SolanaSigner } from "@canvas-js/chain-solana"
 import { SubstrateSigner } from "@canvas-js/chain-substrate"
 // import { ATPSigner } from "@canvas-js/chain-atp"
 
-type SignerImplementation = { createSigner: () => Promise<Signer>; name: string }
+type SessionSignerImplementation = { createSessionSigner: () => Promise<SessionSigner<any>>; name: string }
 
-const SIGNER_IMPLEMENTATIONS: SignerImplementation[] = [
+const SIGNER_IMPLEMENTATIONS: SessionSignerImplementation[] = [
 	{
 		name: "chain-cosmos",
-		createSigner: async () => new CosmosSigner(),
+		createSessionSigner: async () => new CosmosSigner(),
 	},
 	{
 		name: "chain-cosmos-amino",
-		createSigner: async () => {
+		createSessionSigner: async () => {
 			const wallet = await Secp256k1Wallet.fromKey(secp256k1.utils.randomPrivateKey())
 
 			return new CosmosSigner({
@@ -43,56 +43,55 @@ const SIGNER_IMPLEMENTATIONS: SignerImplementation[] = [
 	// },
 	{
 		name: "chain-ethereum",
-		createSigner: async () => new SIWESigner(),
+		createSessionSigner: async () => new SIWESigner(),
 	},
 	{
 		name: "chain-ethereum-viem",
-		createSigner: async () => new SIWESignerViem(),
+		createSessionSigner: async () => new SIWESignerViem(),
 	},
 	{
 		name: "chain-ethereum-eip712",
-		createSigner: async () => new Eip712Signer(),
+		createSessionSigner: async () => new Eip712Signer(),
 	},
 	{
 		name: "chain-solana",
-		createSigner: async () => new SolanaSigner(),
+		createSessionSigner: async () => new SolanaSigner(),
 	},
 	{
 		name: "chain-substrate-sr25519",
-		createSigner: async () => new SubstrateSigner({ substrateKeyType: "sr25519" }),
+		createSessionSigner: async () => new SubstrateSigner({ substrateKeyType: "sr25519" }),
 	},
 	{
 		name: "chain-substrate-ed25519",
-		createSigner: async () => new SubstrateSigner({ substrateKeyType: "ed25519" }),
+		createSessionSigner: async () => new SubstrateSigner({ substrateKeyType: "ed25519" }),
 	},
 	{
 		name: "chain-substrate-ecdsa",
-		createSigner: async () => new SubstrateSigner({ substrateKeyType: "ecdsa" }),
+		createSessionSigner: async () => new SubstrateSigner({ substrateKeyType: "ecdsa" }),
 	},
 	{
 		name: "chain-substrate-ethereum",
-		createSigner: async () => new SubstrateSigner({ substrateKeyType: "ethereum" }),
+		createSessionSigner: async () => new SubstrateSigner({ substrateKeyType: "ethereum" }),
 	},
 ]
 
-function runTestSuite({ createSigner, name }: SignerImplementation) {
+function runTestSuite({ createSessionSigner: createSessionSigner, name }: SessionSignerImplementation) {
 	test(`${name} - create and verify session`, async (t) => {
 		const topic = "example:signer"
-		const signer = await createSigner()
-
-		const session = await signer.getSession(topic)
-		await t.notThrowsAsync(() => Promise.resolve(signer.verifySession(topic, session)))
+		const sessionSigner = await createSessionSigner()
+		const { payload: session } = await sessionSigner.newSession(topic)
+		await t.notThrowsAsync(() => Promise.resolve(sessionSigner.verifySession(topic, session)))
 	})
 
 	test(`${name} - create and verify session fails on incorrect signature`, async (t) => {
 		const topic = "example:signer"
-		const signer = await createSigner()
+		const sessionSigner = await createSessionSigner()
 
-		const session = await signer.getSession(topic)
+		const { payload: session } = await sessionSigner.newSession(topic)
 		// tamper with the session
 		session.timestamp = 0
 		try {
-			await signer.verifySession(topic, session)
+			await sessionSigner.verifySession(topic, session)
 			t.fail("expected verifySession to throw")
 		} catch (e) {
 			t.pass()
@@ -101,23 +100,23 @@ function runTestSuite({ createSigner, name }: SignerImplementation) {
 
 	test(`${name} - sign session and verify session signature`, async (t) => {
 		const topic = "example:signer"
-		const signer = await createSigner()
+		const sessionSigner = await createSessionSigner()
 
-		const session = await signer.getSession(topic)
+		const { payload: session, signer: delegateSigner } = await sessionSigner.newSession(topic)
 
 		const message: Message<Session> = { topic, clock: 0, parents: [], payload: session }
-		const sessionSignature = await signer.sign(message)
-		t.notThrows(() => signer.verify(sessionSignature, message))
+		const sessionSignature = await delegateSigner.sign(message)
+		t.notThrows(() => sessionSigner.scheme.verify(sessionSignature, message))
 	})
 
 	test(`${name} - session address is matched by the signer`, async (t) => {
 		const topic = "example:signer"
-		const signer = await createSigner()
+		const sessionSigner = await createSessionSigner()
 
-		const session = await signer.getSession(topic)
+		const { payload: session } = await sessionSigner.newSession(topic)
 		const addressParts = session.address.split(":")
 		t.is(addressParts.length, 3)
-		t.true(signer.match(session.address))
+		t.true(sessionSigner.match(session.address))
 	})
 
 	// test(`${name} - refuse to sign foreign sessions`, async (t) => {
@@ -135,10 +134,10 @@ function runTestSuite({ createSigner, name }: SignerImplementation) {
 
 	test(`${name} - different signers successfully verify each other's sessions`, async (t) => {
 		const topic = "example:signer"
-		const [a, b] = await Promise.all([createSigner(), createSigner()])
+		const [a, b] = await Promise.all([createSessionSigner(), createSessionSigner()])
 
-		const sessionA = await a.getSession(topic)
-		const sessionB = await b.getSession(topic)
+		const { payload: sessionA } = await a.newSession(topic)
+		const { payload: sessionB } = await b.newSession(topic)
 
 		await t.notThrowsAsync(async () => a.verifySession(topic, sessionB))
 		await t.notThrowsAsync(async () => b.verifySession(topic, sessionA))
@@ -146,13 +145,13 @@ function runTestSuite({ createSigner, name }: SignerImplementation) {
 
 	test(`${name} - create and verify session and action`, async (t) => {
 		const topic = "example:signer"
-		const signer = await createSigner()
-		const session = await signer.getSession(topic)
-		t.notThrows(() => signer.verifySession(topic, session))
+		const sessionSigner = await createSessionSigner()
+		const { payload: session, signer: delegateSigner } = await sessionSigner.newSession(topic)
+		t.notThrows(() => sessionSigner.verifySession(topic, session))
 
 		const sessionMessage = { topic, clock: 1, parents: [], payload: session }
-		const sessionSignature = await signer.sign(sessionMessage)
-		t.notThrows(() => signer.verify(sessionSignature, sessionMessage))
+		const sessionSignature = await delegateSigner.sign(sessionMessage)
+		t.notThrows(() => delegateSigner.scheme.verify(sessionSignature, sessionMessage))
 
 		const action: Action = {
 			type: "action",
@@ -164,8 +163,8 @@ function runTestSuite({ createSigner, name }: SignerImplementation) {
 		}
 
 		const actionMessage = { topic, clock: 1, parents: [], payload: action }
-		const actionSignature = await signer.sign(actionMessage)
-		t.notThrows(() => signer.verify(actionSignature, actionMessage))
+		const actionSignature = await delegateSigner.sign(actionMessage)
+		t.notThrows(() => delegateSigner.scheme.verify(actionSignature, actionMessage))
 	})
 }
 
@@ -178,7 +177,7 @@ test(`ethereum - ethers signer can verify ethereum viem signed data`, async (t) 
 	const signingSigner = new SIWESignerViem()
 	const verifyingSigner = new SIWESigner()
 
-	const session = await signingSigner.getSession(topic)
+	const { payload: session } = await signingSigner.newSession(topic)
 	await t.notThrowsAsync(() => Promise.resolve(verifyingSigner.verifySession(topic, session)))
 })
 
@@ -187,6 +186,6 @@ test(`ethereum - viem signer can verify ethers signed data`, async (t) => {
 	const signingSigner = new SIWESigner()
 	const verifyingSigner = new SIWESignerViem()
 
-	const session = await signingSigner.getSession(topic)
+	const { payload: session } = await signingSigner.newSession(topic)
 	await t.notThrowsAsync(() => Promise.resolve(verifyingSigner.verifySession(topic, session)))
 })

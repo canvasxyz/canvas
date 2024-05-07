@@ -3,8 +3,8 @@ import { KeyPair } from "near-api-js"
 import { PublicKey } from "@near-js/crypto"
 import { ed25519 } from "@noble/curves/ed25519"
 
-import type { Session } from "@canvas-js/interfaces"
-import { AbstractSessionData, AbstractSessionSigner, Ed25519DelegateSigner } from "@canvas-js/signatures"
+import type { Session, AbstractSessionData } from "@canvas-js/interfaces"
+import { AbstractSessionSigner, ed25519 as Ed25519SignatureScheme } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
 import { NEARMessage, NEARSessionData } from "./types.js"
@@ -17,17 +17,14 @@ export interface NEARSignerInit {
 }
 
 export class NEARSigner extends AbstractSessionSigner<NEARSessionData> {
-	public readonly codecs = [Ed25519DelegateSigner.cborCodec, Ed25519DelegateSigner.jsonCodec]
 	public readonly match = (chain: string) => addressPattern.test(chain)
-	public readonly verify = Ed25519DelegateSigner.verify
-
 	public readonly chainId: string
 
 	#address: string
 	#keyPair: KeyPair
 
 	public constructor({ keyPair, sessionDuration, chainId }: NEARSignerInit = {}) {
-		super("chain-near", { createSigner: (init) => new Ed25519DelegateSigner(init), defaultDuration: sessionDuration })
+		super("chain-near", Ed25519SignatureScheme, { sessionDuration })
 
 		this.#keyPair = keyPair ?? KeyPair.fromRandom("ed25519")
 		this.#address = this.#keyPair.getPublicKey().toString().split(":")[1]
@@ -59,12 +56,12 @@ export class NEARSigner extends AbstractSessionSigner<NEARSessionData> {
 		assert(valid, "invalid signature")
 	}
 
-	protected getAddress(): string {
+	public getAddress(): string {
 		const walletAddress = this.#address
 		return `${this.chainId}:${walletAddress}`
 	}
 
-	protected async newSession(data: AbstractSessionData): Promise<Session<NEARSessionData>> {
+	public async authorize(data: AbstractSessionData): Promise<Session<NEARSessionData>> {
 		const { topic, address, publicKey, timestamp, duration } = data
 		const issuedAt = new Date(timestamp)
 

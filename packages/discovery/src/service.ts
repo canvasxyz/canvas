@@ -303,12 +303,12 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 		// include the logged-in address, if we have one
 		let address = null
 		if (this.appTopic !== null && this.signers !== null) {
-			let session
 			for (const signer of this.signers.getAll()) {
 				try {
-					const timestamp = Date.now()
-					const session = await signer.getSession(this.appTopic, { timestamp, fromCache: true })
-					address = session.address
+					// const timestamp = Date.now()
+					address = await signer.getAddress()
+					// const session = await signer.getSession(this.appTopic, { timestamp, fromCache: true })
+					// address = session.address
 				} catch (err) {
 					continue // no session
 				}

@@ -71,19 +71,20 @@ The `codec` identifies how the message was serialized to bytes for signing. `dag
 
 ### Message signers
 
-Although it's possible to create and sign messages manually, the simplest way to use GossipLog is to use the signer class exported from `@canvas-js/signatures`.
+Although it's possible to create and sign messages manually, the simplest way to use GossipLog is to use the `ed25519` signature scheme exported from `@canvas-js/signatures`.
 
 ```ts
-import { Ed25519DelegateSigner } from "@canvas-js/signatures"
+import { ed25519 } from "@canvas-js/signatures"
 
-const signer = new Ed25519DelegateSigner()
+const signer = ed25519.create()
+// or ed25519.create({ type: "ed25519", privateKey: Uint8Array([ ... ]) })
 ```
 
 Once you have a signer, you can add it to `GossipLogInit` to use it by default for all appends, or pass a specific signer into each call to `append` individually.
 
 ```ts
-const signerA = new Ed25519DelegateSigner()
-const signerB = new Ed25519DelegateSigner()
+const signerA = ed25519.create()
+const signerB = ed25519.create()
 
 const log = await GossipLog.init({ ...init, signer: signerA })
 

@@ -118,6 +118,20 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 		}
 	})
 
+	api.get("/sessions", async (req, res) => {
+		const { address, publicKey, minExpiration } = req.query
+		assert(typeof address === "string", "missing address query parameter")
+		assert(typeof publicKey === "string", "missing publicKey query parameter")
+
+		let minExpirationValue: number | undefined = undefined
+		if (typeof minExpiration === "string") {
+			minExpirationValue = parseInt(minExpiration)
+		}
+
+		const sessions = await app.getSessions({ address, publicKey, minExpiration: minExpirationValue })
+		return res.json(sessions)
+	})
+
 	api.get("/clock", async (req, res) => {
 		const [clock, parents] = await app.messageLog.getClock()
 		send(req, res, { clock, parents })
