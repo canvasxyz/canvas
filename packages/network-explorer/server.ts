@@ -54,7 +54,7 @@ const canvasApp = await Canvas.initialize({
 })
 
 console.log("initializing libp2p")
-canvasApp.libp2p.start()
+await canvasApp.libp2p.start()
 
 console.log("initializing express")
 const canvasApiApp = createAPI(canvasApp, { exposeMessages: true, exposeModels: true, exposeP2P: true })
