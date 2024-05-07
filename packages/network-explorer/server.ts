@@ -1,8 +1,7 @@
 import express from "express"
-import { stringify } from "@ipld/dag-json"
 import next from "next"
 
-import { Canvas, defaultBootstrapList } from "@canvas-js/core"
+import { Canvas, createAPI, defaultBootstrapList } from "@canvas-js/core"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 
 const HTTP_PORT = parseInt(process.env.PORT || "3000", 10)
@@ -14,13 +13,13 @@ console.log(`HTTP_ADDR: ${HTTP_ADDR}`)
 console.log(`dev: ${dev}`)
 
 console.log("initializing next.js")
-const app = next({ dev })
-const handle = app.getRequestHandler()
-await app.prepare()
+const nextApp = next({ dev })
+const handle = nextApp.getRequestHandler()
+await nextApp.prepare()
 
 console.log("initializing canvas")
 const canvasApp = await Canvas.initialize({
-	path: process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/chat_postgres",
+	path: process.env.DATABASE_URL,
 	contract: {
 		topic: "chat-example.canvas.xyz",
 		models: {
@@ -58,19 +57,11 @@ console.log("initializing libp2p")
 canvasApp.libp2p.start()
 
 console.log("initializing express")
+const canvasApiApp = createAPI(canvasApp, { exposeMessages: true, exposeModels: true, exposeP2P: true })
+
 const expressApp = express()
-expressApp.use(express.json())
 
-expressApp.get("/api/messages", async (req, res) => {
-	const results = []
-	for await (const [cid, signature, message] of canvasApp.messageLog.iterate()) {
-		results.push({ cid, signature, message })
-	}
-
-	res.set("content-type", "application/json")
-	res.status(200)
-	res.send(stringify(results))
-})
+expressApp.use("/api", canvasApiApp)
 
 expressApp.all("*", (req, res) => {
 	return handle(req, res)
