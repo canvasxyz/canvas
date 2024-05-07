@@ -2,8 +2,6 @@ import useSWR from "swr"
 import { Action, Message, Session, Signature } from "@canvas-js/interfaces"
 import { parse } from "@ipld/dag-json"
 
-import "./App.css"
-
 const fetchAndIpldParseJson = async <T,>(path: string) => {
 	const response = await fetch(`http://localhost:3000${path}`)
 	const json = await response.text()
