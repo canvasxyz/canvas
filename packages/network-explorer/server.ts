@@ -1,7 +1,8 @@
 import express from "express"
 import next from "next"
 
-import { Canvas, createAPI, defaultBootstrapList } from "@canvas-js/core"
+import { createAPI } from "@canvas-js/core/api"
+import { Canvas, defaultBootstrapList } from "@canvas-js/core"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 
 const HTTP_PORT = parseInt(process.env.PORT || "3000", 10)
