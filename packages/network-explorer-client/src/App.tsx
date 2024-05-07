@@ -1,6 +1,7 @@
 import useSWR from "swr"
 import { Action, Message, Session, Signature } from "@canvas-js/interfaces"
 import { parse } from "@ipld/dag-json"
+import ArgsPopout from "./ArgsPopout"
 
 const fetchAndIpldParseJson = async <T,>(path: string) => {
 	const response = await fetch(`http://localhost:3000${path}`)
@@ -14,108 +15,97 @@ function App() {
 		refreshInterval: 1000,
 	})
 
-	const { data: connectionsData, error: connectionsError } = useSWR(
-		"/api/connections",
-		fetchAndIpldParseJson<Record<string, { peer: string; addr: string; streams: Record<string, string | null> }>>,
-		{
-			refreshInterval: 1000,
-		},
-	)
-
-	const { data: clockData, error: clockError } = useSWR(
-		"/api/clock",
-		fetchAndIpldParseJson<{ clock: number; parents: string[] }>,
-		{
-			refreshInterval: 1000,
-		},
-	)
-
-	if (error || connectionsError || clockError) return <div>failed to load</div>
-	if (!data || !connectionsData || !clockData) return <div>loading...</div>
-
-	const connectionsDataKeys = Object.keys(connectionsData)
-	connectionsDataKeys.sort()
+	if (error) return <div>failed to load</div>
+	if (!data) return <div>loading...</div>
 
 	const actions = data.filter((item) => item[2].payload.type === "action") as Result<Action>[]
-	const sessions = data.filter((item) => item[2].payload.type === "session") as Result<Session>[]
 
 	return (
 		<>
-			Clock: {clockData.clock} <br />
-			<h1>Actions ({actions.length}):</h1>
-			<table>
-				<thead>
-					<tr>
-						<th>cid</th>
-						<th>topic</th>
-						<th>name</th>
-						<th>args</th>
-						<th>timestamp</th>
-					</tr>
-				</thead>
-				<tbody>
-					{actions.map((item) => {
-						const cid = item[0]
-						const message = item[2]
-						return (
-							<tr key={cid}>
-								<td>{cid}</td>
-								<td>{message.topic}</td>
-								<td>{message.payload.name}</td>
-								<td>{JSON.stringify(message.payload.args)}</td>
-								<td>{message.payload.timestamp}</td>
+			<div className="flex flex-row max-w-4xl bg-blue-400 gap-10 p-5">
+				<div className="font-bold">Canvas Explorer</div>
+				<div>Applications</div>
+			</div>
+			<div className="max-w-4xl bg-green-100">
+				This explorer provides information about signed interactions on Canvas applications.
+			</div>
+			<div className="flex flex-row max-w-4xl bg-red-100 gap-3">
+				<div>
+					<div className="font-bold">Network Status</div>
+					<div>Explorer is online, running node v0.9.1</div>
+				</div>
+				<div>
+					<div>Observed Actions</div>
+					<div className="font-bold">3,842</div>
+				</div>
+				<div>
+					<div>Observed Sessions</div>
+					<div className="font-bold">1,445</div>
+				</div>
+				<div>
+					<div>Unique Addresses</div>
+					<div className="font-bold">1,110</div>
+				</div>
+			</div>
+			<div className="grid grid-cols-2 max-w-4xl">
+				<div>
+					<div>
+						<div className="font-bold">Applications</div>
+						<div>Each application must be configured manually at this time</div>
+					</div>
+					<table>
+						<thead>
+							<tr>
+								<th>Application</th>
+								<th>Actions</th>
+								<th>Sessions</th>
+								<th>Addresses</th>
 							</tr>
-						)
-					})}
-				</tbody>
-			</table>
-			<h1>Sessions ({sessions.length}):</h1>
-			<table>
-				<thead>
-					<tr>
-						<th>cid</th>
-						<th>topic</th>
-						<th>address</th>
-						<th>publicKey</th>
-						<th>timestamp</th>
-					</tr>
-				</thead>
-				<tbody>
-					{sessions.map((item) => {
-						const cid = item[0]
-						const message = item[2]
-						return (
-							<tr key={cid}>
-								<td>{cid}</td>
-								<td>{message.topic}</td>
-								<td>{message.payload.address}</td>
-								<td>{message.payload.publicKey}</td>
-								<td>{message.payload.timestamp}</td>
+						</thead>
+						<tbody>
+							<tr key={"chat-example.canvas.xyz"}>
+								<td>{"chat-example.canvas.xyz"}</td>
+								<td>{1538}</td>
+								<td>{445}</td>
+								<td>{48}</td>
 							</tr>
-						)
-					})}
-				</tbody>
-			</table>
-			<h1>Connections ({connectionsDataKeys.length}):</h1>
-			<table>
-				<thead>
-					<tr>
-						<th>addr</th>
-						<th>peer</th>
-					</tr>
-				</thead>
-				<tbody>
-					{connectionsDataKeys.map((connectionKey) => {
-						const { addr, peer } = connectionsData[connectionKey]
-						return (
-							<tr key={connectionKey}>
-								<td>{addr.split("/").slice(0, -1).join("/")}/...</td>
-								<td>{peer}</td>
+						</tbody>
+					</table>
+				</div>
+				<div>
+					<div>
+						<div className="font-bold">Latest Actions</div>
+						<div>Live feed of recent actions, for all applications</div>
+					</div>
+					<table>
+						<thead>
+							<tr>
+								<th>Address</th>
+								<th>Action</th>
+								<th>Args</th>
+								<th>Timestamp</th>
 							</tr>
-						)
-					})}
-				</tbody>
-			</table>
+						</thead>
+						<tbody>
+							{actions.map((item) => {
+								const cid = item[0]
+								const message = item[2]
+
+								return (
+									<tr key={cid}>
+										<td>{message.payload.address.slice(0, 20)}...</td>
+										<td>{message.payload.name}</td>
+										<td>
+											<ArgsPopout data={JSON.stringify(message.payload.args)} />
+										</td>
+										<td>{message.payload.timestamp}</td>
+									</tr>
+								)
+							})}
+						</tbody>
+					</table>
+				</div>
+			</div>
 		</>
 	)
 }
