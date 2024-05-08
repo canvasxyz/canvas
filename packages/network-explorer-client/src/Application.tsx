@@ -47,45 +47,51 @@ function Application() {
 				</div>
 			</div>
 
-			<div>
-				<div className="text-sm font-bold">Latest Actions</div>
-				<div>Action history for this application, sorted by timestamp</div>
-				<table className="table-auto">
-					<thead>
-						<tr>
-							<th>Address</th>
-							<th>Action</th>
-							<th>Args</th>
-							<th>Timestamp</th>
-							<th>Session</th>
-							<th>Received (clock)</th>
-						</tr>
-					</thead>
-					<tbody>
-						{actions.map((item) => {
-							const cid = item[0]
-							const message = item[2]
-							const session = sessionsByAddress.get(message.payload.address)
-							const publicKey = session ? session.publicKey : ""
+			<div className="flex flex-col gap-2">
+				<div className="flex flex-col gap-1">
+					<div className="text-sm">Latest Actions</div>
+					<div>Action history for this application, sorted by timestamp</div>
+				</div>
+				<div className="border rounded-lg py-1">
+					<table className="table-auto w-full rounded text-left rtl:text-right">
+						<thead>
+							<tr className="border-b">
+								<th className="px-6 font-normal">Address</th>
+								<th className="px-6 font-normal">Action</th>
+								<th className="px-6 font-normal">Args</th>
+								<th className="px-6 font-normal">Timestamp</th>
+								<th className="px-6 font-normal">Session</th>
+								{/* <th>Received (clock)</th>
+								<th>Parents</th> */}
+							</tr>
+						</thead>
+						<tbody>
+							{actions.map((item) => {
+								const cid = item[0]
+								const message = item[2]
+								const session = sessionsByAddress.get(message.payload.address)
+								const publicKey = session ? session.publicKey : ""
 
-							return (
-								<tr key={cid}>
-									<td>{message.payload.address.slice(0, 20)}...</td>
-									<td>{message.payload.name}</td>
-									<td>
-										<ArgsPopout data={JSON.stringify(message.payload.args)} />
-									</td>
-									<td>{message.payload.timestamp}</td>
-									<td>
-										{publicKey ? `${publicKey.slice(0, 25)}...` : "-"}{" "}
-										<span className="text-gray-400">{session && session.timestamp}</span>
-									</td>
-									<td>{message.clock}</td>
-								</tr>
-							)
-						})}
-					</tbody>
-				</table>
+								return (
+									<tr key={cid}>
+										<td className="break-all px-6 py-2">{message.payload.address.slice(0, 15)}...</td>
+										<td className="break-all px-6">{message.payload.name}</td>
+										<td className="break-all px-6">
+											<ArgsPopout data={JSON.stringify(message.payload.args)} />
+										</td>
+										<td className="break-all px-6">{message.payload.timestamp}</td>
+										<td className="break-all px-6">
+											{publicKey ? `${publicKey.slice(0, 25)}...` : "-"}{" "}
+											<span className="text-gray-400">{session && session.timestamp}</span>
+										</td>
+										{/* <td className="break-all">{message.clock}</td> */}
+										{/* <td className="break-all">{JSON.stringify(message.parents)}</td> */}
+									</tr>
+								)
+							})}
+						</tbody>
+					</table>
+				</div>
 			</div>
 		</>
 	)
