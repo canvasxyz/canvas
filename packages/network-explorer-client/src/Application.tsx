@@ -1,6 +1,5 @@
 import useSWR from "swr"
 import { Action, Session } from "@canvas-js/interfaces"
-import Navbar from "./Navbar"
 import { Result, fetchAndIpldParseJson } from "./utils"
 import ArgsPopout from "./ArgsPopout"
 
@@ -24,15 +23,12 @@ function Application() {
 			}
 		}
 	}
-	console.log(sessionsByAddress)
 
 	return (
 		<>
-			<Navbar />
+			<div className="text-white pt-5 text-lg font-bold">Application Information</div>
 
-			<div className="max-w-4xl bg-green-100">Application Information</div>
-
-			<div className="flex flex-row max-w-4xl bg-red-100 gap-3">
+			<div className="flex flex-row bg-white rounded-lg drop-shadow p-3 gap-3">
 				<div>
 					<div>Topic</div>
 					<div className="font-bold">chat-example.canvas.xyz</div>
@@ -52,9 +48,9 @@ function Application() {
 			</div>
 
 			<div>
-				<div>Latest Actions</div>
+				<div className="text-sm font-bold">Latest Actions</div>
 				<div>Action history for this application, sorted by timestamp</div>
-				<table>
+				<table className="table-auto">
 					<thead>
 						<tr>
 							<th>Address</th>

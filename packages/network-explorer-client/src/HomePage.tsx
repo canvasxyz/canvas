@@ -2,7 +2,6 @@ import useSWR from "swr"
 import { Action, Session } from "@canvas-js/interfaces"
 import { Link } from "react-router-dom"
 import ArgsPopout from "./ArgsPopout"
-import Navbar from "./Navbar"
 import { Result, fetchAndIpldParseJson } from "./utils"
 
 function HomePage() {
@@ -17,11 +16,10 @@ function HomePage() {
 
 	return (
 		<>
-			<Navbar />
-			<div className="max-w-4xl bg-green-100">
+			<div className="text-white pt-5">
 				This explorer provides information about signed interactions on Canvas applications.
 			</div>
-			<div className="flex flex-row max-w-4xl bg-red-100 gap-3">
+			<div className="flex flex-row bg-white rounded-lg drop-shadow p-3 gap-3">
 				<div>
 					<div className="font-bold">Network Status</div>
 					<div>Explorer is online, running node v0.9.1</div>
@@ -39,65 +37,69 @@ function HomePage() {
 					<div className="font-bold">1,110</div>
 				</div>
 			</div>
-			<div className="grid grid-cols-2 max-w-4xl">
+			<div className="grid grid-cols-2 gap-4">
 				<div>
 					<div>
 						<div className="font-bold">Applications</div>
 						<div>Each application must be configured manually at this time</div>
 					</div>
-					<table>
-						<thead>
-							<tr>
-								<th>Application</th>
-								<th>Actions</th>
-								<th>Sessions</th>
-								<th>Addresses</th>
-							</tr>
-						</thead>
-						<tbody>
-							<tr key={"chat-example.canvas.xyz"}>
-								<td>
-									<Link to="application/1">{"chat-example.canvas.xyz"}</Link>
-								</td>
-								<td>{1538}</td>
-								<td>{445}</td>
-								<td>{48}</td>
-							</tr>
-						</tbody>
-					</table>
+					<div className="border rounded-md">
+						<table className="table-auto">
+							<thead>
+								<tr>
+									<th>Application</th>
+									<th>Actions</th>
+									<th>Sessions</th>
+									<th>Addresses</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr key={"chat-example.canvas.xyz"}>
+									<td>
+										<Link to="application/1">{"chat-example.canvas.xyz"}</Link>
+									</td>
+									<td>{1538}</td>
+									<td>{445}</td>
+									<td>{48}</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
 				</div>
 				<div>
 					<div>
 						<div className="font-bold">Latest Actions</div>
 						<div>Live feed of recent actions, for all applications</div>
 					</div>
-					<table>
-						<thead>
-							<tr>
-								<th>Address</th>
-								<th>Action</th>
-								<th>Args</th>
-								<th>Timestamp</th>
-							</tr>
-						</thead>
-						<tbody>
-							{actions.map((item) => {
-								const cid = item[0]
-								const message = item[2]
+					<div className="border rounded-md">
+						<table className="table-auto">
+							<thead className="border">
+								<tr>
+									<th>Address</th>
+									<th>Action</th>
+									<th>Args</th>
+									<th>Timestamp</th>
+								</tr>
+							</thead>
+							<tbody>
+								{actions.map((item) => {
+									const cid = item[0]
+									const message = item[2]
 
-								return (
-									<tr key={cid}>
-										<td>{message.payload.address.slice(0, 20)}...</td>
-										<td>{message.payload.name}</td>
-										<td>
-											<ArgsPopout data={JSON.stringify(message.payload.args)} />
-										</td>
-										<td>{message.payload.timestamp}</td>
-									</tr>
-								)
-							})}
-						</tbody>
-					</table>
+									return (
+										<tr key={cid}>
+											<td>{message.payload.address.slice(0, 20)}...</td>
+											<td>{message.payload.name}</td>
+											<td>
+												<ArgsPopout data={JSON.stringify(message.payload.args)} />
+											</td>
+											<td>{message.payload.timestamp}</td>
+										</tr>
+									)
+								})}
+							</tbody>
+						</table>
+					</div>
 				</div>
 			</div>
 		</>
