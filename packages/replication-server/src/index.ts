@@ -172,6 +172,7 @@ process.on("SIGINT", async () => {
 
 if (loopback !== undefined) {
 	const bootstrapList = [loopback]
+	const healthCheckInitialDelay = 30 * 1000
 	const healthCheckInterval = 30 * 1000
 	const healthCheckGracePeriod = 10 * 1000
 
@@ -205,6 +206,8 @@ if (loopback !== undefined) {
 			}
 		}, healthCheckGracePeriod)
 	}
-	setTimeout(doHealthCheck.bind(1), 1000)
-	setInterval(doHealthCheck.bind(2), healthCheckInterval)
+	setTimeout(() => {
+		doHealthCheck()
+		setInterval(doHealthCheck, healthCheckInterval)
+	}, healthCheckInitialDelay)
 }
