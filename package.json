@@ -7,6 +7,7 @@
     "dev": "tsc --build --watch",
     "build": "tsc --build",
     "clean": "tsc --build --clean",
+    "clean-all": "rm -rf packages/*/lib/* packages/*/test/lib/* packages/*/tsconfig.tsbuildinfo packages/ethereum-contracts/artifacts/* packages/ethereum-contracts/typechain-types/* examples/*/lib/* examples/*/tsconfig.tsbuildinfo examples/*/tsconfig.node.tsbuildinfo",
     "lint": "eslint .",
     "publish": "npm run clean && npm run build && npm publish -w=packages/ --access public",
     "test": "npm run test -w=packages/interfaces -w=packages/modeldb -w=packages/gossiplog -w=packages/core -w=packages/vm",
