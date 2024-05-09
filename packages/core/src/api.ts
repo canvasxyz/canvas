@@ -9,6 +9,8 @@ import { Counter, Gauge, Summary, Registry, register } from "prom-client"
 import type { PeerId } from "@libp2p/interface"
 import { peerIdFromString } from "@libp2p/peer-id"
 
+import * as json from "@ipld/dag-json"
+
 import { Action, Message, Session, Signature } from "@canvas-js/interfaces"
 
 import { Canvas } from "./Canvas.js"
@@ -35,7 +37,9 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 				res.status(StatusCodes.NOT_FOUND).end()
 			} else {
 				const value = await app.db.get(model, key)
-				res.json(value)
+				res.status(StatusCodes.OK)
+				res.setHeader("content-type", "application/json")
+				res.end(json.encode(value))
 			}
 		})
 
@@ -52,15 +56,19 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 			return res.status(StatusCodes.NOT_FOUND).end()
 		}
 
-		res.json({ id, signature, message })
+		res.status(StatusCodes.OK)
+		res.setHeader("content-type", "application/json")
+		res.end(json.encode({ id, signature, message }))
 	})
 
 	api.get("/messages", async (req, res) => {
-		const { gt, gte, lt, lte, type } = req.query
+		const { gt, gte, lt, lte, order, type } = req.query
 
-		const limit = typeof req.query.limit === "string" ? Math.min(100, parseInt(req.query.limit)) : 100
+		const limit = typeof req.query.limit === "string" ? Math.min(64, parseInt(req.query.limit)) : 64
+
 		assert(Number.isSafeInteger(limit) && limit > 0, "invalid `limit` query parameter")
 		assert(type === undefined || type === "action" || type === "session", "invalid `type` query parameter")
+		assert(order === undefined || order === "asc" || order === "desc", "invalid `order` query parameter")
 
 		let lowerBound: { id: string; inclusive: boolean } | null = null
 		let upperBound: { id: string; inclusive: boolean } | null = null
@@ -77,9 +85,10 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 			upperBound = { id: lte, inclusive: true }
 		}
 
-		const results: [id: string, signature: Signature, message: Message<Action | Session>][] = []
+		const reverse = order === "desc"
 
-		for await (const [id, signature, message] of app.getMessages(lowerBound, upperBound)) {
+		const results: [id: string, signature: Signature, message: Message<Action | Session>][] = []
+		for await (const [id, signature, message] of app.getMessages(lowerBound, upperBound, { reverse })) {
 			if (type !== undefined && type !== message.payload.type) {
 				continue
 			}
@@ -89,7 +98,9 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 			}
 		}
 
-		res.json(results)
+		res.status(StatusCodes.OK)
+		res.setHeader("content-type", "application/json")
+		res.end(json.encode(results))
 	})
 
 	api.post("/messages", ipld(), async (req, res) => {
