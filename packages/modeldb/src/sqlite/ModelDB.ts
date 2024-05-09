@@ -10,7 +10,6 @@ import { Effect, ModelValue, ModelsInit, QueryParams } from "../types.js"
 export interface ModelDBOptions {
 	path: string | null
 	models: ModelsInit
-	indexHistory?: Record<string, boolean>
 }
 
 export class ModelDB extends AbstractModelDB {
@@ -19,8 +18,8 @@ export class ModelDB extends AbstractModelDB {
 	#models: Record<string, ModelAPI> = {}
 	#transaction: sqlite.Transaction<(effects: Effect[]) => void>
 
-	constructor({ path, models, indexHistory }: ModelDBOptions) {
-		super(parseConfig(models), { indexHistory })
+	constructor({ path, models }: ModelDBOptions) {
+		super(parseConfig(models))
 
 		this.db = new Database(path ?? ":memory:")
 
