@@ -1,6 +1,6 @@
 import useSWR from "swr"
 import { Action, Session } from "@canvas-js/interfaces"
-import { Result, fetchAndIpldParseJson } from "./utils"
+import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "./utils"
 import ArgsPopout from "./ArgsPopout"
 
 function Application() {
@@ -79,10 +79,10 @@ function Application() {
 										<td className="break-all px-6">
 											<ArgsPopout data={JSON.stringify(message.payload.args)} />
 										</td>
-										<td className="break-all px-6">{message.payload.timestamp}</td>
+										<td className="break-all px-6">{formatDistanceCustom(message.payload.timestamp)} ago</td>
 										<td className="break-all px-6">
 											{publicKey ? `${publicKey.slice(0, 25)}...` : "-"}{" "}
-											<span className="text-gray-400">{session && session.timestamp}</span>
+											<span className="text-gray-400">{session && formatDistanceCustom(session.timestamp)} ago</span>
 										</td>
 										{/* <td className="break-all">{message.clock}</td> */}
 										{/* <td className="break-all">{JSON.stringify(message.parents)}</td> */}

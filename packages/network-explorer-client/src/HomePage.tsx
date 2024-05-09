@@ -2,7 +2,7 @@ import useSWR from "swr"
 import { Action, Session } from "@canvas-js/interfaces"
 import { Link } from "react-router-dom"
 import ArgsPopout from "./ArgsPopout"
-import { Result, fetchAndIpldParseJson } from "./utils"
+import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "./utils"
 
 function HomePage() {
 	const { data, error } = useSWR("/api/messages", fetchAndIpldParseJson<Result<Action | Session>[]>, {
@@ -38,47 +38,47 @@ function HomePage() {
 				</div>
 			</div>
 			<div className="grid grid-cols-2 gap-4">
-				<div>
+				<div className="flex flex-col gap-2">
 					<div>
 						<div className="font-bold">Applications</div>
 						<div>Each application must be configured manually at this time</div>
 					</div>
-					<div className="border rounded-md">
-						<table className="table-auto">
+					<div className="border rounded-lg py-1">
+						<table className="table-auto w-full rounded text-left rtl:text-right">
 							<thead>
-								<tr>
-									<th>Application</th>
-									<th>Actions</th>
-									<th>Sessions</th>
-									<th>Addresses</th>
+								<tr className="border-b">
+									<th className="px-3 font-normal">Application</th>
+									<th className="px-3 font-normal">Actions</th>
+									<th className="px-3 font-normal">Sessions</th>
+									<th className="px-3 font-normal">Addresses</th>
 								</tr>
 							</thead>
 							<tbody>
 								<tr key={"chat-example.canvas.xyz"}>
-									<td>
+									<td className="break-all px-3 py-2">
 										<Link to="application/1">{"chat-example.canvas.xyz"}</Link>
 									</td>
-									<td>{1538}</td>
-									<td>{445}</td>
-									<td>{48}</td>
+									<td className="break-all px-3">{1538}</td>
+									<td className="break-all px-3">{445}</td>
+									<td className="break-all px-3">{48}</td>
 								</tr>
 							</tbody>
 						</table>
 					</div>
 				</div>
-				<div>
+				<div className="flex flex-col gap-2">
 					<div>
 						<div className="font-bold">Latest Actions</div>
 						<div>Live feed of recent actions, for all applications</div>
 					</div>
-					<div className="border rounded-md">
-						<table className="table-auto">
-							<thead className="border">
-								<tr>
-									<th>Address</th>
-									<th>Action</th>
-									<th>Args</th>
-									<th>Timestamp</th>
+					<div className="border rounded-lg py-1">
+						<table className="table-auto w-full rounded text-left rtl:text-right">
+							<thead>
+								<tr className="border-b">
+									<th className="px-3 font-normal">Address</th>
+									<th className="px-3 font-normal">Action</th>
+									<th className="px-1 font-normal">Args</th>
+									<th className="px-3 font-normal">Timestamp</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -88,12 +88,14 @@ function HomePage() {
 
 									return (
 										<tr key={cid}>
-											<td>{message.payload.address.slice(0, 20)}...</td>
-											<td>{message.payload.name}</td>
-											<td>
+											<td className="break-all px-3 py-2">{message.payload.address.slice(0, 20)}...</td>
+											<td className="break-all px-3">{message.payload.name}</td>
+											<td className="break-all px-1">
 												<ArgsPopout data={JSON.stringify(message.payload.args)} />
 											</td>
-											<td>{message.payload.timestamp}</td>
+											<td className="break-all px-3">
+												{formatDistanceCustom(message.payload.timestamp).replace("about ", "~")} ago
+											</td>
 										</tr>
 									)
 								})}
