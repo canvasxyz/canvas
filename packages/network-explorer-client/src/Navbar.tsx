@@ -1,10 +1,12 @@
+import { Link } from "react-router-dom"
+
 function Navbar() {
 	return (
 		<div className="flex flex-row gap-10 pt-5">
 			<div className="font-bold">Canvas Explorer</div>
-			<a href="/">
+			<Link to={"/"}>
 				<div>Applications</div>
-			</a>
+			</Link>
 		</div>
 	)
 }
