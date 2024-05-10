@@ -5,7 +5,7 @@ import type pg from "pg"
 import type { PlatformTarget, ServiceMap } from "../interface.js"
 
 export default {
-	async openDB(location, models, { indexHistory } = {}) {
+	async openDB(location, models) {
 		throw new Error("Unsupported platform")
 	},
 

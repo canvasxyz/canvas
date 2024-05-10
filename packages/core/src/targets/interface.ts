@@ -23,7 +23,6 @@ export interface PlatformTarget {
 	openDB: (
 		location: { path: string | pg.ConnectionConfig | null; topic: string },
 		models: ModelsInit,
-		options?: { indexHistory?: Record<string, boolean> },
 	) => Promise<AbstractModelDB>
 
 	openGossipLog: <Payload>(

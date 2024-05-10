@@ -11,8 +11,7 @@ import type { PlatformTarget } from "../interface.js"
 import { getLibp2pOptions } from "./libp2p.js"
 
 export default {
-	openDB: ({ topic }, models, { indexHistory } = {}) =>
-		ModelDB.initialize({ name: `canvas/${topic}/db`, models, indexHistory }),
+	openDB: ({ topic }, models) => ModelDB.initialize({ name: `canvas/${topic}/db`, models }),
 
 	openGossipLog: <Payload>({ topic }: { topic: string }, init: GossipLogInit<Payload>) => GossipLog.open(init),
 
@@ -42,7 +41,7 @@ async function getPeerId({ topic }: { topic: string }): Promise<PeerId> {
 				peerId = await createEd25519PeerId()
 			}
 			resolve(peerId)
-			return new Promise((resolve) => { }) // automatically released when the browser tab closes
+			return new Promise((resolve) => {}) // automatically released when the browser tab closes
 		})
 	})
 }
