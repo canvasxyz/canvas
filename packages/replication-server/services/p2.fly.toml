@@ -53,5 +53,8 @@ processes = []
     timeout = 2000
 
 [metrics]
-port = 8000
-path = "/metrics"
+  port = 8000
+  path = "/metrics"
+
+[[restart]]
+  policy = "always"
