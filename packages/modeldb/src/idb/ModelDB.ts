@@ -13,7 +13,6 @@ import { getIndexName, checkForMissingObjectStores } from "./utils.js"
 export interface ModelDBOptions {
 	name: string
 	models: ModelsInit
-	indexHistory?: Record<string, boolean>
 }
 
 export class ModelDB extends AbstractModelDB {
