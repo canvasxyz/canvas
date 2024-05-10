@@ -104,6 +104,10 @@ export const options: Libp2pOptions<ServiceMap> = {
 				publishThreshold: -999_999_999, // default is -50
 				graylistThreshold: -999_999_999, // default is -80
 			},
+			D: 99, // up from 6 - optimal degree of topic mesh
+			Dlo: 99, //
+			Dhi: 99, // up from 15 - upper bound of topic mesh peers
+			Dout: 50, // up from 2 - number of outbound connections to maintain in topic mesh
 		}),
 
 		fetch: fetchService({
