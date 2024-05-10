@@ -11,18 +11,26 @@ import { SIWESigner, Eip712Signer } from "@canvas-js/chain-ethereum"
 import { SIWESignerViem } from "@canvas-js/chain-ethereum-viem"
 import { SolanaSigner } from "@canvas-js/chain-solana"
 import { SubstrateSigner } from "@canvas-js/chain-substrate"
+import { AbstractSessionSignerOptions } from "@canvas-js/signatures"
 // import { ATPSigner } from "@canvas-js/chain-atp"
 
-type SessionSignerImplementation = { createSessionSigner: () => Promise<SessionSigner<any>>; name: string }
+type AdditionalSignerArgs = {
+	sessionDuration?: number
+}
+
+type SessionSignerImplementation = {
+	createSessionSigner: (args?: AdditionalSignerArgs) => Promise<SessionSigner<any>>
+	name: string
+}
 
 const SIGNER_IMPLEMENTATIONS: SessionSignerImplementation[] = [
 	{
 		name: "chain-cosmos",
-		createSessionSigner: async () => new CosmosSigner(),
+		createSessionSigner: async (args) => new CosmosSigner(args),
 	},
 	{
 		name: "chain-cosmos-amino",
-		createSessionSigner: async () => {
+		createSessionSigner: async (args) => {
 			const wallet = await Secp256k1Wallet.fromKey(secp256k1.utils.randomPrivateKey())
 
 			return new CosmosSigner({
@@ -34,6 +42,7 @@ const SIGNER_IMPLEMENTATIONS: SessionSignerImplementation[] = [
 						return wallet.signAmino(signer, signDoc)
 					},
 				},
+				...args,
 			})
 		},
 	},
@@ -43,35 +52,35 @@ const SIGNER_IMPLEMENTATIONS: SessionSignerImplementation[] = [
 	// },
 	{
 		name: "chain-ethereum",
-		createSessionSigner: async () => new SIWESigner(),
+		createSessionSigner: async (args) => new SIWESigner(args),
 	},
 	{
 		name: "chain-ethereum-viem",
-		createSessionSigner: async () => new SIWESignerViem(),
+		createSessionSigner: async (args) => new SIWESignerViem(args),
 	},
 	{
 		name: "chain-ethereum-eip712",
-		createSessionSigner: async () => new Eip712Signer(),
+		createSessionSigner: async (args) => new Eip712Signer(args),
 	},
 	{
 		name: "chain-solana",
-		createSessionSigner: async () => new SolanaSigner(),
+		createSessionSigner: async (args) => new SolanaSigner(args),
 	},
 	{
 		name: "chain-substrate-sr25519",
-		createSessionSigner: async () => new SubstrateSigner({ substrateKeyType: "sr25519" }),
+		createSessionSigner: async (args) => new SubstrateSigner({ substrateKeyType: "sr25519", ...args }),
 	},
 	{
 		name: "chain-substrate-ed25519",
-		createSessionSigner: async () => new SubstrateSigner({ substrateKeyType: "ed25519" }),
+		createSessionSigner: async (args) => new SubstrateSigner({ substrateKeyType: "ed25519", ...args }),
 	},
 	{
 		name: "chain-substrate-ecdsa",
-		createSessionSigner: async () => new SubstrateSigner({ substrateKeyType: "ecdsa" }),
+		createSessionSigner: async (args) => new SubstrateSigner({ substrateKeyType: "ecdsa", ...args }),
 	},
 	{
 		name: "chain-substrate-ethereum",
-		createSessionSigner: async () => new SubstrateSigner({ substrateKeyType: "ethereum" }),
+		createSessionSigner: async (args) => new SubstrateSigner({ substrateKeyType: "ethereum", ...args }),
 	},
 ]
 
@@ -80,6 +89,15 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 		const topic = "example:signer"
 		const sessionSigner = await createSessionSigner()
 		const { payload: session } = await sessionSigner.newSession(topic)
+		await t.notThrowsAsync(() => Promise.resolve(sessionSigner.verifySession(topic, session)))
+	})
+
+	test(`${name} - create and verify session with a session duration`, async (t) => {
+		const topic = "example:signer"
+		const duration = 1000 * 60 * 60 * 24 * 7
+		const sessionSigner = await createSessionSigner({ sessionDuration: duration })
+		const { payload: session } = await sessionSigner.newSession(topic)
+		t.is(session.duration, duration)
 		await t.notThrowsAsync(() => Promise.resolve(sessionSigner.verifySession(topic, session)))
 	})
 
