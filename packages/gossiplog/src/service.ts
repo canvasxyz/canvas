@@ -17,7 +17,6 @@ import PQueue from "p-queue"
 import { anySignal } from "any-signal"
 import * as lp from "it-length-prefixed"
 import { pipe } from "it-pipe"
-import { bytesToHex } from "@noble/hashes/utils"
 
 import type { Signature, Message, Signer } from "@canvas-js/interfaces"
 import { assert } from "@canvas-js/utils"
@@ -28,7 +27,6 @@ import {
 	DEFAULT_PROTOCOL_SELECT_TIMEOUT,
 	MAX_INBOUND_STREAMS,
 	MAX_OUTBOUND_STREAMS,
-	MAX_SYNC_QUEUE_SIZE,
 	SYNC_RETRY_INTERVAL,
 	SYNC_RETRY_LIMIT,
 	second,
@@ -73,7 +71,7 @@ export class GossipLogService<Payload = unknown>
 	private readonly maxInboundStreams: number
 	private readonly maxOutboundStreams: number
 	private readonly syncQueue = new PQueue({ concurrency: 1 })
-	private readonly syncQueuePeers = new Map<string, Promise<void>>()
+	private readonly syncQueuePeers = new Set<string>()
 	private readonly topologyPeers = new Set<string>()
 	private readonly controller = new AbortController()
 
@@ -294,7 +292,7 @@ export class GossipLogService<Payload = unknown>
 	): Promise<TopicValidatorResult> {
 		this.log("handling update event %s from %p (via %p)", msgId, from, propagationSource)
 
-		const missingParents = await this.messageLog.read(async (txn) => {
+		const result = await this.messageLog.read(async (txn) => {
 			const missingParents = new Set<string>()
 			for (const key of heads) {
 				const leaf = await txn.messages.getNode(0, key)
@@ -303,15 +301,19 @@ export class GossipLogService<Payload = unknown>
 				}
 			}
 
-			return missingParents
+			if (missingParents.size === 0) {
+				return TopicValidatorResult.Accept
+			} else {
+				return TopicValidatorResult.Ignore
+			}
 		})
 
-		if (missingParents.size > 0) {
+		// Need to sync
+		if (result === TopicValidatorResult.Ignore) {
 			this.scheduleSync(propagationSource)
-			return TopicValidatorResult.Ignore
-		} else {
-			return TopicValidatorResult.Accept
 		}
+
+		return result
 	}
 
 	private handleIncomingStream: StreamHandler = async ({ connection, stream }) => {
@@ -366,20 +368,18 @@ export class GossipLogService<Payload = unknown>
 		}
 	}
 
-	private scheduleSync(peerId: PeerId): Promise<void> {
+	private scheduleSync(peerId: PeerId) {
 		const id = peerId.toString()
 		if (this.syncQueuePeers.has(id)) {
 			this.log("already queued sync with %p", peerId)
-			return this.syncQueuePeers.get(id)!
+			return
 		}
 
-		const p = this.syncQueue
+		this.syncQueuePeers.add(id)
+		this.syncQueue
 			.add(() => this.sync(peerId), { priority: 0 })
 			.catch((err) => this.log.error("sync failed: %O", err))
 			.finally(() => this.syncQueuePeers.delete(id))
-
-		this.syncQueuePeers.set(id, p)
-		return p
 	}
 
 	private async sync(peerId: PeerId) {
@@ -445,9 +445,11 @@ export class GossipLogService<Payload = unknown>
 
 		this.log("initiating sync with peer %p", peerId)
 
+		let heads: Uint8Array[] | null = null
+
 		const client = new Client(stream)
 		try {
-			const { root, heads } = await this.messageLog.write(async (txn) => {
+			heads = await this.messageLog.write(async (txn) => {
 				let messageCount = 0
 
 				for await (const [_, signature, message, entry] of this.messageLog.sync(txn, client, { sourceId })) {
@@ -457,26 +459,24 @@ export class GossipLogService<Payload = unknown>
 					messageCount += 1
 				}
 
-				const root = await txn.messages.getRoot()
-				if (messageCount === 0) {
-					return { root, heads: null }
+				if (messageCount !== 0) {
+					return await txn.getHeads()
 				} else {
-					const heads = await txn.getHeads()
-					return { root, heads }
+					return null
 				}
 			})
-
-			if (heads !== null) {
-				const data = Event.encode({ update: { heads } })
-				this.#pubsub.publish(this.messageLog.topic, data).then(
-					({ recipients }) => this.log("published update event to %d recipients %O", recipients.length, recipients),
-					(err) => this.log.error("failed to publish update event: %O", err),
-				)
-			}
 		} finally {
 			signal.clear()
 			client.end()
 			this.log("closed outgoing stream %s to peer %p", stream.id, peerId)
+		}
+
+		if (heads !== null) {
+			const data = Event.encode({ update: { heads } })
+			this.#pubsub.publish(this.messageLog.topic, data).then(
+				({ recipients }) => this.log("published update event to %d recipients %O", recipients.length, recipients),
+				(err) => this.log.error("failed to publish update event: %O", err),
+			)
 		}
 	}
 

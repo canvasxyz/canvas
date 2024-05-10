@@ -7,7 +7,6 @@ import type { Signature, Signer, Message, Awaitable } from "@canvas-js/interface
 import { ed25519 } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
-// import { Mempool } from "./Mempool.js"
 import { Driver } from "./sync/driver.js"
 
 import {
@@ -81,7 +80,6 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 	): AsyncIterable<[key: Uint8Array, value: Uint8Array]>
 
 	protected readonly log: Logger
-	// public readonly mempool = new Mempool<{ signature: Signature; message: Message<Payload> }>()
 
 	public readonly validatePayload: (payload: unknown) => payload is Payload
 	public readonly verifySignature: (signature: Signature, message: Message<Payload>) => Awaitable<void>
@@ -222,7 +220,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 	}
 
 	/**
-	 * Insert an existing signed message into the log (ie received via PubSub).
+	 * Insert an existing signed message into the log (ie received via HTTP API).
 	 * If any of the parents are not present, throw an error.
 	 */
 	public async insert(
@@ -269,10 +267,6 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		await txn.insert(signature, message, [key, value])
 
 		this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message } }))
-
-		// for (const [childId, { signature, message }] of this.mempool.observe(id)) {
-		// 	await this.apply(txn, childId, signature, message)
-		// }
 	}
 
 	public async getAncestors(txn: ReadOnlyTransaction, id: string, atOrBefore: number): Promise<string[]> {
