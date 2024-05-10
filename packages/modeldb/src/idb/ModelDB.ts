@@ -17,7 +17,7 @@ export interface ModelDBOptions {
 }
 
 export class ModelDB extends AbstractModelDB {
-	public static async initialize({ name, models, indexHistory }: ModelDBOptions) {
+	public static async initialize({ name, models }: ModelDBOptions) {
 		const config = parseConfig(models)
 		const db = await openDB(name, 1, {
 			upgrade(db: IDBPDatabase<unknown>) {
@@ -41,17 +41,13 @@ export class ModelDB extends AbstractModelDB {
 			},
 		})
 
-		return new ModelDB(db, config, { indexHistory })
+		return new ModelDB(db, config)
 	}
 
 	readonly #models: Record<string, ModelAPI> = {}
 
-	private constructor(
-		public readonly db: IDBPDatabase,
-		config: Config,
-		options: { indexHistory?: Record<string, boolean> },
-	) {
-		super(config, options)
+	private constructor(public readonly db: IDBPDatabase, config: Config) {
+		super(config)
 
 		for (const model of config.models) {
 			this.#models[model.name] = new ModelAPI(model)

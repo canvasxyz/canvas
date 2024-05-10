@@ -32,20 +32,15 @@ export class ModelDB extends AbstractModelDB {
 				modelDBAPIs[model.name] = await ModelAPI.initialize(client, model, clear)
 			}
 
-			return new ModelDB(client, modelDBConfig, modelDBAPIs, indexHistory)
+			return new ModelDB(client, modelDBConfig, modelDBAPIs)
 		} catch (e) {
 			await client.end()
 			throw e
 		}
 	}
 
-	constructor(
-		client: pg.Client,
-		modelDBConfig: Config,
-		modelAPIs: Record<string, ModelAPI>,
-		indexHistory?: Record<string, boolean>,
-	) {
-		super(modelDBConfig, { indexHistory })
+	constructor(client: pg.Client, modelDBConfig: Config, modelAPIs: Record<string, ModelAPI>) {
+		super(modelDBConfig)
 
 		for (const model of Object.values(this.models)) {
 			this.#models[model.name] = modelAPIs[model.name]
