@@ -27,8 +27,8 @@ export class Eip712Signer extends AbstractSessionSigner<Eip712SessionData> {
 	public readonly chainId: number
 	#signer: AbstractSigner
 
-	constructor(init: { signer?: AbstractSigner; chainId?: number } = {}) {
-		super("chain-ethereum-eip712", Secp256k1SignatureScheme)
+	constructor(init: { signer?: AbstractSigner; chainId?: number; sessionDuration?: number } = {}) {
+		super("chain-ethereum-eip712", Secp256k1SignatureScheme, { sessionDuration: init.sessionDuration })
 		this.#signer = init.signer ?? Wallet.createRandom()
 		this.chainId = init.chainId ?? 1
 	}
