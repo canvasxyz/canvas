@@ -101,6 +101,15 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 		await t.notThrowsAsync(() => Promise.resolve(sessionSigner.verifySession(topic, session)))
 	})
 
+	test(`${name} - create and verify session with no session duration given`, async (t) => {
+		const topic = "example:signer"
+		const sessionSigner = await createSessionSigner({})
+		const { payload: session } = await sessionSigner.newSession(topic)
+		// if no sessionDuration is given, the session duration should be null
+		t.is(session.duration, null)
+		await t.notThrowsAsync(() => Promise.resolve(sessionSigner.verifySession(topic, session)))
+	})
+
 	test(`${name} - create and verify session fails on incorrect signature`, async (t) => {
 		const topic = "example:signer"
 		const sessionSigner = await createSessionSigner()
