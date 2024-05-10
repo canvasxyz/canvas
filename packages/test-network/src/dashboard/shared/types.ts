@@ -1,5 +1,5 @@
 export type Event =
-	| { type: "start"; id: string; t: number; detail: { hostname: string } }
+	| { type: "start"; id: string; t: number; detail: { hostname: string; rootLevel: number; rootHash: string } }
 	| { type: "stop"; id: string; t: number; detail: {} }
 	| { type: "connection:open"; id: string; t: number; detail: { id: string; remotePeer: string; remoteAddr: string } }
 	| { type: "connection:close"; id: string; t: number; detail: { id: string; remotePeer: string; remoteAddr: string } }

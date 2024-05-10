@@ -122,13 +122,17 @@ async function start() {
 		console.log(`API server listening on http://${SERVICE_NAME}:8000`)
 	})
 
-	libp2p.addEventListener("start", () => {
+	libp2p.addEventListener("start", async () => {
 		console.log("libp2p started")
 		// if (SERVICE_NAME !== "bootstrap") {
 		// 	libp2p.services.pubsub.subscribe(topic)
 		// }
-
-		post(libp2p.peerId, "start", { hostname: `${SERVICE_NAME}:8000` })
+		const root = await libp2p.services.gossiplog.messageLog.read((txn) => txn.messages.getRoot())
+		post(libp2p.peerId, "start", {
+			hostname: `${SERVICE_NAME}:8000`,
+			rootLevel: root.level,
+			rootHash: bytesToHex(root.hash),
+		})
 	})
 
 	libp2p.addEventListener("stop", () => {
@@ -289,6 +293,9 @@ async function start() {
 				rootHash: bytesToHex(root.hash),
 			})
 		})
+
+		const intervalId = setInterval(() => void libp2p.services.gossiplog.append(randomBytes(16)), 3000)
+		controller.signal.addEventListener("abort", () => clearInterval(intervalId))
 	}
 }
 

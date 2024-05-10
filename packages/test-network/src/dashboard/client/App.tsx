@@ -19,7 +19,7 @@ function reduce(state: State, event: Event): State {
 			return {
 				...state,
 				nodes: [...state.nodes, { id: event.id }],
-				roots: { ...state.roots, [event.id]: "e3b0c44298fc1c149afbf4c8996fb924" },
+				roots: { ...state.roots, [event.id]: event.detail.rootHash },
 			}
 		}
 	} else if (event.type === "connection:open") {

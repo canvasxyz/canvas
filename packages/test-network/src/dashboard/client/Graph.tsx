@@ -177,7 +177,8 @@ export const Graph: React.FC<GraphProps> = ({
 			.append("circle")
 			.attr("r", nodeRadius)
 			.attr("data-id", (d) => d.id)
-			.attr("fill", (d) => (bootstrapPeerIds.includes(d.id) ? "#000" : rootsRef.current[d.id] ?? "#000"))
+			// .attr("fill", (d) => (bootstrapPeerIds.includes(d.id) ? "#000" : rootsRef.current[d.id] ?? "#000"))
+			.attr("fill", (d) => rootsRef.current[d.id] ?? "#000")
 			.on("click", (event, node) => onNodeClick(node.id, event.shiftKey, event.metaKey))
 			.merge(oldNodes)
 
@@ -200,9 +201,10 @@ export const Graph: React.FC<GraphProps> = ({
 			.selectAll<SVGCircleElement, Node>("circle")
 			.attr("fill", (d, idx, elems) => {
 				const id = elems[idx].getAttribute("data-id")
-				if (id && bootstrapPeerIds.includes(id)) {
-					return "#000"
-				} else if (id && roots[id]) {
+				// if (id && bootstrapPeerIds.includes(id)) {
+				// 	return "#000"
+				// } else
+				if (id && roots[id]) {
 					return "#" + roots[id].slice(0, 6)
 				} else {
 					return "#000"

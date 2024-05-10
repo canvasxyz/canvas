@@ -17,6 +17,7 @@ import { GossipLogService, gossiplog } from "@canvas-js/gossiplog/service"
 
 import { bootstrapList, listen, announce, getPeerId } from "./config.js"
 import { GossipLog } from "@canvas-js/gossiplog/memory"
+import { randomBytes } from "@noble/hashes/utils"
 
 const { MIN_CONNECTIONS, MAX_CONNECTIONS, SERVICE_NAME } = process.env
 const serviceNameHash = sha256(SERVICE_NAME ?? new Uint8Array([]))
@@ -36,6 +37,7 @@ export async function getLibp2p() {
 	const peerId = await getPeerId()
 
 	const log = await GossipLog.open({ topic, apply: () => {} })
+	await log.write((txn) => log.append(txn, randomBytes(16)))
 
 	return await createLibp2p({
 		peerId: peerId,
