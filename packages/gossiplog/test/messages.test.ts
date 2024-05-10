@@ -13,9 +13,9 @@ testPlatforms("append messages", async (t, openGossipLog) => {
 	const log = await openGossipLog(t, { topic, apply })
 
 	const signer = ed25519.create()
-	const { id: idA } = await log.append("foo", { signer })
-	const { id: idB } = await log.append("bar", { signer })
-	const { id: idC } = await log.append("baz", { signer })
+	const { id: idA } = await log.write((txn) => log.append(txn, "foo", { signer }))
+	const { id: idB } = await log.write((txn) => log.append(txn, "bar", { signer }))
+	const { id: idC } = await log.write((txn) => log.append(txn, "baz", { signer }))
 
 	t.deepEqual(await collect(log.iterate(), getPublicKey), [
 		[idA, signer.publicKey, { topic, clock: 1, parents: [], payload: "foo" }],
@@ -33,9 +33,9 @@ testPlatforms("insert concurrent messages", async (t, openGossipLog) => {
 	const b = { topic, clock: 1, parents: [], payload: nanoid() }
 	const c = { topic, clock: 1, parents: [], payload: nanoid() }
 
-	const { id: idA } = await log.insert(signer.sign(a), a)
-	const { id: idB } = await log.insert(signer.sign(b), b)
-	const { id: idC } = await log.insert(signer.sign(c), c)
+	const { id: idA } = await log.write((txn) => log.insert(txn, signer.sign(a), a))
+	const { id: idB } = await log.write((txn) => log.insert(txn, signer.sign(b), b))
+	const { id: idC } = await log.write((txn) => log.insert(txn, signer.sign(c), c))
 
 	const entries: [string, string, Message<string>][] = [
 		[idA, signer.publicKey, a],
@@ -57,9 +57,9 @@ testPlatforms("append to multiple parents", async (t, openGossipLog) => {
 	const b = { topic, clock: 1, parents: [], payload: nanoid() }
 	const c = { topic, clock: 1, parents: [], payload: nanoid() }
 
-	const { id: idA } = await log.insert(signer.sign(a), a)
-	const { id: idB } = await log.insert(signer.sign(b), b)
-	const { id: idC } = await log.insert(signer.sign(c), c)
+	const { id: idA } = await log.write((txn) => log.insert(txn, signer.sign(a), a))
+	const { id: idB } = await log.write((txn) => log.insert(txn, signer.sign(b), b))
+	const { id: idC } = await log.write((txn) => log.insert(txn, signer.sign(c), c))
 
 	const entries: [string, string, Message<string>][] = [
 		[idA, signer.publicKey, a],
@@ -70,7 +70,7 @@ testPlatforms("append to multiple parents", async (t, openGossipLog) => {
 	entries.sort(([a], [b]) => (a < b ? -1 : b < a ? 1 : 0))
 
 	const payload = nanoid()
-	const { id } = await log.append(payload, { signer })
+	const { id } = await log.write((txn) => log.append(txn, payload, { signer }))
 	const [_, message] = await log.get(id)
 	t.deepEqual(message, { topic, clock: 2, parents: entries.map(([id]) => id), payload })
 	t.deepEqual(await collect(log.iterate(), getPublicKey), [...entries, [id, signer.publicKey, message]])

@@ -4,17 +4,13 @@ import { multiaddr } from "@multiformats/multiaddr"
 
 const { PEER_ID, BOOTSTRAP_LIST, LISTEN, ANNOUNCE } = process.env
 
-async function getPeerId() {
+export async function getPeerId() {
 	if (typeof PEER_ID === "string") {
 		return await createFromProtobuf(Buffer.from(PEER_ID, "base64"))
 	} else {
 		return await createEd25519PeerId()
 	}
 }
-
-export const peerId: PeerId = await getPeerId()
-
-console.log("using peer id", peerId.toString())
 
 export const bootstrapList = BOOTSTRAP_LIST === undefined ? [] : BOOTSTRAP_LIST.split(" ")
 

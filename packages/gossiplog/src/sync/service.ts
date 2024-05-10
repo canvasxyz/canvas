@@ -1,328 +1,273 @@
-import { Startable, PeerId, Connection, Stream, StreamHandler, StreamHandlerOptions } from "@libp2p/interface"
+// import { Startable, PeerId, Connection, StreamHandler } from "@libp2p/interface"
+// import { ConnectionManager, Registrar } from "@libp2p/interface-internal"
 
-import { Logger, logger } from "@libp2p/logger"
+// import { Logger, logger } from "@libp2p/logger"
 
-import PQueue from "p-queue"
-import * as lp from "it-length-prefixed"
-import { pipe } from "it-pipe"
-import { bytesToHex as hex } from "@noble/hashes/utils"
+// import PQueue from "p-queue"
+// import { pipe } from "it-pipe"
+// import * as lp from "it-length-prefixed"
+// import { bytesToHex as hex } from "@noble/hashes/utils"
+// import { anySignal } from "any-signal"
 
-import { CacheMap } from "@canvas-js/utils"
+// import { assert } from "@canvas-js/utils"
 
-import { Client, Server, decodeRequests, encodeResponses } from "./index.js"
-import { AbstractGossipLog } from "../AbstractGossipLog.js"
+// import {
+// 	MAX_INBOUND_STREAMS,
+// 	MAX_OUTBOUND_STREAMS,
+// 	MAX_SYNC_QUEUE_SIZE,
+// 	SYNC_RETRY_INTERVAL,
+// 	SYNC_RETRY_LIMIT,
+// 	second,
+// } from "../constants.js"
 
-export interface Topology {
-	min?: number
-	max?: number
+// import { wait, DelayableController, SyncDeadlockError, SyncTimeoutError } from "../utils.js"
 
-	onConnect?: (peerId: PeerId, conn: Connection) => void
-	onDisconnect?: (peerId: PeerId) => void
-}
+// import { Client, Server, decodeRequests, encodeResponses } from "./index.js"
+// import { AbstractGossipLog } from "../AbstractGossipLog.js"
 
-import {
-	MAX_CONNECTIONS,
-	MAX_INBOUND_STREAMS,
-	MAX_OUTBOUND_STREAMS,
-	MAX_SYNC_QUEUE_SIZE,
-	MIN_CONNECTIONS,
-	SYNC_COOLDOWN_PERIOD,
-	SYNC_RETRY_INTERVAL,
-	SYNC_RETRY_LIMIT,
-	second,
-} from "../constants.js"
-import { shuffle, sortPair, wait, DelayableController, SyncDeadlockError, SyncTimeoutError } from "../utils.js"
-import { anySignal } from "any-signal"
+// export interface SyncOptions {
+// 	maxInboundStreams?: number
+// 	maxOutboundStreams?: number
+// }
 
-export interface SyncOptions {
-	minConnections?: number
-	maxConnections?: number
-	maxInboundStreams?: number
-	maxOutboundStreams?: number
-}
+// export interface SyncServiceComponents {
+// 	peerId: PeerId
+// 	registrar: Registrar
+// 	connectionManager: ConnectionManager
+// }
 
-export interface SyncServiceComponents {
-	peerId: PeerId
+// /**
+//  * The SyncService class implements a libp2p syncing service for GossipLog messages.
+//  * The service is configured with a global "topic" and takes place over a libp2p protocol
+//  * interpolating that topic (`/canvas/sync/v1/${init.topic}`). By default, it schedules
+//  * a merkle sync for every new connection with a peer supporting the same topic.
+//  */
+// export class SyncService<Payload = unknown> implements Startable {
+// 	private readonly controller = new AbortController()
+// 	private readonly log: Logger
+// 	// private readonly protocol: string
+// 	private readonly topologyPeers = new Set<string>()
 
-	registrar: {
-		handle: (protocol: string, handler: StreamHandler, options?: StreamHandlerOptions | undefined) => Promise<void>
-		register: (protocol: string, topology: Topology) => Promise<string>
-		unhandle: (protocol: string) => Promise<void>
-		unregister: (id: string) => void
-	}
+// 	private readonly maxInboundStreams: number
+// 	private readonly maxOutboundStreams: number
 
-	connectionManager: {
-		getConnections: (peerId?: PeerId | undefined) => Connection[]
-	}
-}
+// 	private readonly syncQueue = new PQueue({ concurrency: 1 })
+// 	private readonly syncQueuePeers = new Set<string>()
 
-/**
- * The SyncService class implements a libp2p syncing service for GossipLog messages.
- * The service is configured with a global "topic" and takes place over a libp2p protocol
- * interpolating that topic (`/canvas/sync/v1/${init.topic}`). By default, it schedules
- * a merkle sync for every new connection with a peer supporting the same topic.
- */
-export class SyncService<Payload = unknown> implements Startable {
-	private readonly protocol: string
-	private readonly topologyPeers = new Set<string>()
+// 	#registrarId: string | null = null
 
-	private readonly maxInboundStreams: number
-	private readonly maxOutboundStreams: number
+// 	constructor(
+// 		private readonly components: SyncServiceComponents,
+// 		private readonly messages: AbstractGossipLog<Payload>,
+// 		options: SyncOptions,
+// 	) {
+// 		this.log = logger(`canvas:gossiplog:[${this.messages.topic}]:sync`)
+// 		// this.protocol = getProtocol(messages.topic)
 
-	private readonly minConnections: number
-	private readonly maxConnections: number
+// 		this.maxInboundStreams = options.maxInboundStreams ?? MAX_INBOUND_STREAMS
+// 		this.maxOutboundStreams = options.maxOutboundStreams ?? MAX_OUTBOUND_STREAMS
+// 	}
 
-	private readonly syncQueue = new PQueue({ concurrency: 1 })
-	private readonly syncQueuePeers = new Set<string>()
-	private readonly syncHistory = new CacheMap<string, number>(MAX_SYNC_QUEUE_SIZE)
+// 	public isStarted() {
+// 		return this.#registrarId !== null
+// 	}
 
-	#controller = new AbortController()
-	#registrarId: string | null = null
+// 	public async start(): Promise<void> {
+// 		this.log("starting sync service")
 
-	private readonly log: Logger
+// 		await this.components.registrar.handle(this.protocol, this.handleIncomingStream, {
+// 			maxInboundStreams: this.maxInboundStreams,
+// 			maxOutboundStreams: this.maxOutboundStreams,
+// 		})
 
-	constructor(
-		private readonly components: SyncServiceComponents,
-		private readonly messages: AbstractGossipLog<Payload>,
-		options: SyncOptions,
-	) {
-		this.log = logger(`canvas:gossiplog:[${this.topic}]:sync`)
-		this.protocol = `/gossiplog/sync/v1/${messages.topic}`
+// 		this.#registrarId = await this.components.registrar.register(this.protocol, {
+// 			notifyOnTransient: false,
+// 			onConnect: async (peerId, connection) => {
+// 				this.topologyPeers.add(peerId.toString())
+// 				this.log("connected to peer %p", peerId)
 
-		this.maxInboundStreams = options.maxInboundStreams ?? MAX_INBOUND_STREAMS
-		this.maxOutboundStreams = options.maxOutboundStreams ?? MAX_OUTBOUND_STREAMS
+// 				// having one peer wait an initial randomized interval
+// 				// reduces the likelihood of deadlock to near-zero,
+// 				// but it could still happen.
+// 				if (connection.direction === "inbound") {
+// 					const interval = second + Math.floor(Math.random() * SYNC_RETRY_INTERVAL)
+// 					this.log("waiting an initial %dms", interval)
+// 					await this.wait(interval)
+// 				}
 
-		this.minConnections = options.minConnections ?? MIN_CONNECTIONS
-		this.maxConnections = options.maxConnections ?? MAX_CONNECTIONS
-	}
+// 				this.scheduleSync(peerId)
+// 			},
 
-	public isStarted() {
-		return this.#registrarId !== null
-	}
+// 			onDisconnect: (peerId) => {
+// 				this.log("disconnected from %p", peerId)
+// 				this.topologyPeers.delete(peerId.toString())
+// 			},
+// 		})
+// 	}
 
-	public get topic() {
-		return this.messages.topic
-	}
+// 	public async stop(): Promise<void> {
+// 		if (this.#registrarId === null) {
+// 			return
+// 		}
 
-	public async start(): Promise<void> {
-		this.log("starting sync service")
+// 		this.log("stopping sync service")
 
-		await this.components.registrar.handle(this.protocol, this.handleIncomingStream, {
-			maxInboundStreams: this.maxInboundStreams,
-			maxOutboundStreams: this.maxOutboundStreams,
-		})
+// 		this.controller.abort()
 
-		this.#registrarId = await this.components.registrar.register(this.protocol, {
-			min: this.minConnections,
-			max: this.maxConnections,
+// 		this.syncQueue.clear()
+// 		await this.syncQueue.onIdle()
 
-			onConnect: (peerId, connection) => {
-				this.topologyPeers.add(peerId.toString())
-				this.log("connected to peer %p", peerId)
-				this.scheduleSync(peerId)
-			},
+// 		await this.components.registrar.unhandle(this.protocol)
+// 		if (this.#registrarId !== null) {
+// 			this.components.registrar.unregister(this.#registrarId)
+// 			this.#registrarId = null
+// 		}
+// 	}
 
-			onDisconnect: (peerId) => {
-				this.log("disconnected from %p", peerId)
-				this.topologyPeers.delete(peerId.toString())
-			},
-		})
-	}
+// 	private handleIncomingStream: StreamHandler = async ({ connection, stream }) => {
+// 		const peerId = connection.remotePeer
+// 		this.log("opened incoming stream %s from peer %p", stream.id, peerId)
 
-	public async stop(): Promise<void> {
-		if (this.#registrarId === null) {
-			return
-		}
+// 		const timeoutController = new DelayableController(3 * second)
+// 		const signal = anySignal([this.controller.signal, timeoutController.signal])
+// 		signal.addEventListener("abort", (err) => {
+// 			if (stream.status === "open") {
+// 				stream.abort(new Error("TIMEOUT"))
+// 			}
+// 		})
 
-		this.log("stopping sync service")
+// 		try {
+// 			await this.messages.serve(
+// 				async (source) => {
+// 					const server = new Server(source)
+// 					await pipe(
+// 						stream.source,
+// 						lp.decode,
+// 						decodeRequests,
+// 						async function* (reqs) {
+// 							for await (const req of reqs) {
+// 								timeoutController.delay()
+// 								yield req
+// 							}
+// 						},
+// 						(reqs) => server.handle(reqs),
+// 						encodeResponses,
+// 						lp.encode,
+// 						stream.sink,
+// 					)
+// 				},
+// 				{ targetId: peerId.toString() },
+// 			)
 
-		this.#controller.abort()
+// 			this.log("closed incoming stream %s from peer %p", stream.id, peerId)
+// 		} catch (err) {
+// 			if (err instanceof Error && err.message === "TIMEOUT") {
+// 				this.log.error("timed out incoming stream %s from peer %p", stream.id, peerId)
+// 				stream.abort(err)
+// 			} else if (err instanceof Error) {
+// 				this.log.error("aborting incoming stream %s from peer %p: %O", stream.id, peerId, err)
+// 				stream.abort(err)
+// 			} else {
+// 				this.log.error("aborting incoming stream %s from peer %p: %O", stream.id, peerId, err)
+// 				stream.abort(new Error("internal error"))
+// 			}
+// 		} finally {
+// 			signal.clear()
+// 		}
+// 	}
 
-		this.syncQueue.clear()
-		await this.syncQueue.onIdle()
+// 	private scheduleSync(peerId: PeerId) {
+// 		const id = peerId.toString()
+// 		if (this.syncQueuePeers.has(id)) {
+// 			this.log("already queued sync with %p", peerId)
+// 			return
+// 		}
 
-		await this.components.registrar.unhandle(this.protocol)
-		if (this.#registrarId !== null) {
-			this.components.registrar.unregister(this.#registrarId)
-			this.#registrarId = null
-		}
-	}
+// 		if (this.syncQueue.size >= MAX_SYNC_QUEUE_SIZE) {
+// 			this.log("sync queue is full")
+// 			return
+// 		}
 
-	private handleIncomingStream: StreamHandler = async ({ connection, stream }) => {
-		const peerId = connection.remotePeer
-		this.log("opened incoming stream %s from peer %p", stream.id, peerId)
+// 		this.syncQueuePeers.add(id)
+// 		this.syncQueue
+// 			.add(async () => {
+// 				if (!this.topologyPeers.has(id)) {
+// 					this.log("no longer connected to %s", id)
+// 					return
+// 				}
 
-		const timeoutController = new DelayableController(3 * second)
-		const signal = anySignal([this.#controller.signal, timeoutController.signal])
-		signal.addEventListener("abort", (err) => {
-			if (stream.status === "open") {
-				stream.abort(new Error("TIMEOUT"))
-			}
-		})
+// 				const connection = await this.components.connectionManager.openConnection(peerId)
+// 				assert(connection !== null, "failed to get connection")
 
-		try {
-			await this.messages.serve(
-				async (source) => {
-					const server = new Server(source)
-					await pipe(
-						stream.source,
-						lp.decode,
-						decodeRequests,
-						(reqs) => {
-							timeoutController.delay()
-							return server.handle(reqs)
-						},
-						encodeResponses,
-						lp.encode,
-						stream.sink,
-					)
-				},
-				{ targetId: peerId.toString() },
-			)
+// 				for (let n = 0; n < SYNC_RETRY_LIMIT; n++) {
+// 					try {
+// 						await this.sync(connection)
+// 						return
+// 					} catch (err) {
+// 						if (err instanceof SyncTimeoutError) {
+// 							this.log("merkle sync timed out with %p, waiting to continue", peerId)
+// 						} else if (err instanceof SyncDeadlockError) {
+// 							this.log("started merkle sync concurrently with %p, retrying to break deadlock", peerId)
+// 						} else {
+// 							this.log.error("failed to sync with peer: %O", err)
+// 						}
 
-			this.log("closed incoming stream %s from peer %p", stream.id, peerId)
-		} catch (err) {
-			if (err instanceof Error && err.message === "TIMEOUT") {
-				this.log.error("timed out incoming stream %s from peer %p", stream.id, peerId)
-				stream.abort(err)
-			} else if (err instanceof Error) {
-				this.log.error("aborting incoming stream %s from peer %p: %O", stream.id, peerId, err)
-				stream.abort(err)
-			} else {
-				this.log.error("aborting incoming stream %s from peer %p: %O", stream.id, peerId, err)
-				stream.abort(new Error("internal error"))
-			}
-		} finally {
-			signal.clear()
-		}
-	}
+// 						if (this.controller.signal.aborted) {
+// 							break
+// 						} else {
+// 							const interval = Math.floor(Math.random() * SYNC_RETRY_INTERVAL)
+// 							this.log("waiting %dms before trying again (%d/%d)", interval, n + 1, SYNC_RETRY_LIMIT)
+// 							await this.wait(interval)
+// 							continue
+// 						}
+// 					}
+// 				}
 
-	private scheduleSync(peerId: PeerId) {
-		const id = peerId.toString()
-		if (this.syncQueuePeers.has(id)) {
-			this.log("already queued sync with %p", peerId)
-			return
-		}
+// 				throw new Error("exceeded sync retry limit")
+// 			})
+// 			.catch((err) => this.log.error("sync failed: %O", err))
+// 			.finally(() => this.syncQueuePeers.delete(id))
+// 	}
 
-		if (this.syncQueue.size >= MAX_SYNC_QUEUE_SIZE) {
-			this.log("sync queue is full", this.topic)
-			return
-		}
+// 	private async sync(connection: Connection): Promise<void> {
+// 		const timeoutController = new DelayableController(3 * second)
+// 		const signal = anySignal([this.controller.signal, timeoutController.signal])
 
-		const lastSyncMark = this.syncHistory.get(id)
-		if (lastSyncMark !== undefined) {
-			const timeSinceLastSync = performance.now() - lastSyncMark
-			this.log("last sync with %p was %ds ago", peerId, Math.floor(timeSinceLastSync / 1000))
-			if (timeSinceLastSync < SYNC_COOLDOWN_PERIOD) {
-				return
-			}
-		}
+// 		const peerId = connection.remotePeer
+// 		const stream = await connection.newStream(this.protocol).catch((err) => {
+// 			this.log.error("failed to open outgoing stream: %O", err)
+// 			throw err
+// 		})
 
-		this.syncQueuePeers.add(id)
-		this.syncQueue
-			.add(async () => {
-				// having one peer wait an initial randomized interval
-				// reduces the likelihood of deadlock to near-zero,
-				// but it could still happen.
+// 		this.log("opened outgoing stream %s to peer %p", stream.id, peerId)
 
-				// comment out this block to test the deadlock recovery process.
-				const [x, y] = sortPair(this.components.peerId, peerId)
-				if (x.equals(this.components.peerId)) {
-					const interval = Math.floor(Math.random() * SYNC_RETRY_INTERVAL)
-					this.log("waiting an initial %dms", interval)
-					await this.wait(interval)
-				}
+// 		signal.addEventListener("abort", (err) => {
+// 			if (stream.status === "open") {
+// 				stream.abort(new Error("TIMEOUT"))
+// 			}
+// 		})
 
-				for (let n = 0; n < SYNC_RETRY_LIMIT; n++) {
-					try {
-						const stream = await this.dial(peerId)
-						if (stream === null) {
-							throw new Error("failed to open stream")
-						}
+// 		const client = new Client(stream)
+// 		try {
+// 			this.log("initiating sync with peer %p", peerId)
+// 			const root = await this.messages.write(async (txn) => {
+// 				for await (const id of this.messages.sync(txn, peerId.toString(), client)) {
+// 					timeoutController.delay()
+// 				}
 
-						return await this.sync(peerId, stream)
-					} catch (err) {
-						if (err instanceof SyncTimeoutError) {
-							this.log("merkle sync timed out with %p, waiting to continue", peerId)
-						} else if (err instanceof SyncDeadlockError) {
-							this.log("started merkle sync concurrently with %p, retrying to break deadlock", peerId)
-						} else {
-							this.log.error("failed to sync with peer: %O", err)
-						}
+// 				return await txn.messages.getRoot()
+// 			})
 
-						if (this.#controller.signal.aborted) {
-							break
-						} else {
-							const interval = Math.floor(Math.random() * SYNC_RETRY_INTERVAL)
-							this.log("waiting %dms before trying again (%d/%d)", interval, n + 1, SYNC_RETRY_LIMIT)
-							await this.wait(interval)
-							continue
-						}
-					}
-				}
+// 			this.log("committing sync with root hash %s", hex(root.hash))
+// 			this.messages.dispatchEvent(new CustomEvent("commit", { detail: { topic: this.messages.topic, root } }))
+// 		} finally {
+// 			signal.clear()
+// 			client.end()
+// 			this.log("closed outgoing stream %s to peer %p", stream.id, peerId)
+// 		}
+// 	}
 
-				throw new Error("exceeded sync retry limit")
-			})
-			.then(() => this.syncHistory.set(id, performance.now()))
-			.catch((err) => this.log.error("sync failed: %O", err))
-			.finally(() => this.syncQueuePeers.delete(id))
-	}
-
-	private async sync(peerId: PeerId, stream: Stream): Promise<void> {
-		const timeoutController = new DelayableController(3 * second)
-		const signal = anySignal([this.#controller.signal, timeoutController.signal])
-		signal.addEventListener("abort", (err) => {
-			if (stream.status === "open") {
-				stream.abort(new Error("TIMEOUT"))
-			}
-		})
-
-		const client = new Client(stream)
-		try {
-			this.log("initiating sync with peer %p", peerId)
-			const { root, messageCount } = await this.messages.sync(client, {
-				sourceId: peerId.toString(),
-				timeoutController,
-			})
-			this.log("finished sync with peer %p, got root hash %s (%s messages)", peerId, hex(root.hash), messageCount)
-		} finally {
-			signal.clear()
-			client.end()
-			this.log("closed outgoing stream %s to peer %p", stream.id, peerId)
-		}
-	}
-
-	private async dial(peerId: PeerId): Promise<Stream | null> {
-		const connections = [...this.components.connectionManager.getConnections(peerId)]
-		if (connections.length === 0) {
-			this.log("no longer connected to peer %p", peerId)
-			return null
-		}
-
-		// randomize selected connection
-		shuffle(connections)
-		for (const connection of connections) {
-			if (connection.transient) {
-				continue
-			}
-
-			this.log("opening outgoing stream on connection %s", connection.id)
-
-			try {
-				// TODO: figure out what { signal } does here - is it just for opening the stream or for its entire duration?
-				const stream = await connection.newStream(this.protocol)
-				this.log("opened outgoing stream %s to peer %p", stream.id, peerId)
-				return stream
-			} catch (err) {
-				this.log.error("failed to open outgoing stream: %O", err)
-				continue
-			}
-		}
-
-		return null
-	}
-
-	private async wait(interval: number) {
-		await wait(interval, { signal: this.#controller.signal })
-	}
-}
+// 	private async wait(interval: number) {
+// 		await wait(interval, { signal: this.controller.signal })
+// 	}
+// }

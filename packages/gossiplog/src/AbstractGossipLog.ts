@@ -1,15 +1,13 @@
-import type { Source, Target, Node, Bound, KeyValueStore, Entry } from "@canvas-js/okra"
+import type { Source, Target, Node, Bound, Entry } from "@canvas-js/okra"
 
 import { TypedEventEmitter, CustomEvent } from "@libp2p/interface"
 import { Logger, logger } from "@libp2p/logger"
-
-import { bytesToHex as hex } from "@noble/hashes/utils"
 
 import type { Signature, Signer, Message, Awaitable } from "@canvas-js/interfaces"
 import { ed25519 } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
-import { Mempool } from "./Mempool.js"
+// import { Mempool } from "./Mempool.js"
 import { Driver } from "./sync/driver.js"
 
 import {
@@ -22,7 +20,7 @@ import {
 	MAX_MESSAGE_ID,
 	decodeSignedMessage,
 } from "./schema.js"
-import { topicPattern, DelayableController } from "./utils.js"
+import { topicPattern } from "./utils.js"
 
 export interface ReadOnlyTransaction {
 	getHeads: () => Awaitable<Uint8Array[]>
@@ -33,7 +31,7 @@ export interface ReadOnlyTransaction {
 }
 
 export interface ReadWriteTransaction extends ReadOnlyTransaction {
-	insert: (id: string, signature: Signature, message: Message, entry?: Entry) => Awaitable<void>
+	insert: (signature: Signature, message: Message, entry?: Entry) => Awaitable<void>
 }
 
 export type GossipLogConsumer<Payload = unknown> = (
@@ -60,7 +58,21 @@ export type GossipLogEvents<Payload = unknown> = {
 }
 
 export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmitter<GossipLogEvents<Payload>> {
+	public readonly topic: string
+	public readonly indexAncestors: boolean
+	public readonly signer: Signer<Payload>
+
 	public abstract close(): Promise<void>
+
+	public abstract read<T>(
+		callback: (txn: ReadOnlyTransaction) => Awaitable<T>,
+		options?: { targetId?: string },
+	): Promise<T>
+
+	public abstract write<T>(
+		callback: (txn: ReadWriteTransaction) => Awaitable<T>,
+		options?: { sourceId?: string },
+	): Promise<T>
 
 	protected abstract entries(
 		lowerBound?: Bound<Uint8Array> | null,
@@ -68,25 +80,12 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		options?: { reverse?: boolean },
 	): AsyncIterable<[key: Uint8Array, value: Uint8Array]>
 
-	protected abstract read<T>(
-		callback: (txn: ReadOnlyTransaction) => Awaitable<T>,
-		options?: { targetId?: string },
-	): Promise<T>
-
-	protected abstract write<T>(
-		callback: (txn: ReadWriteTransaction) => Awaitable<T>,
-		options?: { sourceId?: string },
-	): Promise<T>
-
-	public readonly topic: string
-	public readonly indexAncestors: boolean
-	public readonly signer: Signer<Payload>
-
 	protected readonly log: Logger
-	protected readonly mempool = new Mempool<{ signature: Signature; message: Message<Payload> }>()
+	// public readonly mempool = new Mempool<{ signature: Signature; message: Message<Payload> }>()
 
-	readonly #validatePayload: (payload: unknown) => payload is Payload
-	readonly #verifySignature: (signature: Signature, message: Message<Payload>) => Awaitable<void>
+	public readonly validatePayload: (payload: unknown) => payload is Payload
+	public readonly verifySignature: (signature: Signature, message: Message<Payload>) => Awaitable<void>
+
 	readonly #apply: GossipLogConsumer<Payload>
 
 	protected constructor(init: GossipLogInit<Payload>) {
@@ -98,8 +97,8 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		this.signer = init.signer ?? ed25519.create()
 
 		this.#apply = init.apply
-		this.#validatePayload = init.validatePayload ?? ((payload: unknown): payload is Payload => true)
-		this.#verifySignature = init.verifySignature ?? this.signer.scheme.verify
+		this.validatePayload = init.validatePayload ?? ((payload: unknown): payload is Payload => true)
+		this.verifySignature = init.verifySignature ?? this.signer.scheme.verify
 
 		this.log = logger(`canvas:gossiplog:[${this.topic}]`)
 	}
@@ -140,14 +139,14 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 	public encode(signature: Signature, message: Message<Payload>): [key: Uint8Array, value: Uint8Array] {
 		assert(this.topic === message.topic, "expected this.topic === topic")
-		assert(this.#validatePayload(message.payload), "error encoding message (invalid payload)")
+		assert(this.validatePayload(message.payload), "error encoding message (invalid payload)")
 		return encodeSignedMessage(signature, message)
 	}
 
 	public decode(value: Uint8Array): [id: string, signature: Signature, message: Message<Payload>] {
 		const [id, signature, { topic, clock, parents, payload }] = decodeSignedMessage(value)
 		assert(this.topic === topic, "expected this.topic === topic")
-		assert(this.#validatePayload(payload), "error decoding message (invalid payload)")
+		assert(this.validatePayload(payload), "error decoding message (invalid payload)")
 		return [id, signature, { topic, clock, parents, payload }]
 	}
 
@@ -183,101 +182,81 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 	 * The currently unmerged heads of the local log are used as parents.
 	 */
 	public async append(
+		txn: ReadWriteTransaction,
 		payload: Payload,
 		options: { signer?: Signer<Payload> } = {},
 	): Promise<{ id: string; signature: Signature; message: Message<Payload> }> {
 		const signer = options.signer ?? this.signer
+		const heads = await txn.getHeads()
 
-		const { id, signature, message, root } = await this.write(async (txn) => {
-			const heads = await txn.getHeads()
+		const clock = getNextClock(heads)
 
-			const clock = getNextClock(heads)
+		const parents = heads.map(decodeId)
+		const message: Message<Payload> = { topic: this.topic, clock, parents, payload }
+		const signature = await signer.sign(message)
+		const [key, value] = this.encode(signature, message)
 
-			const parents = heads.map(decodeId)
-			const message: Message<Payload> = { topic: this.topic, clock, parents, payload }
-			const signature = await signer.sign(message)
-			const [key, value] = this.encode(signature, message)
+		const id = decodeId(key)
+		this.log("appending message %s: %O", id, message)
 
-			const id = decodeId(key)
-			this.log("appending message %s: %O", id, message)
-			const { root } = await this.#insert(txn, id, signature, message, [key, value])
-			return { id, signature, message, root }
-		})
-
-		this.dispatchEvent(new CustomEvent("commit", { detail: { topic: this.topic, root } }))
-		this.log("commited root %s", hex(root.hash))
+		await this.apply(txn, id, signature, message, [key, value])
 
 		return { id, signature, message }
 	}
 
+	public async getMissingParents(txn: ReadWriteTransaction, parents: string[]): Promise<Set<string>> {
+		const missingParents = new Set<string>()
+		this.log("looking up %s parents", parents.length)
+		for (const parentId of parents) {
+			// TODO: txn.messages.getMany
+			const leaf = await txn.messages.getNode(0, encodeId(parentId))
+			if (leaf !== null) {
+				this.log("found parent %s", parentId)
+			} else {
+				this.log("missing parent %s", parentId)
+				missingParents.add(parentId)
+			}
+		}
+
+		return missingParents
+	}
+
 	/**
 	 * Insert an existing signed message into the log (ie received via PubSub).
-	 * If any of the parents are not present, insert the message into the mempool instead.
+	 * If any of the parents are not present, throw an error.
 	 */
-	public async insert(signature: Signature, message: Message<Payload>): Promise<{ id: string }> {
-		await this.#verifySignature(signature, message)
+	public async insert(
+		txn: ReadWriteTransaction,
+		signature: Signature,
+		message: Message<Payload>,
+		[key, value] = this.encode(signature, message),
+	): Promise<{ id: string }> {
+		const id = decodeId(key)
+		this.log("inserting message %s", id)
 
-		const { id, root } = await this.write(async (txn) => {
-			const [key, value] = this.encode(signature, message)
-			const id = decodeId(key)
+		await this.verifySignature(signature, message)
 
-			this.log("inserting message %s", id)
-
-			const missingParents = new Set<string>()
-			this.log("looking up %s parents", message.parents.length)
-			for (const parentId of message.parents) {
-				// TODO: txn.messages.getMany
-				const leaf = await txn.messages.getNode(0, encodeId(parentId))
-				if (leaf !== null) {
-					this.log("found parent %s", parentId)
-				} else {
-					this.log("missing parent %s", parentId)
-					missingParents.add(parentId)
-				}
+		// TODO: txn.hasMany(keys)
+		for (const parent of message.parents) {
+			const leaf = await txn.messages.getNode(0, encodeId(parent))
+			if (leaf === null) {
+				this.log.error("missing parent %s of message %s: %O", parent, id, message)
+				throw new Error(`missing parent ${parent} of message ${id}`)
 			}
-
-			if (missingParents.size > 0) {
-				this.log("missing %d/%d parents", missingParents.size, message.parents.length)
-				this.mempool.add(id, { signature, message }, missingParents)
-				return { id }
-			}
-
-			const { root } = await this.#insert(txn, id, signature, message, [key, value])
-
-			return { id, root }
-		})
-
-		if (root !== undefined) {
-			this.dispatchEvent(new CustomEvent("commit", { detail: { topic: this.topic, root } }))
-			this.log("commited root %s", hex(root.hash))
 		}
+
+		await this.apply(txn, id, signature, message, [key, value])
 
 		return { id }
 	}
 
-	public async getAncestors(id: string, atOrBefore: number): Promise<string[]> {
-		assert(messageIdPattern.test(id), "invalid message ID")
-
-		const results = new Set<string>()
-		await this.read((txn) => txn.getAncestors(encodeId(id), atOrBefore, results))
-
-		this.log("getAncestors of %s atOrBefore %d: %o", id, atOrBefore, results)
-		return Array.from(results).sort()
-	}
-
-	public async isAncestor(id: string, ancestor: string): Promise<boolean> {
-		assert(messageIdPattern.test(id), "invalid message ID")
-		assert(messageIdPattern.test(ancestor), "invalid message ID")
-		return await this.read((txn) => txn.isAncestor(encodeId(id), encodeId(ancestor)))
-	}
-
-	async #insert(
+	public async apply(
 		txn: ReadWriteTransaction,
 		id: string,
 		signature: Signature,
 		message: Message<Payload>,
 		[key, value]: Entry = this.encode(signature, message),
-	): Promise<{ root: Node }> {
+	): Promise<void> {
 		this.log("applying %s %O", id, message)
 
 		try {
@@ -287,70 +266,65 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 			throw error
 		}
 
+		await txn.insert(signature, message, [key, value])
+
 		this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message } }))
-		await txn.insert(id, signature, message, [key, value])
 
-		for (const [childId, { signature, message }] of this.mempool.observe(id)) {
-			await this.#insert(txn, childId, signature, message)
-		}
+		// for (const [childId, { signature, message }] of this.mempool.observe(id)) {
+		// 	await this.apply(txn, childId, signature, message)
+		// }
+	}
 
-		const root = await txn.messages.getRoot()
-		return { root }
+	public async getAncestors(txn: ReadOnlyTransaction, id: string, atOrBefore: number): Promise<string[]> {
+		const results = new Set<string>()
+		await txn.getAncestors(encodeId(id), atOrBefore, results)
+
+		this.log("getAncestors of %s atOrBefore %d: %o", id, atOrBefore, results)
+		return Array.from(results).sort()
+	}
+
+	public async isAncestor(txn: ReadOnlyTransaction, id: string, ancestor: string): Promise<boolean> {
+		return await txn.isAncestor(encodeId(id), encodeId(ancestor))
 	}
 
 	/**
 	 * Sync with a remote source, applying and inserting all missing messages into the local log
 	 */
-	public async sync(
+	public async *sync(
+		txn: ReadWriteTransaction,
 		source: Source,
-		options: { sourceId?: string; timeoutController?: DelayableController } = {},
-	): Promise<{ root: Node; messageCount: number }> {
-		let messageCount = 0
+		options: { sourceId?: string } = {},
+	): AsyncIterable<[string, Signature, Message<Payload>, Entry]> {
 		const start = performance.now()
-		const root = await this.write(async (txn) => {
-			const driver = new Driver(this.topic, source, txn.messages)
-			for await (const [key, value] of driver.sync()) {
-				const [id, signature, message] = this.decode(value)
-				assert(id === decodeId(key), "expected id === decodeId(key)")
-				await this.#verifySignature(signature, message)
+		let messageCount = 0
 
-				const leaf = await txn.messages.getNode(0, encodeId(id))
-				if (leaf === null) {
-					for (const parent of message.parents) {
-						// TODO: txn.messages.getMany
-						const leaf = await txn.messages.getNode(0, encodeId(parent))
-						if (leaf === null) {
-							this.log.error("missing parent %s of message %s: %O", parent, id, message)
-							if (this.indexAncestors) {
-								throw new Error(`missing parent ${parent} of message ${id}`)
-							} else {
-								continue // don't try to insert, just skip and try to get the message on the next sync
-							}
-						}
-					}
+		const driver = new Driver(this.topic, source, txn.messages)
+		for await (const [key, value] of driver.sync()) {
+			const [id, signature, message] = this.decode(value)
+			assert(id === decodeId(key), "expected id === decodeId(key)")
 
-					await this.#insert(txn, id, signature, message, [key, value])
-					if (options.timeoutController) options.timeoutController.delay()
-					messageCount++
-				}
+			await this.verifySignature(signature, message)
+
+			// TODO: txn.has(key)
+			// TODO: unnecessary????
+			const leaf = await txn.messages.getNode(0, key)
+			if (leaf !== null) {
+				continue
 			}
 
-			return await txn.messages.getRoot()
-		}, options)
+			yield [id, signature, message, [key, value]]
+			messageCount++
+		}
 
 		const duration = Math.ceil(performance.now() - start)
-		const peer = options.sourceId
-
-		this.dispatchEvent(new CustomEvent("sync", { detail: { peer, duration, messageCount } }))
-		this.dispatchEvent(new CustomEvent("commit", { detail: { root } }))
-		this.log("commited root %s", hex(root.hash))
-		return { root, messageCount }
+		this.log("finished sync with peer %s (%d messages in %dms)", options.sourceId, messageCount, duration)
+		this.dispatchEvent(new CustomEvent("sync", { detail: { peer: options.sourceId, messageCount, duration } }))
 	}
 
 	/**
 	 * Serve a read-only snapshot of the merkle tree
 	 */
-	public async serve(callback: (source: Source) => Promise<void>, options: { targetId?: string } = {}) {
+	public async serve(callback: (source: Source) => Awaitable<void>, options: { targetId?: string } = {}) {
 		await this.read((txn) => callback(txn.messages), options)
 	}
 }

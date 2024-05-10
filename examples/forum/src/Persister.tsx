@@ -186,7 +186,7 @@ export function Persister({ app }: { app?: Canvas }) {
 						actionCache[msgid] = true
 						delete expectedRoots[msgid]
 
-						await app.messageLog.insert(signature, message)
+						await app.messageLog.write((txn) => app.messageLog.insert(txn, signature, message))
 
 						for (const parent of message.parents) {
 							if (seenActions[parent]) continue

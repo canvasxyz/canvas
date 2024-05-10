@@ -120,7 +120,7 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 			}
 
 			try {
-				return await callback({
+				const result = await callback({
 					getHeads: () => getHeads(this.heads),
 					getAncestors: async (key: Uint8Array, atOrBefore: number, results: Set<string>) =>
 						getAncestors(this.ancestors, key, atOrBefore, results),
@@ -128,7 +128,6 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 						isAncestor(this.ancestors, key, ancestorKey, visited),
 
 					insert: async (
-						id: string,
 						signature: Signature,
 						message: Message,
 						[key, value] = encodeSignedMessage(signature, message),
@@ -149,6 +148,11 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 
 					messages: this.messages,
 				})
+
+				const root = await this.messages.getRoot()
+				this.dispatchEvent(new CustomEvent("commit", { detail: { root } }))
+
+				return result
 			} catch (err) {
 				this.log.error("error in transaction: %O", err)
 				throw err
@@ -159,7 +163,7 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 			}
 		})
 
-		return result as T
+		return result!
 	}
 }
 

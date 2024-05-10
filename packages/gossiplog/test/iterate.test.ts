@@ -9,9 +9,9 @@ testPlatforms("append three messages", async (t, openGossipLog) => {
 	const signer = ed25519.create()
 	const log = await openGossipLog(t, { topic, apply: () => {}, signer })
 
-	const { id: foo } = await log.append("foo")
-	const { id: bar } = await log.append("bar")
-	const { id: baz } = await log.append("baz")
+	const { id: foo } = await log.write((txn) => log.append(txn, "foo"))
+	const { id: bar } = await log.write((txn) => log.append(txn, "bar"))
+	const { id: baz } = await log.write((txn) => log.append(txn, "baz"))
 
 	t.deepEqual(await collect(log.iterate(), getPublicKey), [
 		[foo, signer.publicKey, { topic, clock: 1, parents: [], payload: "foo" }],
@@ -28,9 +28,9 @@ testPlatforms("insert three concurrent messages and append a fourth", async (t, 
 	const a = { topic, clock: 1, parents: [], payload: "foo" }
 	const b = { topic, clock: 1, parents: [], payload: "bar" }
 	const c = { topic, clock: 1, parents: [], payload: "baz" }
-	const { id: idA } = await log.insert(signer.sign(a), a)
-	const { id: idB } = await log.insert(signer.sign(b), b)
-	const { id: idC } = await log.insert(signer.sign(c), c)
+	const { id: idA } = await log.write((txn) => log.insert(txn, signer.sign(a), a))
+	const { id: idB } = await log.write((txn) => log.insert(txn, signer.sign(b), b))
+	const { id: idC } = await log.write((txn) => log.insert(txn, signer.sign(c), c))
 
 	const entries: [string, string, Message<string>][] = [
 		[idA, signer.publicKey, a],
@@ -42,7 +42,7 @@ testPlatforms("insert three concurrent messages and append a fourth", async (t, 
 
 	t.deepEqual(await collect(log.iterate(), getPublicKey), entries)
 
-	const { id: tailId } = await log.append("qux")
+	const { id: tailId } = await log.write((txn) => log.append(txn, "qux"))
 
 	t.deepEqual(await collect(log.iterate(), getPublicKey), [
 		...entries,

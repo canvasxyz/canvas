@@ -139,7 +139,7 @@ export async function appendChain(
 		}
 
 		const signature = await signer.sign(message)
-		const { id } = await log.insert(signature, message)
+		const { id } = await log.write((txn) => log.insert(txn, signature, message))
 		ids.push(id)
 	}
 

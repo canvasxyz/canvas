@@ -4,8 +4,8 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-boolean-literal-compare */
 /* eslint-disable @typescript-eslint/no-empty-interface */
 
-import { encodeMessage, decodeMessage, message } from 'protons-runtime'
-import type { Codec } from 'protons-runtime'
+import { type Codec, CodeError, decodeMessage, type DecodeOptions, encodeMessage, message } from 'protons-runtime'
+import { alloc as uint8ArrayAlloc } from 'uint8arrays/alloc'
 import type { Uint8ArrayList } from 'uint8arraylist'
 
 export interface Node {
@@ -48,11 +48,11 @@ export namespace Node {
         if (opts.lengthDelimited !== false) {
           w.ldelim()
         }
-      }, (reader, length) => {
+      }, (reader, length, opts = {}) => {
         const obj: any = {
           level: 0,
-          key: new Uint8Array(0),
-          hash: new Uint8Array(0)
+          key: uint8ArrayAlloc(0),
+          hash: uint8ArrayAlloc(0)
         }
 
         const end = length == null ? reader.len : reader.pos + length
@@ -95,8 +95,8 @@ export namespace Node {
     return encodeMessage(obj, Node.codec())
   }
 
-  export const decode = (buf: Uint8Array | Uint8ArrayList): Node => {
-    return decodeMessage(buf, Node.codec())
+  export const decode = (buf: Uint8Array | Uint8ArrayList, opts?: DecodeOptions<Node>): Node => {
+    return decodeMessage(buf, Node.codec(), opts)
   }
 }
 
@@ -122,7 +122,7 @@ export namespace Request {
           if (opts.lengthDelimited !== false) {
             w.ldelim()
           }
-        }, (reader, length) => {
+        }, (reader, length, opts = {}) => {
           const obj: any = {}
 
           const end = length == null ? reader.len : reader.pos + length
@@ -149,8 +149,8 @@ export namespace Request {
       return encodeMessage(obj, GetRootRequest.codec())
     }
 
-    export const decode = (buf: Uint8Array | Uint8ArrayList): GetRootRequest => {
-      return decodeMessage(buf, GetRootRequest.codec())
+    export const decode = (buf: Uint8Array | Uint8ArrayList, opts?: DecodeOptions<GetRootRequest>): GetRootRequest => {
+      return decodeMessage(buf, GetRootRequest.codec(), opts)
     }
   }
 
@@ -182,10 +182,10 @@ export namespace Request {
           if (opts.lengthDelimited !== false) {
             w.ldelim()
           }
-        }, (reader, length) => {
+        }, (reader, length, opts = {}) => {
           const obj: any = {
             level: 0,
-            key: new Uint8Array(0)
+            key: uint8ArrayAlloc(0)
           }
 
           const end = length == null ? reader.len : reader.pos + length
@@ -220,8 +220,8 @@ export namespace Request {
       return encodeMessage(obj, GetNodeRequest.codec())
     }
 
-    export const decode = (buf: Uint8Array | Uint8ArrayList): GetNodeRequest => {
-      return decodeMessage(buf, GetNodeRequest.codec())
+    export const decode = (buf: Uint8Array | Uint8ArrayList, opts?: DecodeOptions<GetNodeRequest>): GetNodeRequest => {
+      return decodeMessage(buf, GetNodeRequest.codec(), opts)
     }
   }
 
@@ -253,10 +253,10 @@ export namespace Request {
           if (opts.lengthDelimited !== false) {
             w.ldelim()
           }
-        }, (reader, length) => {
+        }, (reader, length, opts = {}) => {
           const obj: any = {
             level: 0,
-            key: new Uint8Array(0)
+            key: uint8ArrayAlloc(0)
           }
 
           const end = length == null ? reader.len : reader.pos + length
@@ -291,8 +291,8 @@ export namespace Request {
       return encodeMessage(obj, GetChildrenRequest.codec())
     }
 
-    export const decode = (buf: Uint8Array | Uint8ArrayList): GetChildrenRequest => {
-      return decodeMessage(buf, GetChildrenRequest.codec())
+    export const decode = (buf: Uint8Array | Uint8ArrayList, opts?: DecodeOptions<GetChildrenRequest>): GetChildrenRequest => {
+      return decodeMessage(buf, GetChildrenRequest.codec(), opts)
     }
   }
 
@@ -323,7 +323,7 @@ export namespace Request {
         if (opts.lengthDelimited !== false) {
           w.ldelim()
         }
-      }, (reader, length) => {
+      }, (reader, length, opts = {}) => {
         const obj: any = {}
 
         const end = length == null ? reader.len : reader.pos + length
@@ -333,15 +333,21 @@ export namespace Request {
 
           switch (tag >>> 3) {
             case 1: {
-              obj.getRoot = Request.GetRootRequest.codec().decode(reader, reader.uint32())
+              obj.getRoot = Request.GetRootRequest.codec().decode(reader, reader.uint32(), {
+                limits: opts.limits?.getRoot
+              })
               break
             }
             case 2: {
-              obj.getNode = Request.GetNodeRequest.codec().decode(reader, reader.uint32())
+              obj.getNode = Request.GetNodeRequest.codec().decode(reader, reader.uint32(), {
+                limits: opts.limits?.getNode
+              })
               break
             }
             case 3: {
-              obj.getChildren = Request.GetChildrenRequest.codec().decode(reader, reader.uint32())
+              obj.getChildren = Request.GetChildrenRequest.codec().decode(reader, reader.uint32(), {
+                limits: opts.limits?.getChildren
+              })
               break
             }
             default: {
@@ -362,8 +368,8 @@ export namespace Request {
     return encodeMessage(obj, Request.codec())
   }
 
-  export const decode = (buf: Uint8Array | Uint8ArrayList): Request => {
-    return decodeMessage(buf, Request.codec())
+  export const decode = (buf: Uint8Array | Uint8ArrayList, opts?: DecodeOptions<Request>): Request => {
+    return decodeMessage(buf, Request.codec(), opts)
   }
 }
 
@@ -396,7 +402,7 @@ export namespace Response {
           if (opts.lengthDelimited !== false) {
             w.ldelim()
           }
-        }, (reader, length) => {
+        }, (reader, length, opts = {}) => {
           const obj: any = {}
 
           const end = length == null ? reader.len : reader.pos + length
@@ -406,7 +412,9 @@ export namespace Response {
 
             switch (tag >>> 3) {
               case 1: {
-                obj.root = Node.codec().decode(reader, reader.uint32())
+                obj.root = Node.codec().decode(reader, reader.uint32(), {
+                  limits: opts.limits?.root
+                })
                 break
               }
               default: {
@@ -427,8 +435,8 @@ export namespace Response {
       return encodeMessage(obj, GetRootResponse.codec())
     }
 
-    export const decode = (buf: Uint8Array | Uint8ArrayList): GetRootResponse => {
-      return decodeMessage(buf, GetRootResponse.codec())
+    export const decode = (buf: Uint8Array | Uint8ArrayList, opts?: DecodeOptions<GetRootResponse>): GetRootResponse => {
+      return decodeMessage(buf, GetRootResponse.codec(), opts)
     }
   }
 
@@ -454,7 +462,7 @@ export namespace Response {
           if (opts.lengthDelimited !== false) {
             w.ldelim()
           }
-        }, (reader, length) => {
+        }, (reader, length, opts = {}) => {
           const obj: any = {}
 
           const end = length == null ? reader.len : reader.pos + length
@@ -464,7 +472,9 @@ export namespace Response {
 
             switch (tag >>> 3) {
               case 1: {
-                obj.node = Node.codec().decode(reader, reader.uint32())
+                obj.node = Node.codec().decode(reader, reader.uint32(), {
+                  limits: opts.limits?.node
+                })
                 break
               }
               default: {
@@ -485,8 +495,8 @@ export namespace Response {
       return encodeMessage(obj, GetNodeResponse.codec())
     }
 
-    export const decode = (buf: Uint8Array | Uint8ArrayList): GetNodeResponse => {
-      return decodeMessage(buf, GetNodeResponse.codec())
+    export const decode = (buf: Uint8Array | Uint8ArrayList, opts?: DecodeOptions<GetNodeResponse>): GetNodeResponse => {
+      return decodeMessage(buf, GetNodeResponse.codec(), opts)
     }
   }
 
@@ -514,7 +524,7 @@ export namespace Response {
           if (opts.lengthDelimited !== false) {
             w.ldelim()
           }
-        }, (reader, length) => {
+        }, (reader, length, opts = {}) => {
           const obj: any = {
             children: []
           }
@@ -526,7 +536,13 @@ export namespace Response {
 
             switch (tag >>> 3) {
               case 1: {
-                obj.children.push(Node.codec().decode(reader, reader.uint32()))
+                if (opts.limits?.children != null && obj.children.length === opts.limits.children) {
+                  throw new CodeError('decode error - map field "children" had too many elements', 'ERR_MAX_LENGTH')
+                }
+
+                obj.children.push(Node.codec().decode(reader, reader.uint32(), {
+                  limits: opts.limits?.children$
+                }))
                 break
               }
               default: {
@@ -547,8 +563,8 @@ export namespace Response {
       return encodeMessage(obj, GetChildrenResponse.codec())
     }
 
-    export const decode = (buf: Uint8Array | Uint8ArrayList): GetChildrenResponse => {
-      return decodeMessage(buf, GetChildrenResponse.codec())
+    export const decode = (buf: Uint8Array | Uint8ArrayList, opts?: DecodeOptions<GetChildrenResponse>): GetChildrenResponse => {
+      return decodeMessage(buf, GetChildrenResponse.codec(), opts)
     }
   }
 
@@ -579,7 +595,7 @@ export namespace Response {
         if (opts.lengthDelimited !== false) {
           w.ldelim()
         }
-      }, (reader, length) => {
+      }, (reader, length, opts = {}) => {
         const obj: any = {}
 
         const end = length == null ? reader.len : reader.pos + length
@@ -589,15 +605,21 @@ export namespace Response {
 
           switch (tag >>> 3) {
             case 1: {
-              obj.getRoot = Response.GetRootResponse.codec().decode(reader, reader.uint32())
+              obj.getRoot = Response.GetRootResponse.codec().decode(reader, reader.uint32(), {
+                limits: opts.limits?.getRoot
+              })
               break
             }
             case 2: {
-              obj.getNode = Response.GetNodeResponse.codec().decode(reader, reader.uint32())
+              obj.getNode = Response.GetNodeResponse.codec().decode(reader, reader.uint32(), {
+                limits: opts.limits?.getNode
+              })
               break
             }
             case 3: {
-              obj.getChildren = Response.GetChildrenResponse.codec().decode(reader, reader.uint32())
+              obj.getChildren = Response.GetChildrenResponse.codec().decode(reader, reader.uint32(), {
+                limits: opts.limits?.getChildren
+              })
               break
             }
             default: {
@@ -618,7 +640,7 @@ export namespace Response {
     return encodeMessage(obj, Response.codec())
   }
 
-  export const decode = (buf: Uint8Array | Uint8ArrayList): Response => {
-    return decodeMessage(buf, Response.codec())
+  export const decode = (buf: Uint8Array | Uint8ArrayList, opts?: DecodeOptions<Response>): Response => {
+    return decodeMessage(buf, Response.codec(), opts)
   }
 }

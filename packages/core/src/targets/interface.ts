@@ -6,37 +6,36 @@ import type { GossipsubEvents } from "@chainsafe/libp2p-gossipsub"
 
 import type pg from "pg"
 
+import type { Action, Session, SignerCache } from "@canvas-js/interfaces"
 import type { AbstractModelDB, ModelsInit } from "@canvas-js/modeldb"
 import type { AbstractGossipLog, GossipLogInit } from "@canvas-js/gossiplog"
 import type { GossipLogService } from "@canvas-js/gossiplog/service"
-import type { DiscoveryService } from "@canvas-js/discovery"
-import type { SignerCache } from "@canvas-js/interfaces"
+// import type { DiscoveryService } from "@canvas-js/discovery"
 
 import type { NetworkConfig } from "../Canvas.js"
 
 export interface PlatformTarget {
-	createLibp2p: (
+	openGossipLog: (
 		location: { path: string | pg.ConnectionConfig | null; topic: string },
-		config: NetworkConfig & { signers: SignerCache },
-	) => Promise<Libp2p<ServiceMap>>
+		init: GossipLogInit<Action | Session>,
+	) => Promise<AbstractGossipLog<Action | Session>>
 
 	openDB: (
 		location: { path: string | pg.ConnectionConfig | null; topic: string },
 		models: ModelsInit,
-		options?: { indexHistory?: Record<string, boolean> },
 	) => Promise<AbstractModelDB>
 
-	openGossipLog: <Payload>(
-		location: { path: string | pg.ConnectionConfig | null; topic: string },
-		init: GossipLogInit<Payload>,
-	) => Promise<AbstractGossipLog<Payload>>
+	createLibp2p: (
+		messageLog: AbstractGossipLog<Action | Session>,
+		config: NetworkConfig & { signers: SignerCache },
+	) => Promise<Libp2p<ServiceMap>>
 }
 
 export type ServiceMap = {
 	identify: {}
 	ping: PingService
 	pubsub: PubSub<GossipsubEvents>
-	gossiplog: GossipLogService
+	gossiplog: GossipLogService<Action | Session>
 	fetch: FetchService
-	discovery: DiscoveryService
+	// discovery: DiscoveryService
 }

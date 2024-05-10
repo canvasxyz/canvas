@@ -13,14 +13,16 @@ import { fetch } from "@libp2p/fetch"
 
 import { Multiaddr } from "@multiformats/multiaddr"
 
-import { gossiplog } from "@canvas-js/gossiplog/service"
+import { GossipLogService, gossiplog } from "@canvas-js/gossiplog/service"
 
-import { bootstrapList, listen, announce, peerId } from "./config.js"
+import { bootstrapList, listen, announce, getPeerId } from "./config.js"
+import { GossipLog } from "@canvas-js/gossiplog/memory"
 
 const { MIN_CONNECTIONS, MAX_CONNECTIONS, SERVICE_NAME } = process.env
 const serviceNameHash = sha256(SERVICE_NAME ?? new Uint8Array([]))
 
-export const topic = SERVICE_NAME !== "bootstrap" && serviceNameHash[0] < 128 ? "test-network-example" : null
+// export const topic = SERVICE_NAME !== "bootstrap" && serviceNameHash[0] < 128 ? "test-network-example" : null
+export const topic = "test-network-example"
 
 let minConnections: number | undefined = undefined
 let maxConnections: number | undefined = undefined
@@ -30,59 +32,68 @@ if (MAX_CONNECTIONS !== undefined) maxConnections = parseInt(MAX_CONNECTIONS)
 
 export const getTopicDHTProtocol = (topic: string) => `/canvas/kad/${topic}/1.0.0`
 
-export const libp2p = await createLibp2p({
-	peerId: peerId,
-	start: false,
-	addresses: { listen, announce },
-	transports: [webSockets({ filter: all })],
-	connectionGater: {
-		denyDialMultiaddr: (addr: Multiaddr) => false,
-	},
+export async function getLibp2p() {
+	const peerId = await getPeerId()
 
-	connectionManager: { minConnections, maxConnections },
+	const log = await GossipLog.open({ topic, apply: () => {} })
 
-	peerDiscovery: bootstrapList.length > 0 ? [bootstrap({ list: bootstrapList })] : [],
+	return await createLibp2p({
+		peerId: peerId,
+		start: false,
+		addresses: { listen, announce },
+		transports: [webSockets({ filter: all })],
+		connectionGater: {
+			denyDialMultiaddr: (addr: Multiaddr) => false,
+		},
 
-	streamMuxers: [mplex()],
-	connectionEncryption: [noise()],
-	services: {
-		identify: identifyService({ protocolPrefix: "canvas" }),
-		// globalDHT: kadDHT({
-		// 	kBucketSize: 2,
-		// 	protocol: "/canvas/kad/1.0.0",
-		// }),
+		connectionManager: { minConnections, maxConnections },
 
-		...(topic === null ? {} : { topicDHT: kadDHT({ protocol: getTopicDHTProtocol(topic) }) }),
+		peerDiscovery: bootstrapList.length > 0 ? [bootstrap({ list: bootstrapList })] : [],
 
-		pubsub: gossipsub({
-			fallbackToFloodsub: false,
-			allowPublishToZeroPeers: true,
-			globalSignaturePolicy: "StrictSign",
-			metricsTopicStrToLabel: new Map<string, string>(topic ? [[topic, topic]] : []),
-			metricsRegister: {
-				gauge({}) {
-					return {
-						inc: () => {},
-						set: () => {},
-						addCollect: () => {},
-					}
+		streamMuxers: [mplex()],
+		connectionEncryption: [noise()],
+		services: {
+			identify: identifyService({ protocolPrefix: "canvas" }),
+			globalDHT: kadDHT({
+				kBucketSize: 2,
+				protocol: "/canvas/kad/1.0.0",
+			}),
+
+			// ...(topic === null ? {} : { topicDHT: kadDHT({ protocol: getTopicDHTProtocol(topic) }) }),
+
+			pubsub: gossipsub({
+				fallbackToFloodsub: false,
+				allowPublishToZeroPeers: true,
+				globalSignaturePolicy: "StrictSign",
+
+				asyncValidation: true,
+
+				metricsTopicStrToLabel: new Map<string, string>(topic ? [[topic, topic]] : []),
+				metricsRegister: {
+					gauge({}) {
+						return {
+							inc: () => {},
+							set: () => {},
+							addCollect: () => {},
+						}
+					},
+					histogram({}) {
+						return {
+							startTimer: () => () => {},
+							observe: () => {},
+							reset: () => {},
+						}
+					},
+					avgMinMax({}) {
+						return {
+							set: () => {},
+						}
+					},
 				},
-				histogram({}) {
-					return {
-						startTimer: () => () => {},
-						observe: () => {},
-						reset: () => {},
-					}
-				},
-				avgMinMax({}) {
-					return {
-						set: () => {},
-					}
-				},
-			},
-		}),
+			}),
 
-		fetch: fetch({ protocolPrefix: "canvas" }),
-		gossiplog: gossiplog({}),
-	},
-})
+			fetch: fetch({ protocolPrefix: "canvas" }),
+			gossiplog: gossiplog(log, {}),
+		},
+	})
+}

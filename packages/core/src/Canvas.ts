@@ -49,9 +49,6 @@ export interface CanvasConfig<T extends Contract = Contract> extends NetworkConf
 	/** data directory path (NodeJS/sqlite), or postgres connection config (NodeJS/pg) */
 	path?: string | pg.ConnectionConfig | null
 
-	/** provide an existing libp2p instance instead of creating a new one */
-	libp2p?: Libp2p<ServiceMap>
-
 	/** set to `false` to disable history indexing and db.get(..) within actions */
 	indexHistory?: boolean
 
@@ -133,9 +130,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 
 		const topic = runtime.topic
 
-		const libp2p = await Promise.resolve(config.libp2p ?? target.createLibp2p({ topic, path }, { ...config, signers }))
-
-		const gossipLog = await target.openGossipLog<Action | Session>(
+		const messageLog = await target.openGossipLog(
 			{ topic, path, clear: reset },
 			{
 				topic: runtime.topic,
@@ -146,9 +141,9 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			},
 		)
 
-		await libp2p.services.gossiplog.subscribe(gossipLog, {})
+		const libp2p = await target.createLibp2p(messageLog, { ...config, signers })
 
-		return new Canvas(signers, libp2p, gossipLog, runtime, offline, disablePing)
+		return new Canvas(signers, libp2p, messageLog, runtime, offline, disablePing)
 	}
 
 	public readonly db: AbstractModelDB
@@ -204,20 +199,20 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			this.updateStatus()
 		})
 
-		this.libp2p.services.discovery.addEventListener(
-			"presence:join",
-			({ detail: { peerId, env, address, topics, peers } }) => {
-				this._log("discovered peer %p with addresses %o", peerId)
-				this.dispatchEvent(
-					new CustomEvent("presence:join", { detail: { peerId, env, address, topics, peers: { ...peers } } }),
-				)
-			},
-		)
+		// this.libp2p.services.discovery.addEventListener(
+		// 	"presence:join",
+		// 	({ detail: { peerId, env, address, topics, peers } }) => {
+		// 		this._log("discovered peer %p with addresses %o", peerId)
+		// 		this.dispatchEvent(
+		// 			new CustomEvent("presence:join", { detail: { peerId, env, address, topics, peers: { ...peers } } }),
+		// 		)
+		// 	},
+		// )
 
-		this.libp2p.services.discovery.addEventListener("presence:leave", ({ detail: { peerId, peers } }) => {
-			this._log("discovered peer %p with addresses %o", peerId)
-			this.dispatchEvent(new CustomEvent("presence:leave", { detail: { peerId, peers: { ...peers } } }))
-		})
+		// this.libp2p.services.discovery.addEventListener("presence:leave", ({ detail: { peerId, peers } }) => {
+		// 	this._log("discovered peer %p with addresses %o", peerId)
+		// 	this.dispatchEvent(new CustomEvent("presence:leave", { detail: { peerId, peers: { ...peers } } }))
+		// })
 
 		this.libp2p.addEventListener("connection:open", ({ detail: connection }) => {
 			this._connections = [...this._connections, connection]
@@ -246,43 +241,43 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			}
 		})
 
-		const startPingTimer = () => {
-			this._pingTimer = setInterval(() => {
-				const subscribers = this.libp2p.services.pubsub.getSubscribers(GossipLogService.topicPrefix + this.topic)
-				const pings = this._peers.map((peer) =>
-					this.libp2p.services.ping
-						.ping(peer)
-						.then((msec) => {
-							this.connections[peer.toString()] = {
-								peer,
-								status: subscribers.find((p) => p.toString() === peer.toString()) ? "online" : "waiting",
-								connections: this._connections.filter((conn) => conn.remotePeer.toString() === peer.toString()),
-							}
-						})
-						.catch((err) => {
-							this.connections[peer.toString()] = {
-								peer,
-								status: "offline",
-								connections: this._connections.filter((conn) => conn.remotePeer.toString() === peer.toString()),
-							}
-						}),
-				)
-				Promise.allSettled(pings).then(() => {
-					this.updateStatus()
-					this.dispatchEvent(
-						new CustomEvent("connections:updated", {
-							detail: { connections: { ...this.connections }, status: this.status },
-						}),
-					)
-				})
-			}, 3000)
-		}
+		// const startPingTimer = () => {
+		// 	this._pingTimer = setInterval(() => {
+		// 		const subscribers = this.libp2p.services.pubsub.getSubscribers( this.topic)
+		// 		const pings = this._peers.map((peer) =>
+		// 			this.libp2p.services.ping
+		// 				.ping(peer)
+		// 				.then((msec) => {
+		// 					this.connections[peer.toString()] = {
+		// 						peer,
+		// 						status: subscribers.find((p) => p.toString() === peer.toString()) ? "online" : "waiting",
+		// 						connections: this._connections.filter((conn) => conn.remotePeer.toString() === peer.toString()),
+		// 					}
+		// 				})
+		// 				.catch((err) => {
+		// 					this.connections[peer.toString()] = {
+		// 						peer,
+		// 						status: "offline",
+		// 						connections: this._connections.filter((conn) => conn.remotePeer.toString() === peer.toString()),
+		// 					}
+		// 				}),
+		// 		)
+		// 		Promise.allSettled(pings).then(() => {
+		// 			this.updateStatus()
+		// 			this.dispatchEvent(
+		// 				new CustomEvent("connections:updated", {
+		// 					detail: { connections: { ...this.connections }, status: this.status },
+		// 				}),
+		// 			)
+		// 		})
+		// 	}, 3000)
+		// }
 
-		if (offline && !disablePing) {
-			this.libp2p.addEventListener("start", (event) => startPingTimer())
-		} else if (!disablePing) {
-			startPingTimer()
-		}
+		// if (offline && !disablePing) {
+		// 	this.libp2p.addEventListener("start", (event) => startPingTimer())
+		// } else if (!disablePing) {
+		// 	startPingTimer()
+		// }
 
 		this.libp2p.addEventListener("stop", (event) => clearInterval(this._pingTimer))
 
@@ -442,9 +437,10 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 	 */
 	public async append<Payload extends Session | Action>(
 		payload: Payload,
-		options: { signer?: Signer<Payload> },
+		options: { signer?: Signer<Session | Action> },
 	): Promise<{ id: string; signature: Signature; message: Message<Payload>; recipients: Promise<PeerId[]> }> {
-		return this.libp2p.services.gossiplog.append(this.topic, payload, options)
+		const { id, signature, message, recipients } = await this.libp2p.services.gossiplog.append(payload, options)
+		return { id, signature, message: message as Message<Payload>, recipients }
 	}
 
 	public async getMessage(

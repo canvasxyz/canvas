@@ -244,7 +244,6 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 				isAncestor: (key: Uint8Array, ancestorKey: Uint8Array): Promise<boolean> => isAncestor(this, key, ancestorKey),
 
 				insert: async (
-					id: string,
 					signature: Signature,
 					message: Message,
 					[key, value] = encodeSignedMessage(signature, message),

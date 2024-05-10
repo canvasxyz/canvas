@@ -52,7 +52,7 @@ async function append(t: ExecutionContext, log: AbstractGossipLog<string>, n: nu
 	const start = performance.now()
 
 	for (let i = 0; i < n; i++) {
-		await log.append(i.toString())
+		await log.write((txn) => log.append(txn, i.toString()))
 	}
 
 	const time = performance.now() - start

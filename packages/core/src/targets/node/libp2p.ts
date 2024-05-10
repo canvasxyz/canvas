@@ -20,7 +20,9 @@ import { register } from "prom-client"
 
 import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 
-import { GossipLogService, gossiplog } from "@canvas-js/gossiplog/service"
+import type { Action, Session } from "@canvas-js/interfaces"
+import { AbstractGossipLog } from "@canvas-js/gossiplog"
+import { gossiplog } from "@canvas-js/gossiplog/service"
 import { discovery } from "@canvas-js/discovery"
 
 import { defaultBootstrapList } from "@canvas-js/core/bootstrap"
@@ -29,10 +31,14 @@ import { DIAL_CONCURRENCY, MAX_CONNECTIONS, MIN_CONNECTIONS, PING_TIMEOUT } from
 import type { ServiceMap } from "../interface.js"
 import { NetworkConfig } from "../../Canvas.js"
 
-export function getLibp2pOptions(peerId: PeerId, options: NetworkConfig): Libp2pOptions<ServiceMap> {
-	const announce = options.announce ?? []
-	const listen = options.listen ?? []
-	const bootstrapList = options.bootstrapList ?? defaultBootstrapList
+export function getLibp2pOptions(
+	messageLog: AbstractGossipLog<Action | Session>,
+	peerId: PeerId,
+	config: NetworkConfig,
+): Libp2pOptions<ServiceMap> {
+	const announce = config.announce ?? []
+	const listen = config.listen ?? []
+	const bootstrapList = config.bootstrapList ?? defaultBootstrapList
 
 	for (const address of announce) {
 		console.log(chalk.gray(`[canvas] Announcing on ${address}/p2p/${peerId}`))
@@ -63,14 +69,14 @@ export function getLibp2pOptions(peerId: PeerId, options: NetworkConfig): Libp2p
 	}
 
 	return {
-		start: !options.offline,
+		start: !config.offline,
 		peerId: peerId,
 		addresses: { listen, announce },
 
 		connectionGater: { denyDialMultiaddr },
 		connectionManager: {
-			minConnections: options.minConnections ?? MIN_CONNECTIONS,
-			maxConnections: options.maxConnections ?? MAX_CONNECTIONS,
+			minConnections: config.minConnections ?? MIN_CONNECTIONS,
+			maxConnections: config.maxConnections ?? MAX_CONNECTIONS,
 			autoDialConcurrency: DIAL_CONCURRENCY,
 		},
 
@@ -97,7 +103,7 @@ export function getLibp2pOptions(peerId: PeerId, options: NetworkConfig): Libp2p
 				emitSelf: false,
 				fallbackToFloodsub: false,
 				allowPublishToZeroPeers: true,
-				globalSignaturePolicy: "StrictNoSign",
+				globalSignaturePolicy: "StrictSign",
 				scoreParams: {
 					behaviourPenaltyWeight: -1.0, // 1/10th of default
 					retainScore: 10 * 1000, // 10 seconds, instead of 1 hour
@@ -109,17 +115,9 @@ export function getLibp2pOptions(peerId: PeerId, options: NetworkConfig): Libp2p
 				},
 			}),
 
-			gossiplog: gossiplog({ sync: true }),
+			gossiplog: gossiplog(messageLog, {}),
 
 			fetch: fetchService({ protocolPrefix: "canvas" }),
-			discovery: discovery({
-				discoveryTopic: options.discoveryTopic,
-				discoveryInterval: options.discoveryInterval,
-				trackAllPeers: options.trackAllPeers,
-				evictionThreshold: options.presenceTimeout,
-				topicFilter: (topic) => topic.startsWith(GossipLogService.topicPrefix),
-				addressFilter: (addr) => WebSockets.matches(addr) || WebSocketsSecure.matches(addr),
-			}),
 		},
 	}
 }

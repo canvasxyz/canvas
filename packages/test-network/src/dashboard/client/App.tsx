@@ -32,7 +32,7 @@ function reduce(state: State, event: Event): State {
 	} else if (event.type === "connection:close") {
 		return { ...state, links: state.links.filter((link) => link.id !== event.detail.id) }
 	} else if (event.type === "gossipsub:mesh:update") {
-		if (event.detail.topic === `canvas/${topic}`) {
+		if (event.detail.topic === topic) {
 			return { ...state, mesh: { ...state.mesh, [event.id]: event.detail.peers } }
 		}
 	} else if (event.type === "gossiplog:commit") {

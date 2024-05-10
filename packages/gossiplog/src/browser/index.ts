@@ -216,7 +216,6 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 							this.ancestors.read(() => isAncestor(this.ancestors, key, ancestorKey, visited)),
 
 						insert: async (
-							id: string,
 							signature: Signature,
 							message: Message,
 							[key, value] = encodeSignedMessage(signature, message),
@@ -239,6 +238,9 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 
 						messages: this.messages,
 					})
+
+					const root = await this.messages.getRoot()
+					this.dispatchEvent(new CustomEvent("commit", { detail: root }))
 				} catch (err) {
 					this.log.error("error in read-write transaction: %O", err)
 					error = err as Error

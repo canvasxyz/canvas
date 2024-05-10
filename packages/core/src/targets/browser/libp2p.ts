@@ -17,17 +17,18 @@ import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 
 import { GossipLogService, gossiplog } from "@canvas-js/gossiplog/service"
 import { discovery } from "@canvas-js/discovery"
-import { SignerCache } from "@canvas-js/interfaces"
+import { Action, Session, SignerCache } from "@canvas-js/interfaces"
 
 import { defaultBootstrapList } from "@canvas-js/core/bootstrap"
 import { DIAL_CONCURRENCY, MAX_CONNECTIONS, MIN_CONNECTIONS, PING_TIMEOUT } from "@canvas-js/core/constants"
 
 import type { ServiceMap } from "../interface.js"
 import type { NetworkConfig } from "../../Canvas.js"
+import { AbstractGossipLog } from "@canvas-js/gossiplog"
 
 export function getLibp2pOptions(
+	messageLog: AbstractGossipLog<Action | Session>,
 	peerId: PeerId,
-	appTopic: string,
 	options: NetworkConfig & { signers: SignerCache },
 ): Libp2pOptions<ServiceMap> {
 	const announce = options.announce ?? []
@@ -99,18 +100,18 @@ export function getLibp2pOptions(
 				},
 			}),
 
-			gossiplog: gossiplog({}),
+			gossiplog: gossiplog(messageLog, {}),
 			fetch: fetchService({ protocolPrefix: "canvas" }),
-			discovery: discovery({
-				discoveryTopic: options.discoveryTopic,
-				discoveryInterval: options.discoveryInterval,
-				trackAllPeers: options.trackAllPeers,
-				evictionThreshold: options.presenceTimeout,
-				topicFilter: (topic) => topic.startsWith(GossipLogService.topicPrefix),
-				addressFilter: (addr) => WebSockets.matches(addr) || WebSocketsSecure.matches(addr),
-				signers: options.signers,
-				appTopic,
-			}),
+			// discovery: discovery({
+			// 	discoveryTopic: options.discoveryTopic,
+			// 	discoveryInterval: options.discoveryInterval,
+			// 	trackAllPeers: options.trackAllPeers,
+			// 	evictionThreshold: options.presenceTimeout,
+			// 	topicFilter: (topic) => topic.startsWith(GossipLogService.topicPrefix),
+			// 	addressFilter: (addr) => WebSockets.matches(addr) || WebSocketsSecure.matches(addr),
+			// 	signers: options.signers,
+			// 	appTopic,
+			// }),
 		},
 	}
 }

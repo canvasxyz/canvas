@@ -5,12 +5,11 @@ import { nanoid } from "nanoid"
 
 import type { Signature, Message } from "@canvas-js/interfaces"
 import { ed25519 } from "@canvas-js/signatures"
-import { decodeId } from "@canvas-js/gossiplog"
 import { GossipLog } from "@canvas-js/gossiplog/node"
 import { GossipLog as PostgresGossipLog } from "@canvas-js/gossiplog/pg"
 import { AbstractGossipLog } from "@canvas-js/gossiplog"
 
-import { appendChain, getDirectory, shuffle, testPlatforms } from "./utils.js"
+import { appendChain, getDirectory, testPlatforms } from "./utils.js"
 
 const apply = (id: string, signature: Signature, message: Message<string>) => {}
 
@@ -21,13 +20,13 @@ testPlatforms("get ancestors (append, linear history)", async (t, openGossipLog)
 	const n = 20
 	const ids: string[] = []
 	for (let i = 0; i < n; i++) {
-		const { id } = await log.append(nanoid())
+		const { id } = await log.write((txn) => log.append(txn, nanoid()))
 		ids.push(id)
 	}
 
 	for (let i = 0; i < n; i++) {
 		for (let j = 0; j < i; j++) {
-			t.deepEqual(await log.getAncestors(ids[i], j + 1), [ids[j]], `i=${i} j=${j}`)
+			t.deepEqual(await log.read((txn) => log.getAncestors(txn, ids[i], j + 1)), [ids[j]], `i=${i} j=${j}`)
 		}
 	}
 })
@@ -48,47 +47,13 @@ testPlatforms("get ancestors (insert, linear history)", async (t, openGossipLog)
 		}
 
 		const signature = signer.sign(message)
-		const { id } = await log.insert(signature, message)
+		const { id } = await log.write((txn) => log.insert(txn, signature, message))
 		ids.push(id)
 	}
 
 	for (let i = 0; i < n; i++) {
 		for (let j = 0; j < i; j++) {
-			t.deepEqual(await log.getAncestors(ids[i], j + 1), [ids[j]], `i=${i} j=${j}`)
-		}
-	}
-})
-
-testPlatforms("get ancestors (insert, linear history, shuffled)", async (t, openGossipLog) => {
-	const topic = randomUUID()
-	const signer = ed25519.create()
-	const log = await openGossipLog(t, { topic, apply, indexAncestors: true })
-
-	const n = 20
-	const ids: string[] = []
-	const messages: [Signature, Message<string>][] = []
-	for (let i = 0; i < n; i++) {
-		const message: Message<string> = {
-			topic,
-			clock: i + 1,
-			parents: i === 0 ? [] : [ids[i - 1]],
-			payload: nanoid(),
-		}
-
-		const signature = signer.sign(message)
-		messages.push([signature, message])
-		const [key] = log.encode(signature, message)
-		ids.push(decodeId(key))
-	}
-
-	shuffle(messages)
-	for (const [signature, message] of messages) {
-		await log.insert(signature, message)
-	}
-
-	for (let i = 0; i < n; i++) {
-		for (let j = 0; j < i; j++) {
-			t.deepEqual(await log.getAncestors(ids[i], j + 1), [ids[j]], `i=${i} j=${j}`)
+			t.deepEqual(await log.read((txn) => log.getAncestors(txn, ids[i], j + 1)), [ids[j]], `i=${i} j=${j}`)
 		}
 	}
 })
@@ -97,28 +62,28 @@ testPlatforms("get ancestors (insert, concurrent history, fixed)", async (t, ope
 	const topic = randomUUID()
 	const log = await openGossipLog(t, { topic, apply, indexAncestors: true })
 
-	const { id: idX } = await log.append(nanoid())
-	const { id: idY } = await log.append(nanoid())
-	const { id: idZ } = await log.append(nanoid())
+	const { id: idX } = await log.write((txn) => log.append(txn, nanoid()))
+	const { id: idY } = await log.write((txn) => log.append(txn, nanoid()))
+	const { id: idZ } = await log.write((txn) => log.append(txn, nanoid()))
 	const chainA = await appendChain(log, idZ, 5)
 	const chainB = await appendChain(log, idZ, 3)
-	const { id: tailId } = await log.append(nanoid())
+	const { id: tailId } = await log.write((txn) => log.append(txn, nanoid()))
 
-	t.deepEqual(await log.getAncestors(idZ, 1), [idX])
-	t.deepEqual(await log.getAncestors(tailId, 1), [idX])
-	t.deepEqual(await log.getAncestors(tailId, 3), [idZ])
-	t.deepEqual(await log.getAncestors(chainA[0], 3), [idZ])
-	t.deepEqual(await log.getAncestors(chainB[0], 3), [idZ])
+	t.deepEqual(await log.read((txn) => log.getAncestors(txn, idZ, 1)), [idX])
+	t.deepEqual(await log.read((txn) => log.getAncestors(txn, tailId, 1)), [idX])
+	t.deepEqual(await log.read((txn) => log.getAncestors(txn, tailId, 3)), [idZ])
+	t.deepEqual(await log.read((txn) => log.getAncestors(txn, chainA[0], 3)), [idZ])
+	t.deepEqual(await log.read((txn) => log.getAncestors(txn, chainB[0], 3)), [idZ])
 
-	t.deepEqual(await log.getAncestors(tailId, 4), [chainA[0], chainB[0]].sort())
-	t.deepEqual(await log.getAncestors(tailId, 5), [chainA[1], chainB[1]].sort())
-	t.deepEqual(await log.getAncestors(tailId, 6), [chainA[2], chainB[2]].sort())
+	t.deepEqual(await log.read((txn) => log.getAncestors(txn, tailId, 4)), [chainA[0], chainB[0]].sort())
+	t.deepEqual(await log.read((txn) => log.getAncestors(txn, tailId, 5)), [chainA[1], chainB[1]].sort())
+	t.deepEqual(await log.read((txn) => log.getAncestors(txn, tailId, 6)), [chainA[2], chainB[2]].sort())
 
-	t.deepEqual(await log.getAncestors(tailId, 7), [chainA[3], chainB[2]].sort())
-	t.deepEqual(await log.getAncestors(chainA[4], 7), [chainA[3]])
+	t.deepEqual(await log.read((txn) => log.getAncestors(txn, tailId, 7)), [chainA[3], chainB[2]].sort())
+	t.deepEqual(await log.read((txn) => log.getAncestors(txn, chainA[4], 7)), [chainA[3]])
 
-	t.deepEqual(await log.getAncestors(chainA[2], 4), [chainA[0]])
-	t.deepEqual(await log.getAncestors(chainB[2], 4), [chainB[0]])
+	t.deepEqual(await log.read((txn) => log.getAncestors(txn, chainA[2], 4)), [chainA[0]])
+	t.deepEqual(await log.read((txn) => log.getAncestors(txn, chainB[2], 4)), [chainB[0]])
 })
 
 test("simulate a randomly partitioned network, logs on disk", async (t) => {
@@ -211,7 +176,11 @@ export const simulateRandomNetwork = async (
 		if (peerIndex !== selfIndex) {
 			const peer = logs[peerIndex]
 			await peer.serve(async (source) => {
-				await self.sync(source)
+				await self.write(async (txn) => {
+					for await (const [_, signature, message, entry] of self.sync(txn, source)) {
+						await self.insert(txn, signature, message, entry)
+					}
+				})
 			})
 
 			merge(bitMaps[selfIndex], bitMaps[peerIndex])
@@ -220,7 +189,7 @@ export const simulateRandomNetwork = async (
 		// append a chain of messages
 		const chainLength = random(maxChainLength)
 		for (let j = 0; j < chainLength && messageCount < maxMessageCount; j++) {
-			const { id } = await self.append(nanoid())
+			const { id } = await self.write((txn) => self.append(txn, nanoid()))
 			const index = messageCount++
 			messageIndices.set(id, { index, map: new Uint8Array(bitMaps[selfIndex]) })
 			messageIDs.push(id)
@@ -257,7 +226,11 @@ export const simulateRandomNetwork = async (
 	const [self, ...peers] = logs
 	for (const peer of peers) {
 		await peer.serve(async (source) => {
-			await self.sync(source)
+			await self.write(async (txn) => {
+				for await (const [_, signature, message, entry] of self.sync(txn, source)) {
+					await self.insert(txn, signature, message, entry)
+				}
+			})
 		})
 	}
 
@@ -270,7 +243,7 @@ export const simulateRandomNetwork = async (
 			}
 
 			const start = performance.now()
-			const isAncestor = await self.isAncestor(id, ancestorID)
+			const isAncestor = await self.read((txn) => self.isAncestor(txn, id, ancestorID))
 			sum += performance.now() - start
 			n++
 

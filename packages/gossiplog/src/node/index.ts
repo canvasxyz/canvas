@@ -73,11 +73,11 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 
 	public async write<T>(callback: (txn: ReadWriteTransaction) => Promise<T>): Promise<T> {
 		this.log("opening read-write transaction")
-		return await this.env.write(async (txn) => {
+		const { result, root } = await this.env.write(async (txn) => {
 			const messages = new Tree(txn, "messages")
 			const heads = txn.database("heads")
 			const ancestors = txn.database("ancestors")
-			return await callback({
+			const result = await callback({
 				getHeads: () => getHeads(heads),
 				getAncestors: async (key: Uint8Array, atOrBefore: number, results: Set<string>) =>
 					getAncestors(ancestors, key, atOrBefore, results),
@@ -85,7 +85,6 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 					isAncestor(ancestors, key, ancestorKey, visited),
 
 				insert: async (
-					id: string,
 					signature: Signature,
 					message: Message,
 					[key, value] = encodeSignedMessage(signature, message),
@@ -106,7 +105,12 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 
 				messages,
 			})
+
+			return { result, root: messages.getRoot() }
 		})
+
+		this.dispatchEvent(new CustomEvent("commit", { detail: { root } }))
+		return result
 	}
 }
 

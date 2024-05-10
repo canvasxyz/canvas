@@ -1,10 +1,10 @@
+import { equals } from "uint8arrays"
 import * as cbor from "@ipld/dag-cbor"
 
 import { Awaitable } from "@canvas-js/interfaces"
 import { assert } from "@canvas-js/utils"
 import { decodeClock } from "./clock.js"
 import { decodeId, encodeId } from "./schema.js"
-import { equals } from "uint8arrays"
 import { getAncestorClocks } from "./utils.js"
 
 export async function getAncestors(
