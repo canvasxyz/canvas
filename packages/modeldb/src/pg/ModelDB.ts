@@ -10,7 +10,6 @@ import { Config, Effect, ModelValue, ModelsInit, QueryParams } from "../types.js
 export interface ModelDBOptions {
 	connectionConfig: string | pg.ConnectionConfig
 	models: ModelsInit
-	indexHistory?: Record<string, boolean>
 	clear?: boolean
 }
 
@@ -20,7 +19,7 @@ export class ModelDB extends AbstractModelDB {
 	#models: Record<string, ModelAPI> = {}
 	#doTransaction: (effects: Effect[]) => void
 
-	public static async initialize({ connectionConfig, models, indexHistory, clear }: ModelDBOptions) {
+	public static async initialize({ connectionConfig, models, clear }: ModelDBOptions) {
 		const client = new pg.Client(connectionConfig)
 		await client.connect()
 
