@@ -66,6 +66,7 @@ export function getLibp2pOptions(
 			minConnections: options.minConnections ?? MIN_CONNECTIONS,
 			maxConnections: options.maxConnections ?? MAX_CONNECTIONS,
 			autoDialConcurrency: DIAL_CONCURRENCY,
+			autoDialPeerRetryThreshold: 2000, // 2 sec, instead of 7 min in browsers
 		},
 
 		transports: [
