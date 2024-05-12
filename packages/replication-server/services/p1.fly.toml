@@ -58,3 +58,4 @@ processes = []
 
 [[restart]]
   policy = "always"
+  processes = ["app"]
