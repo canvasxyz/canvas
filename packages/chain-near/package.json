@@ -15,7 +15,7 @@
     "@canvas-js/utils": "0.9.1",
     "@ipld/dag-cbor": "^9.2.0",
     "@ipld/dag-json": "^10.1.5",
-    "@libp2p/logger": "^4.0.2",
+    "@libp2p/logger": "^4.0.12",
     "@near-js/crypto": "^0.0.5",
     "@noble/curves": "^1.4.0",
     "bs58": "^5.0.0",
