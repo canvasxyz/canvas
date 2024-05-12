@@ -79,7 +79,7 @@ export async function getLibp2p() {
 
 			pubsub: gossipsub({
 				fallbackToFloodsub: false,
-				allowPublishToZeroPeers: true,
+				allowPublishToZeroTopicPeers: true,
 				globalSignaturePolicy: "StrictSign",
 
 				asyncValidation: true,
