@@ -23,18 +23,6 @@ export function* getAncestorClocks(clock: number): Iterable<number> {
 	}
 }
 
-export async function collect<I, O = I>(iter: AsyncIterable<I>, map?: (value: I) => O): Promise<O[]> {
-	const values: O[] = []
-	for await (const value of iter) {
-		if (map === undefined) {
-			values.push(value as O)
-		} else {
-			values.push(map(value))
-		}
-	}
-	return values
-}
-
 export async function wait(interval: number, options: { signal: AbortSignal }) {
 	if (options.signal.aborted) {
 		return
