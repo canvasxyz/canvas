@@ -133,7 +133,8 @@ export abstract class AbstractRuntime {
 				})
 
 				if (sessions.length === 0) {
-					throw new Error(`missing session ${signature.publicKey} for $${address}`)
+					console.error(`missing session ${signature.publicKey} for $${address}`)
+					return
 				}
 
 				const modelEntries: Record<string, Record<string, ModelValue | null>> = mapValues(runtime.db.models, () => ({}))
