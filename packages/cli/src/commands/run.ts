@@ -20,7 +20,6 @@ dotenv.config()
 import { Canvas } from "@canvas-js/core"
 import { createAPI, createMetricsAPI } from "@canvas-js/core/api"
 import { MIN_CONNECTIONS, MAX_CONNECTIONS } from "@canvas-js/core/constants"
-import { defaultBootstrapList, testnetBootstrapList } from "@canvas-js/core/bootstrap"
 
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { ATPSigner } from "@canvas-js/chain-atp"
@@ -155,12 +154,9 @@ export async function handler(args: Args) {
 		listen.push(address)
 	}
 
-	let bootstrapList: string[]
+	let bootstrapList: string[] = []
 	if (args.offline) {
 		bootstrapList = []
-	} else if (args.testnet) {
-		console.log(chalk.yellowBright("[canvas] Using testnet bootstrap servers"))
-		bootstrapList = testnetBootstrapList
 	} else if (args.bootstrap !== undefined) {
 		console.log(chalk.yellowBright("[canvas] Using custom bootstrap servers"))
 		bootstrapList = []
@@ -175,9 +171,6 @@ export async function handler(args: Args) {
 		for (const address of bootstrapList) {
 			console.log(chalk.yellowBright(`[canvas] - ${address}`))
 		}
-	} else {
-		console.log(chalk.gray("[canvas] Using default Canvas bootstrap servers"))
-		bootstrapList = defaultBootstrapList
 	}
 
 	if (args["discovery-topic"]) {

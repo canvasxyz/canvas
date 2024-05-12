@@ -16,7 +16,6 @@ import { Connect } from "./connect/index.js"
 const topic = "chat-example.canvas.xyz"
 
 export const contract = {
-	topic,
 	models: {
 		message: {
 			id: "primary",
@@ -41,6 +40,7 @@ export const App: React.FC<{}> = ({}) => {
 	const topicRef = useRef(topic)
 
 	const { app } = useCanvas({
+		topic,
 		contract: { ...contract, topic: topicRef.current },
 		signers: sessionSigner ? [sessionSigner] : undefined,
 		indexHistory: false,

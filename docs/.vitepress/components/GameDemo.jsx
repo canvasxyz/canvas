@@ -32,6 +32,7 @@ const GameDemo = () => {
 	const wallet = new ethers.Wallet(privateKey)
 
 	const { app } = useCanvas({
+		topic: "canvas-chess",
 		contract: {
 			models: {
 				boards: {
@@ -50,7 +51,6 @@ const GameDemo = () => {
 					await db.set("boards", { id: "0", fen: new Chess().fen() })
 				},
 			},
-			topic: "canvas-chess",
 		},
 		signers: [new SIWESigner({ signer: wallet })],
 	})

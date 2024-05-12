@@ -1,6 +1,7 @@
 import { PeerId, TypedEventEmitter, CustomEvent, Connection } from "@libp2p/interface"
 import { Libp2p } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
+import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 
 import type pg from "pg"
 
@@ -17,6 +18,7 @@ import type { Contract, ActionImplementationFunction, ActionImplementationObject
 import type { ServiceMap } from "./targets/interface.js"
 import { Runtime, createRuntime } from "./runtime/index.js"
 import { validatePayload } from "./schema.js"
+import { sha256 } from "@noble/hashes/sha2"
 
 export interface NetworkConfig {
 	start?: boolean
@@ -33,6 +35,7 @@ export interface NetworkConfig {
 }
 
 export interface CanvasConfig<T extends Contract = Contract> extends NetworkConfig {
+	topic?: string
 	contract: string | T
 	signers?: SessionSigner[]
 
@@ -101,12 +104,19 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			return signer.scheme.verify(signature, message)
 		}
 
-		const runtime = await createRuntime(path, signers, contract, {
+		let topic = config.topic
+		if (topic === undefined) {
+			if (typeof contract === "string") {
+				topic = bytesToHex(sha256(contract))
+			} else {
+				topic = bytesToHex(randomBytes(32))
+			}
+		}
+
+		const runtime = await createRuntime(path, topic, signers, contract, {
 			runtimeMemoryLimit,
 			clearModelDB: reset,
 		})
-
-		const topic = runtime.topic
 
 		const messageLog = await target.openGossipLog(
 			{ topic, path, clear: reset },

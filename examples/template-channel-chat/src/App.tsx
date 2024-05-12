@@ -12,7 +12,8 @@ type Channel = { name: string }
 function App() {
 	const wallet = ethers.Wallet.createRandom()
 	const { app } = useCanvas({
-		contract: { ...ChannelChat, topic: "canvas-example-chat-channel" },
+		topic: "canvas-example-chat-channel",
+		contract: ChannelChat,
 		signers: [new SIWESigner({ signer: wallet })],
 	})
 
@@ -30,7 +31,7 @@ function App() {
 	})
 	const channels = useLiveQuery(app, "channels", {}) || []
 	const displayedChannels = [{ name: "home" } as Channel].concat(
-		channels.filter((channel) => channel.name !== "home") as Channel[]
+		channels.filter((channel) => channel.name !== "home") as Channel[],
 	)
 
 	const send = (e: FormEvent) => {

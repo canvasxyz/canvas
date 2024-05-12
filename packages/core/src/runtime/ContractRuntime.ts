@@ -17,6 +17,7 @@ import { bytesToHex } from "@noble/hashes/utils"
 export class ContractRuntime extends AbstractRuntime {
 	public static async init(
 		path: string | pg.ConnectionConfig | null,
+		topic: string,
 		signers: SignerCache,
 		contract: string,
 		options: { runtimeMemoryLimit?: number; indexHistory?: boolean; clearModelDB?: boolean } = {},
@@ -28,7 +29,6 @@ export class ContractRuntime extends AbstractRuntime {
 		const vm = await VM.initialize({ runtimeMemoryLimit })
 
 		const {
-			topic: topicHandle,
 			models: modelsHandle,
 			actions: actionsHandle,
 			...rest
@@ -38,9 +38,6 @@ export class ContractRuntime extends AbstractRuntime {
 			console.warn(`extraneous export ${JSON.stringify(name)}`)
 			handle.dispose()
 		}
-
-		assert(topicHandle !== undefined, "missing `topic` export")
-		const topic = topicHandle.consume(vm.context.getString)
 
 		assert(actionsHandle !== undefined, "missing `actions` export")
 

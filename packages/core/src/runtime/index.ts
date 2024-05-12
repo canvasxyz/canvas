@@ -10,13 +10,14 @@ export { AbstractRuntime as Runtime } from "./AbstractRuntime.js"
 
 export async function createRuntime(
 	location: string | pg.ConnectionConfig | null,
+	topic: string,
 	signers: SignerCache,
 	contract: string | Contract,
 	options: { runtimeMemoryLimit?: number; indexHistory?: boolean; clearModelDB?: boolean } = {},
 ): Promise<AbstractRuntime> {
 	if (typeof contract === "string") {
-		return ContractRuntime.init(location, signers, contract, options)
+		return ContractRuntime.init(location, topic, signers, contract, options)
 	} else {
-		return FunctionRuntime.init(location, signers, contract, options)
+		return FunctionRuntime.init(location, topic, signers, contract, options)
 	}
 }

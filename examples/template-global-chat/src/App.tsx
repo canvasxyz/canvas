@@ -9,7 +9,8 @@ import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
 function App() {
 	const wallet = ethers.Wallet.createRandom()
 	const { app } = useCanvas({
-		contract: { ...PublicChat, topic: "canvas-example-chat-global" },
+		topic: "canvas-example-chat-global",
+		contract: PublicChat,
 		signers: [new SIWESigner({ signer: wallet })],
 	})
 

@@ -22,7 +22,8 @@ const MessagingDemo = () => {
 	const wallet = new ethers.Wallet(privateKey)
 
 	const { app } = useCanvas({
-		contract: { ...PublicChat, topic: "canvas-example-public-chat" },
+		topic: "canvas-example-public-chat",
+		contract: PublicChat,
 		signers: [new SIWESigner({ signer: wallet })],
 	})
 

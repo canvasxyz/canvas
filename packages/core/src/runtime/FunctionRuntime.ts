@@ -16,17 +16,17 @@ const identity = (x: any) => x
 export class FunctionRuntime extends AbstractRuntime {
 	public static async init(
 		path: string | pg.ConnectionConfig | null,
+		topic: string,
 		signers: SignerCache,
 		contract: Contract,
 		options: { indexHistory?: boolean; clearModelDB?: boolean } = {},
 	): Promise<FunctionRuntime> {
 		assert(contract.actions !== undefined, "contract initialized without actions")
 		assert(contract.models !== undefined, "contract initialized without models")
-		assert(contract.topic !== undefined, "contract initialized without topic")
 
 		const { indexHistory = true } = options
 		const models = AbstractRuntime.getModelSchema(contract.models, { indexHistory })
-		const db = await target.openDB({ path, topic: contract.topic, clear: options.clearModelDB }, models)
+		const db = await target.openDB({ path, topic, clear: options.clearModelDB }, models)
 
 		const argsTransformers: Record<
 			string,
@@ -49,7 +49,7 @@ export class FunctionRuntime extends AbstractRuntime {
 			return action.apply
 		})
 
-		return new FunctionRuntime(contract.topic, signers, db, actions, argsTransformers, indexHistory)
+		return new FunctionRuntime(topic, signers, db, actions, argsTransformers, indexHistory)
 	}
 
 	#context: ExecutionContext | null = null
