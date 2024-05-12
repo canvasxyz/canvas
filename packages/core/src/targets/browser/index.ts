@@ -19,7 +19,15 @@ export default {
 
 	async createLibp2p(location, config) {
 		const peerId = await getPeerId(location)
-		return await createLibp2p(getLibp2pOptions(peerId, location.topic, config))
+		const libp2p = await createLibp2p(getLibp2pOptions(peerId, location.topic, config))
+
+		// Patch autoDialPeerRetryThresholdms because it isn't passed to the dialer component.
+		// This is safe to do because the threshold is checked on every autodial attempt.
+		// The configuration option is fixed on master but it hasn't been released yet.
+
+		// @ts-expect-error TS2339: Property 'components' does not exist
+		libp2p.components.components.connectionManager.autoDial.autoDialPeerRetryThresholdMs = 1000
+		return libp2p
 	},
 } satisfies PlatformTarget
 
