@@ -41,6 +41,10 @@ export const builder = (yargs: Argv) =>
 			type: "string",
 			demandOption: true,
 		})
+		.option("topic", {
+			desc: "Application topic",
+			type: "string",
+		})
 		.option("init", {
 			desc: "Path to a contract to copy if the application directory does not exist",
 			type: "string",
@@ -179,6 +183,7 @@ export async function handler(args: Args) {
 
 	const app = await Canvas.initialize({
 		path: location,
+		topic: args["topic"],
 		contract,
 		signers: [new SIWESigner(), new ATPSigner(), new CosmosSigner(), new SubstrateSigner(), new SolanaSigner()],
 		listen,
