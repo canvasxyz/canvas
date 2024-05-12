@@ -15,7 +15,6 @@
 	"exports": {
 		".": "./lib/index.js",
 		"./api": "./lib/api.js",
-		"./bootstrap": "./lib/bootstrap.js",
 		"./constants": "./lib/constants.js"
 	},
 	"imports": {

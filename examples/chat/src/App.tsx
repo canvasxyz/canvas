@@ -1,7 +1,6 @@
 import React, { useRef, useState } from "react"
 
 import type { SessionSigner } from "@canvas-js/interfaces"
-import { defaultBootstrapList } from "@canvas-js/core"
 import type { Contract } from "@canvas-js/core"
 
 import { useCanvas } from "@canvas-js/hooks"
@@ -49,7 +48,6 @@ export const App: React.FC<{}> = ({}) => {
 			"/dns4/canvas-chat-discovery-staging-p0.fly.dev/tcp/443/wss/p2p/12D3KooWFtS485QGEZwquMQbq7MZTMxiuHs6xUKEi664i4yWUhWa",
 			"/dns4/canvas-chat-discovery-staging-p1.fly.dev/tcp/443/wss/p2p/12D3KooWPix1mT8QavTjfiha3hWy85dQDgPb9VWaxRhY8Yq3cC7L",
 			"/dns4/canvas-chat-discovery-staging-p2.fly.dev/tcp/443/wss/p2p/12D3KooWRbxAWmpvc9U7q1ftBTd3bKa1iQ2rn6RkwRb1d9K7hVg5",
-			...defaultBootstrapList,
 		],
 	})
 
