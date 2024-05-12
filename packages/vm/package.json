@@ -19,7 +19,7 @@
     "test": "ava"
   },
   "dependencies": {
-    "@libp2p/logger": "^4.0.2",
+    "@libp2p/logger": "^4.0.12",
     "@noble/hashes": "^1.3.3",
     "quickjs-emscripten": "^0.26.0"
   }
