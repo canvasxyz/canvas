@@ -63,8 +63,9 @@ export abstract class AbstractSessionSigner<AuthorizationData> implements Sessio
 
 	public async getSession(
 		topic: string,
+		options: { address?: string } = {},
 	): Promise<{ payload: Session<AuthorizationData>; signer: Signer<Action | Session<AuthorizationData>> } | null> {
-		const address = await this.getAddress()
+		const address = await Promise.resolve(options.address ?? this.getAddress())
 		const key = `canvas/${topic}/${address}`
 
 		if (this.#cache.has(key)) {

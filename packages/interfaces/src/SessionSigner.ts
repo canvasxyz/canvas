@@ -20,6 +20,7 @@ export interface SessionSigner<AuthorizationData = any> {
 	hasSession: (topic: string, address: string) => boolean
 	getSession: (
 		topic: string,
+		options?: { address?: string },
 	) => Awaitable<{ payload: Session<AuthorizationData>; signer: Signer<Action | Session<AuthorizationData>> } | null>
 	newSession: (
 		topic: string,
