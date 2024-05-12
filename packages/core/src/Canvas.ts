@@ -8,7 +8,6 @@ import { Signature, Action, Session, Message, Signer, SessionSigner, SignerCache
 import { AbstractModelDB, Model } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { AbstractGossipLog, GossipLogEvents } from "@canvas-js/gossiplog"
-import type { PresenceStore } from "@canvas-js/discovery"
 import type { AbstractSessionSigner } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
@@ -57,17 +56,12 @@ export type ActionAPI<Args = any> = (
 ) => Promise<{ id: string; signature: Signature; message: Message<Action>; recipients: Promise<PeerId[]> }>
 
 export type ConnectionsInfo = { connections: Connections; status: AppConnectionStatus }
-export type PresenceInfo = { peer: PeerId; peers: PresenceStore }
 
 export interface CanvasEvents extends GossipLogEvents<Action | Session> {
 	close: Event
 	connect: CustomEvent<{ peer: PeerId }>
 	disconnect: CustomEvent<{ peer: PeerId }>
 	"connections:updated": CustomEvent<ConnectionsInfo>
-	"presence:join": CustomEvent<
-		PresenceInfo & { peerId: PeerId; env: "browser" | "server"; address: string | null; topics: string[] }
-	>
-	"presence:leave": CustomEvent<PresenceInfo>
 }
 
 export type CanvasLogEvent = CustomEvent<{

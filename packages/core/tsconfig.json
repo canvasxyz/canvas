@@ -13,7 +13,6 @@
 		{ "path": "../signatures" },
 		{ "path": "../modeldb" },
 		{ "path": "../gossiplog" },
-		{ "path": "../vm" },
-		{ "path": "../discovery" }
+		{ "path": "../vm" }
 	]
 }

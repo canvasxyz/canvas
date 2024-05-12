@@ -7,5 +7,5 @@
 		"module": "Node16",
 		"moduleResolution": "Node16"
 	},
-	"references": [{ "path": "../core" }, { "path": "../signatures" }]
+	"references": [{ "path": "../core" }]
 }
