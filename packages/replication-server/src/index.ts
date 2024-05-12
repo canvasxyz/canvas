@@ -56,7 +56,6 @@
 // 				contract: { topic: appTopic, models: {}, actions: {} },
 // 				libp2p,
 // 				indexHistory: false,
-// 				ignoreMissingActions: true,
 // 				disablePing: true,
 // 			})
 

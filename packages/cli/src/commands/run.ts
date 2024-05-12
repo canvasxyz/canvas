@@ -194,8 +194,7 @@ export async function handler(args: Args) {
 		minConnections: args["min-connections"],
 		maxConnections: args["max-connections"],
 		bootstrapList: bootstrapList,
-		offline: args.offline,
-		discoveryTopic: args["discovery-topic"],
+		start: !args.offline,
 	})
 
 	console.log(`${chalk.gray("[canvas] Starting app on topic")} ${chalk.whiteBright(app.topic)}`)
@@ -242,7 +241,7 @@ export async function handler(args: Args) {
 
 	controller.signal.addEventListener("abort", async () => {
 		console.log("[canvas] Closing application...")
-		await app.close()
+		await app.stop()
 		console.log("[canvas] Application closed.")
 	})
 

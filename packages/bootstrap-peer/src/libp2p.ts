@@ -7,8 +7,6 @@ import { identify as identifyService } from "@libp2p/identify"
 import { Fetch as FetchService, fetch as fetchService } from "@libp2p/fetch"
 import { CircuitRelayService, circuitRelayServer } from "@libp2p/circuit-relay-v2"
 
-import { WebSockets, WebSocketsSecure } from "@multiformats/multiaddr-matcher"
-
 import { webSockets } from "@libp2p/websockets"
 import { all } from "@libp2p/websockets/filters"
 import { noise } from "@chainsafe/libp2p-noise"
@@ -21,10 +19,8 @@ import { peerIdFromString } from "@libp2p/peer-id"
 import { isLoopback } from "@libp2p/utils/multiaddr/is-loopback"
 import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 
-import { DiscoveryService, discovery } from "@canvas-js/discovery"
-
 import { second, minute, MIN_CONNECTIONS, MAX_CONNECTIONS } from "./constants.js"
-import { peerId, bootstrapList, listen, announce, discoveryTopic } from "./config.js"
+import { peerId, bootstrapList, listen, announce } from "./config.js"
 
 async function denyDialMultiaddr(addr: Multiaddr) {
 	const transportRoot = addr.decapsulate("/ws")
@@ -46,7 +42,6 @@ export type ServiceMap = {
 	relay: CircuitRelayService
 	pubsub: PubSub<GossipsubEvents>
 	fetch: FetchService
-	discovery: DiscoveryService
 }
 
 export const options: Libp2pOptions<ServiceMap> = {
@@ -102,7 +97,7 @@ export const options: Libp2pOptions<ServiceMap> = {
 			doPX: true,
 			canRelayMessage: true,
 			fallbackToFloodsub: false,
-			allowPublishToZeroPeers: true,
+			allowPublishToZeroTopicPeers: true,
 			globalSignaturePolicy: "StrictNoSign",
 			directPeers: bootstrapList.map(multiaddr).map((addr) => {
 				const id = addr.getPeerId()
@@ -112,10 +107,5 @@ export const options: Libp2pOptions<ServiceMap> = {
 		}),
 
 		fetch: fetchService({ protocolPrefix: "canvas" }),
-
-		discovery: discovery({
-			discoveryTopic: discoveryTopic ?? undefined,
-			addressFilter: (addr) => WebSockets.matches(addr) || WebSocketsSecure.matches(addr),
-		}),
 	},
 }

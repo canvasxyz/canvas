@@ -18,8 +18,6 @@ import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 import { isLoopback } from "@libp2p/utils/multiaddr/is-loopback"
 import { isPrivate } from "@libp2p/utils/multiaddr/is-private"
 
-// import { P2P, WebRTC, WebSockets, WebSocketsSecure } from "@multiformats/multiaddr-matcher"
-
 import { Fetch as FetchService } from "@libp2p/fetch"
 import { PeerRecord, RecordEnvelope } from "@libp2p/peer-record"
 import { logger } from "@libp2p/logger"

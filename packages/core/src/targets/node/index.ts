@@ -4,7 +4,7 @@ import type pg from "pg"
 import { createEd25519PeerId, createFromProtobuf } from "@libp2p/peer-id-factory"
 import { createLibp2p } from "libp2p"
 
-import { AbstractGossipLog, GossipLogInit } from "@canvas-js/gossiplog"
+import { AbstractGossipLog } from "@canvas-js/gossiplog"
 import { GossipLog } from "@canvas-js/gossiplog/node"
 import { GossipLog as MemoryGossipLog } from "@canvas-js/gossiplog/memory"
 import { GossipLog as PostgresGossipLog } from "@canvas-js/gossiplog/pg"

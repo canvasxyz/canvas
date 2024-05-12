@@ -142,7 +142,6 @@ export interface CanvasConfig<T extends Contract = Contract> extends NetworkConf
     /** set to `false` to disable history indexing and db.get(..) within actions */
     indexHistory?: boolean;
     runtimeMemoryLimit?: number;
-    ignoreMissingActions?: boolean;
 }
 
 export interface CanvasEvents extends GossipLogEvents<Action | Session, unknown> {

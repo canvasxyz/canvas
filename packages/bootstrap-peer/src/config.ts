@@ -8,11 +8,6 @@ dotenv.config()
 
 const { PEER_ID, BOOTSTRAP_LIST, LISTEN, ANNOUNCE, PORT, DISCOVERY_TOPIC } = process.env
 
-export const discoveryTopic = DISCOVERY_TOPIC ?? null
-if (discoveryTopic !== null) {
-	console.log("[bootstrap-peer] Using discovery topic", discoveryTopic)
-}
-
 export const port = parseInt(PORT ?? "8000")
 
 async function getPeerId() {

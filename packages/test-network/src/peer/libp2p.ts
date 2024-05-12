@@ -13,10 +13,11 @@ import { fetch } from "@libp2p/fetch"
 
 import { Multiaddr } from "@multiformats/multiaddr"
 
+// import { GossipLog } from "@canvas-js/gossiplog/memory"
+import { GossipLog } from "@canvas-js/gossiplog/node"
 import { GossipLogService, gossiplog } from "@canvas-js/gossiplog/service"
 
 import { bootstrapList, listen, announce, getPeerId } from "./config.js"
-import { GossipLog } from "@canvas-js/gossiplog/memory"
 import { randomBytes } from "@noble/hashes/utils"
 
 const { MIN_CONNECTIONS, MAX_CONNECTIONS, SERVICE_NAME } = process.env
@@ -36,7 +37,20 @@ export const getTopicDHTProtocol = (topic: string) => `/canvas/kad/${topic}/1.0.
 export async function getLibp2p() {
 	const peerId = await getPeerId()
 
-	const log = await GossipLog.open({ topic, apply: () => {} })
+	// const log = await GossipLog.open({ topic, apply: () => {} })
+	const log = await GossipLog.open({ topic, apply: () => {} }, "data")
+
+	await log.write((txn) => log.append(txn, randomBytes(16)))
+	await log.write((txn) => log.append(txn, randomBytes(16)))
+	await log.write((txn) => log.append(txn, randomBytes(16)))
+	await log.write((txn) => log.append(txn, randomBytes(16)))
+	await log.write((txn) => log.append(txn, randomBytes(16)))
+	await log.write((txn) => log.append(txn, randomBytes(16)))
+	await log.write((txn) => log.append(txn, randomBytes(16)))
+	await log.write((txn) => log.append(txn, randomBytes(16)))
+	await log.write((txn) => log.append(txn, randomBytes(16)))
+	await log.write((txn) => log.append(txn, randomBytes(16)))
+	await log.write((txn) => log.append(txn, randomBytes(16)))
 	await log.write((txn) => log.append(txn, randomBytes(16)))
 
 	return await createLibp2p({

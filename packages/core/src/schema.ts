@@ -3,7 +3,7 @@ import { create } from "@ipld/schema/typed.js"
 
 import type { Action, Session } from "@canvas-js/interfaces"
 
-export const schema = `
+const schema = `
 type Action struct {
   address   String
   name      String

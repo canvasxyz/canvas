@@ -8,7 +8,6 @@ import { Signature, Action, Session, Message, Signer, SessionSigner, SignerCache
 import { AbstractModelDB, Model } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { AbstractGossipLog, GossipLogEvents } from "@canvas-js/gossiplog"
-import { GossipLogService } from "@canvas-js/gossiplog/service"
 import type { PresenceStore } from "@canvas-js/discovery"
 import type { AbstractSessionSigner } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
@@ -21,8 +20,7 @@ import { Runtime, createRuntime } from "./runtime/index.js"
 import { validatePayload } from "./schema.js"
 
 export interface NetworkConfig {
-	offline?: boolean
-	disablePing?: boolean
+	start?: boolean
 
 	/** array of local WebSocket multiaddrs, e.g. "/ip4/127.0.0.1/tcp/3000/ws" */
 	listen?: string[]
@@ -33,13 +31,6 @@ export interface NetworkConfig {
 	bootstrapList?: string[]
 	minConnections?: number
 	maxConnections?: number
-
-	discoveryTopic?: string
-	discoveryInterval?: number
-	trackAllPeers?: boolean
-	presenceTimeout?: number
-
-	enableWebRTC?: boolean
 }
 
 export interface CanvasConfig<T extends Contract = Contract> extends NetworkConfig {
@@ -54,9 +45,6 @@ export interface CanvasConfig<T extends Contract = Contract> extends NetworkConf
 
 	/** set a memory limit for the quickjs runtime, only used if `contract` is a string */
 	runtimeMemoryLimit?: number
-
-	/** don't throw an error when invalid messages are received */
-	ignoreMissingActions?: boolean
 
 	reset?: boolean
 }
@@ -109,9 +97,6 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			signers: initSigners = [],
 			runtimeMemoryLimit,
 			indexHistory = true,
-			ignoreMissingActions = false,
-			offline,
-			disablePing,
 			reset = false,
 		} = config
 
@@ -124,7 +109,6 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 
 		const runtime = await createRuntime(path, signers, contract, {
 			runtimeMemoryLimit,
-			ignoreMissingActions,
 			clearModelDB: reset,
 		})
 
@@ -143,7 +127,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 
 		const libp2p = await target.createLibp2p(messageLog, { ...config, signers })
 
-		return new Canvas(signers, libp2p, messageLog, runtime, offline, disablePing)
+		return new Canvas(signers, messageLog, libp2p, runtime)
 	}
 
 	public readonly db: AbstractModelDB
@@ -163,56 +147,39 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 	private _connections: Connection[] = []
 	private _pingTimer: ReturnType<typeof setTimeout> | undefined
 
-	private readonly _abortController = new AbortController()
-	private readonly _log = logger("canvas:core")
+	private readonly controller = new AbortController()
+	private readonly log = logger("canvas:core")
 
-	#open = true
+	#started = false
 
 	private constructor(
 		public readonly signers: SignerCache,
-		public readonly libp2p: Libp2p<ServiceMap>,
 		public readonly messageLog: AbstractGossipLog<Action | Session>,
+		public readonly libp2p: Libp2p<ServiceMap>,
 		private readonly runtime: Runtime,
-		offline?: boolean,
-		disablePing?: boolean,
 	) {
 		super()
 		this.db = runtime.db
 
-		this._log("initialized with peerId %p", libp2p.peerId)
+		this.log("initialized with peerId %p", libp2p.peerId)
 
 		this.libp2p.addEventListener("peer:discovery", ({ detail: { id, multiaddrs } }) => {
-			this._log("discovered peer %p with addresses %o", id, multiaddrs)
+			this.log("discovered peer %p with addresses %o", id, multiaddrs)
 		})
 
 		this.libp2p.addEventListener("peer:connect", ({ detail: peerId }) => {
-			this._log("connected to %p", peerId)
+			this.log("connected to %p", peerId)
 			this.dispatchEvent(new CustomEvent("connect", { detail: { peer: peerId.toString() } }))
 			this._peers = [...this._peers, peerId]
 		})
 
 		this.libp2p.addEventListener("peer:disconnect", ({ detail: peerId }) => {
-			this._log("disconnected %p", peerId)
+			this.log("disconnected %p", peerId)
 			this.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: peerId.toString() } }))
 			this._peers = this._peers.filter((peer) => peer.toString() !== peerId.toString())
 			delete this.connections[peerId.toString()]
 			this.updateStatus()
 		})
-
-		// this.libp2p.services.discovery.addEventListener(
-		// 	"presence:join",
-		// 	({ detail: { peerId, env, address, topics, peers } }) => {
-		// 		this._log("discovered peer %p with addresses %o", peerId)
-		// 		this.dispatchEvent(
-		// 			new CustomEvent("presence:join", { detail: { peerId, env, address, topics, peers: { ...peers } } }),
-		// 		)
-		// 	},
-		// )
-
-		// this.libp2p.services.discovery.addEventListener("presence:leave", ({ detail: { peerId, peers } }) => {
-		// 	this._log("discovered peer %p with addresses %o", peerId)
-		// 	this.dispatchEvent(new CustomEvent("presence:leave", { detail: { peerId, peers: { ...peers } } }))
-		// })
 
 		this.libp2p.addEventListener("connection:open", ({ detail: connection }) => {
 			this._connections = [...this._connections, connection]
@@ -240,44 +207,6 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 				this.updateStatus()
 			}
 		})
-
-		// const startPingTimer = () => {
-		// 	this._pingTimer = setInterval(() => {
-		// 		const subscribers = this.libp2p.services.pubsub.getSubscribers( this.topic)
-		// 		const pings = this._peers.map((peer) =>
-		// 			this.libp2p.services.ping
-		// 				.ping(peer)
-		// 				.then((msec) => {
-		// 					this.connections[peer.toString()] = {
-		// 						peer,
-		// 						status: subscribers.find((p) => p.toString() === peer.toString()) ? "online" : "waiting",
-		// 						connections: this._connections.filter((conn) => conn.remotePeer.toString() === peer.toString()),
-		// 					}
-		// 				})
-		// 				.catch((err) => {
-		// 					this.connections[peer.toString()] = {
-		// 						peer,
-		// 						status: "offline",
-		// 						connections: this._connections.filter((conn) => conn.remotePeer.toString() === peer.toString()),
-		// 					}
-		// 				}),
-		// 		)
-		// 		Promise.allSettled(pings).then(() => {
-		// 			this.updateStatus()
-		// 			this.dispatchEvent(
-		// 				new CustomEvent("connections:updated", {
-		// 					detail: { connections: { ...this.connections }, status: this.status },
-		// 				}),
-		// 			)
-		// 		})
-		// 	}, 3000)
-		// }
-
-		// if (offline && !disablePing) {
-		// 	this.libp2p.addEventListener("start", (event) => startPingTimer())
-		// } else if (!disablePing) {
-		// 	startPingTimer()
-		// }
 
 		this.libp2p.addEventListener("stop", (event) => clearInterval(this._pingTimer))
 
@@ -332,7 +261,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 					{ signer: session.signer },
 				)
 
-				this._log("applied action %s", id)
+				this.log("applied action %s", id)
 
 				return { id, signature, message, recipients }
 			}
@@ -394,16 +323,16 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		return this.messageLog.topic
 	}
 
-	public async close() {
-		if (this.#open) {
-			this.#open = false
-			this._abortController.abort()
+	public async stop() {
+		if (this.#started) {
+			this.#started = false
+			this.controller.abort()
 			await this.libp2p.stop()
 			await this.messageLog.close()
 			await this.runtime.close()
 			this.dispatchEvent(new CustomEvent("connections:updated", { detail: { connections: {} } }))
 			this.dispatchEvent(new Event("close"))
-			this._log("closed")
+			this.log("closed")
 		}
 	}
 
@@ -422,10 +351,13 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 	 * Low-level utility method for internal and debugging use.
 	 * The normal way to apply actions is to use the `Canvas.actions[name](...)` functions.
 	 */
-	public async insert(signature: Signature, message: Message<Session | Action>): Promise<{ id: string }> {
+	public async insert(
+		signature: Signature,
+		message: Message<Session | Action>,
+	): Promise<{ id: string; recipients: Promise<PeerId[]> }> {
 		assert(message.topic === this.topic, "invalid message topic")
-		const { id } = await this.libp2p.services.gossiplog.insert(signature, message)
-		return { id }
+		const { id, recipients } = await this.libp2p.services.gossiplog.insert(signature, message)
+		return { id, recipients }
 	}
 
 	/**

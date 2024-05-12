@@ -34,7 +34,7 @@ export async function handler(args: Args) {
 	const { location, contract } = getContractLocation(args)
 	assert(location !== null, "Cannot import to development apps since they do not persist any data")
 
-	const app = await Canvas.initialize({ path: location, contract, offline: true })
+	const app = await Canvas.initialize({ path: location, contract, start: false })
 
 	const rl = readline.createInterface({
 		input: process.stdin,

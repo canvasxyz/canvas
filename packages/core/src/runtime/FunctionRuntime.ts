@@ -18,13 +18,13 @@ export class FunctionRuntime extends AbstractRuntime {
 		path: string | pg.ConnectionConfig | null,
 		signers: SignerCache,
 		contract: Contract,
-		options: { indexHistory?: boolean; ignoreMissingActions?: boolean, clearModelDB?: boolean } = {},
+		options: { indexHistory?: boolean; clearModelDB?: boolean } = {},
 	): Promise<FunctionRuntime> {
 		assert(contract.actions !== undefined, "contract initialized without actions")
 		assert(contract.models !== undefined, "contract initialized without models")
 		assert(contract.topic !== undefined, "contract initialized without topic")
 
-		const { indexHistory = true, ignoreMissingActions = false } = options
+		const { indexHistory = true } = options
 		const models = AbstractRuntime.getModelSchema(contract.models, { indexHistory })
 		const db = await target.openDB({ path, topic: contract.topic, clear: options.clearModelDB }, models)
 
@@ -49,15 +49,7 @@ export class FunctionRuntime extends AbstractRuntime {
 			return action.apply
 		})
 
-		return new FunctionRuntime(
-			contract.topic,
-			signers,
-			db,
-			actions,
-			argsTransformers,
-			indexHistory,
-			ignoreMissingActions,
-		)
+		return new FunctionRuntime(contract.topic, signers, db, actions, argsTransformers, indexHistory)
 	}
 
 	#context: ExecutionContext | null = null
@@ -73,9 +65,8 @@ export class FunctionRuntime extends AbstractRuntime {
 			{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
 		>,
 		indexHistory: boolean,
-		ignoreMissingActions: boolean,
 	) {
-		super(indexHistory, ignoreMissingActions)
+		super(indexHistory)
 
 		this.#db = {
 			get: async <T extends ModelValue = ModelValue>(model: string, key: string) => {
@@ -107,11 +98,7 @@ export class FunctionRuntime extends AbstractRuntime {
 		const argsTransformer = this.argsTransformers[name]
 		const action = this.actions[name]
 		if (action === undefined || argsTransformer === undefined) {
-			if (this.ignoreMissingActions) {
-				return
-			} else {
-				throw new Error(`invalid action name: ${name}`)
-			}
+			throw new Error(`invalid action name: ${name}`)
 		}
 
 		const typedArgs = argsTransformer.toTyped(args)

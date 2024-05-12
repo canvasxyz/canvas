@@ -17,8 +17,6 @@ import { CID } from "multiformats"
 import { sha256 } from "multiformats/hashes/sha2"
 import * as raw from "multiformats/codecs/raw"
 
-import { GossipLog } from "@canvas-js/gossiplog/memory"
-
 import type { Event } from "../dashboard/shared/types.js"
 
 import { getTopicDHTProtocol, getLibp2p, topic } from "./libp2p.js"

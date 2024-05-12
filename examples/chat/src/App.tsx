@@ -45,9 +45,7 @@ export const App: React.FC<{}> = ({}) => {
 		contract: { ...contract, topic: topicRef.current },
 		signers: sessionSigner ? [sessionSigner] : undefined,
 		indexHistory: false,
-		discoveryTopic: "canvas-discovery",
-		trackAllPeers: true,
-		presenceTimeout: 12 * 60 * 60 * 1000, // keep up to 12 hours of offline peers
+		// presenceTimeout: 12 * 60 * 60 * 1000, // keep up to 12 hours of offline peers
 		bootstrapList: [
 			"/dns4/canvas-chat-discovery-staging-p0.fly.dev/tcp/443/wss/p2p/12D3KooWFtS485QGEZwquMQbq7MZTMxiuHs6xUKEi664i4yWUhWa",
 			"/dns4/canvas-chat-discovery-staging-p1.fly.dev/tcp/443/wss/p2p/12D3KooWPix1mT8QavTjfiha3hWy85dQDgPb9VWaxRhY8Yq3cC7L",

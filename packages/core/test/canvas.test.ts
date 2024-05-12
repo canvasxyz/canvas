@@ -44,14 +44,14 @@ export const actions = {
 
 const init = async (t: ExecutionContext) => {
 	const signer = new SIWESigner()
-	const app = await Canvas.initialize({ contract, offline: true, reset: true, signers: [signer] })
-	t.teardown(() => app.close())
+	const app = await Canvas.initialize({ contract, start: false, reset: true, signers: [signer] })
+	t.teardown(() => app.stop())
 	return app
 }
 
 const initEIP712 = async (t: ExecutionContext) => {
-	const app = await Canvas.initialize({ contract, offline: true, reset: true, signers: [new Eip712Signer()] })
-	t.teardown(() => app.close())
+	const app = await Canvas.initialize({ contract, start: false, reset: true, signers: [new Eip712Signer()] })
+	t.teardown(() => app.stop())
 	return app
 }
 
@@ -75,11 +75,11 @@ const initPostgres = async (t: ExecutionContext, options: { reset: boolean } = {
 	const app = await Canvas.initialize({
 		path: getPgConfig(),
 		contract,
-		offline: true,
+		start: false,
 		reset: options.reset,
 		signers: [new Eip712Signer()],
 	})
-	t.teardown(() => app.close())
+	t.teardown(() => app.stop())
 	return app
 }
 
@@ -170,11 +170,11 @@ test("create an app with an inline contract", async (t) => {
 				},
 			},
 		},
-		offline: true,
+		start: false,
 		signers: [new SIWESigner({ signer: wallet })],
 	})
 
-	t.teardown(() => app.close())
+	t.teardown(() => app.stop())
 
 	const { id, message } = await app.actions.createPost({ content: "hello world" })
 
@@ -215,10 +215,10 @@ test("get a value set by another action", async (t) => {
 				},
 			},
 		},
-		offline: true,
+		start: false,
 	})
 
-	t.teardown(() => app.close())
+	t.teardown(() => app.stop())
 
 	const { id } = await app.actions.createUser({ name: "John Doe" })
 	t.log(`${id}: created user`)
@@ -276,10 +276,10 @@ test("validate action args using IPLD schemas", async (t) => {
 			},
 		},
 		signers: [new SIWESigner({ signer: wallet })],
-		offline: true,
+		start: false,
 	})
 
-	t.teardown(() => app.close())
+	t.teardown(() => app.stop())
 
 	const { id } = await app.actions.createPost({ content: "hello world!", inReplyTo: null })
 
