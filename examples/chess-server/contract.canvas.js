@@ -1,3 +1,5 @@
+/* eslint-disable */
+
 /* manually bundled from https://www.npmjs.com/package/chess.js/v/0.13.4?activeTab=code */
 const SYMBOLS = "pnbrqkPNBRQK"
 
