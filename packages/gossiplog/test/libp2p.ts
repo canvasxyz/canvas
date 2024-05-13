@@ -16,10 +16,10 @@ import { createEd25519PeerId } from "@libp2p/peer-id-factory"
 import { logger } from "@libp2p/logger"
 
 import { Message, Signature } from "@canvas-js/interfaces"
-import { AbstractGossipLog, GossipLogInit, GossipLogEvents } from "@canvas-js/gossiplog"
+import { AbstractGossipLog, GossipLogEvents } from "@canvas-js/gossiplog"
 import { GossipLogService, GossipLogServiceInit, gossiplog } from "@canvas-js/gossiplog/service"
 
-export type NetworkConfig = Record<string, { port: number; peers: string[] }>
+export type NetworkConfig = Record<string, { port: number; peers?: string[] }>
 
 const getAddress = (port: number) => `/ip4/127.0.0.1/tcp/${port}`
 
@@ -39,10 +39,7 @@ export async function createNetwork<T extends NetworkConfig, Payload>(
 	const names = Object.keys(networkConfig)
 
 	const peerIds = await Promise.all(
-		names.map<Promise<[string, PeerId]>>(async (name) => {
-			const peerId = await createEd25519PeerId()
-			return [name, peerId]
-		}),
+		names.map<Promise<[string, PeerId]>>((name) => createEd25519PeerId().then((peerId) => [name, peerId])),
 	).then((entries) => Object.fromEntries(entries))
 
 	const log = logger("canvas:gossiplog:test")
@@ -52,12 +49,10 @@ export async function createNetwork<T extends NetworkConfig, Payload>(
 			const messageLog = await openMessageLog()
 			const peerId = peerIds[name]
 			const address = getAddress(port)
-			const bootstrapList = peers.map(
-				(peerName) => `${getAddress(networkConfig[peerName].port)}/p2p/${peerIds[peerName]}`,
-			)
+			const bootstrapList =
+				peers?.map((peerName) => `${getAddress(networkConfig[peerName].port)}/p2p/${peerIds[peerName]}`) ?? []
 
-			const minConnections = options.minConnections ?? peers.length
-			const maxConnections = options.maxConnections ?? peers.length + 1
+			const minConnections = peers?.length ?? 0
 
 			const libp2p = await createLibp2p({
 				peerId: peerId,
@@ -67,7 +62,7 @@ export async function createNetwork<T extends NetworkConfig, Payload>(
 				connectionEncryption: [plaintext()],
 				streamMuxers: [mplex()],
 				peerDiscovery: bootstrapList.length > 0 ? [bootstrap({ list: bootstrapList, timeout: 0 })] : [],
-				connectionManager: { minConnections, maxConnections, autoDialInterval: 1000 },
+				connectionManager: { minConnections, autoDialInterval: 200 },
 
 				services: {
 					identify: identifyService({ protocolPrefix: "canvas" }),
@@ -92,12 +87,16 @@ export async function createNetwork<T extends NetworkConfig, Payload>(
 				log("[%p] listening on", peerId, addrs)
 			})
 
-			libp2p.addEventListener("peer:discovery", ({ detail: peerInfo }) =>
-				log("[%p] discovered peer %p", peerId, peerInfo.id),
-			)
+			libp2p.addEventListener("peer:discovery", ({ detail: peerInfo }) => {
+				log("[%p] discovered peer %p", peerId, peerInfo.id)
+			})
 
-			libp2p.addEventListener("peer:connect", ({ detail }) => {
-				log("[%p] connected to peer %p", peerId, detail)
+			libp2p.addEventListener("connection:open", ({ detail: { id, remotePeer } }) => {
+				log("[%p] opened connection %s to peer %p", peerId, id, remotePeer)
+			})
+
+			libp2p.addEventListener("connection:close", ({ detail: { id, remotePeer } }) => {
+				log("[%p] closed connection %s to peer %p", peerId, id, remotePeer)
 			})
 
 			return [name, libp2p]
@@ -140,32 +139,47 @@ export async function waitForInitialConnections<Payload>(
 	await Promise.all(Object.values(connectionPromises).map((defer) => defer.promise))
 }
 
+export async function waitForGraft<Payload>(
+	network: Record<string, Libp2p<ServiceMap<Payload>>>,
+	links: [string, string][],
+): Promise<void> {
+	const wait = (source: string, target: string) =>
+		new Promise<void>((resolve) => {
+			network[source].services.pubsub.addEventListener(
+				"gossipsub:graft",
+				({ detail: { peerId } }) => {
+					if (peerId === network[target].peerId.toString()) {
+						resolve()
+					}
+				},
+				{ once: true },
+			)
+		})
+
+	await Promise.all(links.map(([source, target]) => [wait(source, target), wait(target, source)]).flat())
+}
+
 /**
  * waits for every peer to emit a `sync` event for every other peer
  */
-export async function waitForInitialSync<Payload>(network: Record<string, Libp2p<ServiceMap<Payload>>>): Promise<void> {
-	const syncPromises: Record<string, DeferredPromise<void>> = {}
+export async function waitForInitialSync<Payload>(
+	network: Record<string, Libp2p<ServiceMap<Payload>>>,
+	links: [string, string][],
+): Promise<void> {
+	const wait = (source: string, target: string) =>
+		new Promise<void>((resolve) => {
+			network[source].services.gossiplog.addEventListener(
+				"sync",
+				({ detail: { peerId } }) => {
+					if (peerId === network[target].peerId.toString()) {
+						resolve()
+					}
+				},
+				{ once: true },
+			)
+		})
 
-	for (const source of Object.values(network)) {
-		const sourceId = source.peerId
-		for (const target of Object.values(network)) {
-			const targetId = target.peerId
-			if (sourceId.equals(targetId)) {
-				continue
-			}
-
-			const defer = pDefer<void>()
-			syncPromises[`${sourceId}:${targetId}`] = defer
-		}
-
-		source.services.gossiplog.addEventListener(
-			"sync",
-			({ detail: { peer: targetId } }) => syncPromises[`${sourceId}:${targetId}`].resolve(),
-			{ once: true },
-		)
-	}
-
-	await Promise.all(Object.values(syncPromises).map((defer) => defer.promise))
+	await Promise.all(links.map(([source, target]) => [wait(source, target), wait(target, source)]).flat())
 }
 
 type Result = { id: string; signature: Signature; message: Message }

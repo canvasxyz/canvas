@@ -52,7 +52,7 @@ export interface GossipLogInit<Payload = unknown> {
 export type GossipLogEvents<Payload = unknown> = {
 	message: CustomEvent<{ id: string; signature: Signature; message: Message<Payload> }>
 	commit: CustomEvent<{ root: Node }>
-	sync: CustomEvent<{ peer?: string; duration: number; messageCount: number }>
+	sync: CustomEvent<{ peerId?: string; duration: number; messageCount: number }>
 	error: CustomEvent<{ error: Error }>
 }
 
@@ -312,7 +312,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 		const duration = Math.ceil(performance.now() - start)
 		this.log("finished sync with peer %s (%d messages in %dms)", options.sourceId, messageCount, duration)
-		this.dispatchEvent(new CustomEvent("sync", { detail: { peer: options.sourceId, messageCount, duration } }))
+		this.dispatchEvent(new CustomEvent("sync", { detail: { peerId: options.sourceId, messageCount, duration } }))
 	}
 
 	/**
