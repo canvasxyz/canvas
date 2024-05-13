@@ -78,6 +78,7 @@ export async function getLibp2p() {
 			// ...(topic === null ? {} : { topicDHT: kadDHT({ protocol: getTopicDHTProtocol(topic) }) }),
 
 			pubsub: gossipsub({
+				emitSelf: false,
 				fallbackToFloodsub: false,
 				allowPublishToZeroTopicPeers: true,
 				globalSignaturePolicy: "StrictSign",
