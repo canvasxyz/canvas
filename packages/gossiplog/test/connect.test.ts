@@ -1,10 +1,10 @@
 import test from "ava"
+import { randomUUID } from "crypto"
 
 import { GossipLogConsumer } from "@canvas-js/gossiplog"
 import { GossipLog } from "@canvas-js/gossiplog/memory"
 
 import { createNetwork, waitForGraft, waitForInitialConnections, waitForInitialSync } from "./libp2p.js"
-import { randomUUID } from "crypto"
 
 test("wait for initial connection events", async (t) => {
 	const topic = randomUUID()

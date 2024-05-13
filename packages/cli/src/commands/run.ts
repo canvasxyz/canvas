@@ -227,10 +227,10 @@ export async function handler(args: Args) {
 		}
 	})
 
-	app.addEventListener("sync", ({ detail: { peer, duration, messageCount } }) => {
+	app.addEventListener("sync", ({ detail: { peerId, duration, messageCount } }) => {
 		console.log(
 			chalk.magenta(
-				`[canvas] Completed merkle sync with peer ${peer}: applied ${messageCount} messages in ${duration}ms`,
+				`[canvas] Completed merkle sync with peer ${peerId}: applied ${messageCount} messages in ${duration}ms`,
 			),
 		)
 	})
