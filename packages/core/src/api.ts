@@ -242,8 +242,8 @@ export function createMetricsAPI(app: Canvas): express.Express {
 		canvasMetrics.canvas_messages.inc({ topic: message.topic, type: message.payload.type })
 	})
 
-	app.messageLog.addEventListener("sync", ({ detail: { peer, duration } }) => {
-		canvasMetrics.canvas_sync_time.observe({ topic: app.messageLog.topic, peer }, duration)
+	app.messageLog.addEventListener("sync", ({ detail: { peerId, duration } }) => {
+		canvasMetrics.canvas_sync_time.observe({ topic: app.messageLog.topic, peer: peerId }, duration)
 	})
 
 	const api = express()
