@@ -30,15 +30,15 @@ import {
 	SYNC_RETRY_INTERVAL,
 	SYNC_RETRY_LIMIT,
 	second,
-} from "./constants.js"
+} from "../constants.js"
 
-import { AbstractGossipLog, GossipLogEvents } from "./AbstractGossipLog.js"
+import { AbstractGossipLog, GossipLogEvents } from "../AbstractGossipLog.js"
 
-import { decodeId } from "./schema.js"
-import { Client, decodeRequests, encodeResponses } from "./sync/index.js"
+import { decodeId } from "../schema.js"
+import { Client, decodeRequests, encodeResponses } from "../sync/index.js"
 
-import { DelayableController, SyncDeadlockError, SyncTimeoutError, wait } from "./utils.js"
-import { Server } from "./sync/server.js"
+import { DelayableController, SyncDeadlockError, SyncTimeoutError, wait } from "../utils.js"
+import { Server } from "../sync/server.js"
 
 export const getProtocol = (topic: string) => `/canvas/sync/v1/${topic}`
 
