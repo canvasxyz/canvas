@@ -486,6 +486,6 @@ export class GossipLogService<Payload = unknown>
 }
 
 export const gossiplog =
-	<Payload>(messageLog: AbstractGossipLog<Payload>, init: GossipLogServiceInit) =>
+	<Payload>(messageLog: AbstractGossipLog<Payload>, init: GossipLogServiceInit = {}) =>
 	(components: GossipLogServiceComponents) =>
 		new GossipLogService<Payload>(components, messageLog, init)

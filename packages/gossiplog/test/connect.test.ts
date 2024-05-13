@@ -1,14 +1,19 @@
-// import test from "ava"
+import test from "ava"
 
-// import { createNetwork, waitForInitialConnections } from "./libp2p.js"
+import { GossipLogConsumer } from "@canvas-js/gossiplog"
+import { GossipLog } from "@canvas-js/gossiplog/memory"
 
-// test("wait for initial connections", async (t) => {
-// 	t.timeout(10 * 1000)
+import { createNetwork, waitForInitialConnections } from "./libp2p.js"
+import { randomUUID } from "crypto"
 
-// 	const network = await createNetwork(t, {
-// 		a: { port: 9990, peers: ["b"] },
-// 		b: { port: 9991, peers: ["a"] },
-// 	})
+test("wait for initial connections", async (t) => {
+	const topic = randomUUID()
+	const apply: GossipLogConsumer<string> = (i) => {}
 
-// 	await t.notThrowsAsync(() => waitForInitialConnections(network))
-// })
+	const network = await createNetwork(t, () => GossipLog.open({ topic, apply }), {
+		a: { port: 9990, peers: ["b"] },
+		b: { port: 9991, peers: ["a"] },
+	})
+
+	await t.notThrowsAsync(() => waitForInitialConnections(network))
+})
