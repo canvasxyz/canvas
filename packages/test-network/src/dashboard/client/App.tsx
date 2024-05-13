@@ -19,7 +19,7 @@ function reduce(state: State, event: Event): State {
 			return {
 				...state,
 				nodes: [...state.nodes, { id: event.id }],
-				roots: { ...state.roots, [event.id]: event.detail.rootHash },
+				roots: { ...state.roots, [event.id]: event.detail.root },
 			}
 		}
 	} else if (event.type === "connection:open") {
@@ -39,7 +39,7 @@ function reduce(state: State, event: Event): State {
 		if (event.detail.topic === topic) {
 			return {
 				...state,
-				roots: { ...state.roots, [event.id]: event.detail.rootHash },
+				roots: { ...state.roots, [event.id]: event.detail.root },
 			}
 		}
 	}
@@ -48,21 +48,9 @@ function reduce(state: State, event: Event): State {
 }
 
 export const App: React.FC<{}> = ({}) => {
-	const [events, setEvents] = useState<Event[]>([])
+	// const [events, setEvents] = useState<Event[]>([])
 	const [state, setState] = useState<State>({ nodes: [], links: [], roots: {}, mesh: {} })
-	const [messages, setMessages] = useState<{ peerId: string; data: string }[]>([])
-
-	// console.log("state", state)
-	;(window as any).foo = () => {
-		const state = events.reduce<State>((state, event) => reduce(state, event), {
-			nodes: [],
-			links: [],
-			mesh: {},
-			roots: {},
-		})
-
-		console.log(events, state)
-	}
+	// const [messages, setMessages] = useState<{ peerId: string; data: string }[]>([])
 
 	// const events = useMemo<Array<Event | null>>(() => [], [])
 	// const [eventCount, setEventCount] = useState(0)
@@ -73,17 +61,8 @@ export const App: React.FC<{}> = ({}) => {
 		eventSource.addEventListener("close", (event) => console.log("closed event source", event))
 		eventSource.addEventListener("message", ({ data }) => {
 			const event = JSON.parse(data) as Event
-			if (event.type === "gossiplog:message") {
-				const message = { peerId: event.id, data: event.detail.id }
-				setMessages((messages) => [...messages, message])
-				setTimeout(() => {
-					setMessages((messages) => messages.filter((m) => m.peerId !== message.peerId && m.data !== message.data))
-				}, 2000)
-			} else {
-				setEvents((events) => [...events, event])
-				// setEventCount(events.push(event))
-				setState((state) => reduce(state, event))
-			}
+			// setEvents((events) => [...events, event])
+			setState((state) => reduce(state, event))
 		})
 
 		return () => eventSource.close()
@@ -165,17 +144,16 @@ export const App: React.FC<{}> = ({}) => {
 			<section>
 				<Graph
 					{...state}
-					messages={messages}
+					// messages={messages}
 					bootstrapPeerIds={bootstrapPeerIds}
 					onNodeClick={handleNodeClick}
 					onLinkClick={handleLinkClick}
 				/>
-				{/* <input style={{ width }} type="range" min={0} max={100} value={rangeValue} onChange={handleRangeChange} /> */}
 			</section>
 
 			<hr />
 
-			<EventLog events={events} />
+			{/* <EventLog events={events} /> */}
 		</>
 	)
 }

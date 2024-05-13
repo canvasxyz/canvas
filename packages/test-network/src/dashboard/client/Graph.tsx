@@ -18,7 +18,7 @@ export interface GraphProps {
 	roots: Record<string, string>
 
 	bootstrapPeerIds?: string[]
-	messages?: { peerId: string; data: string }[]
+	// messages?: { peerId: string; data: string }[]
 	onNodeClick?: (id: string, shift: boolean, meta: boolean) => void
 	onLinkClick?: (source: string, target: string) => void
 }
@@ -27,13 +27,14 @@ export const nodeRadius = 10
 export const width = 800
 export const height = 600
 
+const getColor = (root?: string | null) => (root ? "#" + root.slice(-6) : "#000")
+
 export const Graph: React.FC<GraphProps> = ({
 	mesh,
 	nodes,
 	links,
 	roots,
-	bootstrapPeerIds = [],
-	messages = [],
+	// messages = [],
 	onNodeClick = () => {},
 	onLinkClick = () => {},
 }) => {
@@ -79,7 +80,7 @@ export const Graph: React.FC<GraphProps> = ({
 			.attr("class", "arrowHead")
 			.style("fill", "#222")
 
-		svg.append("g").attr("class", "messages").attr("stroke-width", 0)
+		// svg.append("g").attr("class", "messages").attr("stroke-width", 0)
 		svg.append("g").attr("class", "links").attr("stroke", "#999").attr("stroke-opacity", 1).attr("stroke-width", 4)
 		svg.append("g").attr("class", "markers")
 		svg.append("g").attr("class", "nodes").attr("stroke", "#fff").attr("stroke-width", 2)
@@ -177,8 +178,7 @@ export const Graph: React.FC<GraphProps> = ({
 			.append("circle")
 			.attr("r", nodeRadius)
 			.attr("data-id", (d) => d.id)
-			// .attr("fill", (d) => (bootstrapPeerIds.includes(d.id) ? "#000" : rootsRef.current[d.id] ?? "#000"))
-			.attr("fill", (d) => rootsRef.current[d.id] ?? "#000")
+			.attr("fill", (d) => getColor(rootsRef.current[d.id]))
 			.on("click", (event, node) => onNodeClick(node.id, event.shiftKey, event.metaKey))
 			.merge(oldNodes)
 
@@ -201,46 +201,40 @@ export const Graph: React.FC<GraphProps> = ({
 			.selectAll<SVGCircleElement, Node>("circle")
 			.attr("fill", (d, idx, elems) => {
 				const id = elems[idx].getAttribute("data-id")
-				// if (id && bootstrapPeerIds.includes(id)) {
-				// 	return "#000"
-				// } else
-				if (id && roots[id]) {
-					return "#" + roots[id].slice(0, 6)
-				} else {
-					return "#000"
-				}
+				const root = id && roots[id]
+				return getColor(root)
 			})
 	}, [svg, roots])
 
-	useEffect(() => {
-		if (svg === null || simulation === null) {
-			return
-		}
+	// useEffect(() => {
+	// 	if (svg === null || simulation === null) {
+	// 		return
+	// 	}
 
-		const resolvedMessages = messages.map(({ data, peerId }) => ({ data, node: nodes.find((n) => n.id === peerId)! }))
+	// 	const resolvedMessages = messages.map(({ data, peerId }) => ({ data, node: nodes.find((n) => n.id === peerId)! }))
 
-		const oldMessages = svg
-			.select<SVGGElement>(".messages")
-			.selectAll<SVGCircleElement, { data: string; node: Node }>("circle")
-			.data(resolvedMessages, (d) => `${d.node.id}/${d.data}`)
+	// 	const oldMessages = svg
+	// 		.select<SVGGElement>(".messages")
+	// 		.selectAll<SVGCircleElement, { data: string; node: Node }>("circle")
+	// 		.data(resolvedMessages, (d) => `${d.node.id}/${d.data}`)
 
-		oldMessages.exit().remove()
+	// 	oldMessages.exit().remove()
 
-		const newMessages = oldMessages
-			.enter()
-			.append("circle")
-			.attr("r", nodeRadius * 1.5)
-			.attr("fill", (d) => "#007")
-			.attr("cx", (d) => d.node.x!)
-			.attr("cy", (d) => d.node.y!)
-			.merge(oldMessages)
+	// 	const newMessages = oldMessages
+	// 		.enter()
+	// 		.append("circle")
+	// 		.attr("r", nodeRadius * 1.5)
+	// 		.attr("fill", (d) => "#007")
+	// 		.attr("cx", (d) => d.node.x!)
+	// 		.attr("cy", (d) => d.node.y!)
+	// 		.merge(oldMessages)
 
-		simulation.on("tick.messages", () => {
-			newMessages.attr("cx", (d) => d.node.x!).attr("cy", (d) => d.node.y!)
-		})
+	// 	simulation.on("tick.messages", () => {
+	// 		newMessages.attr("cx", (d) => d.node.x!).attr("cy", (d) => d.node.y!)
+	// 	})
 
-		return () => void simulation.on("tick.messages", null)
-	}, [svg, simulation, nodes, messages])
+	// 	return () => void simulation.on("tick.messages", null)
+	// }, [svg, simulation, nodes, messages])
 
 	return (
 		<svg
