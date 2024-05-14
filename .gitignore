@@ -6,6 +6,8 @@
 
 node_modules/
 
+pnpm-lock.yaml
+
 tsconfig.tsbuildinfo
 
 packages/**/lib/
