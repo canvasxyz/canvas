@@ -57,7 +57,16 @@ const checkConnections = async () => {
 		],
 	})
 	const page = await browser.newPage()
-	await page.goto("https:example.com")
+	await page.setRequestInterception(true)
+	page.on("request", (request) => {
+		request.respond({
+			status: 200,
+			contentType: "text/html",
+			body: "Success",
+		})
+	})
+	console.log("setting up browser context...")
+	await page.goto("https://example.com")
 
 	let connections = {}
 
