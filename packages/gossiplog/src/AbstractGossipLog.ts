@@ -91,7 +91,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 	public readonly topic: string
 	public readonly indexAncestors: boolean
 	public readonly signer: Signer<Message<Payload>>
-	protected open: boolean
+	public open: boolean
 
 	protected readonly log: Logger
 	protected readonly mempool = new Mempool<{ signature: Signature; message: Message<Payload> }>()

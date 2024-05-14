@@ -156,6 +156,12 @@ export class SyncService<Payload = unknown, Result = void> implements Startable 
 
 	private handleIncomingStream: StreamHandler = async ({ connection, stream }) => {
 		const peerId = connection.remotePeer
+
+		if (this.messages.open === false) {
+			this.log("aborted incoming stream %s from peer %p", stream.id, peerId)
+			stream.abort(new Error("application was closed"))
+			return
+		}
 		this.log("opened incoming stream %s from peer %p", stream.id, peerId)
 
 		const timeoutController = new DelayableController(3 * second)
