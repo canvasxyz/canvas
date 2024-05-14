@@ -75,17 +75,15 @@ const checkConnections = async () => {
 	await page.evaluate(clientJs)
 	await new Promise((resolve) => setTimeout(resolve, 5000))
 
-	setInterval(() => {
-		const healthy = Object.keys(connections).length
-		healthyServersGauge.set(healthy)
+	const healthy = Object.keys(connections).length
+	healthyServersGauge.set(healthy)
 
-		// await browser.close()
-		console.log(`[probe-server] check completed: ${healthy} healthy nodes reached`)
-	}, 5000)
+	await browser.close()
+	console.log("[probe-server] check completed:", healthy)
 }
 
 checkConnections()
-//setInterval(checkConnections, 5 * 60 * 1000)
+setInterval(checkConnections, 5 * 60 * 1000)
 
 process.on("SIGINT", async () => {
 	console.log("\nReceived SIGINT. Attempting to shut down gracefully.")
