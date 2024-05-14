@@ -64,6 +64,7 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 	public async close() {
 		this.log("closing")
+		this.open = false
 		this.controller.abort()
 		this.db.close()
 	}
@@ -181,6 +182,9 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			if (this.incomingSyncPeers.has(sourceId)) {
 				throw new SyncDeadlockError(`deadlock with peer ${sourceId}`)
 			}
+		}
+		if (!this.open) {
+			throw new Error("gossiplog closed")
 		}
 
 		let result: T | undefined = undefined

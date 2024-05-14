@@ -36,12 +36,16 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 			txn.entries(lowerBound, upperBound, { ...options, dbi }),
 	})
 
-	private constructor(private readonly env: Environment, init: GossipLogInit<Payload, Result>) {
+	private constructor(
+		private readonly env: Environment,
+		init: GossipLogInit<Payload, Result>,
+	) {
 		super(init)
 	}
 
 	public async close() {
 		this.log("closing")
+		this.open = false
 		await this.env.close()
 	}
 
@@ -84,6 +88,9 @@ export class GossipLog<Payload, Result> extends AbstractGossipLog<Payload, Resul
 
 	public async write<T>(callback: (txn: ReadWriteTransaction) => Promise<T>): Promise<T> {
 		this.log("opening read-write transaction")
+		if (!this.open) {
+			throw new Error("gossiplog closed")
+		}
 		return await this.env.write(async (txn) => {
 			const messages = new Tree(txn, { dbi: txn.openDatabase("messages") })
 			return await callback({

@@ -91,6 +91,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 	public readonly topic: string
 	public readonly indexAncestors: boolean
 	public readonly signer: Signer<Message<Payload>>
+	protected open: boolean
 
 	protected readonly log: Logger
 	protected readonly mempool = new Mempool<{ signature: Signature; message: Message<Payload> }>()
@@ -103,6 +104,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 		assert(topicPattern.test(init.topic), "invalid topic (must match [a-zA-Z0-9\\.\\-])")
 
 		this.topic = init.topic
+		this.open = true
 		this.#apply = init.apply
 
 		if (typeof init.validate === "function") {
@@ -477,7 +479,10 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = unknown> ext
 	/**
 	 * Sync with a remote source, applying and inserting all missing messages into the local log
 	 */
-	public async sync(source: Source, options: { sourceId?: string, timeoutController?: DelayableController } = {}): Promise<{ root: Node, messageCount: number }> {
+	public async sync(
+		source: Source,
+		options: { sourceId?: string; timeoutController?: DelayableController } = {},
+	): Promise<{ root: Node; messageCount: number }> {
 		let messageCount = 0
 		const start = performance.now()
 		const root = await this.write(async (txn) => {
