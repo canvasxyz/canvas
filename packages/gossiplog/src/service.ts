@@ -212,10 +212,15 @@ export class GossipLogService extends TypedEventEmitter<GossipLogEvents<unknown,
 			return
 		}
 
-		const [id, signature, message] = messageLog.decode(msg.data)
+		try {
+			const [id, signature, message] = messageLog.decode(msg.data)
 
-		this.log("received message %s via gossipsub on %s", id, topic)
-		await messageLog.insert(signature, message)
+			this.log("received message %s via gossipsub on %s", id, topic)
+			await messageLog.insert(signature, message)
+		} catch (err) {
+			this.log("received invalid message via gossipsub on %s", topic)
+			this.log(err)
+		}
 	}
 }
 
