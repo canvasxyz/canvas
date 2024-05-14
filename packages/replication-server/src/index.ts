@@ -7,20 +7,10 @@ import client from "prom-client"
 
 import { topicPattern } from "@canvas-js/gossiplog"
 import { GossipLogService } from "@canvas-js/gossiplog/service"
-import { Canvas, Connection } from "@canvas-js/core"
+import { Canvas } from "@canvas-js/core"
 
 import { options } from "./libp2p.js"
-import {
-	port,
-	metricsPort,
-	restartAt,
-	dataDirectory,
-	discoveryTopic,
-	maxTopics,
-	sleepTimeout,
-	bootstrapList,
-	loopback,
-} from "./config.js"
+import { port, metricsPort, restartAt, dataDirectory, discoveryTopic, maxTopics, sleepTimeout } from "./config.js"
 import { getAPI } from "./api.js"
 import { initFinishedMatches } from "./indexer.js"
 
@@ -170,44 +160,37 @@ process.on("SIGINT", async () => {
 	process.exit(0)
 })
 
-if (loopback !== undefined) {
-	const bootstrapList = [loopback]
-	const healthCheckInitialDelay = 30 * 1000
-	const healthCheckInterval = 30 * 1000
-	const healthCheckGracePeriod = 10 * 1000
+// process.title is just "node" when run using node directly,
+// and "node .../index.js" when run using pm2
+const isNode = process.title === "node"
+const isPM2 = process.title.startsWith("node ") && process.title.endsWith("/index.js")
 
-	const doHealthCheck = async () => {
-		console.log("[replication-server] health check starting")
-		const connections: Record<string, Connection> = {}
-		const randId = Math.floor(Math.random() * 0xffffff).toString(16)
-		const app = await Canvas.initialize({
-			contract: { topic: `healthcheck-${randId}.canvas.xyz`, models: {}, actions: {} },
-			indexHistory: false,
-			ignoreMissingActions: true,
-			disablePing: true,
-			discoveryTopic,
-			bootstrapList,
-		})
-		app.libp2p.addEventListener("connection:open", ({ detail: connection }) => {
-			connections[connection.id] = connection
-			console.log("[replication-server] health check found new connection:", connection.remoteAddr)
-		})
-		app.libp2p.addEventListener("connection:close", ({ detail: connection }) => {
-			delete connections[connection.id]
-			console.log("[replication-server] health check closed connection", connection.remoteAddr)
-		})
-		console.log("[replication-server] health check started app")
-
-		setTimeout(() => {
-			const healthy = Object.keys(connections).length
-			console.log(`[replication-server] health check found ${healthy} connections`)
-			if (healthy === 0) {
-				process.exit(-1)
-			}
-		}, healthCheckGracePeriod)
+if (restartAt && isPM2) {
+	// let the user set a wall clock restart time
+	const matches = restartAt.match(/^([0-9]+):([0-9]+)$/)
+	if (!matches) {
+		console.log("Invalid restart time, must be in format RESTART=23:59")
+		process.exit(1)
 	}
-	setTimeout(() => {
-		doHealthCheck()
-		setInterval(doHealthCheck, healthCheckInterval)
-	}, healthCheckInitialDelay)
+	const [unused, hours, minutes] = matches
+	const alarm = new Date()
+	alarm.setHours(parseInt(hours, 10))
+	alarm.setMinutes(parseInt(minutes, 10))
+	const timeLeft =
+		alarm.getTime() > Date.now() ? alarm.getTime() - Date.now() : alarm.getTime() + 24 * 60 * 60 * 1000 - Date.now() // wrap around day
+
+	console.log(
+		`[replication-server] next restart at ${hours.padStart(2, "0")}:${minutes.padStart(2, "0")}, waiting ${Math.ceil(
+			timeLeft / 1000,
+		)} seconds...`,
+	)
+
+	const restartTimer = setTimeout(() => {
+		console.log("[replication-server] alarm triggered, restarting...")
+		process.exit(0)
+	}, timeLeft)
+} else if (restartAt && isNode) {
+	console.log("[replication-server] unexpected RESTART_AT, try running with pm2")
+} else if (restartAt) {
+	console.log("[replication-server] unexpected process.title, try running with pm2")
 }

@@ -13,7 +13,6 @@ dotenv.config()
 const {
 	PEER_ID,
 	BOOTSTRAP_LIST,
-	LOOPBACK,
 	LISTEN,
 	ANNOUNCE,
 	DISCOVERY_TOPIC,
@@ -53,8 +52,6 @@ async function getPeerId() {
 }
 
 export const peerId: PeerId = await getPeerId()
-
-export const loopback: string | undefined = LOOPBACK
 
 export const bootstrapList = BOOTSTRAP_LIST === undefined ? [] : BOOTSTRAP_LIST.split(" ")
 
