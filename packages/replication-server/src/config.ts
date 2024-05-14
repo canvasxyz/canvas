@@ -26,7 +26,7 @@ const {
 
 export const maxTopics = 90 ?? MAX_TOPICS
 
-export const sleepTimeout = 15 * 60 * 1000 ?? SLEEP_TIMEOUT
+export const sleepTimeout = 2 * 60 * 1000 ?? SLEEP_TIMEOUT
 
 console.log("[replication-server] Initializing with max topics:", maxTopics)
 
