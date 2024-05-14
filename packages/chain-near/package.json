@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@canvas-js/chain-near",
-  "version": "0.8.27-patch.20",
+  "version": "0.8.27-patch.21",
   "type": "module",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "main": "lib/index.js",
@@ -17,8 +17,8 @@
     }
   },
   "dependencies": {
-    "@canvas-js/interfaces": "0.8.27-patch.20",
-    "@canvas-js/signed-cid": "0.8.27-patch.20",
+    "@canvas-js/interfaces": "0.8.27-patch.21",
+    "@canvas-js/signed-cid": "0.8.27-patch.21",
     "@ipld/dag-cbor": "^9.0.6",
     "@ipld/dag-json": "^10.1.5",
     "@libp2p/logger": "^4.0.12",

@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/vm",
-  "version": "0.8.27-patch.20",
+  "version": "0.8.27-patch.21",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "type": "module",
   "engines": {
