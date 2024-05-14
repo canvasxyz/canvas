@@ -140,8 +140,8 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		[K in keyof T["actions"]]: T["actions"][K] extends ActionImplementationFunction<infer Args, infer Result>
 			? ActionAPI<Args, Result>
 			: T["actions"][K] extends ActionImplementationObject<infer Args, infer Result>
-			? ActionAPI<Args, Result>
-			: never
+				? ActionAPI<Args, Result>
+				: never
 	}
 
 	private pingTimer: ReturnType<typeof setTimeout> | undefined
@@ -355,6 +355,8 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			this.controller.abort()
 			if (stopLibp2p) {
 				await this.libp2p.stop()
+			} else {
+				await this.libp2p.services.gossiplog.unsubscribe(this.messageLog.topic)
 			}
 			await this.messageLog.close()
 			await this.runtime.close()
