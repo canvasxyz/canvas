@@ -9,7 +9,9 @@ services:
 
   bootstrap:
     init: true
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.peer
     depends_on:
       - dashboard
     environment:
@@ -22,7 +24,9 @@ services:
 
   web-1:
     init: true
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.peer
     depends_on:
       - bootstrap
     environment:
@@ -35,7 +39,9 @@ services:
 
   web-2:
     init: true
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.peer
     depends_on:
       - bootstrap
     environment:
@@ -48,7 +54,9 @@ services:
 
   web-3:
     init: true
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.peer
     depends_on:
       - bootstrap
     environment:
@@ -61,7 +69,9 @@ services:
 
   web-4:
     init: true
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.peer
     depends_on:
       - bootstrap
     environment:
@@ -74,7 +84,9 @@ services:
 
   web-5:
     init: true
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.peer
     depends_on:
       - bootstrap
     environment:
@@ -87,7 +99,9 @@ services:
 
   web-6:
     init: true
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.peer
     depends_on:
       - bootstrap
     environment:
@@ -100,7 +114,9 @@ services:
 
   web-7:
     init: true
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.peer
     depends_on:
       - bootstrap
     environment:
@@ -113,7 +129,9 @@ services:
 
   web-8:
     init: true
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.peer
     depends_on:
       - bootstrap
     environment:
@@ -126,7 +144,9 @@ services:
 
   web-9:
     init: true
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.peer
     depends_on:
       - bootstrap
     environment:
@@ -139,7 +159,9 @@ services:
 
   web-10:
     init: true
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.peer
     depends_on:
       - bootstrap
     environment:
@@ -152,7 +174,9 @@ services:
 
   web-11:
     init: true
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.peer
     depends_on:
       - bootstrap
     environment:
@@ -165,7 +189,9 @@ services:
 
   web-12:
     init: true
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.peer
     depends_on:
       - bootstrap
     environment:
@@ -178,7 +204,9 @@ services:
 
   web-13:
     init: true
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.peer
     depends_on:
       - bootstrap
     environment:
@@ -191,7 +219,9 @@ services:
 
   web-14:
     init: true
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.peer
     depends_on:
       - bootstrap
     environment:
@@ -204,7 +234,9 @@ services:
 
   web-15:
     init: true
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.peer
     depends_on:
       - bootstrap
     environment:
