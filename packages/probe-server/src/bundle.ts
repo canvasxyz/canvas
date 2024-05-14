@@ -5,8 +5,9 @@ declare global {
 	function updateConnections(connections: Record<string, Connection>): void
 }
 
+const randId = Math.floor(Math.random() * 0xffffff).toString(16)
 const app = await Canvas.initialize({
-	contract: { topic: "room-1.canvas.xyz", models: {}, actions: {} },
+	contract: { topic: `room-${randId}.canvas.xyz`, models: {}, actions: {} },
 	indexHistory: false,
 	ignoreMissingActions: true,
 	disablePing: true,
