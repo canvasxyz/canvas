@@ -4,6 +4,8 @@ Build the dashboard client bundle
 
 ```
 $ npm run dashboard:client:build
+$ npm run dashboard:server:build
+$ npm run peer:build
 ```
 
 Then start the simulation
