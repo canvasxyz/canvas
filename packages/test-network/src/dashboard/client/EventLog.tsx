@@ -1,5 +1,5 @@
 import React, { useState } from "react"
-import { Event } from "../shared/types.js"
+import type { Event } from "../../types.js"
 
 export const EventLog: React.FC<{ events: Event[] }> = ({ events }) => {
 	const [visible, setVisible] = useState(false)

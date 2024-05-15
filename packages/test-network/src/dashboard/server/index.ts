@@ -2,9 +2,11 @@ import http from "node:http"
 import assert from "node:assert"
 
 import express from "express"
+import cors from "cors"
+
 import PQueue from "p-queue"
 
-import type { Event } from "../shared/types.js"
+import type { Event } from "../../types.js"
 
 const events: Event[] = []
 const queues = new Map<express.Response, PQueue>()
@@ -18,6 +20,7 @@ function push(res: express.Response, event: Event) {
 }
 
 const app = express()
+app.use(cors())
 app.use(express.json())
 app.use(express.text())
 

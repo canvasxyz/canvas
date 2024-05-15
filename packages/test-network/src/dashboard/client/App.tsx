@@ -1,7 +1,8 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react"
-import type { Event } from "../shared/types.js"
+import React, { useCallback, useEffect, useState } from "react"
+
+import type { Event } from "../../types.js"
 import { Graph, width } from "./Graph.js"
-import { EventLog } from "./EventLog.js"
+// import { EventLog } from "./EventLog.js"
 
 type State = {
 	mesh: Record<string, string[]>

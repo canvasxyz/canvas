@@ -13,7 +13,7 @@ import { PeerId } from "@libp2p/interface"
 // import { GossipLog } from "@canvas-js/gossiplog/memory"
 import { GossipLog } from "@canvas-js/gossiplog/node"
 
-import type { Event } from "../dashboard/shared/types.js"
+import type { Event } from "../types.js"
 
 import { getLibp2p, topic } from "./libp2p.js"
 
@@ -38,7 +38,7 @@ async function start() {
 	})
 
 	const { SERVICE_NAME } = process.env
-	assert(typeof SERVICE_NAME === "string")
+	// assert(typeof SERVICE_NAME === "string")
 
 	const app = express()
 
@@ -143,7 +143,7 @@ async function start() {
 
 	let delay = 0
 	if (SERVICE_NAME !== "bootstrap") {
-		delay = 1000 + Math.random() * 20000
+		delay = 1000 + Math.random() * 5000
 	}
 
 	await setTimeout(delay)
