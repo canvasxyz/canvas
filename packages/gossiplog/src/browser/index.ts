@@ -5,7 +5,7 @@ import { IDBPDatabase, openDB } from "idb"
 
 import { Bound } from "@canvas-js/okra"
 import { IDBStore, IDBTree } from "@canvas-js/okra-idb"
-import { Message, Signature } from "@canvas-js/interfaces"
+import { Awaitable, Message, Signature } from "@canvas-js/interfaces"
 import { assert } from "@canvas-js/utils"
 
 import { KEY_LENGTH, encodeId, encodeSignedMessage } from "../schema.js"
@@ -122,7 +122,7 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 	}
 
 	public async read<T>(
-		callback: (txn: ReadOnlyTransaction) => Promise<T>,
+		callback: (txn: ReadOnlyTransaction) => Awaitable<T>,
 		options: { targetId?: string } = {},
 	): Promise<T> {
 		const targetId = options.targetId ?? null
@@ -178,7 +178,7 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 	}
 
 	public async write<T>(
-		callback: (txn: ReadWriteTransaction) => Promise<T>,
+		callback: (txn: ReadWriteTransaction) => Awaitable<T>,
 		options: { sourceId?: string } = {},
 	): Promise<T> {
 		const sourceId = options.sourceId ?? null
@@ -240,7 +240,7 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 					})
 
 					const root = await this.messages.getRoot()
-					this.dispatchEvent(new CustomEvent("commit", { detail: root }))
+					this.dispatchEvent(new CustomEvent("commit", { detail: { root } }))
 				} catch (err) {
 					this.log.error("error in read-write transaction: %O", err)
 					error = err as Error
