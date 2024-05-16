@@ -7,8 +7,9 @@ import type { PeerId, PubSub, EventHandler } from "@libp2p/interface"
 import { Libp2p, createLibp2p } from "libp2p"
 import { identify as identifyService } from "@libp2p/identify"
 import { plaintext } from "@libp2p/plaintext"
-import { tcp } from "@libp2p/tcp"
 import { mplex } from "@libp2p/mplex"
+import { webSockets } from "@libp2p/websockets"
+import { all } from "@libp2p/websockets/filters"
 import { bootstrap } from "@libp2p/bootstrap"
 import { GossipsubEvents, gossipsub } from "@chainsafe/libp2p-gossipsub"
 
@@ -58,7 +59,7 @@ export async function createNetwork<T extends NetworkConfig, Payload>(
 				peerId: peerId,
 				start: false,
 				addresses: { listen: [address] },
-				transports: [tcp()],
+				transports: [webSockets({filter: all})],
 				connectionEncryption: [plaintext()],
 				streamMuxers: [mplex()],
 				peerDiscovery: bootstrapList.length > 0 ? [bootstrap({ list: bootstrapList, timeout: 0 })] : [],
