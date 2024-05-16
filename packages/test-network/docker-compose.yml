@@ -14,235 +14,209 @@ services:
       dockerfile: Dockerfile.peer
     depends_on:
       - dashboard
+    ports:
+      - "8080:8080"
     environment:
+      # - DEBUG=libp2p:*
+      # - DEBUG_COLORS=0
       - SERVICE_NAME=bootstrap
       # 12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
       - PEER_ID=CiYAJAgBEiC9yHdvmtjGZW9Q2lSLKlgmNYW9bxRK7uyo4g0aS0hFzxIkCAESIL3Id2+a2MZlb1DaVIsqWCY1hb1vFEru7KjiDRpLSEXPGkQIARJA8STx22fxKw7avM9/YjP3elT1YKBfA4wCIgnfs4yl/4G9yHdvmtjGZW9Q2lSLKlgmNYW9bxRK7uyo4g0aS0hFzw==
       - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
-      - ANNOUNCE=/dns4/bootstrap/tcp/8080/ws
+      - ANNOUNCE=/dns4/localhost/tcp/8080/ws
       - MIN_CONNECTIONS=0
 
-  web-1:
-    init: true
-    build:
-      context: .
-      dockerfile: Dockerfile.peer
-    depends_on:
-      - bootstrap
-    environment:
-      - SERVICE_NAME=web-1
-      - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
-      - ANNOUNCE=/dns4/web-1/tcp/8080/ws
-      - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
-      - MIN_CONNECTIONS=3
-      # - MAX_CONNECTIONS=5
+  # server-1:
+  #   init: true
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.peer
+  #   depends_on:
+  #     - bootstrap
+  #   environment:
+  #     - SERVICE_NAME=server-1
+  #     - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+  #     - ANNOUNCE=/dns4/server-1/tcp/8080/ws
+  #     - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
 
-  web-2:
-    init: true
-    build:
-      context: .
-      dockerfile: Dockerfile.peer
-    depends_on:
-      - bootstrap
-    environment:
-      - SERVICE_NAME=web-2
-      - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
-      - ANNOUNCE=/dns4/web-2/tcp/8080/ws
-      - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
-      - MIN_CONNECTIONS=3
-      # - MAX_CONNECTIONS=5
+  # server-2:
+  #   init: true
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.peer
+  #   depends_on:
+  #     - bootstrap
+  #   environment:
+  #     - SERVICE_NAME=server-2
+  #     - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+  #     - ANNOUNCE=/dns4/server-2/tcp/8080/ws
+  #     - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
 
-  web-3:
-    init: true
-    build:
-      context: .
-      dockerfile: Dockerfile.peer
-    depends_on:
-      - bootstrap
-    environment:
-      - SERVICE_NAME=web-3
-      - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
-      - ANNOUNCE=/dns4/web-3/tcp/8080/ws
-      - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
-      - MIN_CONNECTIONS=3
-      # - MAX_CONNECTIONS=5
+  # server-3:
+  #   init: true
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.peer
+  #   depends_on:
+  #     - bootstrap
+  #   environment:
+  #     - SERVICE_NAME=server-3
+  #     - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+  #     - ANNOUNCE=/dns4/server-3/tcp/8080/ws
+  #     - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
 
-  web-4:
-    init: true
-    build:
-      context: .
-      dockerfile: Dockerfile.peer
-    depends_on:
-      - bootstrap
-    environment:
-      - SERVICE_NAME=web-4
-      - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
-      - ANNOUNCE=/dns4/web-4/tcp/8080/ws
-      - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
-      - MIN_CONNECTIONS=3
-      # - MAX_CONNECTIONS=5
+  # server-4:
+  #   init: true
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.peer
+  #   depends_on:
+  #     - bootstrap
+  #   environment:
+  #     - SERVICE_NAME=server-4
+  #     - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+  #     - ANNOUNCE=/dns4/server-4/tcp/8080/ws
+  #     - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
 
-  web-5:
-    init: true
-    build:
-      context: .
-      dockerfile: Dockerfile.peer
-    depends_on:
-      - bootstrap
-    environment:
-      - SERVICE_NAME=web-5
-      - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
-      - ANNOUNCE=/dns4/web-5/tcp/8080/ws
-      - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
-      - MIN_CONNECTIONS=3
-      # - MAX_CONNECTIONS=5
+  # server-5:
+  #   init: true
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.peer
+  #   depends_on:
+  #     - bootstrap
+  #   environment:
+  #     - SERVICE_NAME=server-5
+  #     - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+  #     - ANNOUNCE=/dns4/server-5/tcp/8080/ws
+  #     - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
 
-  web-6:
-    init: true
-    build:
-      context: .
-      dockerfile: Dockerfile.peer
-    depends_on:
-      - bootstrap
-    environment:
-      - SERVICE_NAME=web-6
-      - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
-      - ANNOUNCE=/dns4/web-6/tcp/8080/ws
-      - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
-      - MIN_CONNECTIONS=3
-      # - MAX_CONNECTIONS=5
+  # server-6:
+  #   init: true
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.peer
+  #   depends_on:
+  #     - bootstrap
+  #   environment:
+  #     - SERVICE_NAME=server-6
+  #     - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+  #     - ANNOUNCE=/dns4/server-6/tcp/8080/ws
+  #     - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
 
-  web-7:
-    init: true
-    build:
-      context: .
-      dockerfile: Dockerfile.peer
-    depends_on:
-      - bootstrap
-    environment:
-      - SERVICE_NAME=web-7
-      - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
-      - ANNOUNCE=/dns4/web-7/tcp/8080/ws
-      - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
-      - MIN_CONNECTIONS=3
-      # - MAX_CONNECTIONS=5
+  # server-7:
+  #   init: true
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.peer
+  #   depends_on:
+  #     - bootstrap
+  #   environment:
+  #     - SERVICE_NAME=server-7
+  #     - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+  #     - ANNOUNCE=/dns4/server-7/tcp/8080/ws
+  #     - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
 
-  web-8:
-    init: true
-    build:
-      context: .
-      dockerfile: Dockerfile.peer
-    depends_on:
-      - bootstrap
-    environment:
-      - SERVICE_NAME=web-8
-      - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
-      - ANNOUNCE=/dns4/web-8/tcp/8080/ws
-      - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
-      - MIN_CONNECTIONS=3
-      # - MAX_CONNECTIONS=5
+  # server-8:
+  #   init: true
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.peer
+  #   depends_on:
+  #     - bootstrap
+  #   environment:
+  #     - SERVICE_NAME=server-8
+  #     - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+  #     - ANNOUNCE=/dns4/server-8/tcp/8080/ws
+  #     - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
 
-  web-9:
-    init: true
-    build:
-      context: .
-      dockerfile: Dockerfile.peer
-    depends_on:
-      - bootstrap
-    environment:
-      - SERVICE_NAME=web-9
-      - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
-      - ANNOUNCE=/dns4/web-9/tcp/8080/ws
-      - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
-      - MIN_CONNECTIONS=3
-      # - MAX_CONNECTIONS=5
+  # server-9:
+  #   init: true
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.peer
+  #   depends_on:
+  #     - bootstrap
+  #   environment:
+  #     - SERVICE_NAME=server-9
+  #     - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+  #     - ANNOUNCE=/dns4/server-9/tcp/8080/ws
+  #     - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
 
-  web-10:
-    init: true
-    build:
-      context: .
-      dockerfile: Dockerfile.peer
-    depends_on:
-      - bootstrap
-    environment:
-      - SERVICE_NAME=web-10
-      - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
-      - ANNOUNCE=/dns4/web-10/tcp/8080/ws
-      - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
-      - MIN_CONNECTIONS=3
-      # - MAX_CONNECTIONS=5
+  # server-10:
+  #   init: true
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.peer
+  #   depends_on:
+  #     - bootstrap
+  #   environment:
+  #     - SERVICE_NAME=server-10
+  #     - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+  #     - ANNOUNCE=/dns4/server-10/tcp/8080/ws
+  #     - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
 
-  web-11:
-    init: true
-    build:
-      context: .
-      dockerfile: Dockerfile.peer
-    depends_on:
-      - bootstrap
-    environment:
-      - SERVICE_NAME=web-11
-      - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
-      - ANNOUNCE=/dns4/web-11/tcp/8080/ws
-      - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
-      - MIN_CONNECTIONS=3
-      # - MAX_CONNECTIONS=5
+  # server-11:
+  #   init: true
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.peer
+  #   depends_on:
+  #     - bootstrap
+  #   environment:
+  #     - SERVICE_NAME=server-11
+  #     - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+  #     - ANNOUNCE=/dns4/server-11/tcp/8080/ws
+  #     - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
 
-  web-12:
-    init: true
-    build:
-      context: .
-      dockerfile: Dockerfile.peer
-    depends_on:
-      - bootstrap
-    environment:
-      - SERVICE_NAME=web-12
-      - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
-      - ANNOUNCE=/dns4/web-12/tcp/8080/ws
-      - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
-      - MIN_CONNECTIONS=3
-      # - MAX_CONNECTIONS=5
+  # server-12:
+  #   init: true
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.peer
+  #   depends_on:
+  #     - bootstrap
+  #   environment:
+  #     - SERVICE_NAME=server-12
+  #     - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+  #     - ANNOUNCE=/dns4/server-12/tcp/8080/ws
+  #     - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
 
-  web-13:
-    init: true
-    build:
-      context: .
-      dockerfile: Dockerfile.peer
-    depends_on:
-      - bootstrap
-    environment:
-      - SERVICE_NAME=web-13
-      - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
-      - ANNOUNCE=/dns4/web-13/tcp/8080/ws
-      - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
-      - MIN_CONNECTIONS=3
-      # - MAX_CONNECTIONS=5
+  # server-13:
+  #   init: true
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.peer
+  #   depends_on:
+  #     - bootstrap
+  #   environment:
+  #     - SERVICE_NAME=server-13
+  #     - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+  #     - ANNOUNCE=/dns4/server-13/tcp/8080/ws
+  #     - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
 
-  web-14:
-    init: true
-    build:
-      context: .
-      dockerfile: Dockerfile.peer
-    depends_on:
-      - bootstrap
-    environment:
-      - SERVICE_NAME=web-14
-      - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
-      - ANNOUNCE=/dns4/web-14/tcp/8080/ws
-      - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
-      - MIN_CONNECTIONS=3
-      # - MAX_CONNECTIONS=5
+  # server-14:
+  #   init: true
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.peer
+  #   depends_on:
+  #     - bootstrap
+  #   environment:
+  #     - SERVICE_NAME=server-14
+  #     - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+  #     - ANNOUNCE=/dns4/server-14/tcp/8080/ws
+  #     - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
 
-  web-15:
-    init: true
-    build:
-      context: .
-      dockerfile: Dockerfile.peer
-    depends_on:
-      - bootstrap
-    environment:
-      - SERVICE_NAME=web-15
-      - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
-      - ANNOUNCE=/dns4/web-15/tcp/8080/ws
-      - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
-      - MIN_CONNECTIONS=3
-      # - MAX_CONNECTIONS=5
+  # server-15:
+  #   init: true
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.peer
+  #   depends_on:
+  #     - bootstrap
+  #   environment:
+  #     - SERVICE_NAME=server-15
+  #     - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+  #     - ANNOUNCE=/dns4/server-15/tcp/8080/ws
+  #     - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn

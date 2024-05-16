@@ -1,7 +1,28 @@
+import type { GossipLogService } from "@canvas-js/gossiplog/service"
+import type { GossipsubEvents } from "@chainsafe/libp2p-gossipsub"
+import type { Identify } from "@libp2p/identify"
+import type { PubSub } from "@libp2p/interface"
+
+export type ServiceMap = {
+	identify: Identify
+	pubsub: PubSub<GossipsubEvents>
+	gossiplog: GossipLogService<Uint8Array>
+}
+
 export type Event =
-	| { type: "start"; id: string; t: number; detail: { hostname: string; root: string } }
-	| { type: "stop"; id: string; t: number; detail: {} }
-	| { type: "connection:open"; id: string; t: number; detail: { id: string; remotePeer: string; remoteAddr: string } }
-	| { type: "connection:close"; id: string; t: number; detail: { id: string; remotePeer: string; remoteAddr: string } }
-	| { type: "gossipsub:mesh:update"; id: string; t: number; detail: { topic: string; peers: string[] } }
-	| { type: "gossiplog:commit"; id: string; t: number; detail: { topic: string; root: string } }
+	| { type: "start"; peerId: string; timestamp: number; detail: { root: string } }
+	| { type: "stop"; peerId: string; timestamp: number; detail: {} }
+	| {
+			type: "connection:open"
+			peerId: string
+			timestamp: number
+			detail: { id: string; remotePeer: string; remoteAddr: string }
+	  }
+	| {
+			type: "connection:close"
+			peerId: string
+			timestamp: number
+			detail: { id: string; remotePeer: string; remoteAddr: string }
+	  }
+	| { type: "gossipsub:mesh:update"; peerId: string; timestamp: number; detail: { topic: string; peers: string[] } }
+	| { type: "gossiplog:commit"; peerId: string; timestamp: number; detail: { topic: string; root: string } }

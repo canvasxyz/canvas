@@ -34,7 +34,6 @@ export const Graph: React.FC<GraphProps> = ({
 	nodes,
 	links,
 	roots,
-	// messages = [],
 	onNodeClick = () => {},
 	onLinkClick = () => {},
 }) => {

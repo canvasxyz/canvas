@@ -4,11 +4,7 @@ WORKDIR /app
 
 COPY dist/peer/index.js lib/index.mjs
 
-# COPY lib/peer/ lib/
-# COPY package.json package.json
-# RUN npm install --omit-dev
-
-RUN npm i -g @canvas-js/okra-node
+RUN npm i -g @canvas-js/okra-node@0.6.0
 RUN npm link @canvas-js/okra-node
 
 ENTRYPOINT ["node"]
