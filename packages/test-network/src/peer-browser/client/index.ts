@@ -6,24 +6,9 @@ import { PeerId } from "@libp2p/interface"
 // import { GossipLog } from "@canvas-js/gossiplog/memory"
 import { GossipLog } from "@canvas-js/gossiplog/browser"
 
-import { Socket } from "../socket.js"
-import type { Event } from "../types.js"
+import { Socket } from "../../socket.js"
 
 import { getLibp2p, topic } from "./libp2p.js"
-
-// function post<T extends Event["type"]>(peerId: PeerId, type: T, detail: (Event & { type: T })["detail"]) {
-// 	const timestamp = Date.now()
-// 	fetch("http://localhost:8000/api/events", {
-// 		method: "POST",
-// 		headers: { "Content-Type": "application/json" },
-// 		body: JSON.stringify({ type, peerId, timestamp, detail }),
-// 	}).then(async (res) => {
-// 		if (!res.ok) {
-// 			const err = await res.text()
-// 			console.error("post failed:", res.status, res.statusText, err)
-// 		}
-// 	})
-// }
 
 const messageLog = await GossipLog.open<Uint8Array>({ topic, apply: () => {} })
 

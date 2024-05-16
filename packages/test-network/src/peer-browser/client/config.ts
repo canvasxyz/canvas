@@ -1,17 +1,25 @@
 import { createEd25519PeerId } from "@libp2p/peer-id-factory"
 import { multiaddr } from "@multiformats/multiaddr"
 
+const query: Record<string, string> = {}
+
+const url = new URL(window.location.href)
+if (url.search.length > 1) {
+	for (const entry of url.search.slice(1).split("&")) {
+		const [name, value] = entry.split("=")
+		query[name] = decodeURIComponent(value)
+	}
+}
+
 // const BOOTSTRAP_LIST = window.localStorage.getItem("BOOTSTRAP_LIST")
 const { cookieStore } = window as unknown as {
 	cookieStore: { get: (name: string) => Promise<{ name: string; value: string } | null> }
 }
 
-const bootstrapListCookie = await cookieStore.get("BOOTSTRAP_LIST")
-const minConnectionsCookie = await cookieStore.get("MIN_CONNECTIONS")
-const maxConnectionsCookie = await cookieStore.get("MAX_CONNECTIONS")
+export const bootstrapList = query.bootstrapList?.split(",") ?? []
 
-export const minConnections = minConnectionsCookie ? parseInt(minConnectionsCookie.value) : undefined
-export const maxConnections = maxConnectionsCookie ? parseInt(maxConnectionsCookie.value) : undefined
+export const minConnections = query.minConnections ? parseInt(query.minConnections) : undefined
+export const maxConnections = query.maxConnections ? parseInt(query.maxConnections) : undefined
 
 export const listen = []
 export const announce = []
@@ -19,8 +27,6 @@ export const announce = []
 export async function getPeerId() {
 	return await createEd25519PeerId()
 }
-
-export const bootstrapList = bootstrapListCookie ? bootstrapListCookie.value.split(" ") : []
 
 console.log(`bootstrap list: [ ${bootstrapList.join(", ")} ]`)
 

@@ -21,7 +21,7 @@
 		"dashboard:server:dev": "npm run dashboard:server:build -- --watch",
 		"peer:build": "esbuild lib/peer/index.js --bundle --outdir=dist/peer --platform=node --target=node20 --format=esm --external:@canvas-js/okra-node --banner:js=\"import { createRequire as yix6bKft } from 'module'; const require = yix6bKft(import.meta.url);\"",
 		"peer:dev": "npm run peer:build -- --watch",
-		"peer-browser:build": "esbuild lib/peer-browser/index.js --bundle --outdir=dist/peer-browser --platform=browser --target=esnext --format=esm",
+		"peer-browser:build": "esbuild lib/peer-browser/client/index.js --bundle --outdir=dist/peer-browser/client --platform=browser --target=esnext --format=esm",
 		"peer-browser:dev": "npm run peer-browser:build -- --watch"
 	},
 	"devDependencies": {

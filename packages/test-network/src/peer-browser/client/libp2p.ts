@@ -16,7 +16,7 @@ import { randomBytes } from "@noble/hashes/utils"
 import { AbstractGossipLog } from "@canvas-js/gossiplog"
 import { gossiplog } from "@canvas-js/gossiplog/service"
 
-import type { ServiceMap } from "../types.js"
+import type { ServiceMap } from "../../types.js"
 import { bootstrapList, minConnections, maxConnections, listen, announce, getPeerId } from "./config.js"
 
 export const topic = "test-network-example"

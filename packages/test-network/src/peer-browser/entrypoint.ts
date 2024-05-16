@@ -1,6 +1,22 @@
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 import puppeteer from "puppeteer"
 
+const { BOOTSTRAP_LIST, MIN_CONNECTIONS, MAX_CONNECTIONS } = process.env
+
+const query: Record<string, string> = {}
+
+if (BOOTSTRAP_LIST !== undefined) {
+	query.bootstrapList = BOOTSTRAP_LIST.split(" ").join(",")
+}
+
+if (MIN_CONNECTIONS !== undefined) {
+	query.minConnections = MIN_CONNECTIONS
+}
+
+if (MAX_CONNECTIONS !== undefined) {
+	query.maxConnections = MAX_CONNECTIONS
+}
+
 const browser = await puppeteer.launch({
 	userDataDir: `data/${bytesToHex(randomBytes(8))}`,
 	headless: true,
@@ -18,7 +34,11 @@ page.on("console", (msg) => {
 	console.log(`[${msg.type()}] ${msg.text()}`)
 })
 
-await page.goto("http://localhost:3000")
+const q = Object.entries(query)
+	.map(([name, value]) => `${name}=${encodeURIComponent(value)}`)
+	.join("&")
+
+await page.goto(`http://localhost:8000/peer-browser/index.html?${q}`)
 
 process.addListener("SIGINT", async () => {
 	process.stdout.write("\nReceived SIGINT\n")
