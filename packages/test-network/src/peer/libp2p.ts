@@ -61,6 +61,9 @@ export async function getLibp2p(messageLog: AbstractGossipLog<Uint8Array>): Prom
 				globalSignaturePolicy: "StrictSign",
 
 				asyncValidation: true,
+				scoreParams: {
+					IPColocationFactorWeight: 0,
+				},
 			}),
 
 			fetch: fetch({ protocolPrefix: "canvas" }),
