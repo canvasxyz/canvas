@@ -7,7 +7,7 @@ import type { PeerId, PubSub, EventHandler } from "@libp2p/interface"
 import { Libp2p, createLibp2p } from "libp2p"
 import { identify as identifyService } from "@libp2p/identify"
 import { plaintext } from "@libp2p/plaintext"
-import { mplex } from "@libp2p/mplex"
+import { yamux } from "@chainsafe/libp2p-yamux"
 import { webSockets } from "@libp2p/websockets"
 import { all } from "@libp2p/websockets/filters"
 import { bootstrap } from "@libp2p/bootstrap"
@@ -59,9 +59,9 @@ export async function createNetwork<T extends NetworkConfig, Payload>(
 				peerId: peerId,
 				start: false,
 				addresses: { listen: [address] },
-				transports: [webSockets({filter: all})],
+				transports: [webSockets({ filter: all })],
 				connectionEncryption: [plaintext()],
-				streamMuxers: [mplex()],
+				streamMuxers: [yamux()],
 				peerDiscovery: bootstrapList.length > 0 ? [bootstrap({ list: bootstrapList, timeout: 0 })] : [],
 				connectionManager: { minConnections, autoDialInterval: 200 },
 

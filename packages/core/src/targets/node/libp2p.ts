@@ -10,7 +10,7 @@ import { kadDHT } from "@libp2p/kad-dht"
 import { webSockets } from "@libp2p/websockets"
 import { all } from "@libp2p/websockets/filters"
 import { noise } from "@chainsafe/libp2p-noise"
-import { mplex } from "@libp2p/mplex"
+import { yamux } from "@chainsafe/libp2p-yamux"
 import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 
@@ -57,7 +57,7 @@ export function getLibp2pOptions(
 		transports: [webSockets({ filter: all })],
 
 		connectionEncryption: [noise()],
-		streamMuxers: [mplex({ disconnectThreshold: 20 })],
+		streamMuxers: [yamux({})],
 		peerDiscovery: bootstrapList.length === 0 ? [] : [bootstrap({ list: bootstrapList })],
 
 		metrics: prometheusMetrics({ registry: register }),

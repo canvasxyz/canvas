@@ -4,11 +4,10 @@ import { webSockets } from "@libp2p/websockets"
 import { all } from "@libp2p/websockets/filters"
 // import { noise } from "@chainsafe/libp2p-noise"
 import { plaintext } from "@libp2p/plaintext"
-import { mplex } from "@libp2p/mplex"
+import { yamux } from "@chainsafe/libp2p-yamux"
 import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { kadDHT } from "@libp2p/kad-dht"
-import { fetch } from "@libp2p/fetch"
 
 import { Multiaddr } from "@multiformats/multiaddr"
 import { randomBytes } from "@noble/hashes/utils"
@@ -40,10 +39,10 @@ export async function getLibp2p(messageLog: AbstractGossipLog<Uint8Array>): Prom
 
 		peerDiscovery: bootstrapList.length > 0 ? [bootstrap({ list: bootstrapList })] : [],
 
-		streamMuxers: [mplex()],
+		streamMuxers: [yamux({})],
 		connectionEncryption: [plaintext({})],
 		services: {
-			identify: identifyService({ protocolPrefix: "canvas", timeout: 20000 }),
+			identify: identifyService({ protocolPrefix: "canvas" }),
 
 			// dht: kadDHT({ protocol: getTopicDHTProtocol(topic) }),
 
@@ -58,8 +57,6 @@ export async function getLibp2p(messageLog: AbstractGossipLog<Uint8Array>): Prom
 					IPColocationFactorWeight: 0,
 				},
 			}),
-
-			fetch: fetch({ protocolPrefix: "canvas" }),
 
 			gossiplog: gossiplog(messageLog, {}),
 		},
