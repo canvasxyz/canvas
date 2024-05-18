@@ -375,6 +375,7 @@ export class GossipLogService<Payload = unknown>
 			return
 		}
 
+		this.log("scheduling sync with %p", peerId)
 		this.syncQueuePeers.add(id)
 		this.syncQueue
 			.add(() => this.sync(peerId), { priority: 0 })
@@ -383,6 +384,7 @@ export class GossipLogService<Payload = unknown>
 	}
 
 	private async sync(peerId: PeerId) {
+		this.log("initiating sync with %p", peerId)
 		const connection = this.components.connectionManager
 			.getConnections(peerId)
 			.find((connection) => connection.transient === false)
@@ -443,7 +445,7 @@ export class GossipLogService<Payload = unknown>
 			}
 		})
 
-		this.log("initiating sync with peer %p", peerId)
+		this.log("starting sync with peer %p", peerId)
 
 		let heads: Uint8Array[] | null = null
 
