@@ -1,6 +1,6 @@
-## Server-side chat with Postgres and NextJS 
+## Server-side chat with Postgres and NextJS
 
-This app demonstrates how a hybrid client/server implementation of Canvas can work. 
+This app demonstrates how a hybrid client/server implementation of Canvas can work.
 
   1) All signer state is stored on the frontend. Only signatures and signed actions are passed to the server, which handles all other Canvas-related functionality
   2) Effects recieved on the server are persisted into a local or cloud Postgres database
@@ -31,7 +31,7 @@ You need a Postgres instance running locally or remotely that conforms to a stan
 
 - You need standard node and npm versions (node 18+)
 
-### Run 
+### Run
 
 To run, navigate to the root of the workspace and install dependencies:
   - `npm i`
@@ -44,7 +44,7 @@ Finally, run the development server for this app:
 
 ### Build
 
-To deploy remotely, you need to run (2) build steps and (1) command to start the server. 
+To deploy remotely, you need to run (2) build steps and (1) command to start the server.
 
 Make sure you have a valid Postgres connection string passed as `DATABASE_URL`.
 
@@ -55,4 +55,4 @@ Make sure you have a valid Postgres connection string passed as `DATABASE_URL`.
 3) Run the production server:
   - `npm run start -w @canvas-js/chat-postgres`
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result
+Open localhost:3000 with your browser to see the result
