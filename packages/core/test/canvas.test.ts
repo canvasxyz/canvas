@@ -10,8 +10,6 @@ import { SIWESigner, Eip712Signer } from "@canvas-js/chain-ethereum"
 import { Canvas } from "@canvas-js/core"
 
 const contract = `
-export const topic = "com.example.app"
-
 export const models = {
   posts: {
     id: "primary",
@@ -351,37 +349,37 @@ test.serial("apply an action and read a record from the database using postgres"
 	t.is(value2?.content, "foo bar")
 })
 
-// test.serial("reset app to clear modeldb and gossiplog", async (t) => {
-// 	const app = await initPostgres(t)
+// // test.serial("reset app to clear modeldb and gossiplog", async (t) => {
+// // 	const app = await initPostgres(t)
 
-// 	const { id, message } = await app.actions.createPost({
-// 		content: "hello world",
-// 		isVisible: true,
-// 		something: -1,
-// 		metadata: 0,
-// 	})
+// // 	const { id, message } = await app.actions.createPost({
+// // 		content: "hello world",
+// // 		isVisible: true,
+// // 		something: -1,
+// // 		metadata: 0,
+// // 	})
 
-// 	const [clock1] = await app.messageLog.getClock()
-// 	t.is(clock1, 3)
+// // 	const [clock1] = await app.messageLog.getClock()
+// // 	t.is(clock1, 3)
 
-// 	const postId = [message.payload.address, id].join("/")
-// 	const value1 = await app.db.get("posts", postId)
-// 	t.is(value1?.content, "hello world")
+// // 	const postId = [message.payload.address, id].join("/")
+// // 	const value1 = await app.db.get("posts", postId)
+// // 	t.is(value1?.content, "hello world")
 
-// 	const [clock2] = await app.messageLog.getClock()
-// 	t.is(clock2, 3)
+// // 	const [clock2] = await app.messageLog.getClock()
+// // 	t.is(clock2, 3)
 
-// 	const app2 = await initPostgres(t, { reset: false })
-// 	const value2 = await app2.db.get("posts", postId)
-// 	t.is(value2?.content, "hello world")
+// // 	const app2 = await initPostgres(t, { reset: false })
+// // 	const value2 = await app2.db.get("posts", postId)
+// // 	t.is(value2?.content, "hello world")
 
-// 	const [clock3] = await app2.messageLog.getClock()
-// 	t.is(clock3, 3)
+// // 	const [clock3] = await app2.messageLog.getClock()
+// // 	t.is(clock3, 3)
 
-// 	const app3 = await initPostgres(t, { reset: true })
-// 	const value3 = await app3.db.get("posts", postId)
-// 	t.is(value3, null)
+// // 	const app3 = await initPostgres(t, { reset: true })
+// // 	const value3 = await app3.db.get("posts", postId)
+// // 	t.is(value3, null)
 
-// 	const [clock4] = await app3.messageLog.getClock()
-// 	t.is(clock4, 1)
-// })
+// // 	const [clock4] = await app3.messageLog.getClock()
+// // 	t.is(clock4, 1)
+// // })
