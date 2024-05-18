@@ -42,7 +42,7 @@ export async function getLibp2p(messageLog: AbstractGossipLog<Uint8Array>): Prom
 			denyDialMultiaddr: (addr: Multiaddr) => false,
 		},
 
-		connectionManager: { minConnections, maxConnections, inboundUpgradeTimeout: 10000 },
+		connectionManager: { minConnections, maxConnections },
 
 		peerDiscovery: bootstrapList.length > 0 ? [bootstrap({ list: bootstrapList })] : [],
 
