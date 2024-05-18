@@ -434,10 +434,11 @@ export class DiscoveryService extends TypedEventEmitter<DiscoveryServiceEvents> 
 		for (const peerId of peers) {
 			const { peerRecordEnvelope } = await this.components.peerStore.get(peerId)
 			if (peerRecordEnvelope !== undefined) {
+				const p = this.discoveryPeers[peerId.toString()]
 				results.set(peerId, {
-					topics: this.discoveryPeers[peerId.toString()].topics ?? [],
-					address: this.discoveryPeers[peerId.toString()].address ?? null,
-					env: this.discoveryPeers[peerId.toString()].env ?? null,
+					topics: p?.topics ?? [],
+					address: p?.address ?? null,
+					env: p?.env ?? null,
 					peerRecordEnvelope,
 				})
 			}
