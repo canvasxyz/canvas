@@ -13,9 +13,9 @@ const app = await Canvas.initialize({
 	disablePing: true,
 	discoveryTopic: "canvas-discovery",
 	bootstrapList: [
-		"/dns4/canvas-chat-discovery-p0.fly.dev/tcp/443/wss/p2p/12D3KooWG1zzEepzv5ib5Rz16Z4PXVfNRffXBGwf7wM8xoNAbJW7",
-		"/dns4/canvas-chat-discovery-p1.fly.dev/tcp/443/wss/p2p/12D3KooWNfH4Z4ayppVFyTKv8BBYLLvkR1nfWkjcSTqYdS4gTueq",
-		"/dns4/canvas-chat-discovery-p2.fly.dev/tcp/443/wss/p2p/12D3KooWRBdFp5T1fgjWdPSCf9cDqcCASMBgcLqjzzBvptjAfAxN",
+		"/dns4/test-discovery-p0.fly.dev/tcp/443/wss/p2p/12D3KooWSndvFSJtqq9NT4qQxB7jni6styhfuY4cZhdavq7daeJe",
+		"/dns4/test-discovery-p1.fly.dev/tcp/443/wss/p2p/12D3KooWDoRTPYYdYEgJBptAF7MEZjYV4J82rBp8BoyKe1AXtxgA",
+		"/dns4/test-discovery-p2.fly.dev/tcp/443/wss/p2p/12D3KooWQFJcBXTT5LH2aGJzyYRPkBPd4WsqxccmLwpvn6DxLFdq",
 	],
 })
 
