@@ -27,6 +27,7 @@ export async function getLibp2p() {
 			identify: identify({ protocolPrefix: "canvas" }),
 			circuitRelay: circuitRelayServer(),
 			fetch: fetch({ protocolPrefix: "canvas" }),
+			ping: ping({ protocolPrefix: "canvas" }),
 		},
 	})
 }

@@ -1,7 +1,9 @@
 import * as cbor from "@ipld/dag-cbor"
 
-import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
+import { peerIdFromBytes, peerIdFromString } from "@libp2p/peer-id"
+import { multiaddr } from "@multiformats/multiaddr"
+import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 
 import Debugger from "debug"
 
@@ -15,8 +17,6 @@ import { topic } from "../../constants.js"
 
 import { getLibp2p } from "./libp2p.js"
 import { relayServer } from "./config.js"
-import { peerIdFromBytes, peerIdFromString } from "@libp2p/peer-id"
-import { multiaddr } from "@multiformats/multiaddr"
 
 const messageLog = await GossipLog.open<Uint8Array>({ topic, apply: () => {} })
 

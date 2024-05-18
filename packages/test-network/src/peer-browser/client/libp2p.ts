@@ -1,5 +1,5 @@
-import { Libp2p, createLibp2p } from "libp2p"
-import { identify as identifyService } from "@libp2p/identify"
+import { createLibp2p } from "libp2p"
+import { identify } from "@libp2p/identify"
 import { webSockets } from "@libp2p/websockets"
 import { all } from "@libp2p/websockets/filters"
 // import { noise } from "@chainsafe/libp2p-noise"
@@ -9,17 +9,15 @@ import { mplex } from "@libp2p/mplex"
 import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { webRTC } from "@libp2p/webrtc"
-import { kadDHT } from "@libp2p/kad-dht"
+// import { kadDHT } from "@libp2p/kad-dht"
 import { circuitRelayTransport } from "@libp2p/circuit-relay-v2"
 import { fetch } from "@libp2p/fetch"
 import { ping } from "@libp2p/ping"
 
-import { Multiaddr } from "@multiformats/multiaddr"
-
 import { AbstractGossipLog } from "@canvas-js/gossiplog"
 import { gossiplog } from "@canvas-js/gossiplog/service"
 
-import { topic, getTopicDHTProtocol } from "../../constants.js"
+// import { topic, getTopicDHTProtocol } from "../../constants.js"
 import { bootstrapList, minConnections, maxConnections, listen, announce, peerId } from "./config.js"
 
 export async function getLibp2p(messageLog: AbstractGossipLog<Uint8Array>) {
@@ -40,7 +38,7 @@ export async function getLibp2p(messageLog: AbstractGossipLog<Uint8Array>) {
 		streamMuxers: [mplex({})],
 		connectionEncryption: [plaintext({})],
 		services: {
-			identify: identifyService({ protocolPrefix: "canvas" }),
+			identify: identify({ protocolPrefix: "canvas" }),
 			fetch: fetch({ protocolPrefix: "canvas" }),
 			ping: ping({ protocolPrefix: "canvas" }),
 
