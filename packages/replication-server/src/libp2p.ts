@@ -58,6 +58,8 @@ export const options: Libp2pOptions<ServiceMap> = {
 	connectionManager: {
 		minConnections: MIN_CONNECTIONS,
 		maxConnections: MAX_CONNECTIONS,
+		inboundConnectionThreshold: 999_999_999, // per-second, per-host rate limit (default: 5)
+		maxIncomingPendingConnections: 512, // default: 10
 	},
 
 	peerDiscovery: bootstrapList.length > 0 ? [bootstrap({ list: bootstrapList })] : [],
@@ -68,16 +70,16 @@ export const options: Libp2pOptions<ServiceMap> = {
 	services: {
 		identify: identifyService({
 			protocolPrefix: "canvas",
-			maxInboundStreams: 256,
-			maxOutboundStreams: 64,
-			maxPushIncomingStreams: 64,
-			maxPushOutgoingStreams: 32,
+			maxInboundStreams: 512,
+			maxOutboundStreams: 256,
+			maxPushIncomingStreams: 512,
+			maxPushOutgoingStreams: 256,
 		}),
 
 		ping: pingService({
 			protocolPrefix: "canvas",
-			maxInboundStreams: 256,
-			maxOutboundStreams: 64,
+			maxInboundStreams: 512,
+			maxOutboundStreams: 256,
 			timeout: 20 * second,
 			runOnTransientConnection: false,
 		}),
@@ -88,8 +90,8 @@ export const options: Libp2pOptions<ServiceMap> = {
 			fallbackToFloodsub: false,
 			allowPublishToZeroPeers: true,
 			globalSignaturePolicy: "StrictNoSign",
-			maxInboundStreams: 256,
-			maxOutboundStreams: 64,
+			maxInboundStreams: 512,
+			maxOutboundStreams: 256,
 			directPeers: bootstrapList.map(multiaddr).map((addr) => {
 				const id = addr.getPeerId()
 				assert(id !== null)
@@ -104,10 +106,10 @@ export const options: Libp2pOptions<ServiceMap> = {
 				publishThreshold: -999_999_999, // default is -50
 				graylistThreshold: -999_999_999, // default is -80
 			},
-			D: 99, // up from 6 - optimal degree of topic mesh
-			Dlo: 99, //
-			Dhi: 99, // up from 15 - upper bound of topic mesh peers
-			Dout: 50, // up from 2 - number of outbound connections to maintain in topic mesh
+			D: 512, // up from 6 - optimal degree of topic mesh
+			Dlo: 512, //
+			Dhi: 512, // up from 15 - upper bound of topic mesh peers
+			Dout: 256, // up from 2 - number of outbound connections to maintain in topic mesh
 		}),
 
 		fetch: fetchService({
