@@ -8,6 +8,7 @@ import { yamux } from "@chainsafe/libp2p-yamux"
 import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { kadDHT } from "@libp2p/kad-dht"
+import { circuitRelayTransport } from "@libp2p/circuit-relay-v2"
 
 import { Multiaddr } from "@multiformats/multiaddr"
 
@@ -15,20 +16,18 @@ import { AbstractGossipLog } from "@canvas-js/gossiplog"
 import { gossiplog } from "@canvas-js/gossiplog/service"
 
 import type { ServiceMap } from "../../types.js"
-import { bootstrapList, minConnections, maxConnections, listen, announce, getPeerId } from "./config.js"
+import { bootstrapList, minConnections, maxConnections, listen, announce, peerId } from "./config.js"
 
 export const topic = "test-network-example"
 
 export const getTopicDHTProtocol = (topic: string) => `/canvas/kad/${topic}/1.0.0`
 
 export async function getLibp2p(messageLog: AbstractGossipLog<Uint8Array>): Promise<Libp2p<ServiceMap>> {
-	const peerId = await getPeerId()
-
 	return await createLibp2p({
 		peerId: peerId,
 		start: false,
 		addresses: { listen, announce },
-		transports: [webSockets({ filter: all })],
+		transports: [webSockets({ filter: all }), circuitRelayTransport({})],
 		connectionGater: {
 			denyDialMultiaddr: (addr: Multiaddr) => false,
 		},
