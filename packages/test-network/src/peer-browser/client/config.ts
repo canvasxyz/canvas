@@ -15,18 +15,17 @@ if (url.search.length > 1) {
 
 export const bootstrapList = query.bootstrapList?.split(",") ?? []
 
-export const listen: string[] = []
+export const listen: string[] = ["/webrtc"]
 export const announce: string[] = []
 
 export const relayServer: Multiaddr | null = query.relayServer ? multiaddr(query.relayServer) : null
 
 if (relayServer !== null) {
-	bootstrapList.push(relayServer.toString())
-	listen.push(`${relayServer}/p2p-circuit/p2p/${peerId}`)
-	announce.push(`${relayServer}/p2p-circuit/p2p/${peerId}`)
+	// announce.push("/webrtc")
+	announce.push(`${relayServer}/p2p-circuit/webrtc/p2p/${peerId}`)
 }
 
 console.log(`bootstrap list: [ ${bootstrapList.join(", ")} ]`)
 
-export const minConnections = query.minConnections ? parseInt(query.minConnections) : bootstrapList.length
+export const minConnections = query.minConnections ? parseInt(query.minConnections) : undefined
 export const maxConnections = query.maxConnections ? parseInt(query.maxConnections) : undefined

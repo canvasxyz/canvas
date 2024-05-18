@@ -1,24 +1,29 @@
+import * as cbor from "@ipld/dag-cbor"
+
 import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 
-import { PeerId } from "@libp2p/interface"
-
 import Debugger from "debug"
+
 // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
 ;(Debugger as any).useColors = () => false
 
-// import { GossipLog } from "@canvas-js/gossiplog/memory"
 import { GossipLog } from "@canvas-js/gossiplog/browser"
 
 import { Socket } from "../../socket.js"
+import { topic } from "../../constants.js"
 
-import { getLibp2p, topic } from "./libp2p.js"
+import { getLibp2p } from "./libp2p.js"
 import { relayServer } from "./config.js"
+import { peerIdFromBytes, peerIdFromString } from "@libp2p/peer-id"
+import { multiaddr } from "@multiformats/multiaddr"
 
 const messageLog = await GossipLog.open<Uint8Array>({ topic, apply: () => {} })
 
 const libp2p = await getLibp2p(messageLog)
 const socket = await Socket.open(libp2p, `ws://localhost:8000`)
+
+Object.assign(window, { libp2p, ping: (peerId: string) => libp2p.services.ping.ping(peerIdFromString(peerId)) })
 
 messageLog.addEventListener("commit", ({ detail: { root } }) => {
 	socket.post("gossiplog:commit", { topic, root: `${root.level}:${bytesToHex(root.hash)}` })
@@ -39,9 +44,43 @@ libp2p.addEventListener("stop", () => {
 
 const relayServerPeerId = relayServer && relayServer.getPeerId()
 
+const getProtocol = (topic: string) => `/canvas/sync/v1/${topic}`
+
+type TopicPeerRecord = {
+	id: Uint8Array
+	addresses: { isCertified: boolean; multiaddr: Uint8Array }[]
+	protocols: string[]
+	peerRecordEnvelope: Uint8Array | null
+}
+
 libp2p.addEventListener("connection:open", ({ detail: { id, remotePeer, remoteAddr } }) => {
 	console.log(`connection:open ${remotePeer} ${remoteAddr}`)
 	if (relayServerPeerId === remotePeer.toString()) {
+		console.log(`[fetch ${relayServerPeerId}]`)
+		libp2p.services.fetch.fetch(peerIdFromString(relayServerPeerId), `topic/${topic}`).then(
+			async (result) => {
+				const results = cbor.decode<TopicPeerRecord[]>(result ?? cbor.encode([]))
+				console.log(`[fetch ${relayServerPeerId}] got ${results.length} results`)
+				for (const { id, addresses, protocols, peerRecordEnvelope } of results) {
+					const peerId = peerIdFromBytes(id)
+					if (peerId.equals(libp2p.peerId)) {
+						continue
+					}
+
+					await libp2p.peerStore.save(peerId, {
+						addresses: addresses.map(({ isCertified, multiaddr: ma }) => ({ isCertified, multiaddr: multiaddr(ma) })),
+						protocols: protocols,
+						peerRecordEnvelope: peerRecordEnvelope ?? undefined,
+					})
+
+					console.log(`[fetch ${relayServerPeerId}] dialing ${peerId}`)
+
+					libp2p.dial(peerId)
+				}
+			},
+			(err) => console.log("fetch failed", err),
+		)
+
 		return
 	}
 
@@ -77,10 +116,10 @@ libp2p.services.pubsub.addEventListener("gossipsub:prune", ({ detail: { topic } 
 	socket.post("gossipsub:mesh:update", { topic, peers })
 })
 
-libp2p.start()
+// libp2p.start()
 
-// const delay = 1000 + Math.random() * 20000
-// setTimeout(() => libp2p.start(), delay)
+const delay = 1000 + Math.random() * 20000
+setTimeout(() => libp2p.start(), delay)
 
 // const topicPeers = new Set<string>()
 // libp2p.register(getTopicDHTProtocol(topic), {

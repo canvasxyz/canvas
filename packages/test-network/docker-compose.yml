@@ -20,24 +20,24 @@ services:
       - LISTEN=/ip4/127.0.0.1/tcp/8081/ws
       - ANNOUNCE=/dns4/localhost/tcp/8081/ws
 
-  bootstrap:
-    init: true
-    build:
-      context: .
-      dockerfile: Dockerfile.peer
-    depends_on:
-      - dashboard
-    ports:
-      - "8080:8080"
-    environment:
-      # - DEBUG=libp2p:*
-      # - DEBUG_COLORS=0
-      - SERVICE_NAME=bootstrap
-      # 12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
-      - PEER_ID=CiYAJAgBEiC9yHdvmtjGZW9Q2lSLKlgmNYW9bxRK7uyo4g0aS0hFzxIkCAESIL3Id2+a2MZlb1DaVIsqWCY1hb1vFEru7KjiDRpLSEXPGkQIARJA8STx22fxKw7avM9/YjP3elT1YKBfA4wCIgnfs4yl/4G9yHdvmtjGZW9Q2lSLKlgmNYW9bxRK7uyo4g0aS0hFzw==
-      - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
-      - ANNOUNCE=/dns4/localhost/tcp/8080/ws
-      - MIN_CONNECTIONS=0
+  # bootstrap:
+  #   init: true
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.peer
+  #   depends_on:
+  #     - dashboard
+  #   ports:
+  #     - "8080:8080"
+  #   environment:
+  #     - DEBUG=libp2p:*
+  #     - DEBUG_COLORS=0
+  #     - SERVICE_NAME=bootstrap
+  #     # 12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
+  #     - PEER_ID=CiYAJAgBEiC9yHdvmtjGZW9Q2lSLKlgmNYW9bxRK7uyo4g0aS0hFzxIkCAESIL3Id2+a2MZlb1DaVIsqWCY1hb1vFEru7KjiDRpLSEXPGkQIARJA8STx22fxKw7avM9/YjP3elT1YKBfA4wCIgnfs4yl/4G9yHdvmtjGZW9Q2lSLKlgmNYW9bxRK7uyo4g0aS0hFzw==
+  #     - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+  #     - ANNOUNCE=/dns4/localhost/tcp/8080/ws
+  #     - MIN_CONNECTIONS=0
 
   # server-1:
   #   init: true

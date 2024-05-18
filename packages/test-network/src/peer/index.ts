@@ -6,8 +6,9 @@ import { bytesToHex } from "@noble/hashes/utils"
 import { GossipLog } from "@canvas-js/gossiplog/node"
 
 import { Socket } from "../socket.js"
+import { topic } from "../constants.js"
 
-import { getLibp2p, topic } from "./libp2p.js"
+import { getLibp2p } from "./libp2p.js"
 
 const { SERVICE_NAME } = process.env
 

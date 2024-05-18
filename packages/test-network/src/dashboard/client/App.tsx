@@ -1,8 +1,8 @@
-import React, { useCallback, useEffect, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useState } from "react"
 
 import type { Event } from "../../types.js"
 import { Graph } from "./Graph.js"
-// import { EventLog } from "./EventLog.js"
+import { EventLog } from "./EventLog.js"
 
 type State = {
 	mesh: Record<string, string[]>
@@ -49,7 +49,7 @@ function reduce(state: State, event: Event): State {
 }
 
 export const App: React.FC<{}> = ({}) => {
-	// const [events, setEvents] = useState<Event[]>([])
+	const [events, setEvents] = useState<Event[]>([])
 	const [state, setState] = useState<State>({ nodes: [], links: [], roots: {}, mesh: {} })
 	// const [messages, setMessages] = useState<{ peerId: string; data: string }[]>([])
 
@@ -62,7 +62,7 @@ export const App: React.FC<{}> = ({}) => {
 		eventSource.addEventListener("close", (event) => console.log("closed event source", event))
 		eventSource.addEventListener("message", ({ data }) => {
 			const event = JSON.parse(data) as Event
-			// setEvents((events) => [...events, event])
+			setEvents((events) => [...events, event])
 			setState((state) => reduce(state, event))
 		})
 
@@ -106,8 +106,6 @@ export const App: React.FC<{}> = ({}) => {
 		})
 	}, [])
 
-	const [eventLogVisible, setEventLogVisible] = useState(false)
-
 	return (
 		<>
 			<section>
@@ -121,7 +119,7 @@ export const App: React.FC<{}> = ({}) => {
 
 			<hr />
 
-			{/* <EventLog events={events} /> */}
+			<EventLog events={events} />
 		</>
 	)
 }
