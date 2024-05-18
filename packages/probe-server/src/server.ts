@@ -35,7 +35,7 @@ api.get("/metrics", async (req, res) => {
 })
 
 const server = http.createServer(api)
-const port = 8000
+const port = process.env.PORT ? parseInt(process.env.PORT) : 8000
 
 server.listen(port, "::", () => {
 	const host = `http://localhost:${port}`
@@ -70,20 +70,28 @@ const checkConnections = async () => {
 
 	let connections = {}
 
-	await page.exposeFunction("updateConnections", (_connections: Connection[]) => (connections = _connections))
+	await page.exposeFunction("getBootstrapList", () => {
+		return [
+			// "/ip4/127.0.0.1/tcp/8080/ws/p2p/12D3KooWK6Sj3eoW9C8FtgBE7DnZmpX9iwt2RgM2NLSLZfSn1Kk1"
+			"/dns4/test-discovery-p0.fly.dev/tcp/443/wss/p2p/12D3KooWSndvFSJtqq9NT4qQxB7jni6styhfuY4cZhdavq7daeJe",
+			"/dns4/test-discovery-p1.fly.dev/tcp/443/wss/p2p/12D3KooWDoRTPYYdYEgJBptAF7MEZjYV4J82rBp8BoyKe1AXtxgA",
+			"/dns4/test-discovery-p2.fly.dev/tcp/443/wss/p2p/12D3KooWQFJcBXTT5LH2aGJzyYRPkBPd4WsqxccmLwpvn6DxLFdq",
+		]
+	})
+
+	await page.exposeFunction("getClients", () => {
+		return { clients: process.env.CLIENTS ? parseInt(process.env.CLIENTS) : 30 }
+	})
+
+	await page.exposeFunction("shouldWrite", () => {
+		return process.env.WRITE ? true : false
+	})
+
 	await page.exposeFunction("log", (...args: any[]) => console.log(...args))
 	await page.evaluate(clientJs)
-	await new Promise((resolve) => setTimeout(resolve, 5000))
-
-	const healthy = Object.keys(connections).length
-	healthyServersGauge.set(healthy)
-
-	await browser.close()
-	console.log("[probe-server] check completed:", healthy)
 }
 
 checkConnections()
-setInterval(checkConnections, 5 * 60 * 1000)
 
 process.on("SIGINT", async () => {
 	console.log("\nReceived SIGINT. Attempting to shut down gracefully.")
