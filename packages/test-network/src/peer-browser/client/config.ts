@@ -1,5 +1,5 @@
 import { createEd25519PeerId } from "@libp2p/peer-id-factory"
-import { multiaddr } from "@multiformats/multiaddr"
+import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 
 const query: Record<string, string> = {}
 
@@ -11,12 +11,13 @@ if (url.search.length > 1) {
 	}
 }
 
-// const BOOTSTRAP_LIST = window.localStorage.getItem("BOOTSTRAP_LIST")
-const { cookieStore } = window as unknown as {
-	cookieStore: { get: (name: string) => Promise<{ name: string; value: string } | null> }
-}
-
 export const bootstrapList = query.bootstrapList?.split(",") ?? []
+
+export const relayServer: Multiaddr | null = query.relayServer ? multiaddr(query.relayServer) : null
+
+if (relayServer !== null) {
+	bootstrapList.push(relayServer.toString())
+}
 
 export const minConnections = query.minConnections ? parseInt(query.minConnections) : undefined
 export const maxConnections = query.maxConnections ? parseInt(query.maxConnections) : undefined

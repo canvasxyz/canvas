@@ -1,9 +1,13 @@
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 import puppeteer from "puppeteer"
 
-const { BOOTSTRAP_LIST, MIN_CONNECTIONS, MAX_CONNECTIONS } = process.env
+const { RELAY_SERVER, BOOTSTRAP_LIST, MIN_CONNECTIONS, MAX_CONNECTIONS } = process.env
 
 const query: Record<string, string> = {}
+
+if (RELAY_SERVER !== undefined) {
+	query.relayServer = RELAY_SERVER
+}
 
 if (BOOTSTRAP_LIST !== undefined) {
 	query.bootstrapList = BOOTSTRAP_LIST.split(" ").join(",")

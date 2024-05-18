@@ -10,7 +10,6 @@ import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { kadDHT } from "@libp2p/kad-dht"
 
 import { Multiaddr } from "@multiformats/multiaddr"
-import { randomBytes } from "@noble/hashes/utils"
 
 import { AbstractGossipLog } from "@canvas-js/gossiplog"
 import { gossiplog } from "@canvas-js/gossiplog/service"
@@ -30,7 +29,6 @@ export async function getLibp2p(messageLog: AbstractGossipLog<Uint8Array>): Prom
 		start: false,
 		addresses: { listen, announce },
 		transports: [webSockets({ filter: all })],
-		// transports: [webSockets({ filter: dnsWsOrWss })],
 		connectionGater: {
 			denyDialMultiaddr: (addr: Multiaddr) => false,
 		},

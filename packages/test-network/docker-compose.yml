@@ -7,6 +7,19 @@ services:
     ports:
       - "8000:8000"
 
+  relay:
+    init: true
+    build:
+      context: .
+      dockerfile: Dockerfile.relay
+    ports:
+      - "8081:8081"
+    environment:
+      # 12D3KooWEaSQnJTxztTHmKmcQkDy3oScjo8ww4JCKig73XH4cmb3
+      - PEER_ID=CiYAJAgBEiBGuRmK/f0LmjUOf5aGmq0McK0Y35NjYFsis/PFRDUvDhIkCAESIEa5GYr9/QuaNQ5/loaarQxwrRjfk2NgWyKz88VENS8OGkQIARJAY8+xf3UiUUVqf13Xtyo/TtuEjZZKZ07axdLxur3kPbxGuRmK/f0LmjUOf5aGmq0McK0Y35NjYFsis/PFRDUvDg==
+      - LISTEN=/ip4/127.0.0.1/tcp/8081/ws
+      - ANNOUNCE=/dns4/localhost/tcp/8081/ws
+
   bootstrap:
     init: true
     build:

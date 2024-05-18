@@ -9,6 +9,7 @@ import { GossipLog } from "@canvas-js/gossiplog/browser"
 import { Socket } from "../../socket.js"
 
 import { getLibp2p, topic } from "./libp2p.js"
+import { relayServer } from "./config.js"
 
 const messageLog = await GossipLog.open<Uint8Array>({ topic, apply: () => {} })
 
@@ -32,11 +33,23 @@ libp2p.addEventListener("stop", () => {
 	socket.post("stop", {})
 })
 
+const relayServerPeerId = relayServer && relayServer.getPeerId()
+
 libp2p.addEventListener("connection:open", ({ detail: { id, remotePeer, remoteAddr } }) => {
+	console.log(`connection:open ${remotePeer} ${remoteAddr}`)
+	if (relayServerPeerId === remotePeer.toString()) {
+		return
+	}
+
 	socket.post("connection:open", { id, remotePeer: remotePeer.toString(), remoteAddr: remoteAddr.toString() })
 })
 
 libp2p.addEventListener("connection:close", ({ detail: { id, remotePeer, remoteAddr } }) => {
+	console.log(`connection:close ${remotePeer} ${remoteAddr}`)
+	if (relayServerPeerId === remotePeer.toString()) {
+		return
+	}
+
 	socket.post("connection:close", { id, remotePeer: remotePeer.toString(), remoteAddr: remoteAddr.toString() })
 })
 

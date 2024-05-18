@@ -22,7 +22,9 @@
 		"peer:build": "esbuild lib/peer/index.js --bundle --outdir=dist/peer --platform=node --target=node20 --format=esm --external:@canvas-js/okra-node --banner:js=\"import { createRequire as yix6bKft } from 'module'; const require = yix6bKft(import.meta.url);\"",
 		"peer:dev": "npm run peer:build -- --watch",
 		"peer-browser:build": "esbuild lib/peer-browser/client/index.js --bundle --outdir=dist/peer-browser/client --platform=browser --target=esnext --format=esm",
-		"peer-browser:dev": "npm run peer-browser:build -- --watch"
+		"peer-browser:dev": "npm run peer-browser:build -- --watch",
+		"relay:build": "esbuild lib/relay/index.js --bundle --outdir=dist/relay --platform=node --target=node20 --format=esm --banner:js=\"import { createRequire as yix6bKft } from 'module'; const require = yix6bKft(import.meta.url);\"",
+		"relay:dev": "npm run relay:build -- --watch"
 	},
 	"devDependencies": {
 		"concurrently": "^8.2.2",
@@ -37,6 +39,7 @@
 		"@chainsafe/libp2p-yamux": "^6.0.2",
 		"@ipld/dag-cbor": "^9.2.0",
 		"@libp2p/bootstrap": "^10.0.23",
+		"@libp2p/circuit-relay-v2": "^1.0.23",
 		"@libp2p/fetch": "^1.0.17",
 		"@libp2p/identify": "^2.0.1",
 		"@libp2p/interface": "^1.3.1",
@@ -47,6 +50,7 @@
 		"@libp2p/ping": "^1.0.18",
 		"@libp2p/plaintext": "^1.0.23",
 		"@libp2p/prometheus-metrics": "^3.0.23",
+		"@libp2p/webrtc": "^4.0.32",
 		"@libp2p/websockets": "^8.0.23",
 		"@multiformats/multiaddr": "^12.1.11",
 		"@multiformats/multiaddr-matcher": "^1.2.1",
