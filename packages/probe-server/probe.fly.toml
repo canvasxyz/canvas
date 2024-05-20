@@ -8,6 +8,7 @@ processes = []
 
 [env]
   BOOTSTRAP_LIST = "/dns6/test-discovery-p0.internal/tcp/8080/ws/p2p/12D3KooWSndvFSJtqq9NT4qQxB7jni6styhfuY4cZhdavq7daeJe /dns6/test-discovery-p1.internal/tcp/8080/ws/p2p/12D3KooWDoRTPYYdYEgJBptAF7MEZjYV4J82rBp8BoyKe1AXtxgA /dns6/test-discovery-p2.internal/tcp/8080/ws/p2p/12D3KooWQFJcBXTT5LH2aGJzyYRPkBPd4WsqxccmLwpvn6DxLFdq"
+  CLIENTS = 50
 
 [metrics]
 port = 8000
