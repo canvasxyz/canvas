@@ -20,6 +20,9 @@ import { Runtime, createRuntime } from "./runtime/index.js"
 import { validatePayload } from "./schema.js"
 import { sha256 } from "@noble/hashes/sha2"
 
+export type { Model } from "@canvas-js/modeldb"
+export type { PeerId, Connection } from "@libp2p/interface"
+
 export interface NetworkConfig {
 	start?: boolean
 
@@ -58,13 +61,10 @@ export type ActionAPI<Args = any> = (
 	options?: ActionOptions,
 ) => Promise<{ id: string; signature: Signature; message: Message<Action>; recipients: Promise<PeerId[]> }>
 
-export type ConnectionsInfo = { connections: Connections; status: AppConnectionStatus }
-
 export interface CanvasEvents extends GossipLogEvents<Action | Session> {
-	close: Event
+	stop: Event
 	connect: CustomEvent<{ peer: PeerId }>
 	disconnect: CustomEvent<{ peer: PeerId }>
-	"connections:updated": CustomEvent<ConnectionsInfo>
 }
 
 export type CanvasLogEvent = CustomEvent<{
@@ -79,12 +79,6 @@ export type ApplicationData = {
 	models: Record<string, Model>
 	actions: string[]
 }
-export { Model } from "@canvas-js/modeldb"
-
-export type AppConnectionStatus = "connected" | "disconnected"
-export type ConnectionStatus = "connecting" | "online" | "offline" | "waiting"
-export type Connections = Record<string, { peer: PeerId; status: ConnectionStatus; connections: Connection[] }>
-export { PeerId, Connection } from "@libp2p/interface"
 
 export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<CanvasEvents> {
 	public static async initialize<T_ extends Contract>(config: CanvasConfig<T_>): Promise<Canvas<T_>> {
@@ -143,18 +137,8 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			: never
 	}
 
-	public readonly connections: Connections = {}
-	public status: AppConnectionStatus = "disconnected"
-
-	// TODO: encapsulate internal stores for peers and connections
-	private _peers: PeerId[] = []
-	private _connections: Connection[] = []
-	private _pingTimer: ReturnType<typeof setTimeout> | undefined
-
 	private readonly controller = new AbortController()
 	private readonly log = logger("canvas:core")
-
-	#started = false
 
 	private constructor(
 		public readonly signers: SignerCache,
@@ -173,46 +157,11 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 
 		this.libp2p.addEventListener("peer:connect", ({ detail: peerId }) => {
 			this.log("connected to %p", peerId)
-			this.dispatchEvent(new CustomEvent("connect", { detail: { peer: peerId.toString() } }))
-			this._peers = [...this._peers, peerId]
 		})
 
 		this.libp2p.addEventListener("peer:disconnect", ({ detail: peerId }) => {
 			this.log("disconnected %p", peerId)
-			this.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: peerId.toString() } }))
-			this._peers = this._peers.filter((peer) => peer.toString() !== peerId.toString())
-			delete this.connections[peerId.toString()]
-			this.updateStatus()
 		})
-
-		this.libp2p.addEventListener("connection:open", ({ detail: connection }) => {
-			this._connections = [...this._connections, connection]
-			const remotePeerId = connection.remoteAddr.getPeerId()?.toString()
-			if (remotePeerId && !this.connections[remotePeerId]) {
-				const peer = this._peers.find((peer) => peer.toString() === remotePeerId)
-				if (!peer) return
-				this.connections[remotePeerId] = {
-					peer,
-					status: "connecting",
-					connections: [connection],
-				}
-				this.dispatchEvent(
-					new CustomEvent("connections:updated", { detail: { connections: this.connections, status: this.status } }),
-				)
-			}
-		})
-		this.libp2p.addEventListener("connection:close", ({ detail: connection }) => {
-			this._connections = this._connections.filter(({ id }) => id !== connection.id)
-			const remotePeerId = connection.remoteAddr.getPeerId()?.toString()
-			if (remotePeerId && this.connections[remotePeerId]) {
-				this.connections[remotePeerId].connections = this.connections[remotePeerId].connections.filter(
-					({ id }) => id !== connection.id,
-				)
-				this.updateStatus()
-			}
-		})
-
-		this.libp2p.addEventListener("stop", (event) => clearInterval(this._pingTimer))
 
 		this.messageLog.addEventListener("message", (event) => this.safeDispatchEvent("message", event))
 		this.messageLog.addEventListener("commit", (event) => this.safeDispatchEvent("commit", event))
@@ -308,17 +257,6 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		this.signers.updateSigners(signers)
 	}
 
-	private updateStatus() {
-		const hasAnyOnline = Object.entries(this.connections).some(([peerId, conn]) => conn.status === "online")
-		const newStatus = hasAnyOnline ? "connected" : "disconnected"
-		if (this.status !== newStatus) {
-			this.dispatchEvent(
-				new CustomEvent("connections:updated", { detail: { connections: { ...this.connections }, status: newStatus } }),
-			)
-		}
-		this.status = newStatus
-	}
-
 	public get peerId(): PeerId {
 		return this.libp2p.peerId
 	}
@@ -328,16 +266,12 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 	}
 
 	public async stop() {
-		if (this.#started) {
-			this.#started = false
-			this.controller.abort()
-			await this.libp2p.stop()
-			await this.messageLog.close()
-			await this.runtime.close()
-			this.dispatchEvent(new CustomEvent("connections:updated", { detail: { connections: {} } }))
-			this.dispatchEvent(new Event("close"))
-			this.log("closed")
-		}
+		this.controller.abort()
+		await this.libp2p.stop()
+		await this.messageLog.close()
+		await this.runtime.close()
+		this.dispatchEvent(new Event("stop"))
+		this.log("stopped")
 	}
 
 	public getApplicationData(): ApplicationData {

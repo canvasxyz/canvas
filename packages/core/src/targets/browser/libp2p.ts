@@ -39,7 +39,7 @@ export function getLibp2pOptions(
 	}
 
 	return {
-		start: options.start,
+		start: options.start ?? true,
 		peerId: peerId,
 		addresses: { listen, announce },
 
