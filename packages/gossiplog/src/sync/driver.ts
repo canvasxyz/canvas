@@ -1,7 +1,8 @@
 import { Logger, logger } from "@libp2p/logger"
 import { bytesToHex as hex } from "@noble/hashes/utils"
+import { equals } from "uint8arrays"
 
-import { Node, Source, Target, equalArrays, equalNodes } from "@canvas-js/okra"
+import { Entry, Node, Source, Target, equalNodes } from "@canvas-js/okra"
 import { assert } from "@canvas-js/utils"
 
 export class Driver {
@@ -10,7 +11,7 @@ export class Driver {
 		this.log = logger(`canvas:gossiplog:[${topic}]:driver`)
 	}
 
-	public async *sync() {
+	public async *sync(): AsyncGenerator<Entry> {
 		const [sourceRoot, targetRoot] = await Promise.all([this.source.getRoot(), this.target.getRoot()])
 		assert(sourceRoot.key === null, "invalid source root")
 		assert(targetRoot.key === null, "invalid target root")
@@ -29,7 +30,7 @@ export class Driver {
 		yield* this.syncRoot(targetRoot.level, sourceRoot)
 	}
 
-	private async *syncRoot(targetLevel: number, sourceNode: Node): AsyncGenerator<[key: Uint8Array, value: Uint8Array]> {
+	private async *syncRoot(targetLevel: number, sourceNode: Node): AsyncGenerator<Entry> {
 		if (sourceNode.level > targetLevel) {
 			const children = await this.source.getChildren(sourceNode.level, sourceNode.key)
 			if (targetLevel === 0 && sourceNode.level === 1) {
@@ -40,7 +41,11 @@ export class Driver {
 
 					assert(level === 0, "unexpected leaf level")
 					assert(value !== undefined, "missing leaf entry value")
-					yield [key, value]
+					try {
+						yield [key, value]
+					} catch (err) {
+						this.log.error("failed to process entry: %O", err)
+					}
 				}
 			} else {
 				for (const sourceChild of children) {
@@ -52,7 +57,7 @@ export class Driver {
 		}
 	}
 
-	private async *syncNode(sourceNode: Node): AsyncGenerator<[key: Uint8Array, value: Uint8Array]> {
+	private async *syncNode(sourceNode: Node): AsyncGenerator<Entry> {
 		const targetNode = await this.target.getNode(sourceNode.level, sourceNode.key)
 		if (targetNode !== null && equalNodes(sourceNode, targetNode)) {
 			return
@@ -79,7 +84,7 @@ export class Driver {
 					} catch (err) {
 						this.log.error("failed to process entry: %O", err)
 					}
-				} else if (equalArrays(hash, leaf.hash)) {
+				} else if (equals(hash, leaf.hash)) {
 					continue
 				} else {
 					this.log.error("conflict at key %s", hex(key))
