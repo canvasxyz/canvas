@@ -17,7 +17,7 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 			fs.mkdirSync(path, { recursive: true })
 		}
 
-		const env = new Environment(path, { databases: 3 })
+		const env = new Environment(path, { databases: 3, mapSize: 4096 * 1024 * 256 })
 		const gossipLog = new GossipLog(env, init)
 		await gossipLog.write(async (txn) => {})
 
