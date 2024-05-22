@@ -40,6 +40,7 @@ export const App: React.FC<{}> = ({}) => {
 	const topicRef = useRef(topic)
 
 	const { app } = useCanvas({
+		start: false,
 		topic,
 		contract: { ...contract, topic: topicRef.current },
 		signers: sessionSigner ? [sessionSigner] : undefined,
