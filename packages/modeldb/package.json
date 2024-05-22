@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/modeldb",
-  "version": "0.10.0-alpha.1",
+  "version": "0.10.0-beta.1",
   "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
   "type": "module",
   "engines": {
@@ -32,7 +32,7 @@
     "react": "^18.3.1"
   },
   "dependencies": {
-    "@canvas-js/utils": "0.10.0-alpha.1",
+    "@canvas-js/utils": "0.10.0-beta.1",
     "@libp2p/logger": "^4.0.13",
     "@types/react": "^18.2.45",
     "better-sqlite3": "^9.2.2",

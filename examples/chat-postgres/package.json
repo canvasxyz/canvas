@@ -1,35 +1,35 @@
 {
-	"name": "@canvas-js/chat-postgres",
-	"version": "0.10.0-alpha.1",
-	"type": "module",
-	"private": true,
-	"scripts": {
-		"dev": "tsx server.ts",
-		"build": "next build",
-		"start": "NODE_ENV=production tsx server.ts",
-		"lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
-	},
-	"dependencies": {
-		"@canvas-js/chain-ethereum": "0.10.0-alpha.1",
-		"@canvas-js/client": "0.10.0-alpha.1",
-		"@canvas-js/core": "0.10.0-alpha.1",
-		"@canvas-js/utils": "0.10.0-alpha.1",
-		"@ipld/dag-json": "^10.2.0",
-		"next": "14.1.4",
-		"react": "^18",
-		"react-dom": "^18.3.1"
-	},
-	"devDependencies": {
-		"@types/node": "^20.12.12",
-		"@types/react": "^18",
-		"@types/react-dom": "^18.3.0",
-		"autoprefixer": "^10.0.1",
-		"eslint": "^8",
-		"eslint-config-next": "14.1.4",
-		"postcss": "^8",
-		"tailwindcss": "^3.3.0",
-		"ts-node": "^10.9.2",
-		"tsx": "^4.7.2",
-		"typescript": "^5"
-	}
+  "name": "@canvas-js/chat-postgres",
+  "version": "0.10.0-beta.1",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "tsx server.ts",
+    "build": "next build",
+    "start": "NODE_ENV=production tsx server.ts",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
+  },
+  "dependencies": {
+    "@canvas-js/chain-ethereum": "0.10.0-beta.1",
+    "@canvas-js/client": "0.10.0-beta.1",
+    "@canvas-js/core": "0.10.0-beta.1",
+    "@canvas-js/utils": "0.10.0-beta.1",
+    "@ipld/dag-json": "^10.2.0",
+    "next": "14.1.4",
+    "react": "^18",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.12",
+    "@types/react": "^18",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.0.1",
+    "eslint": "^8",
+    "eslint-config-next": "14.1.4",
+    "postcss": "^8",
+    "tailwindcss": "^3.3.0",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.7.2",
+    "typescript": "^5"
+  }
 }

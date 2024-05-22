@@ -1,12 +1,12 @@
 {
-	"private": true,
-	"name": "@canvas-js/example-chat-server",
-	"version": "0.10.0-alpha.1",
-	"type": "module",
-	"scripts": {
-		"dev": "canvas run --port 8080 --disableHistoryIndexing --topic chat-example.canvas.xyz contract.canvas.js"
-	},
-	"dependencies": {
-		"@canvas-js/cli": "0.10.0-alpha.1"
-	}
+  "private": true,
+  "name": "@canvas-js/example-chat-server",
+  "version": "0.10.0-beta.1",
+  "type": "module",
+  "scripts": {
+    "dev": "canvas run --port 8080 --disableHistoryIndexing --topic chat-example.canvas.xyz contract.canvas.js"
+  },
+  "dependencies": {
+    "@canvas-js/cli": "0.10.0-beta.1"
+  }
 }
