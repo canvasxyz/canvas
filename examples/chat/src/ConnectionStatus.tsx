@@ -34,11 +34,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({ topic }) => 
 			</div>
 			<hr />
 			<div>
-				<span className="text-sm">Online</span>
-			</div>
-			<hr />
-			<div>
-				<span className="text-sm">Connections (Status: {status})</span>
+				<span className="text-sm">Connections</span>
 			</div>
 			<ConnectionList app={app} />
 		</div>
