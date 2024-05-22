@@ -22,7 +22,7 @@ import { GossipLogService, GossipLogServiceInit, gossiplog } from "@canvas-js/go
 
 export type NetworkConfig = Record<string, { port: number; peers?: string[] }>
 
-const getAddress = (port: number) => `/ip4/127.0.0.1/tcp/${port}`
+const getAddress = (port: number) => `/ip4/127.0.0.1/tcp/${port}/ws`
 
 export type ServiceMap<Payload> = {
 	identify: {}
