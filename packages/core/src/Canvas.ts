@@ -1,4 +1,4 @@
-import { PeerId, TypedEventEmitter } from "@libp2p/interface"
+import { PeerId, TypedEventEmitter, CustomEvent } from "@libp2p/interface"
 import { Libp2p } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
 import { sha256 } from "@noble/hashes/sha2"

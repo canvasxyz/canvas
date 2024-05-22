@@ -1,5 +1,6 @@
 import fs from "node:fs"
 import { equals } from "uint8arrays"
+import { CustomEvent } from "@libp2p/interface"
 
 import { Bound } from "@canvas-js/okra"
 import { Database, Environment, Transaction, Tree } from "@canvas-js/okra-node"

@@ -1,6 +1,7 @@
 import PQueue from "p-queue"
 import pDefer from "p-defer"
 import { equals } from "uint8arrays"
+import { CustomEvent } from "@libp2p/interface"
 
 import { Bound } from "@canvas-js/okra"
 import { MemoryTree, MemoryStore } from "@canvas-js/okra-memory"

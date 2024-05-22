@@ -2,6 +2,7 @@ import pDefer from "p-defer"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 import { equals } from "uint8arrays"
 import { IDBPDatabase, openDB } from "idb"
+import { CustomEvent } from "@libp2p/interface"
 
 import { Bound } from "@canvas-js/okra"
 import { IDBStore, IDBTree } from "@canvas-js/okra-idb"
