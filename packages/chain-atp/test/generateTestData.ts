@@ -1,6 +1,6 @@
 import * as ATP from "@atproto/api"
 import { ATPSigner } from "@canvas-js/chain-atp"
-import { Ed25519DelegateSigner } from "@canvas-js/signatures"
+import { ed25519 } from "@canvas-js/signatures"
 import { randomUUID } from "crypto"
 import { writeFile } from "fs/promises"
 import { stdin, stdout } from "process"
@@ -21,8 +21,8 @@ const address = agent.session!.did
 
 const topic = randomUUID()
 
-const signer = new Ed25519DelegateSigner()
-const message = ATPSigner.createAuthenticationMessage(topic, signer.uri, address)
+const signer = ed25519.create()
+const message = ATPSigner.createAuthenticationMessage(topic, signer.publicKey, address)
 const { uri, cid } = await agent.post({ text: message })
 
 const prefix = `at://${address}/`
@@ -34,7 +34,7 @@ await agent.deletePost(uri)
 
 const testFixture = {
 	address,
-	signingKey: signer.uri,
+	signingKey: signer.publicKey,
 	topic,
 	archives: {
 		[`test/archives/${rkey}.car`]: uri,

@@ -1,8 +1,6 @@
 import { PeerId, TypedEventEmitter, CustomEvent, Connection } from "@libp2p/interface"
 import { Libp2p } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
-import * as cbor from "@ipld/dag-cbor"
-import { hexToBytes } from "@noble/hashes/utils"
 
 import type pg from "pg"
 
@@ -12,6 +10,7 @@ import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { AbstractGossipLog, GossipLogEvents } from "@canvas-js/gossiplog"
 import { GossipLogService } from "@canvas-js/gossiplog/service"
 import type { PresenceStore } from "@canvas-js/discovery"
+import type { AbstractSessionSigner } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
 import target from "#target"
@@ -121,9 +120,9 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 
 		const signers = new SignerCache(initSigners.length === 0 ? [new SIWESigner()] : initSigners)
 		const verifySignature = (signature: Signature, message: Message<Action | Session>) => {
-			const signer = signers.getAll().find((signer) => signer.codecs.includes(signature.codec))
+			const signer = signers.getAll().find((signer) => signer.scheme.codecs.includes(signature.codec))
 			assert(signer !== undefined, "no matching signer found")
-			return signer.verify(signature, message)
+			return signer.scheme.verify(signature, message)
 		}
 
 		const runtime = await createRuntime(path, signers, contract, {
@@ -280,15 +279,12 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		}
 
 		if (offline && !disablePing) {
-			this.libp2p.addEventListener("start", (event) => {
-				startPingTimer()
-			})
+			this.libp2p.addEventListener("start", (event) => startPingTimer())
 		} else if (!disablePing) {
 			startPingTimer()
 		}
-		this.libp2p.addEventListener("stop", (event) => {
-			clearInterval(this._pingTimer)
-		})
+
+		this.libp2p.addEventListener("stop", (event) => clearInterval(this._pingTimer))
 
 		this.messageLog.addEventListener("message", (event) => this.safeDispatchEvent("message", event))
 		this.messageLog.addEventListener("commit", (event) => this.safeDispatchEvent("commit", event))
@@ -296,44 +292,49 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 
 		for (const name of runtime.actionNames) {
 			const action: ActionAPI = async (args: any, options: ActionOptions = {}) => {
-				const signer = options.signer ?? signers.getFirst()
-				assert(signer !== undefined, "signer not found")
-
 				const timestamp = Date.now()
 
-				const session = await signer.getSession(this.topic, { timestamp })
-				const { address, publicKey: public_key } = session
+				const sessionSigner = (options.signer ?? signers.getFirst()) as AbstractSessionSigner<any>
+				assert(sessionSigner !== undefined, "signer not found")
 
-				// Check if the session has already been added to the message log
-				const results = await runtime.db.query("$sessions", {
-					where: { address, public_key, expiration: { gt: timestamp } },
-					limit: 1,
-				})
+				let session = await sessionSigner.getSession(this.topic)
 
-				this._log("got %d matching sessions: %o", results.length, results)
-				if (results.length === 0) {
-					const { id: sessionId } = await this.append(session, { signer })
-					this._log("created session %s", sessionId)
-				} else {
-					try {
-						const row = results[0]
-						const signature = cbor.decode<Signature>(hexToBytes(row.rawSignature as string))
-						const message = cbor.decode<Message<Session>>(hexToBytes(row.rawMessage as string))
-						this.insert(signature, message)
-					} catch (err) {
-						this._log("failed to rebroadcast session for action")
+				// check that a session for the delegate signer exists in the log and hasn't expired
+				if (session !== null) {
+					const sessionIds = await this.getSessions({
+						address: session.payload.address,
+						publicKey: session.signer.publicKey,
+						minExpiration: timestamp,
+					})
+
+					if (sessionIds.length === 0) {
+						session = null
 					}
+				}
+
+				// if the delegate signer doesn't exist, or if the session expired,
+				// create and append a new one
+				if (session === null) {
+					session = await sessionSigner.newSession(this.topic)
+					await this.append(session.payload, { signer: session.signer })
 				}
 
 				const argsTransformer = runtime.argsTransformers[name]
 				assert(argsTransformer !== undefined, "invalid action name")
 
-				const representation = argsTransformer.toRepresentation(args)
-				assert(representation !== undefined, "action args did not validate the provided schema type")
+				const argsRepresentation = argsTransformer.toRepresentation(args)
+				assert(argsRepresentation !== undefined, "action args did not validate the provided schema type")
 
 				const { id, signature, message, recipients } = await this.append<Action>(
-					{ type: "action", address, name, args: representation, blockhash: null, timestamp },
-					{ signer },
+					{
+						type: "action",
+						address: session.payload.address,
+						name,
+						args: argsRepresentation,
+						blockhash: null,
+						timestamp,
+					},
+					{ signer: session.signer },
 				)
 
 				this._log("applied action %s", id)
@@ -343,6 +344,36 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 
 			Object.assign(this.actions, { [name]: action })
 		}
+	}
+
+	/**
+	 * Get existing sessions
+	 */
+	public async getSessions(query: {
+		address: string
+		publicKey: string
+		minExpiration?: number
+	}): Promise<{ id: string; address: string; publicKey: string; expiration: number | null }[]> {
+		const sessions = await this.db.query<{
+			message_id: string
+			public_key: string
+			address: string
+			expiration: number
+		}>("$sessions", {
+			select: { message_id: true, public_key: true, address: true, expiration: true },
+			where: {
+				public_key: query.publicKey,
+				address: query.address,
+				expiration: { gte: query.minExpiration ?? 0 },
+			},
+		})
+
+		return sessions.map(({ message_id, public_key, address, expiration }) => ({
+			id: message_id,
+			publicKey: public_key,
+			address,
+			expiration: expiration === Number.MAX_SAFE_INTEGER ? null : expiration,
+		}))
 	}
 
 	public updateSigners(signers: SessionSigner[]) {
@@ -411,7 +442,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 	 */
 	public async append<Payload extends Session | Action>(
 		payload: Payload,
-		options: { signer?: Pick<Signer<Payload>, "sign" | "verify"> },
+		options: { signer?: Signer<Payload> },
 	): Promise<{ id: string; signature: Signature; message: Message<Payload>; recipients: Promise<PeerId[]> }> {
 		return this.libp2p.services.gossiplog.append(this.topic, payload, options)
 	}
@@ -428,5 +459,24 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		options: { reverse?: boolean } = {},
 	): AsyncIterable<[id: string, signature: Signature, message: Message<Action | Session>]> {
 		yield* this.messageLog.iterate(lowerBound, upperBound, options)
+	}
+
+	/**
+	 * Get an existing session
+	 */
+	public async getSession(query: { address: string; publicKey: string; timestamp?: number }): Promise<string | null> {
+		const sessions = await this.db.query<{ message_id: string }>("$sessions", {
+			where: {
+				public_key: query.publicKey,
+				address: query.address,
+				expiration: { gte: query.timestamp ?? 0 },
+			},
+		})
+
+		if (sessions.length === 0) {
+			return null
+		} else {
+			return sessions[0].message_id
+		}
 	}
 }

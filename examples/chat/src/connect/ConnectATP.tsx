@@ -43,7 +43,9 @@ export const ConnectATP: React.FC<ConnectATPProps> = ({}) => {
 			return
 		}
 
-		const { address } = await signer.getSession(app.topic)
+		const {
+			payload: { address },
+		} = await signer.newSession(app.topic)
 		setAddress(address)
 		setSessionSigner(signer)
 	}, [app])

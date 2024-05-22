@@ -141,6 +141,7 @@ pre {
 }
 
 .VPSidebarBlogItem {
+  display: block;
   line-height: 1.35;
   margin-top: 4px;
   margin-bottom: 8px;

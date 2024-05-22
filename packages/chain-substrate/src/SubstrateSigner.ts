@@ -6,8 +6,8 @@ import { InjectedExtension } from "@polkadot/extension-inject/types"
 import { cryptoWaitReady, decodeAddress } from "@polkadot/util-crypto"
 import { KeypairType } from "@polkadot/util-crypto/types"
 
-import type { Awaitable, Session } from "@canvas-js/interfaces"
-import { AbstractSessionData, AbstractSessionSigner, Ed25519DelegateSigner } from "@canvas-js/signatures"
+import type { Awaitable, Session, AbstractSessionData } from "@canvas-js/interfaces"
+import { AbstractSessionSigner, ed25519 } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
 import type { SubstrateMessage, SubstrateSessionData } from "./types.js"
@@ -35,19 +35,14 @@ type AbstractSigner = {
 }
 
 export class SubstrateSigner extends AbstractSessionSigner<SubstrateSessionData> {
-	public readonly codecs = [Ed25519DelegateSigner.cborCodec, Ed25519DelegateSigner.jsonCodec]
 	public readonly match = (address: string) => addressPattern.test(address)
-	public readonly verify = Ed25519DelegateSigner.verify
 
 	// some type that overlaps with the injected extension and
 	// a generated wallet
 	#signer: AbstractSigner
 
 	public constructor({ sessionDuration, substrateKeyType, extension }: SubstrateSignerInit = {}) {
-		super("chain-substrate", {
-			createSigner: (init) => new Ed25519DelegateSigner(init),
-			defaultDuration: sessionDuration,
-		})
+		super("chain-substrate", ed25519, { sessionDuration })
 		if (extension) {
 			const signRaw = extension.signer.signRaw
 			if (signRaw === undefined) {
@@ -173,13 +168,13 @@ export class SubstrateSigner extends AbstractSessionSigner<SubstrateSessionData>
 		assert(valid, "invalid signature")
 	}
 
-	protected async getAddress(): Promise<string> {
+	public async getAddress(): Promise<string> {
 		const chainId = await this.#signer.getChainId()
 		const walletAddress = await this.#signer.getAddress()
 		return `polkadot:${chainId}:${walletAddress}`
 	}
 
-	protected async newSession(data: AbstractSessionData): Promise<Session<SubstrateSessionData>> {
+	public async authorize(data: AbstractSessionData): Promise<Session<SubstrateSessionData>> {
 		const { topic, address, publicKey, timestamp, duration } = data
 		const issuedAt = new Date(timestamp).toISOString()
 

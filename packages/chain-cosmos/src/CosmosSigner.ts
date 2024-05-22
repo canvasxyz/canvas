@@ -1,5 +1,5 @@
-import type { Awaitable, Session } from "@canvas-js/interfaces"
-import { AbstractSessionData, AbstractSessionSigner, Ed25519DelegateSigner } from "@canvas-js/signatures"
+import type { Awaitable, Session, AbstractSessionData } from "@canvas-js/interfaces"
+import { AbstractSessionSigner, ed25519 } from "@canvas-js/signatures"
 
 import { addressPattern, parseAddress } from "./utils.js"
 import { CosmosMessage, CosmosSessionData, ExternalCosmosSigner } from "./types.js"
@@ -27,13 +27,13 @@ type GenericSigner = {
 }
 
 export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
-	public readonly codecs = [Ed25519DelegateSigner.cborCodec, Ed25519DelegateSigner.jsonCodec]
+	public readonly match = (address: string) => addressPattern.test(address)
 	public readonly bech32Prefix: string
 
 	#signer: GenericSigner
 
 	public constructor({ signer, sessionDuration, bech32Prefix }: CosmosSignerInit = {}) {
-		super("chain-cosmos", { createSigner: (init) => new Ed25519DelegateSigner(init), defaultDuration: sessionDuration })
+		super("chain-cosmos", ed25519, { sessionDuration })
 
 		this.bech32Prefix = bech32Prefix == undefined ? "cosmos" : bech32Prefix
 
@@ -51,9 +51,6 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 			throw new Error("invalid signer")
 		}
 	}
-
-	public readonly match = (address: string) => addressPattern.test(address)
-	public readonly verify = Ed25519DelegateSigner.verify
 
 	public async verifySession(topic: string, session: Session) {
 		const { publicKey, address, authorizationData: data, timestamp, duration } = session
@@ -95,7 +92,7 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 		}
 	}
 
-	protected async getAddress(): Promise<string> {
+	public async getAddress(): Promise<string> {
 		const chainId = await this.#signer.getChainId()
 		const walletAddress = await this.#signer.getAddress(chainId)
 		const { data } = fromBech32(walletAddress)
@@ -103,7 +100,7 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 		return `cosmos:${chainId}:${walletAddressWithPrefix}`
 	}
 
-	protected async newSession(data: AbstractSessionData): Promise<Session<CosmosSessionData>> {
+	public async authorize(data: AbstractSessionData): Promise<Session<CosmosSessionData>> {
 		const { topic, address, timestamp, publicKey, duration } = data
 		const [chainId, walletAddress] = parseAddress(address)
 

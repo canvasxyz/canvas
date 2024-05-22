@@ -23,24 +23,20 @@ const isPostgres = (path: string | pg.ConnectionConfig): boolean =>
 	typeof path !== "string" || path.startsWith("postgres://") || path.startsWith("postgresql://")
 
 export default {
-	async openDB(
-		location: { path: string | pg.ConnectionConfig | null; topic: string; clear?: boolean },
-		models,
-		{ indexHistory } = {},
-	) {
+	async openDB(location: { path: string | pg.ConnectionConfig | null; topic: string; clear?: boolean }, models) {
 		if (location.path === null) {
-			return new ModelDB({ path: null, models, indexHistory })
+			return new ModelDB({ path: null, models })
 		} else if (isPostgres(location.path)) {
 			return await PostgresModelDB.initialize({
 				connectionConfig: location.path,
 				models,
-				indexHistory,
+
 				clear: location.clear,
 			})
 		} else {
 			assert(typeof location.path === "string", 'expected typeof location.path === "string"')
 			// TODO: delete db.sqlite
-			return new ModelDB({ path: path.resolve(location.path, "db.sqlite"), models, indexHistory })
+			return new ModelDB({ path: path.resolve(location.path, "db.sqlite"), models })
 		}
 	},
 

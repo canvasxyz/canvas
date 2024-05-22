@@ -29,23 +29,23 @@ describe("Contract_Test", function () {
 
 	async function getArgumentsFixture() {
 		const { decodeURI } = await import("@canvas-js/signatures")
-		const { Eip712Signer, Secp256k1DelegateSigner, getAbiString } = await import("@canvas-js/chain-ethereum")
+		const { Eip712Signer, Secp256k1SignatureScheme, getAbiString } = await import("@canvas-js/chain-ethereum")
 		// @ts-ignore TS2339
 		const { utils } = await import("ethers")
 
 		async function getArguments(args?: any) {
 			const signer = new Eip712Signer()
-
-			const session = (args && args.session) || (await signer.getSession(topic))
+			const { payload: session, signer: delegateSigner } = await signer.newSession(topic)
+			// const session = (args && args.session) || (await signer.newSession(topic))
 
 			const clock = 1
 			const parents = ["parent1", "parent2"]
 			const sessionMessage = { topic, clock, parents, payload: session }
-			const sessionMessageSignature = await signer.sign(sessionMessage)
+			const sessionMessageSignature = await delegateSigner.sign(sessionMessage)
 
 			const userAddress = session.address.split(":")[2]
 			const { type: publicKeyType, publicKey: publicKeyBytes } = decodeURI(session.publicKey)
-			expect(publicKeyType).to.equal(Secp256k1DelegateSigner.type)
+			expect(publicKeyType).to.equal(Secp256k1SignatureScheme.type)
 			const sessionAddress = utils.computeAddress(utils.hexlify(publicKeyBytes))
 			const uncompressedPublicKeyBytes = "0x" + utils.computePublicKey(publicKeyBytes).slice(4)
 
@@ -73,7 +73,7 @@ describe("Contract_Test", function () {
 				timestamp: session.timestamp,
 			}
 			const actionMessage = { topic, clock, parents, payload: action }
-			const actionMessageSignature = await signer.sign(actionMessage)
+			const actionMessageSignature = await delegateSigner.sign(actionMessage)
 			const actionMessageForContract = {
 				...actionMessage,
 				payload: {
@@ -103,7 +103,7 @@ describe("Contract_Test", function () {
 
 	describe("contract.recoverAddressFromSession", function () {
 		it("Should verify that a session has been signed by the proper address with getSession", async function () {
-			const { Eip712Signer, Secp256k1DelegateSigner } = await import("@canvas-js/chain-ethereum")
+			const { Eip712Signer, Secp256k1SignatureScheme } = await import("@canvas-js/chain-ethereum")
 			const { decodeURI } = await import("@canvas-js/signatures")
 			// @ts-ignore TS2339
 			const { utils } = await import("ethers")
@@ -112,12 +112,12 @@ describe("Contract_Test", function () {
 
 			const signer = new Eip712Signer()
 
-			const session = await signer.getSession(topic)
+			const { payload: session } = await signer.newSession(topic)
 			signer.verifySession(topic, session)
 
 			const userAddress = session.address.split(":")[2]
 			const { type: publicKeyType, publicKey: publicKeyBytes } = decodeURI(session.publicKey)
-			expect(publicKeyType).to.equal(Secp256k1DelegateSigner.type)
+			expect(publicKeyType).to.equal(Secp256k1SignatureScheme.type)
 			const sessionAddress = utils.computeAddress(utils.hexlify(publicKeyBytes))
 			const uncompressedPublicKeyBytes = "0x" + utils.computePublicKey(publicKeyBytes).slice(4)
 
@@ -142,7 +142,7 @@ describe("Contract_Test", function () {
 
 	describe("contract.verifySessionMessageSignature", function () {
 		it("Should verify that a session has been signed by the proper address with sign", async function () {
-			const { Eip712Signer, Secp256k1DelegateSigner } = await import("@canvas-js/chain-ethereum")
+			const { Eip712Signer, Secp256k1SignatureScheme } = await import("@canvas-js/chain-ethereum")
 			const { decodeURI } = await import("@canvas-js/signatures")
 			// @ts-ignore TS2339
 			const { utils } = await import("ethers")
@@ -150,18 +150,18 @@ describe("Contract_Test", function () {
 			const { contract } = await loadFixture(deployFixture)
 
 			const signer = new Eip712Signer()
-			const session = await signer.getSession(topic, { fromCache: false })
+			const { payload: session, signer: delegateSigner } = await signer.newSession(topic)
 
 			const clock = 1
 			const parents = ["parent1", "parent2"]
 			const sessionMessage = { topic, clock, parents, payload: session }
-			const sessionSignature = await signer.sign(sessionMessage)
+			const sessionSignature = await delegateSigner.sign(sessionMessage)
 
-			signer.verify(sessionSignature, sessionMessage)
+			signer.scheme.verify(sessionSignature, sessionMessage)
 
 			const userAddress = session.address.split(":")[2]
 			const { type: publicKeyType, publicKey: publicKeyBytes } = decodeURI(session.publicKey)
-			expect(publicKeyType).to.equal(Secp256k1DelegateSigner.type)
+			expect(publicKeyType).to.equal(Secp256k1SignatureScheme.type)
 			const sessionAddress = utils.computeAddress(utils.hexlify(publicKeyBytes))
 			const uncompressedPublicKeyBytes = "0x" + utils.computePublicKey(publicKeyBytes).slice(4)
 
@@ -193,12 +193,12 @@ describe("Contract_Test", function () {
 			// @ts-ignore TS2339
 			const { utils } = await import("ethers")
 			const { decodeURI } = await import("@canvas-js/signatures")
-			const { Eip712Signer, Secp256k1DelegateSigner, getAbiString } = await import("@canvas-js/chain-ethereum")
+			const { Eip712Signer, Secp256k1SignatureScheme, getAbiString } = await import("@canvas-js/chain-ethereum")
 
 			const { contract } = await loadFixture(deployFixture)
 
 			const signer = new Eip712Signer()
-			const session = await signer.getSession(topic, { fromCache: false })
+			const { payload: session, signer: delegateSigner } = await signer.newSession(topic)
 
 			// sign an action
 			const clock = 1
@@ -212,14 +212,14 @@ describe("Contract_Test", function () {
 				timestamp: session.timestamp,
 			}
 			const actionMessage = { topic, clock, parents, payload: action }
-			const actionSignature = await signer.sign(actionMessage)
+			const actionSignature = await delegateSigner.sign(actionMessage)
 
 			// verify the action offchain
-			signer.verify(actionSignature, actionMessage)
+			signer.scheme.verify(actionSignature, actionMessage)
 
 			const userAddress = session.address.split(":")[2]
 			const { type: publicKeyType, publicKey: publicKeyBytes } = decodeURI(session.publicKey)
-			expect(publicKeyType).to.equal(Secp256k1DelegateSigner.type)
+			expect(publicKeyType).to.equal(Secp256k1SignatureScheme.type)
 			const sessionAddress = utils.computeAddress(utils.hexlify(publicKeyBytes))
 			const uncompressedPublicKeyBytes = "0x" + utils.computePublicKey(publicKeyBytes).slice(4)
 

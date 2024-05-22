@@ -4,8 +4,8 @@ import * as ATP from "@atproto/api"
 // to publish ESM modules (please, it's been ten years since ES6)
 const BskyAgent = ATP.BskyAgent ?? ATP["default"].BskyAgent
 
-import type { Session } from "@canvas-js/interfaces"
-import { AbstractSessionData, AbstractSessionSigner, Ed25519DelegateSigner } from "@canvas-js/signatures"
+import type { Session, AbstractSessionData } from "@canvas-js/interfaces"
+import { AbstractSessionSigner, ed25519 } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
 import { unpackArchive } from "./mst.js"
@@ -32,17 +32,14 @@ export class ATPSigner extends AbstractSessionSigner<ATPSessionData> {
 		return `Authorizing ${publicKey} to sign actions for ${topic} on behalf of ${address}`
 	}
 
-	public readonly codecs = [Ed25519DelegateSigner.cborCodec, Ed25519DelegateSigner.jsonCodec]
-
 	#agent = new BskyAgent({ service: `https://${service}` })
 	#session: ATP.AtpSessionData | null = null
 
 	public constructor(private readonly options: ATPSignerOptions = {}) {
-		super("chain-atp", { createSigner: (init) => new Ed25519DelegateSigner(init) })
+		super("chain-atp", ed25519, {})
 	}
 
 	public readonly match = (address: string) => address.startsWith("did:plc:") || address.startsWith("did:web:")
-	public readonly verify = Ed25519DelegateSigner.verify
 
 	public async verifySession(topic: string, session: Session<ATPSessionData>): Promise<void> {
 		const { verificationMethod, recordArchive, recordURI, plcOperationLog } = session.authorizationData
@@ -60,7 +57,7 @@ export class ATPSigner extends AbstractSessionSigner<ATPSessionData> {
 		assert(record.text === message, "invalid app.bsky.feed.post record text")
 	}
 
-	protected async getAddress(): Promise<string> {
+	public async getAddress(): Promise<string> {
 		if (this.#session !== null) {
 			return this.#session.did
 		}
@@ -96,7 +93,7 @@ export class ATPSigner extends AbstractSessionSigner<ATPSessionData> {
 		this.target.set("canvas-chain-atp/jwt", JSON.stringify(data))
 	}
 
-	protected async newSession(data: AbstractSessionData): Promise<Session<ATPSessionData>> {
+	public async authorize(data: AbstractSessionData): Promise<Session<ATPSessionData>> {
 		const { topic, address, publicKey, timestamp, duration } = data
 		this.log("fetching plc operation log for %s", address)
 		const plcOperationLog = await fetch(`https://plc.directory/${address}/log`).then((res) => res.json())

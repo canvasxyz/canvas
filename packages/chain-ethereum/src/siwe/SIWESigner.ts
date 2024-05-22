@@ -1,8 +1,8 @@
 import { Wallet, verifyMessage, hexlify, getBytes } from "ethers"
 import * as siwe from "siwe"
 
-import type { Awaitable, Session } from "@canvas-js/interfaces"
-import { AbstractSessionData, AbstractSessionSigner, Ed25519DelegateSigner } from "@canvas-js/signatures"
+import type { Awaitable, Session, AbstractSessionData } from "@canvas-js/interfaces"
+import { AbstractSessionSigner, ed25519 } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
 import type { SIWESessionData, SIWEMessage } from "./types.js"
@@ -26,29 +26,27 @@ export interface SIWESignerInit {
 }
 
 export class SIWESigner extends AbstractSessionSigner<SIWESessionData> {
-	public readonly codecs = [Ed25519DelegateSigner.cborCodec, Ed25519DelegateSigner.jsonCodec]
 	public readonly match = (address: string) => addressPattern.test(address)
-	public readonly verify = Ed25519DelegateSigner.verify
 
 	public readonly key: string
 	public readonly chainId: number
 
 	#signer: AbstractSigner
 
-	public constructor(init: SIWESignerInit = {}) {
-		super("chain-ethereum", { createSigner: (init) => new Ed25519DelegateSigner(init) })
+	public constructor({ sessionDuration, ...init }: SIWESignerInit = {}) {
+		super("chain-ethereum", ed25519, { sessionDuration })
 
 		this.#signer = init.signer ?? Wallet.createRandom()
 		this.chainId = init.chainId ?? 1
 		this.key = `SIWESigner-${init.signer ? "signer" : "burner"}`
 	}
 
-	protected async getAddress(): Promise<string> {
+	public async getAddress(): Promise<string> {
 		const walletAddress = await this.#signer.getAddress()
 		return `eip155:${this.chainId}:${walletAddress}`
 	}
 
-	protected async newSession(sessionData: AbstractSessionData): Promise<Session<SIWESessionData>> {
+	public async authorize(sessionData: AbstractSessionData): Promise<Session<SIWESessionData>> {
 		const { topic, address, timestamp, duration, publicKey } = sessionData
 
 		const nonce = siwe.generateNonce()
