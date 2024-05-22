@@ -1,6 +1,7 @@
 import { PeerId, TypedEventEmitter } from "@libp2p/interface"
 import { Libp2p } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
+import { sha256 } from "@noble/hashes/sha2"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 
 import type pg from "pg"
@@ -18,10 +19,9 @@ import type { Contract, ActionImplementationFunction, ActionImplementationObject
 import type { ServiceMap } from "./targets/interface.js"
 import { Runtime, createRuntime } from "./runtime/index.js"
 import { validatePayload } from "./schema.js"
-import { sha256 } from "@noble/hashes/sha2"
 
 export type { Model } from "@canvas-js/modeldb"
-export type { PeerId, Connection } from "@libp2p/interface"
+export type { PeerId } from "@libp2p/interface"
 
 export interface NetworkConfig {
 	start?: boolean
@@ -74,10 +74,11 @@ export type CanvasLogEvent = CustomEvent<{
 }>
 
 export type ApplicationData = {
-	peerId: string
 	topic: string
 	models: Record<string, Model>
 	actions: string[]
+
+	peerId: string
 }
 
 export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<CanvasEvents> {

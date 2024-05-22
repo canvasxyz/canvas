@@ -19,7 +19,7 @@
     "@canvas-js/core": "0.9.1",
     "@canvas-js/interfaces": "0.9.1",
     "@ipld/dag-json": "^10.1.5",
-    "@libp2p/peer-id": "^4.0.2",
+    "@libp2p/peer-id": "^4.1.2",
     "@multiformats/multiaddr": "^12.1.11",
     "@multiformats/multiaddr-matcher": "^1.2.1",
     "@types/websocket": "^1.0.10",
@@ -36,7 +36,6 @@
     "prompts": "^2.4.2",
     "stoppable": "^1.1.0",
     "winston": "^3.11.0",
-    "ws": "^8.14.2",
     "yargs": "^17.7.2"
   },
   "devDependencies": {
