@@ -16,6 +16,7 @@ import { Action, Message, Session, Signature } from "@canvas-js/interfaces"
 import { Canvas } from "./Canvas.js"
 
 import { PING_TIMEOUT } from "./constants.js"
+import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 
 export interface APIOptions {
 	exposeModels?: boolean
@@ -112,7 +113,7 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 			res.end()
 		} catch (e) {
 			console.error(e)
-			return res.status(StatusCodes.BAD_REQUEST).end()
+			return res.status(StatusCodes.BAD_REQUEST).end(`${e}`)
 		}
 	})
 
@@ -137,32 +138,28 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 
 	if (options.exposeP2P) {
 		api.get("/connections", (req, res) => {
-			if (app.libp2p === null) {
-				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end("Offline")
-				return
-			}
-
-			const result: Record<string, { peer: string; addr: string; streams: Record<string, string | null> }> = {}
+			const results: {
+				id: string
+				remotePeer: string
+				remoteAddr: string
+				streams: { id: string; protocol: string | null }[]
+			}[] = []
 
 			for (const { id, remotePeer, remoteAddr, streams } of app.libp2p.getConnections()) {
-				result[id] = {
-					peer: remotePeer.toString(),
-					addr: remoteAddr.toString(),
-					streams: Object.fromEntries(streams.map((stream) => [stream.id, stream.protocol ?? null])),
-				}
+				results.push({
+					id,
+					remotePeer: remotePeer.toString(),
+					remoteAddr: remoteAddr.toString(),
+					streams: streams.map(({ id, protocol }) => ({ id, protocol: protocol ?? null })),
+				})
 			}
 
-			res.json(result)
+			res.json(results)
 		})
 
-		api.get("/peers", (req, res) => {
-			if (app.libp2p === null) {
-				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end("Offline")
-				return
-			}
-
-			const peers = app.libp2p.services.pubsub.getPeers().map((peerId) => peerId.toString())
-			res.json(peers)
+		api.get("/mesh/:topic", (req, res) => {
+			const gossipsub = app.libp2p.services.pubsub as GossipSub
+			res.json(gossipsub.getMeshPeers(req.params.topic))
 		})
 
 		api.post("/ping/:peerId", async (req, res) => {
