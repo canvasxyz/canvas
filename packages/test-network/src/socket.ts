@@ -22,7 +22,7 @@ export class Socket {
 	private constructor(readonly libp2p: Libp2p<ServiceMap>, readonly ws: WebSocket) {
 		ws.addEventListener("message", (msg) => {
 			const event = JSON.parse(msg.data.toString()) as SocketEvent
-
+			console.log(`event: ${event.type}`)
 			if (event.type === "boop") {
 				libp2p.services.gossiplog.append(randomBytes(16)).then(
 					({ recipients }) =>
@@ -35,7 +35,7 @@ export class Socket {
 			} else if (event.type === "provide") {
 				// libp2p.services.dht.refreshRoutingTable().catch((err) => console.error(err))
 			} else if (event.type === "query") {
-				// libp2p.services.dht.refreshRoutingTable().catch((err) => console.error(err))
+				libp2p.services.dht.refreshRoutingTable().catch((err) => console.error(err))
 			} else if (event.type === "disconnect") {
 				libp2p.hangUp(peerIdFromString(event.target)).then(
 					() => console.log(`disconnected from ${event.target}`),

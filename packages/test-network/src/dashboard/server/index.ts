@@ -36,6 +36,7 @@ app.post("/api/disconnect/:source/:target", (req, res) => {
 	}
 
 	ws.send(JSON.stringify({ type: "disconnect", target }))
+	return res.status(200).end()
 })
 
 app.post("/api/provide/:peerId", (req, res) => {

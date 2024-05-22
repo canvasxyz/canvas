@@ -1,7 +1,7 @@
 import { setTimeout } from "node:timers/promises"
 
 import { GossipSub } from "@chainsafe/libp2p-gossipsub"
-import { bytesToHex } from "@noble/hashes/utils"
+import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 
 import { GossipLog } from "@canvas-js/gossiplog/node"
 
@@ -64,6 +64,10 @@ async function start() {
 		socket.post("gossipsub:mesh:update", { topic, peers })
 	})
 
+	messageLog.addEventListener("sync", (event) => {
+		console.log(`completed sync with ${event.detail.peerId}`)
+	})
+
 	const controller = new AbortController()
 
 	process.addListener("SIGINT", () => {
@@ -86,8 +90,8 @@ async function start() {
 	// 	onDisconnect: (peerId) => void topicPeers.delete(peerId.toString()),
 	// })
 
-	// const intervalId = setInterval(() => void libp2p.services.gossiplog.append(randomBytes(16)), 1000)
-	// controller.signal.addEventListener("abort", () => clearInterval(intervalId))
+	const intervalId = setInterval(() => void libp2p.services.gossiplog.append(randomBytes(16)), 1000)
+	controller.signal.addEventListener("abort", () => clearInterval(intervalId))
 }
 
 start()

@@ -7,102 +7,102 @@ services:
     ports:
       - "8000:8000"
 
-  relay:
+  # relay:
+  #   init: true
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.relay
+  #   ports:
+  #     - "8081:8081"
+  #   environment:
+  #     # 12D3KooWEaSQnJTxztTHmKmcQkDy3oScjo8ww4JCKig73XH4cmb3
+  #     - PEER_ID=CiYAJAgBEiBGuRmK/f0LmjUOf5aGmq0McK0Y35NjYFsis/PFRDUvDhIkCAESIEa5GYr9/QuaNQ5/loaarQxwrRjfk2NgWyKz88VENS8OGkQIARJAY8+xf3UiUUVqf13Xtyo/TtuEjZZKZ07axdLxur3kPbxGuRmK/f0LmjUOf5aGmq0McK0Y35NjYFsis/PFRDUvDg==
+  #     - LISTEN=/ip4/127.0.0.1/tcp/8081/ws
+  #     - ANNOUNCE=/dns4/localhost/tcp/8081/ws
+
+  bootstrap:
     init: true
     build:
       context: .
-      dockerfile: Dockerfile.relay
+      dockerfile: Dockerfile.peer
+    depends_on:
+      - dashboard
     ports:
-      - "8081:8081"
+      - "8080:8080"
     environment:
-      # 12D3KooWEaSQnJTxztTHmKmcQkDy3oScjo8ww4JCKig73XH4cmb3
-      - PEER_ID=CiYAJAgBEiBGuRmK/f0LmjUOf5aGmq0McK0Y35NjYFsis/PFRDUvDhIkCAESIEa5GYr9/QuaNQ5/loaarQxwrRjfk2NgWyKz88VENS8OGkQIARJAY8+xf3UiUUVqf13Xtyo/TtuEjZZKZ07axdLxur3kPbxGuRmK/f0LmjUOf5aGmq0McK0Y35NjYFsis/PFRDUvDg==
-      - LISTEN=/ip4/127.0.0.1/tcp/8081/ws
-      - ANNOUNCE=/dns4/localhost/tcp/8081/ws
+      # - DEBUG=libp2p:*
+      # - DEBUG_COLORS=0
+      - SERVICE_NAME=bootstrap
+      # 12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
+      - PEER_ID=CiYAJAgBEiC9yHdvmtjGZW9Q2lSLKlgmNYW9bxRK7uyo4g0aS0hFzxIkCAESIL3Id2+a2MZlb1DaVIsqWCY1hb1vFEru7KjiDRpLSEXPGkQIARJA8STx22fxKw7avM9/YjP3elT1YKBfA4wCIgnfs4yl/4G9yHdvmtjGZW9Q2lSLKlgmNYW9bxRK7uyo4g0aS0hFzw==
+      - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+      - ANNOUNCE=/dns4/bootstrap/tcp/8080/ws
+      - MIN_CONNECTIONS=0
 
-  # bootstrap:
-  #   init: true
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.peer
-  #   depends_on:
-  #     - dashboard
-  #   ports:
-  #     - "8080:8080"
-  #   environment:
-  #     - DEBUG=libp2p:*
-  #     - DEBUG_COLORS=0
-  #     - SERVICE_NAME=bootstrap
-  #     # 12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
-  #     - PEER_ID=CiYAJAgBEiC9yHdvmtjGZW9Q2lSLKlgmNYW9bxRK7uyo4g0aS0hFzxIkCAESIL3Id2+a2MZlb1DaVIsqWCY1hb1vFEru7KjiDRpLSEXPGkQIARJA8STx22fxKw7avM9/YjP3elT1YKBfA4wCIgnfs4yl/4G9yHdvmtjGZW9Q2lSLKlgmNYW9bxRK7uyo4g0aS0hFzw==
-  #     - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
-  #     - ANNOUNCE=/dns4/localhost/tcp/8080/ws
-  #     - MIN_CONNECTIONS=0
+  server-1:
+    init: true
+    build:
+      context: .
+      dockerfile: Dockerfile.peer
+    depends_on:
+      - bootstrap
+    environment:
+      - SERVICE_NAME=server-1
+      - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+      - ANNOUNCE=/dns4/server-1/tcp/8080/ws
+      - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
 
-  # server-1:
-  #   init: true
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.peer
-  #   depends_on:
-  #     - bootstrap
-  #   environment:
-  #     - SERVICE_NAME=server-1
-  #     - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
-  #     - ANNOUNCE=/dns4/server-1/tcp/8080/ws
-  #     - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
+  server-2:
+    init: true
+    build:
+      context: .
+      dockerfile: Dockerfile.peer
+    depends_on:
+      - bootstrap
+    environment:
+      - SERVICE_NAME=server-2
+      - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+      - ANNOUNCE=/dns4/server-2/tcp/8080/ws
+      - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
 
-  # server-2:
-  #   init: true
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.peer
-  #   depends_on:
-  #     - bootstrap
-  #   environment:
-  #     - SERVICE_NAME=server-2
-  #     - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
-  #     - ANNOUNCE=/dns4/server-2/tcp/8080/ws
-  #     - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
+  server-3:
+    init: true
+    build:
+      context: .
+      dockerfile: Dockerfile.peer
+    depends_on:
+      - bootstrap
+    environment:
+      - SERVICE_NAME=server-3
+      - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+      - ANNOUNCE=/dns4/server-3/tcp/8080/ws
+      - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
 
-  # server-3:
-  #   init: true
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.peer
-  #   depends_on:
-  #     - bootstrap
-  #   environment:
-  #     - SERVICE_NAME=server-3
-  #     - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
-  #     - ANNOUNCE=/dns4/server-3/tcp/8080/ws
-  #     - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
+  server-4:
+    init: true
+    build:
+      context: .
+      dockerfile: Dockerfile.peer
+    depends_on:
+      - bootstrap
+    environment:
+      - SERVICE_NAME=server-4
+      - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+      - ANNOUNCE=/dns4/server-4/tcp/8080/ws
+      - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
 
-  # server-4:
-  #   init: true
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.peer
-  #   depends_on:
-  #     - bootstrap
-  #   environment:
-  #     - SERVICE_NAME=server-4
-  #     - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
-  #     - ANNOUNCE=/dns4/server-4/tcp/8080/ws
-  #     - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
-
-  # server-5:
-  #   init: true
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.peer
-  #   depends_on:
-  #     - bootstrap
-  #   environment:
-  #     - SERVICE_NAME=server-5
-  #     - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
-  #     - ANNOUNCE=/dns4/server-5/tcp/8080/ws
-  #     - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
+  server-5:
+    init: true
+    build:
+      context: .
+      dockerfile: Dockerfile.peer
+    depends_on:
+      - bootstrap
+    environment:
+      - SERVICE_NAME=server-5
+      - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+      - ANNOUNCE=/dns4/server-5/tcp/8080/ws
+      - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
 
   # server-6:
   #   init: true
