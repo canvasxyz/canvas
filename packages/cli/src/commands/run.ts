@@ -2,7 +2,6 @@ import fs from "node:fs"
 import http from "node:http"
 import assert from "node:assert"
 import process from "node:process"
-import httpProxy from "http-proxy"
 
 import type { Argv } from "yargs"
 import chalk from "chalk"
@@ -93,13 +92,9 @@ export const builder = (yargs: Argv) =>
 			type: "string",
 			desc: "Serve a static directory from the root path /",
 		})
-		.option("testnet", {
-			type: "boolean",
-			desc: "Bootstrap to the private testnet (requires VPN)",
-		})
 		.option("bootstrap", {
 			type: "array",
-			desc: "Use custom bootstrap servers",
+			desc: "Initial application peers, e.g. /dns4/myapp.com/tcp/4444/ws",
 		})
 		.option("min-connections", {
 			type: "number",
@@ -110,10 +105,6 @@ export const builder = (yargs: Argv) =>
 			type: "number",
 			desc: "Stop accepting connections above a limit",
 			default: MAX_CONNECTIONS,
-		})
-		.option("discovery-topic", {
-			type: "string",
-			desc: "Enable active peer discovery via GossipSub",
 		})
 		.option("verbose", {
 			type: "boolean",
@@ -177,10 +168,6 @@ export async function handler(args: Args) {
 		}
 	}
 
-	if (args["discovery-topic"]) {
-		console.log("[canvas] Using discovery topic", args["discovery-topic"])
-	}
-
 	const app = await Canvas.initialize({
 		path: location,
 		topic: args["topic"],
@@ -212,8 +199,7 @@ export async function handler(args: Args) {
 
 	app.addEventListener("message", ({ detail: { id, message } }) => {
 		if (args["verbose"]) {
-			const { type, ...payload } = message.payload
-			console.log(`[canvas] Applied message ${chalk.green(id)}`, { type, ...payload })
+			console.log(`[canvas] Applied message ${chalk.green(id)}`, message.payload)
 		} else {
 			console.log(`[canvas] Applied message ${chalk.green(id)}`)
 		}
@@ -283,26 +269,11 @@ export async function handler(args: Args) {
 				}
 
 				console.log(`└ GET  ${origin}/api/connections`)
-				console.log(`└ GET  ${origin}/api/peers`)
+				console.log(`└ GET  ${origin}/api/mesh/:topic`)
 				console.log(`└ POST ${origin}/api/ping/:peerId`)
-				if (listen[0]) {
-					console.log(`└ WS   ${origin}/p2p/:peerId`)
-				}
 			}),
 			0,
 		)
-
-		if (listen[0]) {
-			const matches = listen[0].match(/([0-9]+)\/wss?$/)
-			if (matches) {
-				const wsPort = matches[1]
-				const wsProxy = httpProxy.createProxyServer({ target: `http://0.0.0.0:${wsPort}`, ws: true })
-				server.on("upgrade", (req, socket, head) => {
-					console.log("proxying upgrade request", req.url)
-					wsProxy.ws(req, socket, head)
-				})
-			}
-		}
 
 		controller.signal.addEventListener("abort", () => {
 			console.log("[canvas] Stopping HTTP API server...")
