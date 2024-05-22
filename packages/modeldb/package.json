@@ -29,7 +29,7 @@
     "nanoid": "^5.0.4"
   },
   "peerDependencies": {
-    "react": "^18.2.0"
+    "react": "^18.3.1"
   },
   "dependencies": {
     "@canvas-js/utils": "0.10.0-alpha.1",

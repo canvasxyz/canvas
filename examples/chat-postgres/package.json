@@ -17,7 +17,7 @@
 		"@ipld/dag-json": "^10.2.0",
 		"next": "14.1.4",
 		"react": "^18",
-		"react-dom": "^18.2.0"
+		"react-dom": "^18.3.1"
 	},
 	"devDependencies": {
 		"@types/node": "^20.12.12",

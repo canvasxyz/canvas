@@ -37,7 +37,7 @@
 		"near-api-js": "^2.1.4",
 		"process": "^0.11.10",
 		"react": "^18.2.0",
-		"react-dom": "^18.2.0",
+		"react-dom": "^18.3.1",
 		"viem": "^2.3.1",
 		"web3": "^4.3.0"
 	},
@@ -47,6 +47,6 @@
 		"tailwindcss": "^3.3.6",
 		"typescript": "^5.3.3",
 		"vite": "^5.2.11",
-		"vite-plugin-node-polyfills": "^0.21.0"
+		"vite-plugin-node-polyfills": "^0.22.0"
 	}
 }
