@@ -1,4 +1,4 @@
-import { PeerId, TypedEventEmitter, CustomEvent, Connection } from "@libp2p/interface"
+import { PeerId, TypedEventEmitter } from "@libp2p/interface"
 import { Libp2p } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
@@ -63,8 +63,8 @@ export type ActionAPI<Args = any> = (
 
 export interface CanvasEvents extends GossipLogEvents<Action | Session> {
 	stop: Event
-	connect: CustomEvent<{ peer: PeerId }>
-	disconnect: CustomEvent<{ peer: PeerId }>
+	connect: CustomEvent<{ peer: string }>
+	disconnect: CustomEvent<{ peer: string }>
 }
 
 export type CanvasLogEvent = CustomEvent<{
@@ -92,6 +92,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		} = config
 
 		const signers = new SignerCache(initSigners.length === 0 ? [new SIWESigner()] : initSigners)
+
 		const verifySignature = (signature: Signature, message: Message<Action | Session>) => {
 			const signer = signers.getAll().find((signer) => signer.scheme.codecs.includes(signature.codec))
 			assert(signer !== undefined, "no matching signer found")
@@ -110,6 +111,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		const runtime = await createRuntime(path, topic, signers, contract, {
 			runtimeMemoryLimit,
 			clearModelDB: reset,
+			indexHistory: indexHistory,
 		})
 
 		const messageLog = await target.openGossipLog(
@@ -157,10 +159,12 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 
 		this.libp2p.addEventListener("peer:connect", ({ detail: peerId }) => {
 			this.log("connected to %p", peerId)
+			this.dispatchEvent(new CustomEvent("connect", { detail: { peer: peerId.toString() } }))
 		})
 
 		this.libp2p.addEventListener("peer:disconnect", ({ detail: peerId }) => {
 			this.log("disconnected %p", peerId)
+			this.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: peerId.toString() } }))
 		})
 
 		this.messageLog.addEventListener("message", (event) => this.safeDispatchEvent("message", event))
@@ -270,8 +274,8 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		await this.libp2p.stop()
 		await this.messageLog.close()
 		await this.runtime.close()
-		this.dispatchEvent(new Event("stop"))
 		this.log("stopped")
+		this.dispatchEvent(new Event("stop"))
 	}
 
 	public getApplicationData(): ApplicationData {
