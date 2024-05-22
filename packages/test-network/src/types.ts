@@ -13,20 +13,15 @@ export type ServiceMap = {
 	dht: KadDHT
 }
 
-export type Event =
-	| { type: "start"; peerId: string; timestamp: number; detail: { root: string } }
-	| { type: "stop"; peerId: string; timestamp: number; detail: {} }
-	| {
-			type: "connection:open"
-			peerId: string
-			timestamp: number
-			detail: { id: string; remotePeer: string; remoteAddr: string }
-	  }
-	| {
-			type: "connection:close"
-			peerId: string
-			timestamp: number
-			detail: { id: string; remotePeer: string; remoteAddr: string }
-	  }
-	| { type: "gossipsub:mesh:update"; peerId: string; timestamp: number; detail: { topic: string; peers: string[] } }
-	| { type: "gossiplog:commit"; peerId: string; timestamp: number; detail: { topic: string; root: string } }
+type EventTypes = {
+	start: { root: string }
+	stop: {}
+	"connection:open": { id: string; remotePeer: string; remoteAddr: string }
+	"connection:close": { id: string; remotePeer: string; remoteAddr: string }
+	"gossipsub:mesh:update": { topic: string; peers: string[] }
+	"gossiplog:commit": { topic: string; root: string }
+}
+
+export type Event = {
+	[K in keyof EventTypes]: { type: K; peerId: string; timestamp: number; detail: EventTypes[K] }
+}[keyof EventTypes]
