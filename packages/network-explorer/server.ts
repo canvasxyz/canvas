@@ -14,22 +14,7 @@ console.log(`HTTP_PORT: ${HTTP_PORT}`)
 console.log(`HTTP_ADDR: ${HTTP_ADDR}`)
 console.log(`dev: ${dev}`)
 
-const db = createDatabase(":memory:")
-const incrementActionCountsQuery = db.prepare(`
-	INSERT INTO counts(topic, action_count, session_count)
-	VALUES (?, 1, 0)
-	ON CONFLICT (topic)
-	DO UPDATE SET action_count=action_count+1;
-`)
-
-const incrementSessionCountsQuery = db.prepare(`
-	INSERT INTO counts(topic, action_count, session_count)
-	VALUES (?, 0, 1)
-	ON CONFLICT (topic)
-	DO UPDATE SET session_count=session_count+1;
-`)
-
-const selectCountsQuery = db.prepare(`SELECT * FROM counts WHERE topic = ?`)
+const { queries } = createDatabase(":memory:")
 
 console.log("initializing canvas")
 const canvasApp = await Canvas.initialize({
@@ -53,9 +38,10 @@ canvasApp.addEventListener("message", async (event) => {
 	const message = event.detail
 
 	if (message.message.payload.type == "action") {
-		incrementActionCountsQuery.run(message.message.topic)
+		queries.incrementActionCounts.run(message.message.topic)
 	} else if (message.message.payload.type == "session") {
-		incrementSessionCountsQuery.run(message.message.topic)
+		queries.addAddress.run(message.message.topic, message.message.payload.address)
+		queries.incrementSessionCounts.run(message.message.topic)
 	}
 })
 
@@ -72,11 +58,13 @@ const canvasApiApp = createAPI(canvasApp, { exposeMessages: true, exposeModels: 
 expressApp.use("/api", canvasApiApp)
 
 expressApp.get("/api/counts/:topic", (req, res) => {
-	const queryResult = selectCountsQuery.get(req.params.topic) || ({} as any)
+	const queryResult = queries.selectCounts.get(req.params.topic) || ({} as any)
+	const addressCountResult = queries.selectAddressCount.get(req.params.topic) as any
 	const result = {
 		topic: req.params.topic,
 		action_count: queryResult.action_count || 0,
 		session_count: queryResult.session_count || 0,
+		address_count: addressCountResult.count || 0,
 	}
 	res.json(result)
 })
