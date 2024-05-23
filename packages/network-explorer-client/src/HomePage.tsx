@@ -40,7 +40,7 @@ function HomePage() {
 							<tbody>
 								<tr key={"chat-example.canvas.xyz"}>
 									<td className="break-all px-3 py-2">
-										<Link to="application/1">{"chat-example.canvas.xyz"}</Link>
+										<Link to="topic/chat-example.canvas.xyz">{"chat-example.canvas.xyz"}</Link>
 									</td>
 									<td className="break-all px-3">{1538}</td>
 									<td className="break-all px-3">{445}</td>

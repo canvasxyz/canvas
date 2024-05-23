@@ -17,7 +17,7 @@ const router = createBrowserRouter([
 		),
 	},
 	{
-		path: "/application/:application",
+		path: "/topic/:topic",
 		element: (
 			<Container>
 				<Application />

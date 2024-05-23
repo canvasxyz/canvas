@@ -3,15 +3,16 @@ import { Action, Session } from "@canvas-js/interfaces"
 import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "./utils"
 import ArgsPopout from "./ArgsPopout"
 import { ApplicationStats } from "./ApplicationStats"
+import { useParams } from "react-router-dom"
 
 function Application() {
-	const topic = "chat-example.canvas.xyz"
+	const { topic } = useParams()
 
 	const { data, error } = useSWR("/api/messages", fetchAndIpldParseJson<Result<Action | Session>[]>, {
 		refreshInterval: 1000,
 	})
 
-	if (error) return <div>failed to load</div>
+	if (error || !topic) return <div>failed to load</div>
 	if (!data) return <div>loading...</div>
 
 	const sortedMessages = data.sort((a, b) => b[2].payload.timestamp - a[2].payload.timestamp)
@@ -81,7 +82,7 @@ function Application() {
 				</div>
 			</div>
 
-			<div className="flex flex-col gap-2">
+			<div className="flex flex-col gap-2 pb-4">
 				<div className="flex flex-col gap-1">
 					<div className="text-sm">Sessions</div>
 					<div>Sessions that have been created for this application, sorted by timestamp</div>
