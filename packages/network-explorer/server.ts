@@ -57,6 +57,17 @@ console.log("initializing canvas api")
 const canvasApiApp = createAPI(canvasApp, { exposeMessages: true, exposeModels: true, exposeP2P: true })
 expressApp.use("/api", canvasApiApp)
 
+expressApp.get("/api/counts/", (req, res) => {
+	const queryResult = queries.selectCountsTotal.get() || ({} as any)
+	const addressCountResult = queries.selectAddressCountTotal.get() as any
+	const result = {
+		action_count: queryResult.action_count || 0,
+		session_count: queryResult.session_count || 0,
+		address_count: addressCountResult.count || 0,
+	}
+	res.json(result)
+})
+
 expressApp.get("/api/counts/:topic", (req, res) => {
 	const queryResult = queries.selectCounts.get(req.params.topic) || ({} as any)
 	const addressCountResult = queries.selectAddressCount.get(req.params.topic) as any

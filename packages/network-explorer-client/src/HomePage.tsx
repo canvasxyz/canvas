@@ -3,6 +3,7 @@ import { Action, Session } from "@canvas-js/interfaces"
 import { Link } from "react-router-dom"
 import ArgsPopout from "./ArgsPopout"
 import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "./utils"
+import { NetworkStats } from "./NetworkStats"
 
 function HomePage() {
 	const { data, error } = useSWR("/api/messages", fetchAndIpldParseJson<Result<Action | Session>[]>, {
@@ -19,24 +20,7 @@ function HomePage() {
 			<div className="text-white pt-5">
 				This explorer provides information about signed interactions on Canvas applications.
 			</div>
-			<div className="flex flex-row bg-white rounded-lg drop-shadow p-3 gap-3">
-				<div>
-					<div className="font-bold">Network Status</div>
-					<div>Explorer is online, running node v0.9.1</div>
-				</div>
-				<div>
-					<div>Observed Actions</div>
-					<div className="font-bold">3,842</div>
-				</div>
-				<div>
-					<div>Observed Sessions</div>
-					<div className="font-bold">1,445</div>
-				</div>
-				<div>
-					<div>Unique Addresses</div>
-					<div className="font-bold">1,110</div>
-				</div>
-			</div>
+			<NetworkStats />
 			<div className="grid grid-cols-2 gap-4">
 				<div className="flex flex-col gap-2">
 					<div>
