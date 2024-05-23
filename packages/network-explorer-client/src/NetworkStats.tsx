@@ -3,7 +3,7 @@ import { fetchAndIpldParseJson } from "./utils"
 
 export function NetworkStats() {
 	const { data } = useSWR(
-		"/api/counts",
+		"/api/counts/total",
 		fetchAndIpldParseJson<{
 			action_count: number
 			session_count: number
