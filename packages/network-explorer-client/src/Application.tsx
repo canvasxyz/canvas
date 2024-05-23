@@ -8,7 +8,7 @@ import { useParams } from "react-router-dom"
 function Application() {
 	const { topic } = useParams()
 
-	const { data, error } = useSWR("/api/messages", fetchAndIpldParseJson<Result<Action | Session>[]>, {
+	const { data, error } = useSWR(`/canvas_api/${topic}/messages`, fetchAndIpldParseJson<Result<Action | Session>[]>, {
 		refreshInterval: 1000,
 	})
 

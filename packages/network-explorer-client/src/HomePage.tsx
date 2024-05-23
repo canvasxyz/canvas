@@ -6,7 +6,7 @@ import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "./utils"
 import { NetworkStats } from "./NetworkStats"
 
 function HomePage() {
-	const { data, error } = useSWR("/api/messages", fetchAndIpldParseJson<Result<Action | Session>[]>, {
+	const { data, error } = useSWR("/index_api/messages", fetchAndIpldParseJson<Result<Action | Session>[]>, {
 		refreshInterval: 1000,
 	})
 

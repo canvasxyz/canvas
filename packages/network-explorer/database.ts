@@ -32,6 +32,7 @@ export function createDatabase(location: string) {
   `)
 
 	const selectCounts = db.prepare(`SELECT * FROM counts WHERE topic = ?`)
+	const selectCountsAll = db.prepare(`SELECT * FROM counts`)
 	const selectCountsTotal = db.prepare(
 		`SELECT SUM(action_count) as action_count, SUM(session_count) as session_count FROM counts`,
 	)
@@ -44,6 +45,7 @@ export function createDatabase(location: string) {
   `)
 
 	const selectAddressCount = db.prepare(`SELECT COUNT(*) AS count FROM addresses WHERE topic = ?`)
+	const selectAddressCountsAll = db.prepare(`SELECT topic, COUNT(topic) AS count FROM addresses GROUP BY topic`)
 	const selectAddressCountTotal = db.prepare(`SELECT COUNT(DISTINCT address) AS count FROM addresses`)
 
 	return {
@@ -52,9 +54,11 @@ export function createDatabase(location: string) {
 			incrementActionCounts,
 			incrementSessionCounts,
 			selectCounts,
+			selectCountsAll,
 			selectCountsTotal,
 			addAddress,
 			selectAddressCount,
+			selectAddressCountsAll,
 			selectAddressCountTotal,
 		},
 	}
