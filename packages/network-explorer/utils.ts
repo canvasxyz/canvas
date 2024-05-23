@@ -1,3 +1,19 @@
+const peekable = async <T>(
+	iterator: AsyncIterator<T>,
+): Promise<{
+	head: () => IteratorResult<T>
+	consume: () => Promise<void>
+}> => {
+	let head = await iterator.next()
+
+	return {
+		head: () => head,
+		consume: async () => {
+			head = await iterator.next()
+		},
+	}
+}
+
 // TODO: unit tests for this
 export const consumeOrderedIterators = async <T>(
 	iterators: AsyncIterator<T>[],
@@ -8,34 +24,37 @@ export const consumeOrderedIterators = async <T>(
 	// It assumes that the async iterators are already ordered in the same way
 	// It returns an array containing N of the "top" items consumed from all of the iterators
 
-	const heads: IteratorResult<T>[] = []
-	for (const messageIterator of iterators) {
-		const iterResult = await messageIterator.next()
-		heads.push(iterResult)
+	const sources = []
+	for (const iterator of iterators) {
+		const p = await peekable(iterator)
+		if (!p.head().done) sources.push(p)
 	}
 
 	const result: T[] = []
 	while (result.length < numToConsume) {
-		let maxI = 0
-		for (let i = 0; i < heads.length; i++) {
-			if (heads[i].done) {
-				continue
-			}
-			if (compare(heads[i].value, heads[maxI].value)) {
-				maxI = i
-			}
-		}
-
-		// return early if we run out of items
-		if (!heads[maxI].value) {
+		if (sources.length == 0) {
 			break
 		}
 
+		let maxSource = sources[0]
+		for (const source of sources) {
+			// console.log(source.head())
+			if (compare(source.head().value, maxSource.head().value)) {
+				maxSource = source
+			}
+		}
+
 		// add the highest value to the result
-		result.push(heads[maxI].value)
+		result.push(maxSource.head().value)
 
 		// consume the iterator that the highest value was taken from
-		heads[maxI] = await iterators[maxI].next()
+		await maxSource.consume()
+
+		// if maxSource is done, remove it from `sources`
+		if (maxSource.head().done) {
+			const indexToRemove = sources.findIndex((s) => s === maxSource)
+			sources.splice(indexToRemove, 1)
+		}
 	}
 
 	return result
