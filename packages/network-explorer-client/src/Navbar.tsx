@@ -5,7 +5,7 @@ function Navbar() {
 		<div className="flex flex-row gap-10 pt-5">
 			<div className="font-bold">Canvas Explorer</div>
 			<Link to={"/"}>
-				<div>Applications</div>
+				<div>Topics</div>
 			</Link>
 		</div>
 	)

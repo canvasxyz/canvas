@@ -4,7 +4,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom"
 
 import "./index.css"
 import HomePage from "./HomePage.tsx"
-import Application from "./Application.tsx"
+import Topic from "./Topic.tsx"
 import Container from "./Container.tsx"
 
 const router = createBrowserRouter([
@@ -20,7 +20,7 @@ const router = createBrowserRouter([
 		path: "/topic/:topic",
 		element: (
 			<Container>
-				<Application />
+				<Topic />
 			</Container>
 		),
 	},

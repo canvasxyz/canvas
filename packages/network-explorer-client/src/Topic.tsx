@@ -2,10 +2,10 @@ import useSWR from "swr"
 import { Action, Session } from "@canvas-js/interfaces"
 import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "./utils"
 import ArgsPopout from "./ArgsPopout"
-import { ApplicationStats } from "./ApplicationStats"
+import { TopicStats } from "./TopicStats"
 import { useParams } from "react-router-dom"
 
-function Application() {
+function Topic() {
 	const { topic } = useParams()
 
 	const { data, error } = useSWR(`/canvas_api/${topic}/messages`, fetchAndIpldParseJson<Result<Action | Session>[]>, {
@@ -33,12 +33,12 @@ function Application() {
 
 	return (
 		<>
-			<div className="text-white pt-5 text-lg font-bold">Application Information</div>
-			<ApplicationStats topic={topic} />
+			<div className="text-white pt-5 text-lg font-bold">Topic Information</div>
+			<TopicStats topic={topic} />
 			<div className="flex flex-col gap-2">
 				<div className="flex flex-col gap-1">
 					<div className="text-sm">Latest Actions</div>
-					<div>Action history for this application, sorted by timestamp</div>
+					<div>Action history for this topic, sorted by timestamp</div>
 				</div>
 				<div className="border rounded-lg py-1">
 					<table className="table-auto w-full rounded text-left rtl:text-right">
@@ -85,7 +85,7 @@ function Application() {
 			<div className="flex flex-col gap-2 pb-4">
 				<div className="flex flex-col gap-1">
 					<div className="text-sm">Sessions</div>
-					<div>Sessions that have been created for this application, sorted by timestamp</div>
+					<div>Sessions that have been created for this topic, sorted by timestamp</div>
 				</div>
 				<div className="border rounded-lg py-1">
 					<table className="table-auto w-full rounded text-left rtl:text-right">
@@ -119,4 +119,4 @@ function Application() {
 	)
 }
 
-export default Application
+export default Topic

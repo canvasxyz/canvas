@@ -1,7 +1,7 @@
 import useSWR from "swr"
 import { fetchAndIpldParseJson } from "./utils"
 
-export function ApplicationStats({ topic }: { topic: string }) {
+export function TopicStats({ topic }: { topic: string }) {
 	const { data: countsData } = useSWR(
 		`/index_api/counts/${topic}`,
 		fetchAndIpldParseJson<{ topic: string; action_count: number; session_count: number; address_count: number }>,
