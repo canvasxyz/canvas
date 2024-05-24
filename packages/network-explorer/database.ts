@@ -17,18 +17,21 @@ export function createDatabase(location: string) {
     );
     `)
 
-	const incrementActionCounts = db.prepare(`
+	const addCountsRow = db.prepare(`
     INSERT INTO counts(topic, action_count, session_count)
-    VALUES (?, 1, 0)
-    ON CONFLICT (topic)
-    DO UPDATE SET action_count=action_count+1;
+    VALUES(?, 0, 0);
+  `)
+
+	const incrementActionCounts = db.prepare(`
+    UPDATE counts
+    SET action_count = action_count + 1
+    WHERE topic = ?;
   `)
 
 	const incrementSessionCounts = db.prepare(`
-    INSERT INTO counts(topic, action_count, session_count)
-    VALUES (?, 0, 1)
-    ON CONFLICT (topic)
-    DO UPDATE SET session_count=session_count+1;
+    UPDATE counts
+    SET session_count = session_count + 1
+    WHERE topic = ?;
   `)
 
 	const selectCounts = db.prepare(`SELECT * FROM counts WHERE topic = ?`)
@@ -51,6 +54,7 @@ export function createDatabase(location: string) {
 	return {
 		db,
 		queries: {
+			addCountsRow,
 			incrementActionCounts,
 			incrementSessionCounts,
 			selectCounts,

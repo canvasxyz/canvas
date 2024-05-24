@@ -48,6 +48,9 @@ for (const topic of topics) {
 		listen: [`/ip4/0.0.0.0/tcp/8080/ws`],
 	})
 
+	// create empty counts row for this topic in the index table
+	queries.addCountsRow.run(topic)
+
 	canvasApp.addEventListener("message", async (event) => {
 		const message = event.detail
 
@@ -94,7 +97,7 @@ expressApp.get("/index_api/counts", (req, res) => {
 	}
 
 	for (const row of queryResult) {
-		row.address_count = addressCountsMap[row.topic]
+		row.address_count = addressCountsMap[row.topic] || 0
 	}
 
 	res.json(queryResult)
