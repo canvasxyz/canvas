@@ -17,11 +17,12 @@ import PQueue from "p-queue"
 import { anySignal } from "any-signal"
 import * as lp from "it-length-prefixed"
 import { pipe } from "it-pipe"
+import * as cbor from "@ipld/dag-cbor"
+
+import { pushable } from "it-pushable"
 
 import type { Signature, Message, Signer } from "@canvas-js/interfaces"
 import { assert } from "@canvas-js/utils"
-
-import { Event } from "#protocols/events"
 
 import {
 	DEFAULT_PROTOCOL_SELECT_TIMEOUT,
@@ -34,13 +35,15 @@ import {
 
 import { AbstractGossipLog, GossipLogEvents } from "../AbstractGossipLog.js"
 
-import { decodeId } from "../schema.js"
+import { decodeId, encodeId } from "../schema.js"
 import { Client, decodeRequests, encodeResponses } from "../sync/index.js"
 
 import { DelayableController, SyncDeadlockError, SyncTimeoutError, wait } from "../utils.js"
 import { Server } from "../sync/server.js"
+import { Entry } from "@canvas-js/okra"
 
-export const getProtocol = (topic: string) => `/canvas/sync/v1/${topic}`
+export const getSyncProtocol = (topic: string) => `/canvas/sync/v1/${topic}`
+export const getPushProtocol = (topic: string) => `/canvas/sync/v1/${topic}/push`
 
 export type GossipLogServiceComponents = {
 	peerId: PeerId
@@ -65,13 +68,17 @@ export class GossipLogService<Payload = unknown>
 		return pubsub
 	}
 
-	public readonly protocol = getProtocol(this.messageLog.topic)
+	public readonly syncProtocol = getSyncProtocol(this.messageLog.topic)
+	public readonly pushProtocol = getPushProtocol(this.messageLog.topic)
 
 	private readonly log: Logger
 	private readonly maxInboundStreams: number
 	private readonly maxOutboundStreams: number
 	private readonly syncQueue = new PQueue({ concurrency: 1 })
 	private readonly syncQueuePeers = new Set<string>()
+
+	private readonly pushQueue = new PQueue({ concurrency: 16 })
+
 	private readonly topologyPeers = new Set<string>()
 	private readonly controller = new AbortController()
 
@@ -105,12 +112,17 @@ export class GossipLogService<Payload = unknown>
 
 		this.#pubsub.addEventListener("gossipsub:message", this.handleMessage)
 
-		await this.components.registrar.handle(this.protocol, this.handleIncomingStream, {
+		await this.components.registrar.handle(this.pushProtocol, this.handleIncomingPush, {
 			maxInboundStreams: this.maxInboundStreams,
 			maxOutboundStreams: this.maxOutboundStreams,
 		})
 
-		this.#registrarId = await this.components.registrar.register(this.protocol, {
+		await this.components.registrar.handle(this.syncProtocol, this.handleIncomingSync, {
+			maxInboundStreams: this.maxInboundStreams,
+			maxOutboundStreams: this.maxOutboundStreams,
+		})
+
+		this.#registrarId = await this.components.registrar.register(this.syncProtocol, {
 			notifyOnTransient: false,
 			onConnect: async (peerId, connection) => {
 				this.topologyPeers.add(peerId.toString())
@@ -125,7 +137,9 @@ export class GossipLogService<Payload = unknown>
 					await this.wait(interval)
 				}
 
-				this.scheduleSync(peerId)
+				const heads = await this.messageLog.read((txn) => txn.getHeads())
+				this.schedulePush(peerId, heads)
+				// this.scheduleSync(peerId)
 			},
 
 			onDisconnect: (peerId) => {
@@ -155,7 +169,7 @@ export class GossipLogService<Payload = unknown>
 		this.messageLog.removeEventListener("commit", this.forwardEvent)
 		this.messageLog.removeEventListener("message", this.forwardEvent)
 
-		await this.components.registrar.unhandle(this.protocol)
+		await this.components.registrar.unhandle(this.syncProtocol)
 		if (this.#registrarId !== null) {
 			this.components.registrar.unregister(this.#registrarId)
 			this.#registrarId = null
@@ -173,10 +187,9 @@ export class GossipLogService<Payload = unknown>
 			this.messageLog.append(txn, payload, options),
 		)
 
-		const [key, value] = this.messageLog.encode(signature, message)
-		const data = Event.encode({ insert: { key, value } })
+		const [_, value] = this.messageLog.encode(signature, message)
 
-		const recipients = this.#pubsub.publish(this.messageLog.topic, data).then(
+		const recipients = this.#pubsub.publish(this.messageLog.topic, value).then(
 			({ recipients }) => {
 				this.log("published message %s to %d recipients %O", id, recipients.length, recipients)
 				return recipients
@@ -198,9 +211,9 @@ export class GossipLogService<Payload = unknown>
 
 		const { id } = await this.messageLog.write((txn) => this.messageLog.insert(txn, signature, message))
 
-		const [key, value] = this.messageLog.encode(signature, message)
-		const data = Event.encode({ insert: { key, value } })
-		const recipients = this.#pubsub.publish(message.topic, data).then(
+		const [_, value] = this.messageLog.encode(signature, message)
+
+		const recipients = this.#pubsub.publish(message.topic, value).then(
 			({ recipients }) => {
 				this.log("published message %s to %d recipients %O", id, recipients.length, recipients)
 				return recipients
@@ -215,55 +228,33 @@ export class GossipLogService<Payload = unknown>
 	}
 
 	private handleMessage = ({ detail: { msgId, propagationSource, msg } }: GossipsubEvents["gossipsub:message"]) => {
-		if (msg.type !== "signed" || msg.topic !== this.messageLog.topic) {
+		if (msg.topic !== this.messageLog.topic) {
 			return
 		}
+
+		this.log("received gossipsub message %s via %p", msgId, propagationSource)
 
 		const sourceId = propagationSource.toString()
-
-		let event: Event
-		try {
-			event = Event.decode(msg.data)
-		} catch (err) {
-			this.log.error("error decoding gossipsub message: %O", err)
-			this.#pubsub.reportMessageValidationResult(msgId, sourceId, TopicValidatorResult.Reject)
-			return
-		}
-
-		if (event.insert !== undefined) {
-			this.handleInsert({ msgId, propagationSource, from: msg.from }, event.insert).then(
-				(result) => this.#pubsub.reportMessageValidationResult(msgId, sourceId, result),
-				(err) => {
-					this.log.error("error handling insert event: %O", err)
-					this.#pubsub.reportMessageValidationResult(msgId, sourceId, TopicValidatorResult.Reject)
-				},
-			)
-		} else if (event.update !== undefined) {
-			this.handleUpdate({ msgId, propagationSource, from: msg.from }, event.update).then(
-				(result) => this.#pubsub.reportMessageValidationResult(msgId, sourceId, result),
-				(err) => {
-					this.log.error("error handling update event: %O", err)
-					this.#pubsub.reportMessageValidationResult(msgId, sourceId, TopicValidatorResult.Reject)
-				},
-			)
-		} else {
-			this.log.error("error decoding gossipsub message (invalid type)")
-			this.#pubsub.reportMessageValidationResult(msgId, sourceId, TopicValidatorResult.Reject)
-		}
+		this.handleInsert(msg.data).then(
+			(result) => {
+				this.#pubsub.reportMessageValidationResult(msgId, sourceId, result)
+				if (result === TopicValidatorResult.Ignore) {
+					this.scheduleSync(propagationSource)
+				}
+			},
+			(err) => {
+				this.log.error("error handling gossipsub message: %O", err)
+				this.#pubsub.reportMessageValidationResult(msgId, sourceId, TopicValidatorResult.Reject)
+			},
+		)
 	}
 
-	private async handleInsert(
-		{ msgId, propagationSource, from }: { msgId: string; propagationSource: PeerId; from: PeerId },
-		{ key, value }: Event.Insert,
-	): Promise<TopicValidatorResult> {
-		this.log("handling insert event %s from %p (via %p)", msgId, from, propagationSource)
-
+	private async handleInsert(value: Uint8Array): Promise<TopicValidatorResult> {
 		const [id, signature, message] = this.messageLog.decode(value)
-		assert(decodeId(key) === id, "invalid message key")
 
 		await this.messageLog.verifySignature(signature, message)
 
-		const result = await this.messageLog.write(async (txn) => {
+		return await this.messageLog.write(async (txn) => {
 			const missingParents = await this.messageLog.getMissingParents(txn, message.parents)
 			if (missingParents.size !== 0) {
 				this.log("missing %d/%d parents", missingParents.size, message.parents.length)
@@ -271,26 +262,16 @@ export class GossipLogService<Payload = unknown>
 			}
 
 			try {
-				await this.messageLog.apply(txn, id, signature, message, [key, value])
+				await this.messageLog.apply(txn, id, signature, message, [encodeId(id), value])
 				return TopicValidatorResult.Accept
 			} catch (err) {
 				return TopicValidatorResult.Reject
 			}
 		})
-
-		// Need to sync
-		if (result === TopicValidatorResult.Ignore) {
-			this.scheduleSync(propagationSource)
-		}
-
-		return result
 	}
 
-	private async handleUpdate(
-		{ msgId, propagationSource, from }: { msgId: string; propagationSource: PeerId; from: PeerId },
-		{ heads }: Event.Update,
-	): Promise<TopicValidatorResult> {
-		this.log("handling update event %s from %p (via %p)", msgId, from, propagationSource)
+	private async handleUpdate(propagationSource: PeerId, heads: Uint8Array[]): Promise<TopicValidatorResult> {
+		this.log("handling update: %o", heads.map(decodeId))
 
 		const result = await this.messageLog.read(async (txn) => {
 			const missingParents = new Set<string>()
@@ -316,9 +297,23 @@ export class GossipLogService<Payload = unknown>
 		return result
 	}
 
-	private handleIncomingStream: StreamHandler = async ({ connection, stream }) => {
+	private handleIncomingPush: StreamHandler = async ({ connection, stream }) => {
 		const peerId = connection.remotePeer
-		this.log("opened incoming stream %s from peer %p", stream.id, peerId)
+		this.log("opened incoming push stream %s from peer %p", stream.id, peerId)
+
+		pipe(stream.source, lp.decode, async (msgs) => {
+			const { value: msg, done } = await msgs.next()
+			assert(done === false && msg !== undefined)
+			const heads = cbor.decode<Uint8Array[]>(msg.subarray())
+			await msgs.next().then((result) => assert(result.done))
+
+			this.handleUpdate(connection.remotePeer, heads)
+		})
+	}
+
+	private handleIncomingSync: StreamHandler = async ({ connection, stream }) => {
+		const peerId = connection.remotePeer
+		this.log("opened incoming sync stream %s from peer %p", stream.id, peerId)
 
 		const timeoutController = new DelayableController(3 * second)
 		const signal = anySignal([this.controller.signal, timeoutController.signal])
@@ -368,6 +363,51 @@ export class GossipLogService<Payload = unknown>
 		}
 	}
 
+	private schedulePush(peerId: PeerId, heads: Uint8Array[]) {
+		this.log("scheduling push to %p", peerId)
+		this.pushQueue.add(() => this.push(peerId, heads).catch((err) => this.log.error("push failed: %O", err)))
+	}
+
+	private async push(peerId: PeerId, heads: Uint8Array[]) {
+		const connection = this.components.connectionManager
+			.getConnections(peerId)
+			.find((connection) => connection.transient === false)
+
+		if (connection === undefined) {
+			this.log("cancelling push: no longer connected to %p", peerId)
+			return
+		}
+
+		const protocolSelectSignal = AbortSignal.timeout(DEFAULT_PROTOCOL_SELECT_TIMEOUT)
+		const stream = await connection
+			.newStream(this.pushProtocol, { negotiateFully: false, signal: protocolSelectSignal })
+			.catch((err) => {
+				this.log.error("failed to open outgoing push stream: %O", err)
+				throw err
+			})
+
+		this.log("opened outgoing push stream %s to peer %p", stream.id, peerId)
+
+		try {
+			const source = pushable()
+			await Promise.all([
+				//
+				pipe(source, lp.encode, stream.sink),
+				//
+				source.push(cbor.encode(heads)).end().onEmpty(),
+			])
+
+			await stream.close()
+		} catch (err) {
+			this.log.error("error sending push: %o", err)
+			if (err instanceof Error) {
+				stream.abort(err)
+			} else {
+				stream.abort(new Error())
+			}
+		}
+	}
+
 	private scheduleSync(peerId: PeerId) {
 		const id = peerId.toString()
 		if (this.syncQueuePeers.has(id)) {
@@ -378,7 +418,7 @@ export class GossipLogService<Payload = unknown>
 		this.log("scheduling sync with %p", peerId)
 		this.syncQueuePeers.add(id)
 		this.syncQueue
-			.add(() => this.sync(peerId), { priority: 0 })
+			.add(() => this.sync(peerId))
 			.catch((err) => this.log.error("sync failed: %O", err))
 			.finally(() => this.syncQueuePeers.delete(id))
 	}
@@ -427,15 +467,15 @@ export class GossipLogService<Payload = unknown>
 		const peerId = connection.remotePeer
 		const sourceId = peerId.toString()
 
-		const selectProtocolSignal = AbortSignal.timeout(DEFAULT_PROTOCOL_SELECT_TIMEOUT)
+		const protocolSelectSignal = AbortSignal.timeout(DEFAULT_PROTOCOL_SELECT_TIMEOUT)
 		const stream = await connection
-			.newStream(this.protocol, { negotiateFully: false, signal: selectProtocolSignal })
+			.newStream(this.syncProtocol, { negotiateFully: false, signal: protocolSelectSignal })
 			.catch((err) => {
-				this.log.error("failed to open outgoing stream: %O", err)
+				this.log.error("failed to open outgoing sync stream: %O", err)
 				throw err
 			})
 
-		this.log("opened outgoing stream %s to peer %p", stream.id, peerId)
+		this.log("opened outgoing sync stream %s to peer %p", stream.id, peerId)
 
 		const timeoutController = new DelayableController(3 * second)
 		const signal = anySignal([this.controller.signal, timeoutController.signal])
@@ -474,11 +514,13 @@ export class GossipLogService<Payload = unknown>
 		}
 
 		if (heads !== null) {
-			const data = Event.encode({ update: { heads } })
-			this.#pubsub.publish(this.messageLog.topic, data).then(
-				({ recipients }) => this.log("published update event to %d recipients %O", recipients.length, recipients),
-				(err) => this.log.error("failed to publish update event: %O", err),
-			)
+			this.#pubsub.getSubscribers(this.messageLog.topic).map((peer) => this.schedulePush(peer, heads))
+
+			// const data = Event.encode({ update: { heads } })
+			// this.#pubsub.publish(this.messageLog.topic, data).then(
+			// 	({ recipients }) => this.log("published update event to %d recipients %O", recipients.length, recipients),
+			// 	(err) => this.log.error("failed to publish update event: %O", err),
+			// )
 		}
 	}
 
