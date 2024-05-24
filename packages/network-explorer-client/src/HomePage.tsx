@@ -6,12 +6,21 @@ import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "./utils"
 import { NetworkStats } from "./NetworkStats"
 
 function HomePage() {
+	//
+	const { data: countsData, error: countsError } = useSWR(
+		"/index_api/counts",
+		fetchAndIpldParseJson<{ topic: string; address_count: number; session_count: number; action_count: number }[]>,
+		{
+			refreshInterval: 1000,
+		},
+	)
+
 	const { data, error } = useSWR("/index_api/messages", fetchAndIpldParseJson<Result<Action | Session>[]>, {
 		refreshInterval: 1000,
 	})
 
-	if (error) return <div>failed to load</div>
-	if (!data) return <div>loading...</div>
+	if (error || countsError) return <div>failed to load</div>
+	if (!data || !countsData) return <div>loading...</div>
 
 	const actions = data.filter((item) => item[2].payload.type === "action") as Result<Action>[]
 
@@ -38,14 +47,16 @@ function HomePage() {
 								</tr>
 							</thead>
 							<tbody>
-								<tr key={"chat-example.canvas.xyz"}>
-									<td className="break-all px-3 py-2">
-										<Link to="topic/chat-example.canvas.xyz">{"chat-example.canvas.xyz"}</Link>
-									</td>
-									<td className="break-all px-3">{1538}</td>
-									<td className="break-all px-3">{445}</td>
-									<td className="break-all px-3">{48}</td>
-								</tr>
+								{countsData.map((row) => (
+									<tr key={row.topic}>
+										<td className="break-all px-3 py-2">
+											<Link to={`topic/${row.topic}`}>{row.topic}</Link>
+										</td>
+										<td className="break-all px-3">{row.action_count}</td>
+										<td className="break-all px-3">{row.session_count}</td>
+										<td className="break-all px-3">{row.address_count}</td>
+									</tr>
+								))}
 							</tbody>
 						</table>
 					</div>
