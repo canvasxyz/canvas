@@ -1,5 +1,5 @@
 import useSWR from "swr"
-import { fetchAndIpldParseJson } from "./utils"
+import { fetchAndIpldParseJson } from "./utils.js"
 import { version } from "../package.json"
 
 export function NetworkStats() {

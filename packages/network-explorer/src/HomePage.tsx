@@ -1,9 +1,9 @@
 import useSWR from "swr"
 import { Action, Session } from "@canvas-js/interfaces"
 import { Link } from "react-router-dom"
-import ArgsPopout from "./ArgsPopout"
-import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "./utils"
-import { NetworkStats } from "./NetworkStats"
+import ArgsPopout from "./ArgsPopout.js"
+import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "./utils.js"
+import { NetworkStats } from "./NetworkStats.js"
 
 function HomePage() {
 	//

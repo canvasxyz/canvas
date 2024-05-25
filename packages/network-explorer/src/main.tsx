@@ -3,9 +3,9 @@ import ReactDOM from "react-dom/client"
 import { createBrowserRouter, RouterProvider } from "react-router-dom"
 
 import "./index.css"
-import HomePage from "./HomePage.tsx"
-import Topic from "./Topic.tsx"
-import Container from "./Container.tsx"
+import HomePage from "./HomePage.js"
+import Topic from "./Topic.js"
+import Container from "./Container.js"
 
 const router = createBrowserRouter([
 	{
