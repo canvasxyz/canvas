@@ -2,7 +2,6 @@ import React, { useCallback, useState, useEffect, useRef, lazy } from "react"
 import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
 import { PublicChat } from "@canvas-js/templates"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
-import { defaultBootstrapList } from "@canvas-js/core"
 
 import { ethers } from "ethers"
 
@@ -191,7 +190,7 @@ const GameDemo = () => {
 					</span>
 				)}
 				<div className="peers" onClick={() => setShowPeers(!showPeers)}>
-					{connections.filter((conn) => defaultBootstrapList.indexOf(conn.remoteAddr.toString()) === -1).length} peers
+					{connections} peers
 					{synced ? "" : connections.length === 0 ? ", waiting..." : ", syncing..."}
 				</div>
 			</div>
@@ -199,9 +198,7 @@ const GameDemo = () => {
 				<div className="peer-details">
 					{connections.map((conn) => (
 						<div>
-							{defaultBootstrapList.indexOf(conn.remoteAddr.toString()) !== -1
-								? "[bootstrap] "
-								: `[${conn?.direction}] `}
+							{`[${conn?.direction}] `}
 							{conn?.remoteAddr.toString()}
 						</div>
 					))}
