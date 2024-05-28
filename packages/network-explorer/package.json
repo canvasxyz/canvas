@@ -4,9 +4,10 @@
   "type": "module",
   "version": "0.10.0-alpha.1",
   "scripts": {
-    "dev": "nodemon",
-    "build": "next build && tsc --project tsconfig.server.json",
-    "start": "cross-env NODE_ENV=production node dist/server.js"
+    "dev:server": "nodemon",
+    "dev:client": "vite",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "start:server": "cross-env NODE_ENV=production node dist/server.js"
   },
   "dependencies": {
     "@canvas-js/chain-ethereum": "^0.10.0-alpha.1",
@@ -21,8 +22,6 @@
   },
   "devDependencies": {
     "@types/node": "^18.11.5",
-    "nodemon": "^2.0.20",
-    "tsx": "^4.9.0",
-    "typescript": "^4.8.4"
+    "nodemon": "^2.0.20"
   }
 }

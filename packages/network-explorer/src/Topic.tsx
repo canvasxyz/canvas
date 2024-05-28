@@ -1,8 +1,8 @@
 import useSWR from "swr"
 import { Action, Session } from "@canvas-js/interfaces"
-import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "./utils"
-import ArgsPopout from "./ArgsPopout"
-import { TopicStats } from "./TopicStats"
+import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "./utils.js"
+import ArgsPopout from "./ArgsPopout.js"
+import { TopicStats } from "./TopicStats.js"
 import { useParams } from "react-router-dom"
 
 function Topic() {
