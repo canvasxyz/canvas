@@ -104,7 +104,7 @@ function Topic() {
 
 								return (
 									<tr key={cid}>
-										<td className="break-all px-6 py-2">{message.payload.address.slice(0, 15)}...</td>
+										<td className="break-all px-6 py-2">{message.payload.address}</td>
 										<td className="break-all px-6">
 											<span className="text-gray-400">{formatDistanceCustom(message.payload.timestamp)} ago</span>
 										</td>
