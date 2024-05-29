@@ -16,7 +16,7 @@ function SessionField({ signature, message }: { signature: Signature; message: M
 
 function ActionsTable({ topic }: { topic: string }) {
 	const { data: actions, error } = useSWR(
-		`/canvas_api/${topic}/messages?type=action`,
+		`/canvas_api/${topic}/messages?type=action&order=desc&limit=10`,
 		fetchAndIpldParseJson<Result<Action>[]>,
 		{
 			refreshInterval: 1000,

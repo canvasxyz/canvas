@@ -4,7 +4,7 @@ import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "./utils.js"
 
 function SessionsTable({ topic }: { topic: string }) {
 	const { data: sessions, error } = useSWR(
-		`/canvas_api/${topic}/messages?type=action`,
+		`/canvas_api/${topic}/messages?type=session&order=desc&limit=10`,
 		fetchAndIpldParseJson<Result<Session>[]>,
 		{
 			refreshInterval: 1000,
@@ -24,6 +24,7 @@ function SessionsTable({ topic }: { topic: string }) {
 				<table className="table-auto w-full rounded text-left rtl:text-right">
 					<thead>
 						<tr className="border-b">
+							<th className="px-6 font-normal">Public Key</th>
 							<th className="px-6 font-normal">Address</th>
 							<th className="px-6 font-normal">Timestamp</th>
 						</tr>
@@ -35,6 +36,7 @@ function SessionsTable({ topic }: { topic: string }) {
 
 							return (
 								<tr key={cid}>
+									<td className="break-all px-6 py-2">{message.payload.publicKey}</td>
 									<td className="break-all px-6 py-2">{message.payload.address}</td>
 									<td className="break-all px-6">
 										<span className="text-gray-400">{formatDistanceCustom(message.payload.timestamp)} ago</span>
