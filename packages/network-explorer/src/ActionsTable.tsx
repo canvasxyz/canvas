@@ -12,15 +12,15 @@ function SessionField({ signature, message }: { signature: Signature; message: M
 
 	if (error) return <span className="text-red-400">failed to load</span>
 
-	return <span className="text-gray-400">{session && formatDistanceCustom(session.timestamp)} ago</span>
+	return <span className="text-gray-400"> {session && formatDistanceCustom(session.timestamp)} ago</span>
 }
 
 const entriesPerPage = 10
 
 function PaginationButton({ text, onClick, enabled }: { text: string; enabled: boolean; onClick: () => void }) {
 	const className = enabled
-		? "p-2 border rounded-lg cursor-pointer"
-		: "p-2 border rounded-lg bg-gray-100 cursor-not-allowed"
+		? "p-2 border rounded-lg cursor-pointer select-none"
+		: "p-2 border rounded-lg bg-gray-100 cursor-not-allowed select-none"
 
 	return (
 		<div
@@ -75,32 +75,34 @@ function ActionsTable({ topic }: { topic: string }) {
 				<table className="table-auto w-full rounded text-left rtl:text-right">
 					<thead>
 						<tr className="border-b">
-							<th className="px-6 font-normal">Address</th>
-							<th className="px-6 font-normal">Action</th>
-							<th className="px-6 font-normal">Args</th>
-							<th className="px-6 font-normal">Timestamp</th>
-							<th className="px-6 font-normal">Session</th>
+							<th className="pl-6 pr-3 font-normal">Address</th>
+							<th className="px-3 font-normal">Action</th>
+							<th className="px-3 font-normal">Args</th>
+							<th className="px-3 font-normal">Timestamp</th>
+							<th className="pl-3 pr-6 font-normal">Session</th>
 						</tr>
 					</thead>
 					<tbody>
-						{actionsToDisplay.map(([cid, signature, message]) => (
-							<tr key={cid}>
-								<td className="break-all px-6 py-2">{message.payload.address.slice(0, 15)}...</td>
-								<td className="break-all px-6">{message.payload.name}</td>
-								<td className="break-all px-6">
-									<ArgsPopout data={JSON.stringify(message.payload.args)} />
-								</td>
-								<td className="break-all px-6">{formatDistanceCustom(message.payload.timestamp)} ago</td>
-								<td className="break-all px-6">
-									{signature.publicKey.slice(0, 25)}...
-									<SessionField message={message} signature={signature} />
-								</td>
-							</tr>
-						))}
+						{actionsToDisplay.map(([cid, signature, message]) => {
+							const args = JSON.stringify(message.payload.args)
+							return (
+								<tr key={cid}>
+									<td className="break-all pl-6 pr-3 py-2">{message.payload.address.slice(0, 15)}...</td>
+									<td className="break-all px-3">{message.payload.name}</td>
+									<td className="break-all px-3">{args.length > 50 ? <ArgsPopout data={args} /> : args}</td>
+									<td className="break-all px-3">{formatDistanceCustom(message.payload.timestamp)} ago</td>
+									<td className="break-all pl-3 pr-6">
+										{signature.publicKey.slice(0, 25)}...
+										<SessionField message={message} signature={signature} />
+									</td>
+								</tr>
+							)
+						})}
 					</tbody>
 				</table>
 			</div>
 			<div className="flex flex-row gap-2">
+				<div className="flex-grow"></div>
 				<PaginationButton
 					text="Previous"
 					enabled={paginationCursors.length > 0}
