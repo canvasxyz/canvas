@@ -2,6 +2,7 @@ import useSWR from "swr"
 import ArgsPopout from "./ArgsPopout.js"
 import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "./utils.js"
 import { Action, Message, Session, Signature } from "@canvas-js/interfaces"
+import { useState } from "react"
 
 function SessionField({ signature, message }: { signature: Signature; message: Message<Action> }) {
 	const { data: session, error } = useSWR(
@@ -14,9 +15,40 @@ function SessionField({ signature, message }: { signature: Signature; message: M
 	return <span className="text-gray-400">{session && formatDistanceCustom(session.timestamp)} ago</span>
 }
 
+const entriesPerPage = 10
+
+function PaginationButton({ text, onClick, enabled }: { text: string; enabled: boolean; onClick: () => void }) {
+	const className = enabled
+		? "p-2 border rounded-lg cursor-pointer"
+		: "p-2 border rounded-lg bg-gray-100 cursor-not-allowed"
+
+	return (
+		<div
+			className={className}
+			onClick={(e) => {
+				if (!enabled) return
+				onClick()
+			}}
+		>
+			{text}
+		</div>
+	)
+}
+
 function ActionsTable({ topic }: { topic: string }) {
+	const [paginationCursor, setPaginationCursor] = useState<string | null>(null)
+	const query: Record<string, any> = {
+		type: "action",
+		order: "desc",
+		limit: entriesPerPage + 1,
+	}
+	if (paginationCursor) {
+		query["lt"] = paginationCursor
+	}
 	const { data: actions, error } = useSWR(
-		`/canvas_api/${topic}/messages?type=action&order=desc&limit=10`,
+		`/canvas_api/${topic}/messages?${Object.entries(query)
+			.map((entry) => entry.join("="))
+			.join("&")}`,
 		fetchAndIpldParseJson<Result<Action>[]>,
 		{
 			refreshInterval: 1000,
@@ -25,6 +57,11 @@ function ActionsTable({ topic }: { topic: string }) {
 
 	if (error) return <div>failed to load</div>
 	if (!actions) return <div>loading...</div>
+
+	// in order to determine if another page exists, we retrieve n + 1 entries
+	// but we don't want to display the last entry, so we pop it
+	const hasMore = actions.length > entriesPerPage
+	const actionsToDisplay = hasMore ? actions.slice(0, -1) : actions
 
 	return (
 		<div className="flex flex-col gap-2">
@@ -44,7 +81,7 @@ function ActionsTable({ topic }: { topic: string }) {
 						</tr>
 					</thead>
 					<tbody>
-						{actions.map(([cid, signature, message]) => (
+						{actionsToDisplay.map(([cid, signature, message]) => (
 							<tr key={cid}>
 								<td className="break-all px-6 py-2">{message.payload.address.slice(0, 15)}...</td>
 								<td className="break-all px-6">{message.payload.name}</td>
@@ -60,6 +97,17 @@ function ActionsTable({ topic }: { topic: string }) {
 						))}
 					</tbody>
 				</table>
+			</div>
+			<div className="flex flex-row gap-2">
+				<PaginationButton text="Previous" enabled={true} onClick={() => {}} />
+				<PaginationButton
+					text="Next"
+					enabled={hasMore}
+					onClick={() => {
+						const newCursor = actionsToDisplay[actionsToDisplay.length - 1][0]
+						setPaginationCursor(newCursor)
+					}}
+				/>
 			</div>
 		</div>
 	)
