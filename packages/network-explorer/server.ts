@@ -25,7 +25,7 @@ const { queries } = createDatabase(":memory:")
 const expressApp = express()
 expressApp.use(cors())
 
-const canvasApps: Canvas[] = []
+const canvasApps: Record<string, Canvas> = {}
 
 for (const topic of topics) {
 	console.log(`initializing canvas for topic ${topic}`)
@@ -68,13 +68,13 @@ for (const topic of topics) {
 	const canvasApiApp = createAPI(canvasApp, { exposeMessages: true, exposeModels: true, exposeP2P: true })
 	expressApp.use(`/canvas_api/${topic}`, canvasApiApp)
 
-	canvasApps.push(canvasApp)
+	canvasApps[topic] = canvasApp
 }
 
 expressApp.get("/index_api/messages", ipld(), async (req, res) => {
 	const numMessagesToReturn = 20
 
-	const messageIterators = canvasApps.map((app) =>
+	const messageIterators = Object.values(canvasApps).map((app) =>
 		app.getMessages(undefined, undefined, { reverse: true })[Symbol.asyncIterator](),
 	)
 	const result = await consumeOrderedIterators(
@@ -124,6 +124,57 @@ expressApp.get("/index_api/counts/:topic", (req, res) => {
 		address_count: addressCountResult.count || 0,
 	}
 	res.json(result)
+})
+
+expressApp.get("/index_api/latest_session/:topic", async (req, res) => {
+	// message.signature.publicKey
+	const canvasApp = canvasApps[req.params.topic]
+	if (!canvasApp) {
+		res.status(StatusCodes.NOT_FOUND)
+		res.end()
+		return
+	}
+	if (
+		!req.query.address ||
+		typeof req.query.address !== "string" ||
+		!req.query.public_key ||
+		typeof req.query.public_key !== "string"
+	) {
+		res.status(StatusCodes.BAD_REQUEST)
+		res.end()
+		return
+	}
+
+	// timestamp is optional but if given, it must be a string
+	if (req.query.timestamp && typeof req.query.timestamp !== "string") {
+		res.status(StatusCodes.BAD_REQUEST)
+		res.end()
+		return
+	}
+
+	const sessionId = await canvasApp.getSession({
+		address: req.query.address,
+		publicKey: req.query.public_key,
+		timestamp: req.query.timestamp ? parseInt(req.query.timestamp) : undefined,
+	})
+
+	if (!sessionId) {
+		res.status(StatusCodes.NOT_FOUND)
+		res.end()
+		return
+	}
+
+	const [_signature, message] = await canvasApp.getMessage(sessionId)
+	if (!message || message.payload.type !== "session") {
+		res.status(StatusCodes.NOT_FOUND)
+		res.end()
+		return
+	}
+
+	// return using ipld json stringify
+	res.status(StatusCodes.OK)
+	res.setHeader("content-type", "application/json")
+	res.end(json.encode(message.payload))
 })
 
 expressApp.listen(HTTP_PORT, HTTP_ADDR, () => {

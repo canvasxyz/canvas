@@ -1,9 +1,20 @@
 import useSWR from "swr"
-import { Action, Session } from "@canvas-js/interfaces"
+import { Action, Message, Session, Signature } from "@canvas-js/interfaces"
 import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "./utils.js"
 import ArgsPopout from "./ArgsPopout.js"
 import { TopicStats } from "./TopicStats.js"
 import { useParams } from "react-router-dom"
+
+function SessionField({ signature, message }: { signature: Signature; message: Message<Action> }) {
+	const { data: session, error } = useSWR(
+		`/index_api/latest_session/${message.topic}?address=${message.payload.address}&public_key=${signature.publicKey}`,
+		fetchAndIpldParseJson<Session>,
+	)
+
+	if (error) return <span className="text-red-400">failed to load</span>
+
+	return <span className="text-gray-400">{session && formatDistanceCustom(session.timestamp)} ago</span>
+}
 
 function Topic() {
 	const { topic } = useParams()
@@ -19,17 +30,6 @@ function Topic() {
 
 	const actions = sortedMessages.filter((item) => item[2].payload.type === "action") as Result<Action>[]
 	const sessions = sortedMessages.filter((item) => item[2].payload.type === "session") as Result<Session>[]
-
-	const sessionsByAddress = new Map<string, Session>()
-	for (const line of sessions) {
-		const { payload } = line[2]
-		if (payload.type === "session") {
-			const sessionIfExists = sessionsByAddress.get(payload.address)
-			if (!sessionIfExists || sessionIfExists.timestamp < payload.timestamp) {
-				sessionsByAddress.set(payload.address, payload)
-			}
-		}
-	}
 
 	return (
 		<>
@@ -54,29 +54,22 @@ function Topic() {
 							</tr>
 						</thead>
 						<tbody>
-							{actions.map((item) => {
-								const cid = item[0]
-								const message = item[2]
-								const session = sessionsByAddress.get(message.payload.address)
-								const publicKey = session ? session.publicKey : ""
-
-								return (
-									<tr key={cid}>
-										<td className="break-all px-6 py-2">{message.payload.address.slice(0, 15)}...</td>
-										<td className="break-all px-6">{message.payload.name}</td>
-										<td className="break-all px-6">
-											<ArgsPopout data={JSON.stringify(message.payload.args)} />
-										</td>
-										<td className="break-all px-6">{formatDistanceCustom(message.payload.timestamp)} ago</td>
-										<td className="break-all px-6">
-											{publicKey ? `${publicKey.slice(0, 25)}...` : "-"}{" "}
-											<span className="text-gray-400">{session && formatDistanceCustom(session.timestamp)} ago</span>
-										</td>
-										{/* <td className="break-all">{message.clock}</td> */}
-										{/* <td className="break-all">{JSON.stringify(message.parents)}</td> */}
-									</tr>
-								)
-							})}
+							{actions.map(([cid, signature, message]) => (
+								<tr key={cid}>
+									<td className="break-all px-6 py-2">{message.payload.address.slice(0, 15)}...</td>
+									<td className="break-all px-6">{message.payload.name}</td>
+									<td className="break-all px-6">
+										<ArgsPopout data={JSON.stringify(message.payload.args)} />
+									</td>
+									<td className="break-all px-6">{formatDistanceCustom(message.payload.timestamp)} ago</td>
+									<td className="break-all px-6">
+										{signature.publicKey.slice(0, 25)}...
+										<SessionField message={message} signature={signature} />
+									</td>
+									{/* <td className="break-all">{message.clock}</td> */}
+									{/* <td className="break-all">{JSON.stringify(message.parents)}</td> */}
+								</tr>
+							))}
 						</tbody>
 					</table>
 				</div>
