@@ -2,7 +2,8 @@ import useSWR from "swr"
 import ArgsPopout from "./ArgsPopout.js"
 import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "./utils.js"
 import { Action, Message, Session, Signature } from "@canvas-js/interfaces"
-import { useState } from "react"
+import PaginationButton from "./PaginationButton.js"
+import useCursorStack from "./useCursorStack.js"
 
 function SessionField({ signature, message }: { signature: Signature; message: Message<Action> }) {
 	const { data: session, error } = useSWR(
@@ -17,40 +18,22 @@ function SessionField({ signature, message }: { signature: Signature; message: M
 
 const entriesPerPage = 10
 
-function PaginationButton({ text, onClick, enabled }: { text: string; enabled: boolean; onClick: () => void }) {
-	const className = enabled
-		? "p-2 border rounded-lg cursor-pointer select-none"
-		: "p-2 border rounded-lg bg-gray-100 cursor-not-allowed select-none"
-
-	return (
-		<div
-			className={className}
-			onClick={(e) => {
-				if (!enabled) return
-				onClick()
-			}}
-		>
-			{text}
-		</div>
-	)
-}
-
 function ActionsTable({ topic }: { topic: string }) {
-	// store a stack of pagination cursors, so that we can go back
-	const [paginationCursors, setPaginationCursors] = useState<string[]>([])
+	const { currentCursor, pushCursor, popCursor } = useCursorStack<string>()
 
-	const query: Record<string, any> = {
+	// in order to determine if another page exists, we retrieve n + 1 entries
+	// if the length of the result is n + 1, then there is another page
+	const params = new URLSearchParams({
 		type: "action",
 		order: "desc",
-		limit: entriesPerPage + 1,
+		limit: (entriesPerPage + 1).toString(),
+	})
+	if (currentCursor) {
+		params.append("lt", currentCursor)
 	}
-	if (paginationCursors.length > 0) {
-		query["lt"] = paginationCursors[paginationCursors.length - 1]
-	}
+
 	const { data: actions, error } = useSWR(
-		`/canvas_api/${topic}/messages?${Object.entries(query)
-			.map((entry) => entry.join("="))
-			.join("&")}`,
+		`/canvas_api/${topic}/messages?${params.toString()}`,
 		fetchAndIpldParseJson<Result<Action>[]>,
 		{
 			refreshInterval: 1000,
@@ -60,8 +43,6 @@ function ActionsTable({ topic }: { topic: string }) {
 	if (error) return <div>failed to load</div>
 	if (!actions) return <div>loading...</div>
 
-	// in order to determine if another page exists, we retrieve n + 1 entries
-	// but we don't want to display the last entry, so we pop it
 	const hasMore = actions.length > entriesPerPage
 	const actionsToDisplay = hasMore ? actions.slice(0, -1) : actions
 
@@ -103,20 +84,11 @@ function ActionsTable({ topic }: { topic: string }) {
 			</div>
 			<div className="flex flex-row gap-2">
 				<div className="flex-grow"></div>
-				<PaginationButton
-					text="Previous"
-					enabled={paginationCursors.length > 0}
-					onClick={() => {
-						setPaginationCursors((paginationCursors) => paginationCursors.slice(0, -1))
-					}}
-				/>
+				<PaginationButton text="Previous" enabled={currentCursor !== null} onClick={popCursor} />
 				<PaginationButton
 					text="Next"
 					enabled={hasMore}
-					onClick={() => {
-						const newCursor = actionsToDisplay[actionsToDisplay.length - 1][0]
-						setPaginationCursors((paginationCursors) => [...paginationCursors, newCursor])
-					}}
+					onClick={() => pushCursor(actionsToDisplay[actionsToDisplay.length - 1][0])}
 				/>
 			</div>
 		</div>
