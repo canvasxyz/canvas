@@ -6,7 +6,7 @@ function PaginationButton({ text, onClick, enabled }: { text: string; enabled: b
 	return (
 		<div
 			className={className}
-			onClick={(e) => {
+			onClick={() => {
 				if (!enabled) return
 				onClick()
 			}}
