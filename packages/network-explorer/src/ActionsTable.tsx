@@ -36,14 +36,16 @@ function PaginationButton({ text, onClick, enabled }: { text: string; enabled: b
 }
 
 function ActionsTable({ topic }: { topic: string }) {
-	const [paginationCursor, setPaginationCursor] = useState<string | null>(null)
+	// store a stack of pagination cursors, so that we can go back
+	const [paginationCursors, setPaginationCursors] = useState<string[]>([])
+
 	const query: Record<string, any> = {
 		type: "action",
 		order: "desc",
 		limit: entriesPerPage + 1,
 	}
-	if (paginationCursor) {
-		query["lt"] = paginationCursor
+	if (paginationCursors.length > 0) {
+		query["lt"] = paginationCursors[paginationCursors.length - 1]
 	}
 	const { data: actions, error } = useSWR(
 		`/canvas_api/${topic}/messages?${Object.entries(query)
@@ -99,13 +101,19 @@ function ActionsTable({ topic }: { topic: string }) {
 				</table>
 			</div>
 			<div className="flex flex-row gap-2">
-				<PaginationButton text="Previous" enabled={true} onClick={() => {}} />
+				<PaginationButton
+					text="Previous"
+					enabled={paginationCursors.length > 0}
+					onClick={() => {
+						setPaginationCursors((paginationCursors) => paginationCursors.slice(0, -1))
+					}}
+				/>
 				<PaginationButton
 					text="Next"
 					enabled={hasMore}
 					onClick={() => {
 						const newCursor = actionsToDisplay[actionsToDisplay.length - 1][0]
-						setPaginationCursor(newCursor)
+						setPaginationCursors((paginationCursors) => [...paginationCursors, newCursor])
 					}}
 				/>
 			</div>
