@@ -1,10 +1,27 @@
 import useSWR from "swr"
 import { Session } from "@canvas-js/interfaces"
 import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "./utils.js"
+import PaginationButton from "./PaginationButton.js"
+import useCursorStack from "./useCursorStack.js"
+
+const entriesPerPage = 10
 
 function SessionsTable({ topic }: { topic: string }) {
+	const { currentCursor, pushCursor, popCursor } = useCursorStack<string>()
+
+	// in order to determine if another page exists, we retrieve n + 1 entries
+	// if the length of the result is n + 1, then there is another page
+	const params = new URLSearchParams({
+		type: "session",
+		order: "desc",
+		limit: (entriesPerPage + 1).toString(),
+	})
+	if (currentCursor) {
+		params.append("lt", currentCursor)
+	}
+
 	const { data: sessions, error } = useSWR(
-		`/canvas_api/${topic}/messages?type=session&order=desc&limit=10`,
+		`/canvas_api/${topic}/messages?${params.toString()}`,
 		fetchAndIpldParseJson<Result<Session>[]>,
 		{
 			refreshInterval: 1000,
@@ -13,6 +30,9 @@ function SessionsTable({ topic }: { topic: string }) {
 
 	if (error) return <div>failed to load</div>
 	if (!sessions) return <div>loading...</div>
+
+	const sessionsToDisplay = sessions.slice(0, entriesPerPage)
+	const hasMore = sessions.length > entriesPerPage
 
 	return (
 		<div className="flex flex-col gap-2 pb-4">
@@ -30,7 +50,7 @@ function SessionsTable({ topic }: { topic: string }) {
 						</tr>
 					</thead>
 					<tbody>
-						{sessions.map((item) => {
+						{sessionsToDisplay.map((item) => {
 							const cid = item[0]
 							const message = item[2]
 
@@ -46,6 +66,15 @@ function SessionsTable({ topic }: { topic: string }) {
 						})}
 					</tbody>
 				</table>
+			</div>
+			<div className="flex flex-row gap-2">
+				<div className="flex-grow"></div>
+				<PaginationButton text="Previous" enabled={currentCursor !== null} onClick={popCursor} />
+				<PaginationButton
+					text="Next"
+					enabled={hasMore}
+					onClick={() => pushCursor(sessionsToDisplay[sessionsToDisplay.length - 1][0])}
+				/>
 			</div>
 		</div>
 	)

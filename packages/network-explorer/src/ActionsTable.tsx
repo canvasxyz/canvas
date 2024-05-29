@@ -44,7 +44,7 @@ function ActionsTable({ topic }: { topic: string }) {
 	if (!actions) return <div>loading...</div>
 
 	const hasMore = actions.length > entriesPerPage
-	const actionsToDisplay = hasMore ? actions.slice(0, -1) : actions
+	const actionsToDisplay = actions.slice(0, entriesPerPage)
 
 	return (
 		<div className="flex flex-col gap-2">
