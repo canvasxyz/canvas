@@ -30,7 +30,7 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 	public readonly match = (address: string) => addressPattern.test(address)
 	public readonly bech32Prefix: string
 
-	#signer: GenericSigner
+	_signer: GenericSigner
 
 	public constructor({ signer, sessionDuration, bech32Prefix }: CosmosSignerInit = {}) {
 		super("chain-cosmos", ed25519, { sessionDuration })
@@ -38,15 +38,15 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 		this.bech32Prefix = bech32Prefix == undefined ? "cosmos" : bech32Prefix
 
 		if (signer == undefined) {
-			this.#signer = createDefaultSigner(this.bech32Prefix)
+			this._signer = createDefaultSigner(this.bech32Prefix)
 		} else if (signer.type == "ethereum") {
-			this.#signer = createEthereumSigner(signer, this.bech32Prefix)
+			this._signer = createEthereumSigner(signer, this.bech32Prefix)
 		} else if (signer.type == "amino") {
-			this.#signer = createAminoSigner(signer)
+			this._signer = createAminoSigner(signer)
 		} else if (signer.type == "bytes") {
-			this.#signer = createBytesSigner(signer)
+			this._signer = createBytesSigner(signer)
 		} else if (signer.type == "arbitrary") {
-			this.#signer = createArbitrarySigner(signer)
+			this._signer = createArbitrarySigner(signer)
 		} else {
 			throw new Error("invalid signer")
 		}
@@ -93,8 +93,8 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 	}
 
 	public async getAddress(): Promise<string> {
-		const chainId = await this.#signer.getChainId()
-		const walletAddress = await this.#signer.getAddress(chainId)
+		const chainId = await this._signer.getChainId()
+		const walletAddress = await this._signer.getAddress(chainId)
 		const { data } = fromBech32(walletAddress)
 		const walletAddressWithPrefix = toBech32(this.bech32Prefix, data)
 		return `cosmos:${chainId}:${walletAddressWithPrefix}`
@@ -118,7 +118,7 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 			message.expirationTime = new Date(timestamp + duration).toISOString()
 		}
 
-		const signResult = await this.#signer.sign(message, walletAddress, chainId)
+		const signResult = await this._signer.sign(message, walletAddress, chainId)
 
 		return {
 			type: "session",

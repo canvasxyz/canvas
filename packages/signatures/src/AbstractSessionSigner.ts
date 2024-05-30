@@ -41,6 +41,9 @@ export abstract class AbstractSessionSigner<AuthorizationData> implements Sessio
 
 	public abstract authorize(data: AbstractSessionData): Awaitable<Session<AuthorizationData>>
 
+	/*
+	 * Create a new session and cache it for the given `topic`.
+	 */
 	public async newSession(
 		topic: string,
 	): Promise<{ payload: Session<AuthorizationData>; signer: Signer<Action | Session<AuthorizationData>> }> {
@@ -61,6 +64,10 @@ export abstract class AbstractSessionSigner<AuthorizationData> implements Sessio
 		return { payload: session, signer }
 	}
 
+	/*
+	 * Get an existing session for `topic`. You may also provide a specific CAIP-2 formatted
+	 * address to check if a session exists for that specific address.
+	 */
 	public async getSession(
 		topic: string,
 		options: { address?: string } = {},

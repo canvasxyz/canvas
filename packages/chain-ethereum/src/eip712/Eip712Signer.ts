@@ -25,17 +25,17 @@ export class Eip712Signer extends AbstractSessionSigner<Eip712SessionData> {
 	public readonly match = (address: string) => addressPattern.test(address)
 
 	public readonly chainId: number
-	#signer: AbstractSigner
+	_signer: AbstractSigner
 
 	constructor(init: { signer?: AbstractSigner; chainId?: number; sessionDuration?: number } = {}) {
 		super("chain-ethereum-eip712", Secp256k1SignatureScheme, { sessionDuration: init.sessionDuration })
-		this.#signer = init.signer ?? Wallet.createRandom()
+		this._signer = init.signer ?? Wallet.createRandom()
 		this.chainId = init.chainId ?? 1
 	}
 
 	// TODO: should be getUserAddress() or getWalletAddress()
 	public async getAddress(): Promise<string> {
-		const walletAddress = await this.#signer.getAddress()
+		const walletAddress = await this._signer.getAddress()
 		return `eip155:${this.chainId}:${walletAddress}`
 	}
 
@@ -47,7 +47,7 @@ export class Eip712Signer extends AbstractSessionSigner<Eip712SessionData> {
 
 		const sessionAddress = computeAddress(hexlify(publicKeyBytes))
 
-		const signature = await this.#signer.signTypedData({ name: topic }, Eip712Signer.sessionDataTypes, {
+		const signature = await this._signer.signTypedData({ name: topic }, Eip712Signer.sessionDataTypes, {
 			topic: topic,
 			sessionAddress: sessionAddress,
 			duration: duration ?? 0,

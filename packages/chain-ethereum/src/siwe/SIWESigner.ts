@@ -31,18 +31,18 @@ export class SIWESigner extends AbstractSessionSigner<SIWESessionData> {
 	public readonly key: string
 	public readonly chainId: number
 
-	#signer: AbstractSigner
+	_signer: AbstractSigner
 
 	public constructor({ sessionDuration, ...init }: SIWESignerInit = {}) {
 		super("chain-ethereum", ed25519, { sessionDuration })
 
-		this.#signer = init.signer ?? Wallet.createRandom()
+		this._signer = init.signer ?? Wallet.createRandom()
 		this.chainId = init.chainId ?? 1
 		this.key = `SIWESigner-${init.signer ? "signer" : "burner"}`
 	}
 
 	public async getAddress(): Promise<string> {
-		const walletAddress = await this.#signer.getAddress()
+		const walletAddress = await this._signer.getAddress()
 		return `eip155:${this.chainId}:${walletAddress}`
 	}
 
@@ -73,7 +73,7 @@ export class SIWESigner extends AbstractSessionSigner<SIWESessionData> {
 			siweMessage.expirationTime = new Date(timestamp + duration).toISOString()
 		}
 
-		const signature = await this.#signer.signMessage(prepareSIWEMessage(siweMessage))
+		const signature = await this._signer.signMessage(prepareSIWEMessage(siweMessage))
 
 		return {
 			type: "session",
