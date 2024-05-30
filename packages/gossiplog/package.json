@@ -1,84 +1,89 @@
 {
-  "name": "@canvas-js/gossiplog",
-  "version": "0.10.0-beta.2",
-  "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
-  "type": "module",
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "files": [
-    "lib"
-  ],
-  "main": "./lib/index.js",
-  "types": "./lib/index.d.ts",
-  "sideEffects": false,
-  "exports": {
-    ".": "./lib/index.js",
-    "./node": "./lib/node/index.js",
-    "./browser": "./lib/browser/index.js",
-    "./memory": "./lib/memory/index.js",
-    "./pg": "./lib/pg/index.js",
-    "./service": "./lib/service/index.js"
-  },
-  "imports": {
+	"name": "@canvas-js/gossiplog",
+	"version": "0.10.0-beta.2",
+	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
+	"type": "module",
+	"engines": {
+		"node": ">=18.0.0"
+	},
+	"files": [
+		"lib"
+	],
+	"main": "./lib/index.js",
+	"types": "./lib/index.d.ts",
+	"sideEffects": false,
+	"exports": {
+		".": "./lib/index.js",
+		"./node": "./lib/node/index.js",
+		"./browser": "./lib/browser/index.js",
+		"./memory": "./lib/memory/index.js",
+		"./pg": "./lib/pg/index.js",
+		"./service": "./lib/service/index.js"
+	},
+	"imports": {
     "#protocols/sync": "./lib/protocols/sync.js",
-    "#protocols/events": "./lib/protocols/events.js"
-  },
-  "scripts": {
-    "generate": "npm run generate-sync && npm run generate-events",
-    "generate-sync": "protons ./src/protocols/sync.proto",
-    "generate-events": "protons ./src/protocols/events.proto",
-    "test": "ava --serial"
-  },
-  "peerDependencies": {
-    "@chainsafe/libp2p-gossipsub": "^13.0.0"
-  },
-  "dependencies": {
-    "@canvas-js/interfaces": "0.10.0-beta.2",
-    "@canvas-js/okra": "^0.3.0",
-    "@canvas-js/okra-idb": "^0.3.0",
-    "@canvas-js/okra-memory": "^0.3.0",
-    "@canvas-js/okra-node": "^0.6.0",
-    "@canvas-js/okra-pg": "^0.1.0",
-    "@canvas-js/signatures": "0.10.0-beta.2",
-    "@canvas-js/utils": "0.10.0-beta.2",
-    "@chainsafe/libp2p-yamux": "^6.0.2",
-    "@ipld/dag-cbor": "^9.2.0",
-    "@ipld/schema": "^4.2.15",
-    "@libp2p/interface": "^1.4.0",
-    "@libp2p/interface-internal": "^1.2.1",
-    "@libp2p/logger": "^4.0.13",
-    "@libp2p/peer-id": "^4.1.2",
-    "@multiformats/multiaddr": "^12.1.11",
-    "@noble/hashes": "^1.4.0",
-    "any-signal": "^4.1.1",
-    "idb": "^8.0.0",
-    "it-length-prefixed": "^9.0.3",
-    "it-pipe": "^3.0.1",
-    "it-pushable": "^3.2.3",
-    "it-stream-types": "^2.0.1",
-    "multiformats": "^13.0.1",
-    "nanoid": "^5.0.4",
-    "p-queue": "^8.0.0",
-    "pg": "^8.11.3",
-    "pg-cursor": "^2.10.3",
-    "protons-runtime": "^5.2.0",
-    "uint8arraylist": "^2.4.7",
-    "uint8arrays": "^5.1.0"
-  },
-  "devDependencies": {
-    "@chainsafe/libp2p-gossipsub": "^13.0.0",
-    "@libp2p/bootstrap": "^10.0.24",
-    "@libp2p/identify": "^2.0.2",
-    "@libp2p/peer-id-factory": "^4.1.1",
-    "@libp2p/plaintext": "^1.0.24",
-    "@libp2p/websockets": "^8.0.24",
-    "@types/pg": "^8.11.6",
-    "@types/pg-cursor": "^2.7.2",
-    "fake-indexeddb": "^6.0.0",
-    "libp2p": "^1.6.0",
-    "p-defer": "^4.0.0",
-    "protons": "^7.3.1",
-    "web-locks": "^0.0.8"
-  }
+		"#protocols/events": "./lib/protocols/events.js",
+    "#target": {
+      "browser": "./lib/targets/browser/index.js",
+      "node": "./lib/targets/node/index.js",
+      "default": "./lib/targets/default/index.js"
+    }
+	},
+	"scripts": {
+		"generate": "npm run generate-sync && npm run generate-events",
+		"generate-sync": "protons ./src/protocols/sync.proto",
+		"generate-events": "protons ./src/protocols/events.proto",
+		"test": "ava --serial"
+	},
+	"peerDependencies": {
+		"@chainsafe/libp2p-gossipsub": "^13.0.0"
+	},
+	"dependencies": {
+		"@canvas-js/interfaces": "0.10.0-beta.2",
+		"@canvas-js/okra": "^0.3.0",
+		"@canvas-js/okra-idb": "^0.3.0",
+		"@canvas-js/okra-memory": "^0.3.0",
+		"@canvas-js/okra-node": "^0.6.0",
+		"@canvas-js/okra-pg": "^0.1.0",
+		"@canvas-js/signatures": "0.10.0-beta.2",
+		"@canvas-js/utils": "0.10.0-beta.2",
+		"@chainsafe/libp2p-yamux": "^6.0.2",
+		"@ipld/dag-cbor": "^9.2.0",
+		"@ipld/schema": "^4.2.15",
+		"@libp2p/interface": "^1.4.0",
+		"@libp2p/interface-internal": "^1.2.1",
+		"@libp2p/logger": "^4.0.13",
+		"@libp2p/peer-id": "^4.1.2",
+		"@multiformats/multiaddr": "^12.1.11",
+		"@noble/hashes": "^1.4.0",
+		"any-signal": "^4.1.1",
+		"idb": "^8.0.0",
+		"it-length-prefixed": "^9.0.3",
+		"it-pipe": "^3.0.1",
+		"it-pushable": "^3.2.3",
+		"it-stream-types": "^2.0.1",
+		"multiformats": "^13.0.1",
+		"nanoid": "^5.0.4",
+		"p-queue": "^8.0.0",
+		"pg": "^8.11.3",
+		"pg-cursor": "^2.10.3",
+		"protons-runtime": "^5.2.0",
+		"uint8arraylist": "^2.4.7",
+		"uint8arrays": "^5.1.0"
+	},
+	"devDependencies": {
+		"@chainsafe/libp2p-gossipsub": "^13.0.0",
+		"@libp2p/bootstrap": "^10.0.24",
+		"@libp2p/identify": "^2.0.2",
+		"@libp2p/peer-id-factory": "^4.1.1",
+		"@libp2p/plaintext": "^1.0.24",
+		"@libp2p/websockets": "^8.0.24",
+		"@types/pg": "^8.11.6",
+		"@types/pg-cursor": "^2.7.2",
+		"fake-indexeddb": "^6.0.0",
+		"libp2p": "^1.6.0",
+		"p-defer": "^4.0.0",
+		"protons": "^7.3.1",
+		"web-locks": "^0.0.8"
+	}
 }
