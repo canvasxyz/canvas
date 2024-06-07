@@ -13,7 +13,7 @@
   "types": "./lib/index.d.ts",
   "sideEffects": false,
   "scripts": {
-    "test": "ava"
+    "test": "ava --verbose --serial"
   },
   "dependencies": {
     "@canvas-js/core": "0.10.0-beta.2",
