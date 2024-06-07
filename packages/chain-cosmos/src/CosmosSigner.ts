@@ -118,7 +118,7 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 			message.expirationTime = new Date(timestamp + duration).toISOString()
 		}
 
-		const signResult = await this._signer.sign(message, walletAddress, chainId)
+		const signResult = await this._signer.sign(message, walletAddress, await this._signer.getChainId())
 
 		return {
 			type: "session",
