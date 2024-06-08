@@ -134,7 +134,12 @@ export class SubstrateSigner extends AbstractSessionSigner<SubstrateSessionData>
 	}
 
 	public async verifySession(topic: string, session: Session) {
-		const { publicKey, address, authorizationData, timestamp, duration } = session
+		const {
+			publicKey,
+			address,
+			authorizationData,
+			context: { timestamp, duration },
+		} = session
 
 		assert(validateSessionData(authorizationData), "invalid session")
 		const [chainId, walletAddress] = parseAddress(address)
@@ -175,7 +180,12 @@ export class SubstrateSigner extends AbstractSessionSigner<SubstrateSessionData>
 	}
 
 	public async authorize(data: AbstractSessionData): Promise<Session<SubstrateSessionData>> {
-		const { topic, address, publicKey, timestamp, duration } = data
+		const {
+			topic,
+			address,
+			publicKey,
+			context: { timestamp, duration },
+		} = data
 		const issuedAt = new Date(timestamp).toISOString()
 
 		const [chainId, walletAddress] = parseAddress(address)
@@ -197,9 +207,11 @@ export class SubstrateSigner extends AbstractSessionSigner<SubstrateSessionData>
 			address,
 			publicKey: publicKey,
 			authorizationData: { signatureResult, data: message, substrateKeyType },
-			blockhash: null,
-			timestamp: timestamp,
-			duration: duration,
+			context: {
+				blockhash: null,
+				timestamp: timestamp,
+				duration: duration,
+			},
 		}
 	}
 }

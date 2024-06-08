@@ -185,8 +185,10 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 			address: session.address,
 			name: "foo",
 			args: { bar: 7 },
-			blockhash: null,
-			timestamp: session.timestamp,
+			context: {
+				blockhash: null,
+				timestamp: session.timestamp,
+			},
 		}
 
 		const actionMessage = { topic, clock: 1, parents: [], payload: action }

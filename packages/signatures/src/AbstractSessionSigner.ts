@@ -53,8 +53,10 @@ export abstract class AbstractSessionSigner<AuthorizationData> implements Sessio
 			topic,
 			address,
 			publicKey: signer.publicKey,
-			timestamp: Date.now(),
-			duration: this.sessionDuration,
+			context: {
+				timestamp: Date.now(),
+				duration: this.sessionDuration,
+			},
 		})
 
 		const key = `canvas/${topic}/${address}`

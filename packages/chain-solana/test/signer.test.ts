@@ -32,8 +32,10 @@ test("create and verify session and action", async (t) => {
 		address: session.address,
 		name: "foo",
 		args: { bar: 7 },
-		blockhash: null,
-		timestamp: session.timestamp,
+		context: {
+			blockhash: null,
+			timestamp: session.timestamp,
+		},
 	}
 
 	const actionMessage = { topic, clock: 1, parents: [], payload: action }

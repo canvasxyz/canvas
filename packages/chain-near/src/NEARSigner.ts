@@ -33,7 +33,12 @@ export class NEARSigner extends AbstractSessionSigner<NEARSessionData> {
 	}
 
 	public verifySession(topic: string, session: Session) {
-		const { publicKey, address, authorizationData: data, timestamp, duration } = session
+		const {
+			publicKey,
+			address,
+			authorizationData: data,
+			context: { timestamp, duration },
+		} = session
 		assert(validateSessionData(data), "invalid session")
 		const [chain, walletAddress] = parseAddress(address)
 
@@ -62,7 +67,12 @@ export class NEARSigner extends AbstractSessionSigner<NEARSessionData> {
 	}
 
 	public async authorize(data: AbstractSessionData): Promise<Session<NEARSessionData>> {
-		const { topic, address, publicKey, timestamp, duration } = data
+		const {
+			topic,
+			address,
+			publicKey,
+			context: { timestamp, duration },
+		} = data
 		const issuedAt = new Date(timestamp)
 
 		const message: NEARMessage = {
@@ -89,9 +99,11 @@ export class NEARSigner extends AbstractSessionSigner<NEARSessionData> {
 			address: address,
 			publicKey: publicKey,
 			authorizationData: { signature, publicKey: publicKeyData },
-			blockhash: null,
-			timestamp: timestamp,
-			duration: duration,
+			context: {
+				blockhash: null,
+				timestamp: timestamp,
+				duration: duration,
+			},
 		}
 	}
 }

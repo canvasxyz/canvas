@@ -47,7 +47,12 @@ export class SIWESigner extends AbstractSessionSigner<SIWESessionData> {
 	}
 
 	public async authorize(sessionData: AbstractSessionData): Promise<Session<SIWESessionData>> {
-		const { topic, address, timestamp, duration, publicKey } = sessionData
+		const {
+			topic,
+			address,
+			context: { timestamp, duration },
+			publicKey,
+		} = sessionData
 
 		const nonce = siwe.generateNonce()
 
@@ -80,14 +85,21 @@ export class SIWESigner extends AbstractSessionSigner<SIWESessionData> {
 			address: address,
 			publicKey: publicKey,
 			authorizationData: { signature: getBytes(signature), domain, nonce },
-			duration: duration,
-			timestamp: timestamp,
-			blockhash: null,
+			context: {
+				duration: duration,
+				timestamp: timestamp,
+				blockhash: null,
+			},
 		}
 	}
 
 	public verifySession(topic: string, session: Session<SIWESessionData>) {
-		const { publicKey, address, authorizationData, timestamp, duration } = session
+		const {
+			publicKey,
+			address,
+			authorizationData,
+			context: { timestamp, duration },
+		} = session
 
 		assert(validateSIWESessionData(authorizationData), "invalid session")
 		const { chainId, address: walletAddress } = parseAddress(address)

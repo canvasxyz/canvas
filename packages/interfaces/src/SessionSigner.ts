@@ -7,8 +7,10 @@ export interface AbstractSessionData {
 	topic: string
 	address: string
 	publicKey: string
-	timestamp: number
-	duration: number | null
+	context: {
+		timestamp: number
+		duration: number | null
+	}
 }
 
 export interface SessionSigner<AuthorizationData = any> {

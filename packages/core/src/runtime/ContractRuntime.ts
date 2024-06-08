@@ -139,7 +139,12 @@ export class ContractRuntime extends AbstractRuntime {
 	}
 
 	protected async execute(context: ExecutionContext): Promise<void | any> {
-		const { address, name, args, blockhash, timestamp } = context.message.payload
+		const {
+			address,
+			name,
+			args,
+			context: { blockhash, timestamp },
+		} = context.message.payload
 
 		const actionHandle = this.actions[name]
 		const argsTransformer = this.argsTransformers[name]

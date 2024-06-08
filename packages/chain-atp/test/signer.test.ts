@@ -28,9 +28,11 @@ test("create and verify session", async (t) => {
 				plcOperationLog: plcOperationLog,
 			},
 
-			timestamp: Date.now(),
-			blockhash: null,
-			duration: null,
+			context: {
+				timestamp: Date.now(),
+				blockhash: null,
+				duration: null,
+			},
 		})
 	}
 

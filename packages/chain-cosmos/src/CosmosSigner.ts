@@ -53,7 +53,12 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 	}
 
 	public async verifySession(topic: string, session: Session) {
-		const { publicKey, address, authorizationData: data, timestamp, duration } = session
+		const {
+			publicKey,
+			address,
+			authorizationData: data,
+			context: { timestamp, duration },
+		} = session
 
 		const [chainId, walletAddress] = parseAddress(address)
 
@@ -101,7 +106,12 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 	}
 
 	public async authorize(data: AbstractSessionData): Promise<Session<CosmosSessionData>> {
-		const { topic, address, timestamp, publicKey, duration } = data
+		const {
+			topic,
+			address,
+			publicKey,
+			context: { timestamp, duration },
+		} = data
 		const [chainId, walletAddress] = parseAddress(address)
 
 		const issuedAt = new Date(timestamp)
@@ -125,9 +135,11 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 			address: address,
 			publicKey: publicKey,
 			authorizationData: signResult,
-			blockhash: null,
-			timestamp: timestamp,
-			duration: duration,
+			context: {
+				blockhash: null,
+				timestamp: timestamp,
+				duration: duration,
+			},
 		}
 	}
 }

@@ -40,7 +40,12 @@ export class Eip712Signer extends AbstractSessionSigner<Eip712SessionData> {
 	}
 
 	public async authorize(sessionData: AbstractSessionData): Promise<Session<Eip712SessionData>> {
-		const { topic, address, publicKey, timestamp, duration } = sessionData
+		const {
+			topic,
+			address,
+			publicKey,
+			context: { timestamp, duration },
+		} = sessionData
 
 		const { type, publicKey: publicKeyBytes } = decodeURI(publicKey)
 		assert(type === Secp256k1SignatureScheme.type)
@@ -60,9 +65,11 @@ export class Eip712Signer extends AbstractSessionSigner<Eip712SessionData> {
 			address: address,
 			publicKey: publicKey,
 			authorizationData: { signature: getBytes(signature) },
-			duration: duration,
-			timestamp: timestamp,
-			blockhash: null,
+			context: {
+				duration: duration,
+				timestamp: timestamp,
+				blockhash: null,
+			},
 		}
 	}
 
@@ -81,9 +88,9 @@ export class Eip712Signer extends AbstractSessionSigner<Eip712SessionData> {
 			{
 				topic: topic,
 				sessionAddress: sessionAddress,
-				duration: session.duration ?? 0,
-				timestamp: session.timestamp,
-				blockhash: session.blockhash ?? "",
+				duration: session.context.duration ?? 0,
+				timestamp: session.context.timestamp,
+				blockhash: session.context.blockhash ?? "",
 			},
 			hexlify(session.authorizationData.signature),
 		)
