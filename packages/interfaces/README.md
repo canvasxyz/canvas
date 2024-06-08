@@ -68,15 +68,17 @@ export type Action = {
   name: string
   args: any
 
-  timestamp: number
-  blockhash: string | null
+  context: {
+    timestamp: number
+    blockhash?: string
+  }
 }
 ```
 
 ### Sessions
 
 ```ts
-export type Session<Data = any> = {
+export type Session<AuthorizationData = any> = {
   type: "session"
 
   /** DID or CAIP-2 address (e.g. "eip155:1:0xb94d27...") */
@@ -88,9 +90,11 @@ export type Session<Data = any> = {
   /** chain-specific session payload, e.g. a SIWE message & signature */
   authorizationData: AuthorizationData
 
-  blockhash: string | null
-  timestamp: number
-  duration: number | null
+  context: {
+    blockhash?: string
+    duration?: number
+    timestamp: number
+  }
 }
 ```
 

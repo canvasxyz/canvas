@@ -137,11 +137,7 @@ export class ATPSigner extends AbstractSessionSigner<ATPSessionData> {
 				recordURI: uri,
 				plcOperationLog,
 			},
-			context: {
-				blockhash: null,
-				duration: duration,
-				timestamp: timestamp,
-			},
+			context: duration ? { duration, timestamp } : { timestamp },
 		}
 	}
 }

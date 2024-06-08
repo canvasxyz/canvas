@@ -53,7 +53,7 @@ export class NEARSigner extends AbstractSessionSigner<NEARSessionData> {
 			expirationTime: null,
 		}
 
-		if (duration !== null) {
+		if (duration !== undefined) {
 			message.expirationTime = new Date(timestamp + duration).toISOString()
 		}
 
@@ -99,11 +99,7 @@ export class NEARSigner extends AbstractSessionSigner<NEARSessionData> {
 			address: address,
 			publicKey: publicKey,
 			authorizationData: { signature, publicKey: publicKeyData },
-			context: {
-				blockhash: null,
-				timestamp: timestamp,
-				duration: duration,
-			},
+			context: duration ? { duration, timestamp } : { timestamp },
 		}
 	}
 }

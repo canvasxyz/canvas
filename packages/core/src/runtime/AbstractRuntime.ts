@@ -113,7 +113,7 @@ export abstract class AbstractRuntime {
 					message_id: id,
 					public_key: publicKey,
 					address: address,
-					expiration: duration === null ? Number.MAX_SAFE_INTEGER : timestamp + duration,
+					expiration: duration === undefined ? Number.MAX_SAFE_INTEGER : timestamp + duration,
 					rawMessage: bytesToHex(cbor.encode(message)),
 					rawSignature: bytesToHex(cbor.encode(signature)),
 				})

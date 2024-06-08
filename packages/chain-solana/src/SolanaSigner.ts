@@ -95,7 +95,7 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 			topic,
 			publicKey,
 			issuedAt: new Date(timestamp).toISOString(),
-			expirationTime: duration === null ? null : new Date(timestamp + duration).toISOString(),
+			expirationTime: duration === undefined ? null : new Date(timestamp + duration).toISOString(),
 		}
 
 		const signingPublicKey = base58btc.baseDecode(walletAddress)
@@ -142,11 +142,14 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 			address: address,
 			publicKey: publicKey,
 			authorizationData: { signature },
-			context: {
-				blockhash: null,
-				timestamp,
-				duration: this.sessionDuration,
-			},
+			context: this.sessionDuration
+				? {
+						timestamp,
+						duration: this.sessionDuration,
+					}
+				: {
+						timestamp,
+					},
 		}
 	}
 }

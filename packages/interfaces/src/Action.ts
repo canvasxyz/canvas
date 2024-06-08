@@ -8,7 +8,7 @@ export type Action = {
 	args: any
 
 	context: {
+		blockhash?: string
 		timestamp: number
-		blockhash: string | null
 	}
 }

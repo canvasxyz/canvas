@@ -65,11 +65,7 @@ export class Eip712Signer extends AbstractSessionSigner<Eip712SessionData> {
 			address: address,
 			publicKey: publicKey,
 			authorizationData: { signature: getBytes(signature) },
-			context: {
-				duration: duration,
-				timestamp: timestamp,
-				blockhash: null,
-			},
+			context: duration ? { duration, timestamp } : { timestamp },
 		}
 	}
 

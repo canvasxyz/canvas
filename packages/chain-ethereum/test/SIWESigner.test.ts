@@ -33,7 +33,6 @@ test("create and verify session and action", async (t) => {
 		name: "foo",
 		args: { bar: 7 },
 		context: {
-			blockhash: null,
 			timestamp: session.context.timestamp,
 		},
 	}

@@ -116,7 +116,7 @@ export class FunctionRuntime extends AbstractRuntime {
 				id: context.id,
 				publicKey,
 				address,
-				blockhash,
+				blockhash: blockhash ?? null,
 				timestamp,
 			})
 		} finally {

@@ -30,8 +30,6 @@ test("create and verify session", async (t) => {
 
 			context: {
 				timestamp: Date.now(),
-				blockhash: null,
-				duration: null,
 			},
 		})
 	}

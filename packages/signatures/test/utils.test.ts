@@ -78,8 +78,6 @@ test("deepEquals correctly validates primitive types, objects, arrays, and Uint8
 			signature: new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
 		},
 		context: {
-			blockhash: null,
-			duration: null,
 			timestamp: 1712329014279,
 		},
 		publicKey: "did:key:z6aaa4mG17JUSscuTaCKhbM3nkS49maSpzSxPCE2qDqbM5mg",
@@ -91,8 +89,6 @@ test("deepEquals correctly validates primitive types, objects, arrays, and Uint8
 			signature: new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
 		},
 		context: {
-			blockhash: null,
-			duration: null,
 			timestamp: 1712329014279,
 		},
 		publicKey: "did:key:z6aaa4mG17JUSscuTaCKhbM3nkS49maSpzSxPCE2qDqbM5mg",

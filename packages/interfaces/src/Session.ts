@@ -16,8 +16,8 @@ export type Session<AuthorizationData = any> = {
 	authorizationData: AuthorizationData
 
 	context: {
-		blockhash: string | null
 		timestamp: number
-		duration: number | null
+		blockhash?: string
+		duration?: number
 	}
 }

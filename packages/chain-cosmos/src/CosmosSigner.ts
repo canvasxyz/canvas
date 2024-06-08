@@ -68,7 +68,7 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 			chainId,
 			publicKey: publicKey,
 			issuedAt: new Date(timestamp).toISOString(),
-			expirationTime: duration === null ? null : new Date(timestamp + duration).toISOString(),
+			expirationTime: duration === undefined ? null : new Date(timestamp + duration).toISOString(),
 		}
 
 		// select verification method based on the signing method
@@ -135,11 +135,7 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 			address: address,
 			publicKey: publicKey,
 			authorizationData: signResult,
-			context: {
-				blockhash: null,
-				timestamp: timestamp,
-				duration: duration,
-			},
+			context: duration ? { duration, timestamp } : { timestamp },
 		}
 	}
 }

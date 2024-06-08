@@ -59,7 +59,7 @@ export class Client {
 				address: session.payload.address,
 				name,
 				args,
-				context: { blockhash: null, timestamp },
+				context: { timestamp },
 			},
 		})
 	}

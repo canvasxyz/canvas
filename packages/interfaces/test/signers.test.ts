@@ -97,7 +97,7 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 		const duration = 1000 * 60 * 60 * 24 * 7
 		const sessionSigner = await createSessionSigner({ sessionDuration: duration })
 		const { payload: session } = await sessionSigner.newSession(topic)
-		t.is(session.duration, duration)
+		t.is(session.context.duration, duration)
 		await t.notThrowsAsync(() => Promise.resolve(sessionSigner.verifySession(topic, session)))
 	})
 
@@ -105,8 +105,8 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 		const topic = "example:signer"
 		const sessionSigner = await createSessionSigner({})
 		const { payload: session } = await sessionSigner.newSession(topic)
-		// if no sessionDuration is given, the session duration should be null
-		t.is(session.duration, null)
+		// if no sessionDuration is given, the session duration should be undefined
+		t.is(session.context.duration, undefined)
 		await t.notThrowsAsync(() => Promise.resolve(sessionSigner.verifySession(topic, session)))
 	})
 
@@ -116,7 +116,7 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 
 		const { payload: session } = await sessionSigner.newSession(topic)
 		// tamper with the session
-		session.timestamp = 0
+		session.context.timestamp = 0
 		try {
 			await sessionSigner.verifySession(topic, session)
 			t.fail("expected verifySession to throw")
@@ -186,8 +186,7 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 			name: "foo",
 			args: { bar: 7 },
 			context: {
-				blockhash: null,
-				timestamp: session.timestamp,
+				timestamp: session.context.timestamp,
 			},
 		}
 

@@ -214,7 +214,6 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 						name,
 						args: argsRepresentation,
 						context: {
-							blockhash: null,
 							timestamp,
 						},
 					},

@@ -207,11 +207,7 @@ export class SubstrateSigner extends AbstractSessionSigner<SubstrateSessionData>
 			address,
 			publicKey: publicKey,
 			authorizationData: { signatureResult, data: message, substrateKeyType },
-			context: {
-				blockhash: null,
-				timestamp: timestamp,
-				duration: duration,
-			},
+			context: duration ? { timestamp, duration } : { timestamp },
 		}
 	}
 }

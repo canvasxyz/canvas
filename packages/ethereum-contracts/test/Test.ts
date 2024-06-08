@@ -57,10 +57,10 @@ describe("Contract_Test", function () {
 					authorizationData: {
 						signature: session.authorizationData.signature,
 					},
-					blockhash: session.blockhash || "",
-					duration: session.duration || 0,
+					blockhash: session.context.blockhash || "",
+					duration: session.context.duration || 0,
 					publicKey: uncompressedPublicKeyBytes, // TODO: check against sessionAddress
-					timestamp: session.timestamp,
+					timestamp: session.context.timestamp,
 				},
 			}
 
@@ -69,8 +69,7 @@ describe("Contract_Test", function () {
 				address: session.address,
 				name: (args && args.action && args.action.name) || "upvote",
 				args: (args && args.action && args.action.args) || { post_id: "123456" },
-				blockhash: null,
-				timestamp: session.timestamp,
+				context: { timestamp: session.context.timestamp, blockhash: session.context.blockhash },
 			}
 			const actionMessage = { topic, clock, parents, payload: action }
 			const actionMessageSignature = await delegateSigner.sign(actionMessage)
@@ -80,10 +79,10 @@ describe("Contract_Test", function () {
 					userAddress,
 					sessionAddress,
 					args: getAbiString(action.args),
-					blockhash: action.blockhash || "",
+					blockhash: action.context.blockhash || "",
 					publicKey: uncompressedPublicKeyBytes, // TODO: check against sessionAddress
 					name: action.name,
-					timestamp: action.timestamp,
+					timestamp: action.context.timestamp,
 				},
 			}
 
@@ -129,9 +128,9 @@ describe("Contract_Test", function () {
 						signature: session.authorizationData.signature,
 					},
 					publicKey: uncompressedPublicKeyBytes, // TODO: check against sessionAddress
-					blockhash: session.blockhash || "",
-					duration: session.duration || 0,
-					timestamp: session.timestamp,
+					blockhash: session.context.blockhash || "",
+					duration: session.context.duration || 0,
+					timestamp: session.context.timestamp,
 				},
 				topic,
 			)
@@ -176,10 +175,10 @@ describe("Contract_Test", function () {
 						authorizationData: {
 							signature: session.authorizationData.signature,
 						},
-						blockhash: session.blockhash || "",
-						duration: session.duration || 0,
+						blockhash: session.context.blockhash || "",
+						duration: session.context.duration || 0,
 						publicKey: uncompressedPublicKeyBytes, // TODO: check against sessionAddress
-						timestamp: session.timestamp,
+						timestamp: session.context.timestamp,
 					},
 				},
 				sessionSignature.signature,
@@ -208,8 +207,10 @@ describe("Contract_Test", function () {
 				address: session.address,
 				name: "foo",
 				args: { bar: 7 },
-				blockhash: null,
-				timestamp: session.timestamp,
+				context: {
+					timestamp: session.context.timestamp,
+					blockhash: session.context.blockhash,
+				},
 			}
 			const actionMessage = { topic, clock, parents, payload: action }
 			const actionSignature = await delegateSigner.sign(actionMessage)
@@ -232,10 +233,10 @@ describe("Contract_Test", function () {
 						userAddress,
 						sessionAddress,
 						args: getAbiString(action.args),
-						blockhash: action.blockhash || "",
+						blockhash: action.context.blockhash || "",
 						publicKey: uncompressedPublicKeyBytes, // TODO: check against sessionAddress
 						name: action.name,
-						timestamp: action.timestamp,
+						timestamp: action.context.timestamp,
 					},
 				},
 				actionSignature.signature,
@@ -387,7 +388,7 @@ describe("Contract_Test", function () {
 			expect(await contract.upvotes("123456")).to.equal(0)
 
 			// set the action timestamp to be after the expiry period
-			actionMessageForContract.payload.timestamp = session.timestamp + session.duration! + 1
+			actionMessageForContract.payload.timestamp = session.context.timestamp + session.context.duration! + 1
 
 			// submit the upvote action
 			try {

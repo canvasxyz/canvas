@@ -85,11 +85,7 @@ export class SIWESigner extends AbstractSessionSigner<SIWESessionData> {
 			address: address,
 			publicKey: publicKey,
 			authorizationData: { signature: getBytes(signature), domain, nonce },
-			context: {
-				duration: duration,
-				timestamp: timestamp,
-				blockhash: null,
-			},
+			context: duration ? { duration, timestamp } : { timestamp },
 		}
 	}
 
@@ -112,7 +108,7 @@ export class SIWESigner extends AbstractSessionSigner<SIWESessionData> {
 			address: walletAddress,
 			uri: publicKey,
 			issuedAt: new Date(timestamp).toISOString(),
-			expirationTime: duration === null ? null : new Date(timestamp + duration).toISOString(),
+			expirationTime: duration === undefined ? null : new Date(timestamp + duration).toISOString(),
 			resources: [`canvas://${topic}`],
 		}
 
