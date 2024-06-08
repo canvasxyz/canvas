@@ -1,6 +1,8 @@
-import test from "ava"
+import ava, { TestFn } from "ava"
 import { ReplicatedObject } from "@canvas-js/replicated"
 import { Awaitable } from "@canvas-js/interfaces"
+
+const test = ava as TestFn<{ app: Chat }>
 
 class Chat extends ReplicatedObject<{
 	sendMessage: (message: string) => Awaitable<void>
@@ -10,7 +12,7 @@ class Chat extends ReplicatedObject<{
 			id: "primary",
 			message: "string",
 			address: "string",
-			timestamp: "string",
+			timestamp: "integer",
 		},
 	}
 	async onSendMessage(message: string): Promise<void> {
@@ -18,17 +20,27 @@ class Chat extends ReplicatedObject<{
 	}
 }
 
-test.serial("send a message", async (t) => {
+test.beforeEach(async (t) => {
 	const chat = new Chat()
 	await chat.ready()
+	t.context.app = chat
+})
 
-	const app = await chat.getApp()
+test.afterEach(async (t) => {
+	const chat = t.context.app
+	await chat.stop()
+})
+
+test.serial("send two messages", async (t) => {
+	const chat = t.context.app
+
+	t.is(await chat.app?.db.count("messages"), 0)
 
 	await chat.sendMessage("hi")
-	t.log("count", await app?.db.count("messages"))
+	await new Promise<void>((resolve) => setTimeout(() => resolve(), 1000))
+	t.is(await chat.app?.db.count("messages"), 1)
 
 	await chat.sendMessage("hello")
-
-	chat.stop()
-	t.pass()
+	await new Promise<void>((resolve) => setTimeout(() => resolve(), 1000))
+	t.is(await chat.app?.db.count("messages"), 2)
 })
