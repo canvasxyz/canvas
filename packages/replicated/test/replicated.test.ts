@@ -13,7 +13,7 @@ class Chat extends ReplicatedObject {
 			timestamp: "integer",
 		},
 	}
-	async onSendMessage(message: string): Promise<void> {
+	async onMessage(message: string): Promise<void> {
 		this.db.set("messages", { id: this.id, message, address: this.address, timestamp: this.timestamp })
 	}
 }
@@ -34,11 +34,11 @@ test.serial("send two messages", async (t) => {
 
 	t.is(await chat.app?.db.count("messages"), 0)
 
-	await chat.sendMessage("hi")
+	await chat.send.message("hi")
 	await new Promise<void>((resolve) => setTimeout(() => resolve(), 1000))
 	t.is(await chat.app?.db.count("messages"), 1)
 
-	await chat.sendMessage("hello")
+	await chat.send.message("hello")
 	await new Promise<void>((resolve) => setTimeout(() => resolve(), 1000))
 	t.is(await chat.app?.db.count("messages"), 2)
 })

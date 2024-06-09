@@ -1,42 +1,75 @@
 import crypto from "crypto"
 import { mkdirSync } from "fs"
 
-import { ActionImplementation, Canvas, Model, CanvasConfig, ActionImplementationFunction } from "@canvas-js/core"
+import {
+	ActionImplementation,
+	ActionContext,
+	Canvas,
+	Model,
+	CanvasConfig,
+	ModelAPI,
+	ActionImplementationFunction,
+} from "@canvas-js/core"
 import { ModelsInit } from "@canvas-js/modeldb"
 import { Awaitable } from "@canvas-js/interfaces"
 
-type ReplicatedInstance = typeof ReplicatedObject.constructor & {
+type Instance = typeof ReplicatedObject.constructor & {
 	db?: ModelsInit
 	topic?: string
 }
+
+type Call = (...args: any[]) => Awaitable<void>
 
 export class ReplicatedConfig {
 	topic?: string
 }
 
-export abstract class ReplicatedObject {
+export abstract class ReplicatedObject<T extends Record<string, Call> = any> {
 	#app: Canvas | null
 	#ready: Promise<ReplicatedObject>;
 
-	// When index signatures are more flexible, we can derive
-	// the full set of action calls from T. But right now,
-	// object class members have an `any` type, and only action
-	// handlers have specific typings.
-	[action: string]: any
 	[handler: `on${string}`]: (...args: any[]) => void
+
+	send: {
+		[K in keyof T]: T[K]
+	}
+
+	// Stubs for action handlers to read from `this`. Action handlers
+	// are always provided a context when called so these are never used
+	get db(): ModelAPI {
+		throw "Unexpected"
+	}
+	get id(): ActionContext["id"] {
+		throw "Unexpected"
+	}
+	get address(): ActionContext["address"] {
+		throw "Unexpected"
+	}
+	get timestamp(): ActionContext["timestamp"] {
+		throw "Unexpected"
+	}
+	get blockhash(): ActionContext["blockhash"] {
+		throw "Unexpected"
+	}
+	get publicKey(): ActionContext["publicKey"] {
+		throw "Unexpected"
+	}
 
 	constructor(config: ReplicatedConfig = {}) {
 		this.#app = null
 
 		// set up topic, models, and actions
-		const topic = config.topic ?? (this.constructor as ReplicatedInstance).topic
-		const models = (this.constructor as ReplicatedInstance).db ?? {}
+		const topic = config.topic ?? (this.constructor as Instance).topic
+		const models = (this.constructor as Instance).db ?? {}
 
+		const isHandlerKey = (key: string | symbol): key is `on${string}` => {
+			return typeof key === "string" && key.match(/^on[A-Z].*/) !== null
+		}
 		const keys = Reflect.ownKeys(Object.getPrototypeOf(this)).filter((key) => key !== "constructor")
-		const actionHandlerKeys = keys.filter((key) => typeof key === "string" && key.match(/^on[A-Z].*/))
+		const actionHandlerKeys: `on${string}`[] = keys.filter(isHandlerKey)
 
 		const contract = { models, actions: {} }
-		const actions: Record<string, ActionImplementation<any>> = {}
+		const actions: Record<string, Call> = {}
 		const actionCalls: Record<string, ActionImplementation<any>> = {}
 
 		for (const key of actionHandlerKeys) {
@@ -44,7 +77,7 @@ export abstract class ReplicatedObject {
 			if (typeof (this as any)[key] !== "function") continue
 			const name = key[2].toLowerCase() + key.slice(3)
 
-			// shim object contract -> class contract (receive action, injected into object contract)
+			// handlers
 			actions[name] = (parentDb, parentArgs, parentContext) => {
 				const context = {
 					db: { set: parentDb.set, get: parentDb.get },
@@ -53,12 +86,13 @@ export abstract class ReplicatedObject {
 				this[key].apply(context, parentArgs)
 			}
 
-			// shim class contract -> object contract (send action call)
+			// invokers
 			actionCalls[name] = (...args: any[]) => {
 				this.#app?.actions[name].call(this, args)
 			}
 		}
 
+		this.send = actionCalls as typeof this.send // { [K in keyof T]: Call }
 		Object.assign(contract.actions, actions)
 		Object.assign(this, actionCalls)
 
