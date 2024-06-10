@@ -33,6 +33,7 @@
   },
   "dependencies": {
     "@canvas-js/utils": "0.10.0-beta.2",
+    "@ipld/dag-json": "^10.2.1",
     "@libp2p/logger": "^4.0.13",
     "@types/react": "^18.2.45",
     "better-sqlite3": "^11.0.0",

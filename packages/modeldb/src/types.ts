@@ -49,7 +49,7 @@ export type Config = {
 // These are types for the runtime model record values
 
 export type PrimaryKeyValue = string
-export type PrimitiveValue = number | string | Uint8Array | null | boolean
+export type PrimitiveValue = number | string | Uint8Array | null | boolean | any
 export type ReferenceValue = string | null
 export type RelationValue = string[]
 

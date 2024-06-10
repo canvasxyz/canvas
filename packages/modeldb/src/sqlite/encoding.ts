@@ -1,9 +1,12 @@
+import * as json from "@ipld/dag-json"
+
 import type {
 	Model,
 	ModelValue,
 	PrimaryKeyProperty,
 	PrimaryKeyValue,
 	PrimitiveProperty,
+	PrimitiveValue,
 	PropertyValue,
 	ReferenceProperty,
 } from "../types.js"
@@ -98,9 +101,9 @@ function encodePrimitiveValue(
 		}
 	} else if (property.type == "json") {
 		try {
-			return JSON.stringify(value)
+			return json.stringify(value)
 		} catch (e) {
-			throw new TypeError(`${modelName}/${property.name} must be serializable to JSON`)
+			throw new TypeError(`${modelName}/${property.name} must be IPLD-encodable`)
 		}
 	} else {
 		const _: never = property.type
@@ -199,11 +202,12 @@ export function decodePrimitiveValue(modelName: string, property: PrimitivePrope
 			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected boolean)`)
 		}
 	} else if (property.type == "json") {
+		assert(typeof value === "string", 'internal error - expected typeof value === "string"')
 		try {
-			return JSON.parse(value as string)
+			return json.parse<PrimitiveValue>(value)
 		} catch (e) {
-			console.error("expected JSON, got", value)
-			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected JSON)`)
+			console.error("internal error - invalid dag-json", value)
+			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected dag-json)`)
 		}
 	} else {
 		const _: never = property.type

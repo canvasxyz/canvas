@@ -72,11 +72,14 @@ export function validatePropertyValue(modelName: string, property: Property, val
 			if (value === null) {
 				throw new TypeError(`write to db.${modelName}.${property.name}: must not be null`)
 			}
-			try {
-				JSON.stringify(value)
-			} catch (e) {
-				throw new TypeError(`write to db.${modelName}.${property.name}: expected a JSON-serializable value`)
-			}
+
+			// TODO: validate IPLD value
+
+			// try {
+			// 	json.encode(value)
+			// } catch (e) {
+			// 	throw new TypeError(`write to db.${modelName}.${property.name}: expected an IPLD-encodable value`)
+			// }
 		} else {
 			signalInvalidType(property.type)
 		}
