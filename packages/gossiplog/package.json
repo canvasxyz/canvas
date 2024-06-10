@@ -21,13 +21,13 @@
 		"./service": "./lib/service/index.js"
 	},
 	"imports": {
-    "#protocols/sync": "./lib/protocols/sync.js",
+		"#protocols/sync": "./lib/protocols/sync.js",
 		"#protocols/events": "./lib/protocols/events.js",
-    "#target": {
-      "browser": "./lib/targets/browser/index.js",
-      "node": "./lib/targets/node/index.js",
-      "default": "./lib/targets/default/index.js"
-    }
+		"#target": {
+			"browser": "./lib/targets/browser/index.js",
+			"node": "./lib/targets/node/index.js",
+			"default": "./lib/targets/default/index.js"
+		}
 	},
 	"scripts": {
 		"generate": "npm run generate-sync && npm run generate-events",
