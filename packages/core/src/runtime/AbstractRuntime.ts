@@ -93,7 +93,11 @@ export abstract class AbstractRuntime {
 			assert(signature !== null, "missing message signature")
 
 			if (AbstractRuntime.isSession(message)) {
-				const { publicKey, address, timestamp, duration } = message.payload
+				const {
+					publicKey,
+					address,
+					context: { timestamp, duration },
+				} = message.payload
 
 				const signer = runtime.signers
 					.getAll()
@@ -109,12 +113,15 @@ export abstract class AbstractRuntime {
 					message_id: id,
 					public_key: publicKey,
 					address: address,
-					expiration: duration === null ? Number.MAX_SAFE_INTEGER : timestamp + duration,
+					expiration: duration === undefined ? Number.MAX_SAFE_INTEGER : timestamp + duration,
 					rawMessage: bytesToHex(cbor.encode(message)),
 					rawSignature: bytesToHex(cbor.encode(signature)),
 				})
 			} else if (AbstractRuntime.isAction(message)) {
-				const { address, timestamp } = message.payload
+				const {
+					address,
+					context: { timestamp },
+				} = message.payload
 
 				const sessions = await runtime.db.query("$sessions", {
 					where: {

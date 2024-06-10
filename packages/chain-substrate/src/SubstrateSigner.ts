@@ -39,7 +39,7 @@ export class SubstrateSigner extends AbstractSessionSigner<SubstrateSessionData>
 
 	// some type that overlaps with the injected extension and
 	// a generated wallet
-	#signer: AbstractSigner
+	_signer: AbstractSigner
 
 	public constructor({ sessionDuration, substrateKeyType, extension }: SubstrateSignerInit = {}) {
 		super("chain-substrate", ed25519, { sessionDuration })
@@ -48,7 +48,7 @@ export class SubstrateSigner extends AbstractSessionSigner<SubstrateSessionData>
 			if (signRaw === undefined) {
 				throw new Error("Invalid signer - no signRaw method exists")
 			}
-			this.#signer = {
+			this._signer = {
 				getSubstrateKeyType: async () => {
 					const account = await extension.accounts.get()
 					return account[0].type || "sr25519"
@@ -85,7 +85,7 @@ export class SubstrateSigner extends AbstractSessionSigner<SubstrateSessionData>
 			// some of the cryptography methods used by polkadot require a wasm environment which is initialised
 			// asynchronously so we have to lazily create the keypair when it is needed
 			let keyring: ReturnType<Keyring["addFromMnemonic"]> | undefined
-			this.#signer = {
+			this._signer = {
 				getSubstrateKeyType: async () => {
 					return keyType
 				},
@@ -134,7 +134,12 @@ export class SubstrateSigner extends AbstractSessionSigner<SubstrateSessionData>
 	}
 
 	public async verifySession(topic: string, session: Session) {
-		const { publicKey, address, authorizationData, timestamp, duration } = session
+		const {
+			publicKey,
+			address,
+			authorizationData,
+			context: { timestamp, duration },
+		} = session
 
 		assert(validateSessionData(authorizationData), "invalid session")
 		const [chainId, walletAddress] = parseAddress(address)
@@ -169,13 +174,18 @@ export class SubstrateSigner extends AbstractSessionSigner<SubstrateSessionData>
 	}
 
 	public async getAddress(): Promise<string> {
-		const chainId = await this.#signer.getChainId()
-		const walletAddress = await this.#signer.getAddress()
+		const chainId = await this._signer.getChainId()
+		const walletAddress = await this._signer.getAddress()
 		return `polkadot:${chainId}:${walletAddress}`
 	}
 
 	public async authorize(data: AbstractSessionData): Promise<Session<SubstrateSessionData>> {
-		const { topic, address, publicKey, timestamp, duration } = data
+		const {
+			topic,
+			address,
+			publicKey,
+			context: { timestamp, duration },
+		} = data
 		const issuedAt = new Date(timestamp).toISOString()
 
 		const [chainId, walletAddress] = parseAddress(address)
@@ -189,17 +199,15 @@ export class SubstrateSigner extends AbstractSessionSigner<SubstrateSessionData>
 			expirationTime: null,
 		}
 
-		const signatureResult = await this.#signer.signMessage(constructSubstrateMessage(message))
-		const substrateKeyType = await this.#signer.getSubstrateKeyType()
+		const signatureResult = await this._signer.signMessage(constructSubstrateMessage(message))
+		const substrateKeyType = await this._signer.getSubstrateKeyType()
 
 		return {
 			type: "session",
 			address,
 			publicKey: publicKey,
 			authorizationData: { signatureResult, data: message, substrateKeyType },
-			blockhash: null,
-			timestamp: timestamp,
-			duration: duration,
+			context: duration ? { timestamp, duration } : { timestamp },
 		}
 	}
 }

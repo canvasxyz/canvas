@@ -30,7 +30,7 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 	public readonly match = (address: string) => addressPattern.test(address)
 	public readonly bech32Prefix: string
 
-	#signer: GenericSigner
+	_signer: GenericSigner
 
 	public constructor({ signer, sessionDuration, bech32Prefix }: CosmosSignerInit = {}) {
 		super("chain-cosmos", ed25519, { sessionDuration })
@@ -38,22 +38,27 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 		this.bech32Prefix = bech32Prefix == undefined ? "cosmos" : bech32Prefix
 
 		if (signer == undefined) {
-			this.#signer = createDefaultSigner(this.bech32Prefix)
+			this._signer = createDefaultSigner(this.bech32Prefix)
 		} else if (signer.type == "ethereum") {
-			this.#signer = createEthereumSigner(signer, this.bech32Prefix)
+			this._signer = createEthereumSigner(signer, this.bech32Prefix)
 		} else if (signer.type == "amino") {
-			this.#signer = createAminoSigner(signer)
+			this._signer = createAminoSigner(signer)
 		} else if (signer.type == "bytes") {
-			this.#signer = createBytesSigner(signer)
+			this._signer = createBytesSigner(signer)
 		} else if (signer.type == "arbitrary") {
-			this.#signer = createArbitrarySigner(signer)
+			this._signer = createArbitrarySigner(signer)
 		} else {
 			throw new Error("invalid signer")
 		}
 	}
 
 	public async verifySession(topic: string, session: Session) {
-		const { publicKey, address, authorizationData: data, timestamp, duration } = session
+		const {
+			publicKey,
+			address,
+			authorizationData: data,
+			context: { timestamp, duration },
+		} = session
 
 		const [chainId, walletAddress] = parseAddress(address)
 
@@ -63,7 +68,7 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 			chainId,
 			publicKey: publicKey,
 			issuedAt: new Date(timestamp).toISOString(),
-			expirationTime: duration === null ? null : new Date(timestamp + duration).toISOString(),
+			expirationTime: duration === undefined ? null : new Date(timestamp + duration).toISOString(),
 		}
 
 		// select verification method based on the signing method
@@ -93,15 +98,20 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 	}
 
 	public async getAddress(): Promise<string> {
-		const chainId = await this.#signer.getChainId()
-		const walletAddress = await this.#signer.getAddress(chainId)
+		const chainId = await this._signer.getChainId()
+		const walletAddress = await this._signer.getAddress(chainId)
 		const { data } = fromBech32(walletAddress)
 		const walletAddressWithPrefix = toBech32(this.bech32Prefix, data)
 		return `cosmos:${chainId}:${walletAddressWithPrefix}`
 	}
 
 	public async authorize(data: AbstractSessionData): Promise<Session<CosmosSessionData>> {
-		const { topic, address, timestamp, publicKey, duration } = data
+		const {
+			topic,
+			address,
+			publicKey,
+			context: { timestamp, duration },
+		} = data
 		const [chainId, walletAddress] = parseAddress(address)
 
 		const issuedAt = new Date(timestamp)
@@ -118,16 +128,14 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 			message.expirationTime = new Date(timestamp + duration).toISOString()
 		}
 
-		const signResult = await this.#signer.sign(message, walletAddress, chainId)
+		const signResult = await this._signer.sign(message, walletAddress, await this._signer.getChainId())
 
 		return {
 			type: "session",
 			address: address,
 			publicKey: publicKey,
 			authorizationData: signResult,
-			blockhash: null,
-			timestamp: timestamp,
-			duration: duration,
+			context: duration ? { duration, timestamp } : { timestamp },
 		}
 	}
 }

@@ -5,7 +5,11 @@ import type { Action, Message, Session, SessionSigner, Signer } from "@canvas-js
 import { assert } from "@canvas-js/utils"
 
 export class Client {
-	constructor(readonly signer: SessionSigner, readonly host: string, readonly topic: string) {}
+	constructor(
+		readonly signer: SessionSigner,
+		readonly host: string,
+		readonly topic: string,
+	) {}
 
 	public async sendAction(name: string, args: any) {
 		const timestamp = Date.now()
@@ -50,7 +54,13 @@ export class Client {
 			topic: this.topic,
 			clock: head.clock,
 			parents: head.parents,
-			payload: { type: "action", address: session.payload.address, name, args, blockhash: null, timestamp },
+			payload: {
+				type: "action",
+				address: session.payload.address,
+				name,
+				args,
+				context: { timestamp },
+			},
 		})
 	}
 

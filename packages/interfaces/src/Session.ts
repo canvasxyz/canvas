@@ -15,7 +15,9 @@ export type Session<AuthorizationData = any> = {
 	/** chain-specific session payload, e.g. a SIWE message & signature */
 	authorizationData: AuthorizationData
 
-	blockhash: string | null
-	timestamp: number
-	duration: number | null
+	context: {
+		timestamp: number
+		blockhash?: string
+		duration?: number
+	}
 }

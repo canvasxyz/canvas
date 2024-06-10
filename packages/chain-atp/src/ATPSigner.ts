@@ -94,7 +94,12 @@ export class ATPSigner extends AbstractSessionSigner<ATPSessionData> {
 	}
 
 	public async authorize(data: AbstractSessionData): Promise<Session<ATPSessionData>> {
-		const { topic, address, publicKey, timestamp, duration } = data
+		const {
+			topic,
+			address,
+			publicKey,
+			context: { timestamp, duration },
+		} = data
 		this.log("fetching plc operation log for %s", address)
 		const plcOperationLog = await fetch(`https://plc.directory/${address}/log`).then((res) => res.json())
 		const verificationMethod = await verifyLog(address, plcOperationLog)
@@ -132,9 +137,7 @@ export class ATPSigner extends AbstractSessionSigner<ATPSessionData> {
 				recordURI: uri,
 				plcOperationLog,
 			},
-			blockhash: null,
-			duration: duration,
-			timestamp: timestamp,
+			context: duration ? { duration, timestamp } : { timestamp },
 		}
 	}
 }

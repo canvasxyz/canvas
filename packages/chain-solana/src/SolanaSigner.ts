@@ -49,7 +49,7 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 	public readonly match = (chain: string) => addressPattern.test(chain)
 	public readonly chainId: string
 
-	#signer: GenericSigner
+	_signer: GenericSigner
 
 	public constructor({ signer, sessionDuration, chainId }: SolanaSignerInit = {}) {
 		super("chain-solana", Ed25519SignatureScheme, { sessionDuration })
@@ -59,7 +59,7 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 				throw new Error("Invalid signer")
 			}
 
-			this.#signer = {
+			this._signer = {
 				address: base58btc.baseEncode(signer.publicKey.toBytes()),
 				sign: async (msg) => {
 					const { signature } = await signer.signMessage(msg)
@@ -69,7 +69,7 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 		} else {
 			const privateKey = ed25519.utils.randomPrivateKey()
 			const publicKey = ed25519.getPublicKey(privateKey)
-			this.#signer = {
+			this._signer = {
 				address: base58btc.baseEncode(publicKey),
 				sign: async (msg) => ed25519.sign(msg, privateKey),
 			}
@@ -80,7 +80,12 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 	}
 
 	public verifySession(topic: string, session: Session) {
-		const { publicKey, address, authorizationData: data, timestamp, duration } = session
+		const {
+			publicKey,
+			address,
+			authorizationData: data,
+			context: { timestamp, duration },
+		} = session
 		assert(validateSessionData(data), "invalid session")
 
 		const [_, walletAddress] = parseAddress(address)
@@ -90,7 +95,7 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 			topic,
 			publicKey,
 			issuedAt: new Date(timestamp).toISOString(),
-			expirationTime: duration === null ? null : new Date(timestamp + duration).toISOString(),
+			expirationTime: duration === undefined ? null : new Date(timestamp + duration).toISOString(),
 		}
 
 		const signingPublicKey = base58btc.baseDecode(walletAddress)
@@ -101,12 +106,17 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 	}
 
 	public getAddress(): string {
-		const walletAddress = this.#signer.address
+		const walletAddress = this._signer.address
 		return `solana:${this.chainId}:${walletAddress}`
 	}
 
 	public async authorize(data: AbstractSessionData): Promise<Session<SolanaSessionData>> {
-		const { topic, address, publicKey, timestamp, duration } = data
+		const {
+			topic,
+			address,
+			publicKey,
+			context: { timestamp, duration },
+		} = data
 
 		const issuedAt = new Date(timestamp)
 
@@ -125,16 +135,21 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 			message.expirationTime = expirationTime.toISOString()
 		}
 
-		const signature = await this.#signer.sign(encodeSolanaMessage(message))
+		const signature = await this._signer.sign(encodeSolanaMessage(message))
 
 		return {
 			type: "session",
 			address: address,
 			publicKey: publicKey,
 			authorizationData: { signature },
-			blockhash: null,
-			timestamp,
-			duration: this.sessionDuration,
+			context: this.sessionDuration
+				? {
+						timestamp,
+						duration: this.sessionDuration,
+					}
+				: {
+						timestamp,
+					},
 		}
 	}
 }

@@ -97,8 +97,8 @@ export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712Se
 						name: payload.name,
 						args: getAbiString(payload.args),
 						userAddress: address,
-						blockhash: payload.blockhash || "", // TODO: consider making blockhash mandatory for EIP-712?
-						timestamp: payload.timestamp,
+						blockhash: payload.context.blockhash || "", // TODO: consider making blockhash mandatory for EIP-712?
+						timestamp: payload.context.timestamp,
 					},
 				},
 			)
@@ -119,9 +119,9 @@ export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712Se
 					userAddress: address,
 					publicKey: "0x" + SigningKey.computePublicKey(publicKeyBytes, false).slice(4),
 					authorizationData: payload.authorizationData,
-					duration: payload.duration ?? 0,
-					timestamp: payload.timestamp,
-					blockhash: payload.blockhash ?? "", // TODO: consider making blockhash mandatory for EIP-712?
+					duration: payload.context.duration ?? 0,
+					timestamp: payload.context.timestamp,
+					blockhash: payload.context.blockhash ?? "", // TODO: consider making blockhash mandatory for EIP-712?
 				},
 			})
 			return { codec: codecs.session, publicKey: this.publicKey, signature: getBytes(signature) }
@@ -209,8 +209,8 @@ export const Secp256k1SignatureScheme: SignatureScheme<Action | Session<Eip712Se
 						name: payload.name,
 						args: getAbiString(payload.args),
 						userAddress: address,
-						timestamp: payload.timestamp,
-						blockhash: payload.blockhash ?? "",
+						timestamp: payload.context.timestamp,
+						blockhash: payload.context.blockhash ?? "",
 					},
 				},
 				hexlify(signature.signature),
@@ -235,9 +235,9 @@ export const Secp256k1SignatureScheme: SignatureScheme<Action | Session<Eip712Se
 						userAddress: address,
 						publicKey: "0x" + SigningKey.computePublicKey(publicKeyBytes, false).slice(4),
 						authorizationData: payload.authorizationData,
-						duration: payload.duration ?? 0,
-						timestamp: payload.timestamp,
-						blockhash: payload.blockhash ?? "",
+						duration: payload.context.duration ?? 0,
+						timestamp: payload.context.timestamp,
+						blockhash: payload.context.blockhash ?? "",
 					},
 				},
 				hexlify(signature.signature),

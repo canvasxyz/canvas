@@ -77,10 +77,10 @@ test("deepEquals correctly validates primitive types, objects, arrays, and Uint8
 		authorizationData: {
 			signature: new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
 		},
-		blockhash: null,
-		duration: null,
+		context: {
+			timestamp: 1712329014279,
+		},
 		publicKey: "did:key:z6aaa4mG17JUSscuTaCKhbM3nkS49maSpzSxPCE2qDqbM5mg",
-		timestamp: 1712329014279,
 	}
 	const session2: Session = {
 		type: "session",
@@ -88,10 +88,10 @@ test("deepEquals correctly validates primitive types, objects, arrays, and Uint8
 		authorizationData: {
 			signature: new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
 		},
-		blockhash: null,
-		duration: null,
+		context: {
+			timestamp: 1712329014279,
+		},
 		publicKey: "did:key:z6aaa4mG17JUSscuTaCKhbM3nkS49maSpzSxPCE2qDqbM5mg",
-		timestamp: 1712329014279,
 	}
 	t.is(deepEquals(session1, session2), true)
 
