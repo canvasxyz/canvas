@@ -24,6 +24,8 @@ import { pushable } from "it-pushable"
 import type { Signature, Message, Signer } from "@canvas-js/interfaces"
 import { assert } from "@canvas-js/utils"
 
+import { Event } from "#protocols/events"
+
 import {
 	DEFAULT_PROTOCOL_SELECT_TIMEOUT,
 	MAX_INBOUND_STREAMS,
@@ -235,22 +237,38 @@ export class GossipLogService<Payload = unknown>
 		this.log("received gossipsub message %s via %p", msgId, propagationSource)
 
 		const sourceId = propagationSource.toString()
-		this.handleInsert(msg.data).then(
-			(result) => {
-				this.#pubsub.reportMessageValidationResult(msgId, sourceId, result)
-				if (result === TopicValidatorResult.Ignore) {
-					this.scheduleSync(propagationSource)
-				}
-			},
-			(err) => {
-				this.log.error("error handling gossipsub message: %O", err)
-				this.#pubsub.reportMessageValidationResult(msgId, sourceId, TopicValidatorResult.Reject)
-			},
-		)
+
+		let event: Event
+		try {
+			event = Event.decode(msg.data)
+		} catch (err) {
+			this.log.error("error decoding gossipsub message: %O", err)
+			this.#pubsub.reportMessageValidationResult(msgId, sourceId, TopicValidatorResult.Reject)
+			return
+		}
+
+		if (event.insert !== undefined) {
+			const { key, value } = event.insert
+			this.handleInsert([key, value]).then(
+				(result) => {
+					this.#pubsub.reportMessageValidationResult(msgId, sourceId, result)
+					if (result === TopicValidatorResult.Ignore) {
+						this.scheduleSync(propagationSource)
+					}
+				},
+				(err) => {
+					this.log.error("error handling gossipsub message: %O", err)
+					this.#pubsub.reportMessageValidationResult(msgId, sourceId, TopicValidatorResult.Reject)
+				},
+			)
+		} else {
+			this.#pubsub.reportMessageValidationResult(msgId, sourceId, TopicValidatorResult.Ignore)
+		}
 	}
 
-	private async handleInsert(value: Uint8Array): Promise<TopicValidatorResult> {
+	private async handleInsert([key, value]: Entry): Promise<TopicValidatorResult> {
 		const [id, signature, message] = this.messageLog.decode(value)
+		assert(decodeId(key) === id, "invalid key")
 
 		await this.messageLog.verifySignature(signature, message)
 
@@ -262,7 +280,7 @@ export class GossipLogService<Payload = unknown>
 			}
 
 			try {
-				await this.messageLog.apply(txn, id, signature, message, [encodeId(id), value])
+				await this.messageLog.apply(txn, id, signature, message, [key, value])
 				return TopicValidatorResult.Accept
 			} catch (err) {
 				return TopicValidatorResult.Reject
