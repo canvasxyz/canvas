@@ -29,7 +29,7 @@ export abstract class AbstractModelDB {
 
 	abstract close(): Promise<void>
 
-	abstract get(modelName: string, key: string): Promise<ModelValue | null>
+	abstract get<T extends ModelValue<any> = ModelValue<any>>(modelName: string, key: string): Promise<T | null>
 
 	abstract iterate(modelName: string): AsyncIterable<ModelValue>
 
@@ -43,7 +43,7 @@ export abstract class AbstractModelDB {
 
 	// Model operations
 
-	public async set(modelName: string, value: ModelValue) {
+	public async set<T extends ModelValue<any> = ModelValue<any>>(modelName: string, value: T) {
 		await this.apply([{ operation: "set", model: modelName, value }])
 	}
 

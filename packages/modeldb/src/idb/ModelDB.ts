@@ -113,10 +113,10 @@ export class ModelDB extends AbstractModelDB {
 		yield* api.iterate(txn)
 	}
 
-	public async get(modelName: string, key: string): Promise<ModelValue | null> {
+	public async get<T extends ModelValue>(modelName: string, key: string): Promise<T | null> {
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
-		return await this.read((txn) => api.get(txn, key), [api.storeName])
+		return await this.read((txn) => api.get(txn, key) as Promise<T | null>, [api.storeName])
 	}
 
 	public async query<T extends ModelValue = ModelValue>(modelName: string, query: QueryParams = {}): Promise<T[]> {
