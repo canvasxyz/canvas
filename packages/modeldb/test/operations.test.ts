@@ -73,4 +73,8 @@ testOnModelDB("delete a value ", async (t, openDB) => {
 	await db.delete("user", id)
 	t.is(await db.get("user", id), null)
 	t.is(await db.count("user"), 0)
+
+	await db.delete("user", id)
+	t.is(await db.get("user", id), null)
+	t.is(await db.count("user"), 0)
 })
