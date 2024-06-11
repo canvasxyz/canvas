@@ -6,13 +6,7 @@ import {
 	Canvas,
 	ModelAPI,
 } from "@canvas-js/core"
-import { ModelsInit } from "@canvas-js/modeldb"
 import { Awaitable } from "@canvas-js/interfaces"
-
-type Instance = typeof ReplicatedObject.constructor & {
-	db?: ModelsInit
-	topic?: string
-}
 
 type Call = (...args: any[]) => Awaitable<void>
 
@@ -22,7 +16,7 @@ export class ReplicatedConfig {
 	topic?: string
 }
 
-export abstract class ReplicatedObject<T extends Record<string, Call> = any> {
+export abstract class ReplicatedObject<T extends Record<string, Call> = any, K extends typeof ReplicatedObject = typeof ReplicatedObject> {
 	#app: Canvas | null
 	#ready: Promise<ReplicatedObject>;
 
@@ -33,6 +27,8 @@ export abstract class ReplicatedObject<T extends Record<string, Call> = any> {
 	send: {
 		[K in keyof T]: T[K]
 	}
+
+	static db = {}
 
 	// Stubs for action handlers to read from `this`. Action handlers
 	// are always provided a context when called so these are never used
@@ -60,7 +56,7 @@ export abstract class ReplicatedObject<T extends Record<string, Call> = any> {
 
 		// set up topic, models, and actions
 		this.topic = this.topic ?? config.topic
-		const models = (this.constructor as Instance).db ?? {}
+		const models = (this.constructor as K).db
 
 		if (this.topic === undefined) throw new ReplicatedObjectError("Must define a topic on class or constructor")
 
