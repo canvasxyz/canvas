@@ -1,6 +1,6 @@
+import crypto from "crypto"
 import ava, { TestFn } from "ava"
 import { ReplicatedObject } from "@canvas-js/replicated"
-import { Awaitable } from "@canvas-js/interfaces"
 
 const test = ava as TestFn<{ app: Chat }>
 
@@ -19,7 +19,7 @@ class Chat extends ReplicatedObject {
 }
 
 test.beforeEach(async (t) => {
-	const chat = new Chat()
+	const chat = new Chat({ topic: crypto.randomBytes(8).toString("hex") })
 	await chat.ready()
 	t.context.app = chat
 })

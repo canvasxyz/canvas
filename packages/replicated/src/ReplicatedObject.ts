@@ -1,14 +1,10 @@
-import crypto from "crypto"
 import { mkdirSync } from "fs"
 
 import {
 	ActionImplementation,
 	ActionContext,
 	Canvas,
-	Model,
-	CanvasConfig,
 	ModelAPI,
-	ActionImplementationFunction,
 } from "@canvas-js/core"
 import { ModelsInit } from "@canvas-js/modeldb"
 import { Awaitable } from "@canvas-js/interfaces"
@@ -20,6 +16,8 @@ type Instance = typeof ReplicatedObject.constructor & {
 
 type Call = (...args: any[]) => Awaitable<void>
 
+export class ReplicatedObjectError extends Error {}
+
 export class ReplicatedConfig {
 	topic?: string
 }
@@ -27,6 +25,8 @@ export class ReplicatedConfig {
 export abstract class ReplicatedObject<T extends Record<string, Call> = any> {
 	#app: Canvas | null
 	#ready: Promise<ReplicatedObject>;
+
+	topic?: string
 
 	[handler: `on${string}`]: (...args: any[]) => void
 
@@ -59,8 +59,10 @@ export abstract class ReplicatedObject<T extends Record<string, Call> = any> {
 		this.#app = null
 
 		// set up topic, models, and actions
-		const topic = config.topic ?? (this.constructor as Instance).topic
+		this.topic = this.topic ?? config.topic
 		const models = (this.constructor as Instance).db ?? {}
+
+		if (this.topic === undefined) throw new ReplicatedObjectError("Must define a topic on class or constructor")
 
 		const isHandlerKey = (key: string | symbol): key is `on${string}` => {
 			return typeof key === "string" && key.match(/^on[A-Z].*/) !== null
@@ -100,11 +102,11 @@ export abstract class ReplicatedObject<T extends Record<string, Call> = any> {
 		const instance = this
 
 		this.#ready = new Promise((resolve, reject) => {
-			const path = `/tmp/canvas_${crypto.randomBytes(8).toString("hex")}`
+			const path = `/tmp/canvas_${this.topic}`
 			mkdirSync(path)
 			Canvas.initialize({
 				path,
-				topic,
+				topic: this.topic,
 				contract,
 			})
 				.then((app) => {
