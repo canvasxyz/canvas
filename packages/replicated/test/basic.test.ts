@@ -2,9 +2,9 @@ import crypto from "crypto"
 import ava, { TestFn } from "ava"
 import { ReplicatedObject } from "@canvas-js/replicated"
 
-const test = ava as TestFn<{ app: Chat }>
+const test = ava as TestFn<{ chat: Chat }>
 
-class Chat extends ReplicatedObject {
+class Chat extends ReplicatedObject<{ message: (message: string) => void }> {
 	static db = {
 		messages: {
 			id: "primary",
@@ -19,26 +19,24 @@ class Chat extends ReplicatedObject {
 }
 
 test.beforeEach(async (t) => {
-	const chat = new Chat({ topic: crypto.randomBytes(8).toString("hex") })
-	await chat.ready()
-	t.context.app = chat
+	t.context.chat = await Chat.initialize({ topic: crypto.randomBytes(8).toString("hex") })
 })
 
-test.afterEach(async (t) => {
-	const chat = t.context.app
+test.afterEach.always(async (t) => {
+	const { chat } = t.context
 	await chat.stop()
 })
 
 test.serial("send two messages", async (t) => {
-	const chat = t.context.app
+	const { chat } = t.context
 
 	t.is(await chat.app?.db.count("messages"), 0)
 
-	await chat.send.message("hi")
+	await chat.tx.message("hi")
 	await new Promise<void>((resolve) => setTimeout(() => resolve(), 1000))
 	t.is(await chat.app?.db.count("messages"), 1)
 
-	await chat.send.message("hello")
+	await chat.tx.message("hello")
 	await new Promise<void>((resolve) => setTimeout(() => resolve(), 1000))
 	t.is(await chat.app?.db.count("messages"), 2)
 })
