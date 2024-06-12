@@ -66,6 +66,8 @@ function encodePrimitiveValue(
 	if (value === null) {
 		if (property.optional) {
 			return null
+		} else if (property.type === "json") {
+			return "null"
 		} else {
 			throw new TypeError(`${modelName}/${property.name} cannot be null`)
 		}

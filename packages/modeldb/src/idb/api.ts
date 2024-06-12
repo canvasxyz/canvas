@@ -1,5 +1,6 @@
 import { IDBPIndex, IDBPTransaction } from "idb"
 import { logger } from "@libp2p/logger"
+import * as json from "@ipld/dag-json"
 
 import { assert, signalInvalidType } from "@canvas-js/utils"
 
@@ -259,7 +260,10 @@ function encodePropertyValue(property: Property, propertyValue: PropertyValue): 
 		return propertyValue
 	} else if (property.kind === "primitive") {
 		if (property.optional) {
+			assert(property.type !== "json")
 			return propertyValue === null ? [] : [propertyValue]
+		} else if (property.type === "json") {
+			return json.stringify(propertyValue)
 		} else {
 			return propertyValue
 		}
@@ -282,8 +286,12 @@ function decodePropertyValue(property: Property, objectPropertyValue: PropertyVa
 		return objectPropertyValue
 	} else if (property.kind === "primitive") {
 		if (property.optional) {
+			assert(property.type !== "json")
 			assert(Array.isArray(objectPropertyValue))
 			return objectPropertyValue.length === 0 ? null : objectPropertyValue[0]
+		} else if (property.type === "json") {
+			assert(typeof objectPropertyValue === "string")
+			return json.parse(objectPropertyValue)
 		} else {
 			assert(!Array.isArray(objectPropertyValue))
 			return objectPropertyValue
