@@ -1,9 +1,10 @@
 import { setTimeout } from "node:timers/promises"
 
 import { GossipSub } from "@chainsafe/libp2p-gossipsub"
-import { bytesToHex, randomBytes } from "@noble/hashes/utils"
+import { bytesToHex } from "@noble/hashes/utils"
+import { nanoid } from "nanoid"
 
-import { GossipLog } from "@canvas-js/gossiplog/node"
+import { GossipLog } from "@canvas-js/gossiplog/sqlite"
 
 import { Socket } from "../socket.js"
 import { topic } from "../constants.js"
@@ -13,7 +14,7 @@ import { getLibp2p } from "./libp2p.js"
 const { SERVICE_NAME } = process.env
 
 async function start() {
-	const messageLog = await GossipLog.open<Uint8Array>({ topic, apply: () => {} }, "data")
+	const messageLog = new GossipLog<string>({ directory: "data", topic, apply: () => {} })
 
 	const libp2p = await getLibp2p(messageLog)
 
@@ -26,7 +27,7 @@ async function start() {
 	libp2p.addEventListener("start", async () => {
 		console.log("libp2p started")
 
-		const root = await libp2p.services.gossiplog.messageLog.read((txn) => txn.messages.getRoot())
+		const root = await libp2p.services.gossiplog.messageLog.tree.read((txn) => txn.getRoot())
 		socket.post("start", { root: `${root.level}:${bytesToHex(root.hash)}` })
 	})
 
@@ -90,7 +91,7 @@ async function start() {
 	// 	onDisconnect: (peerId) => void topicPeers.delete(peerId.toString()),
 	// })
 
-	const intervalId = setInterval(() => void libp2p.services.gossiplog.append(randomBytes(16)), 1000)
+	const intervalId = setInterval(() => void libp2p.services.gossiplog.append(nanoid()), 2000)
 	controller.signal.addEventListener("abort", () => clearInterval(intervalId))
 }
 

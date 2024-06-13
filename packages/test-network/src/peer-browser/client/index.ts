@@ -1,16 +1,17 @@
 import * as cbor from "@ipld/dag-cbor"
 
-import { bytesToHex, randomBytes } from "@noble/hashes/utils"
+import { bytesToHex } from "@noble/hashes/utils"
 import { peerIdFromBytes, peerIdFromString } from "@libp2p/peer-id"
 import { multiaddr } from "@multiformats/multiaddr"
 import { GossipSub } from "@chainsafe/libp2p-gossipsub"
+import { nanoid } from "nanoid"
 
 import Debugger from "debug"
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
 ;(Debugger as any).useColors = () => false
 
-import { GossipLog } from "@canvas-js/gossiplog/browser"
+import { GossipLog } from "@canvas-js/gossiplog/idb"
 
 import { Socket } from "../../socket.js"
 import { topic } from "../../constants.js"
@@ -18,7 +19,7 @@ import { topic } from "../../constants.js"
 import { getLibp2p } from "./libp2p.js"
 import { relayServer } from "./config.js"
 
-const messageLog = await GossipLog.open<Uint8Array>({ topic, apply: () => {} })
+const messageLog = await GossipLog.open<string>({ topic, apply: () => {} })
 
 const libp2p = await getLibp2p(messageLog)
 const socket = await Socket.open(libp2p, `ws://localhost:8000`)
@@ -32,7 +33,7 @@ messageLog.addEventListener("commit", ({ detail: { root } }) => {
 libp2p.addEventListener("start", async () => {
 	console.log("libp2p started")
 
-	const root = await messageLog.read((txn) => txn.messages.getRoot())
+	const root = await messageLog.tree.read((txn) => txn.getRoot())
 
 	socket.post("start", { root: `0:${bytesToHex(root.hash)}` })
 })
@@ -44,7 +45,7 @@ libp2p.addEventListener("stop", () => {
 
 const relayServerPeerId = relayServer && relayServer.getPeerId()
 
-const getProtocol = (topic: string) => `/canvas/sync/v1/${topic}`
+// const getProtocol = (topic: string) => `/canvas/sync/v1/${topic}`
 
 type TopicPeerRecord = {
 	id: Uint8Array
@@ -127,4 +128,4 @@ setTimeout(() => libp2p.start(), delay)
 // 	onDisconnect: (peerId) => void topicPeers.delete(peerId.toString()),
 // })
 
-// setInterval(() => void libp2p.services.gossiplog.append(randomBytes(16)), 1000)
+setInterval(() => void libp2p.services.gossiplog.append(nanoid()), 1000)

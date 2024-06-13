@@ -88,7 +88,7 @@ export function Persister({ app }: { app?: Canvas }) {
 
 		const handleMessage = (msg: MessageEvent) => {
 			const { id, signature, message } = msg.detail
-			const [_key, value] = app.messageLog.encode(signature, message)
+			const { value } = app.messageLog.encode(signature, message)
 			if (actionCache[id]) return
 			put(value)
 		}
@@ -178,17 +178,17 @@ export function Persister({ app }: { app?: Canvas }) {
 					// TODO: also handle bundles here; loop over everything below for bundles:
 					// for (action in isAction(item) ? [item] : item) { ... }
 					try {
-						const [msgid, signature, message] = app.messageLog.decode(new Uint8Array(txdata))
+						const signedMessage = app.messageLog.decode(new Uint8Array(txdata))
 
 						// Insert the msgid into seenActionCache before calling .insert(), so we don't
 						// push duplicate records to irys.
-						seenActions[msgid] = true
-						actionCache[msgid] = true
-						delete expectedRoots[msgid]
+						seenActions[signedMessage.id] = true
+						actionCache[signedMessage.id] = true
+						delete expectedRoots[signedMessage.id]
 
-						await app.messageLog.write((txn) => app.messageLog.insert(txn, signature, message))
+						await app.messageLog.insert(signedMessage)
 
-						for (const parent of message.parents) {
+						for (const parent of signedMessage.message.parents) {
 							if (seenActions[parent]) continue
 							expectedRoots[parent] = true
 						}

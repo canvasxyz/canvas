@@ -8,7 +8,7 @@ import type { PingService } from "@libp2p/ping"
 export type ServiceMap = {
 	identify: Identify
 	pubsub: PubSub<GossipsubEvents>
-	gossiplog: GossipLogService<Uint8Array>
+	gossiplog: GossipLogService<string>
 	ping: PingService
 	dht: KadDHT
 }

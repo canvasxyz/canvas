@@ -16,7 +16,7 @@ import { GossipsubEvents, gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { createEd25519PeerId } from "@libp2p/peer-id-factory"
 import { logger } from "@libp2p/logger"
 
-import { Message, Signature } from "@canvas-js/interfaces"
+import { Awaitable, Message, Signature } from "@canvas-js/interfaces"
 import { AbstractGossipLog, GossipLogEvents } from "@canvas-js/gossiplog"
 import { GossipLogService, GossipLogServiceInit, gossiplog } from "@canvas-js/gossiplog/service"
 
@@ -32,7 +32,7 @@ export type ServiceMap<Payload> = {
 
 export async function createNetwork<T extends NetworkConfig, Payload>(
 	t: ExecutionContext<unknown>,
-	openMessageLog: () => Promise<AbstractGossipLog<Payload>>,
+	openMessageLog: () => Awaitable<AbstractGossipLog<Payload>>,
 	networkConfig: T,
 	serviceInit: GossipLogServiceInit = {},
 	options: { start?: boolean; minConnections?: number; maxConnections?: number } = {},

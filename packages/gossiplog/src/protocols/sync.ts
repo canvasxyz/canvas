@@ -12,7 +12,6 @@ export interface Node {
   level: number
   key: Uint8Array
   hash: Uint8Array
-  value?: Uint8Array
 }
 
 export namespace Node {
@@ -38,11 +37,6 @@ export namespace Node {
         if ((obj.hash != null && obj.hash.byteLength > 0)) {
           w.uint32(26)
           w.bytes(obj.hash)
-        }
-
-        if (obj.value != null) {
-          w.uint32(34)
-          w.bytes(obj.value)
         }
 
         if (opts.lengthDelimited !== false) {
@@ -73,10 +67,6 @@ export namespace Node {
               obj.hash = reader.bytes()
               break
             }
-            case 4: {
-              obj.value = reader.bytes()
-              break
-            }
             default: {
               reader.skipType(tag & 7)
               break
@@ -104,6 +94,7 @@ export interface Request {
   getRoot?: Request.GetRootRequest
   getNode?: Request.GetNodeRequest
   getChildren?: Request.GetChildrenRequest
+  getValues?: Request.GetValuesRequest
 }
 
 export namespace Request {
@@ -296,6 +287,72 @@ export namespace Request {
     }
   }
 
+  export interface GetValuesRequest {
+    keys: Uint8Array[]
+  }
+
+  export namespace GetValuesRequest {
+    let _codec: Codec<GetValuesRequest>
+
+    export const codec = (): Codec<GetValuesRequest> => {
+      if (_codec == null) {
+        _codec = message<GetValuesRequest>((obj, w, opts = {}) => {
+          if (opts.lengthDelimited !== false) {
+            w.fork()
+          }
+
+          if (obj.keys != null) {
+            for (const value of obj.keys) {
+              w.uint32(10)
+              w.bytes(value)
+            }
+          }
+
+          if (opts.lengthDelimited !== false) {
+            w.ldelim()
+          }
+        }, (reader, length, opts = {}) => {
+          const obj: any = {
+            keys: []
+          }
+
+          const end = length == null ? reader.len : reader.pos + length
+
+          while (reader.pos < end) {
+            const tag = reader.uint32()
+
+            switch (tag >>> 3) {
+              case 1: {
+                if (opts.limits?.keys != null && obj.keys.length === opts.limits.keys) {
+                  throw new CodeError('decode error - map field "keys" had too many elements', 'ERR_MAX_LENGTH')
+                }
+
+                obj.keys.push(reader.bytes())
+                break
+              }
+              default: {
+                reader.skipType(tag & 7)
+                break
+              }
+            }
+          }
+
+          return obj
+        })
+      }
+
+      return _codec
+    }
+
+    export const encode = (obj: Partial<GetValuesRequest>): Uint8Array => {
+      return encodeMessage(obj, GetValuesRequest.codec())
+    }
+
+    export const decode = (buf: Uint8Array | Uint8ArrayList, opts?: DecodeOptions<GetValuesRequest>): GetValuesRequest => {
+      return decodeMessage(buf, GetValuesRequest.codec(), opts)
+    }
+  }
+
   let _codec: Codec<Request>
 
   export const codec = (): Codec<Request> => {
@@ -318,6 +375,11 @@ export namespace Request {
         if (obj.getChildren != null) {
           w.uint32(26)
           Request.GetChildrenRequest.codec().encode(obj.getChildren, w)
+        }
+
+        if (obj.getValues != null) {
+          w.uint32(34)
+          Request.GetValuesRequest.codec().encode(obj.getValues, w)
         }
 
         if (opts.lengthDelimited !== false) {
@@ -350,6 +412,12 @@ export namespace Request {
               })
               break
             }
+            case 4: {
+              obj.getValues = Request.GetValuesRequest.codec().decode(reader, reader.uint32(), {
+                limits: opts.limits?.getValues
+              })
+              break
+            }
             default: {
               reader.skipType(tag & 7)
               break
@@ -377,6 +445,7 @@ export interface Response {
   getRoot?: Response.GetRootResponse
   getNode?: Response.GetNodeResponse
   getChildren?: Response.GetChildrenResponse
+  getValues?: Response.GetValuesResponse
 }
 
 export namespace Response {
@@ -568,6 +637,72 @@ export namespace Response {
     }
   }
 
+  export interface GetValuesResponse {
+    values: Uint8Array[]
+  }
+
+  export namespace GetValuesResponse {
+    let _codec: Codec<GetValuesResponse>
+
+    export const codec = (): Codec<GetValuesResponse> => {
+      if (_codec == null) {
+        _codec = message<GetValuesResponse>((obj, w, opts = {}) => {
+          if (opts.lengthDelimited !== false) {
+            w.fork()
+          }
+
+          if (obj.values != null) {
+            for (const value of obj.values) {
+              w.uint32(10)
+              w.bytes(value)
+            }
+          }
+
+          if (opts.lengthDelimited !== false) {
+            w.ldelim()
+          }
+        }, (reader, length, opts = {}) => {
+          const obj: any = {
+            values: []
+          }
+
+          const end = length == null ? reader.len : reader.pos + length
+
+          while (reader.pos < end) {
+            const tag = reader.uint32()
+
+            switch (tag >>> 3) {
+              case 1: {
+                if (opts.limits?.values != null && obj.values.length === opts.limits.values) {
+                  throw new CodeError('decode error - map field "values" had too many elements', 'ERR_MAX_LENGTH')
+                }
+
+                obj.values.push(reader.bytes())
+                break
+              }
+              default: {
+                reader.skipType(tag & 7)
+                break
+              }
+            }
+          }
+
+          return obj
+        })
+      }
+
+      return _codec
+    }
+
+    export const encode = (obj: Partial<GetValuesResponse>): Uint8Array => {
+      return encodeMessage(obj, GetValuesResponse.codec())
+    }
+
+    export const decode = (buf: Uint8Array | Uint8ArrayList, opts?: DecodeOptions<GetValuesResponse>): GetValuesResponse => {
+      return decodeMessage(buf, GetValuesResponse.codec(), opts)
+    }
+  }
+
   let _codec: Codec<Response>
 
   export const codec = (): Codec<Response> => {
@@ -590,6 +725,11 @@ export namespace Response {
         if (obj.getChildren != null) {
           w.uint32(26)
           Response.GetChildrenResponse.codec().encode(obj.getChildren, w)
+        }
+
+        if (obj.getValues != null) {
+          w.uint32(34)
+          Response.GetValuesResponse.codec().encode(obj.getValues, w)
         }
 
         if (opts.lengthDelimited !== false) {
@@ -619,6 +759,12 @@ export namespace Response {
             case 3: {
               obj.getChildren = Response.GetChildrenResponse.codec().decode(reader, reader.uint32(), {
                 limits: opts.limits?.getChildren
+              })
+              break
+            }
+            case 4: {
+              obj.getValues = Response.GetValuesResponse.codec().decode(reader, reader.uint32(), {
+                limits: opts.limits?.getValues
               })
               break
             }

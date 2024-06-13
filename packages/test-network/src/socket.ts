@@ -1,10 +1,10 @@
 import type { Libp2p } from "libp2p"
 
 import { peerIdFromString } from "@libp2p/peer-id"
-import { randomBytes } from "@noble/hashes/utils"
 import WebSocket from "isomorphic-ws"
 
 import type { Event, ServiceMap } from "./types.js"
+import { nanoid } from "nanoid"
 
 export type SocketEvent =
 	| { type: "boop" }
@@ -19,12 +19,15 @@ export class Socket {
 		return new Socket(libp2p, ws)
 	}
 
-	private constructor(readonly libp2p: Libp2p<ServiceMap>, readonly ws: WebSocket) {
+	private constructor(
+		readonly libp2p: Libp2p<ServiceMap>,
+		readonly ws: WebSocket,
+	) {
 		ws.addEventListener("message", (msg) => {
 			const event = JSON.parse(msg.data.toString()) as SocketEvent
 			console.log(`event: ${event.type}`)
 			if (event.type === "boop") {
-				libp2p.services.gossiplog.append(randomBytes(16)).then(
+				libp2p.services.gossiplog.append(nanoid()).then(
 					({ recipients }) =>
 						recipients.then(
 							(peers) => console.log(`recipients: [ ${peers.join(", ")} ]`),

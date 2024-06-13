@@ -4,7 +4,6 @@ message Node {
   uint32 level = 1;
   bytes key = 2;
   bytes hash = 3;
-  optional bytes value = 4;
 }
 
 message Request {
@@ -20,10 +19,15 @@ message Request {
     bytes key = 2;
   }
 
+  message GetValuesRequest {
+    repeated bytes keys = 1;
+  }
+
   oneof request {
     GetRootRequest get_root = 1;
     GetNodeRequest get_node = 2;
     GetChildrenRequest get_children = 3;
+    GetValuesRequest get_values = 4;
   }
 }
 
@@ -40,9 +44,14 @@ message Response {
     repeated Node children = 1;
   }
 
+  message GetValuesResponse {
+    repeated bytes values = 1;
+  }
+
   oneof response {
     GetRootResponse get_root = 1;
     GetNodeResponse get_node = 2;
     GetChildrenResponse get_children = 3;
+    GetValuesResponse get_values = 4;
   }
 }

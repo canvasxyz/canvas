@@ -28,7 +28,7 @@ let maxConnections: number | undefined = undefined
 if (MIN_CONNECTIONS !== undefined) minConnections = parseInt(MIN_CONNECTIONS)
 if (MAX_CONNECTIONS !== undefined) maxConnections = parseInt(MAX_CONNECTIONS)
 
-export async function getLibp2p(messageLog: AbstractGossipLog<Uint8Array>): Promise<Libp2p<ServiceMap>> {
+export async function getLibp2p(messageLog: AbstractGossipLog<string>): Promise<Libp2p<ServiceMap>> {
 	const peerId = await getPeerId()
 
 	return await createLibp2p({
@@ -50,12 +50,13 @@ export async function getLibp2p(messageLog: AbstractGossipLog<Uint8Array>): Prom
 			identify: identify({ protocolPrefix: "canvas" }),
 			ping: ping({ protocolPrefix: "canvas" }),
 			dht: kadDHT({ protocol: getTopicDHTProtocol(topic), kBucketSize: 2 }),
+			// dht: kadDHT({ protocol: getTopicDHTProtocol(topic) }),
 
 			pubsub: gossipsub({
 				emitSelf: false,
 				fallbackToFloodsub: false,
 				allowPublishToZeroTopicPeers: true,
-				globalSignaturePolicy: "StrictSign",
+				globalSignaturePolicy: "StrictNoSign",
 
 				asyncValidation: true,
 				scoreParams: {

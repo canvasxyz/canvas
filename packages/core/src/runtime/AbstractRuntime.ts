@@ -7,11 +7,11 @@ import { TypeTransformerFunction } from "@ipld/schema/typed.js"
 import type { Signature, Action, Message, Session, SignerCache } from "@canvas-js/interfaces"
 
 import { AbstractModelDB, Effect, ModelValue, ModelsInit, lessThan } from "@canvas-js/modeldb"
-import { GossipLogConsumer, ReadOnlyTransaction, encodeId, MAX_MESSAGE_ID, MIN_MESSAGE_ID } from "@canvas-js/gossiplog"
+import { GossipLogConsumer, encodeId, MAX_MESSAGE_ID, MIN_MESSAGE_ID, AbstractGossipLog } from "@canvas-js/gossiplog"
 import { assert, mapValues } from "@canvas-js/utils"
 
 export type ExecutionContext = {
-	txn: ReadOnlyTransaction
+	messageLog: AbstractGossipLog<Action | Session>
 	id: string
 	signature: Signature
 	message: Message<Action>
@@ -89,7 +89,7 @@ export abstract class AbstractRuntime {
 		// eslint-disable-next-line @typescript-eslint/no-this-alias
 		const runtime = this
 
-		return async function (this: ReadOnlyTransaction, id, signature, message) {
+		return async function (this: AbstractGossipLog<Action | Session>, { id, signature, message }) {
 			assert(signature !== null, "missing message signature")
 
 			if (AbstractRuntime.isSession(message)) {
@@ -137,7 +137,7 @@ export abstract class AbstractRuntime {
 
 				const modelEntries: Record<string, Record<string, ModelValue | null>> = mapValues(runtime.db.models, () => ({}))
 
-				const result = await runtime.execute({ txn: this, modelEntries, id, signature, message })
+				const result = await runtime.execute({ messageLog: this, modelEntries, id, signature, message })
 
 				const effects: Effect[] = []
 
@@ -243,7 +243,7 @@ export abstract class AbstractRuntime {
 			const visited = new Set<string>()
 
 			for (const parent of context.message.parents) {
-				const isAncestor = await context.txn.isAncestor(encodeId(parent), encodeId(messageId), visited)
+				const isAncestor = await context.messageLog.isAncestor(parent, messageId, visited)
 				if (isAncestor) {
 					return cbor.decode<null | T>(value)
 				}
