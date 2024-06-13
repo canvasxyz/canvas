@@ -90,119 +90,130 @@ export abstract class AbstractRuntime {
 		const runtime = this
 
 		return async function (this: AbstractGossipLog<Action | Session>, { id, signature, message }) {
-			assert(signature !== null, "missing message signature")
-
 			if (AbstractRuntime.isSession(message)) {
-				const {
-					publicKey,
-					address,
-					context: { timestamp, duration },
-				} = message.payload
-
-				const signer = runtime.signers
-					.getAll()
-					.find((signer) => signer.scheme.codecs.includes(signature.codec) && signer.match(address))
-
-				assert(signer !== undefined, "no matching signer found")
-
-				assert(publicKey === signature.publicKey)
-
-				await signer.verifySession(runtime.topic, message.payload)
-
-				await runtime.db.set("$sessions", {
-					message_id: id,
-					public_key: publicKey,
-					address: address,
-					expiration: duration === undefined ? Number.MAX_SAFE_INTEGER : timestamp + duration,
-					rawMessage: bytesToHex(cbor.encode(message)),
-					rawSignature: bytesToHex(cbor.encode(signature)),
-				})
+				await runtime.handleSession(id, signature, message)
 			} else if (AbstractRuntime.isAction(message)) {
-				const {
-					address,
-					context: { timestamp },
-				} = message.payload
-
-				const sessions = await runtime.db.query("$sessions", {
-					where: {
-						public_key: signature.publicKey,
-						address: address,
-						expiration: { gte: timestamp },
-					},
-				})
-
-				if (sessions.length === 0) {
-					throw new Error(`missing session ${signature.publicKey} for $${address}`)
-				}
-
-				const modelEntries: Record<string, Record<string, ModelValue | null>> = mapValues(runtime.db.models, () => ({}))
-
-				const result = await runtime.execute({ messageLog: this, modelEntries, id, signature, message })
-
-				const effects: Effect[] = []
-
-				for (const [model, entries] of Object.entries(modelEntries)) {
-					for (const [key, value] of Object.entries(entries)) {
-						const keyHash = AbstractRuntime.getKeyHash(key)
-
-						if (runtime.indexHistory) {
-							const effectKey = `${model}/${keyHash}/${id}`
-							const results = await runtime.db.query("$effects", {
-								select: { key: true },
-								where: { key: { gt: effectKey, lte: `${model}/${keyHash}/${MAX_MESSAGE_ID}` } },
-								limit: 1,
-							})
-
-							effects.push({
-								model: "$effects",
-								operation: "set",
-								value: { key: effectKey, value: value && cbor.encode(value) },
-							})
-
-							if (results.length > 0) {
-								runtime.log("skipping effect %o because it is superceeded by effects %O", [key, value], results)
-								continue
-							}
-						} else {
-							const versionKey = `${model}/${keyHash}`
-							const existingVersionRecord = await runtime.db.get("$versions", versionKey)
-							const { version: existingVersion } = existingVersionRecord ?? { version: null }
-
-							assert(
-								existingVersion === null || existingVersion instanceof Uint8Array,
-								"expected version === null || version instanceof Uint8Array",
-							)
-
-							const currentVersion = encodeId(id)
-							if (existingVersion !== null && lessThan(currentVersion, existingVersion)) {
-								continue
-							}
-
-							effects.push({
-								model: "$versions",
-								operation: "set",
-								value: { key: versionKey, version: currentVersion },
-							})
-						}
-
-						if (value === null) {
-							effects.push({ model, operation: "delete", key })
-						} else {
-							effects.push({ model, operation: "set", value })
-						}
-					}
-				}
-
-				runtime.log("applying effects %O", effects)
-				if (effects.length > 0) {
-					await runtime.db.apply(effects)
-				}
-
-				return result
+				await runtime.handleAction(id, signature, message, this)
 			} else {
 				throw new Error("invalid message payload type")
 			}
 		}
+	}
+
+	private async handleSession(id: string, signature: Signature, message: Message<Session>) {
+		const {
+			publicKey,
+			address,
+			context: { timestamp, duration },
+		} = message.payload
+
+		const signer = this.signers
+			.getAll()
+			.find((signer) => signer.scheme.codecs.includes(signature.codec) && signer.match(address))
+
+		assert(signer !== undefined, "no matching signer found")
+
+		assert(publicKey === signature.publicKey)
+
+		await signer.verifySession(this.topic, message.payload)
+
+		await this.db.set("$sessions", {
+			message_id: id,
+			public_key: publicKey,
+			address: address,
+			expiration: duration === undefined ? Number.MAX_SAFE_INTEGER : timestamp + duration,
+			rawMessage: bytesToHex(cbor.encode(message)),
+			rawSignature: bytesToHex(cbor.encode(signature)),
+		})
+	}
+
+	private async handleAction(
+		id: string,
+		signature: Signature,
+		message: Message<Action>,
+		messageLog: AbstractGossipLog<Action | Session>,
+	) {
+		const {
+			address,
+			context: { timestamp },
+		} = message.payload
+
+		const sessions = await this.db.query("$sessions", {
+			where: {
+				public_key: signature.publicKey,
+				address: address,
+				expiration: { gte: timestamp },
+			},
+		})
+
+		if (sessions.length === 0) {
+			throw new Error(`missing session ${signature.publicKey} for $${address}`)
+		}
+
+		const modelEntries: Record<string, Record<string, ModelValue | null>> = mapValues(this.db.models, () => ({}))
+
+		const result = await this.execute({ messageLog, modelEntries, id, signature, message })
+
+		const effects: Effect[] = []
+
+		for (const [model, entries] of Object.entries(modelEntries)) {
+			for (const [key, value] of Object.entries(entries)) {
+				const keyHash = AbstractRuntime.getKeyHash(key)
+
+				if (this.indexHistory) {
+					const effectKey = `${model}/${keyHash}/${id}`
+					const results = await this.db.query("$effects", {
+						select: { key: true },
+						where: { key: { gt: effectKey, lte: `${model}/${keyHash}/${MAX_MESSAGE_ID}` } },
+						limit: 1,
+					})
+
+					effects.push({
+						model: "$effects",
+						operation: "set",
+						value: { key: effectKey, value: value && cbor.encode(value) },
+					})
+
+					if (results.length > 0) {
+						this.log("skipping effect %o because it is superceeded by effects %O", [key, value], results)
+						continue
+					}
+				} else {
+					const versionKey = `${model}/${keyHash}`
+					const existingVersionRecord = await this.db.get("$versions", versionKey)
+					const { version: existingVersion } = existingVersionRecord ?? { version: null }
+
+					assert(
+						existingVersion === null || existingVersion instanceof Uint8Array,
+						"expected version === null || version instanceof Uint8Array",
+					)
+
+					const currentVersion = encodeId(id)
+					if (existingVersion !== null && lessThan(currentVersion, existingVersion)) {
+						continue
+					}
+
+					effects.push({
+						model: "$versions",
+						operation: "set",
+						value: { key: versionKey, version: currentVersion },
+					})
+				}
+
+				if (value === null) {
+					effects.push({ model, operation: "delete", key })
+				} else {
+					effects.push({ model, operation: "set", value })
+				}
+			}
+		}
+
+		this.log("applying effects %O", effects)
+		if (effects.length > 0) {
+			await this.db.apply(effects)
+		}
+
+		return result
 	}
 
 	protected static getKeyHash = (key: string) => bytesToHex(blake3(key, { dkLen: 16 }))
