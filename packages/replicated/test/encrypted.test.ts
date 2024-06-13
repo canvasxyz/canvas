@@ -67,7 +67,7 @@ class EncryptedChat extends ReplicatedObject<{
 
 	// should be on a `local` scope instead?
 	async registerEncryptionKey(privateKey: string): Promise<void> {
-		return this.tx.registerEncryptionKey(getEncryptionPublicKey(privateKey.slice(2)))
+		return super.tx.registerEncryptionKey(getEncryptionPublicKey(privateKey.slice(2)))
 	}
 	async createEncryptionGroup(recipient: `0x${string}`): Promise<string> {
 		const wallet = {} as any // TODO

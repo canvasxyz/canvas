@@ -15,8 +15,12 @@ export abstract class ReplicatedObject<
 
 	[handler: `on${string}`]: (...args: any[]) => void
 
-	tx: { [K in keyof T]: T[K] }
 	as: (signer: SessionSigner<any>) => { [k: string]: Call }
+
+	_tx: { [K in keyof T]: T[K] }
+	get tx() {
+		return this._tx ?? Object.getPrototypeOf(this)._tx
+	}
 
 	static db = {}
 
@@ -44,6 +48,7 @@ export abstract class ReplicatedObject<
 	constructor(config: ReplicatedConfig = {}) {
 		// eslint-disable-next-line @typescript-eslint/no-this-alias
 		const instance = this
+		const parent = Object.getPrototypeOf(this) // TODO: not parent, but root (repeat until we find a base ReplicatedObject)
 
 		this.#app = null
 
@@ -54,43 +59,106 @@ export abstract class ReplicatedObject<
 		if (this.topic === undefined) throw new ReplicatedObjectError("Must define a topic on class or constructor")
 		if (Object.keys(models).length === 0) throw new ReplicatedObjectError("Must define a model")
 
+		// set up keys
 		const isHandlerKey = (key: string | symbol): key is `on${string}` => {
 			return typeof key === "string" && key.match(/^on[A-Z].*/) !== null
+		}
+		const fromHandlerKey = (key: string) => {
+			return key[2].toLowerCase() + key.slice(3)
 		}
 		const keys = Reflect.ownKeys(Object.getPrototypeOf(this)).filter((key) => key !== "constructor")
 		const actionHandlerKeys: `on${string}`[] = keys.filter(isHandlerKey)
 
+		// set up contract
 		const contract: { models: any; actions: Record<string, Call> } = { models, actions: {} }
-		const calls: Record<string, ActionImplementation<any>> = {}
-		const callsAs: Record<string, (signer: SessionSigner<any>, ...args: any[]) => any> = {}
-
-		for (const key of actionHandlerKeys) {
-			if (typeof key === "symbol") continue
-			if (typeof (this as any)[key] !== "function") continue
-			const name = key[2].toLowerCase() + key.slice(3)
+		for (const handlerKey of actionHandlerKeys) {
+			if (typeof handlerKey === "symbol") continue
+			if (typeof (this as any)[handlerKey] !== "function") continue
+			const name = fromHandlerKey(handlerKey)
 
 			contract.actions[name] = (parentDb, parentArgs, parentContext) => {
 				const context = {
 					db: { set: parentDb.set, get: parentDb.get },
 					...parentContext,
 				}
-				this[key].apply(context, parentArgs)
-			}
-
-			calls[name] = function (...args: any[]) {
-				return instance.#app?.actions[name].call(this, args)
-			}
-			callsAs[name] = function (signer: SessionSigner<any>, ...args: any[]) {
-				return instance.#app?.actions[name].call(this, args, { signer })
+				this[handlerKey].apply(context, parentArgs)
 			}
 		}
 
-		this.tx = calls as typeof this.tx // this.tx.action()
-		Object.assign(this, calls) // this.action()
+		// set up calls
+		// explicitly defined calls (this.message()) go on child
+		// implicitly defined calls (this.onMessage()) go on root
+		const rootCalls: Record<string, ActionImplementation<any>> = {}
+		const childCalls: Record<string, ActionImplementation<any>> = {}
+
+		const rootCallsAs: Record<string, any | ((signer: SessionSigner<any>, ...args: any[]) => any)> = {} // TODO
+		const childCallsAs: Record<string, any | ((signer: SessionSigner<any>, ...args: any[]) => any)> = {} // TODO
+
+		for (const key of keys) {
+			const name = isHandlerKey(key) ? fromHandlerKey(key) : key
+			const explicit = !isHandlerKey(key)
+			if (typeof name === "symbol") continue
+
+			// skip fields on the child object that aren't functions,
+			// but don't perform this check for implicit calls, since
+			// they won't be defined as a function
+			if (explicit && typeof (this as any)[name] !== "function") continue
+
+			// set up direct calls
+			if (explicit) {
+				// handle explicitly defined call (this.message()) on child
+				childCalls[name] = function (...args: any[]) {
+					return parent[name].apply(instance, args)
+				}
+			} else {
+				// handle implicitly defined call (this.onMessage()) on root
+				rootCalls[name] = function (...args: any[]) {
+					return instance.#app?.actions[name].call(this, args)
+				}
+			}
+
+			// set up .as() calls
+			// TODO
+
+			if (explicit) {
+				childCallsAs[name] = function (signer: SessionSigner<any>) {
+					return Object.fromEntries(
+						Object.entries(childCalls).map(([key, call]) => [
+							key,
+							function (...args: any[]) {
+								return parent[name].as(signer).apply(instance, args)
+							},
+						]),
+					)
+				}
+			} else {
+				rootCallsAs[name] = function (signer: SessionSigner<any>) {
+					return Object.fromEntries(
+						Object.entries(rootCalls).map(([key, call]) => [
+							key,
+							(...args: any[]) => {
+								return instance.#app?.actions[name].call(this, args, { signer })
+							},
+						]),
+					)
+				}
+			}
+		}
+
+		console.log("childcalls", childCalls, "rootCalls", rootCalls)
+		parent._tx = rootCalls as typeof this._tx
+		this._tx = { ...childCalls, ...rootCalls } as typeof this._tx // child shadows root
+		Object.assign(parent, rootCalls)
+		Object.assign(this, childCalls)
 
 		this.as = (signer: SessionSigner<any>) => {
 			this.#contextSigner = signer
-			return Object.fromEntries(Object.entries(callsAs).map(([key, call]) => [key, call.bind(instance, signer)]))
+			return Object.fromEntries(Object.entries(childCallsAs).map(([key, call]) => [key, call.bind(instance, signer)]))
+		}
+
+		parent.as = (signer: SessionSigner<any>) => {
+			this.#contextSigner = signer
+			return Object.fromEntries(Object.entries(rootCallsAs).map(([key, call]) => [key, call.bind(instance, signer)]))
 		}
 
 		this.#ready = new Promise((resolve, reject) => {
