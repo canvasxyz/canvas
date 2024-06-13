@@ -16,7 +16,7 @@ import type { Signer, Message } from "@canvas-js/interfaces"
 import { ed25519 } from "@canvas-js/signatures"
 import { zip } from "@canvas-js/utils"
 
-import { AbstractGossipLog, GossipLogInit, encodeId, decodeClock, SignedMessage } from "@canvas-js/gossiplog"
+import { AbstractGossipLog, GossipLogInit, encodeId, decodeClock } from "@canvas-js/gossiplog"
 import { GossipLog as GossipLogSqlite } from "@canvas-js/gossiplog/sqlite"
 // import { GossipLog as GossipLogNode } from "@canvas-js/gossiplog/node"
 import { GossipLog as GossipLogIdb } from "@canvas-js/gossiplog/idb"
@@ -153,7 +153,7 @@ export async function appendChain(
 		}
 
 		const signature = await signer.sign(message)
-		const signedMessage = SignedMessage.encode(signature, message)
+		const signedMessage = log.encode(signature, message)
 		await log.insert(signedMessage)
 		ids.push(signedMessage.id)
 	}

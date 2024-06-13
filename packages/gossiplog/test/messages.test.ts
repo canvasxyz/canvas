@@ -1,13 +1,14 @@
+import assert from "node:assert"
 import { randomUUID } from "node:crypto"
 import { nanoid } from "nanoid"
 
 import { Message } from "@canvas-js/interfaces"
 import { ed25519 } from "@canvas-js/signatures"
-import { SignedMessage } from "@canvas-js/gossiplog"
 
+import type { GossipLogConsumer } from "@canvas-js/gossiplog"
 import { testPlatforms, expectLogEntries } from "./utils.js"
 
-const apply = ({}: SignedMessage<string>) => {}
+const apply: GossipLogConsumer<string> = ({}) => {}
 
 testPlatforms("append messages", async (t, openGossipLog) => {
 	const topic = randomUUID()
@@ -34,9 +35,9 @@ testPlatforms("insert concurrent messages", async (t, openGossipLog) => {
 	const b = { topic, clock: 1, parents: [], payload: nanoid() }
 	const c = { topic, clock: 1, parents: [], payload: nanoid() }
 
-	const { id: idA } = await log.insert(SignedMessage.encode(signer.sign(a), a))
-	const { id: idB } = await log.insert(SignedMessage.encode(signer.sign(b), b))
-	const { id: idC } = await log.insert(SignedMessage.encode(signer.sign(c), c))
+	const { id: idA } = await log.insert(log.encode(signer.sign(a), a))
+	const { id: idB } = await log.insert(log.encode(signer.sign(b), b))
+	const { id: idC } = await log.insert(log.encode(signer.sign(c), c))
 
 	const entries: [string, string, Message<string>][] = [
 		[idA, signer.publicKey, a],
@@ -63,9 +64,9 @@ testPlatforms("append to multiple parents", async (t, openGossipLog) => {
 	const b = { topic, clock: 1, parents: [], payload: nanoid() }
 	const c = { topic, clock: 1, parents: [], payload: nanoid() }
 
-	const { id: idA } = await log.insert(SignedMessage.encode(signer.sign(a), a))
-	const { id: idB } = await log.insert(SignedMessage.encode(signer.sign(b), b))
-	const { id: idC } = await log.insert(SignedMessage.encode(signer.sign(c), c))
+	const { id: idA } = await log.insert(log.encode(signer.sign(a), a))
+	const { id: idB } = await log.insert(log.encode(signer.sign(b), b))
+	const { id: idC } = await log.insert(log.encode(signer.sign(c), c))
 
 	const entries: [string, string, Message<string>][] = [
 		[idA, signer.publicKey, a],
@@ -81,4 +82,17 @@ testPlatforms("append to multiple parents", async (t, openGossipLog) => {
 	t.deepEqual(message, { topic, clock: 2, parents: entries.map(([id]) => id), payload })
 
 	await expectLogEntries(t, log, [...entries, [id, signer.publicKey, message!]])
+})
+
+testPlatforms("reject invalid message", async (t, openGossipLog) => {
+	const topic = randomUUID()
+	const log = await openGossipLog(t, {
+		topic,
+		apply: ({ message }) => {
+			assert(typeof message.payload === "string")
+		},
+	})
+
+	await t.notThrowsAsync(() => log.append(nanoid()))
+	await t.throwsAsync(() => log.append(4))
 })

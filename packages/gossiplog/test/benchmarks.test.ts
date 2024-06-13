@@ -1,13 +1,13 @@
 import test, { ExecutionContext } from "ava"
 import { nanoid } from "nanoid"
 
-import { AbstractGossipLog, SignedMessage } from "@canvas-js/gossiplog"
+import { AbstractGossipLog, GossipLogConsumer } from "@canvas-js/gossiplog"
 import { GossipLog } from "@canvas-js/gossiplog/sqlite"
 
 import { getDirectory } from "./utils.js"
 
 const topic = "com.example.test"
-const apply = ({}: SignedMessage<string>) => {}
+const apply: GossipLogConsumer<string> = ({}) => {}
 
 test("append messages (in-memory, linear, 100)", async (t) => {
 	const log = new GossipLog({ topic, apply })

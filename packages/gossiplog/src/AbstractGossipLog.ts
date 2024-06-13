@@ -89,7 +89,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 					continue
 				}
 
-				const signedMessage = SignedMessage.encode(record.signature, record.message)
+				const signedMessage = this.encode(record.signature, record.message)
 				assert(signedMessage.id === id)
 				await this.#apply.apply(this, [signedMessage])
 			}

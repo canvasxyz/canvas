@@ -44,7 +44,6 @@ import { Client, decodeRequests, encodeResponses } from "../sync/index.js"
 import { DelayableController, SyncDeadlockError, SyncTimeoutError, wait } from "../utils.js"
 import { Server } from "../sync/server.js"
 import { equals } from "uint8arrays"
-import { SignedMessage } from "../SignedMessage.js"
 
 export const getSyncProtocol = (topic: string) => `/canvas/sync/v1/${topic}`
 export const getPushProtocol = (topic: string) => `/canvas/sync/v1/${topic}/push`
@@ -215,7 +214,7 @@ export class GossipLogService<Payload = unknown>
 	): Promise<{ id: string; recipients: Promise<PeerId[]> }> {
 		assert(message.topic === this.messageLog.topic, "wrong topic")
 
-		const signedMessage = SignedMessage.encode<Payload>(signature, message)
+		const signedMessage = this.messageLog.encode(signature, message)
 		this.messageLog.insert(signedMessage)
 
 		const data = Event.encode({ insert: { key: signedMessage.key, value: signedMessage.value } })

@@ -5,13 +5,13 @@ import { nanoid } from "nanoid"
 
 import type { Message } from "@canvas-js/interfaces"
 import { ed25519 } from "@canvas-js/signatures"
-import { AbstractGossipLog, SignedMessage } from "@canvas-js/gossiplog"
+import { AbstractGossipLog, GossipLogConsumer } from "@canvas-js/gossiplog"
 import { GossipLog } from "@canvas-js/gossiplog/sqlite"
 // import { GossipLog as PostgresGossipLog } from "@canvas-js/gossiplog/pg"
 
 import { appendChain, getDirectory, testPlatforms } from "./utils.js"
 
-const apply = ({}: SignedMessage<string>) => {}
+const apply: GossipLogConsumer<string> = ({}) => {}
 
 testPlatforms("get ancestors (append, linear history)", async (t, openGossipLog) => {
 	const topic = randomUUID()
@@ -47,7 +47,7 @@ testPlatforms("get ancestors (insert, linear history)", async (t, openGossipLog)
 		}
 
 		const signature = signer.sign(message)
-		const { id } = await log.insert(SignedMessage.encode(signature, message))
+		const { id } = await log.insert(log.encode(signature, message))
 		ids.push(id)
 	}
 

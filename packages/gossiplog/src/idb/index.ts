@@ -18,7 +18,6 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 		const merkleIndex = new MerkleIndex(db)
 		const tree = await MemoryTree.fromEntries({ mode: Mode.Index }, merkleIndex.entries())
 		const root = await tree.read((txn) => txn.getRoot())
-		console.log(`BUILT TREE WITH ROOT ${root.level}:${toString(root.hash, "hex")}`)
 
 		return new GossipLog(db, tree, init)
 	}

@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto"
 import type { Message } from "@canvas-js/interfaces"
 import { ed25519 } from "@canvas-js/signatures"
 
-import { SignedMessage } from "@canvas-js/gossiplog"
 import { expectLogEntries, testPlatforms } from "./utils.js"
 
 testPlatforms("append three messages", async (t, openGossipLog) => {
@@ -29,9 +28,9 @@ testPlatforms("insert three concurrent messages and append a fourth", async (t, 
 	const a = { topic, clock: 1, parents: [], payload: "foo" }
 	const b = { topic, clock: 1, parents: [], payload: "bar" }
 	const c = { topic, clock: 1, parents: [], payload: "baz" }
-	const { id: idA } = await log.insert(SignedMessage.encode(signer.sign(a), a))
-	const { id: idB } = await log.insert(SignedMessage.encode(signer.sign(b), b))
-	const { id: idC } = await log.insert(SignedMessage.encode(signer.sign(c), c))
+	const { id: idA } = await log.insert(log.encode(signer.sign(a), a))
+	const { id: idB } = await log.insert(log.encode(signer.sign(b), b))
+	const { id: idC } = await log.insert(log.encode(signer.sign(c), c))
 
 	const entries: [string, string, Message<string>][] = [
 		[idA, signer.publicKey, a],
