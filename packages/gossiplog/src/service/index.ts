@@ -44,6 +44,7 @@ import { Client, decodeRequests, encodeResponses } from "../sync/index.js"
 import { DelayableController, SyncDeadlockError, SyncTimeoutError, wait } from "../utils.js"
 import { Server } from "../sync/server.js"
 import { equals } from "uint8arrays"
+import { SignedMessage } from "../SignedMessage.js"
 
 export const getSyncProtocol = (topic: string) => `/canvas/sync/v1/${topic}`
 export const getPushProtocol = (topic: string) => `/canvas/sync/v1/${topic}/push`
@@ -187,18 +188,7 @@ export class GossipLogService<Payload = unknown>
 		options: { signer?: Signer<Payload> } = {},
 	): Promise<{ id: string; signature: Signature; message: Message<Payload>; recipients: Promise<PeerId[]> }> {
 		const signedMessage = await this.messageLog.append(payload, options)
-
-		const data = Event.encode({ insert: { key: signedMessage.key, value: signedMessage.value } })
-		const recipients = this.#pubsub.publish(this.messageLog.topic, data).then(
-			({ recipients }) => {
-				this.log("published message %s to %d recipients %O", signedMessage.id, recipients.length, recipients)
-				return recipients
-			},
-			(err) => {
-				this.log.error("failed to publish event: %O", err)
-				return []
-			},
-		)
+		const recipients = this.publish(signedMessage)
 
 		return {
 			id: signedMessage.id,
@@ -216,9 +206,18 @@ export class GossipLogService<Payload = unknown>
 
 		const signedMessage = this.messageLog.encode(signature, message)
 		this.messageLog.insert(signedMessage)
+		const recipients = this.publish(signedMessage)
+
+		return { id: signedMessage.id, recipients }
+	}
+
+	private async publish(signedMessage: SignedMessage<Payload>): Promise<PeerId[]> {
+		if (!this.#pubsub.isStarted()) {
+			return []
+		}
 
 		const data = Event.encode({ insert: { key: signedMessage.key, value: signedMessage.value } })
-		const recipients = this.#pubsub.publish(message.topic, data).then(
+		return this.#pubsub.publish(this.messageLog.topic, data).then(
 			({ recipients }) => {
 				this.log("published message %s to %d recipients %O", signedMessage.id, recipients.length, recipients)
 				return recipients
@@ -228,8 +227,6 @@ export class GossipLogService<Payload = unknown>
 				return []
 			},
 		)
-
-		return { id: signedMessage.id, recipients }
 	}
 
 	private handleMessage = ({ detail: { msgId, propagationSource, msg } }: GossipsubEvents["gossipsub:message"]) => {
