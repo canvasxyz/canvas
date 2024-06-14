@@ -66,7 +66,9 @@ export abstract class ReplicatedObject<
 		const fromHandlerKey = (key: string) => {
 			return key[2].toLowerCase() + key.slice(3)
 		}
-		const keys = Reflect.ownKeys(Object.getPrototypeOf(this)).filter((key) => key !== "constructor")
+		const keys = Reflect.ownKeys(Object.getPrototypeOf(this)).filter(
+			(key) => key !== "constructor" && key !== "as" && key !== "_tx",
+		)
 		const actionHandlerKeys: `on${string}`[] = keys.filter(isHandlerKey)
 
 		// set up contract
@@ -91,8 +93,8 @@ export abstract class ReplicatedObject<
 		const rootCalls: Record<string, ActionImplementation<any>> = {}
 		const childCalls: Record<string, ActionImplementation<any>> = {}
 
-		const rootCallsAs: Record<string, any | ((signer: SessionSigner<any>, ...args: any[]) => any)> = {} // TODO
-		const childCallsAs: Record<string, any | ((signer: SessionSigner<any>, ...args: any[]) => any)> = {} // TODO
+		const rootCallsAs: Record<string, (signer: SessionSigner<any>, ...args: any[]) => any> = {}
+		const childCallsAs: Record<string, (signer: SessionSigner<any>, ...args: any[]) => any> = {}
 
 		for (const key of keys) {
 			const name = isHandlerKey(key) ? fromHandlerKey(key) : key
@@ -118,47 +120,39 @@ export abstract class ReplicatedObject<
 			}
 
 			// set up .as() calls
-			// TODO
-
 			if (explicit) {
-				childCallsAs[name] = function (signer: SessionSigner<any>) {
-					return Object.fromEntries(
-						Object.entries(childCalls).map(([key, call]) => [
-							key,
-							function (...args: any[]) {
-								return parent[name].as(signer).apply(instance, args)
-							},
-						]),
-					)
+				childCallsAs[name] = function (signer: SessionSigner<any>, ...args: any[]) {
+					// is signer lost here?
+					instance.#contextSigner = signer
+					return instance._tx[name].apply(instance, args)
+				}
+				// manually propagate child calls up to parent
+				rootCallsAs[name] = function (signer: SessionSigner<any>, ...args: any[]) {
+					// is this handled correctly?
+					return instance.#app?.actions[name].call(this, args, { signer })
 				}
 			} else {
-				rootCallsAs[name] = function (signer: SessionSigner<any>) {
-					return Object.fromEntries(
-						Object.entries(rootCalls).map(([key, call]) => [
-							key,
-							(...args: any[]) => {
-								return instance.#app?.actions[name].call(this, args, { signer })
-							},
-						]),
-					)
+				childCallsAs[name] = function (signer: SessionSigner<any>, ...args: any[]) {
+					return instance.#app?.actions[name].call(this, args, { signer })
+				}
+				rootCallsAs[name] = function (signer: SessionSigner<any>, ...args: any[]) {
+					return instance.#app?.actions[name].call(this, args, { signer })
 				}
 			}
 		}
 
-		console.log("childcalls", childCalls, "rootCalls", rootCalls)
 		parent._tx = rootCalls as typeof this._tx
 		this._tx = { ...childCalls, ...rootCalls } as typeof this._tx // child shadows root
 		Object.assign(parent, rootCalls)
 		Object.assign(this, childCalls)
 
 		this.as = (signer: SessionSigner<any>) => {
-			this.#contextSigner = signer
 			return Object.fromEntries(Object.entries(childCallsAs).map(([key, call]) => [key, call.bind(instance, signer)]))
 		}
 
 		parent.as = (signer: SessionSigner<any>) => {
-			this.#contextSigner = signer
-			return Object.fromEntries(Object.entries(rootCallsAs).map(([key, call]) => [key, call.bind(instance, signer)]))
+			const calls = { ...rootCallsAs } // root shadows child
+			return Object.fromEntries(Object.entries(calls).map(([key, call]) => [key, call.bind(instance, signer)]))
 		}
 
 		this.#ready = new Promise((resolve, reject) => {
