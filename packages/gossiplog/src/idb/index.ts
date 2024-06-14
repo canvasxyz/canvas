@@ -15,13 +15,14 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 			models: AbstractGossipLog.schema,
 		})
 
+		const messageCount = await db.count("$messages")
 		const merkleIndex = new MerkleIndex(db)
 		const start = performance.now()
 		const tree = await MemoryTree.fromEntries({ mode: Mode.Index }, merkleIndex.entries())
 		const root = await tree.read((txn) => txn.getRoot())
 		const delta = performance.now() - start
 		console.log(
-			`rebuilt in-memory merkle tree with root ${root.level}:${toString(root.hash, "hex")} in ${Math.round(delta)}ms`,
+			`rebuilt in-memory merkle tree (root ${root.level}:${toString(root.hash, "hex")}, ${messageCount} entries, ${Math.round(delta)}ms)`,
 		)
 
 		return new GossipLog(db, tree, init)

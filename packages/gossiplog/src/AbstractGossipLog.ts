@@ -4,7 +4,7 @@ import { equals } from "uint8arrays"
 
 import { type Node, type Tree, type ReadWriteTransaction, hashEntry } from "@canvas-js/okra"
 import type { Signature, Signer, Message, Awaitable } from "@canvas-js/interfaces"
-import { AbstractModelDB, ModelsInit, Effect } from "@canvas-js/modeldb"
+import { AbstractModelDB, ModelsInit, Effect, RangeExpression } from "@canvas-js/modeldb"
 import { ed25519 } from "@canvas-js/signatures"
 import { assert, zip } from "@canvas-js/utils"
 
@@ -13,7 +13,7 @@ import { Driver } from "./sync/driver.js"
 import type { SyncServer } from "./interface.js"
 import { AncestorIndex } from "./AncestorIndex.js"
 import { SignedMessage } from "./SignedMessage.js"
-import { decodeId, encodeId, messageIdPattern } from "./ids.js"
+import { MIN_MESSAGE_ID, decodeId, encodeId, messageIdPattern } from "./ids.js"
 import { getNextClock } from "./schema.js"
 import { topicPattern } from "./utils.js"
 
