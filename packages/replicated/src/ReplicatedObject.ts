@@ -122,22 +122,14 @@ export abstract class ReplicatedObject<
 			// set up .as() calls
 			if (explicit) {
 				childCallsAs[name] = function (signer: SessionSigner<any>, ...args: any[]) {
-					// is signer lost here?
-					instance.#contextSigner = signer
+					instance.#contextSigner = signer // TODO: pass signer?
 					return instance._tx[name].apply(instance, args)
 				}
-				// manually propagate child calls up to parent
-				rootCallsAs[name] = function (signer: SessionSigner<any>, ...args: any[]) {
-					// is this handled correctly?
-					return instance.#app?.actions[name].call(this, args, { signer })
-				}
-			} else {
-				childCallsAs[name] = function (signer: SessionSigner<any>, ...args: any[]) {
-					return instance.#app?.actions[name].call(this, args, { signer })
-				}
-				rootCallsAs[name] = function (signer: SessionSigner<any>, ...args: any[]) {
-					return instance.#app?.actions[name].call(this, args, { signer })
-				}
+			}
+			// root calls always need to be assigned on the parent because
+			// we don't benefit from prototypal inheritance
+			rootCallsAs[name] = function (signer: SessionSigner<any>, ...args: any[]) {
+				return instance.#app?.actions[name].call(this, args, { signer })
 			}
 		}
 
