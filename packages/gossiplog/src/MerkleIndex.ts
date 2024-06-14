@@ -17,7 +17,7 @@ export class MerkleIndex {
 				orderBy: { id: "asc" },
 				select: { id: true, hash: true },
 				where: { id: lowerBound },
-				limit: options.pageSize ?? 256,
+				limit: options.pageSize ?? 4096,
 			})
 
 			if (results.length === 0) {
