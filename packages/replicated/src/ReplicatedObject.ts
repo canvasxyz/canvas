@@ -156,10 +156,7 @@ export abstract class ReplicatedObject<
 		}
 
 		this.#ready = new Promise((resolve, reject) => {
-			const path = `/tmp/canvas_${this.topic}`
-			mkdirSync(path)
 			Canvas.initialize({
-				path,
 				topic: this.topic,
 				contract,
 			})
