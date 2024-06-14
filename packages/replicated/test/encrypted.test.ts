@@ -115,8 +115,12 @@ class EncryptedChat extends ReplicatedObject<{
 
 test.beforeEach(async (t) => {
 	t.context.chat = await EncryptedChat.initialize({ topic: crypto.randomBytes(8).toString("hex") })
-	t.context.alice = new SIWESigner({ signer: ethers.Wallet.createRandom() })
-	t.context.bob = new SIWESigner({ signer: ethers.Wallet.createRandom() })
+	const alice = ethers.Wallet.createRandom()
+	const bob = ethers.Wallet.createRandom()
+	t.context.alice = new SIWESigner({ signer: alice })
+	t.context.bob = new SIWESigner({ signer: bob })
+	t.context.alicePrivkey = alice.privateKey
+	t.context.bobPrivkey = bob.privateKey
 })
 
 test.afterEach.always(async (t) => {
