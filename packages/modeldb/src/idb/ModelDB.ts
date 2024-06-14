@@ -45,7 +45,10 @@ export class ModelDB extends AbstractModelDB {
 
 	readonly #models: Record<string, ModelAPI> = {}
 
-	private constructor(public readonly db: IDBPDatabase, config: Config) {
+	private constructor(
+		public readonly db: IDBPDatabase,
+		config: Config,
+	) {
 		super(config)
 
 		for (const model of config.models) {
