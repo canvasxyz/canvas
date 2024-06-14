@@ -1,13 +1,13 @@
-import { equals, fromString, toString } from "uint8arrays"
+import { fromString, toString } from "uint8arrays"
 
 import { Node, Key } from "@canvas-js/okra"
-import { AbstractModelDB, Effect, RangeExpression } from "@canvas-js/modeldb"
-import { assert } from "@canvas-js/utils"
-import { MAX_MESSAGE_ID, MIN_MESSAGE_ID, encodeId } from "./ids.js"
+import { AbstractModelDB, RangeExpression } from "@canvas-js/modeldb"
+import { MIN_MESSAGE_ID, encodeId } from "./ids.js"
 
 type NodeRecord = { id: string; hash: Uint8Array }
 
 export class MerkleIndex {
+	public static defaultPageSize = 4096
 	public constructor(readonly db: AbstractModelDB) {}
 
 	public async *entries(options: { pageSize?: number } = {}): AsyncIterable<[Uint8Array, { hash: Uint8Array }]> {
@@ -17,7 +17,7 @@ export class MerkleIndex {
 				orderBy: { id: "asc" },
 				select: { id: true, hash: true },
 				where: { id: lowerBound },
-				limit: options.pageSize ?? 4096,
+				limit: options.pageSize ?? MerkleIndex.defaultPageSize,
 			})
 
 			if (results.length === 0) {
@@ -31,25 +31,6 @@ export class MerkleIndex {
 			lowerBound = { gt: results[results.length - 1].id }
 		}
 	}
-
-	// async commit(root: Node) {
-	// 	const ids = await this.db.query<NodeRecord>("$nodes", { select: { id: true } })
-
-	// 	await this.db.apply([
-	// 		...ids.map<Effect>(({ id }) => ({ model: "$nodes", operation: "delete", key: id })),
-	// 		{ model: "$nodes", operation: "set", value: MerkleIndex.encodeNode(root) },
-	// 	])
-	// }
-
-	// async getRoot(): Promise<Node> {
-	// 	const nodes = await this.db.query<NodeRecord>("messages", { orderBy: { id: "desc" }, limit: 1 })
-
-	// 	assert(nodes.length === 1)
-	// 	const root = MerkleIndex.decodeNode(nodes[0])
-
-	// 	assert(root.key === null)
-	// 	return root
-	// }
 
 	private static encodeNodeId = (level: number, key: Key) => {
 		const l = level.toString(16).padStart(2, "0")
