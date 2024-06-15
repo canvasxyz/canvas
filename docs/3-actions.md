@@ -9,7 +9,7 @@ Canvas apps consist of an **action log** and **model database**. Each action in 
 
 ```ts
 type Action = {
-  /** DID or CAIP-2 address (e.g. "eip155:1:0xb94d27...") */
+  /** DID or CAIP-2 address (e.g. "did:pkh:eip155:1:0xb94d27...") */
   address: string
 
   name: string

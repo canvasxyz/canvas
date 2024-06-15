@@ -66,6 +66,10 @@ export class NEARSigner extends AbstractSessionSigner<NEARSessionData> {
 		return `${this.chainId}:${walletAddress}`
 	}
 
+	public getAddressParts(): number {
+		return 5
+	}
+
 	public async authorize(data: AbstractSessionData): Promise<Session<NEARSessionData>> {
 		const {
 			topic,

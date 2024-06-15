@@ -6,7 +6,7 @@
 export type Session<AuthorizationData = any> = {
 	type: "session"
 
-	/** DID or CAIP-2 address that authorized the session (e.g. "eip155:1:0xb94d27...") */
+	/** DID of the user that authorized the session (e.g. "did:pkh:eip155:1:0xb94d27...") */
 	address: string
 
 	/** did:key URI of the ephemeral session key used to sign subsequent actions */

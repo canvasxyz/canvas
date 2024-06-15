@@ -38,6 +38,7 @@ export abstract class AbstractSessionSigner<AuthorizationData> implements Sessio
 	public abstract verifySession(topic: string, session: Session<AuthorizationData>): Awaitable<void>
 
 	public abstract getAddress(): Awaitable<string>
+	public abstract getAddressParts(): number
 
 	public abstract authorize(data: AbstractSessionData): Awaitable<Session<AuthorizationData>>
 

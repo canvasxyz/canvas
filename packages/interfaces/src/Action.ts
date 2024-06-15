@@ -1,7 +1,7 @@
 export type Action = {
 	type: "action"
 
-	/** DID or CAIP-2 address (e.g. "eip155:1:0xb94d27...") */
+	/** DID of the user that authorized the session (e.g. "did:pkh:eip155:1:0xb94d27...") */
 	address: string
 
 	name: string

@@ -21,7 +21,7 @@ did:key that was authorized to create a `Signature`.
 To exhaustively verify that a message was correctly signed to be
 appended to the log, you should verify that:
 
-- A session key (e.g. did:key) was authorized by a user (e.g. did:eth, eip155:1:0x)
+- A session key (e.g. did:key) was authorized by a user (e.g. did:pkh:eip155:1:0x123...)
   in a `Session`. Sessions are verified using logic in the EIP712 signer.
 - That authorization message was signed by the did:key it authoriaed, i.e. there exists a
   `Signature` corresponding to the session wrapped as a message `Message<Session>`.

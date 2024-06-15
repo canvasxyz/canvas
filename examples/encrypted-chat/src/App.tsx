@@ -12,10 +12,10 @@ const formatAddress = (address: string | null | undefined) => {
 	return address?.slice(0, 6)
 }
 const toCAIP = (address: string) => {
-	return "eip155:1:" + address
+	return "did:pkh:eip155:1:" + address
 }
 const fromCAIP = (address: string) => {
-	return address.replace("eip155:1:", "")
+	return address.replace("did:pkh:eip155:1:", "")
 }
 const getGroupId = (address1: string, address2: string) => {
 	return address1 < address2 ? `${address1},${address2}` : `${address1},${address2}`

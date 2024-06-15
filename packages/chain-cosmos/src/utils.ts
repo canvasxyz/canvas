@@ -1,7 +1,7 @@
 import { EthereumSignedSessionData } from "./external_signers/ethereum.js"
 import type { CosmosSessionData, CosmosMessage } from "./types.js"
 
-export const addressPattern = /^cosmos:([0-9a-z\-_]+):([a-zA-Fa-f0-9]+)$/
+export const addressPattern = /^did:pkh:cosmos:([0-9a-z\-_]+):([a-zA-Fa-f0-9]+)$/
 
 // Later we may want to accept a version of this message that includes
 // the domain we're signing in from. Wallets don't seem to check right now,

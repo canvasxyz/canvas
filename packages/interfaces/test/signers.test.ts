@@ -142,7 +142,7 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 
 		const { payload: session } = await sessionSigner.newSession(topic)
 		const addressParts = session.address.split(":")
-		t.is(addressParts.length, 3)
+		t.is(addressParts.length, sessionSigner.getAddressParts())
 		t.true(sessionSigner.match(session.address))
 	})
 
