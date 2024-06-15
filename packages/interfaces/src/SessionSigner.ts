@@ -18,6 +18,7 @@ export interface SessionSigner<AuthorizationData = any> {
 	match: (address: string) => boolean
 
 	getAddress: () => Awaitable<string>
+	getAddressParts: () => number
 
 	hasSession: (topic: string, address: string) => boolean
 	getSession: (

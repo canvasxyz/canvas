@@ -35,7 +35,6 @@ interface SolanaWindowSigner {
 }
 
 export interface SolanaSignerInit {
-	chainId?: string
 	signer?: SolanaWindowSigner
 	sessionDuration?: number
 }
@@ -47,11 +46,10 @@ type GenericSigner = {
 
 export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 	public readonly match = (chain: string) => addressPattern.test(chain)
-	public readonly chainId: string
 
 	_signer: GenericSigner
 
-	public constructor({ signer, sessionDuration, chainId }: SolanaSignerInit = {}) {
+	public constructor({ signer, sessionDuration }: SolanaSignerInit = {}) {
 		super("chain-solana", Ed25519SignatureScheme, { sessionDuration })
 
 		if (signer) {
@@ -74,9 +72,6 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 				sign: async (msg) => ed25519.sign(msg, privateKey),
 			}
 		}
-
-		// 5ey... is the solana mainnet genesis hash
-		this.chainId = chainId ?? "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
 	}
 
 	public verifySession(topic: string, session: Session) {
@@ -88,7 +83,7 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 		} = session
 		assert(validateSessionData(data), "invalid session")
 
-		const [_, walletAddress] = parseAddress(address)
+		const walletAddress = parseAddress(address)
 
 		const message: SolanaMessage = {
 			address: walletAddress,
@@ -107,7 +102,11 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 
 	public getAddress(): string {
 		const walletAddress = this._signer.address
-		return `solana:${this.chainId}:${walletAddress}`
+		return `did:pkh:solana:${walletAddress}`
+	}
+
+	public getAddressParts(): number {
+		return 4
 	}
 
 	public async authorize(data: AbstractSessionData): Promise<Session<SolanaSessionData>> {
@@ -120,7 +119,7 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 
 		const issuedAt = new Date(timestamp)
 
-		const [_, walletAddress] = parseAddress(address)
+		const walletAddress = parseAddress(address)
 
 		const message: SolanaMessage = {
 			address: walletAddress,

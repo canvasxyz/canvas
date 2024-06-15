@@ -176,7 +176,10 @@ export class SubstrateSigner extends AbstractSessionSigner<SubstrateSessionData>
 	public async getAddress(): Promise<string> {
 		const chainId = await this._signer.getChainId()
 		const walletAddress = await this._signer.getAddress()
-		return `polkadot:${chainId}:${walletAddress}`
+		return `did:pkh:polkadot:${chainId}:${walletAddress}`
+	}
+	public getAddressParts(): number {
+		return 5
 	}
 
 	public async authorize(data: AbstractSessionData): Promise<Session<SubstrateSessionData>> {

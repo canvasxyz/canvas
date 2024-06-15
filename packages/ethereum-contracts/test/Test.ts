@@ -43,7 +43,7 @@ describe("Contract_Test", function () {
 			const sessionMessage = { topic, clock, parents, payload: session }
 			const sessionMessageSignature = await delegateSigner.sign(sessionMessage)
 
-			const userAddress = session.address.split(":")[2]
+			const userAddress = session.address.replace("did:pkh", "").split(":")[2]
 			const { type: publicKeyType, publicKey: publicKeyBytes } = decodeURI(session.publicKey)
 			expect(publicKeyType).to.equal(Secp256k1SignatureScheme.type)
 			const sessionAddress = utils.computeAddress(utils.hexlify(publicKeyBytes))
@@ -114,7 +114,7 @@ describe("Contract_Test", function () {
 			const { payload: session } = await signer.newSession(topic)
 			signer.verifySession(topic, session)
 
-			const userAddress = session.address.split(":")[2]
+			const userAddress = session.address.replace("did:pkh", "").split(":")[2]
 			const { type: publicKeyType, publicKey: publicKeyBytes } = decodeURI(session.publicKey)
 			expect(publicKeyType).to.equal(Secp256k1SignatureScheme.type)
 			const sessionAddress = utils.computeAddress(utils.hexlify(publicKeyBytes))
@@ -158,7 +158,7 @@ describe("Contract_Test", function () {
 
 			signer.scheme.verify(sessionSignature, sessionMessage)
 
-			const userAddress = session.address.split(":")[2]
+			const userAddress = session.address.replace("did:pkh", "").split(":")[2]
 			const { type: publicKeyType, publicKey: publicKeyBytes } = decodeURI(session.publicKey)
 			expect(publicKeyType).to.equal(Secp256k1SignatureScheme.type)
 			const sessionAddress = utils.computeAddress(utils.hexlify(publicKeyBytes))
@@ -218,7 +218,7 @@ describe("Contract_Test", function () {
 			// verify the action offchain
 			signer.scheme.verify(actionSignature, actionMessage)
 
-			const userAddress = session.address.split(":")[2]
+			const userAddress = session.address.replace("did:pkh", "").split(":")[2]
 			const { type: publicKeyType, publicKey: publicKeyBytes } = decodeURI(session.publicKey)
 			expect(publicKeyType).to.equal(Secp256k1SignatureScheme.type)
 			const sessionAddress = utils.computeAddress(utils.hexlify(publicKeyBytes))

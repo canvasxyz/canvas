@@ -180,7 +180,7 @@ test("create an app with an inline contract", async (t) => {
 	const postId = [message.payload.address, id].join("/")
 	const value = await app.db.get("posts", postId)
 	t.is(value?.content, "hello world")
-	t.is(value?.address, `eip155:1:${wallet.address}`)
+	t.is(value?.address, `did:pkh:eip155:1:${wallet.address}`)
 })
 
 test("get a value set by another action", async (t) => {
@@ -231,8 +231,8 @@ test("get a value set by another action", async (t) => {
 			.query<{ id: string; from: string; content: string }>("post", {})
 			.then((results) => results.sort(compareIDs)),
 		[
-			{ id: a, from: `eip155:1:${wallet.address}`, content: "foo" },
-			{ id: b, from: `eip155:1:${wallet.address}`, content: "bar" },
+			{ id: a, from: `did:pkh:eip155:1:${wallet.address}`, content: "foo" },
+			{ id: b, from: `did:pkh:eip155:1:${wallet.address}`, content: "bar" },
 		].sort(compareIDs),
 	)
 })

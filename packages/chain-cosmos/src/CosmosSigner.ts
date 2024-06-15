@@ -102,7 +102,11 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 		const walletAddress = await this._signer.getAddress(chainId)
 		const { data } = fromBech32(walletAddress)
 		const walletAddressWithPrefix = toBech32(this.bech32Prefix, data)
-		return `cosmos:${chainId}:${walletAddressWithPrefix}`
+		return `did:pkh:cosmos:${chainId}:${walletAddressWithPrefix}`
+	}
+
+	public getAddressParts(): number {
+		return 5
 	}
 
 	public async authorize(data: AbstractSessionData): Promise<Session<CosmosSessionData>> {

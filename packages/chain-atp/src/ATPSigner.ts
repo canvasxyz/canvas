@@ -80,6 +80,10 @@ export class ATPSigner extends AbstractSessionSigner<ATPSessionData> {
 		return this.#session.did
 	}
 
+	public getAddressParts() {
+		return 3
+	}
+
 	private loadJWTSession(): ATP.AtpSessionData | null {
 		const value = this.target.get("canvas-chain-atp/jwt")
 		if (value === null) {

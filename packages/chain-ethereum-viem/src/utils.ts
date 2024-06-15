@@ -39,7 +39,7 @@ export function prepareSIWEMessage(message: SIWEMessage): string {
 	}).prepareMessage()
 }
 
-export const addressPattern = /^eip155:(\d+):(0x[A-Fa-f0-9]+)$/
+export const addressPattern = /^did:pkh:eip155:(\d+):(0x[A-Fa-f0-9]+)$/
 
 export function parseAddress(address: string): [chain: number, walletAddress: string] {
 	const result = addressPattern.exec(address)

@@ -73,7 +73,7 @@ test("deepEquals correctly validates primitive types, objects, arrays, and Uint8
 	t.is(deepEquals({ a: new Uint8Array([1, 2, 3]) }, { a: new Uint8Array([1, 2, 3]) }), true)
 	const session1: Session = {
 		type: "session",
-		address: "cosmos:osmosis-1:osmo1atbcdevrem3nczu6dgjd2dd8wuumywkf0w9car",
+		address: "did:pkh:cosmos:osmosis-1:osmo1atbcdevrem3nczu6dgjd2dd8wuumywkf0w9car",
 		authorizationData: {
 			signature: new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
 		},
@@ -84,7 +84,7 @@ test("deepEquals correctly validates primitive types, objects, arrays, and Uint8
 	}
 	const session2: Session = {
 		type: "session",
-		address: "cosmos:osmosis-1:osmo1atbcdevrem3nczu6dgjd2dd8wuumywkf0w9car",
+		address: "did:pkh:cosmos:osmosis-1:osmo1atbcdevrem3nczu6dgjd2dd8wuumywkf0w9car",
 		authorizationData: {
 			signature: new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
 		},
