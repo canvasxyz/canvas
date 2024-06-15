@@ -55,12 +55,12 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 	public async verifySession(topic: string, session: Session) {
 		const {
 			publicKey,
-			address,
+			did,
 			authorizationData: data,
 			context: { timestamp, duration },
 		} = session
 
-		const [chainId, walletAddress] = parseAddress(address)
+		const [chainId, walletAddress] = parseAddress(did)
 
 		const message: CosmosMessage = {
 			topic: topic,
@@ -97,7 +97,7 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 		}
 	}
 
-	public async getAddress(): Promise<string> {
+	public async getDid(): Promise<string> {
 		const chainId = await this._signer.getChainId()
 		const walletAddress = await this._signer.getAddress(chainId)
 		const { data } = fromBech32(walletAddress)
@@ -105,18 +105,23 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 		return `did:pkh:cosmos:${chainId}:${walletAddressWithPrefix}`
 	}
 
-	public getAddressParts(): number {
+	public getDidParts(): number {
 		return 5
+	}
+
+	public getAddressFromDid(did: string) {
+		const [_, walletAddress] = parseAddress(did)
+		return walletAddress
 	}
 
 	public async authorize(data: AbstractSessionData): Promise<Session<CosmosSessionData>> {
 		const {
 			topic,
-			address,
+			did,
 			publicKey,
 			context: { timestamp, duration },
 		} = data
-		const [chainId, walletAddress] = parseAddress(address)
+		const [chainId, walletAddress] = parseAddress(did)
 
 		const issuedAt = new Date(timestamp)
 		const message: CosmosMessage = {
@@ -136,7 +141,7 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 
 		return {
 			type: "session",
-			address: address,
+			did: did,
 			publicKey: publicKey,
 			authorizationData: signResult,
 			context: duration ? { duration, timestamp } : { timestamp },

@@ -43,7 +43,8 @@ describe("Contract_Test", function () {
 			const sessionMessage = { topic, clock, parents, payload: session }
 			const sessionMessageSignature = await delegateSigner.sign(sessionMessage)
 
-			const userAddress = session.address.replace("did:pkh", "").split(":")[2]
+			// TODO: replace since this makes assuptions + will fail for solana
+			const userAddress = session.did.replace("did:pkh", "").split(":")[2]
 			const { type: publicKeyType, publicKey: publicKeyBytes } = decodeURI(session.publicKey)
 			expect(publicKeyType).to.equal(Secp256k1SignatureScheme.type)
 			const sessionAddress = utils.computeAddress(utils.hexlify(publicKeyBytes))
@@ -66,7 +67,7 @@ describe("Contract_Test", function () {
 
 			const action = {
 				type: "action" as const,
-				address: session.address,
+				did: session.did,
 				name: (args && args.action && args.action.name) || "upvote",
 				args: (args && args.action && args.action.args) || { post_id: "123456" },
 				context: { timestamp: session.context.timestamp, blockhash: session.context.blockhash },
@@ -114,7 +115,7 @@ describe("Contract_Test", function () {
 			const { payload: session } = await signer.newSession(topic)
 			signer.verifySession(topic, session)
 
-			const userAddress = session.address.replace("did:pkh", "").split(":")[2]
+			const userAddress = session.did.replace("did:pkh", "").split(":")[2]
 			const { type: publicKeyType, publicKey: publicKeyBytes } = decodeURI(session.publicKey)
 			expect(publicKeyType).to.equal(Secp256k1SignatureScheme.type)
 			const sessionAddress = utils.computeAddress(utils.hexlify(publicKeyBytes))
@@ -158,7 +159,7 @@ describe("Contract_Test", function () {
 
 			signer.scheme.verify(sessionSignature, sessionMessage)
 
-			const userAddress = session.address.replace("did:pkh", "").split(":")[2]
+			const userAddress = session.did.replace("did:pkh", "").split(":")[2]
 			const { type: publicKeyType, publicKey: publicKeyBytes } = decodeURI(session.publicKey)
 			expect(publicKeyType).to.equal(Secp256k1SignatureScheme.type)
 			const sessionAddress = utils.computeAddress(utils.hexlify(publicKeyBytes))
@@ -204,7 +205,7 @@ describe("Contract_Test", function () {
 			const parents = ["parent1", "parent2"]
 			const action = {
 				type: "action" as const,
-				address: session.address,
+				did: session.did,
 				name: "foo",
 				args: { bar: 7 },
 				context: {
@@ -218,7 +219,7 @@ describe("Contract_Test", function () {
 			// verify the action offchain
 			signer.scheme.verify(actionSignature, actionMessage)
 
-			const userAddress = session.address.replace("did:pkh", "").split(":")[2]
+			const userAddress = session.did.replace("did:pkh", "").split(":")[2]
 			const { type: publicKeyType, publicKey: publicKeyBytes } = decodeURI(session.publicKey)
 			expect(publicKeyType).to.equal(Secp256k1SignatureScheme.type)
 			const sessionAddress = utils.computeAddress(utils.hexlify(publicKeyBytes))

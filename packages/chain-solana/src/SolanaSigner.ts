@@ -77,13 +77,13 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 	public verifySession(topic: string, session: Session) {
 		const {
 			publicKey,
-			address,
+			did,
 			authorizationData: data,
 			context: { timestamp, duration },
 		} = session
 		assert(validateSessionData(data), "invalid session")
 
-		const walletAddress = parseAddress(address)
+		const walletAddress = parseAddress(did)
 
 		const message: SolanaMessage = {
 			address: walletAddress,
@@ -100,26 +100,30 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 		assert(valid, "invalid signature")
 	}
 
-	public getAddress(): string {
+	public getDid(): string {
 		const walletAddress = this._signer.address
 		return `did:pkh:solana:${walletAddress}`
 	}
 
-	public getAddressParts(): number {
+	public getDidParts(): number {
 		return 4
+	}
+
+	public getAddressFromDid(did: string) {
+		return parseAddress(did)
 	}
 
 	public async authorize(data: AbstractSessionData): Promise<Session<SolanaSessionData>> {
 		const {
 			topic,
-			address,
+			did,
 			publicKey,
 			context: { timestamp, duration },
 		} = data
 
 		const issuedAt = new Date(timestamp)
 
-		const walletAddress = parseAddress(address)
+		const walletAddress = parseAddress(did)
 
 		const message: SolanaMessage = {
 			address: walletAddress,
@@ -138,7 +142,7 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 
 		return {
 			type: "session",
-			address: address,
+			did: did,
 			publicKey: publicKey,
 			authorizationData: { signature },
 			context: this.sessionDuration

@@ -19,7 +19,7 @@ export class Client {
 		if (session !== null) {
 			// then check that it exists in the log and hasn't expired
 			const query = Object.entries({
-				address: session.payload.address,
+				address: session.payload.did,
 				publicKey: session.signer.publicKey,
 				minExpiration: timestamp,
 			})
@@ -56,7 +56,7 @@ export class Client {
 			parents: head.parents,
 			payload: {
 				type: "action",
-				address: session.payload.address,
+				did: session.payload.did,
 				name,
 				args,
 				context: { timestamp },

@@ -141,9 +141,8 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 		const sessionSigner = await createSessionSigner()
 
 		const { payload: session } = await sessionSigner.newSession(topic)
-		const addressParts = session.address.split(":")
-		t.is(addressParts.length, sessionSigner.getAddressParts())
-		t.true(sessionSigner.match(session.address))
+		t.is(session.did.split(":").length, sessionSigner.getDidParts())
+		t.true(sessionSigner.match(session.did))
 	})
 
 	// test(`${name} - refuse to sign foreign sessions`, async (t) => {
@@ -182,7 +181,7 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 
 		const action: Action = {
 			type: "action",
-			address: session.address,
+			did: session.did,
 			name: "foo",
 			args: { bar: 7 },
 			context: {
