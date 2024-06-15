@@ -41,12 +41,12 @@ export class SIWESigner extends AbstractSessionSigner<SIWESessionData> {
 		this.key = `SIWESigner-${init.signer ? "signer" : "burner"}`
 	}
 
-	public async getAddress(): Promise<string> {
+	public async getDid(): Promise<string> {
 		const walletAddress = await this._signer.getAddress()
 		return `did:pkh:eip155:${this.chainId}:${walletAddress}`
 	}
 
-	public getAddressParts(): number {
+	public getDidParts(): number {
 		return 5
 	}
 

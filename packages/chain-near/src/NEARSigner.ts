@@ -61,12 +61,12 @@ export class NEARSigner extends AbstractSessionSigner<NEARSessionData> {
 		assert(valid, "invalid signature")
 	}
 
-	public getAddress(): string {
+	public getDid(): string {
 		const walletAddress = this.#address
 		return `${this.chainId}:${walletAddress}`
 	}
 
-	public getAddressParts(): number {
+	public getDidParts(): number {
 		return 5
 	}
 

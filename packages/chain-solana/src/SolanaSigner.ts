@@ -100,12 +100,12 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 		assert(valid, "invalid signature")
 	}
 
-	public getAddress(): string {
+	public getDid(): string {
 		const walletAddress = this._signer.address
 		return `did:pkh:solana:${walletAddress}`
 	}
 
-	public getAddressParts(): number {
+	public getDidParts(): number {
 		return 4
 	}
 

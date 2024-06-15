@@ -33,13 +33,12 @@ export class Eip712Signer extends AbstractSessionSigner<Eip712SessionData> {
 		this.chainId = init.chainId ?? 1
 	}
 
-	// TODO: should be getUserAddress() or getWalletAddress()
-	public async getAddress(): Promise<string> {
+	public async getDid(): Promise<string> {
 		const walletAddress = await this._signer.getAddress()
 		return `did:pkh:eip155:${this.chainId}:${walletAddress}`
 	}
 
-	public getAddressParts(): number {
+	public getDidParts(): number {
 		return 5
 	}
 

@@ -37,8 +37,8 @@ export abstract class AbstractSessionSigner<AuthorizationData> implements Sessio
 	public abstract match: (address: string) => boolean
 	public abstract verifySession(topic: string, session: Session<AuthorizationData>): Awaitable<void>
 
-	public abstract getAddress(): Awaitable<string>
-	public abstract getAddressParts(): number
+	public abstract getDid(): Awaitable<string>
+	public abstract getDidParts(): number
 
 	public abstract authorize(data: AbstractSessionData): Awaitable<Session<AuthorizationData>>
 
@@ -49,10 +49,10 @@ export abstract class AbstractSessionSigner<AuthorizationData> implements Sessio
 		topic: string,
 	): Promise<{ payload: Session<AuthorizationData>; signer: Signer<Action | Session<AuthorizationData>> }> {
 		const signer = this.scheme.create()
-		const address = await this.getAddress()
+		const did = await this.getDid()
 		const session = await this.authorize({
 			topic,
-			address,
+			address: did,
 			publicKey: signer.publicKey,
 			context: {
 				timestamp: Date.now(),
@@ -60,7 +60,7 @@ export abstract class AbstractSessionSigner<AuthorizationData> implements Sessio
 			},
 		})
 
-		const key = `canvas/${topic}/${address}`
+		const key = `canvas/${topic}/${did}`
 		this.#cache.set(key, { session, signer })
 		target.set(key, json.stringify({ session, ...signer.export() }))
 
@@ -75,8 +75,8 @@ export abstract class AbstractSessionSigner<AuthorizationData> implements Sessio
 		topic: string,
 		options: { address?: string } = {},
 	): Promise<{ payload: Session<AuthorizationData>; signer: Signer<Action | Session<AuthorizationData>> } | null> {
-		const address = await Promise.resolve(options.address ?? this.getAddress())
-		const key = `canvas/${topic}/${address}`
+		const did = await Promise.resolve(options.address ?? this.getDid())
+		const key = `canvas/${topic}/${did}`
 
 		if (this.#cache.has(key)) {
 			const { session, signer } = this.#cache.get(key)!

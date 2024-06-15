@@ -57,7 +57,7 @@ export class ATPSigner extends AbstractSessionSigner<ATPSessionData> {
 		assert(record.text === message, "invalid app.bsky.feed.post record text")
 	}
 
-	public async getAddress(): Promise<string> {
+	public async getDid(): Promise<string> {
 		if (this.#session !== null) {
 			return this.#session.did
 		}
@@ -80,7 +80,7 @@ export class ATPSigner extends AbstractSessionSigner<ATPSessionData> {
 		return this.#session.did
 	}
 
-	public getAddressParts() {
+	public getDidParts() {
 		return 3
 	}
 

@@ -173,12 +173,12 @@ export class SubstrateSigner extends AbstractSessionSigner<SubstrateSessionData>
 		assert(valid, "invalid signature")
 	}
 
-	public async getAddress(): Promise<string> {
+	public async getDid(): Promise<string> {
 		const chainId = await this._signer.getChainId()
 		const walletAddress = await this._signer.getAddress()
 		return `did:pkh:polkadot:${chainId}:${walletAddress}`
 	}
-	public getAddressParts(): number {
+	public getDidParts(): number {
 		return 5
 	}
 

@@ -17,8 +17,8 @@ export interface SessionSigner<AuthorizationData = any> {
 	scheme: SignatureScheme<Action | Session<AuthorizationData>>
 	match: (address: string) => boolean
 
-	getAddress: () => Awaitable<string>
-	getAddressParts: () => number
+	getDid: () => Awaitable<string>
+	getDidParts: () => number
 
 	hasSession: (topic: string, address: string) => boolean
 	getSession: (
