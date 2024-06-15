@@ -140,7 +140,7 @@ export class ContractRuntime extends AbstractRuntime {
 
 	protected async execute(context: ExecutionContext): Promise<void | any> {
 		const {
-			address,
+			did,
 			name,
 			args,
 			context: { blockhash, timestamp },
@@ -159,7 +159,7 @@ export class ContractRuntime extends AbstractRuntime {
 		this.#context = context
 
 		const argsHandle = this.vm.wrapValue(typedArgs)
-		const ctxHandle = this.vm.wrapValue({ id: context.id, address, blockhash: blockhash ?? null, timestamp })
+		const ctxHandle = this.vm.wrapValue({ id: context.id, did, blockhash: blockhash ?? null, timestamp })
 		try {
 			const result = await this.vm.callAsync(actionHandle, actionHandle, [this.#databaseAPI, argsHandle, ctxHandle])
 

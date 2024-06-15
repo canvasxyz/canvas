@@ -84,7 +84,7 @@ export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712Se
 		const { topic, clock, parents, payload } = message
 
 		if (payload.type === "action") {
-			const { address } = parseAddress(payload.address)
+			const { address } = parseAddress(payload.did)
 
 			const signature = await this.#wallet.signTypedData(
 				{ name: message.topic },
@@ -105,7 +105,7 @@ export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712Se
 
 			return { codec: codecs.action, publicKey: this.publicKey, signature: getBytes(signature) }
 		} else if (payload.type === "session") {
-			const { address } = parseAddress(payload.address)
+			const { address } = parseAddress(payload.did)
 
 			assert(payload.publicKey === this.publicKey)
 			const { type, publicKey: publicKeyBytes } = decodeURI(payload.publicKey)
@@ -197,7 +197,7 @@ export const Secp256k1SignatureScheme: SignatureScheme<Action | Session<Eip712Se
 		if (payload.type === "action") {
 			assert(signature.codec === codecs.action, "expected signature.codec === codecs.action")
 
-			const { address } = parseAddress(payload.address)
+			const { address } = parseAddress(payload.did)
 			const recoveredAddress = verifyTypedData(
 				{ name: message.topic },
 				Secp256k1DelegateSigner.eip712ActionTypes,
@@ -223,7 +223,7 @@ export const Secp256k1SignatureScheme: SignatureScheme<Action | Session<Eip712Se
 			const { type, publicKey: publicKeyBytes } = decodeURI(payload.publicKey)
 			assert(type === Secp256k1SignatureScheme.type)
 
-			const { address } = parseAddress(payload.address)
+			const { address } = parseAddress(payload.did)
 			const recoveredAddress = verifyTypedData(
 				{ name: message.topic },
 				Secp256k1DelegateSigner.eip712SessionTypes,

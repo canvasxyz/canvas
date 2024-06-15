@@ -184,7 +184,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 				// check that a session for the delegate signer exists in the log and hasn't expired
 				if (session !== null) {
 					const sessionIds = await this.getSessions({
-						address: session.payload.address,
+						address: session.payload.did,
 						publicKey: session.signer.publicKey,
 						minExpiration: timestamp,
 					})
@@ -210,7 +210,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 				const { id, signature, message, recipients } = await this.append<Action>(
 					{
 						type: "action",
-						address: session.payload.address,
+						did: session.payload.did,
 						name,
 						args: argsRepresentation,
 						context: {

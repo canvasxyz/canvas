@@ -4,7 +4,7 @@ import { bytesToHex } from "@noble/hashes/utils"
 import { logger } from "@libp2p/logger"
 import { TypeTransformerFunction } from "@ipld/schema/typed.js"
 
-import type { Signature, Action, Message, Session, SignerCache } from "@canvas-js/interfaces"
+import type { Signature, Action, Message, Session, SessionSigner, SignerCache } from "@canvas-js/interfaces"
 
 import { AbstractModelDB, Effect, ModelValue, ModelsInit, lessThan } from "@canvas-js/modeldb"
 import { GossipLogConsumer, ReadOnlyTransaction, encodeId, MAX_MESSAGE_ID, MIN_MESSAGE_ID } from "@canvas-js/gossiplog"
@@ -16,6 +16,7 @@ export type ExecutionContext = {
 	signature: Signature
 	message: Message<Action>
 	modelEntries: Record<string, Record<string, ModelValue | null>>
+	signer: SessionSigner<any>
 }
 
 export abstract class AbstractRuntime {
@@ -95,13 +96,13 @@ export abstract class AbstractRuntime {
 			if (AbstractRuntime.isSession(message)) {
 				const {
 					publicKey,
-					address,
+					did,
 					context: { timestamp, duration },
 				} = message.payload
 
 				const signer = runtime.signers
 					.getAll()
-					.find((signer) => signer.scheme.codecs.includes(signature.codec) && signer.match(address))
+					.find((signer) => signer.scheme.codecs.includes(signature.codec) && signer.match(did))
 
 				assert(signer !== undefined, "no matching signer found")
 
@@ -112,32 +113,40 @@ export abstract class AbstractRuntime {
 				await runtime.db.set("$sessions", {
 					message_id: id,
 					public_key: publicKey,
-					address: address,
+					address: did,
 					expiration: duration === undefined ? Number.MAX_SAFE_INTEGER : timestamp + duration,
 					rawMessage: bytesToHex(cbor.encode(message)),
 					rawSignature: bytesToHex(cbor.encode(signature)),
 				})
 			} else if (AbstractRuntime.isAction(message)) {
 				const {
-					address,
+					did,
 					context: { timestamp },
 				} = message.payload
 
 				const sessions = await runtime.db.query("$sessions", {
 					where: {
 						public_key: signature.publicKey,
-						address: address,
+						address: did,
 						expiration: { gte: timestamp },
 					},
 				})
 
 				if (sessions.length === 0) {
-					throw new Error(`missing session ${signature.publicKey} for $${address}`)
+					throw new Error(`missing session ${signature.publicKey} for $${did}`)
+				}
+
+				const signer = runtime.signers
+					.getAll()
+					.find((signer) => signer.scheme.codecs.includes(signature.codec) && signer.match(did))
+
+				if (signer === undefined) {
+					throw new Error("unexpected missing signer")
 				}
 
 				const modelEntries: Record<string, Record<string, ModelValue | null>> = mapValues(runtime.db.models, () => ({}))
 
-				const result = await runtime.execute({ txn: this, modelEntries, id, signature, message })
+				const result = await runtime.execute({ txn: this, modelEntries, id, signature, message, signer })
 
 				const effects: Effect[] = []
 

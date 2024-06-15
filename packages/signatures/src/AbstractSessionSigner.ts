@@ -39,6 +39,7 @@ export abstract class AbstractSessionSigner<AuthorizationData> implements Sessio
 
 	public abstract getDid(): Awaitable<string>
 	public abstract getDidParts(): number
+	public abstract getAddressFromDid(did: string): string
 
 	public abstract authorize(data: AbstractSessionData): Awaitable<Session<AuthorizationData>>
 
@@ -52,7 +53,7 @@ export abstract class AbstractSessionSigner<AuthorizationData> implements Sessio
 		const did = await this.getDid()
 		const session = await this.authorize({
 			topic,
-			address: did,
+			did,
 			publicKey: signer.publicKey,
 			context: {
 				timestamp: Date.now(),

@@ -5,7 +5,7 @@ import type { Awaitable } from "./Awaitable.js"
 
 export interface AbstractSessionData {
 	topic: string
-	address: string
+	did: string
 	publicKey: string
 	context: {
 		timestamp: number
@@ -19,6 +19,7 @@ export interface SessionSigner<AuthorizationData = any> {
 
 	getDid: () => Awaitable<string>
 	getDidParts: () => number
+	getAddressFromDid: (did: string) => string
 
 	hasSession: (topic: string, address: string) => boolean
 	getSession: (
