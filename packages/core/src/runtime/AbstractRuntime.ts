@@ -88,14 +88,14 @@ export abstract class AbstractRuntime {
 		message.payload.type === "session"
 
 	public getConsumer(): GossipLogConsumer<Action | Session> {
-		// eslint-disable-next-line @typescript-eslint/no-this-alias
-		const runtime = this
+		const handleSession = this.handleSession.bind(this)
+		const handleAction = this.handleAction.bind(this)
 
 		return async function (this: AbstractGossipLog<Action | Session>, { id, signature, message }) {
 			if (AbstractRuntime.isSession(message)) {
-				await runtime.handleSession(id, signature, message)
+				await handleSession(id, signature, message)
 			} else if (AbstractRuntime.isAction(message)) {
-				await runtime.handleAction(id, signature, message, this)
+				await handleAction(id, signature, message, this)
 			} else {
 				throw new Error("invalid message payload type")
 			}
