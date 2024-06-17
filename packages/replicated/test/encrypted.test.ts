@@ -134,7 +134,7 @@ test.serial("send two messages", async (t) => {
 	await chat.as(alice).registerEncryptionKey(alicePrivkey)
 	await chat.as(bob).registerEncryptionKey(bobPrivkey)
 
-	const groupId = await chat.as(alice).createEncryptionGroup(await bob.getAddress())
+	const groupId = await chat.as(alice).createEncryptionGroup(await bob.getDid())
 	await chat.as(alice).sendPrivateMessage(groupId, "hello (secret)")
 
 	t.is(await chat.app?.db.count("encryptionKeys"), 2)
