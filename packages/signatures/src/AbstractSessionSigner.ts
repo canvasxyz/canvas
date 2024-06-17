@@ -40,6 +40,9 @@ export abstract class AbstractSessionSigner<AuthorizationData> implements Sessio
 	public abstract getDid(): Awaitable<string>
 	public abstract getDidParts(): number
 	public abstract getAddressFromDid(did: string): string
+	public async getWalletAddress() {
+		return this.getAddressFromDid(await this.getDid())
+	}
 
 	public abstract authorize(data: AbstractSessionData): Awaitable<Session<AuthorizationData>>
 
