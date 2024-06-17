@@ -1,10 +1,10 @@
 import { TypedEventEmitter, CustomEvent } from "@libp2p/interface"
 import { Logger, logger } from "@libp2p/logger"
-import { equals } from "uint8arrays"
+import { equals, toString } from "uint8arrays"
 
-import { type Node, type Tree, type ReadWriteTransaction, hashEntry } from "@canvas-js/okra"
+import { Node, Tree, ReadWriteTransaction, hashEntry } from "@canvas-js/okra"
 import type { Signature, Signer, Message, Awaitable } from "@canvas-js/interfaces"
-import { AbstractModelDB, ModelsInit, Effect, RangeExpression } from "@canvas-js/modeldb"
+import type { AbstractModelDB, ModelsInit, Effect } from "@canvas-js/modeldb"
 import { ed25519 } from "@canvas-js/signatures"
 import { assert, zip } from "@canvas-js/utils"
 
@@ -13,7 +13,7 @@ import { Driver } from "./sync/driver.js"
 import type { SyncServer } from "./interface.js"
 import { AncestorIndex } from "./AncestorIndex.js"
 import { SignedMessage } from "./SignedMessage.js"
-import { MIN_MESSAGE_ID, decodeId, encodeId, messageIdPattern } from "./ids.js"
+import { decodeId, encodeId, messageIdPattern } from "./ids.js"
 import { getNextClock } from "./schema.js"
 import { topicPattern } from "./utils.js"
 
@@ -43,7 +43,7 @@ export type GossipLogEvents<Payload = unknown> = {
 
 export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmitter<GossipLogEvents<Payload>> {
 	public static schema = {
-		$messages: { id: "primary", signature: "json", message: "json", hash: "bytes" },
+		$messages: { id: "primary", signature: "json", message: "json", hash: "string" },
 		$heads: { id: "primary" },
 		...AncestorIndex.schema,
 	} satisfies ModelsInit
@@ -137,6 +137,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		const { reverse = false, limit, ...where } = range
 		return this.db.query<{ id: string; signature: Signature; message: Message<Payload> }>("$messages", {
 			where: { id: where },
+			select: { id: true, signature: true, message: true },
 			orderBy: { id: reverse ? "desc" : "asc" },
 			limit,
 		})
@@ -199,8 +200,8 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 		let root: Node | null = null
 		await this.tree.write(async (txn) => {
-			const existingMessage = await this.db.get("$messages", signedMessage.id)
-			if (existingMessage !== null) {
+			const hasSignedMessage = await this.has(signedMessage.id)
+			if (hasSignedMessage) {
 				return
 			}
 
@@ -234,7 +235,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 		const { id, signature, message, key, value } = signedMessage
 
-		const hash = hashEntry(key, value)
+		const hash = toString(hashEntry(key, value), "hex")
 
 		await this.db.set("$messages", { id, signature, message, hash })
 

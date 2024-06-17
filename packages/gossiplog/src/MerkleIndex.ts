@@ -13,7 +13,7 @@ export class MerkleIndex {
 	public async *entries(options: { pageSize?: number } = {}): AsyncIterable<[Uint8Array, { hash: Uint8Array }]> {
 		let lowerBound: RangeExpression = { gte: MIN_MESSAGE_ID }
 		while (true) {
-			const results = await this.db.query<{ id: string; hash: Uint8Array }>("$messages", {
+			const results = await this.db.query<{ id: string; hash: string }>("$messages", {
 				orderBy: { id: "asc" },
 				select: { id: true, hash: true },
 				where: { id: lowerBound },
@@ -25,7 +25,7 @@ export class MerkleIndex {
 			}
 
 			for (const { id, hash } of results) {
-				yield [encodeId(id), { hash }]
+				yield [encodeId(id), { hash: fromString(hash, "hex") }]
 			}
 
 			lowerBound = { gt: results[results.length - 1].id }
