@@ -1,5 +1,6 @@
-import { IDBPIndex, IDBPTransaction } from "idb"
+import { IDBPIndex, IDBPObjectStore, IDBPTransaction } from "idb"
 import { logger } from "@libp2p/logger"
+import * as json from "@ipld/dag-json"
 
 import { assert, signalInvalidType } from "@canvas-js/utils"
 
@@ -76,24 +77,22 @@ export class ModelAPI {
 			// TODO: use heuristics to select the "best" index
 			for (const [property, expression] of Object.entries(query.where)) {
 				const modelProperty = this.model.properties.find((modelProperty) => modelProperty.name === property)
-				if (modelProperty && modelProperty.kind === "primitive" && modelProperty.type === "json") {
+				assert(modelProperty !== undefined, "model property does not exist")
+
+				if (modelProperty.kind === "primitive" && modelProperty.type === "json") {
 					throw new Error("json properties are not supported in where clauses")
 				}
 
-				const index = this.model.indexes.find((index) => index[0] === property)
-				if (index === undefined) {
+				const index = this.getIndex(store, modelProperty)
+				if (index === null) {
 					continue
 				}
-
-				// this.log("using index %o", index)
-
-				const storeIndex = store.index(getIndexName(index))
 
 				// TODO: we could be smarter about this if `orderBy` & `limit` are both provided.
 				// TODO: grow the array with insertion sort, max capacity of `limit`
 				const results: ModelValue[] = []
 				let seen = 0
-				for await (const value of this.queryIndex(property, storeIndex, expression)) {
+				for await (const value of this.queryIndex(property, index, expression)) {
 					if (filter(value)) {
 						if (query.offset !== undefined && seen < query.offset) {
 							seen++
@@ -115,12 +114,13 @@ export class ModelAPI {
 			const entries = Object.entries(query.orderBy)
 			assert(entries.length === 1, "expected exactly one entry in query.orderBy")
 			const [[property, direction]] = entries
-			const index = this.model.indexes.find((index) => index[0] === property)
-			if (index !== undefined) {
-				const storeIndex = store.index(getIndexName(index))
+			const modelProperty = this.model.properties.find((modelProperty) => modelProperty.name === property)
+			assert(modelProperty !== undefined, "model property does not exist")
 
+			const index = this.getIndex(store, modelProperty)
+			if (index !== null) {
 				const results: ModelValue[] = []
-				let cursor = await storeIndex.openCursor(null, directions[direction])
+				let cursor = await index.openCursor(null, directions[direction])
 
 				// Can't use cursor.advance(), doesn't behave as expected in chrome
 				let seen = 0
@@ -177,9 +177,25 @@ export class ModelAPI {
 		return results.slice(0, limit).map(select)
 	}
 
+	private getIndex(
+		store: IDBPObjectStore<any, any, string, "readonly">,
+		property: Property,
+	): IDBPObjectStore<any, any, string, "readonly"> | IDBPIndex<any, any, string, string, "readonly"> | null {
+		if (property.kind === "primary") {
+			return store
+		}
+
+		const index = this.model.indexes.find((index) => index[0] === property.name)
+		if (index === undefined) {
+			return null
+		}
+
+		return store.index(getIndexName(index))
+	}
+
 	private async *queryIndex(
 		propertyName: string,
-		storeIndex: IDBPIndex<any, any, string, string, "readonly">,
+		storeIndex: IDBPObjectStore<any, any, string, "readonly"> | IDBPIndex<any, any, string, string, "readonly">,
 		expression: PropertyValue | NotExpression | RangeExpression,
 	): AsyncIterable<ModelValue> {
 		const property = this.model.properties.find((property) => property.name === propertyName)
@@ -259,7 +275,10 @@ function encodePropertyValue(property: Property, propertyValue: PropertyValue): 
 		return propertyValue
 	} else if (property.kind === "primitive") {
 		if (property.optional) {
+			assert(property.type !== "json")
 			return propertyValue === null ? [] : [propertyValue]
+		} else if (property.type === "json") {
+			return json.stringify(propertyValue)
 		} else {
 			return propertyValue
 		}
@@ -282,8 +301,12 @@ function decodePropertyValue(property: Property, objectPropertyValue: PropertyVa
 		return objectPropertyValue
 	} else if (property.kind === "primitive") {
 		if (property.optional) {
+			assert(property.type !== "json")
 			assert(Array.isArray(objectPropertyValue))
 			return objectPropertyValue.length === 0 ? null : objectPropertyValue[0]
+		} else if (property.type === "json") {
+			assert(typeof objectPropertyValue === "string")
+			return json.parse(objectPropertyValue)
 		} else {
 			assert(!Array.isArray(objectPropertyValue))
 			return objectPropertyValue

@@ -3,7 +3,7 @@ import test from "ava"
 import { Secp256k1Wallet, StdSignDoc } from "@cosmjs/amino"
 import { secp256k1 } from "@noble/curves/secp256k1"
 
-import { Action, Message, Session, SessionSigner, Signer } from "@canvas-js/interfaces"
+import { Action, DidIdentifier, Message, Session, SessionSigner, Signer } from "@canvas-js/interfaces"
 
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
 // import { NEARSigner } from "@canvas-js/chain-near"
@@ -97,7 +97,7 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 		const duration = 1000 * 60 * 60 * 24 * 7
 		const sessionSigner = await createSessionSigner({ sessionDuration: duration })
 		const { payload: session } = await sessionSigner.newSession(topic)
-		t.is(session.duration, duration)
+		t.is(session.context.duration, duration)
 		await t.notThrowsAsync(() => Promise.resolve(sessionSigner.verifySession(topic, session)))
 	})
 
@@ -105,8 +105,8 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 		const topic = "example:signer"
 		const sessionSigner = await createSessionSigner({})
 		const { payload: session } = await sessionSigner.newSession(topic)
-		// if no sessionDuration is given, the session duration should be null
-		t.is(session.duration, null)
+		// if no sessionDuration is given, the session duration should be undefined
+		t.is(session.context.duration, undefined)
 		await t.notThrowsAsync(() => Promise.resolve(sessionSigner.verifySession(topic, session)))
 	})
 
@@ -116,7 +116,7 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 
 		const { payload: session } = await sessionSigner.newSession(topic)
 		// tamper with the session
-		session.timestamp = 0
+		session.context.timestamp = 0
 		try {
 			await sessionSigner.verifySession(topic, session)
 			t.fail("expected verifySession to throw")
@@ -141,9 +141,8 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 		const sessionSigner = await createSessionSigner()
 
 		const { payload: session } = await sessionSigner.newSession(topic)
-		const addressParts = session.address.split(":")
-		t.is(addressParts.length, 3)
-		t.true(sessionSigner.match(session.address))
+		t.is(session.did.split(":").length, sessionSigner.getDidParts())
+		t.true(sessionSigner.match(session.did))
 	})
 
 	// test(`${name} - refuse to sign foreign sessions`, async (t) => {
@@ -182,11 +181,12 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 
 		const action: Action = {
 			type: "action",
-			address: session.address,
+			did: session.did,
 			name: "foo",
 			args: { bar: 7 },
-			blockhash: null,
-			timestamp: session.timestamp,
+			context: {
+				timestamp: session.context.timestamp,
+			},
 		}
 
 		const actionMessage = { topic, clock: 1, parents: [], payload: action }

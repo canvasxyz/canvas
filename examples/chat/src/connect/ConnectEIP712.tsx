@@ -37,8 +37,9 @@ export const ConnectEIP712: React.FC<ConnectEIP712Props> = ({}) => {
 			.then((signer) => new Eip712Signer({ signer, chainId: Number(network.chainId) }))
 
 		const {
-			payload: { address },
+			payload: { did },
 		} = await signer.newSession(app.topic)
+		const address = did
 		setAddress(address)
 		setSessionSigner(signer)
 	}, [app, provider])

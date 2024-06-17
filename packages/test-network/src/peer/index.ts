@@ -1,288 +1,98 @@
-import assert from "node:assert"
-import http from "node:http"
 import { setTimeout } from "node:timers/promises"
 
-import express from "express"
+import { GossipSub } from "@chainsafe/libp2p-gossipsub"
+import { bytesToHex } from "@noble/hashes/utils"
+import { nanoid } from "nanoid"
 
-import { CID } from "multiformats/cid"
-import * as raw from "multiformats/codecs/raw"
-import { sha256 } from "multiformats/hashes/sha2"
-import { decode, encode } from "@ipld/dag-cbor"
+import { GossipLog } from "@canvas-js/gossiplog/sqlite"
 
-import { GossipSub, multicodec as gossipSubProtocol } from "@chainsafe/libp2p-gossipsub"
-import { Metrics } from "@chainsafe/libp2p-gossipsub/metrics"
-import { bytesToHex, randomBytes } from "@noble/hashes/utils"
-import { peerIdFromBytes, peerIdFromString } from "@libp2p/peer-id"
-import { PeerId } from "@libp2p/interface"
-import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
+import { Socket } from "../socket.js"
+import { topic } from "../constants.js"
 
-import { GossipLog } from "@canvas-js/gossiplog/node"
-import { Message, Signature } from "@canvas-js/interfaces"
-
-import type { Event } from "../dashboard/shared/types.js"
-
-import { getTopicDHTProtocol, libp2p, topic } from "./libp2p.js"
-import { peerId } from "./config.js"
-
-// const discoveryTopic = "discovery"
+import { getLibp2p } from "./libp2p.js"
 
 const { SERVICE_NAME } = process.env
-assert(typeof SERVICE_NAME === "string")
 
-function post<T extends Event["type"]>(type: T, detail: (Event & { type: T })["detail"]) {
-	const t = Date.now()
-	fetch("http://dashboard:8000/api/events", {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ id: peerId, type, t, detail: detail }),
+async function start() {
+	const messageLog = new GossipLog<string>({ directory: "data", topic, apply: () => {} })
+
+	const libp2p = await getLibp2p(messageLog)
+
+	const socket = await Socket.open(libp2p, `ws://dashboard:8000`)
+
+	messageLog.addEventListener("commit", ({ detail: { root } }) => {
+		socket.post("gossiplog:commit", { topic, root: `${root.level}:${bytesToHex(root.hash)}` })
 	})
-}
 
-const app = express()
+	libp2p.addEventListener("start", async () => {
+		console.log("libp2p started")
 
-app.post("/api/disconnect/:peerId", (req, res) => {
-	if (libp2p.status !== "started") {
-		return res.status(500).end("libp2p not started")
-	}
+		const root = await libp2p.services.gossiplog.messageLog.tree.read((txn) => txn.getRoot())
+		socket.post("start", { root: `${root.level}:${bytesToHex(root.hash)}` })
+	})
 
-	libp2p.hangUp(peerIdFromString(req.params.peerId)).then(
-		() => res.status(200).end(),
-		(err) => res.status(500).end(`${err}`),
-	)
-})
+	libp2p.addEventListener("stop", () => {
+		console.log("libp2p stopped")
+		socket.post("stop", {})
+	})
 
-app.post("/api/boop", (req, res) => {
-	if (libp2p.status !== "started") {
-		return res.status(500).end("libp2p not started")
-	} else if (topic === null) {
-		return res.status(500).end("not subscribed to topic")
-	}
+	libp2p.addEventListener("connection:open", ({ detail: { id, remotePeer, remoteAddr } }) => {
+		console.log(`connection:open ${remotePeer} ${remoteAddr}`)
+		socket.post("connection:open", { id, remotePeer: remotePeer.toString(), remoteAddr: remoteAddr.toString() })
+	})
 
-	libp2p.services.gossiplog.append(topic!, randomBytes(16)).then(
-		({ recipients }) =>
-			recipients.then(
-				(peers) => res.status(200).json(peers),
-				(err) => res.status(500).end(`${err}`),
-			),
-		(err) => res.status(500).end(`${err}`),
-	)
-})
+	libp2p.addEventListener("connection:close", ({ detail: { id, remotePeer, remoteAddr } }) => {
+		console.log(`connection:close  ${remotePeer} ${remoteAddr}`)
+		socket.post("connection:close", { id, remotePeer: remotePeer.toString(), remoteAddr: remoteAddr.toString() })
+	})
 
-// app.post("/api/provide", async (req, res) => {
-// 	if (topic === null) {
-// 		return res.status(500).end("not subscribed to topic")
-// 	}
-
-// 	console.log("PROVIDING DHT RECORD")
-
-// 	// CID
-// 	const digest = await sha256.digest(new TextEncoder().encode(topic))
-// 	const cid = CID.createV1(raw.code, digest)
-
-// 	const results: {}[] = []
-
-// 	for await (const result of libp2p.services.globalDHT.provide(cid)) {
-// 		console.log(`${libp2p.peerId} globalDHT.provide: `, result)
-// 		results.push(result)
-// 	}
-
-// 	return res.json(results)
-// })
-
-// app.post("/api/query", async (req, res) => {
-// 	if (topic === null) {
-// 		return res.status(500).end("not subscribed to topic")
-// 	}
-
-// 	console.log("QUERYING DHT RECORDS")
-
-// 	// CID
-// 	const digest = await sha256.digest(new TextEncoder().encode(topic))
-// 	const cid = CID.createV1(raw.code, digest)
-
-// 	const results: { id: PeerId; multiaddrs: Multiaddr[] }[] = []
-
-// 	for await (const result of libp2p.services.globalDHT.findProviders(cid)) {
-// 		console.log(`${libp2p.peerId} globalDHT.findProviders: `, result)
-// 		if (result.name === "PROVIDER") {
-// 			results.push(...result.providers)
-
-// 			for (const { id, multiaddrs } of result.providers) {
-// 				console.log(`[${libp2p.peerId}] dialing ${id}`)
-// 				await libp2p.dial(multiaddrs)
-// 			}
-// 		}
-// 	}
-
-// 	res.json(results)
-// })
-
-http.createServer(app).listen(8000, () => {
-	console.log(`API server listening on http://${SERVICE_NAME}:8000`)
-})
-
-libp2p.addEventListener("start", () => {
-	console.log("libp2p started")
-	// if (SERVICE_NAME !== "bootstrap") {
-	// 	libp2p.services.pubsub.subscribe(topic)
-	// }
-
-	post("start", { hostname: `${SERVICE_NAME}:8000` })
-})
-
-libp2p.addEventListener("stop", () => {
-	console.log("libp2p stopped")
-	post("stop", {})
-})
-
-libp2p.addEventListener("connection:open", ({ detail: { id, remotePeer, remoteAddr } }) => {
-	post("connection:open", { id, remotePeer: remotePeer.toString(), remoteAddr: remoteAddr.toString() })
-})
-
-libp2p.addEventListener("connection:close", ({ detail: { id, remotePeer, remoteAddr } }) => {
-	post("connection:close", { id, remotePeer: remotePeer.toString(), remoteAddr: remoteAddr.toString() })
-})
-
-libp2p.addEventListener("peer:discovery", ({ detail: { id, multiaddrs } }) =>
-	console.log(`peer:discovery ${id}`, multiaddrs),
-)
-
-// libp2p.addEventListener("peer:identify", ({ detail: { peerId, protocols } }) =>
-// 	console.log(`peer:identify ${peerId}`, protocols),
-// )
-
-{
-	const gossipsub = libp2p.services.pubsub as Omit<GossipSub, "metrics"> & { metrics: Metrics | null }
-	if (gossipsub.metrics) {
-		gossipsub.metrics.onAddToMesh = (topic, reason, count) => {
-			const peers = gossipsub.getMeshPeers(topic)
-			post("gossipsub:mesh:update", { topic, peers })
-		}
-
-		gossipsub.metrics.onRemoveFromMesh = (topic, reason, count) => {
-			const peers = gossipsub.getMeshPeers(topic)
-			post("gossipsub:mesh:update", { topic, peers })
-		}
-	}
-}
-
-const controller = new AbortController()
-
-process.addListener("SIGINT", () => {
-	process.stdout.write("\nReceived SIGINT\n")
-	controller.abort()
-	libp2p.stop()
-})
-
-async function apply(id: string, signature: Signature, message: Message<string>) {
-	post("gossiplog:message", { topic: message.topic, id })
-}
-
-let delay = 0
-if (SERVICE_NAME !== "bootstrap") {
-	delay = 1000 + Math.random() * 20000
-}
-
-await setTimeout(delay)
-
-await libp2p.start()
-
-libp2p.services.fetch.registerLookupFunction("peers/", async (key: string) => {
-	const [_, topic] = key.split("/")
-	const subscribers = libp2p.services.pubsub.getSubscribers(`canvas/${topic}`)
-	console.log("got subscribers", subscribers)
-	const peers = await Promise.all(subscribers.map((peerId) => libp2p.peerStore.get(peerId)))
-	return encode(
-		peers.map((peer) => ({
-			id: peer.id.toBytes(),
-			multiaddrs: peer.addresses.map((address) => address.multiaddr.bytes),
-		})),
-	)
-	// return encode(
-	// 	subscribers.map((peerId) => {
-	// 		const multiaddrs =
-	// 		return { peerId: peerId.toBytes() }
-	// 	}),
+	// libp2p.addEventListener("peer:discovery", ({ detail: { id, multiaddrs } }) =>
+	// 	console.log(`peer:discovery ${id}`, multiaddrs),
 	// )
-})
 
-const minTopicPeers = 20
-const topicPeers = new Set<string>()
+	// libp2p.addEventListener("peer:identify", ({ detail: { peerId, protocols } }) =>
+	// 	console.log(`peer:identify ${peerId}`, protocols),
+	// )
 
-if (topic !== null) {
-	libp2p.register(getTopicDHTProtocol(topic), {
-		onConnect: (peerId) => void topicPeers.add(peerId.toString()),
-		onDisconnect: (peerId) => void topicPeers.delete(peerId.toString()),
+	const gossipsub = libp2p.services.pubsub as GossipSub
+	gossipsub.addEventListener("gossipsub:graft", ({ detail: { topic, peerId } }) => {
+		const peers = gossipsub.getMeshPeers(topic)
+		socket.post("gossipsub:mesh:update", { topic, peers })
 	})
-}
 
-libp2p.register("/canvas/fetch/0.0.1", {
-	onConnect: async (peerId) => {
-		if (topic === null || topicPeers.size >= minTopicPeers) {
-			return
-		}
+	gossipsub.addEventListener("gossipsub:prune", ({ detail: { topic, peerId } }) => {
+		const peers = gossipsub.getMeshPeers(topic)
+		socket.post("gossipsub:mesh:update", { topic, peers })
+	})
 
-		console.log("fetching", peerId, `peers/${topic}`)
+	messageLog.addEventListener("sync", (event) => {
+		console.log(`completed sync with ${event.detail.peerId}`)
+	})
 
-		try {
-			const result = await libp2p.services.fetch.fetch(peerId, `peers/${topic}`, {})
-			if (result === undefined) {
-				console.log("got undefined result")
-				return
-			}
+	const controller = new AbortController()
 
-			const peers = decode<{ id: Uint8Array; multiaddrs: Uint8Array[] }[]>(result).map(({ id, multiaddrs }) => ({
-				id: peerIdFromBytes(id),
-				multiaddrs: multiaddrs.map(multiaddr),
-			}))
+	process.addListener("SIGINT", () => {
+		process.stdout.write("\nReceived SIGINT\n")
+		controller.abort()
+		libp2p.stop()
+	})
 
-			console.log("got peers", peers)
-		} catch (err) {
-			console.error("error fetching peers", err)
-		}
-	},
-})
+	let delay = 0
+	if (SERVICE_NAME !== "bootstrap") {
+		delay = 1000 + Math.random() * 5000
+	}
 
-// libp2p.services.pubsub.subscribe(discoveryTopic)
+	await setTimeout(delay)
+	await libp2p.start()
 
-if (topic !== null) {
-	// const minTopicPeers = 20
 	// const topicPeers = new Set<string>()
-
 	// libp2p.register(getTopicDHTProtocol(topic), {
 	// 	onConnect: (peerId) => void topicPeers.add(peerId.toString()),
 	// 	onDisconnect: (peerId) => void topicPeers.delete(peerId.toString()),
 	// })
 
-	// libp2p.services.pubsub.addEventListener("gossipsub:message", ({ detail: { msg } }) => {
-	// 	if (msg.type === "signed" && msg.topic === discoveryTopic) {
-	// 		const payload = decode<{ topic: string; multiaddrs: Uint8Array[] }>(msg.data)
-	// 		if (payload.topic === topic && topicPeers.size < minTopicPeers && !topicPeers.has(msg.from.toString())) {
-	// 			const multiaddrs = payload.multiaddrs.map(multiaddr)
-	// 			libp2p.dial(multiaddrs).catch((err) => console.error("failed to dial peer", err))
-	// 		}
-	// 	}
-	// })
-
-	// const intervalId = setInterval(() => {
-	// 	console.log("PUBLISHING HEARTBEAT")
-	// 	libp2p.services.pubsub.publish(
-	// 		discoveryTopic,
-	// 		encode({ topic, multiaddrs: libp2p.getMultiaddrs().map((addr) => addr.bytes) }),
-	// 	)
-	// }, 5000)
-
-	// controller.signal.addEventListener("abort", () => clearInterval(intervalId))
-
-	const log = await GossipLog.open({ topic, apply }, "data")
-
-	log.addEventListener("commit", ({ detail: { root } }) => {
-		post("gossiplog:commit", {
-			topic: log.topic,
-			rootLevel: root.level,
-			rootHash: bytesToHex(root.hash),
-		})
-	})
-
-	await libp2p.services.gossiplog.subscribe(log)
+	const intervalId = setInterval(() => void libp2p.services.gossiplog.append(nanoid()), 2000)
+	controller.signal.addEventListener("abort", () => clearInterval(intervalId))
 }
+
+start()

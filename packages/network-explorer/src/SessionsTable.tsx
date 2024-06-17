@@ -57,9 +57,9 @@ function SessionsTable({ topic }: { topic: string }) {
 							return (
 								<tr key={cid}>
 									<td className="break-all px-6 py-2">{message.payload.publicKey}</td>
-									<td className="break-all px-6 py-2">{message.payload.address}</td>
+									<td className="break-all px-6 py-2">{message.payload.did}</td>
 									<td className="break-all px-6">
-										<span className="text-gray-400">{formatDistanceCustom(message.payload.timestamp)} ago</span>
+										<span className="text-gray-400">{formatDistanceCustom(message.payload.context.timestamp)} ago</span>
 									</td>
 								</tr>
 							)

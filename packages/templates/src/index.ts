@@ -1,7 +1,5 @@
 import type { Contract } from "@canvas-js/core"
 
-export type ContractTemplate = Omit<Contract, "topic">
-
 export const PublicChat = {
 	models: {
 		messages: {
@@ -18,7 +16,7 @@ export const PublicChat = {
 			db.set("messages", { id, message, address, timestamp })
 		},
 	},
-} satisfies ContractTemplate
+} satisfies Contract
 
 export const ChannelChat = {
 	models: {
@@ -65,7 +63,7 @@ export const ChannelChat = {
 			await db.delete("messages", id)
 		},
 	},
-} satisfies ContractTemplate
+} satisfies Contract
 
 export const Forum = {
 	models: {
@@ -139,4 +137,4 @@ export const Forum = {
 			await db.delete("replies", replyId)
 		},
 	},
-} satisfies ContractTemplate
+} satisfies Contract

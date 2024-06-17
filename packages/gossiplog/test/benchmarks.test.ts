@@ -1,27 +1,25 @@
 import test, { ExecutionContext } from "ava"
+import { nanoid } from "nanoid"
 
-import { Message, Signature } from "@canvas-js/interfaces"
-
-import { AbstractGossipLog } from "@canvas-js/gossiplog"
-import { GossipLog as MemoryGossipLog } from "@canvas-js/gossiplog/memory"
-import { GossipLog } from "@canvas-js/gossiplog/node"
+import { AbstractGossipLog, GossipLogConsumer } from "@canvas-js/gossiplog"
+import { GossipLog } from "@canvas-js/gossiplog/sqlite"
 
 import { getDirectory } from "./utils.js"
 
 const topic = "com.example.test"
-const apply = (id: string, signature: Signature, message: Message<string>) => {}
+const apply: GossipLogConsumer<string> = ({}) => {}
 
-test("append messages (memory, linear, 100)", async (t) => {
-	const log = await MemoryGossipLog.open({ topic, apply })
+test("append messages (in-memory, linear, 100)", async (t) => {
+	const log = new GossipLog({ topic, apply })
 	t.teardown(() => log.close())
 	await append(t, log, 100)
 })
 
-// test("append messages (node, linear, 100)", async (t) => {
-// 	const log = await GossipLog.open(getDirectory(t), { topic, apply, validate })
-// 	t.teardown(() => log.close())
-// 	await append(t, log, 100)
-// })
+test("append messages (on-disk, linear, 100)", async (t) => {
+	const log = new GossipLog({ directory: getDirectory(t), topic, apply })
+	t.teardown(() => log.close())
+	await append(t, log, 100)
+})
 
 // test("append messages (node, linear, 100, indexed)", async (t) => {
 // 	const log = await GossipLog.open(getDirectory(t), { topic, apply, validate, indexAncestors: true })
@@ -52,7 +50,7 @@ async function append(t: ExecutionContext, log: AbstractGossipLog<string>, n: nu
 	const start = performance.now()
 
 	for (let i = 0; i < n; i++) {
-		await log.append(i.toString())
+		await log.append(nanoid())
 	}
 
 	const time = performance.now() - start

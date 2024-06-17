@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+message Event {
+  message Insert {
+    bytes key = 1;
+    bytes value = 2;
+  }
+
+  message Update {
+    repeated bytes heads = 1;
+  }
+
+  oneof event {
+    Insert insert = 1;
+    Update update = 2;
+  }
+}

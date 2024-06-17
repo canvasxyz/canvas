@@ -44,8 +44,8 @@ const actions = {
 
 // Use the application in React
 const { app } = useCanvas({
-	contract: { models, actions },
 	topic: "canvas-example-public-chat"
+	contract: { models, actions },
 })
 const messages = useLiveQuery(app, "messages", { limit: 10 })
 return <div>{messages.map((message) => { ... })}</div>
@@ -74,8 +74,8 @@ const actions = {
 
 // Use the application in React
 const { app } = useCanvas({
-  contract: { models, actions },
   topic: "canvas-example-chess"
+  contract: { models, actions },
 })
 const boards = useLiveQuery(app, "boards")
 return <Chessboard position={boards[0].position} onDrop={ ... } />

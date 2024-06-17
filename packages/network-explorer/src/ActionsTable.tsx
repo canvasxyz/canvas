@@ -7,13 +7,13 @@ import useCursorStack from "./useCursorStack.js"
 
 function SessionField({ signature, message }: { signature: Signature; message: Message<Action> }) {
 	const { data: session, error } = useSWR(
-		`/index_api/latest_session/${message.topic}?address=${message.payload.address}&public_key=${signature.publicKey}`,
+		`/index_api/latest_session/${message.topic}?address=${message.payload.did}&public_key=${signature.publicKey}`,
 		fetchAndIpldParseJson<Session>,
 	)
 
 	if (error) return <span className="text-red-400">failed to load</span>
 
-	return <span className="text-gray-400"> {session && formatDistanceCustom(session.timestamp)} ago</span>
+	return <span className="text-gray-400"> {session && formatDistanceCustom(session.context.timestamp)} ago</span>
 }
 
 const entriesPerPage = 10
@@ -64,16 +64,16 @@ function ActionsTable({ topic }: { topic: string }) {
 						</tr>
 					</thead>
 					<tbody>
-						{actionsToDisplay.map(([cid, signature, message]) => {
+						{actionsToDisplay.map(([cid, signature, message]: [string, Signature, Message<Action>]) => {
 							const args = JSON.stringify(message.payload.args)
 							return (
 								<tr key={cid}>
-									<td className="break-all pl-6 pr-3 py-2">{message.payload.address.slice(0, 15)}...</td>
+									<td className="break-all pl-6 pr-3 py-2">{message.payload.did.slice(0, 15)}...</td>
 									<td className="break-all px-3">{message.payload.name}</td>
 									<td className="break-all px-3">{args.length > 50 ? <ArgsPopout data={args} /> : args}</td>
-									<td className="break-all px-3">{formatDistanceCustom(message.payload.timestamp)} ago</td>
+									<td className="break-all px-3">{formatDistanceCustom(message.payload.context.timestamp)} ago</td>
 									<td className="break-all pl-3 pr-6">
-										{signature.publicKey.slice(0, 25)}...
+										{signature.signature.slice(0, 25)}...
 										<SessionField message={message} signature={signature} />
 									</td>
 								</tr>

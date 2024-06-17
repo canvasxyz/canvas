@@ -17,13 +17,14 @@ testOnModelDB("get fields of all types", async (t, openDB) => {
 
 	const id = nanoid()
 
+	const jsonValue = { foo: "a", bar: "b", qux: null, baz: 0.3 }
 	await db.set("foo", {
 		id,
 		exampleStr: "hello world",
 		exampleBool: true,
 		exampleInt: -1,
 		exampleFloat: 0.1,
-		exampleJson: JSON.stringify({ foo: "a", bar: "b", qux: null, baz: 0.3 }),
+		exampleJson: jsonValue,
 		exampleBytes: new Uint8Array([0, 255]),
 	})
 
@@ -35,12 +36,12 @@ testOnModelDB("get fields of all types", async (t, openDB) => {
 		exampleBool: true,
 		exampleInt: -1,
 		exampleFloat: 0.1,
-		exampleJson: result?.exampleJson,
+		exampleJson: jsonValue,
 		exampleBytes: new Uint8Array([0, 255]),
 	})
 
 	// assumes stable serialization
-	t.deepEqual(JSON.parse(result?.exampleJson as "string"), { foo: "a", bar: "b", qux: null, baz: 0.3 })
+	t.deepEqual(jsonValue, { foo: "a", bar: "b", qux: null, baz: 0.3 })
 })
 
 testOnModelDB("update a value", async (t, openDB) => {
@@ -68,6 +69,10 @@ testOnModelDB("delete a value ", async (t, openDB) => {
 
 	await db.set("user", { id, name: "John" })
 	t.is(await db.count("user"), 1)
+
+	await db.delete("user", id)
+	t.is(await db.get("user", id), null)
+	t.is(await db.count("user"), 0)
 
 	await db.delete("user", id)
 	t.is(await db.get("user", id), null)

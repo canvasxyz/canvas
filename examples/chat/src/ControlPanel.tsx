@@ -34,7 +34,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({}) => {
 
 	const clear = useCallback(async () => {
 		if (app !== null) {
-			await app.close()
+			await app.stop()
 
 			console.log("deleting model database")
 			await deleteDB(`canvas/${app.topic}/db`, {})

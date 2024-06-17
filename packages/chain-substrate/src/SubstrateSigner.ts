@@ -6,7 +6,7 @@ import { InjectedExtension } from "@polkadot/extension-inject/types"
 import { cryptoWaitReady, decodeAddress } from "@polkadot/util-crypto"
 import { KeypairType } from "@polkadot/util-crypto/types"
 
-import type { Awaitable, Session, AbstractSessionData } from "@canvas-js/interfaces"
+import type { Awaitable, Session, AbstractSessionData, DidIdentifier } from "@canvas-js/interfaces"
 import { AbstractSessionSigner, ed25519 } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
@@ -39,7 +39,7 @@ export class SubstrateSigner extends AbstractSessionSigner<SubstrateSessionData>
 
 	// some type that overlaps with the injected extension and
 	// a generated wallet
-	#signer: AbstractSigner
+	_signer: AbstractSigner
 
 	public constructor({ sessionDuration, substrateKeyType, extension }: SubstrateSignerInit = {}) {
 		super("chain-substrate", ed25519, { sessionDuration })
@@ -48,7 +48,7 @@ export class SubstrateSigner extends AbstractSessionSigner<SubstrateSessionData>
 			if (signRaw === undefined) {
 				throw new Error("Invalid signer - no signRaw method exists")
 			}
-			this.#signer = {
+			this._signer = {
 				getSubstrateKeyType: async () => {
 					const account = await extension.accounts.get()
 					return account[0].type || "sr25519"
@@ -85,7 +85,7 @@ export class SubstrateSigner extends AbstractSessionSigner<SubstrateSessionData>
 			// some of the cryptography methods used by polkadot require a wasm environment which is initialised
 			// asynchronously so we have to lazily create the keypair when it is needed
 			let keyring: ReturnType<Keyring["addFromMnemonic"]> | undefined
-			this.#signer = {
+			this._signer = {
 				getSubstrateKeyType: async () => {
 					return keyType
 				},
@@ -134,10 +134,15 @@ export class SubstrateSigner extends AbstractSessionSigner<SubstrateSessionData>
 	}
 
 	public async verifySession(topic: string, session: Session) {
-		const { publicKey, address, authorizationData, timestamp, duration } = session
+		const {
+			publicKey,
+			did,
+			authorizationData,
+			context: { timestamp, duration },
+		} = session
 
 		assert(validateSessionData(authorizationData), "invalid session")
-		const [chainId, walletAddress] = parseAddress(address)
+		const [chainId, walletAddress] = parseAddress(did)
 
 		const issuedAt = new Date(timestamp).toISOString()
 		const message: SubstrateMessage = {
@@ -168,17 +173,31 @@ export class SubstrateSigner extends AbstractSessionSigner<SubstrateSessionData>
 		assert(valid, "invalid signature")
 	}
 
-	public async getAddress(): Promise<string> {
-		const chainId = await this.#signer.getChainId()
-		const walletAddress = await this.#signer.getAddress()
-		return `polkadot:${chainId}:${walletAddress}`
+	public async getDid(): Promise<DidIdentifier> {
+		const chainId = await this._signer.getChainId()
+		const walletAddress = await this._signer.getAddress()
+		return `did:pkh:polkadot:${chainId}:${walletAddress}`
+	}
+
+	public getDidParts(): number {
+		return 5
+	}
+
+	public getAddressFromDid(did: DidIdentifier) {
+		const [_, walletAddress] = parseAddress(did)
+		return walletAddress
 	}
 
 	public async authorize(data: AbstractSessionData): Promise<Session<SubstrateSessionData>> {
-		const { topic, address, publicKey, timestamp, duration } = data
+		const {
+			topic,
+			did,
+			publicKey,
+			context: { timestamp, duration },
+		} = data
 		const issuedAt = new Date(timestamp).toISOString()
 
-		const [chainId, walletAddress] = parseAddress(address)
+		const [chainId, walletAddress] = parseAddress(did)
 
 		const message: SubstrateMessage = {
 			topic,
@@ -189,17 +208,15 @@ export class SubstrateSigner extends AbstractSessionSigner<SubstrateSessionData>
 			expirationTime: null,
 		}
 
-		const signatureResult = await this.#signer.signMessage(constructSubstrateMessage(message))
-		const substrateKeyType = await this.#signer.getSubstrateKeyType()
+		const signatureResult = await this._signer.signMessage(constructSubstrateMessage(message))
+		const substrateKeyType = await this._signer.getSubstrateKeyType()
 
 		return {
 			type: "session",
-			address,
+			did,
 			publicKey: publicKey,
 			authorizationData: { signatureResult, data: message, substrateKeyType },
-			blockhash: null,
-			timestamp: timestamp,
-			duration: duration,
+			context: duration ? { timestamp, duration } : { timestamp },
 		}
 	}
 }

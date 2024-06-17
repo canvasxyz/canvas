@@ -1,5 +1,5 @@
 import React, { useState } from "react"
-import { Event } from "../shared/types.js"
+import type { Event } from "../../types.js"
 
 export const EventLog: React.FC<{ events: Event[] }> = ({ events }) => {
 	const [visible, setVisible] = useState(false)
@@ -14,12 +14,12 @@ export const EventLog: React.FC<{ events: Event[] }> = ({ events }) => {
 							return null
 						}
 
-						const { type, id, t, detail } = event
-						const time = new Date(t).toISOString().slice(11, -1)
+						const { type, peerId, timestamp, detail } = event
+						const time = new Date(timestamp).toISOString().slice(11, -1)
 						return (
 							<div key={index}>
 								<code>
-									[{time}] [{id}] {type} {JSON.stringify(detail, null, "  ")}
+									[{time}] [{peerId}] {type} {JSON.stringify(detail, null, "  ")}
 								</code>
 							</div>
 						)

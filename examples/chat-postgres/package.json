@@ -1,6 +1,6 @@
 {
   "name": "@canvas-js/chat-postgres",
-  "version": "0.10.0-alpha.1",
+  "version": "0.10.0-beta.2",
   "type": "module",
   "private": true,
   "scripts": {
@@ -10,24 +10,24 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
-    "@canvas-js/chain-ethereum": "0.10.0-alpha.1",
-    "@canvas-js/client": "0.10.0-alpha.1",
-    "@canvas-js/core": "0.10.0-alpha.1",
-    "@canvas-js/utils": "0.10.0-alpha.1",
+    "@canvas-js/chain-ethereum": "0.10.0-beta.2",
+    "@canvas-js/client": "0.10.0-beta.2",
+    "@canvas-js/core": "0.10.0-beta.2",
+    "@canvas-js/utils": "0.10.0-beta.2",
     "@ipld/dag-json": "^10.2.0",
     "next": "14.1.4",
     "react": "^18",
-    "react-dom": "^18"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
-    "@types/node": "^20",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
+    "@types/node": "^20.14.2",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.0.1",
     "eslint": "^8",
     "eslint-config-next": "14.1.4",
     "postcss": "^8",
-    "tailwindcss": "^3.3.0",
+    "tailwindcss": "^3.4.4",
     "ts-node": "^10.9.2",
     "tsx": "^4.7.2",
     "typescript": "^5"

@@ -5,12 +5,13 @@ import { pipe } from "it-pipe"
 import { pushable, Pushable } from "it-pushable"
 import { Uint8ArrayList } from "uint8arraylist"
 
-import type { Key, Node, Source } from "@canvas-js/okra"
+import type { Key, Node } from "@canvas-js/okra"
 import { assert } from "@canvas-js/utils"
 
 import * as Sync from "#protocols/sync"
 
 import { encodeKey, decodeNode } from "./utils.js"
+import { SyncServer } from "../interface.js"
 
 export async function* decodeResponses(source: AsyncIterable<Uint8ArrayList>) {
 	for await (const msg of source) {
@@ -25,7 +26,7 @@ export async function* encodeRequests(source: AsyncIterable<Sync.Request>) {
 	}
 }
 
-export class Client implements Source {
+export class Client implements SyncServer {
 	private readonly responses: AsyncIterator<Sync.Response, void, undefined>
 	private readonly requests: Pushable<Sync.Request>
 	private readonly log = logger("canvas:sync:client")
@@ -49,7 +50,7 @@ export class Client implements Source {
 	public async getRoot(): Promise<Node> {
 		const { getRoot } = await this.get({ getRoot: {} })
 		assert(getRoot, "invalid RPC response type")
-		assert(getRoot.root, "missing `root` in getRoot RPC response")
+		assert(getRoot.root !== undefined, "missing `root` in getRoot RPC response")
 		return decodeNode(getRoot.root)
 	}
 
@@ -66,9 +67,12 @@ export class Client implements Source {
 	public async getChildren(level: number, key: Key): Promise<Node[]> {
 		const { getChildren } = await this.get({ getChildren: { level, key: encodeKey(key) } })
 		assert(getChildren, "invalid RPC response type")
-		assert(getChildren.children, "missing `children` in getChildren RPC response")
-		const children = getChildren.children.map(decodeNode)
-		return children
+		return getChildren.children.map(decodeNode)
+	}
+	public async getValues(keys: Uint8Array[]): Promise<Uint8Array[]> {
+		const { getValues } = await this.get({ getValues: { keys } })
+		assert(getValues, "invalid RPC response type")
+		return getValues.values
 	}
 
 	private async get(req: Sync.Request): Promise<Sync.Response> {

@@ -51,7 +51,8 @@ function App() {
 	const wallet = new ethers.Wallet(privateKey)
 
 	const { app } = useCanvas({
-		contract: { ...Forum, topic: "canvas-example-forum" },
+		topic: "canvas-example-forum",
+		contract: Forum,
 		signers: [new SIWESigner({ signer: wallet })],
 	})
 

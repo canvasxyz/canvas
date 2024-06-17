@@ -32,6 +32,7 @@ You can provide multiple signers to `Canvas.initialize`, and you can control whi
 
 ```ts
 const app = await Canvas.init({
+  topic: "...",
   contract: { ... },
   signers: [
     new SIWESigner({ signer: jsonRpcSigner }),

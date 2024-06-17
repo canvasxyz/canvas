@@ -55,7 +55,7 @@ export type RelationValue = string[]
 
 export type PropertyValue = PrimaryKeyValue | PrimitiveValue | ReferenceValue | RelationValue
 
-export type ModelValue = Record<string, PropertyValue>
+export type ModelValue<T = PropertyValue> = Record<string, T>
 
 export type WhereCondition = Record<string, PropertyValue | NotExpression | RangeExpression>
 export type NotExpression = { neq: PropertyValue }
@@ -72,5 +72,5 @@ export type QueryParams = {
 // Batch effect API
 
 export type Effect =
-	| { model: string; operation: "set"; value: ModelValue }
+	| { model: string; operation: "set"; value: ModelValue<any> }
 	| { model: string; operation: "delete"; key: string }

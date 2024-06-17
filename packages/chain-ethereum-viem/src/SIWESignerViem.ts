@@ -3,7 +3,7 @@ import { toHex, toBytes, WalletClient, PrivateKeyAccount, verifyMessage } from "
 
 import * as siwe from "siwe"
 
-import type { Session, AbstractSessionData } from "@canvas-js/interfaces"
+import type { DidIdentifier, Session, AbstractSessionData } from "@canvas-js/interfaces"
 import { AbstractSessionSigner, ed25519 } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
@@ -73,10 +73,15 @@ export class SIWESignerViem extends AbstractSessionSigner<SIWESessionData> {
 	}
 
 	public async verifySession(topic: string, session: Session<SIWESessionData>) {
-		const { address, publicKey, authorizationData, timestamp, duration } = session
+		const {
+			did,
+			publicKey,
+			authorizationData,
+			context: { timestamp, duration },
+		} = session
 
 		assert(validateSessionData(authorizationData), "invalid session")
-		const [chainId, walletAddress] = parseAddress(address)
+		const [chainId, walletAddress] = parseAddress(did)
 
 		const siweMessage: SIWEMessage = {
 			version: SIWEMessageVersion,
@@ -86,7 +91,7 @@ export class SIWESignerViem extends AbstractSessionSigner<SIWESessionData> {
 			address: walletAddress,
 			uri: publicKey,
 			issuedAt: new Date(timestamp).toISOString(),
-			expirationTime: duration === null ? null : new Date(timestamp + duration).toISOString(),
+			expirationTime: duration === undefined ? null : new Date(timestamp + duration).toISOString(),
 			resources: [`canvas://${topic}`],
 		}
 
@@ -99,17 +104,31 @@ export class SIWESignerViem extends AbstractSessionSigner<SIWESessionData> {
 		assert(isValid, "invalid SIWE signature")
 	}
 
-	public async getAddress(): Promise<string> {
+	public async getDid(): Promise<DidIdentifier> {
 		const walletAddress = await this.#account.getAddress()
-		return `eip155:${this.chainId}:${walletAddress}`
+		return `did:pkh:eip155:${this.chainId}:${walletAddress}`
+	}
+
+	public getDidParts(): number {
+		return 5
+	}
+
+	public getAddressFromDid(did: DidIdentifier) {
+		const [_, walletAddress] = parseAddress(did)
+		return walletAddress
 	}
 
 	public async authorize(data: AbstractSessionData): Promise<Session<SIWESessionData>> {
-		const { topic, address, publicKey, timestamp, duration } = data
+		const {
+			topic,
+			did,
+			publicKey,
+			context: { timestamp, duration },
+		} = data
 		const domain = this.target.getDomain()
 		const nonce = siwe.generateNonce()
 
-		const [chainId, walletAddress] = parseAddress(address)
+		const [chainId, walletAddress] = parseAddress(did)
 		const issuedAt = new Date(timestamp).toISOString()
 
 		const siweMessage: SIWEMessage = {
@@ -132,12 +151,10 @@ export class SIWESignerViem extends AbstractSessionSigner<SIWESessionData> {
 
 		return {
 			type: "session",
-			address: address,
+			did: did,
 			publicKey: publicKey,
 			authorizationData: { signature: toBytes(signature), domain, nonce },
-			duration: duration,
-			timestamp: timestamp,
-			blockhash: null,
+			context: duration ? { duration, timestamp } : { timestamp },
 		}
 	}
 }

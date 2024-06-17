@@ -1,4 +1,4 @@
-import type { Awaitable, Session, AbstractSessionData } from "@canvas-js/interfaces"
+import type { Awaitable, Session, AbstractSessionData, DidIdentifier } from "@canvas-js/interfaces"
 import { AbstractSessionSigner, ed25519 } from "@canvas-js/signatures"
 
 import { addressPattern, parseAddress } from "./utils.js"
@@ -30,7 +30,7 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 	public readonly match = (address: string) => addressPattern.test(address)
 	public readonly bech32Prefix: string
 
-	#signer: GenericSigner
+	_signer: GenericSigner
 
 	public constructor({ signer, sessionDuration, bech32Prefix }: CosmosSignerInit = {}) {
 		super("chain-cosmos", ed25519, { sessionDuration })
@@ -38,24 +38,29 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 		this.bech32Prefix = bech32Prefix == undefined ? "cosmos" : bech32Prefix
 
 		if (signer == undefined) {
-			this.#signer = createDefaultSigner(this.bech32Prefix)
+			this._signer = createDefaultSigner(this.bech32Prefix)
 		} else if (signer.type == "ethereum") {
-			this.#signer = createEthereumSigner(signer, this.bech32Prefix)
+			this._signer = createEthereumSigner(signer, this.bech32Prefix)
 		} else if (signer.type == "amino") {
-			this.#signer = createAminoSigner(signer)
+			this._signer = createAminoSigner(signer)
 		} else if (signer.type == "bytes") {
-			this.#signer = createBytesSigner(signer)
+			this._signer = createBytesSigner(signer)
 		} else if (signer.type == "arbitrary") {
-			this.#signer = createArbitrarySigner(signer)
+			this._signer = createArbitrarySigner(signer)
 		} else {
 			throw new Error("invalid signer")
 		}
 	}
 
 	public async verifySession(topic: string, session: Session) {
-		const { publicKey, address, authorizationData: data, timestamp, duration } = session
+		const {
+			publicKey,
+			did,
+			authorizationData: data,
+			context: { timestamp, duration },
+		} = session
 
-		const [chainId, walletAddress] = parseAddress(address)
+		const [chainId, walletAddress] = parseAddress(did)
 
 		const message: CosmosMessage = {
 			topic: topic,
@@ -63,7 +68,7 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 			chainId,
 			publicKey: publicKey,
 			issuedAt: new Date(timestamp).toISOString(),
-			expirationTime: duration === null ? null : new Date(timestamp + duration).toISOString(),
+			expirationTime: duration === undefined ? null : new Date(timestamp + duration).toISOString(),
 		}
 
 		// select verification method based on the signing method
@@ -92,17 +97,31 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 		}
 	}
 
-	public async getAddress(): Promise<string> {
-		const chainId = await this.#signer.getChainId()
-		const walletAddress = await this.#signer.getAddress(chainId)
+	public async getDid(): Promise<DidIdentifier> {
+		const chainId = await this._signer.getChainId()
+		const walletAddress = await this._signer.getAddress(chainId)
 		const { data } = fromBech32(walletAddress)
 		const walletAddressWithPrefix = toBech32(this.bech32Prefix, data)
-		return `cosmos:${chainId}:${walletAddressWithPrefix}`
+		return `did:pkh:cosmos:${chainId}:${walletAddressWithPrefix}`
+	}
+
+	public getDidParts(): number {
+		return 5
+	}
+
+	public getAddressFromDid(did: DidIdentifier) {
+		const [_, walletAddress] = parseAddress(did)
+		return walletAddress
 	}
 
 	public async authorize(data: AbstractSessionData): Promise<Session<CosmosSessionData>> {
-		const { topic, address, timestamp, publicKey, duration } = data
-		const [chainId, walletAddress] = parseAddress(address)
+		const {
+			topic,
+			did,
+			publicKey,
+			context: { timestamp, duration },
+		} = data
+		const [chainId, walletAddress] = parseAddress(did)
 
 		const issuedAt = new Date(timestamp)
 		const message: CosmosMessage = {
@@ -118,16 +137,14 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 			message.expirationTime = new Date(timestamp + duration).toISOString()
 		}
 
-		const signResult = await this.#signer.sign(message, walletAddress, chainId)
+		const signResult = await this._signer.sign(message, walletAddress, await this._signer.getChainId())
 
 		return {
 			type: "session",
-			address: address,
+			did: did,
 			publicKey: publicKey,
 			authorizationData: signResult,
-			blockhash: null,
-			timestamp: timestamp,
-			duration: duration,
+			context: duration ? { duration, timestamp } : { timestamp },
 		}
 	}
 }

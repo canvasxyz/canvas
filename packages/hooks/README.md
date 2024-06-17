@@ -20,10 +20,11 @@ import { useMemo } from "react"
 
 export function MyApp() {
   const wallet = useMemo(() => {
-    return ethers.Wallet.createRandom();
+    return ethers.Wallet.createRandom()
   }, [])
   const { app, error } = useCanvas({
-    contract: { topic: "com.example.forum", ...Forum },
+    topic: "com.example.forum",
+    contract: Forum,
     signers: [new SIWESigner({ signer: wallet })],
     topic: "myapp",
   })
@@ -61,10 +62,10 @@ The `useTick` hook calls a `tick()` action on a contract at a regular interval.
 
 Ticking happens client-side. Here are a few considerations:
 
-* Ticking will only run if the user has started a session.
-* If a client observes that any other user on the log has called tick()
+- Ticking will only run if the user has started a session.
+- If a client observes that any other user on the log has called tick()
   within the last `interval`, their tick will be skipped.
-* Contracts will stop ticking if no clients are online.
+- Contracts will stop ticking if no clients are online.
 
 Note that useTick() does not do any special accounting for networking -
 it is possible that if two users start their timers at around the same time, their
@@ -94,6 +95,7 @@ const actions = {
 }
 
 const { app } = useCanvas({
+  topic: "...",
   contract: { models, actions }
 })
 

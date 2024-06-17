@@ -3,25 +3,26 @@ import { Ed25519PeerId, PeerId } from "@libp2p/interface"
 import { base64 } from "multiformats/bases/base64"
 import { createLibp2p } from "libp2p"
 
-import { GossipLogInit } from "@canvas-js/gossiplog"
-import { GossipLog } from "@canvas-js/gossiplog/browser"
+import { AbstractGossipLog } from "@canvas-js/gossiplog"
+import { GossipLog } from "@canvas-js/gossiplog/idb"
 import { ModelDB } from "@canvas-js/modeldb/idb"
 
 import type { PlatformTarget } from "../interface.js"
 import { getLibp2pOptions } from "./libp2p.js"
 
 export default {
-	openDB: ({ topic }, models) => ModelDB.initialize({ name: `canvas/${topic}/db`, models }),
+	openDB: ({ topic }, models) =>
+		ModelDB.initialize({ name: `canvas/${topic}`, models: { ...models, ...AbstractGossipLog.schema } }),
 
-	openGossipLog: <Payload>({ topic }: { topic: string }, init: GossipLogInit<Payload>) => GossipLog.open(init),
+	openGossipLog: ({}, init) => GossipLog.open(init),
 
-	async createLibp2p(location, config) {
-		const peerId = await getPeerId(location)
-		return await createLibp2p(getLibp2pOptions(peerId, location.topic, config))
+	async createLibp2p(messageLog, config) {
+		const peerId = await getPeerId(messageLog.topic)
+		return await createLibp2p(getLibp2pOptions(messageLog, peerId, config))
 	},
 } satisfies PlatformTarget
 
-async function getPeerId({ topic }: { topic: string }): Promise<PeerId> {
+async function getPeerId(topic: string): Promise<PeerId> {
 	const localStorageKey = `canvas/${topic}/peer-id`
 	const item = localStorage.getItem(localStorageKey)
 	let peerId: PeerId

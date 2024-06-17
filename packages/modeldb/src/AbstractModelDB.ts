@@ -29,11 +29,11 @@ export abstract class AbstractModelDB {
 
 	abstract close(): Promise<void>
 
-	abstract get(modelName: string, key: string): Promise<ModelValue | null>
+	abstract get<T extends ModelValue<any> = ModelValue<any>>(modelName: string, key: string): Promise<T | null>
 
 	abstract iterate(modelName: string): AsyncIterable<ModelValue>
 
-	abstract query<T extends ModelValue = ModelValue>(modelName: string, query?: QueryParams): Promise<T[]>
+	abstract query<T extends ModelValue<any> = ModelValue<any>>(modelName: string, query?: QueryParams): Promise<T[]>
 
 	abstract count(modelName: string): Promise<number>
 
@@ -43,7 +43,7 @@ export abstract class AbstractModelDB {
 
 	// Model operations
 
-	public async set(modelName: string, value: ModelValue) {
+	public async set<T extends ModelValue<any> = ModelValue<any>>(modelName: string, value: T) {
 		await this.apply([{ operation: "set", model: modelName, value }])
 	}
 

@@ -1,11 +1,11 @@
-import React, { useCallback, useContext, useEffect, useRef, useState } from "react"
+import React, { useContext, useEffect, useState } from "react"
 
-import { Canvas, Connections } from "@canvas-js/core"
+import { Canvas } from "@canvas-js/core"
 
 import { AppContext } from "./AppContext.js"
 
 import { PeerIdView } from "./components/PeerIdView.js"
-import { PresenceStore } from "@canvas-js/discovery"
+import { Connection } from "@libp2p/interface"
 
 export interface ConnectionStatusProps {
 	topic: string
@@ -13,27 +13,6 @@ export interface ConnectionStatusProps {
 
 export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({ topic }) => {
 	const { app } = useContext(AppContext)
-
-	const [status, setStatus] = useState("--")
-	const [onlinePeers, setOnlinePeers] = useState({})
-
-	const updateConnectionStatus = () => {
-		if (app) setStatus(app.status)
-	}
-	const updateOnlinePeers = ({ detail: { peers } }: { detail: { peers: PresenceStore } }) => {
-		setOnlinePeers({ ...peers })
-	}
-
-	useEffect(() => {
-		app?.addEventListener("connections:updated", updateConnectionStatus)
-		app?.addEventListener("presence:join", updateOnlinePeers)
-		app?.addEventListener("presence:leave", updateOnlinePeers)
-		return () => {
-			app?.removeEventListener("connections:updated", updateConnectionStatus)
-			app?.removeEventListener("presence:join", updateOnlinePeers)
-			app?.removeEventListener("presence:leave", updateOnlinePeers)
-		}
-	}, [app])
 
 	if (app === null) {
 		return null
@@ -51,60 +30,15 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({ topic }) => 
 				<span className="text-sm">Peer Id</span>
 			</div>
 			<div>
-				<PeerIdView peerId={app.peerId} />
+				<PeerIdView peerId={app.libp2p.peerId} />
 			</div>
 			<hr />
 			<div>
-				<span className="text-sm">Online</span>
-			</div>
-			<OnlineList onlinePeers={onlinePeers} topic={topic} />
-			<hr />
-			<div>
-				<span className="text-sm">Connections (Status: {status})</span>
+				<span className="text-sm">Connections</span>
 			</div>
 			<ConnectionList app={app} />
 		</div>
 	)
-}
-
-const OnlineList = ({ onlinePeers, topic }: { onlinePeers: PresenceStore; topic: string }) => {
-	const browserPeers = Object.entries(onlinePeers).filter(([peerId, { lastSeen, env }]) => env === "browser")
-	const [time, setTime] = useState<number>()
-
-	useEffect(() => {
-		const timer = setInterval(() => {
-			setTime(new Date().getTime())
-		}, 1000)
-		return () => clearInterval(timer)
-	}, [])
-
-	if (browserPeers.length === 0) {
-		return <div className="italic">No other clients online</div>
-	} else {
-		return (
-			<ul className="list-disc pl-4">
-				{browserPeers.map(([peerIdString, { peerId, lastSeen, env, address, topics }]) => {
-					return (
-						<li key={peerIdString}>
-							<PeerIdView peerId={peerId} />
-							{address && (
-								<div>
-									<code className="text-sm break-all text-gray-500">{address}</code>
-								</div>
-							)}
-							<div>
-								<code className="text-sm break-all text-gray-500">
-									{env} - last seen{" "}
-									{lastSeen === null || !time ? "awhile ago" : Math.ceil((time - lastSeen) / 1000) + "s"}{" "}
-									{!topics.includes(topic) && `[${topics.join(", ")}]`}
-								</code>
-							</div>
-						</li>
-					)
-				})}
-			</ul>
-		)
-	}
 }
 
 interface ConnectionListProps {
@@ -112,19 +46,21 @@ interface ConnectionListProps {
 }
 
 const ConnectionList: React.FC<ConnectionListProps> = ({ app }) => {
-	const [connections, setConnections] = useState<Connections>()
-
-	const handleConnectionsUpdate = useCallback(
-		({ detail: { connections } }: CustomEvent<{ connections: Connections }>) => {
-			setConnections({ ...connections })
-		},
-		[],
-	)
+	const [connections, setConnections] = useState<Connection[]>([])
 
 	useEffect(() => {
-		app?.addEventListener("connections:updated", handleConnectionsUpdate)
+		const handleConnectionOpen = ({ detail: connection }: CustomEvent<Connection>) =>
+			void setConnections((connections) => [...connections, connection])
+
+		const handleConnectionClose = ({ detail: connection }: CustomEvent<Connection>) =>
+			void setConnections((connections) => connections.filter(({ id }) => connection.id !== id))
+
+		app?.libp2p.addEventListener("connection:open", handleConnectionOpen)
+		app?.libp2p.addEventListener("connection:close", handleConnectionClose)
+
 		return () => {
-			app?.removeEventListener("connections:updated", handleConnectionsUpdate)
+			app?.libp2p.removeEventListener("connection:open", handleConnectionOpen)
+			app?.libp2p.removeEventListener("connection:close", handleConnectionClose)
 		}
 	}, [app])
 
@@ -133,22 +69,15 @@ const ConnectionList: React.FC<ConnectionListProps> = ({ app }) => {
 	} else {
 		return (
 			<ul className="list-disc pl-4">
-				{Object.entries(connections).map(([peerId, { peer, status, connections: peerConnections }]) => {
+				{connections.map(({ id, remotePeer, remoteAddr }) => {
+					const address = remoteAddr.decapsulateCode(421).toString()
 					return (
-						<li key={peer.toString()}>
+						<li key={id}>
 							<div>
-								{status === "connecting" ? "🟡" : status === "online" ? "🟢" : status === "waiting" ? "⚪️" : "🔴"}
-								&nbsp;
-								<PeerIdView peerId={peer} />
+								<PeerIdView peerId={remotePeer} />
 							</div>
 							<div>
-								{peerConnections.map((connection, index) => {
-									return (
-										<code className="text-sm break-all text-gray-500" key={index}>
-											{connection.remoteAddr.decapsulateCode(421).toString()}
-										</code>
-									)
-								})}
+								<code className="text-sm break-all text-gray-500">{address}</code>
 							</div>
 						</li>
 					)

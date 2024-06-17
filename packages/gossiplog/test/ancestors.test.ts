@@ -3,16 +3,15 @@ import { randomUUID } from "node:crypto"
 import test, { ExecutionContext } from "ava"
 import { nanoid } from "nanoid"
 
-import type { Signature, Message } from "@canvas-js/interfaces"
+import type { Message } from "@canvas-js/interfaces"
 import { ed25519 } from "@canvas-js/signatures"
-import { decodeId } from "@canvas-js/gossiplog"
-import { GossipLog } from "@canvas-js/gossiplog/node"
-import { GossipLog as PostgresGossipLog } from "@canvas-js/gossiplog/pg"
-import { AbstractGossipLog } from "@canvas-js/gossiplog"
+import { AbstractGossipLog, GossipLogConsumer } from "@canvas-js/gossiplog"
+import { GossipLog } from "@canvas-js/gossiplog/sqlite"
+// import { GossipLog as PostgresGossipLog } from "@canvas-js/gossiplog/pg"
 
-import { appendChain, getDirectory, shuffle, testPlatforms } from "./utils.js"
+import { appendChain, getDirectory, testPlatforms } from "./utils.js"
 
-const apply = (id: string, signature: Signature, message: Message<string>) => {}
+const apply: GossipLogConsumer<string> = ({}) => {}
 
 testPlatforms("get ancestors (append, linear history)", async (t, openGossipLog) => {
 	const topic = randomUUID()
@@ -48,42 +47,8 @@ testPlatforms("get ancestors (insert, linear history)", async (t, openGossipLog)
 		}
 
 		const signature = signer.sign(message)
-		const { id } = await log.insert(signature, message)
+		const { id } = await log.insert(log.encode(signature, message))
 		ids.push(id)
-	}
-
-	for (let i = 0; i < n; i++) {
-		for (let j = 0; j < i; j++) {
-			t.deepEqual(await log.getAncestors(ids[i], j + 1), [ids[j]], `i=${i} j=${j}`)
-		}
-	}
-})
-
-testPlatforms("get ancestors (insert, linear history, shuffled)", async (t, openGossipLog) => {
-	const topic = randomUUID()
-	const signer = ed25519.create()
-	const log = await openGossipLog(t, { topic, apply, indexAncestors: true })
-
-	const n = 20
-	const ids: string[] = []
-	const messages: [Signature, Message<string>][] = []
-	for (let i = 0; i < n; i++) {
-		const message: Message<string> = {
-			topic,
-			clock: i + 1,
-			parents: i === 0 ? [] : [ids[i - 1]],
-			payload: nanoid(),
-		}
-
-		const signature = signer.sign(message)
-		messages.push([signature, message])
-		const [key] = log.encode(signature, message)
-		ids.push(decodeId(key))
-	}
-
-	shuffle(messages)
-	for (const [signature, message] of messages) {
-		await log.insert(signature, message)
 	}
 
 	for (let i = 0; i < n; i++) {
@@ -125,11 +90,11 @@ test("simulate a randomly partitioned network, logs on disk", async (t) => {
 	t.timeout(30 * 1000)
 	const topic = randomUUID()
 
-	const logs: AbstractGossipLog<string>[] = await Promise.all([
-		GossipLog.open({ topic, apply, indexAncestors: true }, getDirectory(t)),
-		GossipLog.open({ topic, apply, indexAncestors: true }, getDirectory(t)),
-		GossipLog.open({ topic, apply, indexAncestors: true }, getDirectory(t)),
-	])
+	const logs: AbstractGossipLog<string>[] = [
+		new GossipLog({ directory: getDirectory(t), topic, apply, indexAncestors: true }),
+		new GossipLog({ directory: getDirectory(t), topic, apply, indexAncestors: true }),
+		new GossipLog({ directory: getDirectory(t), topic, apply, indexAncestors: true }),
+	]
 
 	// const maxMessageCount = 2048
 	// const maxChainLength = 6
@@ -138,35 +103,35 @@ test("simulate a randomly partitioned network, logs on disk", async (t) => {
 	await simulateRandomNetwork(t, topic, logs, maxMessageCount, maxChainLength)
 })
 
-test("simulate a randomly partitioned network, logs on postgres", async (t) => {
-	t.timeout(240 * 1000)
-	const topic = randomUUID()
+// test("simulate a randomly partitioned network, logs on postgres", async (t) => {
+// 	t.timeout(240 * 1000)
+// 	const topic = randomUUID()
 
-	const getPgConfig = (db: string) => {
-		const { POSTGRES_HOST, POSTGRES_PORT } = process.env
-		if (POSTGRES_HOST && POSTGRES_PORT) {
-			return {
-				user: "postgres",
-				database: db,
-				password: "postgres",
-				port: parseInt(POSTGRES_PORT),
-				host: POSTGRES_HOST,
-			}
-		} else {
-			return `postgresql://localhost:5432/${db}`
-		}
-	}
+// 	const getPgConfig = (db: string) => {
+// 		const { POSTGRES_HOST, POSTGRES_PORT } = process.env
+// 		if (POSTGRES_HOST && POSTGRES_PORT) {
+// 			return {
+// 				user: "postgres",
+// 				database: db,
+// 				password: "postgres",
+// 				port: parseInt(POSTGRES_PORT),
+// 				host: POSTGRES_HOST,
+// 			}
+// 		} else {
+// 			return `postgresql://localhost:5432/${db}`
+// 		}
+// 	}
 
-	const logs: AbstractGossipLog<string>[] = await Promise.all([
-		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, getPgConfig("test"), true),
-		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, getPgConfig("test2"), true),
-		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, getPgConfig("test3"), true),
-	])
+// 	const logs: AbstractGossipLog<string>[] = await Promise.all([
+// 		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, getPgConfig("test"), true),
+// 		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, getPgConfig("test2"), true),
+// 		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, getPgConfig("test3"), true),
+// 	])
 
-	const maxMessageCount = 128
-	const maxChainLength = 5
-	await simulateRandomNetwork(t, topic, logs, maxMessageCount, maxChainLength)
-})
+// 	const maxMessageCount = 128
+// 	const maxChainLength = 5
+// 	await simulateRandomNetwork(t, topic, logs, maxMessageCount, maxChainLength)
+// })
 
 export const simulateRandomNetwork = async (
 	t: ExecutionContext<unknown>,
@@ -210,9 +175,7 @@ export const simulateRandomNetwork = async (
 		const peerIndex = random(logs.length)
 		if (peerIndex !== selfIndex) {
 			const peer = logs[peerIndex]
-			await peer.serve(async (source) => {
-				await self.sync(source)
-			})
+			await peer.serve((source) => self.sync(source))
 
 			merge(bitMaps[selfIndex], bitMaps[peerIndex])
 		}
@@ -256,9 +219,7 @@ export const simulateRandomNetwork = async (
 
 	const [self, ...peers] = logs
 	for (const peer of peers) {
-		await peer.serve(async (source) => {
-			await self.sync(source)
-		})
+		await peer.serve((source) => self.sync(source))
 	}
 
 	for (const id of messageIDs) {

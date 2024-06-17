@@ -3,12 +3,16 @@ import { base58btc } from "multiformats/bases/base58"
 
 import { ed25519 } from "@noble/curves/ed25519"
 
-import type { Awaitable, Session, AbstractSessionData } from "@canvas-js/interfaces"
+import type { Awaitable, Session, AbstractSessionData, DidIdentifier } from "@canvas-js/interfaces"
 import { AbstractSessionSigner, ed25519 as Ed25519SignatureScheme } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
 import { validateSessionData, addressPattern, parseAddress } from "./utils.js"
 import { SolanaMessage, SolanaSessionData } from "./types.js"
+
+export const SOLANA_MAINNET_CHAIN_REF = "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
+export const SOLANA_TESTNET_CHAIN_REF = "4sGjMW1sUnHzSxGspuhpqLDx6wiyjNtZ"
+export const SOLANA_DEVNET_CHAIN_REF = "EtWTRABZaYq6iMfeYKouRu166VU2xqa1"
 
 // Tested against Phantom SIWS: https://github.com/phantom/sign-in-with-solana
 export const encodeSolanaMessage = (message: SolanaMessage) => {
@@ -19,7 +23,7 @@ Allow it to read and write to the application on your behalf?
 
 URI: ${message.topic}
 Version: 1
-Chain ID: mainnet
+Chain ID: ${message.chainId}
 Issued At: ${message.issuedAt}
 Expiration Time: ${message.expirationTime}
 Resources:
@@ -35,9 +39,9 @@ interface SolanaWindowSigner {
 }
 
 export interface SolanaSignerInit {
-	chainId?: string
 	signer?: SolanaWindowSigner
 	sessionDuration?: number
+	chainId?: string
 }
 
 type GenericSigner = {
@@ -47,9 +51,9 @@ type GenericSigner = {
 
 export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 	public readonly match = (chain: string) => addressPattern.test(chain)
-	public readonly chainId: string
+	public readonly chainId
 
-	#signer: GenericSigner
+	_signer: GenericSigner
 
 	public constructor({ signer, sessionDuration, chainId }: SolanaSignerInit = {}) {
 		super("chain-solana", Ed25519SignatureScheme, { sessionDuration })
@@ -59,7 +63,7 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 				throw new Error("Invalid signer")
 			}
 
-			this.#signer = {
+			this._signer = {
 				address: base58btc.baseEncode(signer.publicKey.toBytes()),
 				sign: async (msg) => {
 					const { signature } = await signer.signMessage(msg)
@@ -69,28 +73,37 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 		} else {
 			const privateKey = ed25519.utils.randomPrivateKey()
 			const publicKey = ed25519.getPublicKey(privateKey)
-			this.#signer = {
+			this._signer = {
 				address: base58btc.baseEncode(publicKey),
 				sign: async (msg) => ed25519.sign(msg, privateKey),
 			}
 		}
 
-		// 5ey... is the solana mainnet genesis hash
-		this.chainId = chainId ?? "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
+		this.chainId = chainId ?? SOLANA_MAINNET_CHAIN_REF
 	}
 
 	public verifySession(topic: string, session: Session) {
-		const { publicKey, address, authorizationData: data, timestamp, duration } = session
+		const {
+			publicKey,
+			did,
+			authorizationData: data,
+			context: { timestamp, duration },
+		} = session
 		assert(validateSessionData(data), "invalid session")
 
-		const [_, walletAddress] = parseAddress(address)
+		const [chainId, walletAddress] = parseAddress(did)
+
+		if (chainId !== this.chainId) {
+			throw new Error("chain id did not match signer")
+		}
 
 		const message: SolanaMessage = {
 			address: walletAddress,
+			chainId,
 			topic,
 			publicKey,
 			issuedAt: new Date(timestamp).toISOString(),
-			expirationTime: duration === null ? null : new Date(timestamp + duration).toISOString(),
+			expirationTime: duration === undefined ? null : new Date(timestamp + duration).toISOString(),
 		}
 
 		const signingPublicKey = base58btc.baseDecode(walletAddress)
@@ -100,19 +113,38 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 		assert(valid, "invalid signature")
 	}
 
-	public getAddress(): string {
-		const walletAddress = this.#signer.address
-		return `solana:${this.chainId}:${walletAddress}`
+	public getDid(): DidIdentifier {
+		const walletAddress = this._signer.address
+		return `did:pkh:solana:${this.chainId}:${walletAddress}`
+	}
+
+	public getDidParts(): number {
+		return 5
+	}
+
+	public getAddressFromDid(did: DidIdentifier) {
+		const [chainId, walletAddress] = parseAddress(did)
+		return walletAddress
 	}
 
 	public async authorize(data: AbstractSessionData): Promise<Session<SolanaSessionData>> {
-		const { topic, address, publicKey, timestamp, duration } = data
+		const {
+			topic,
+			did,
+			publicKey,
+			context: { timestamp, duration },
+		} = data
 
 		const issuedAt = new Date(timestamp)
 
-		const [_, walletAddress] = parseAddress(address)
+		const [chainId, walletAddress] = parseAddress(did)
+
+		if (chainId !== this.chainId) {
+			throw new Error("message chain id must match signer")
+		}
 
 		const message: SolanaMessage = {
+			chainId,
 			address: walletAddress,
 			topic,
 			publicKey: publicKey,
@@ -125,16 +157,21 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 			message.expirationTime = expirationTime.toISOString()
 		}
 
-		const signature = await this.#signer.sign(encodeSolanaMessage(message))
+		const signature = await this._signer.sign(encodeSolanaMessage(message))
 
 		return {
 			type: "session",
-			address: address,
+			did: did,
 			publicKey: publicKey,
 			authorizationData: { signature },
-			blockhash: null,
-			timestamp,
-			duration: this.sessionDuration,
+			context: this.sessionDuration
+				? {
+						timestamp,
+						duration: this.sessionDuration,
+					}
+				: {
+						timestamp,
+					},
 		}
 	}
 }

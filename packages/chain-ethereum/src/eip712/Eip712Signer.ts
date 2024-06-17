@@ -1,5 +1,5 @@
 import { AbstractSigner, Wallet, computeAddress, getBytes, hexlify, TypedDataField, verifyTypedData } from "ethers"
-import { Session, AbstractSessionData } from "@canvas-js/interfaces"
+import { Session, AbstractSessionData, DidIdentifier } from "@canvas-js/interfaces"
 import { assert } from "@canvas-js/utils"
 
 import { AbstractSessionSigner, decodeURI } from "@canvas-js/signatures"
@@ -25,29 +25,42 @@ export class Eip712Signer extends AbstractSessionSigner<Eip712SessionData> {
 	public readonly match = (address: string) => addressPattern.test(address)
 
 	public readonly chainId: number
-	#signer: AbstractSigner
+	_signer: AbstractSigner
 
 	constructor(init: { signer?: AbstractSigner; chainId?: number; sessionDuration?: number } = {}) {
 		super("chain-ethereum-eip712", Secp256k1SignatureScheme, { sessionDuration: init.sessionDuration })
-		this.#signer = init.signer ?? Wallet.createRandom()
+		this._signer = init.signer ?? Wallet.createRandom()
 		this.chainId = init.chainId ?? 1
 	}
 
-	// TODO: should be getUserAddress() or getWalletAddress()
-	public async getAddress(): Promise<string> {
-		const walletAddress = await this.#signer.getAddress()
-		return `eip155:${this.chainId}:${walletAddress}`
+	public async getDid(): Promise<DidIdentifier> {
+		const walletAddress = await this._signer.getAddress()
+		return `did:pkh:eip155:${this.chainId}:${walletAddress}`
+	}
+
+	public getDidParts(): number {
+		return 5
+	}
+
+	public getAddressFromDid(did: DidIdentifier) {
+		const { address } = parseAddress(did)
+		return address
 	}
 
 	public async authorize(sessionData: AbstractSessionData): Promise<Session<Eip712SessionData>> {
-		const { topic, address, publicKey, timestamp, duration } = sessionData
+		const {
+			topic,
+			did,
+			publicKey,
+			context: { timestamp, duration },
+		} = sessionData
 
 		const { type, publicKey: publicKeyBytes } = decodeURI(publicKey)
 		assert(type === Secp256k1SignatureScheme.type)
 
 		const sessionAddress = computeAddress(hexlify(publicKeyBytes))
 
-		const signature = await this.#signer.signTypedData({ name: topic }, Eip712Signer.sessionDataTypes, {
+		const signature = await this._signer.signTypedData({ name: topic }, Eip712Signer.sessionDataTypes, {
 			topic: topic,
 			sessionAddress: sessionAddress,
 			duration: duration ?? 0,
@@ -57,18 +70,16 @@ export class Eip712Signer extends AbstractSessionSigner<Eip712SessionData> {
 
 		return {
 			type: "session",
-			address: address,
+			did: did,
 			publicKey: publicKey,
 			authorizationData: { signature: getBytes(signature) },
-			duration: duration,
-			timestamp: timestamp,
-			blockhash: null,
+			context: duration ? { duration, timestamp } : { timestamp },
 		}
 	}
 
 	public verifySession(topic: string, session: Session<Eip712SessionData>) {
 		assert(validateEip712SessionData(session.authorizationData), "invalid session")
-		const { address: userAddress } = parseAddress(session.address)
+		const { address: userAddress } = parseAddress(session.did)
 
 		const { type, publicKey } = decodeURI(session.publicKey)
 		assert(type === Secp256k1SignatureScheme.type)
@@ -81,9 +92,9 @@ export class Eip712Signer extends AbstractSessionSigner<Eip712SessionData> {
 			{
 				topic: topic,
 				sessionAddress: sessionAddress,
-				duration: session.duration ?? 0,
-				timestamp: session.timestamp,
-				blockhash: session.blockhash ?? "",
+				duration: session.context.duration ?? 0,
+				timestamp: session.context.timestamp,
+				blockhash: session.context.blockhash ?? "",
 			},
 			hexlify(session.authorizationData.signature),
 		)

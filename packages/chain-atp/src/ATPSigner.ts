@@ -4,7 +4,7 @@ import * as ATP from "@atproto/api"
 // to publish ESM modules (please, it's been ten years since ES6)
 const BskyAgent = ATP.BskyAgent ?? ATP["default"].BskyAgent
 
-import type { Session, AbstractSessionData } from "@canvas-js/interfaces"
+import type { Session, AbstractSessionData, DidIdentifier } from "@canvas-js/interfaces"
 import { AbstractSessionSigner, ed25519 } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
@@ -43,30 +43,30 @@ export class ATPSigner extends AbstractSessionSigner<ATPSessionData> {
 
 	public async verifySession(topic: string, session: Session<ATPSessionData>): Promise<void> {
 		const { verificationMethod, recordArchive, recordURI, plcOperationLog } = session.authorizationData
-		await verifyLog(session.address, plcOperationLog).then((key) =>
+		await verifyLog(session.did, plcOperationLog).then((key) =>
 			assert(key === verificationMethod, "invalid verification method"),
 		)
 
-		const prefix = `at://${session.address}/`
+		const prefix = `at://${session.did}/`
 		assert(recordURI.startsWith(prefix), "invalid record URI")
 		const path = recordURI.slice(prefix.length)
 		const { commit, record } = await unpackArchive<PostRecord>(recordArchive, path)
 		await verifyCommit(verificationMethod, commit)
 
-		const message = ATPSigner.createAuthenticationMessage(topic, session.publicKey, session.address)
+		const message = ATPSigner.createAuthenticationMessage(topic, session.publicKey, session.did)
 		assert(record.text === message, "invalid app.bsky.feed.post record text")
 	}
 
-	public async getAddress(): Promise<string> {
+	public async getDid(): Promise<DidIdentifier> {
 		if (this.#session !== null) {
-			return this.#session.did
+			return this.#session.did as DidIdentifier
 		}
 
 		const sessionData = this.loadJWTSession()
 		if (sessionData !== null) {
 			this.#session = sessionData
 			await this.#agent.resumeSession(sessionData)
-			return this.#session.did
+			return this.#session.did as DidIdentifier
 		}
 
 		assert(this.options.login !== undefined, "options.login must be provided")
@@ -77,7 +77,15 @@ export class ATPSigner extends AbstractSessionSigner<ATPSessionData> {
 		this.#session = this.#agent.session
 		this.saveJWTSession(this.#session)
 
-		return this.#session.did
+		return this.#session.did as DidIdentifier
+	}
+
+	public getDidParts() {
+		return 3
+	}
+
+	public getAddressFromDid(did: DidIdentifier) {
+		return did
 	}
 
 	private loadJWTSession(): ATP.AtpSessionData | null {
@@ -94,19 +102,24 @@ export class ATPSigner extends AbstractSessionSigner<ATPSessionData> {
 	}
 
 	public async authorize(data: AbstractSessionData): Promise<Session<ATPSessionData>> {
-		const { topic, address, publicKey, timestamp, duration } = data
-		this.log("fetching plc operation log for %s", address)
-		const plcOperationLog = await fetch(`https://plc.directory/${address}/log`).then((res) => res.json())
-		const verificationMethod = await verifyLog(address, plcOperationLog)
+		const {
+			topic,
+			did,
+			publicKey,
+			context: { timestamp, duration },
+		} = data
+		this.log("fetching plc operation log for %s", did)
+		const plcOperationLog = await fetch(`https://plc.directory/${did}/log`).then((res) => res.json())
+		const verificationMethod = await verifyLog(did, plcOperationLog)
 		this.log("got plc operation log with verification method %s", verificationMethod)
 
-		const message = ATPSigner.createAuthenticationMessage(topic, publicKey, address)
+		const message = ATPSigner.createAuthenticationMessage(topic, publicKey, did)
 
-		this.log("posting authentication record for %s", address)
+		this.log("posting authentication record for %s", did)
 		const { uri, cid } = await this.#agent.post({ text: message })
 		this.log("created post %s (%c)", uri, cid)
 
-		const prefix = `at://${address}/`
+		const prefix = `at://${did}/`
 		assert(uri.startsWith(prefix), "unexpected record URI")
 		const [collection, rkey] = uri.slice(prefix.length).split("/")
 		assert(collection === "app.bsky.feed.post", "unexepcted collection NSID")
@@ -114,7 +127,7 @@ export class ATPSigner extends AbstractSessionSigner<ATPSessionData> {
 		this.log("waiting 2000ms before fetching merkle inclusion proof")
 		await new Promise((resolve) => setTimeout(resolve, 2000))
 		this.log("fetching merkle inclusion proof")
-		const result = await this.#agent.api.com.atproto.sync.getRecord({ did: address, collection, rkey })
+		const result = await this.#agent.api.com.atproto.sync.getRecord({ did: did, collection, rkey })
 		assert(result.success, "failed to fetch merkle inclusion proof from PDS")
 		this.log("got merkle inclusion proof")
 
@@ -124,7 +137,7 @@ export class ATPSigner extends AbstractSessionSigner<ATPSessionData> {
 
 		return {
 			type: "session",
-			address: address,
+			did: did,
 			publicKey: publicKey,
 			authorizationData: {
 				verificationMethod,
@@ -132,9 +145,7 @@ export class ATPSigner extends AbstractSessionSigner<ATPSessionData> {
 				recordURI: uri,
 				plcOperationLog,
 			},
-			blockhash: null,
-			duration: duration,
-			timestamp: timestamp,
+			context: duration ? { duration, timestamp } : { timestamp },
 		}
 	}
 }

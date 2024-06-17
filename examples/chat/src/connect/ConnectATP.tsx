@@ -1,5 +1,5 @@
 import React, { useCallback, useContext, useMemo, useState } from "react"
-import { TypedEventEmitter } from "@libp2p/interface"
+import { CustomEvent, TypedEventEmitter } from "@libp2p/interface"
 import { ATPSigner } from "@canvas-js/chain-atp"
 
 import { AppContext } from "../AppContext.js"
@@ -44,8 +44,9 @@ export const ConnectATP: React.FC<ConnectATPProps> = ({}) => {
 		}
 
 		const {
-			payload: { address },
+			payload: { did },
 		} = await signer.newSession(app.topic)
+		const address = did
 		setAddress(address)
 		setSessionSigner(signer)
 	}, [app])

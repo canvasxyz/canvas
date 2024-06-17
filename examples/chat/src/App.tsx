@@ -1,7 +1,6 @@
 import React, { useRef, useState } from "react"
 
 import type { SessionSigner } from "@canvas-js/interfaces"
-import { defaultBootstrapList } from "@canvas-js/core"
 import type { Contract } from "@canvas-js/core"
 
 import { useCanvas } from "@canvas-js/hooks"
@@ -17,7 +16,6 @@ import { Connect } from "./connect/index.js"
 const topic = "chat-example.canvas.xyz"
 
 export const contract = {
-	topic,
 	models: {
 		message: {
 			id: "primary",
@@ -42,18 +40,11 @@ export const App: React.FC<{}> = ({}) => {
 	const topicRef = useRef(topic)
 
 	const { app } = useCanvas({
+		start: false,
+		topic,
 		contract: { ...contract, topic: topicRef.current },
 		signers: sessionSigner ? [sessionSigner] : undefined,
 		indexHistory: false,
-		discoveryTopic: "canvas-discovery",
-		trackAllPeers: true,
-		presenceTimeout: 12 * 60 * 60 * 1000, // keep up to 12 hours of offline peers
-		bootstrapList: [
-			"/dns4/canvas-chat-discovery-staging-p0.fly.dev/tcp/443/wss/p2p/12D3KooWFtS485QGEZwquMQbq7MZTMxiuHs6xUKEi664i4yWUhWa",
-			"/dns4/canvas-chat-discovery-staging-p1.fly.dev/tcp/443/wss/p2p/12D3KooWPix1mT8QavTjfiha3hWy85dQDgPb9VWaxRhY8Yq3cC7L",
-			"/dns4/canvas-chat-discovery-staging-p2.fly.dev/tcp/443/wss/p2p/12D3KooWRbxAWmpvc9U7q1ftBTd3bKa1iQ2rn6RkwRb1d9K7hVg5",
-			...defaultBootstrapList,
-		],
 	})
 
 	return (
@@ -67,7 +58,7 @@ export const App: React.FC<{}> = ({}) => {
 							</div>
 							<MessageComposer />
 						</div>
-						<div className="min-w-[480px] flex flex-col gap-4">
+						<div className="min-w-max flex flex-col gap-4">
 							<Connect />
 							<SessionStatus />
 							<ConnectionStatus topic={topicRef.current} />

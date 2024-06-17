@@ -20,7 +20,6 @@
 		{ "path": "../../packages/chain-solana" },
 		{ "path": "../../packages/chain-substrate" },
 		{ "path": "../../packages/core" },
-		{ "path": "../../packages/discovery" },
 		{ "path": "../../packages/hooks" },
 		{ "path": "../../packages/interfaces" },
 		{ "path": "../../packages/modeldb" }

@@ -1,8 +1,5 @@
-import type { PeerId } from "@libp2p/interface"
 import { anySignal } from "any-signal"
 import * as cbor from "@ipld/dag-cbor"
-
-import { lessThan } from "@canvas-js/okra"
 
 export class SyncDeadlockError extends Error {}
 export class SyncTimeoutError extends Error {}
@@ -24,26 +21,6 @@ export function* getAncestorClocks(clock: number): Iterable<number> {
 			break
 		}
 	}
-}
-
-export function sortPair(a: PeerId, b: PeerId): [x: PeerId, y: PeerId] {
-	if (lessThan(a.multihash.digest, b.multihash.digest)) {
-		return [a, b]
-	} else {
-		return [b, a]
-	}
-}
-
-export async function collect<I, O = I>(iter: AsyncIterable<I>, map?: (value: I) => O): Promise<O[]> {
-	const values: O[] = []
-	for await (const value of iter) {
-		if (map === undefined) {
-			values.push(value as O)
-		} else {
-			values.push(map(value))
-		}
-	}
-	return values
 }
 
 export async function wait(interval: number, options: { signal: AbortSignal }) {
@@ -76,12 +53,5 @@ export class DelayableController {
 		this.#timer = setTimeout(() => {
 			this.#controller.abort()
 		}, this.#interval)
-	}
-}
-
-export function shuffle<T>(array: T[]) {
-	for (let i = array.length - 1; i > 0; i--) {
-		const j = Math.floor(Math.random() * (i + 1))
-		;[array[i], array[j]] = [array[j], array[i]]
 	}
 }

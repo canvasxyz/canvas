@@ -29,7 +29,7 @@ const { id: idC } = await app.actions.createPost({ content: "baz" }) // 0j77pkou
 await app.db.get("posts", idA)
 // {
 //   id: '08arkku017tl90n9dptlkkd62vooji11',
-//   user: 'eip155:1:0x8A876c44064b77b36Cb3e0524DeeC1416858bDE6',
+//   user: 'did:pkh:eip155:1:0x8A876c44064b77b36Cb3e0524DeeC1416858bDE6',
 //   content: 'foo',
 //   updated_at: 1698344798345
 // }
@@ -63,19 +63,19 @@ const results = await app.db.query("posts", {})
 // [
 //   {
 //     id: '08arkku017tl90n9dptlkkd62vooji11',
-//     user: 'eip155:1:0x8A876c44064b77b36Cb3e0524DeeC1416858bDE6',
+//     user: 'did:pkh:eip155:1:0x8A876c44064b77b36Cb3e0524DeeC1416858bDE6',
 //     content: 'foo',
 //     updated_at: 1698344798345
 //   },
 //   {
 //     id: '0cfag48t05mags2lhdt9idn3cbpubl1e',
-//     user: 'eip155:1:0x8A876c44064b77b36Cb3e0524DeeC1416858bDE6',
+//     user: 'did:pkh:eip155:1:0x8A876c44064b77b36Cb3e0524DeeC1416858bDE6',
 //     content: 'bar',
 //     updated_at: 1698344798363
 //   },
 //   {
 //     id: '0j77pkoundspspv1dgkppvceduu8s2t1',
-//     user: 'eip155:1:0x8A876c44064b77b36Cb3e0524DeeC1416858bDE6',
+//     user: 'did:pkh:eip155:1:0x8A876c44064b77b36Cb3e0524DeeC1416858bDE6',
 //     content: 'baz',
 //     updated_at: 1698344798366
 //   }

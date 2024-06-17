@@ -16,6 +16,7 @@ import { Action, Message, Session, Signature } from "@canvas-js/interfaces"
 import { Canvas } from "./Canvas.js"
 
 import { PING_TIMEOUT } from "./constants.js"
+import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 
 export interface APIOptions {
 	exposeModels?: boolean
@@ -51,7 +52,7 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 
 	api.get("/messages/:id", async (req, res) => {
 		const { id } = req.params
-		const [signature, message] = await app.messageLog.get(id)
+		const [signature, message] = await app.getMessage(id)
 		if (signature === null || message === null) {
 			return res.status(StatusCodes.NOT_FOUND).end()
 		}
@@ -63,39 +64,28 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 
 	api.get("/messages", async (req, res) => {
 		const { gt, gte, lt, lte, order, type } = req.query
+		assert(gt === undefined || typeof gt === "string", "invalid `gt` query parameter")
+		assert(gte === undefined || typeof gte === "string", "invalid `gte` query parameter")
+		assert(lt === undefined || typeof lt === "string", "invalid `lt` query parameter")
+		assert(lte === undefined || typeof lte === "string", "invalid `lte` query parameter")
 
-		const limit = typeof req.query.limit === "string" ? Math.min(64, parseInt(req.query.limit)) : 64
+		let limit = 64
+		if (typeof req.query.limit === "string") {
+			limit = parseInt(req.query.limit)
+		}
 
-		assert(Number.isSafeInteger(limit) && limit > 0, "invalid `limit` query parameter")
-		assert(type === undefined || type === "action" || type === "session", "invalid `type` query parameter")
+		assert(Number.isSafeInteger(limit) && 0 < limit && limit <= 64, "invalid `limit` query parameter")
+
+		// TODO: add `type` back
+		// assert(type === undefined || type === "action" || type === "session", "invalid `type` query parameter")
 		assert(order === undefined || order === "asc" || order === "desc", "invalid `order` query parameter")
-
-		let lowerBound: { id: string; inclusive: boolean } | null = null
-		let upperBound: { id: string; inclusive: boolean } | null = null
-
-		if (typeof gte === "string") {
-			lowerBound = { id: gte, inclusive: true }
-		} else if (typeof gt === "string") {
-			lowerBound = { id: gt, inclusive: false }
-		}
-
-		if (typeof lt === "string") {
-			upperBound = { id: lt, inclusive: false }
-		} else if (typeof lte === "string") {
-			upperBound = { id: lte, inclusive: true }
-		}
 
 		const reverse = order === "desc"
 
 		const results: [id: string, signature: Signature, message: Message<Action | Session>][] = []
-		for await (const [id, signature, message] of app.getMessages(lowerBound, upperBound, { reverse })) {
-			if (type !== undefined && type !== message.payload.type) {
-				continue
-			}
 
-			if (results.push([id, signature, message]) >= limit) {
-				break
-			}
+		for (const { id, signature, message } of await app.messageLog.export({ gt, gte, lt, lte, reverse, limit })) {
+			results.push([id, signature, message])
 		}
 
 		res.status(StatusCodes.OK)
@@ -112,7 +102,7 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 			res.end()
 		} catch (e) {
 			console.error(e)
-			return res.status(StatusCodes.BAD_REQUEST).end()
+			return res.status(StatusCodes.BAD_REQUEST).end(`${e}`)
 		}
 	})
 
@@ -137,32 +127,28 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 
 	if (options.exposeP2P) {
 		api.get("/connections", (req, res) => {
-			if (app.libp2p === null) {
-				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end("Offline")
-				return
-			}
-
-			const result: Record<string, { peer: string; addr: string; streams: Record<string, string | null> }> = {}
+			const results: {
+				id: string
+				remotePeer: string
+				remoteAddr: string
+				streams: { id: string; protocol: string | null }[]
+			}[] = []
 
 			for (const { id, remotePeer, remoteAddr, streams } of app.libp2p.getConnections()) {
-				result[id] = {
-					peer: remotePeer.toString(),
-					addr: remoteAddr.toString(),
-					streams: Object.fromEntries(streams.map((stream) => [stream.id, stream.protocol ?? null])),
-				}
+				results.push({
+					id,
+					remotePeer: remotePeer.toString(),
+					remoteAddr: remoteAddr.toString(),
+					streams: streams.map(({ id, protocol }) => ({ id, protocol: protocol ?? null })),
+				})
 			}
 
-			res.json(result)
+			res.json(results)
 		})
 
-		api.get("/peers", (req, res) => {
-			if (app.libp2p === null) {
-				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end("Offline")
-				return
-			}
-
-			const peers = app.libp2p.services.pubsub.getPeers().map((peerId) => peerId.toString())
-			res.json(peers)
+		api.get("/mesh/:topic", (req, res) => {
+			const gossipsub = app.libp2p.services.pubsub as GossipSub
+			res.json(gossipsub.getMeshPeers(req.params.topic))
 		})
 
 		api.post("/ping/:peerId", async (req, res) => {
@@ -242,8 +228,8 @@ export function createMetricsAPI(app: Canvas): express.Express {
 		canvasMetrics.canvas_messages.inc({ topic: message.topic, type: message.payload.type })
 	})
 
-	app.messageLog.addEventListener("sync", ({ detail: { peer, duration } }) => {
-		canvasMetrics.canvas_sync_time.observe({ topic: app.messageLog.topic, peer }, duration)
+	app.messageLog.addEventListener("sync", ({ detail: { peerId, duration } }) => {
+		canvasMetrics.canvas_sync_time.observe({ topic: app.messageLog.topic, peer: peerId }, duration)
 	})
 
 	const api = express()

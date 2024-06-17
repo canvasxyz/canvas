@@ -83,13 +83,13 @@ function HomePage() {
 
 									return (
 										<tr key={cid}>
-											<td className="break-all px-3 py-2">{message.payload.address.slice(0, 20)}...</td>
+											<td className="break-all px-3 py-2">{message.payload.did.slice(0, 20)}...</td>
 											<td className="break-all px-3">{message.payload.name}</td>
 											<td className="break-all px-1">
 												<ArgsPopout data={JSON.stringify(message.payload.args)} />
 											</td>
 											<td className="break-all px-3">
-												{formatDistanceCustom(message.payload.timestamp).replace("about ", "~")} ago
+												{formatDistanceCustom(message.payload.context.timestamp).replace("about ", "~")} ago
 											</td>
 										</tr>
 									)

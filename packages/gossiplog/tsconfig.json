@@ -7,5 +7,10 @@
 		"rootDir": "src",
 		"outDir": "lib"
 	},
-	"references": [{ "path": "../interfaces" }, { "path": "../utils" }, { "path": "../signatures" }]
+	"references": [
+		{ "path": "../interfaces" },
+		{ "path": "../utils" },
+		{ "path": "../signatures" },
+		{ "path": "../modeldb" }
+	]
 }

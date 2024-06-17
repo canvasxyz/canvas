@@ -1,6 +1,8 @@
-import { PeerId, TypedEventEmitter, CustomEvent, Connection } from "@libp2p/interface"
+import { PeerId, TypedEventEmitter, CustomEvent } from "@libp2p/interface"
 import { Libp2p } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
+import { sha256 } from "@noble/hashes/sha2"
+import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 
 import type pg from "pg"
 
@@ -8,8 +10,6 @@ import { Signature, Action, Session, Message, Signer, SessionSigner, SignerCache
 import { AbstractModelDB, Model } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { AbstractGossipLog, GossipLogEvents } from "@canvas-js/gossiplog"
-import { GossipLogService } from "@canvas-js/gossiplog/service"
-import type { PresenceStore } from "@canvas-js/discovery"
 import type { AbstractSessionSigner } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
@@ -20,9 +20,11 @@ import type { ServiceMap } from "./targets/interface.js"
 import { Runtime, createRuntime } from "./runtime/index.js"
 import { validatePayload } from "./schema.js"
 
+export type { Model } from "@canvas-js/modeldb"
+export type { PeerId } from "@libp2p/interface"
+
 export interface NetworkConfig {
-	offline?: boolean
-	disablePing?: boolean
+	start?: boolean
 
 	/** array of local WebSocket multiaddrs, e.g. "/ip4/127.0.0.1/tcp/3000/ws" */
 	listen?: string[]
@@ -33,33 +35,21 @@ export interface NetworkConfig {
 	bootstrapList?: string[]
 	minConnections?: number
 	maxConnections?: number
-
-	discoveryTopic?: string
-	discoveryInterval?: number
-	trackAllPeers?: boolean
-	presenceTimeout?: number
-
-	enableWebRTC?: boolean
 }
 
 export interface CanvasConfig<T extends Contract = Contract> extends NetworkConfig {
+	topic?: string
 	contract: string | T
 	signers?: SessionSigner[]
 
 	/** data directory path (NodeJS/sqlite), or postgres connection config (NodeJS/pg) */
 	path?: string | pg.ConnectionConfig | null
 
-	/** provide an existing libp2p instance instead of creating a new one */
-	libp2p?: Libp2p<ServiceMap>
-
 	/** set to `false` to disable history indexing and db.get(..) within actions */
 	indexHistory?: boolean
 
 	/** set a memory limit for the quickjs runtime, only used if `contract` is a string */
 	runtimeMemoryLimit?: number
-
-	/** don't throw an error when invalid messages are received */
-	ignoreMissingActions?: boolean
 
 	reset?: boolean
 }
@@ -71,18 +61,10 @@ export type ActionAPI<Args = any> = (
 	options?: ActionOptions,
 ) => Promise<{ id: string; signature: Signature; message: Message<Action>; recipients: Promise<PeerId[]> }>
 
-export type ConnectionsInfo = { connections: Connections; status: AppConnectionStatus }
-export type PresenceInfo = { peer: PeerId; peers: PresenceStore }
-
 export interface CanvasEvents extends GossipLogEvents<Action | Session> {
-	close: Event
-	connect: CustomEvent<{ peer: PeerId }>
-	disconnect: CustomEvent<{ peer: PeerId }>
-	"connections:updated": CustomEvent<ConnectionsInfo>
-	"presence:join": CustomEvent<
-		PresenceInfo & { peerId: PeerId; env: "browser" | "server"; address: string | null; topics: string[] }
-	>
-	"presence:leave": CustomEvent<PresenceInfo>
+	stop: Event
+	connect: CustomEvent<{ peer: string }>
+	disconnect: CustomEvent<{ peer: string }>
 }
 
 export type CanvasLogEvent = CustomEvent<{
@@ -92,17 +74,12 @@ export type CanvasLogEvent = CustomEvent<{
 }>
 
 export type ApplicationData = {
-	peerId: string
 	topic: string
 	models: Record<string, Model>
 	actions: string[]
-}
-export { Model } from "@canvas-js/modeldb"
 
-export type AppConnectionStatus = "connected" | "disconnected"
-export type ConnectionStatus = "connecting" | "online" | "offline" | "waiting"
-export type Connections = Record<string, { peer: PeerId; status: ConnectionStatus; connections: Connection[] }>
-export { PeerId, Connection } from "@libp2p/interface"
+	peerId: string
+}
 
 export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<CanvasEvents> {
 	public static async initialize<T_ extends Contract>(config: CanvasConfig<T_>): Promise<Canvas<T_>> {
@@ -112,30 +89,33 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			signers: initSigners = [],
 			runtimeMemoryLimit,
 			indexHistory = true,
-			ignoreMissingActions = false,
-			offline,
-			disablePing,
 			reset = false,
 		} = config
 
 		const signers = new SignerCache(initSigners.length === 0 ? [new SIWESigner()] : initSigners)
+
 		const verifySignature = (signature: Signature, message: Message<Action | Session>) => {
 			const signer = signers.getAll().find((signer) => signer.scheme.codecs.includes(signature.codec))
 			assert(signer !== undefined, "no matching signer found")
 			return signer.scheme.verify(signature, message)
 		}
 
-		const runtime = await createRuntime(path, signers, contract, {
+		let topic = config.topic
+		if (topic === undefined) {
+			if (typeof contract === "string") {
+				topic = bytesToHex(sha256(contract))
+			} else {
+				topic = bytesToHex(randomBytes(32))
+			}
+		}
+
+		const runtime = await createRuntime(path, topic, signers, contract, {
 			runtimeMemoryLimit,
-			ignoreMissingActions,
 			clearModelDB: reset,
+			indexHistory: indexHistory,
 		})
 
-		const topic = runtime.topic
-
-		const libp2p = await Promise.resolve(config.libp2p ?? target.createLibp2p({ topic, path }, { ...config, signers }))
-
-		const gossipLog = await target.openGossipLog<Action | Session>(
+		const messageLog = await target.openGossipLog(
 			{ topic, path, clear: reset },
 			{
 				topic: runtime.topic,
@@ -146,9 +126,9 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			},
 		)
 
-		await libp2p.services.gossiplog.subscribe(gossipLog, {})
+		const libp2p = await target.createLibp2p(messageLog, { ...config, signers })
 
-		return new Canvas(signers, libp2p, gossipLog, runtime, offline, disablePing)
+		return new Canvas(signers, messageLog, libp2p, runtime)
 	}
 
 	public readonly db: AbstractModelDB
@@ -156,135 +136,37 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		[K in keyof T["actions"]]: T["actions"][K] extends ActionImplementationFunction<infer Args>
 			? ActionAPI<Args>
 			: T["actions"][K] extends ActionImplementationObject<infer Args>
-			? ActionAPI<Args>
-			: never
+				? ActionAPI<Args>
+				: never
 	}
 
-	public readonly connections: Connections = {}
-	public status: AppConnectionStatus = "disconnected"
-
-	// TODO: encapsulate internal stores for peers and connections
-	private _peers: PeerId[] = []
-	private _connections: Connection[] = []
-	private _pingTimer: ReturnType<typeof setTimeout> | undefined
-
-	private readonly _abortController = new AbortController()
-	private readonly _log = logger("canvas:core")
-
-	#open = true
+	private readonly controller = new AbortController()
+	private readonly log = logger("canvas:core")
 
 	private constructor(
 		public readonly signers: SignerCache,
-		public readonly libp2p: Libp2p<ServiceMap>,
 		public readonly messageLog: AbstractGossipLog<Action | Session>,
+		public readonly libp2p: Libp2p<ServiceMap>,
 		private readonly runtime: Runtime,
-		offline?: boolean,
-		disablePing?: boolean,
 	) {
 		super()
 		this.db = runtime.db
 
-		this._log("initialized with peerId %p", libp2p.peerId)
+		this.log("initialized with peerId %p", libp2p.peerId)
 
 		this.libp2p.addEventListener("peer:discovery", ({ detail: { id, multiaddrs } }) => {
-			this._log("discovered peer %p with addresses %o", id, multiaddrs)
+			this.log("discovered peer %p with addresses %o", id, multiaddrs)
 		})
 
 		this.libp2p.addEventListener("peer:connect", ({ detail: peerId }) => {
-			this._log("connected to %p", peerId)
+			this.log("connected to %p", peerId)
 			this.dispatchEvent(new CustomEvent("connect", { detail: { peer: peerId.toString() } }))
-			this._peers = [...this._peers, peerId]
 		})
 
 		this.libp2p.addEventListener("peer:disconnect", ({ detail: peerId }) => {
-			this._log("disconnected %p", peerId)
+			this.log("disconnected %p", peerId)
 			this.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: peerId.toString() } }))
-			this._peers = this._peers.filter((peer) => peer.toString() !== peerId.toString())
-			delete this.connections[peerId.toString()]
-			this.updateStatus()
 		})
-
-		this.libp2p.services.discovery.addEventListener(
-			"presence:join",
-			({ detail: { peerId, env, address, topics, peers } }) => {
-				this._log("discovered peer %p with addresses %o", peerId)
-				this.dispatchEvent(
-					new CustomEvent("presence:join", { detail: { peerId, env, address, topics, peers: { ...peers } } }),
-				)
-			},
-		)
-
-		this.libp2p.services.discovery.addEventListener("presence:leave", ({ detail: { peerId, peers } }) => {
-			this._log("discovered peer %p with addresses %o", peerId)
-			this.dispatchEvent(new CustomEvent("presence:leave", { detail: { peerId, peers: { ...peers } } }))
-		})
-
-		this.libp2p.addEventListener("connection:open", ({ detail: connection }) => {
-			this._connections = [...this._connections, connection]
-			const remotePeerId = connection.remoteAddr.getPeerId()?.toString()
-			if (remotePeerId && !this.connections[remotePeerId]) {
-				const peer = this._peers.find((peer) => peer.toString() === remotePeerId)
-				if (!peer) return
-				this.connections[remotePeerId] = {
-					peer,
-					status: "connecting",
-					connections: [connection],
-				}
-				this.dispatchEvent(
-					new CustomEvent("connections:updated", { detail: { connections: this.connections, status: this.status } }),
-				)
-			}
-		})
-		this.libp2p.addEventListener("connection:close", ({ detail: connection }) => {
-			this._connections = this._connections.filter(({ id }) => id !== connection.id)
-			const remotePeerId = connection.remoteAddr.getPeerId()?.toString()
-			if (remotePeerId && this.connections[remotePeerId]) {
-				this.connections[remotePeerId].connections = this.connections[remotePeerId].connections.filter(
-					({ id }) => id !== connection.id,
-				)
-				this.updateStatus()
-			}
-		})
-
-		const startPingTimer = () => {
-			this._pingTimer = setInterval(() => {
-				const subscribers = this.libp2p.services.pubsub.getSubscribers(GossipLogService.topicPrefix + this.topic)
-				const pings = this._peers.map((peer) =>
-					this.libp2p.services.ping
-						.ping(peer)
-						.then((msec) => {
-							this.connections[peer.toString()] = {
-								peer,
-								status: subscribers.find((p) => p.toString() === peer.toString()) ? "online" : "waiting",
-								connections: this._connections.filter((conn) => conn.remotePeer.toString() === peer.toString()),
-							}
-						})
-						.catch((err) => {
-							this.connections[peer.toString()] = {
-								peer,
-								status: "offline",
-								connections: this._connections.filter((conn) => conn.remotePeer.toString() === peer.toString()),
-							}
-						}),
-				)
-				Promise.allSettled(pings).then(() => {
-					this.updateStatus()
-					this.dispatchEvent(
-						new CustomEvent("connections:updated", {
-							detail: { connections: { ...this.connections }, status: this.status },
-						}),
-					)
-				})
-			}, 3000)
-		}
-
-		if (offline && !disablePing) {
-			this.libp2p.addEventListener("start", (event) => startPingTimer())
-		} else if (!disablePing) {
-			startPingTimer()
-		}
-
-		this.libp2p.addEventListener("stop", (event) => clearInterval(this._pingTimer))
 
 		this.messageLog.addEventListener("message", (event) => this.safeDispatchEvent("message", event))
 		this.messageLog.addEventListener("commit", (event) => this.safeDispatchEvent("commit", event))
@@ -302,7 +184,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 				// check that a session for the delegate signer exists in the log and hasn't expired
 				if (session !== null) {
 					const sessionIds = await this.getSessions({
-						address: session.payload.address,
+						address: session.payload.did,
 						publicKey: session.signer.publicKey,
 						minExpiration: timestamp,
 					})
@@ -328,16 +210,17 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 				const { id, signature, message, recipients } = await this.append<Action>(
 					{
 						type: "action",
-						address: session.payload.address,
+						did: session.payload.did,
 						name,
 						args: argsRepresentation,
-						blockhash: null,
-						timestamp,
+						context: {
+							timestamp,
+						},
 					},
 					{ signer: session.signer },
 				)
 
-				this._log("applied action %s", id)
+				this.log("applied action %s", id)
 
 				return { id, signature, message, recipients }
 			}
@@ -380,17 +263,6 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		this.signers.updateSigners(signers)
 	}
 
-	private updateStatus() {
-		const hasAnyOnline = Object.entries(this.connections).some(([peerId, conn]) => conn.status === "online")
-		const newStatus = hasAnyOnline ? "connected" : "disconnected"
-		if (this.status !== newStatus) {
-			this.dispatchEvent(
-				new CustomEvent("connections:updated", { detail: { connections: { ...this.connections }, status: newStatus } }),
-			)
-		}
-		this.status = newStatus
-	}
-
 	public get peerId(): PeerId {
 		return this.libp2p.peerId
 	}
@@ -399,17 +271,13 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		return this.messageLog.topic
 	}
 
-	public async close() {
-		if (this.#open) {
-			this.#open = false
-			this._abortController.abort()
-			await this.libp2p.stop()
-			await this.messageLog.close()
-			await this.runtime.close()
-			this.dispatchEvent(new CustomEvent("connections:updated", { detail: { connections: {} } }))
-			this.dispatchEvent(new Event("close"))
-			this._log("closed")
-		}
+	public async stop() {
+		this.controller.abort()
+		await this.libp2p.stop()
+		await this.messageLog.close()
+		await this.runtime.close()
+		this.log("stopped")
+		this.dispatchEvent(new Event("stop"))
 	}
 
 	public getApplicationData(): ApplicationData {
@@ -427,10 +295,13 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 	 * Low-level utility method for internal and debugging use.
 	 * The normal way to apply actions is to use the `Canvas.actions[name](...)` functions.
 	 */
-	public async insert(signature: Signature, message: Message<Session | Action>): Promise<{ id: string }> {
+	public async insert(
+		signature: Signature,
+		message: Message<Session | Action>,
+	): Promise<{ id: string; recipients: Promise<PeerId[]> }> {
 		assert(message.topic === this.topic, "invalid message topic")
-		const { id } = await this.libp2p.services.gossiplog.insert(signature, message)
-		return { id }
+		const { id, recipients } = await this.libp2p.services.gossiplog.insert(signature, message)
+		return { id, recipients }
 	}
 
 	/**
@@ -442,9 +313,10 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 	 */
 	public async append<Payload extends Session | Action>(
 		payload: Payload,
-		options: { signer?: Signer<Payload> },
+		options: { signer?: Signer<Session | Action> },
 	): Promise<{ id: string; signature: Signature; message: Message<Payload>; recipients: Promise<PeerId[]> }> {
-		return this.libp2p.services.gossiplog.append(this.topic, payload, options)
+		const { id, signature, message, recipients } = await this.libp2p.services.gossiplog.append(payload, options)
+		return { id, signature, message: message as Message<Payload>, recipients }
 	}
 
 	public async getMessage(
@@ -453,13 +325,13 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		return await this.messageLog.get(id)
 	}
 
-	public async *getMessages(
-		lowerBound: { id: string; inclusive: boolean } | null = null,
-		upperBound: { id: string; inclusive: boolean } | null = null,
-		options: { reverse?: boolean } = {},
-	): AsyncIterable<[id: string, signature: Signature, message: Message<Action | Session>]> {
-		yield* this.messageLog.iterate(lowerBound, upperBound, options)
-	}
+	// public async *getMessages(
+	// 	lowerBound: { id: string; inclusive: boolean } | null = null,
+	// 	upperBound: { id: string; inclusive: boolean } | null = null,
+	// 	options: { reverse?: boolean } = {},
+	// ): AsyncIterable<[id: string, signature: Signature, message: Message<Action | Session>]> {
+	// 	yield* this.messageLog.iterate(lowerBound, upperBound, options)
+	// }
 
 	/**
 	 * Get an existing session

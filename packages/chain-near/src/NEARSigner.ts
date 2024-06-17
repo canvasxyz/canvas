@@ -3,7 +3,7 @@ import { KeyPair } from "near-api-js"
 import { PublicKey } from "@near-js/crypto"
 import { ed25519 } from "@noble/curves/ed25519"
 
-import type { Session, AbstractSessionData } from "@canvas-js/interfaces"
+import type { Session, AbstractSessionData, DidIdentifier } from "@canvas-js/interfaces"
 import { AbstractSessionSigner, ed25519 as Ed25519SignatureScheme } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
@@ -33,9 +33,14 @@ export class NEARSigner extends AbstractSessionSigner<NEARSessionData> {
 	}
 
 	public verifySession(topic: string, session: Session) {
-		const { publicKey, address, authorizationData: data, timestamp, duration } = session
+		const {
+			publicKey,
+			did,
+			authorizationData: data,
+			context: { timestamp, duration },
+		} = session
 		assert(validateSessionData(data), "invalid session")
-		const [chain, walletAddress] = parseAddress(address)
+		const [chain, walletAddress] = parseAddress(did)
 
 		const walletAddressFromPublicKey = new PublicKey({ keyType: 0, data: data.publicKey }).toString().split(":")[1]
 		assert(walletAddress == walletAddressFromPublicKey, "the wallet address does not match the public key")
@@ -48,7 +53,7 @@ export class NEARSigner extends AbstractSessionSigner<NEARSessionData> {
 			expirationTime: null,
 		}
 
-		if (duration !== null) {
+		if (duration !== undefined) {
 			message.expirationTime = new Date(timestamp + duration).toISOString()
 		}
 
@@ -56,13 +61,27 @@ export class NEARSigner extends AbstractSessionSigner<NEARSessionData> {
 		assert(valid, "invalid signature")
 	}
 
-	public getAddress(): string {
+	public getDid(): DidIdentifier {
 		const walletAddress = this.#address
-		return `${this.chainId}:${walletAddress}`
+		return `did:${this.chainId}:${walletAddress}`
+	}
+
+	public getDidParts(): number {
+		return 5
+	}
+
+	public getAddressFromDid(did: DidIdentifier) {
+		const [_, walletAddress] = parseAddress(did)
+		return walletAddress
 	}
 
 	public async authorize(data: AbstractSessionData): Promise<Session<NEARSessionData>> {
-		const { topic, address, publicKey, timestamp, duration } = data
+		const {
+			topic,
+			did,
+			publicKey,
+			context: { timestamp, duration },
+		} = data
 		const issuedAt = new Date(timestamp)
 
 		const message: NEARMessage = {
@@ -86,12 +105,10 @@ export class NEARSigner extends AbstractSessionSigner<NEARSessionData> {
 
 		return {
 			type: "session",
-			address: address,
+			did: did,
 			publicKey: publicKey,
 			authorizationData: { signature, publicKey: publicKeyData },
-			blockhash: null,
-			timestamp: timestamp,
-			duration: duration,
+			context: duration ? { duration, timestamp } : { timestamp },
 		}
 	}
 }

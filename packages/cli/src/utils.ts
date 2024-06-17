@@ -6,6 +6,7 @@ import chalk from "chalk"
 import prompts from "prompts"
 
 export const CONTRACT_FILENAME = "contract.canvas.js"
+export const CONFIG_FILENAME = "canvas.json"
 
 export function getContractLocation(args: { path: string; init?: string; memory?: boolean }): {
 	contract: string
