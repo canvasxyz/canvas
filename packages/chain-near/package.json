@@ -15,11 +15,11 @@
     "@canvas-js/utils": "0.10.0-beta.2",
     "@ipld/dag-cbor": "^9.2.0",
     "@ipld/dag-json": "^10.1.5",
-    "@libp2p/logger": "^4.0.13",
+    "@libp2p/logger": "^4.0.14",
     "@near-js/crypto": "^0.0.5",
     "@noble/curves": "^1.4.0",
     "bs58": "^5.0.0",
-    "multiformats": "^13.0.1",
+    "multiformats": "^13.1.1",
     "near-api-js": "^2.1.4"
   },
   "devDependencies": {
