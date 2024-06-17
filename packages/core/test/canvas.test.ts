@@ -14,6 +14,8 @@ export const models = {
   posts: {
     id: "primary",
     content: "string",
+    address: "string",
+    did: "string",
     timestamp: "integer",
     isVisible: "boolean",
 		metadata: "json"
@@ -21,9 +23,9 @@ export const models = {
 };
 
 export const actions = {
-  async createPost(db, { content, isVisible, metadata }, { id, did, timestamp }) {
+  async createPost(db, { content, isVisible, metadata }, { id, did, address, timestamp }) {
     const postId = [did, id].join("/")
-    await db.set("posts", { id: postId, content, isVisible, timestamp, metadata });
+    await db.set("posts", { id: postId, content, address, did, isVisible, timestamp, metadata });
   },
 
   async deletePost(db, key, { did }) {
@@ -44,13 +46,14 @@ const init = async (t: ExecutionContext) => {
 	const signer = new SIWESigner()
 	const app = await Canvas.initialize({ contract, start: false, reset: true, signers: [signer] })
 	t.teardown(() => app.stop())
-	return app
+	return { app, signer }
 }
 
 const initEIP712 = async (t: ExecutionContext) => {
-	const app = await Canvas.initialize({ contract, start: false, reset: true, signers: [new Eip712Signer()] })
+	const signer = new Eip712Signer()
+	const app = await Canvas.initialize({ contract, start: false, reset: true, signers: [signer] })
 	t.teardown(() => app.stop())
-	return app
+	return { app, signer }
 }
 
 // const { POSTGRES_HOST, POSTGRES_PORT } = process.env
@@ -132,9 +135,9 @@ const initEIP712 = async (t: ExecutionContext) => {
 // })
 
 test("reject an invalid message", async (t) => {
-	const app = await init(t)
+	const { app } = await init(t)
 
-	const signer = ed25519.create()
+	const scheme = ed25519.create()
 	const invalidMessage: Message<{ type: "fjdskl" }> = {
 		topic: app.topic,
 		clock: 1,
@@ -142,7 +145,7 @@ test("reject an invalid message", async (t) => {
 		payload: { type: "fjdskl" },
 	}
 
-	const signature = signer.sign(invalidMessage)
+	const signature = scheme.sign(invalidMessage)
 	await t.throwsAsync(() => app.insert(signature, invalidMessage as any), {
 		message: "error encoding message (invalid payload)",
 	})
@@ -294,7 +297,7 @@ test("get a value set by another action", async (t) => {
 // })
 
 test("apply an action and read a record from the database using eip712", async (t) => {
-	const app = await initEIP712(t)
+	const { app, signer } = await initEIP712(t)
 
 	const { id, message } = await app.actions.createPost({
 		content: "hello world",
@@ -320,6 +323,25 @@ test("apply an action and read a record from the database using eip712", async (
 	const postId2 = [message2.payload.did, id2].join("/")
 	const value2 = await app.db.get("posts", postId2)
 	t.is(value2?.content, "foo bar")
+})
+
+test("call quickjs contract with did uri and wallet address", async (t) => {
+	const { app, signer } = await initEIP712(t)
+	const address = await signer._signer.getAddress()
+
+	const { id, message } = await app.actions.createPost({
+		content: "hello world",
+		isVisible: true,
+		something: -1,
+		metadata: 0,
+	})
+
+	t.log(`applied action ${id}`)
+
+	const postId = [message.payload.did, id].join("/")
+	const value = await app.db.get("posts", postId)
+	t.is(value?.address, address)
+	t.is(value?.did, `did:pkh:eip155:1:${address}`)
 })
 
 // test.serial("apply an action and read a record from the database using postgres", async (t) => {

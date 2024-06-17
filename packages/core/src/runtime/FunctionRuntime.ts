@@ -92,7 +92,6 @@ export class FunctionRuntime extends AbstractRuntime {
 	}
 
 	protected async execute(context: ExecutionContext): Promise<void | any> {
-		console.log("exec FR")
 		const { publicKey } = context.signature
 		const { address } = context
 		const {

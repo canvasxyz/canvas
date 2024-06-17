@@ -139,7 +139,6 @@ export class ContractRuntime extends AbstractRuntime {
 	}
 
 	protected async execute(context: ExecutionContext): Promise<void | any> {
-		console.log("exec CR")
 		const { publicKey } = context.signature
 		const { address } = context
 		const {
