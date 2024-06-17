@@ -32,7 +32,7 @@ testOnModelDB("create modeldb with a model with invalid fields should fail", asy
 		},
 	} as ModelsInit
 
-	await t.throwsAsync(() => openDB(t, models), { message: `invalid property "unsupported"` })
+	await t.throwsAsync(() => openDB(t, models), { message: `error defining room: invalid property "unsupported"` })
 })
 
 testOnModelDB("create modeldb with a model with an optional json field should fail", async (t, openDB) => {
@@ -43,7 +43,9 @@ testOnModelDB("create modeldb with a model with an optional json field should fa
 		},
 	} as ModelsInit
 
-	await t.throwsAsync(() => openDB(t, models), { message: `field "name" is invalid - json fields cannot be optional` })
+	await t.throwsAsync(() => openDB(t, models), {
+		message: `error defining room: field "name" is invalid - json fields cannot be optional`,
+	})
 })
 
 testOnModelDB("create a model without a primary key", async (t, openDB) => {
