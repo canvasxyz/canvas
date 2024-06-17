@@ -18,12 +18,10 @@ import { zip } from "@canvas-js/utils"
 
 import { AbstractGossipLog, GossipLogInit, encodeId, decodeClock } from "@canvas-js/gossiplog"
 import { GossipLog as GossipLogSqlite } from "@canvas-js/gossiplog/sqlite"
-// import { GossipLog as GossipLogNode } from "@canvas-js/gossiplog/node"
 import { GossipLog as GossipLogIdb } from "@canvas-js/gossiplog/idb"
-// import { GossipLog as GossipLogMemory } from "@canvas-js/gossiplog/memory"
-// import { GossipLog as GossipLogPostgres } from "@canvas-js/gossiplog/pg"
+import { GossipLog as GossipLogPostgres } from "@canvas-js/gossiplog/pg"
 
-// @ts-expect-error
+// @ts-expect-error TS2322
 globalThis.AbortController = AbortController
 
 if (globalThis.navigator === undefined) {
@@ -59,17 +57,17 @@ export const testPlatforms = (
 ) => {
 	const macro = test.macro(run)
 
-	// test(`Sqlite (on-disk) - ${name}`, macro, async (t, init) => {
-	// 	const log = new GossipLogSqlite({ ...init, directory: getDirectory(t) })
-	// 	t.teardown(() => log.close())
-	// 	return log
-	// })
+	test(`Sqlite (on-disk) - ${name}`, macro, async (t, init) => {
+		const log = new GossipLogSqlite({ ...init, directory: getDirectory(t) })
+		t.teardown(() => log.close())
+		return log
+	})
 
-	// test(`Sqlite (in-memory) - ${name}`, macro, async (t, init) => {
-	// 	const log = new GossipLogSqlite(init)
-	// 	t.teardown(() => log.close())
-	// 	return log
-	// })
+	test(`Sqlite (in-memory) - ${name}`, macro, async (t, init) => {
+		const log = new GossipLogSqlite(init)
+		t.teardown(() => log.close())
+		return log
+	})
 
 	test(`IndexedDB - ${name}`, macro, async (t, init) => {
 		const log = await GossipLogIdb.open(init)
@@ -77,11 +75,11 @@ export const testPlatforms = (
 		return log
 	})
 
-	// test.serial(`Postgres - ${name}`, macro, async (t, init) => {
-	// 	const log = await GossipLogPostgres.open(init, getPgConfig(), true)
-	// 	t.teardown(() => log.close())
-	// 	return log
-	// })
+	test(`Postgres - ${name}`, macro, async (t, init) => {
+		const log = await GossipLogPostgres.open(getPgConfig(), { ...init, clear: true })
+		t.teardown(() => log.close())
+		return log
+	})
 }
 
 export async function expectLogEntries<T>(

@@ -17,11 +17,10 @@ import { decodeId, encodeId, messageIdPattern } from "./ids.js"
 import { getNextClock } from "./schema.js"
 import { topicPattern } from "./utils.js"
 
-export type GossipLogConsumer<Payload = unknown> = ({
-	id,
-	signature,
-	message,
-}: SignedMessage<Payload>) => Awaitable<void>
+export type GossipLogConsumer<Payload = unknown> = (
+	this: AbstractGossipLog<Payload>,
+	{ id, signature, message }: SignedMessage<Payload>,
+) => Awaitable<void>
 
 export interface GossipLogInit<Payload = unknown> {
 	topic: string

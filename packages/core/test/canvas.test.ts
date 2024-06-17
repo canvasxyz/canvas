@@ -89,50 +89,50 @@ const initEIP712 = async (t: ExecutionContext) => {
 // 	t.pass()
 // })
 
-// test("apply an action and read a record from the database", async (t) => {
-// 	const app = await init(t)
+test("apply an action and read a record from the database", async (t) => {
+	const { app } = await init(t)
 
-// 	const { id, message } = await app.actions.createPost({
-// 		content: "hello world",
-// 		isVisible: true,
-// 		something: null,
-// 		metadata: {},
-// 	})
+	const { id, message } = await app.actions.createPost({
+		content: "hello world",
+		isVisible: true,
+		something: null,
+		metadata: {},
+	})
 
-// 	t.log(`applied action ${id}`)
-// 	const postId = [message.payload.did, id].join("/")
-// 	const value = await app.db.get("posts", postId)
-// 	t.is(value?.content, "hello world")
-// })
+	t.log(`applied action ${id}`)
+	const postId = [message.payload.did, id].join("/")
+	const value = await app.db.get("posts", postId)
+	t.is(value?.content, "hello world")
+})
 
-// test("create and delete a post", async (t) => {
-// 	const app = await init(t)
+test("create and delete a post", async (t) => {
+	const { app } = await init(t)
 
-// 	const { id, message } = await app.actions.createPost({
-// 		content: "hello world",
-// 		isVisible: true,
-// 		metadata: { author: "me" },
-// 	})
+	const { id, message } = await app.actions.createPost({
+		content: "hello world",
+		isVisible: true,
+		metadata: { author: "me" },
+	})
 
-// 	const postId = [message.payload.did, id].join("/")
-// 	const value = await app.db.get("posts", postId)
-// 	t.is(value?.content, "hello world")
-// 	// TODO: better type inference for the result of db.get
-// 	t.is((value?.metadata as any).author, "me")
+	const postId = [message.payload.did, id].join("/")
+	const value = await app.db.get("posts", postId)
+	t.is(value?.content, "hello world")
+	// TODO: better type inference for the result of db.get
+	t.is((value?.metadata as any).author, "me")
 
-// 	await app.actions.deletePost(postId)
-// 	t.is(await app.db.get("posts", postId), null)
-// })
+	await app.actions.deletePost(postId)
+	t.is(await app.db.get("posts", postId), null)
+})
 
-// test("insert a message created by another app", async (t) => {
-// 	const [a, b] = await Promise.all([init(t), init(t)])
+test("insert a message created by another app", async (t) => {
+	const [{ app: a }, { app: b }] = await Promise.all([init(t), init(t)])
 
-// 	await a.actions.createPost({ content: "hello world", isVisible: true, something: "bar", metadata: {} })
-// 	const records = await a.messageLog.export()
-// 	for (const { signature, message } of records) {
-// 		await t.notThrowsAsync(() => b.insert(signature, message))
-// 	}
-// })
+	await a.actions.createPost({ content: "hello world", isVisible: true, something: "bar", metadata: {} })
+	const records = await a.messageLog.export()
+	for (const { signature, message } of records) {
+		await t.notThrowsAsync(() => b.insert(signature, message))
+	}
+})
 
 test("reject an invalid message", async (t) => {
 	const { app } = await init(t)
@@ -241,63 +241,63 @@ test("get a value set by another action", async (t) => {
 	)
 })
 
-// test("validate action args using IPLD schemas", async (t) => {
-// 	const schema = `
-// 		type CreatePostPayload struct {
-// 			content String
-// 			inReplyTo nullable String
-// 		} representation tuple
-// 	`
+test("validate action args using IPLD schemas", async (t) => {
+	const schema = `
+		type CreatePostPayload struct {
+			content String
+			inReplyTo nullable String
+		} representation tuple
+	`
 
-// 	const wallet = ethers.Wallet.createRandom()
-// 	const app = await Canvas.initialize({
-// 		contract: {
-// 			topic: "com.example.app",
-// 			models: {
-// 				posts: {
-// 					id: "primary",
-// 					content: "string",
-// 					timestamp: "integer",
-// 					address: "string",
-// 				},
-// 			},
-// 			actions: {
-// 				createPost: {
-// 					requireSessionAuthentication: false,
-// 					argsType: { schema, name: "CreatePostPayload" },
-// 					apply: async (
-// 						db,
-// 						{ content, inReplyTo }: { content: string; inReplyTo: string | null },
-// 						{ id, address, timestamp },
-// 					) => {
-// 						const postId = [address, id].join("/")
-// 						await db.set("posts", { id: postId, content, timestamp, address })
-// 					},
-// 				},
-// 			},
-// 		},
-// 		signers: [new SIWESigner({ signer: wallet })],
-// 		start: false,
-// 	})
+	const wallet = ethers.Wallet.createRandom()
+	const app = await Canvas.initialize({
+		contract: {
+			topic: "com.example.app",
+			models: {
+				posts: {
+					id: "primary",
+					content: "string",
+					timestamp: "integer",
+					address: "string",
+				},
+			},
+			actions: {
+				createPost: {
+					requireSessionAuthentication: false,
+					argsType: { schema, name: "CreatePostPayload" },
+					apply: async (
+						db,
+						{ content, inReplyTo }: { content: string; inReplyTo: string | null },
+						{ id, address, timestamp },
+					) => {
+						const postId = [address, id].join("/")
+						await db.set("posts", { id: postId, content, timestamp, address })
+					},
+				},
+			},
+		},
+		signers: [new SIWESigner({ signer: wallet })],
+		start: false,
+	})
 
-// 	t.teardown(() => app.stop())
+	t.teardown(() => app.stop())
 
-// 	const { id } = await app.actions.createPost({ content: "hello world!", inReplyTo: null })
+	const { id } = await app.actions.createPost({ content: "hello world!", inReplyTo: null })
 
-// 	// validate that the args are represented as tuples inside the action
-// 	const [_, message] = await app.getMessage(id)
-// 	assert(message !== null && message.payload.type === "action")
-// 	t.deepEqual(message.payload.args, ["hello world!", null])
+	// validate that the args are represented as tuples inside the action
+	const [_, message] = await app.getMessage(id)
+	assert(message !== null && message.payload.type === "action")
+	t.deepEqual(message.payload.args, ["hello world!", null])
 
-// 	await t.throwsAsync(() => app.actions.createPost({ content: 8 } as any), {
-// 		message: "action args did not validate the provided schema type",
-// 	})
+	await t.throwsAsync(() => app.actions.createPost({ content: 8 } as any), {
+		message: "action args did not validate the provided schema type",
+	})
 
-// 	t.is(await app.db.count("posts"), 1)
-// })
+	t.is(await app.db.count("posts"), 1)
+})
 
 test("apply an action and read a record from the database using eip712", async (t) => {
-	const { app, signer } = await initEIP712(t)
+	const { app } = await initEIP712(t)
 
 	const { id, message } = await app.actions.createPost({
 		content: "hello world",

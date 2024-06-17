@@ -21,11 +21,18 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 		const tree = await MemoryTree.fromEntries({ mode: Mode.Index }, merkleIndex.entries())
 		const root = await tree.read((txn) => txn.getRoot())
 		const delta = performance.now() - start
-		console.log(
-			`rebuilt in-memory merkle tree (root ${root.level}:${toString(root.hash, "hex")}, ${messageCount} entries, ${Math.round(delta)}ms)`,
+
+		const gossipLog = new GossipLog(db, tree, init)
+
+		gossipLog.log(
+			`built in-memory merkle tree (root %d:%s, %d entries, %dms)`,
+			root.level,
+			toString(root.hash, "hex"),
+			messageCount,
+			Math.round(delta),
 		)
 
-		return new GossipLog(db, tree, init)
+		return gossipLog
 	}
 
 	private constructor(
