@@ -2,16 +2,17 @@ import { CID } from "multiformats/cid"
 
 import type { SolanaSessionData } from "./types.js"
 
-export const addressPattern = /did:pkh:solana:([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)$/
+export const addressPattern =
+	/did:pkh:solana:([A-Za-z0-9]+):([123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)$/
 
-export function parseAddress(address: string): string {
+export function parseAddress(address: string): [string, string] {
 	const result = addressPattern.exec(address)
 	if (result === null) {
 		throw new Error(`expected address to match ${addressPattern}`)
 	}
 
-	const [_, walletAddress] = result
-	return walletAddress
+	const [_, chainId, walletAddress] = result
+	return [chainId, walletAddress]
 }
 
 export function validateSessionData(data: unknown): data is SolanaSessionData {

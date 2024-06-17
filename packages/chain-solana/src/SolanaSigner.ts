@@ -10,6 +10,10 @@ import { assert } from "@canvas-js/utils"
 import { validateSessionData, addressPattern, parseAddress } from "./utils.js"
 import { SolanaMessage, SolanaSessionData } from "./types.js"
 
+export const SOLANA_MAINNET_CHAIN_REF = "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
+export const SOLANA_TESTNET_CHAIN_REF = "4sGjMW1sUnHzSxGspuhpqLDx6wiyjNtZ"
+export const SOLANA_DEVNET_CHAIN_REF = "EtWTRABZaYq6iMfeYKouRu166VU2xqa1"
+
 // Tested against Phantom SIWS: https://github.com/phantom/sign-in-with-solana
 export const encodeSolanaMessage = (message: SolanaMessage) => {
 	return new TextEncoder().encode(`This website wants you to sign in with your Solana account:
@@ -19,7 +23,7 @@ Allow it to read and write to the application on your behalf?
 
 URI: ${message.topic}
 Version: 1
-Chain ID: mainnet
+Chain ID: ${message.chainId}
 Issued At: ${message.issuedAt}
 Expiration Time: ${message.expirationTime}
 Resources:
@@ -37,6 +41,7 @@ interface SolanaWindowSigner {
 export interface SolanaSignerInit {
 	signer?: SolanaWindowSigner
 	sessionDuration?: number
+	chainId?: string
 }
 
 type GenericSigner = {
@@ -46,10 +51,11 @@ type GenericSigner = {
 
 export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 	public readonly match = (chain: string) => addressPattern.test(chain)
+	public readonly chainId
 
 	_signer: GenericSigner
 
-	public constructor({ signer, sessionDuration }: SolanaSignerInit = {}) {
+	public constructor({ signer, sessionDuration, chainId }: SolanaSignerInit = {}) {
 		super("chain-solana", Ed25519SignatureScheme, { sessionDuration })
 
 		if (signer) {
@@ -72,6 +78,8 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 				sign: async (msg) => ed25519.sign(msg, privateKey),
 			}
 		}
+
+		this.chainId = chainId ?? SOLANA_MAINNET_CHAIN_REF
 	}
 
 	public verifySession(topic: string, session: Session) {
@@ -83,10 +91,15 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 		} = session
 		assert(validateSessionData(data), "invalid session")
 
-		const walletAddress = parseAddress(did)
+		const [chainId, walletAddress] = parseAddress(did)
+
+		if (chainId !== this.chainId) {
+			throw new Error("chain id did not match signer")
+		}
 
 		const message: SolanaMessage = {
 			address: walletAddress,
+			chainId,
 			topic,
 			publicKey,
 			issuedAt: new Date(timestamp).toISOString(),
@@ -102,15 +115,16 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 
 	public getDid(): string {
 		const walletAddress = this._signer.address
-		return `did:pkh:solana:${walletAddress}`
+		return `did:pkh:solana:${this.chainId}:${walletAddress}`
 	}
 
 	public getDidParts(): number {
-		return 4
+		return 5
 	}
 
 	public getAddressFromDid(did: string) {
-		return parseAddress(did)
+		const [chainId, walletAddress] = parseAddress(did)
+		return walletAddress
 	}
 
 	public async authorize(data: AbstractSessionData): Promise<Session<SolanaSessionData>> {
@@ -123,9 +137,14 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 
 		const issuedAt = new Date(timestamp)
 
-		const walletAddress = parseAddress(did)
+		const [chainId, walletAddress] = parseAddress(did)
+
+		if (chainId !== this.chainId) {
+			throw new Error("message chain id must match signer")
+		}
 
 		const message: SolanaMessage = {
+			chainId,
 			address: walletAddress,
 			topic,
 			publicKey: publicKey,
