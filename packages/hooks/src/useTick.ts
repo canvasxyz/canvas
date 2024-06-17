@@ -46,7 +46,7 @@ export const useTick = (app: Canvas<TickingContract> | undefined, condition: str
 				const action = payload as Action
 
 				for (const signer of app.signers.getAll()) {
-					if (signer.hasSession(app.topic, action.address)) {
+					if (signer.hasSession(app.topic, action.did)) {
 						return
 					}
 				}

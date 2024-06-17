@@ -27,6 +27,7 @@ export type ModelAPI = {
 
 export type ActionContext = {
 	id: string
+	did: string
 	address: string
 	blockhash: string | null
 	timestamp: number

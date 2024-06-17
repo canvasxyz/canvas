@@ -112,8 +112,9 @@ You can configure the threshold by setting `presenceTimeout` in your app config.
 The event also provides a `peers` list, which shows a list of online peers:
 
 - `address` is the public address of the user behind this online peer. For an Ethereum signer,
-  this will be a CAIP-2 Ethereum address in the form `eip155:1:0xabc`. Note that this address is
-  self-attested and not cryptographically verified (yet).
+  this will be a did:pkh identifier in the form `did:pkh:eip155:1:0xabc`. (did:pkh identifiers
+  are based on CAIP-2 interchain identifiers.) Note that this address is self-attested and not
+  cryptographically verified (yet).
 - `env` is the environment that peer is running in, either `browser` or `server`.
 - `lastSeen` is the milliseconds since the last heartbeat from this peer.
 - `topics` is the list of topics the peer is subscribed to.

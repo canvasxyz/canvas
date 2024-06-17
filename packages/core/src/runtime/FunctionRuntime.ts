@@ -92,9 +92,11 @@ export class FunctionRuntime extends AbstractRuntime {
 	}
 
 	protected async execute(context: ExecutionContext): Promise<void | any> {
+		console.log("exec FR")
 		const { publicKey } = context.signature
+		const { address } = context
 		const {
-			address,
+			did,
 			name,
 			args,
 			context: { blockhash, timestamp },
@@ -115,6 +117,7 @@ export class FunctionRuntime extends AbstractRuntime {
 			return await action(this.#db, typedArgs, {
 				id: context.id,
 				publicKey,
+				did,
 				address,
 				blockhash: blockhash ?? null,
 				timestamp,

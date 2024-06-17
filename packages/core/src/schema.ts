@@ -10,7 +10,7 @@ type ActionContext struct {
 }
 
 type Action struct {
-  address   String
+  did       String
   name      String
   args      any
   context   ActionContext
@@ -23,7 +23,7 @@ type SessionContext struct {
 }
 
 type Session struct {
-  address   String
+  did       String
   publicKey String
   authorizationData any
   context SessionContext

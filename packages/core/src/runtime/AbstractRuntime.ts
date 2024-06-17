@@ -4,7 +4,7 @@ import { bytesToHex } from "@noble/hashes/utils"
 import { logger } from "@libp2p/logger"
 import { TypeTransformerFunction } from "@ipld/schema/typed.js"
 
-import type { Signature, Action, Message, Session, SignerCache } from "@canvas-js/interfaces"
+import type { Signature, Action, Message, Session, SessionSigner, SignerCache } from "@canvas-js/interfaces"
 
 import { AbstractModelDB, Effect, ModelValue, ModelsInit, lessThan } from "@canvas-js/modeldb"
 import { GossipLogConsumer, encodeId, MAX_MESSAGE_ID, MIN_MESSAGE_ID, AbstractGossipLog } from "@canvas-js/gossiplog"
@@ -15,6 +15,7 @@ export type ExecutionContext = {
 	id: string
 	signature: Signature
 	message: Message<Action>
+	address: string
 	modelEntries: Record<string, Record<string, ModelValue | null>>
 }
 
@@ -38,6 +39,7 @@ export abstract class AbstractRuntime {
 			message_id: "primary",
 			public_key: "string",
 			address: "string",
+			did: "string",
 			expiration: "integer?",
 			rawMessage: "string",
 			rawSignature: "string",
@@ -103,23 +105,25 @@ export abstract class AbstractRuntime {
 	private async handleSession(id: string, signature: Signature, message: Message<Session>) {
 		const {
 			publicKey,
-			address,
+			did,
 			context: { timestamp, duration },
 		} = message.payload
 
 		const signer = this.signers
 			.getAll()
-			.find((signer) => signer.scheme.codecs.includes(signature.codec) && signer.match(address))
+			.find((signer) => signer.scheme.codecs.includes(signature.codec) && signer.match(did))
 
 		assert(signer !== undefined, "no matching signer found")
 
 		assert(publicKey === signature.publicKey)
 
 		await signer.verifySession(this.topic, message.payload)
+		const address = signer.getAddressFromDid(did)
 
 		await this.db.set("$sessions", {
 			message_id: id,
 			public_key: publicKey,
+			did: did,
 			address: address,
 			expiration: duration === undefined ? Number.MAX_SAFE_INTEGER : timestamp + duration,
 			rawMessage: bytesToHex(cbor.encode(message)),
@@ -134,25 +138,31 @@ export abstract class AbstractRuntime {
 		messageLog: AbstractGossipLog<Action | Session>,
 	) {
 		const {
-			address,
+			did,
 			context: { timestamp },
 		} = message.payload
+
+		const signer = this.signers
+			.getAll()
+			.find((signer) => signer.scheme.codecs.includes(signature.codec) && signer.match(did))
+		if (!signer) throw new Error("unexpected missing signer")
+		const address = signer.getAddressFromDid(did)
 
 		const sessions = await this.db.query("$sessions", {
 			where: {
 				public_key: signature.publicKey,
-				address: address,
+				did: did,
 				expiration: { gte: timestamp },
 			},
 		})
 
 		if (sessions.length === 0) {
-			throw new Error(`missing session ${signature.publicKey} for $${address}`)
+			throw new Error(`missing session ${signature.publicKey} for $${did}`)
 		}
 
 		const modelEntries: Record<string, Record<string, ModelValue | null>> = mapValues(this.db.models, () => ({}))
 
-		const result = await this.execute({ messageLog, modelEntries, id, signature, message })
+		const result = await this.execute({ messageLog, modelEntries, id, signature, message, address })
 
 		const effects: Effect[] = []
 

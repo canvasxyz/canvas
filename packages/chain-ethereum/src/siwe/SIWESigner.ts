@@ -41,15 +41,24 @@ export class SIWESigner extends AbstractSessionSigner<SIWESessionData> {
 		this.key = `SIWESigner-${init.signer ? "signer" : "burner"}`
 	}
 
-	public async getAddress(): Promise<string> {
+	public async getDid(): Promise<string> {
 		const walletAddress = await this._signer.getAddress()
-		return `eip155:${this.chainId}:${walletAddress}`
+		return `did:pkh:eip155:${this.chainId}:${walletAddress}`
+	}
+
+	public getDidParts(): number {
+		return 5
+	}
+
+	public getAddressFromDid(did: string) {
+		const { address } = parseAddress(did)
+		return address
 	}
 
 	public async authorize(sessionData: AbstractSessionData): Promise<Session<SIWESessionData>> {
 		const {
 			topic,
-			address,
+			did,
 			context: { timestamp, duration },
 			publicKey,
 		} = sessionData
@@ -58,7 +67,7 @@ export class SIWESigner extends AbstractSessionSigner<SIWESessionData> {
 
 		const issuedAt = new Date(timestamp).toISOString()
 
-		const { chainId, address: walletAddress } = parseAddress(address)
+		const { chainId, address: walletAddress } = parseAddress(did)
 
 		const domain = this.target.getDomain()
 
@@ -82,7 +91,7 @@ export class SIWESigner extends AbstractSessionSigner<SIWESessionData> {
 
 		return {
 			type: "session",
-			address: address,
+			did: did,
 			publicKey: publicKey,
 			authorizationData: { signature: getBytes(signature), domain, nonce },
 			context: duration ? { duration, timestamp } : { timestamp },
@@ -92,13 +101,13 @@ export class SIWESigner extends AbstractSessionSigner<SIWESessionData> {
 	public verifySession(topic: string, session: Session<SIWESessionData>) {
 		const {
 			publicKey,
-			address,
+			did,
 			authorizationData,
 			context: { timestamp, duration },
 		} = session
 
 		assert(validateSIWESessionData(authorizationData), "invalid session")
-		const { chainId, address: walletAddress } = parseAddress(address)
+		const { chainId, address: walletAddress } = parseAddress(did)
 
 		const siweMessage: SIWEMessage = {
 			version: SIWEMessageVersion,

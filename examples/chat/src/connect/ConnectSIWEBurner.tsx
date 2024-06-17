@@ -26,9 +26,9 @@ export const ConnectSIWEBurner: React.FC<ConnectSIWEBurnerProps> = ({}) => {
 
 		const signer = new SIWESigner({ chainId: 1 })
 		const {
-			payload: { address },
+			payload: { did },
 		} = await signer.newSession(app.topic)
-
+		const address = did
 		setAddress(address)
 		setSessionSigner(signer)
 	}, [app, provider])

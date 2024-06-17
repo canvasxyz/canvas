@@ -21,13 +21,13 @@ export const models = {
 };
 
 export const actions = {
-  async createPost(db, { content, isVisible, metadata }, { id, address, timestamp }) {
-    const postId = [address, id].join("/")
+  async createPost(db, { content, isVisible, metadata }, { id, did, timestamp }) {
+    const postId = [did, id].join("/")
     await db.set("posts", { id: postId, content, isVisible, timestamp, metadata });
   },
 
-  async deletePost(db, key, { address }) {
-		if (!key.startsWith(address + "/")) {
+  async deletePost(db, key, { did }) {
+		if (!key.startsWith(did + "/")) {
 			throw new Error("unauthorized")
 		}
 
@@ -97,7 +97,7 @@ const initEIP712 = async (t: ExecutionContext) => {
 // 	})
 
 // 	t.log(`applied action ${id}`)
-// 	const postId = [message.payload.address, id].join("/")
+// 	const postId = [message.payload.did, id].join("/")
 // 	const value = await app.db.get("posts", postId)
 // 	t.is(value?.content, "hello world")
 // })
@@ -111,7 +111,7 @@ const initEIP712 = async (t: ExecutionContext) => {
 // 		metadata: { author: "me" },
 // 	})
 
-// 	const postId = [message.payload.address, id].join("/")
+// 	const postId = [message.payload.did, id].join("/")
 // 	const value = await app.db.get("posts", postId)
 // 	t.is(value?.content, "hello world")
 // 	// TODO: better type inference for the result of db.get
@@ -162,9 +162,9 @@ test("create an app with an inline contract", async (t) => {
 				},
 			},
 			actions: {
-				async createPost(db, { content }: { content: string }, { id, address, timestamp }) {
-					const postId = [address, id].join("/")
-					await db.set("posts", { id: postId, content, timestamp, address })
+				async createPost(db, { content }: { content: string }, { id, did, timestamp }) {
+					const postId = [did, id].join("/")
+					await db.set("posts", { id: postId, content, timestamp, address: did })
 				},
 			},
 		},
@@ -178,10 +178,10 @@ test("create an app with an inline contract", async (t) => {
 
 	t.log(`applied action ${id}`)
 
-	const postId = [message.payload.address, id].join("/")
+	const postId = [message.payload.did, id].join("/")
 	const value = await app.db.get("posts", postId)
 	t.is(value?.content, "hello world")
-	t.is(value?.address, `eip155:1:${wallet.address}`)
+	t.is(value?.address, `did:pkh:eip155:1:${wallet.address}`)
 })
 
 test("get a value set by another action", async (t) => {
@@ -196,18 +196,18 @@ test("get a value set by another action", async (t) => {
 				post: { id: "primary", from: "@user", content: "string" },
 			},
 			actions: {
-				async createUser(db, { name }: { name: string }, { address }) {
-					await db.set("user", { id: address, name })
+				async createUser(db, { name }: { name: string }, { did }) {
+					await db.set("user", { id: did, name })
 				},
-				async createPost(db, { content }: { content: string }, { id, address }) {
-					const user = await db.get("user", address)
+				async createPost(db, { content }: { content: string }, { id, did }) {
+					const user = await db.get("user", did)
 					assert(user !== null)
-					await db.set("post", { id, from: address, content })
+					await db.set("post", { id, from: did, content })
 				},
-				async deletePost(db, { id }: { id: string }, { address }) {
+				async deletePost(db, { id }: { id: string }, { did }) {
 					const post = await db.get("post", id)
 					if (post !== null) {
-						assert(post.from === address, "cannot delete others' posts")
+						assert(post.from === did, "cannot delete others' posts")
 						await db.delete("post", id)
 					}
 				},
@@ -232,8 +232,8 @@ test("get a value set by another action", async (t) => {
 			.query<{ id: string; from: string; content: string }>("post", {})
 			.then((results) => results.sort(compareIDs)),
 		[
-			{ id: a, from: `eip155:1:${wallet.address}`, content: "foo" },
-			{ id: b, from: `eip155:1:${wallet.address}`, content: "bar" },
+			{ id: a, from: `did:pkh:eip155:1:${wallet.address}`, content: "foo" },
+			{ id: b, from: `did:pkh:eip155:1:${wallet.address}`, content: "bar" },
 		].sort(compareIDs),
 	)
 })
@@ -305,7 +305,7 @@ test("apply an action and read a record from the database using eip712", async (
 
 	t.log(`applied action ${id}`)
 
-	const postId = [message.payload.address, id].join("/")
+	const postId = [message.payload.did, id].join("/")
 	const value = await app.db.get("posts", postId)
 	t.is(value?.content, "hello world")
 
@@ -317,7 +317,7 @@ test("apply an action and read a record from the database using eip712", async (
 	})
 
 	t.log(`applied action ${id2}`)
-	const postId2 = [message2.payload.address, id2].join("/")
+	const postId2 = [message2.payload.did, id2].join("/")
 	const value2 = await app.db.get("posts", postId2)
 	t.is(value2?.content, "foo bar")
 })
@@ -333,7 +333,7 @@ test("apply an action and read a record from the database using eip712", async (
 // 	})
 
 // 	t.log(`applied action ${id}`)
-// 	const postId = [message.payload.address, id].join("/")
+// 	const postId = [message.payload.did, id].join("/")
 // 	const value = await app.db.get("posts", postId)
 // 	t.is(value?.content, "hello world")
 
@@ -345,7 +345,7 @@ test("apply an action and read a record from the database using eip712", async (
 // 	})
 
 // 	t.log(`applied action ${id2}`)
-// 	const postId2 = [message2.payload.address, id2].join("/")
+// 	const postId2 = [message2.payload.did, id2].join("/")
 // 	const value2 = await app.db.get("posts", postId2)
 // 	t.is(value2?.content, "foo bar")
 // })
@@ -363,7 +363,7 @@ test("apply an action and read a record from the database using eip712", async (
 // 	const [clock1] = await app.messageLog.getClock()
 // 	t.is(clock1, 3)
 
-// 	const postId = [message.payload.address, id].join("/")
+// 	const postId = [message.payload.did, id].join("/")
 // 	const value1 = await app.db.get("posts", postId)
 // 	t.is(value1?.content, "hello world")
 

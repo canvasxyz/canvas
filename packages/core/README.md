@@ -64,7 +64,7 @@ const results = await app.db.query("posts", {})
 // [
 //   {
 //     id: '09p5qn7affkhtbflscr663tet8ddeu41',
-//     user: 'eip155:1:0x79c5158f81ebb0c2bcF877E9e1813aed2Eb652B7',
+//     user: 'did:pkh:eip155:1:0x79c5158f81ebb0c2bcF877E9e1813aed2Eb652B7',
 //     content: 'hello world!',
 //     updated_at: 1698339861041
 //   }

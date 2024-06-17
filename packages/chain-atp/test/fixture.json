@@ -1,5 +1,5 @@
 {
-	"address": "did:plc:uh3qgppih5ocj6hsvtlsg5v7",
+	"did": "did:plc:uh3qgppih5ocj6hsvtlsg5v7",
 	"signingKey": "did:key:zQ3shkEorJBU14FH9L1eLfU6QdE1FBhA7zC75XbrDLYWETEeJ",
 	"topic": "a7fbe055-2139-4f26-9868-ebbd7ed80a64",
 	"archives": {

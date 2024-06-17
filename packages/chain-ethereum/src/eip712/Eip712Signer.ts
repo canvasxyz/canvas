@@ -33,16 +33,24 @@ export class Eip712Signer extends AbstractSessionSigner<Eip712SessionData> {
 		this.chainId = init.chainId ?? 1
 	}
 
-	// TODO: should be getUserAddress() or getWalletAddress()
-	public async getAddress(): Promise<string> {
+	public async getDid(): Promise<string> {
 		const walletAddress = await this._signer.getAddress()
-		return `eip155:${this.chainId}:${walletAddress}`
+		return `did:pkh:eip155:${this.chainId}:${walletAddress}`
+	}
+
+	public getDidParts(): number {
+		return 5
+	}
+
+	public getAddressFromDid(did: string) {
+		const { address } = parseAddress(did)
+		return address
 	}
 
 	public async authorize(sessionData: AbstractSessionData): Promise<Session<Eip712SessionData>> {
 		const {
 			topic,
-			address,
+			did,
 			publicKey,
 			context: { timestamp, duration },
 		} = sessionData
@@ -62,7 +70,7 @@ export class Eip712Signer extends AbstractSessionSigner<Eip712SessionData> {
 
 		return {
 			type: "session",
-			address: address,
+			did: did,
 			publicKey: publicKey,
 			authorizationData: { signature: getBytes(signature) },
 			context: duration ? { duration, timestamp } : { timestamp },
@@ -71,7 +79,7 @@ export class Eip712Signer extends AbstractSessionSigner<Eip712SessionData> {
 
 	public verifySession(topic: string, session: Session<Eip712SessionData>) {
 		assert(validateEip712SessionData(session.authorizationData), "invalid session")
-		const { address: userAddress } = parseAddress(session.address)
+		const { address: userAddress } = parseAddress(session.did)
 
 		const { type, publicKey } = decodeURI(session.publicKey)
 		assert(type === Secp256k1SignatureScheme.type)

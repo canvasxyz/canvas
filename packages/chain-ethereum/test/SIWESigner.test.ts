@@ -29,7 +29,7 @@ test("create and verify session and action", async (t) => {
 
 	const action: Action = {
 		type: "action",
-		address: session.address,
+		did: session.did,
 		name: "foo",
 		args: { bar: 7 },
 		context: {

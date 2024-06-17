@@ -29,8 +29,9 @@ export const ConnectSIWEViem: React.FC<ConnectSIWEViemProps> = ({}) => {
 		const signer = new SIWESignerViem({ signer: client, chainId })
 
 		const {
-			payload: { address },
+			payload: { did },
 		} = await signer.newSession(app.topic)
+		const address = did
 		setAddress(address)
 		setSessionSigner(signer)
 	}, [app])
