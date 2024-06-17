@@ -4,11 +4,11 @@ function useCursorStack<T>() {
 	const [cursors, setCursors] = useState<T[]>([])
 
 	const pushCursor = (cursor: T) => {
-		setCursors((cursors) => [...cursors, cursor])
+		setCursors((cursors: T[]) => [...cursors, cursor])
 	}
 
 	const popCursor = () => {
-		setCursors((cursors) => cursors.slice(0, -1))
+		setCursors((cursors: T[]) => cursors.slice(0, -1))
 	}
 
 	const currentCursor = cursors[cursors.length - 1] || null
