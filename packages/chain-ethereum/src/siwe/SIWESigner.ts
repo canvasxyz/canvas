@@ -1,7 +1,7 @@
 import { Wallet, verifyMessage, hexlify, getBytes } from "ethers"
 import * as siwe from "siwe"
 
-import type { Awaitable, Session, AbstractSessionData } from "@canvas-js/interfaces"
+import type { Awaitable, Session, AbstractSessionData, DidIdentifier } from "@canvas-js/interfaces"
 import { AbstractSessionSigner, ed25519 } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
@@ -41,7 +41,7 @@ export class SIWESigner extends AbstractSessionSigner<SIWESessionData> {
 		this.key = `SIWESigner-${init.signer ? "signer" : "burner"}`
 	}
 
-	public async getDid(): Promise<string> {
+	public async getDid(): Promise<DidIdentifier> {
 		const walletAddress = await this._signer.getAddress()
 		return `did:pkh:eip155:${this.chainId}:${walletAddress}`
 	}
@@ -50,7 +50,7 @@ export class SIWESigner extends AbstractSessionSigner<SIWESessionData> {
 		return 5
 	}
 
-	public getAddressFromDid(did: string) {
+	public getAddressFromDid(did: DidIdentifier) {
 		const { address } = parseAddress(did)
 		return address
 	}

@@ -3,9 +3,11 @@ import type { Session } from "./Session.js"
 import type { Action } from "./Action.js"
 import type { Awaitable } from "./Awaitable.js"
 
+export type DidIdentifier = `did:${string}`
+
 export interface AbstractSessionData {
 	topic: string
-	did: string
+	did: DidIdentifier
 	publicKey: string
 	context: {
 		timestamp: number
@@ -15,16 +17,16 @@ export interface AbstractSessionData {
 
 export interface SessionSigner<AuthorizationData = any> {
 	scheme: SignatureScheme<Action | Session<AuthorizationData>>
-	match: (address: string) => boolean
+	match: (did: DidIdentifier) => boolean
 
-	getDid: () => Awaitable<string>
+	getDid: () => Awaitable<DidIdentifier>
 	getDidParts: () => number
-	getAddressFromDid: (did: string) => string
+	getAddressFromDid: (did: DidIdentifier) => string
 
-	hasSession: (topic: string, address: string) => boolean
+	hasSession: (topic: string, did: DidIdentifier) => boolean
 	getSession: (
 		topic: string,
-		options?: { address?: string },
+		options?: { did?: DidIdentifier },
 	) => Awaitable<{ payload: Session<AuthorizationData>; signer: Signer<Action | Session<AuthorizationData>> } | null>
 	newSession: (
 		topic: string,
@@ -32,7 +34,7 @@ export interface SessionSigner<AuthorizationData = any> {
 
 	/**
 	 * Verify that `session.data` authorizes `session.publicKey`
-	 * to take actions on behalf of the user `${session.chain}:${session.address}`
+	 * to take actions on behalf of the user `session.did`
 	 */
 	verifySession: (topic: string, session: Session<AuthorizationData>) => Awaitable<void>
 

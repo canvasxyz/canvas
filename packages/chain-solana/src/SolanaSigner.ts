@@ -3,7 +3,7 @@ import { base58btc } from "multiformats/bases/base58"
 
 import { ed25519 } from "@noble/curves/ed25519"
 
-import type { Awaitable, Session, AbstractSessionData } from "@canvas-js/interfaces"
+import type { Awaitable, Session, AbstractSessionData, DidIdentifier } from "@canvas-js/interfaces"
 import { AbstractSessionSigner, ed25519 as Ed25519SignatureScheme } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
@@ -113,7 +113,7 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 		assert(valid, "invalid signature")
 	}
 
-	public getDid(): string {
+	public getDid(): DidIdentifier {
 		const walletAddress = this._signer.address
 		return `did:pkh:solana:${this.chainId}:${walletAddress}`
 	}
@@ -122,7 +122,7 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 		return 5
 	}
 
-	public getAddressFromDid(did: string) {
+	public getAddressFromDid(did: DidIdentifier) {
 		const [chainId, walletAddress] = parseAddress(did)
 		return walletAddress
 	}

@@ -6,7 +6,7 @@ import { InjectedExtension } from "@polkadot/extension-inject/types"
 import { cryptoWaitReady, decodeAddress } from "@polkadot/util-crypto"
 import { KeypairType } from "@polkadot/util-crypto/types"
 
-import type { Awaitable, Session, AbstractSessionData } from "@canvas-js/interfaces"
+import type { Awaitable, Session, AbstractSessionData, DidIdentifier } from "@canvas-js/interfaces"
 import { AbstractSessionSigner, ed25519 } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
@@ -173,7 +173,7 @@ export class SubstrateSigner extends AbstractSessionSigner<SubstrateSessionData>
 		assert(valid, "invalid signature")
 	}
 
-	public async getDid(): Promise<string> {
+	public async getDid(): Promise<DidIdentifier> {
 		const chainId = await this._signer.getChainId()
 		const walletAddress = await this._signer.getAddress()
 		return `did:pkh:polkadot:${chainId}:${walletAddress}`
@@ -183,7 +183,7 @@ export class SubstrateSigner extends AbstractSessionSigner<SubstrateSessionData>
 		return 5
 	}
 
-	public getAddressFromDid(did: string) {
+	public getAddressFromDid(did: DidIdentifier) {
 		const [_, walletAddress] = parseAddress(did)
 		return walletAddress
 	}

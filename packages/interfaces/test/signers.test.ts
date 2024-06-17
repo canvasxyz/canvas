@@ -3,7 +3,7 @@ import test from "ava"
 import { Secp256k1Wallet, StdSignDoc } from "@cosmjs/amino"
 import { secp256k1 } from "@noble/curves/secp256k1"
 
-import { Action, Message, Session, SessionSigner, Signer } from "@canvas-js/interfaces"
+import { Action, DidIdentifier, Message, Session, SessionSigner, Signer } from "@canvas-js/interfaces"
 
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
 // import { NEARSigner } from "@canvas-js/chain-near"

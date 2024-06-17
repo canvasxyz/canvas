@@ -9,6 +9,7 @@ import type {
 	SignatureScheme,
 	AbstractSessionData,
 	SessionSigner,
+	DidIdentifier,
 } from "@canvas-js/interfaces"
 
 import target from "#target"
@@ -17,7 +18,9 @@ export interface AbstractSessionSignerOptions {
 	sessionDuration?: number | null
 }
 
-export abstract class AbstractSessionSigner<AuthorizationData> implements SessionSigner<AuthorizationData> {
+export abstract class AbstractSessionSigner<AuthorizationData, WalletAddress extends string = string>
+	implements SessionSigner<AuthorizationData>
+{
 	public readonly target = target
 	public readonly sessionDuration: number | null
 
@@ -37,9 +40,9 @@ export abstract class AbstractSessionSigner<AuthorizationData> implements Sessio
 	public abstract match: (address: string) => boolean
 	public abstract verifySession(topic: string, session: Session<AuthorizationData>): Awaitable<void>
 
-	public abstract getDid(): Awaitable<string>
+	public abstract getDid(): Awaitable<DidIdentifier>
 	public abstract getDidParts(): number
-	public abstract getAddressFromDid(did: string): string
+	public abstract getAddressFromDid(did: DidIdentifier): WalletAddress
 	public async getWalletAddress() {
 		return this.getAddressFromDid(await this.getDid())
 	}
@@ -72,14 +75,14 @@ export abstract class AbstractSessionSigner<AuthorizationData> implements Sessio
 	}
 
 	/*
-	 * Get an existing session for `topic`. You may also provide a specific CAIP-2 formatted
-	 * address to check if a session exists for that specific address.
+	 * Get an existing session for `topic`. You may also provide a specific DID to check
+	 * if a session exists for that specific address.
 	 */
 	public async getSession(
 		topic: string,
-		options: { address?: string } = {},
+		options: { did?: string } = {},
 	): Promise<{ payload: Session<AuthorizationData>; signer: Signer<Action | Session<AuthorizationData>> } | null> {
-		const did = await Promise.resolve(options.address ?? this.getDid())
+		const did = await Promise.resolve(options.did ?? this.getDid())
 		const key = `canvas/${topic}/${did}`
 
 		if (this.#cache.has(key)) {
@@ -99,8 +102,8 @@ export abstract class AbstractSessionSigner<AuthorizationData> implements Sessio
 		return null
 	}
 
-	public hasSession(topic: string, address: string): boolean {
-		const key = `canvas/${topic}/${address}`
+	public hasSession(topic: string, did: DidIdentifier): boolean {
+		const key = `canvas/${topic}/${did}`
 		return this.#cache.has(key) || target.get(key) !== null
 	}
 

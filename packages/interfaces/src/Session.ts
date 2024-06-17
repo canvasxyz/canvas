@@ -7,7 +7,7 @@ export type Session<AuthorizationData = any> = {
 	type: "session"
 
 	/** DID of the user that authorized the session (e.g. "did:pkh:eip155:1:0xb94d27...") */
-	did: string
+	did: `did:${string}`
 
 	/** did:key URI of the ephemeral session key used to sign subsequent actions */
 	publicKey: string

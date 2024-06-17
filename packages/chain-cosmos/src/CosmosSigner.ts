@@ -1,4 +1,4 @@
-import type { Awaitable, Session, AbstractSessionData } from "@canvas-js/interfaces"
+import type { Awaitable, Session, AbstractSessionData, DidIdentifier } from "@canvas-js/interfaces"
 import { AbstractSessionSigner, ed25519 } from "@canvas-js/signatures"
 
 import { addressPattern, parseAddress } from "./utils.js"
@@ -97,7 +97,7 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 		}
 	}
 
-	public async getDid(): Promise<string> {
+	public async getDid(): Promise<DidIdentifier> {
 		const chainId = await this._signer.getChainId()
 		const walletAddress = await this._signer.getAddress(chainId)
 		const { data } = fromBech32(walletAddress)
@@ -109,7 +109,7 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 		return 5
 	}
 
-	public getAddressFromDid(did: string) {
+	public getAddressFromDid(did: DidIdentifier) {
 		const [_, walletAddress] = parseAddress(did)
 		return walletAddress
 	}

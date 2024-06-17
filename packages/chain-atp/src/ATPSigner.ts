@@ -4,7 +4,7 @@ import * as ATP from "@atproto/api"
 // to publish ESM modules (please, it's been ten years since ES6)
 const BskyAgent = ATP.BskyAgent ?? ATP["default"].BskyAgent
 
-import type { Session, AbstractSessionData } from "@canvas-js/interfaces"
+import type { Session, AbstractSessionData, DidIdentifier } from "@canvas-js/interfaces"
 import { AbstractSessionSigner, ed25519 } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
@@ -57,16 +57,16 @@ export class ATPSigner extends AbstractSessionSigner<ATPSessionData> {
 		assert(record.text === message, "invalid app.bsky.feed.post record text")
 	}
 
-	public async getDid(): Promise<string> {
+	public async getDid(): Promise<DidIdentifier> {
 		if (this.#session !== null) {
-			return this.#session.did
+			return this.#session.did as DidIdentifier
 		}
 
 		const sessionData = this.loadJWTSession()
 		if (sessionData !== null) {
 			this.#session = sessionData
 			await this.#agent.resumeSession(sessionData)
-			return this.#session.did
+			return this.#session.did as DidIdentifier
 		}
 
 		assert(this.options.login !== undefined, "options.login must be provided")
@@ -77,14 +77,14 @@ export class ATPSigner extends AbstractSessionSigner<ATPSessionData> {
 		this.#session = this.#agent.session
 		this.saveJWTSession(this.#session)
 
-		return this.#session.did
+		return this.#session.did as DidIdentifier
 	}
 
 	public getDidParts() {
 		return 3
 	}
 
-	public getAddressFromDid(did: string) {
+	public getAddressFromDid(did: DidIdentifier) {
 		return did
 	}
 

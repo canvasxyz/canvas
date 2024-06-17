@@ -1,5 +1,5 @@
 import { AbstractSigner, Wallet, computeAddress, getBytes, hexlify, TypedDataField, verifyTypedData } from "ethers"
-import { Session, AbstractSessionData } from "@canvas-js/interfaces"
+import { Session, AbstractSessionData, DidIdentifier } from "@canvas-js/interfaces"
 import { assert } from "@canvas-js/utils"
 
 import { AbstractSessionSigner, decodeURI } from "@canvas-js/signatures"
@@ -33,7 +33,7 @@ export class Eip712Signer extends AbstractSessionSigner<Eip712SessionData> {
 		this.chainId = init.chainId ?? 1
 	}
 
-	public async getDid(): Promise<string> {
+	public async getDid(): Promise<DidIdentifier> {
 		const walletAddress = await this._signer.getAddress()
 		return `did:pkh:eip155:${this.chainId}:${walletAddress}`
 	}
@@ -42,7 +42,7 @@ export class Eip712Signer extends AbstractSessionSigner<Eip712SessionData> {
 		return 5
 	}
 
-	public getAddressFromDid(did: string) {
+	public getAddressFromDid(did: DidIdentifier) {
 		const { address } = parseAddress(did)
 		return address
 	}

@@ -3,7 +3,7 @@ import { toHex, toBytes, WalletClient, PrivateKeyAccount, verifyMessage } from "
 
 import * as siwe from "siwe"
 
-import type { Session, AbstractSessionData } from "@canvas-js/interfaces"
+import type { DidIdentifier, Session, AbstractSessionData } from "@canvas-js/interfaces"
 import { AbstractSessionSigner, ed25519 } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
@@ -104,7 +104,7 @@ export class SIWESignerViem extends AbstractSessionSigner<SIWESessionData> {
 		assert(isValid, "invalid SIWE signature")
 	}
 
-	public async getDid(): Promise<string> {
+	public async getDid(): Promise<DidIdentifier> {
 		const walletAddress = await this.#account.getAddress()
 		return `did:pkh:eip155:${this.chainId}:${walletAddress}`
 	}
@@ -113,7 +113,7 @@ export class SIWESignerViem extends AbstractSessionSigner<SIWESessionData> {
 		return 5
 	}
 
-	public getAddressFromDid(did: string) {
+	public getAddressFromDid(did: DidIdentifier) {
 		const [_, walletAddress] = parseAddress(did)
 		return walletAddress
 	}

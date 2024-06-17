@@ -3,7 +3,7 @@ import { KeyPair } from "near-api-js"
 import { PublicKey } from "@near-js/crypto"
 import { ed25519 } from "@noble/curves/ed25519"
 
-import type { Session, AbstractSessionData } from "@canvas-js/interfaces"
+import type { Session, AbstractSessionData, DidIdentifier } from "@canvas-js/interfaces"
 import { AbstractSessionSigner, ed25519 as Ed25519SignatureScheme } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
@@ -61,16 +61,16 @@ export class NEARSigner extends AbstractSessionSigner<NEARSessionData> {
 		assert(valid, "invalid signature")
 	}
 
-	public getDid(): string {
+	public getDid(): DidIdentifier {
 		const walletAddress = this.#address
-		return `${this.chainId}:${walletAddress}`
+		return `did:${this.chainId}:${walletAddress}`
 	}
 
 	public getDidParts(): number {
 		return 5
 	}
 
-	public getAddressFromDid(did: string) {
+	public getAddressFromDid(did: DidIdentifier) {
 		const [_, walletAddress] = parseAddress(did)
 		return walletAddress
 	}
