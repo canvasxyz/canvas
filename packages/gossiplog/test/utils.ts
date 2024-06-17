@@ -57,23 +57,23 @@ export const testPlatforms = (
 ) => {
 	const macro = test.macro(run)
 
-	// test(`Sqlite (on-disk) - ${name}`, macro, async (t, init) => {
-	// 	const log = new GossipLogSqlite({ ...init, directory: getDirectory(t) })
-	// 	t.teardown(() => log.close())
-	// 	return log
-	// })
+	test(`Sqlite (on-disk) - ${name}`, macro, async (t, init) => {
+		const log = new GossipLogSqlite({ ...init, directory: getDirectory(t) })
+		t.teardown(() => log.close())
+		return log
+	})
 
-	// test(`Sqlite (in-memory) - ${name}`, macro, async (t, init) => {
-	// 	const log = new GossipLogSqlite(init)
-	// 	t.teardown(() => log.close())
-	// 	return log
-	// })
+	test(`Sqlite (in-memory) - ${name}`, macro, async (t, init) => {
+		const log = new GossipLogSqlite(init)
+		t.teardown(() => log.close())
+		return log
+	})
 
-	// test(`IndexedDB - ${name}`, macro, async (t, init) => {
-	// 	const log = await GossipLogIdb.open(init)
-	// 	t.teardown(() => log.close())
-	// 	return log
-	// })
+	test(`IndexedDB - ${name}`, macro, async (t, init) => {
+		const log = await GossipLogIdb.open(init)
+		t.teardown(() => log.close())
+		return log
+	})
 
 	test(`Postgres - ${name}`, macro, async (t, init) => {
 		const log = await GossipLogPostgres.open(getPgConfig(), { ...init, clear: true })
