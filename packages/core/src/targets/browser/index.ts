@@ -3,14 +3,17 @@ import { Ed25519PeerId, PeerId } from "@libp2p/interface"
 import { base64 } from "multiformats/bases/base64"
 import { createLibp2p } from "libp2p"
 
-import { GossipLog } from "@canvas-js/gossiplog/browser"
+import { AbstractGossipLog } from "@canvas-js/gossiplog"
+import { GossipLog } from "@canvas-js/gossiplog/idb"
 import { ModelDB } from "@canvas-js/modeldb/idb"
 
 import type { PlatformTarget } from "../interface.js"
 import { getLibp2pOptions } from "./libp2p.js"
 
 export default {
-	openDB: ({ topic }, models) => ModelDB.initialize({ name: `canvas/${topic}/db`, models }),
+	openDB: ({ topic }, models) =>
+		ModelDB.initialize({ name: `canvas/${topic}`, models: { ...models, ...AbstractGossipLog.schema } }),
+
 	openGossipLog: ({}, init) => GossipLog.open(init),
 
 	async createLibp2p(messageLog, config) {

@@ -5,9 +5,7 @@ import { createEd25519PeerId, createFromProtobuf } from "@libp2p/peer-id-factory
 import { createLibp2p } from "libp2p"
 
 import { AbstractGossipLog } from "@canvas-js/gossiplog"
-import { GossipLog } from "@canvas-js/gossiplog/node"
-import { GossipLog as MemoryGossipLog } from "@canvas-js/gossiplog/memory"
-import { GossipLog as PostgresGossipLog } from "@canvas-js/gossiplog/pg"
+import { GossipLog } from "@canvas-js/gossiplog/sqlite"
 import { ModelDB } from "@canvas-js/modeldb/sqlite"
 import { ModelDB as PostgresModelDB } from "@canvas-js/modeldb/pg"
 import { assert } from "@canvas-js/utils"
@@ -34,14 +32,16 @@ export default {
 
 	async openGossipLog(location: { path: string | pg.ConnectionConfig | null; topic: string; clear?: boolean }, init) {
 		if (location.path === null) {
-			return await MemoryGossipLog.open(init)
-		} else if (isPostgres(location.path)) {
-			return await PostgresGossipLog.open(init, location.path, location.clear)
-		} else {
-			// TODO: delete topics/
-			assert(typeof location.path === "string", 'expected typeof location.path === "string"')
-			return await GossipLog.open(init, path.resolve(location.path, "topics", init.topic))
+			return new GossipLog(init)
+			// } else if (isPostgres(location.path)) {
+			// 	return await PostgresGossipLog.open(init, location.path, location.clear)
+			// } else {
+			// 	// TODO: delete topics/
+			// 	assert(typeof location.path === "string", 'expected typeof location.path === "string"')
+			// 	return await GossipLog.open(init, path.resolve(location.path, "topics", init.topic))
 		}
+
+		throw new Error("FIXME")
 	},
 
 	createLibp2p: async (messageLog: AbstractGossipLog<Action | Session>, config) => {

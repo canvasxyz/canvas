@@ -52,7 +52,7 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 
 	api.get("/messages/:id", async (req, res) => {
 		const { id } = req.params
-		const [signature, message] = await app.messageLog.get(id)
+		const [signature, message] = await app.getMessage(id)
 		if (signature === null || message === null) {
 			return res.status(StatusCodes.NOT_FOUND).end()
 		}
@@ -64,39 +64,28 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 
 	api.get("/messages", async (req, res) => {
 		const { gt, gte, lt, lte, order, type } = req.query
+		assert(gt === undefined || typeof gt === "string", "invalid `gt` query parameter")
+		assert(gte === undefined || typeof gte === "string", "invalid `gte` query parameter")
+		assert(lt === undefined || typeof lt === "string", "invalid `lt` query parameter")
+		assert(lte === undefined || typeof lte === "string", "invalid `lte` query parameter")
 
-		const limit = typeof req.query.limit === "string" ? Math.min(64, parseInt(req.query.limit)) : 64
+		let limit = 64
+		if (typeof req.query.limit === "string") {
+			limit = parseInt(req.query.limit)
+		}
 
-		assert(Number.isSafeInteger(limit) && limit > 0, "invalid `limit` query parameter")
-		assert(type === undefined || type === "action" || type === "session", "invalid `type` query parameter")
+		assert(Number.isSafeInteger(limit) && 0 < limit && limit <= 64, "invalid `limit` query parameter")
+
+		// TODO: add `type` back
+		// assert(type === undefined || type === "action" || type === "session", "invalid `type` query parameter")
 		assert(order === undefined || order === "asc" || order === "desc", "invalid `order` query parameter")
-
-		let lowerBound: { id: string; inclusive: boolean } | null = null
-		let upperBound: { id: string; inclusive: boolean } | null = null
-
-		if (typeof gte === "string") {
-			lowerBound = { id: gte, inclusive: true }
-		} else if (typeof gt === "string") {
-			lowerBound = { id: gt, inclusive: false }
-		}
-
-		if (typeof lt === "string") {
-			upperBound = { id: lt, inclusive: false }
-		} else if (typeof lte === "string") {
-			upperBound = { id: lte, inclusive: true }
-		}
 
 		const reverse = order === "desc"
 
 		const results: [id: string, signature: Signature, message: Message<Action | Session>][] = []
-		for await (const [id, signature, message] of app.getMessages(lowerBound, upperBound, { reverse })) {
-			if (type !== undefined && type !== message.payload.type) {
-				continue
-			}
 
-			if (results.push([id, signature, message]) >= limit) {
-				break
-			}
+		for (const { id, signature, message } of await app.messageLog.export({ gt, gte, lt, lte, reverse, limit })) {
+			results.push([id, signature, message])
 		}
 
 		res.status(StatusCodes.OK)

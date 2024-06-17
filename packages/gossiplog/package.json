@@ -14,10 +14,9 @@
 	"sideEffects": false,
 	"exports": {
 		".": "./lib/index.js",
-		"./node": "./lib/node/index.js",
-		"./browser": "./lib/browser/index.js",
-		"./memory": "./lib/memory/index.js",
+		"./idb": "./lib/idb/index.js",
 		"./pg": "./lib/pg/index.js",
+		"./sqlite": "./lib/sqlite/index.js",
 		"./service": "./lib/service/index.js"
 	},
 	"imports": {
@@ -40,11 +39,10 @@
 	},
 	"dependencies": {
 		"@canvas-js/interfaces": "0.10.0-beta.2",
-		"@canvas-js/okra": "^0.3.0",
-		"@canvas-js/okra-idb": "^0.3.0",
-		"@canvas-js/okra-memory": "^0.3.0",
-		"@canvas-js/okra-node": "^0.6.0",
-		"@canvas-js/okra-pg": "^0.1.0",
+		"@canvas-js/modeldb": "0.10.0-beta.2",
+		"@canvas-js/okra": "^0.4.4",
+		"@canvas-js/okra-lmdb": "^0.1.2",
+		"@canvas-js/okra-memory": "^0.4.4",
 		"@canvas-js/signatures": "0.10.0-beta.2",
 		"@canvas-js/utils": "0.10.0-beta.2",
 		"@chainsafe/libp2p-yamux": "^6.0.2",

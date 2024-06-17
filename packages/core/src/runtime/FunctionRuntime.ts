@@ -92,7 +92,9 @@ export class FunctionRuntime extends AbstractRuntime {
 	}
 
 	protected async execute(context: ExecutionContext): Promise<void | any> {
+		console.log("exec FR")
 		const { publicKey } = context.signature
+		const { address } = context
 		const {
 			did,
 			name,
@@ -105,7 +107,6 @@ export class FunctionRuntime extends AbstractRuntime {
 		if (action === undefined || argsTransformer === undefined) {
 			throw new Error(`invalid action name: ${name}`)
 		}
-		const address = context.signer.getAddressFromDid(did)
 
 		const typedArgs = argsTransformer.toTyped(args)
 		assert(typedArgs !== undefined, "action args did not validate the provided schema type")

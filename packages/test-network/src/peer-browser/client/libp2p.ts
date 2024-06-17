@@ -19,7 +19,7 @@ import { gossiplog } from "@canvas-js/gossiplog/service"
 import { topic, getTopicDHTProtocol } from "../../constants.js"
 import { bootstrapList, minConnections, maxConnections, listen, announce, peerId } from "./config.js"
 
-export async function getLibp2p(messageLog: AbstractGossipLog<Uint8Array>) {
+export async function getLibp2p(messageLog: AbstractGossipLog<string>) {
 	return await createLibp2p({
 		peerId: peerId,
 		start: false,
@@ -46,7 +46,7 @@ export async function getLibp2p(messageLog: AbstractGossipLog<Uint8Array>) {
 				emitSelf: false,
 				fallbackToFloodsub: false,
 				allowPublishToZeroTopicPeers: true,
-				globalSignaturePolicy: "StrictSign",
+				globalSignaturePolicy: "StrictNoSign",
 
 				asyncValidation: true,
 				scoreParams: {

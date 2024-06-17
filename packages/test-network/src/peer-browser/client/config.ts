@@ -23,7 +23,10 @@ export const relayServer: Multiaddr | null = query.relayServer ? multiaddr(query
 if (relayServer !== null) {
 	// announce.push("/webrtc")
 	announce.push(`${relayServer}/p2p-circuit/webrtc/p2p/${peerId}`)
+	bootstrapList.push(relayServer.toString())
 }
+
+console.log("announcing on", announce)
 
 console.log(`bootstrap list: [ ${bootstrapList.join(", ")} ]`)
 

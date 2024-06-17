@@ -389,7 +389,7 @@ describe("Contract_Test", function () {
 			expect(await contract.upvotes("123456")).to.equal(0)
 
 			// set the action timestamp to be after the expiry period
-			actionMessageForContract.payload.timestamp = session.context.timestamp + session.context.duration! + 1
+			actionMessageForContract.payload.timestamp = session.context.timestamp + (session.context.duration ?? 0) + 1
 
 			// submit the upvote action
 			try {

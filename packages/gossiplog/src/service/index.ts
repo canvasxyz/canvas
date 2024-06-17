@@ -21,6 +21,7 @@ import * as cbor from "@ipld/dag-cbor"
 
 import { pushable } from "it-pushable"
 
+import type { Entry } from "@canvas-js/okra"
 import type { Signature, Message, Signer } from "@canvas-js/interfaces"
 import { assert } from "@canvas-js/utils"
 
@@ -37,12 +38,13 @@ import {
 
 import { AbstractGossipLog, GossipLogEvents } from "../AbstractGossipLog.js"
 
-import { decodeId, encodeId } from "../schema.js"
+import { decodeId, encodeId } from "../ids.js"
 import { Client, decodeRequests, encodeResponses } from "../sync/index.js"
 
 import { DelayableController, SyncDeadlockError, SyncTimeoutError, wait } from "../utils.js"
 import { Server } from "../sync/server.js"
-import { Entry } from "@canvas-js/okra"
+import { equals } from "uint8arrays"
+import { SignedMessage } from "../SignedMessage.js"
 
 export const getSyncProtocol = (topic: string) => `/canvas/sync/v1/${topic}`
 export const getPushProtocol = (topic: string) => `/canvas/sync/v1/${topic}/push`
@@ -139,9 +141,9 @@ export class GossipLogService<Payload = unknown>
 					await this.wait(interval)
 				}
 
-				const heads = await this.messageLog.read((txn) => txn.getHeads())
+				const [_, parentIds] = await this.messageLog.getClock()
+				const heads = parentIds.map(encodeId)
 				this.schedulePush(peerId, heads)
-				// this.scheduleSync(peerId)
 			},
 
 			onDisconnect: (peerId) => {
@@ -185,24 +187,15 @@ export class GossipLogService<Payload = unknown>
 		payload: Payload,
 		options: { signer?: Signer<Payload> } = {},
 	): Promise<{ id: string; signature: Signature; message: Message<Payload>; recipients: Promise<PeerId[]> }> {
-		const { id, signature, message } = await this.messageLog.write((txn) =>
-			this.messageLog.append(txn, payload, options),
-		)
+		const signedMessage = await this.messageLog.append(payload, options)
+		const recipients = this.publish(signedMessage)
 
-		const [_, value] = this.messageLog.encode(signature, message)
-
-		const recipients = this.#pubsub.publish(this.messageLog.topic, value).then(
-			({ recipients }) => {
-				this.log("published message %s to %d recipients %O", id, recipients.length, recipients)
-				return recipients
-			},
-			(err) => {
-				this.log.error("failed to publish event: %O", err)
-				return []
-			},
-		)
-
-		return { id, signature, message, recipients }
+		return {
+			id: signedMessage.id,
+			signature: signedMessage.signature,
+			message: signedMessage.message,
+			recipients,
+		}
 	}
 
 	public async insert(
@@ -211,13 +204,22 @@ export class GossipLogService<Payload = unknown>
 	): Promise<{ id: string; recipients: Promise<PeerId[]> }> {
 		assert(message.topic === this.messageLog.topic, "wrong topic")
 
-		const { id } = await this.messageLog.write((txn) => this.messageLog.insert(txn, signature, message))
+		const signedMessage = this.messageLog.encode(signature, message)
+		this.messageLog.insert(signedMessage)
+		const recipients = this.publish(signedMessage)
 
-		const [_, value] = this.messageLog.encode(signature, message)
+		return { id: signedMessage.id, recipients }
+	}
 
-		const recipients = this.#pubsub.publish(message.topic, value).then(
+	private async publish(signedMessage: SignedMessage<Payload>): Promise<PeerId[]> {
+		if (!this.#pubsub.isStarted()) {
+			return []
+		}
+
+		const data = Event.encode({ insert: { key: signedMessage.key, value: signedMessage.value } })
+		return this.#pubsub.publish(this.messageLog.topic, data).then(
 			({ recipients }) => {
-				this.log("published message %s to %d recipients %O", id, recipients.length, recipients)
+				this.log("published message %s to %d recipients %O", signedMessage.id, recipients.length, recipients)
 				return recipients
 			},
 			(err) => {
@@ -225,8 +227,6 @@ export class GossipLogService<Payload = unknown>
 				return []
 			},
 		)
-
-		return { id, recipients }
 	}
 
 	private handleMessage = ({ detail: { msgId, propagationSource, msg } }: GossipsubEvents["gossipsub:message"]) => {
@@ -242,6 +242,7 @@ export class GossipLogService<Payload = unknown>
 		try {
 			event = Event.decode(msg.data)
 		} catch (err) {
+			console.error("error decoding gossipsub message", err)
 			this.log.error("error decoding gossipsub message: %O", err)
 			this.#pubsub.reportMessageValidationResult(msgId, sourceId, TopicValidatorResult.Reject)
 			return
@@ -262,39 +263,43 @@ export class GossipLogService<Payload = unknown>
 				},
 			)
 		} else {
+			console.error("IGNORING MESSAGE")
 			this.#pubsub.reportMessageValidationResult(msgId, sourceId, TopicValidatorResult.Ignore)
 		}
 	}
 
 	private async handleInsert([key, value]: Entry): Promise<TopicValidatorResult> {
-		const [id, signature, message] = this.messageLog.decode(value)
-		assert(decodeId(key) === id, "invalid key")
+		const signedMessage = this.messageLog.decode(value)
+		assert(equals(key, signedMessage.key), "invalid key")
 
-		await this.messageLog.verifySignature(signature, message)
+		await this.messageLog.verifySignature(signedMessage.signature, signedMessage.message)
 
-		return await this.messageLog.write(async (txn) => {
-			const missingParents = await this.messageLog.getMissingParents(txn, message.parents)
-			if (missingParents.size !== 0) {
-				this.log("missing %d/%d parents", missingParents.size, message.parents.length)
-				return TopicValidatorResult.Ignore
-			}
+		await this.messageLog.insert(signedMessage)
+		return TopicValidatorResult.Accept
 
-			try {
-				await this.messageLog.apply(txn, id, signature, message, [key, value])
-				return TopicValidatorResult.Accept
-			} catch (err) {
-				return TopicValidatorResult.Reject
-			}
-		})
+		// return await this.messageLog.write(async (txn) => {
+		// 	const missingParents = await this.messageLog.getMissingParents(txn, message.parents)
+		// 	if (missingParents.size !== 0) {
+		// 		this.log("missing %d/%d parents", missingParents.size, message.parents.length)
+		// 		return TopicValidatorResult.Ignore
+		// 	}
+
+		// 	try {
+		// 		await this.messageLog.apply(txn, id, signature, message, [key, value])
+		// 		return TopicValidatorResult.Accept
+		// 	} catch (err) {
+		// 		return TopicValidatorResult.Reject
+		// 	}
+		// })
 	}
 
 	private async handleUpdate(propagationSource: PeerId, heads: Uint8Array[]): Promise<TopicValidatorResult> {
 		this.log("handling update: %o", heads.map(decodeId))
 
-		const result = await this.messageLog.read(async (txn) => {
+		const result = await this.messageLog.tree.read((txn) => {
 			const missingParents = new Set<string>()
 			for (const key of heads) {
-				const leaf = await txn.messages.getNode(0, key)
+				const leaf = txn.getNode(0, key)
 				if (leaf === null) {
 					missingParents.add(decodeId(key))
 				}
@@ -342,27 +347,25 @@ export class GossipLogService<Payload = unknown>
 		})
 
 		try {
-			await this.messageLog.serve(
-				async (source) => {
-					const server = new Server(source)
-					await pipe(
-						stream.source,
-						lp.decode,
-						decodeRequests,
-						async function* (reqs) {
-							for await (const req of reqs) {
-								timeoutController.delay()
-								yield req
-							}
-						},
-						(reqs) => server.handle(reqs),
-						encodeResponses,
-						lp.encode,
-						stream.sink,
-					)
-				},
-				{ targetId: peerId.toString() },
-			)
+			await this.messageLog.serve(async (txn) => {
+				const server = new Server(txn)
+
+				await pipe(
+					stream.source,
+					lp.decode,
+					decodeRequests,
+					async function* (reqs) {
+						for await (const req of reqs) {
+							timeoutController.delay()
+							yield req
+						}
+					},
+					(reqs) => server.handle(reqs),
+					encodeResponses,
+					lp.encode,
+					stream.sink,
+				)
+			})
 
 			this.log("closed incoming stream %s from peer %p", stream.id, peerId)
 		} catch (err) {
@@ -383,7 +386,11 @@ export class GossipLogService<Payload = unknown>
 
 	private schedulePush(peerId: PeerId, heads: Uint8Array[]) {
 		this.log("scheduling push to %p", peerId)
-		this.pushQueue.add(() => this.push(peerId, heads).catch((err) => this.log.error("push failed: %O", err)))
+		this.pushQueue
+			.add(async () => {
+				await this.push(peerId, heads)
+			})
+			.catch((err) => this.log.error("push failed: %O", err))
 	}
 
 	private async push(peerId: PeerId, heads: Uint8Array[]) {
@@ -409,9 +416,9 @@ export class GossipLogService<Payload = unknown>
 		try {
 			const source = pushable()
 			await Promise.all([
-				//
+				// ...
 				pipe(source, lp.encode, stream.sink),
-				//
+				// ...
 				source.push(cbor.encode(heads)).end().onEmpty(),
 			])
 
@@ -505,40 +512,24 @@ export class GossipLogService<Payload = unknown>
 
 		this.log("starting sync with peer %p", peerId)
 
-		let heads: Uint8Array[] | null = null
-
 		const client = new Client(stream)
+
+		let messageCount = 0
 		try {
-			heads = await this.messageLog.write(async (txn) => {
-				let messageCount = 0
-
-				for await (const [_, signature, message, entry] of this.messageLog.sync(txn, client, { sourceId })) {
-					timeoutController.delay()
-
-					await this.messageLog.insert(txn, signature, message, entry)
-					messageCount += 1
-				}
-
-				if (messageCount !== 0) {
-					return await txn.getHeads()
-				} else {
-					return null
-				}
-			})
+			const result = await this.messageLog.sync(client, { sourceId })
+			messageCount = result.messageCount
 		} finally {
 			signal.clear()
 			client.end()
 			this.log("closed outgoing stream %s to peer %p", stream.id, peerId)
 		}
 
-		if (heads !== null) {
-			this.#pubsub.getSubscribers(this.messageLog.topic).map((peer) => this.schedulePush(peer, heads))
-
-			// const data = Event.encode({ update: { heads } })
-			// this.#pubsub.publish(this.messageLog.topic, data).then(
-			// 	({ recipients }) => this.log("published update event to %d recipients %O", recipients.length, recipients),
-			// 	(err) => this.log.error("failed to publish update event: %O", err),
-			// )
+		if (messageCount !== 0) {
+			const [_, parentIds] = await this.messageLog.getClock()
+			const heads = parentIds.map(encodeId)
+			for (const peer of this.#pubsub.getSubscribers(this.messageLog.topic)) {
+				this.schedulePush(peer, heads)
+			}
 		}
 	}
 

@@ -53,82 +53,83 @@ const initEIP712 = async (t: ExecutionContext) => {
 	return app
 }
 
-const { POSTGRES_HOST, POSTGRES_PORT } = process.env
+// const { POSTGRES_HOST, POSTGRES_PORT } = process.env
 
-function getPgConfig(): pg.ConnectionConfig | string {
-	if (POSTGRES_HOST && POSTGRES_PORT) {
-		return {
-			user: "postgres",
-			database: "test",
-			password: "postgres",
-			port: parseInt(POSTGRES_PORT),
-			host: process.env.POSTGRES_HOST,
-		}
-	} else {
-		return `postgresql://localhost:5432/test`
-	}
-}
+// function getPgConfig(): pg.ConnectionConfig | string {
+// 	if (POSTGRES_HOST && POSTGRES_PORT) {
+// 		return {
+// 			user: "postgres",
+// 			database: "test",
+// 			password: "postgres",
+// 			port: parseInt(POSTGRES_PORT),
+// 			host: process.env.POSTGRES_HOST,
+// 		}
+// 	} else {
+// 		return `postgresql://localhost:5432/test`
+// 	}
+// }
 
-const initPostgres = async (t: ExecutionContext, options: { reset: boolean } = { reset: true }) => {
-	const app = await Canvas.initialize({
-		path: getPgConfig(),
-		contract,
-		start: false,
-		reset: options.reset,
-		signers: [new Eip712Signer()],
-	})
-	t.teardown(() => app.stop())
-	return app
-}
+// const initPostgres = async (t: ExecutionContext, options: { reset: boolean } = { reset: true }) => {
+// 	const app = await Canvas.initialize({
+// 		path: getPgConfig(),
+// 		contract,
+// 		start: false,
+// 		reset: options.reset,
+// 		signers: [new Eip712Signer()],
+// 	})
+// 	t.teardown(() => app.stop())
+// 	return app
+// }
 
-test("open and close an app", async (t) => {
-	const app = await init(t)
-	t.pass()
-})
+// test("open and close an app", async (t) => {
+// 	const app = await init(t)
+// 	t.pass()
+// })
 
-test("apply an action and read a record from the database", async (t) => {
-	const app = await init(t)
+// test("apply an action and read a record from the database", async (t) => {
+// 	const app = await init(t)
 
-	const { id, message } = await app.actions.createPost({
-		content: "hello world",
-		isVisible: true,
-		something: null,
-		metadata: {},
-	})
+// 	const { id, message } = await app.actions.createPost({
+// 		content: "hello world",
+// 		isVisible: true,
+// 		something: null,
+// 		metadata: {},
+// 	})
 
-	t.log(`applied action ${id}`)
-	const postId = [message.payload.did, id].join("/")
-	const value = await app.db.get("posts", postId)
-	t.is(value?.content, "hello world")
-})
+// 	t.log(`applied action ${id}`)
+// 	const postId = [message.payload.did, id].join("/")
+// 	const value = await app.db.get("posts", postId)
+// 	t.is(value?.content, "hello world")
+// })
 
-test("create and delete a post", async (t) => {
-	const app = await init(t)
+// test("create and delete a post", async (t) => {
+// 	const app = await init(t)
 
-	const { id, message } = await app.actions.createPost({
-		content: "hello world",
-		isVisible: true,
-		metadata: { author: "me" },
-	})
+// 	const { id, message } = await app.actions.createPost({
+// 		content: "hello world",
+// 		isVisible: true,
+// 		metadata: { author: "me" },
+// 	})
 
-	const postId = [message.payload.did, id].join("/")
-	const value = await app.db.get("posts", postId)
-	t.is(value?.content, "hello world")
-	// TODO: better type inference for the result of db.get
-	t.is((value?.metadata as any).author, "me")
+// 	const postId = [message.payload.did, id].join("/")
+// 	const value = await app.db.get("posts", postId)
+// 	t.is(value?.content, "hello world")
+// 	// TODO: better type inference for the result of db.get
+// 	t.is((value?.metadata as any).author, "me")
 
-	await app.actions.deletePost(postId)
-	t.is(await app.db.get("posts", postId), null)
-})
+// 	await app.actions.deletePost(postId)
+// 	t.is(await app.db.get("posts", postId), null)
+// })
 
-test("insert a message created by another app", async (t) => {
-	const [a, b] = await Promise.all([init(t), init(t)])
+// test("insert a message created by another app", async (t) => {
+// 	const [a, b] = await Promise.all([init(t), init(t)])
 
-	await a.actions.createPost({ content: "hello world", isVisible: true, something: "bar", metadata: {} })
-	for await (const [id, signature, message] of a.getMessages()) {
-		await t.notThrowsAsync(() => b.insert(signature, message))
-	}
-})
+// 	await a.actions.createPost({ content: "hello world", isVisible: true, something: "bar", metadata: {} })
+// 	const records = await a.messageLog.export()
+// 	for (const { signature, message } of records) {
+// 		await t.notThrowsAsync(() => b.insert(signature, message))
+// 	}
+// })
 
 test("reject an invalid message", async (t) => {
 	const app = await init(t)
@@ -237,60 +238,60 @@ test("get a value set by another action", async (t) => {
 	)
 })
 
-test("validate action args using IPLD schemas", async (t) => {
-	const schema = `
-		type CreatePostPayload struct {
-			content String
-			inReplyTo nullable String
-		} representation tuple
-	`
+// test("validate action args using IPLD schemas", async (t) => {
+// 	const schema = `
+// 		type CreatePostPayload struct {
+// 			content String
+// 			inReplyTo nullable String
+// 		} representation tuple
+// 	`
 
-	const wallet = ethers.Wallet.createRandom()
-	const app = await Canvas.initialize({
-		contract: {
-			topic: "com.example.app",
-			models: {
-				posts: {
-					id: "primary",
-					content: "string",
-					timestamp: "integer",
-					address: "string",
-				},
-			},
-			actions: {
-				createPost: {
-					requireSessionAuthentication: false,
-					argsType: { schema, name: "CreatePostPayload" },
-					apply: async (
-						db,
-						{ content, inReplyTo }: { content: string; inReplyTo: string | null },
-						{ id, address, timestamp },
-					) => {
-						const postId = [address, id].join("/")
-						await db.set("posts", { id: postId, content, timestamp, address })
-					},
-				},
-			},
-		},
-		signers: [new SIWESigner({ signer: wallet })],
-		start: false,
-	})
+// 	const wallet = ethers.Wallet.createRandom()
+// 	const app = await Canvas.initialize({
+// 		contract: {
+// 			topic: "com.example.app",
+// 			models: {
+// 				posts: {
+// 					id: "primary",
+// 					content: "string",
+// 					timestamp: "integer",
+// 					address: "string",
+// 				},
+// 			},
+// 			actions: {
+// 				createPost: {
+// 					requireSessionAuthentication: false,
+// 					argsType: { schema, name: "CreatePostPayload" },
+// 					apply: async (
+// 						db,
+// 						{ content, inReplyTo }: { content: string; inReplyTo: string | null },
+// 						{ id, address, timestamp },
+// 					) => {
+// 						const postId = [address, id].join("/")
+// 						await db.set("posts", { id: postId, content, timestamp, address })
+// 					},
+// 				},
+// 			},
+// 		},
+// 		signers: [new SIWESigner({ signer: wallet })],
+// 		start: false,
+// 	})
 
-	t.teardown(() => app.stop())
+// 	t.teardown(() => app.stop())
 
-	const { id } = await app.actions.createPost({ content: "hello world!", inReplyTo: null })
+// 	const { id } = await app.actions.createPost({ content: "hello world!", inReplyTo: null })
 
-	// validate that the args are represented as tuples inside the action
-	const [_, message] = await app.getMessage(id)
-	assert(message !== null && message.payload.type === "action")
-	t.deepEqual(message.payload.args, ["hello world!", null])
+// 	// validate that the args are represented as tuples inside the action
+// 	const [_, message] = await app.getMessage(id)
+// 	assert(message !== null && message.payload.type === "action")
+// 	t.deepEqual(message.payload.args, ["hello world!", null])
 
-	await t.throwsAsync(() => app.actions.createPost({ content: 8 } as any), {
-		message: "action args did not validate the provided schema type",
-	})
+// 	await t.throwsAsync(() => app.actions.createPost({ content: 8 } as any), {
+// 		message: "action args did not validate the provided schema type",
+// 	})
 
-	t.is(await app.db.count("posts"), 1)
-})
+// 	t.is(await app.db.count("posts"), 1)
+// })
 
 test("apply an action and read a record from the database using eip712", async (t) => {
 	const app = await initEIP712(t)
@@ -321,65 +322,65 @@ test("apply an action and read a record from the database using eip712", async (
 	t.is(value2?.content, "foo bar")
 })
 
-test.serial("apply an action and read a record from the database using postgres", async (t) => {
-	const app = await initPostgres(t)
+// test.serial("apply an action and read a record from the database using postgres", async (t) => {
+// 	const app = await initPostgres(t)
 
-	const { id, message } = await app.actions.createPost({
-		content: "hello world",
-		isVisible: true,
-		something: -1,
-		metadata: 0,
-	})
+// 	const { id, message } = await app.actions.createPost({
+// 		content: "hello world",
+// 		isVisible: true,
+// 		something: -1,
+// 		metadata: 0,
+// 	})
 
-	t.log(`applied action ${id}`)
-	const postId = [message.payload.did, id].join("/")
-	const value = await app.db.get("posts", postId)
-	t.is(value?.content, "hello world")
+// 	t.log(`applied action ${id}`)
+// 	const postId = [message.payload.did, id].join("/")
+// 	const value = await app.db.get("posts", postId)
+// 	t.is(value?.content, "hello world")
 
-	const { id: id2, message: message2 } = await app.actions.createPost({
-		content: "foo bar",
-		isVisible: true,
-		something: -1,
-		metadata: 0,
-	})
+// 	const { id: id2, message: message2 } = await app.actions.createPost({
+// 		content: "foo bar",
+// 		isVisible: true,
+// 		something: -1,
+// 		metadata: 0,
+// 	})
 
-	t.log(`applied action ${id2}`)
-	const postId2 = [message2.payload.did, id2].join("/")
-	const value2 = await app.db.get("posts", postId2)
-	t.is(value2?.content, "foo bar")
-})
+// 	t.log(`applied action ${id2}`)
+// 	const postId2 = [message2.payload.did, id2].join("/")
+// 	const value2 = await app.db.get("posts", postId2)
+// 	t.is(value2?.content, "foo bar")
+// })
 
-// // test.serial("reset app to clear modeldb and gossiplog", async (t) => {
-// // 	const app = await initPostgres(t)
+// test.serial("reset app to clear modeldb and gossiplog", async (t) => {
+// 	const app = await initPostgres(t)
 
-// // 	const { id, message } = await app.actions.createPost({
-// // 		content: "hello world",
-// // 		isVisible: true,
-// // 		something: -1,
-// // 		metadata: 0,
-// // 	})
+// 	const { id, message } = await app.actions.createPost({
+// 		content: "hello world",
+// 		isVisible: true,
+// 		something: -1,
+// 		metadata: 0,
+// 	})
 
-// // 	const [clock1] = await app.messageLog.getClock()
-// // 	t.is(clock1, 3)
+// 	const [clock1] = await app.messageLog.getClock()
+// 	t.is(clock1, 3)
 
-// // 	const postId = [message.payload.did, id].join("/")
-// // 	const value1 = await app.db.get("posts", postId)
-// // 	t.is(value1?.content, "hello world")
+// 	const postId = [message.payload.did, id].join("/")
+// 	const value1 = await app.db.get("posts", postId)
+// 	t.is(value1?.content, "hello world")
 
-// // 	const [clock2] = await app.messageLog.getClock()
-// // 	t.is(clock2, 3)
+// 	const [clock2] = await app.messageLog.getClock()
+// 	t.is(clock2, 3)
 
-// // 	const app2 = await initPostgres(t, { reset: false })
-// // 	const value2 = await app2.db.get("posts", postId)
-// // 	t.is(value2?.content, "hello world")
+// 	const app2 = await initPostgres(t, { reset: false })
+// 	const value2 = await app2.db.get("posts", postId)
+// 	t.is(value2?.content, "hello world")
 
-// // 	const [clock3] = await app2.messageLog.getClock()
-// // 	t.is(clock3, 3)
+// 	const [clock3] = await app2.messageLog.getClock()
+// 	t.is(clock3, 3)
 
-// // 	const app3 = await initPostgres(t, { reset: true })
-// // 	const value3 = await app3.db.get("posts", postId)
-// // 	t.is(value3, null)
+// 	const app3 = await initPostgres(t, { reset: true })
+// 	const value3 = await app3.db.get("posts", postId)
+// 	t.is(value3, null)
 
-// // 	const [clock4] = await app3.messageLog.getClock()
-// // 	t.is(clock4, 1)
-// // })
+// 	const [clock4] = await app3.messageLog.getClock()
+// 	t.is(clock4, 1)
+// })

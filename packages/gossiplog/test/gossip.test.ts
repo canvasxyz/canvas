@@ -4,7 +4,7 @@ import { randomUUID } from "crypto"
 import { nanoid } from "nanoid"
 
 import { GossipLogConsumer } from "@canvas-js/gossiplog"
-import { GossipLog } from "@canvas-js/gossiplog/memory"
+import { GossipLog } from "@canvas-js/gossiplog/sqlite"
 
 import { createNetwork, waitForInitialConnections, waitForMessageDelivery } from "./libp2p.js"
 
@@ -12,7 +12,7 @@ test("send a message from one peer to another via gossipsub", async (t) => {
 	const topic = randomUUID()
 	const apply: GossipLogConsumer<string> = (i) => {}
 
-	const network = await createNetwork(t, () => GossipLog.open({ topic, apply }), {
+	const network = await createNetwork(t, () => new GossipLog({ topic, apply }), {
 		a: { port: 9990, peers: ["b"] },
 		b: { port: 9991, peers: ["a"] },
 	})
@@ -33,7 +33,7 @@ test("deliver two concurrent messages to two peers via gossipsub", async (t) => 
 	const topic = randomUUID()
 	const apply: GossipLogConsumer<string> = (i) => {}
 
-	const network = await createNetwork(t, () => GossipLog.open({ topic, apply }), {
+	const network = await createNetwork(t, () => new GossipLog({ topic, apply }), {
 		a: { port: 9990, peers: ["b"] },
 		b: { port: 9991, peers: ["a"] },
 	})
@@ -58,7 +58,7 @@ test("exchange serial messages between two peers via gossipsub", async (t) => {
 	const topic = randomUUID()
 	const apply: GossipLogConsumer<string> = (i) => {}
 
-	const network = await createNetwork(t, () => GossipLog.open({ topic, apply }), {
+	const network = await createNetwork(t, () => new GossipLog({ topic, apply }), {
 		a: { port: 9990, peers: ["b"] },
 		b: { port: 9991, peers: ["a"] },
 	})
