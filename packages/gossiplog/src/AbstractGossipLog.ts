@@ -12,6 +12,8 @@ import { Driver } from "./sync/driver.js"
 
 import type { SyncServer } from "./interface.js"
 import { AncestorIndex } from "./AncestorIndex.js"
+import { ChildIndex } from "./ChildIndex.js"
+import { MessageBranchIndex } from "./MessageBranchIndex.js"
 import { SignedMessage } from "./SignedMessage.js"
 import { decodeId, encodeId, messageIdPattern } from "./ids.js"
 import { getNextClock } from "./schema.js"
@@ -42,8 +44,10 @@ export type GossipLogEvents<Payload = unknown> = {
 
 export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmitter<GossipLogEvents<Payload>> {
 	public static schema = {
-		$messages: { id: "primary", signature: "json", message: "json", hash: "string" },
+		$messages: { id: "primary", signature: "json", message: "json", hash: "string", branch: "number" },
 		$heads: { id: "primary" },
+		...MessageBranchIndex.schema,
+		...ChildIndex.schema,
 		...AncestorIndex.schema,
 	} satisfies ModelsInit
 
@@ -251,9 +255,43 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		// const root = await txn.getRoot()
 		// await new MerkleIndex(this.db).commit(root)
 
+		const branch = await this.getBranch(id, message.parents)
+		if (!branch) {
+			throw new Error(`Couldn't determine the branch for message ${id} with parents ${message.parents}`)
+		}
+		const messageBranchIndex = new MessageBranchIndex(this.db)
+		await messageBranchIndex.setMessageBranch(id, branch)
+
 		await new AncestorIndex(this.db).indexAncestors(id, message.parents)
+		const childIndex = new ChildIndex(this.db)
+		for (const parentId of message.parents) {
+			await childIndex.indexChild(parentId, id)
+		}
 
 		this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message } }))
+	}
+
+	private async getBranch(messageId: string, parentIds: string[]) {
+		const childIndex = new ChildIndex(this.db)
+		let parentsAlreadyHaveChildren = false
+		for (const parentId of parentIds) {
+			const parentChildren = await childIndex.getChildren(parentId)
+			const otherParentChildren = parentChildren.filter((m) => m !== messageId)
+
+			if (otherParentChildren.length > 0) parentsAlreadyHaveChildren = true
+		}
+
+		if (parentsAlreadyHaveChildren) {
+			// create a new branch
+		} else {
+			// get the max branch out of the parents' branches
+			const messageBranchIndex = new MessageBranchIndex(this.db)
+			const parentBranches: number[] = []
+			for (const parentId of parentIds) {
+				parentBranches.push(await messageBranchIndex.getMessageBranch(parentId))
+			}
+			return Math.max(...parentBranches)
+		}
 	}
 
 	public async getAncestors(id: string, atOrBefore: number): Promise<string[]> {
