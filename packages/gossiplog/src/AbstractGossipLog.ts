@@ -44,7 +44,7 @@ export type GossipLogEvents<Payload = unknown> = {
 
 export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmitter<GossipLogEvents<Payload>> {
 	public static schema = {
-		$messages: { id: "primary", signature: "json", message: "json", hash: "string", branch: "number" },
+		$messages: { id: "primary", signature: "json", message: "json", hash: "string", branch: "integer" },
 		$heads: { id: "primary" },
 		...MessageBranchIndex.schema,
 		...ChildIndex.schema,
@@ -240,7 +240,9 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 		const hash = toString(hashEntry(key, value), "hex")
 
-		await this.db.set("$messages", { id, signature, message, hash })
+		const branch = await this.getBranch(id, message.parents)
+
+		await this.db.set("$messages", { id, signature, message, hash, branch })
 
 		const heads = await this.db.query<{ id: string }>("$heads")
 		await this.db.apply([
@@ -255,10 +257,6 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		// const root = await txn.getRoot()
 		// await new MerkleIndex(this.db).commit(root)
 
-		const branch = await this.getBranch(id, message.parents)
-		if (!branch) {
-			throw new Error(`Couldn't determine the branch for message ${id} with parents ${message.parents}`)
-		}
 		const messageBranchIndex = new MessageBranchIndex(this.db)
 		await messageBranchIndex.setMessageBranch(id, branch)
 
@@ -281,11 +279,12 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 			if (otherParentChildren.length > 0) parentsAlreadyHaveChildren = true
 		}
 
-		if (parentsAlreadyHaveChildren) {
+		const messageBranchIndex = new MessageBranchIndex(this.db)
+		if (parentsAlreadyHaveChildren || parentIds.length === 0) {
 			// create a new branch
+			return await messageBranchIndex.allocateMaxBranch()
 		} else {
 			// get the max branch out of the parents' branches
-			const messageBranchIndex = new MessageBranchIndex(this.db)
 			const parentBranches: number[] = []
 			for (const parentId of parentIds) {
 				parentBranches.push(await messageBranchIndex.getMessageBranch(parentId))
@@ -302,6 +301,12 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 	public async isAncestor(id: string, ancestor: string, visited = new Set<string>()): Promise<boolean> {
 		return await new AncestorIndex(this.db).isAncestor(id, ancestor, visited)
+	}
+
+	public async getChildren(id: string): Promise<string[]> {
+		const results = await new ChildIndex(this.db).getChildren(id)
+		this.log("getChildren of %s: %o", id, results)
+		return Array.from(results).sort()
 	}
 
 	/**

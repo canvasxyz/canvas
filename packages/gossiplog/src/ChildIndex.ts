@@ -2,7 +2,7 @@ import type { AbstractModelDB, ModelsInit } from "@canvas-js/modeldb"
 
 export class ChildIndex {
 	public static schema = {
-		$children: { id: "primary", childLinks: "string" },
+		$children: { id: "primary", childLinks: "json" },
 	} satisfies ModelsInit
 
 	constructor(private readonly db: AbstractModelDB) {}
