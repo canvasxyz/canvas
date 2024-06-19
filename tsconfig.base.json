@@ -3,9 +3,9 @@
 		"composite": true,
 		"strict": true,
 		"declaration": true,
-		"module": "es2022",
+		"module": "node16",
 		"target": "es2020",
-		"moduleResolution": "node",
+		"moduleResolution": "node16",
 		"allowSyntheticDefaultImports": true,
 		"skipLibCheck": true
 	}
