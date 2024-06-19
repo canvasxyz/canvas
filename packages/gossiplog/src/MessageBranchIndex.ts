@@ -21,7 +21,7 @@ export class MessageBranchIndex {
 		return result.branch
 	}
 
-	public async allocateMaxBranch() {
+	public async createNewBranch() {
 		const maxBranchResult = await this.db.get<{ maxBranch: number }>("$maxBranch", "singleton")
 		const maxBranch = maxBranchResult ? maxBranchResult.maxBranch : 0
 		await this.db.set("$maxBranch", { id: "singleton", maxBranch: maxBranch + 1 })

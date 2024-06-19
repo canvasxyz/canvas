@@ -269,7 +269,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message } }))
 	}
 
-	private async getBranch(messageId: string, parentIds: string[]) {
+	private async shouldCreateNewBranch(messageId: string, parentIds: string[]) {
 		const childIndex = new ChildIndex(this.db)
 		let parentsAlreadyHaveChildren = false
 		for (const parentId of parentIds) {
@@ -278,11 +278,14 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 			if (otherParentChildren.length > 0) parentsAlreadyHaveChildren = true
 		}
+		return parentsAlreadyHaveChildren || parentIds.length === 0
+	}
 
+	private async getBranch(messageId: string, parentIds: string[]) {
 		const messageBranchIndex = new MessageBranchIndex(this.db)
-		if (parentsAlreadyHaveChildren || parentIds.length === 0) {
+		if (await this.shouldCreateNewBranch(messageId, parentIds)) {
 			// create a new branch
-			return await messageBranchIndex.allocateMaxBranch()
+			return await messageBranchIndex.createNewBranch()
 		} else {
 			// get the max branch out of the parents' branches
 			const parentBranches: number[] = []
