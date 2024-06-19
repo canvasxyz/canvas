@@ -33,13 +33,13 @@ testPlatforms("get children (P1 -> C1, P1 -> C2)", async (t, openGossipLog) => {
 	const log = await openGossipLog(t, { topic, apply, indexAncestors: true })
 	const signer = ed25519.create()
 
-	const p1 = { topic, clock: 1, parents: [], payload: "foo" }
+	const p1 = { topic, clock: 1, parents: [], payload: nanoid() }
 	const { id: parent1 } = await log.insert(log.encode(signer.sign(p1), p1))
 
-	const c1 = { topic, clock: 2, parents: [parent1], payload: "baz" }
+	const c1 = { topic, clock: 2, parents: [parent1], payload: nanoid() }
 	const { id: child1 } = await log.insert(log.encode(signer.sign(c1), c1))
 
-	const c2 = { topic, clock: 2, parents: [parent1], payload: "baz2" }
+	const c2 = { topic, clock: 2, parents: [parent1], payload: nanoid() }
 	const { id: child2 } = await log.insert(log.encode(signer.sign(c2), c2))
 
 	t.deepEqual(sorted(await log.getChildren(parent1)), sorted([child1, child2]))
@@ -50,16 +50,16 @@ testPlatforms("get children (P1 -> C1, P1 -> C2, P2 -> C2)", async (t, openGossi
 	const log = await openGossipLog(t, { topic, apply, indexAncestors: true })
 	const signer = ed25519.create()
 
-	const p1 = { topic, clock: 1, parents: [], payload: "foo" }
+	const p1 = { topic, clock: 1, parents: [], payload: nanoid() }
 	const { id: parent1 } = await log.insert(log.encode(signer.sign(p1), p1))
 
-	const p2 = { topic, clock: 1, parents: [], payload: "foo2" }
+	const p2 = { topic, clock: 1, parents: [], payload: nanoid() }
 	const { id: parent2 } = await log.insert(log.encode(signer.sign(p2), p2))
 
-	const c1 = { topic, clock: 2, parents: [parent1], payload: "baz" }
+	const c1 = { topic, clock: 2, parents: [parent1], payload: nanoid() }
 	const { id: child1 } = await log.insert(log.encode(signer.sign(c1), c1))
 
-	const c2 = { topic, clock: 2, parents: [parent1, parent2], payload: "baz2" }
+	const c2 = { topic, clock: 2, parents: [parent1, parent2], payload: nanoid() }
 	const { id: child2 } = await log.insert(log.encode(signer.sign(c2), c2))
 
 	t.deepEqual(sorted(await log.getChildren(parent1)), sorted([child1, child2]))
@@ -71,19 +71,19 @@ testPlatforms("get children (P1 -> C1, P1 -> C2, P2 -> C2, P1 -> C3, P2 -> C3)",
 	const log = await openGossipLog(t, { topic, apply, indexAncestors: true })
 	const signer = ed25519.create()
 
-	const p1 = { topic, clock: 1, parents: [], payload: "foo" }
+	const p1 = { topic, clock: 1, parents: [], payload: nanoid() }
 	const { id: parent1 } = await log.insert(log.encode(signer.sign(p1), p1))
 
-	const p2 = { topic, clock: 1, parents: [], payload: "foo2" }
+	const p2 = { topic, clock: 1, parents: [], payload: nanoid() }
 	const { id: parent2 } = await log.insert(log.encode(signer.sign(p2), p2))
 
-	const c1 = { topic, clock: 2, parents: [parent1], payload: "baz" }
+	const c1 = { topic, clock: 2, parents: [parent1], payload: nanoid() }
 	const { id: child1 } = await log.insert(log.encode(signer.sign(c1), c1))
 
-	const c2 = { topic, clock: 2, parents: [parent1, parent2], payload: "baz2" }
+	const c2 = { topic, clock: 2, parents: [parent1, parent2], payload: nanoid() }
 	const { id: child2 } = await log.insert(log.encode(signer.sign(c2), c2))
 
-	const c3 = { topic, clock: 2, parents: [parent1, parent2], payload: "baz3" }
+	const c3 = { topic, clock: 2, parents: [parent1, parent2], payload: nanoid() }
 	const { id: child3 } = await log.insert(log.encode(signer.sign(c3), c3))
 
 	t.deepEqual(sorted(await log.getChildren(parent1)), sorted([child1, child2, child3]))
