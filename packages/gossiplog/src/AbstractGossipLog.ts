@@ -288,32 +288,38 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message } }))
 	}
 
-	private async shouldCreateNewBranch(messageId: string, parentIds: string[]) {
-		const childIndex = new ChildIndex(this.db)
-		let parentsAlreadyHaveChildren = false
-		for (const parentId of parentIds) {
-			const parentChildren = await childIndex.getChildren(parentId)
-			const otherParentChildren = parentChildren.filter((m) => m !== messageId)
-
-			if (otherParentChildren.length > 0) parentsAlreadyHaveChildren = true
-		}
-		return parentsAlreadyHaveChildren || parentIds.length === 0
-	}
-
 	private async getBranch(messageId: string, parentIds: string[]) {
-		if (await this.shouldCreateNewBranch(messageId, parentIds)) {
+		if (parentIds.length == 0) {
+			return await new BranchIndex(this.db).createNewBranch()
+		}
+		const parentsByBranch: Record<number, any> = {}
+
+		for (const parentId of parentIds) {
+			const parentMessage = await this.db.get("$messages", parentId)
+			if (parentMessage == null) {
+				throw new Error(`Parent message ${parentId} not found`)
+			}
+			parentsByBranch[parentMessage.branch] = parentMessage
+		}
+
+		const branches = Object.keys(parentsByBranch).map((k) => parseInt(k))
+		const branch = Math.max(...branches)
+
+		const parentWithMaxBranch = parentsByBranch[branch]!
+		const children = await new ChildIndex(this.db).getChildren(parentWithMaxBranch.id)
+
+		let createNewBranch = false
+		for (const childId of children) {
+			if (childId !== messageId) {
+				createNewBranch = true
+				break
+			}
+		}
+
+		if (createNewBranch) {
 			return await new BranchIndex(this.db).createNewBranch()
 		} else {
-			// get the max branch out of the parents' branches
-			const parentBranches: number[] = []
-			for (const parentId of parentIds) {
-				const parentMessage = await this.db.get("$messages", parentId)
-				if (parentMessage == null) {
-					throw new Error(`Parent message ${parentId} not found`)
-				}
-				parentBranches.push(parentMessage.branch)
-			}
-			return Math.max(...parentBranches)
+			return branch
 		}
 	}
 
