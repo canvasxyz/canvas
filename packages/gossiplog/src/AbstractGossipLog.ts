@@ -12,7 +12,6 @@ import { Driver } from "./sync/driver.js"
 
 import type { SyncServer } from "./interface.js"
 import { AncestorIndex } from "./AncestorIndex.js"
-import { ChildIndex } from "./ChildIndex.js"
 import { BranchIndex } from "./BranchIndex.js"
 import { BranchMergeIndex } from "./BranchMergeIndex.js"
 import { SignedMessage } from "./SignedMessage.js"
@@ -52,12 +51,11 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 			hash: "string",
 			branch: "integer",
 			clock: "integer",
-			$indexes: [["branch", "clock"]],
+			$indexes: ["branch", "clock"],
 		},
 		$heads: { id: "primary" },
 		...BranchIndex.schema,
 		...BranchMergeIndex.schema,
-		...ChildIndex.schema,
 		...AncestorIndex.schema,
 	} satisfies ModelsInit
 
@@ -289,10 +287,6 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		// await new MerkleIndex(this.db).commit(root)
 
 		await new AncestorIndex(this.db).indexAncestors(id, message.parents)
-		const childIndex = new ChildIndex(this.db)
-		for (const parentId of message.parents) {
-			await childIndex.indexChild(parentId, id)
-		}
 
 		this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message } }))
 	}
@@ -334,12 +328,6 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 	public async isAncestor(id: string, ancestor: string, visited = new Set<string>()): Promise<boolean> {
 		return await new AncestorIndex(this.db).isAncestor(id, ancestor, visited)
-	}
-
-	public async getChildren(id: string): Promise<string[]> {
-		const results = await new ChildIndex(this.db).getChildren(id)
-		this.log("getChildren of %s: %o", id, results)
-		return Array.from(results).sort()
 	}
 
 	/**
