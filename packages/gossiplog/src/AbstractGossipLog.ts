@@ -257,8 +257,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		// const root = await txn.getRoot()
 		// await new MerkleIndex(this.db).commit(root)
 
-		const messageBranchIndex = new MessageBranchIndex(this.db)
-		await messageBranchIndex.setMessageBranch(id, branch)
+		await new MessageBranchIndex(this.db).setMessageBranch(id, branch)
 
 		await new AncestorIndex(this.db).indexAncestors(id, message.parents)
 		const childIndex = new ChildIndex(this.db)
