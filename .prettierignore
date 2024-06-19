@@ -5,3 +5,5 @@ node_modules/
 package-lock.json
 docs/
 packages/gossiplog/src/protocols/
+examples/*/vite.config.d.ts
+examples/*/vite.config.js
