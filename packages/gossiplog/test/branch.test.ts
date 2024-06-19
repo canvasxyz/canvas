@@ -38,6 +38,9 @@ testPlatforms("branch (insert, unconnected messages)", async (t, openGossipLog) 
 
 	t.deepEqual((await log.db.get("$messages", parent1))!.branch, 0)
 	t.deepEqual((await log.db.get("$messages", parent2))!.branch, 1)
+
+	const branchMergesResult = await log.db.query("$branch_merges", {})
+	t.deepEqual(branchMergesResult, [])
 })
 
 testPlatforms("branch (insert, P1 -> C1, P1 -> C2)", async (t, openGossipLog) => {
@@ -57,6 +60,18 @@ testPlatforms("branch (insert, P1 -> C1, P1 -> C2)", async (t, openGossipLog) =>
 	t.deepEqual((await log.db.get("$messages", parent1))!.branch, 0)
 	t.deepEqual((await log.db.get("$messages", child1))!.branch, 0)
 	t.deepEqual((await log.db.get("$messages", child2))!.branch, 1)
+
+	const branchMergesResult = await log.db.query("$branch_merges", {})
+	t.deepEqual(branchMergesResult.length, 1)
+	const { id, ...branchMerge } = branchMergesResult[0]
+	t.deepEqual(branchMerge, {
+		source_branch: 0,
+		source_message_id: parent1,
+		source_clock: 1,
+		target_branch: 1,
+		target_message_id: child2,
+		target_clock: 2,
+	})
 })
 
 testPlatforms("branch (P1 -> C1, P1 -> C2, P2 -> C2)", async (t, openGossipLog) => {
@@ -80,6 +95,18 @@ testPlatforms("branch (P1 -> C1, P1 -> C2, P2 -> C2)", async (t, openGossipLog) 
 	t.deepEqual((await log.db.get("$messages", parent2))!.branch, 1)
 	t.deepEqual((await log.db.get("$messages", child1))!.branch, 0)
 	t.deepEqual((await log.db.get("$messages", child2))!.branch, 1)
+
+	const branchMergesResult = await log.db.query("$branch_merges", {})
+	t.deepEqual(branchMergesResult.length, 1)
+	const { id, ...branchMerge } = branchMergesResult[0]
+	t.deepEqual(branchMerge, {
+		source_branch: 0,
+		source_message_id: parent1,
+		source_clock: 1,
+		target_branch: 1,
+		target_message_id: child2,
+		target_clock: 2,
+	})
 })
 
 testPlatforms("branch (P1 -> C1, P1 -> C2, P2 -> C2, P1 -> C3, P2 -> C3)", async (t, openGossipLog) => {
@@ -107,4 +134,39 @@ testPlatforms("branch (P1 -> C1, P1 -> C2, P2 -> C2, P1 -> C3, P2 -> C3)", async
 	t.deepEqual((await log.db.get("$messages", child1))!.branch, 0)
 	t.deepEqual((await log.db.get("$messages", child2))!.branch, 1)
 	t.deepEqual((await log.db.get("$messages", child3))!.branch, 2)
+
+	t.deepEqual((await log.db.query("$branch_merges", {})).length, 3)
+
+	const res1 = await log.db.query("$branch_merges", { where: { source_branch: 0, target_branch: 1 } })
+	const { id: _id1, ...branchMerge1 } = res1[0]
+	t.deepEqual(branchMerge1, {
+		source_branch: 0,
+		source_message_id: parent1,
+		source_clock: 1,
+		target_branch: 1,
+		target_message_id: child2,
+		target_clock: 2,
+	})
+
+	const res2 = await log.db.query("$branch_merges", { where: { source_branch: 0, target_branch: 2 } })
+	const { id: _id2, ...branchMerge2 } = res2[0]
+	t.deepEqual(branchMerge2, {
+		source_branch: 0,
+		source_message_id: parent1,
+		source_clock: 1,
+		target_branch: 2,
+		target_message_id: child3,
+		target_clock: 2,
+	})
+
+	const res3 = await log.db.query("$branch_merges", { where: { source_branch: 1, target_branch: 2 } })
+	const { id: _id3, ...branchMerge3 } = res3[0]
+	t.deepEqual(branchMerge3, {
+		source_branch: 1,
+		source_message_id: parent2,
+		source_clock: 1,
+		target_branch: 2,
+		target_message_id: child3,
+		target_clock: 2,
+	})
 })
