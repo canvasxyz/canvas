@@ -104,15 +104,23 @@ defineProps<{
 
 .details {
   flex-grow: 1;
-  padding-top: 8px;
   line-height: 22px;
   font-size: 16px;
   font-weight: 500;
   color: var(--vp-c-text-2);
 }
 
+h2.title {
+  padding-top: 0px !important;
+}
+
+p.details {
+  margin: 10px 0;
+}
+
 .link-text {
   padding-top: 8px;
+  max-height: 50px;
 }
 
 .link-text-value {
@@ -121,9 +129,10 @@ defineProps<{
   font-size: 16px;
   font-weight: 600;
   color: var(--vp-c-brand-1);
+  margin: 0;
 }
-.link-text-value a:hover {
-  text-decoration: underline;
+.link-text-value a {
+  text-decoration: none;
 }
 
 .soon-text {
@@ -135,9 +144,9 @@ defineProps<{
 .external-link {
   display: inline-block;
   position: relative;
-  top: 2px;
-  left: -2px;
+  top: 1px;
   line-height: 1;
-  margin-right: 9px;
+  margin-right: 15px;
+  margin-left: 1px;
 }
 </style>
