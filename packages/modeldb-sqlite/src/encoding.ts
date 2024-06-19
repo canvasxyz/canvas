@@ -1,4 +1,4 @@
-import { assert, signalInvalidType } from "@canvas-js/utils"
+import * as json from "@ipld/dag-json"
 
 import type {
 	Model,
@@ -6,18 +6,25 @@ import type {
 	PrimaryKeyProperty,
 	PrimaryKeyValue,
 	PrimitiveProperty,
+	PrimitiveValue,
 	PropertyValue,
 	ReferenceProperty,
-} from "../types.js"
+} from "@canvas-js/modeldb"
 
-type PostgresPrimitiveValue = string | number | boolean | Uint8Array | null
+import { assert, signalInvalidType } from "@canvas-js/utils"
+
+// this is the type of a primitive value as stored in sqlite
+// this may not match onto the types in the model
+// because sqlite does not natively support all of the types we might want
+// for example, sqlite does not have a boolean or a json type
+type SqlitePrimitiveValue = string | number | Buffer | null
 
 export function encodeRecordParams(
 	model: Model,
 	value: ModelValue,
 	params: Record<string, `p${string}`>,
-): Record<`p${string}`, string | number | boolean | Uint8Array | null> {
-	const values: Record<`p${string}`, string | number | boolean | Uint8Array | null> = {}
+): Record<`p${string}`, string | number | Buffer | null> {
+	const values: Record<`p${string}`, string | number | Buffer | null> = {}
 
 	for (const property of model.properties) {
 		const propertyValue = value[property.name]
@@ -43,7 +50,7 @@ export function encodeRecordParams(
 	return values
 }
 
-export function encodePrimaryKeyValue(modelName: string, property: PrimaryKeyProperty, value: PropertyValue): string {
+function encodePrimaryKeyValue(modelName: string, property: PrimaryKeyProperty, value: PropertyValue): string {
 	if (typeof value === "string") {
 		return value
 	} else {
@@ -51,14 +58,16 @@ export function encodePrimaryKeyValue(modelName: string, property: PrimaryKeyPro
 	}
 }
 
-export function encodePrimitiveValue(
+function encodePrimitiveValue(
 	modelName: string,
 	property: PrimitiveProperty,
 	value: PropertyValue,
-): PostgresPrimitiveValue {
+): SqlitePrimitiveValue {
 	if (value === null) {
 		if (property.optional) {
 			return null
+		} else if (property.type === "json") {
+			return "null"
 		} else {
 			throw new TypeError(`${modelName}/${property.name} cannot be null`)
 		}
@@ -88,15 +97,15 @@ export function encodePrimitiveValue(
 		}
 	} else if (property.type === "boolean") {
 		if (typeof value === "boolean") {
-			return value ? true : false
+			return value ? 1 : 0
 		} else {
 			throw new TypeError(`${modelName}/${property.name} must be a boolean`)
 		}
 	} else if (property.type == "json") {
 		try {
-			return JSON.stringify(value)
+			return json.stringify(value)
 		} catch (e) {
-			throw new TypeError(`${modelName}/${property.name} must be serializable to JSON`)
+			throw new TypeError(`${modelName}/${property.name} must be IPLD-encodable`)
 		}
 	} else {
 		const _: never = property.type
@@ -104,11 +113,7 @@ export function encodePrimitiveValue(
 	}
 }
 
-export function encodeReferenceValue(
-	modelName: string,
-	property: ReferenceProperty,
-	value: PropertyValue,
-): string | null {
+function encodeReferenceValue(modelName: string, property: ReferenceProperty, value: PropertyValue): string | null {
 	if (value === null) {
 		if (property.optional) {
 			return null
@@ -122,10 +127,7 @@ export function encodeReferenceValue(
 	}
 }
 
-export function decodeRecord(
-	model: Model,
-	record: Record<string, string | number | boolean | Uint8Array | null>,
-): ModelValue {
+export function decodeRecord(model: Model, record: Record<string, string | number | Buffer | null>): ModelValue {
 	const value: ModelValue = {}
 
 	for (const property of model.properties) {
@@ -148,7 +150,7 @@ export function decodeRecord(
 export function decodePrimaryKeyValue(
 	modelName: string,
 	property: PrimaryKeyProperty,
-	value: string | number | boolean | Uint8Array | null,
+	value: string | number | Buffer | null,
 ): PrimaryKeyValue {
 	if (typeof value !== "string") {
 		throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected string)`)
@@ -157,7 +159,7 @@ export function decodePrimaryKeyValue(
 	return value
 }
 
-export function decodePrimitiveValue(modelName: string, property: PrimitiveProperty, value: PostgresPrimitiveValue) {
+export function decodePrimitiveValue(modelName: string, property: PrimitiveProperty, value: SqlitePrimitiveValue) {
 	if (value === null) {
 		if (property.optional) {
 			return null
@@ -167,15 +169,15 @@ export function decodePrimitiveValue(modelName: string, property: PrimitivePrope
 	}
 
 	if (property.type === "integer") {
-		if (typeof value === "string" && Number.isSafeInteger(parseInt(value, 10))) {
-			return parseInt(value, 10)
+		if (typeof value === "number" && Number.isSafeInteger(value)) {
+			return value
 		} else {
 			console.error("expected integer, got", value)
 			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected integer)`)
 		}
 	} else if (property.type === "float") {
-		if (typeof value === "string") {
-			return parseFloat(value)
+		if (typeof value === "number") {
+			return value
 		} else {
 			console.error("expected float, got", value)
 			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected float)`)
@@ -195,18 +197,19 @@ export function decodePrimitiveValue(modelName: string, property: PrimitivePrope
 			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected Uint8Array)`)
 		}
 	} else if (property.type == "boolean") {
-		if (typeof value === "boolean") {
-			return value === true
+		if (typeof value === "number") {
+			return value === 1
 		} else {
 			console.error("expected boolean, got", value)
 			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected boolean)`)
 		}
 	} else if (property.type == "json") {
+		assert(typeof value === "string", 'internal error - expected typeof value === "string"')
 		try {
-			return JSON.parse(value as string)
+			return json.parse<PrimitiveValue>(value)
 		} catch (e) {
-			console.error("expected JSON, got", value)
-			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected JSON)`)
+			console.error("internal error - invalid dag-json", value)
+			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected dag-json)`)
 		}
 	} else {
 		const _: never = property.type
@@ -217,7 +220,7 @@ export function decodePrimitiveValue(modelName: string, property: PrimitivePrope
 export function decodeReferenceValue(
 	modelName: string,
 	property: ReferenceProperty,
-	value: string | number | boolean | Uint8Array | null,
+	value: string | number | Uint8Array | null,
 ): string | null {
 	if (value === null) {
 		if (property.optional) {

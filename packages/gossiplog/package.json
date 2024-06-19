@@ -40,6 +40,9 @@
 	"dependencies": {
 		"@canvas-js/interfaces": "0.10.0-beta.2",
 		"@canvas-js/modeldb": "0.10.0-beta.2",
+		"@canvas-js/modeldb-idb": "0.10.0-beta.2",
+		"@canvas-js/modeldb-pg": "0.10.0-beta.2",
+		"@canvas-js/modeldb-sqlite": "0.10.0-beta.2",
 		"@canvas-js/okra": "^0.4.4",
 		"@canvas-js/okra-lmdb": "^0.1.2",
 		"@canvas-js/okra-memory": "^0.4.4",
@@ -47,7 +50,6 @@
 		"@canvas-js/utils": "0.10.0-beta.2",
 		"@chainsafe/libp2p-yamux": "^6.0.2",
 		"@ipld/dag-cbor": "^9.2.0",
-		"@ipld/schema": "^4.2.18",
 		"@libp2p/interface": "^1.4.0",
 		"@libp2p/interface-internal": "^1.2.1",
 		"@libp2p/logger": "^4.0.14",

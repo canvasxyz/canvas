@@ -11,6 +11,9 @@
 		{ "path": "../interfaces" },
 		{ "path": "../utils" },
 		{ "path": "../signatures" },
-		{ "path": "../modeldb" }
+		{ "path": "../modeldb" },
+		{ "path": "../modeldb-idb" },
+		{ "path": "../modeldb-pg" },
+		{ "path": "../modeldb-sqlite" }
 	]
 }

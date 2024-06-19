@@ -8,5 +8,5 @@
 		"rootDir": "src",
 		"outDir": "lib"
 	},
-	"references": [{ "path": "../utils" }]
+	"references": [{ "path": "../modeldb" }, { "path": "../utils" }]
 }

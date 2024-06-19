@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import equal from "fast-deep-equal/es6/index.js"
 
-import type { ModelValue, QueryParams } from "../types.js"
-import { AbstractModelDB } from "../AbstractModelDB.js"
+import type { AbstractModelDB, ModelValue, QueryParams } from "@canvas-js/modeldb"
 
 export function useLiveQuery<T extends ModelValue = ModelValue>(
 	db: AbstractModelDB | null | undefined,

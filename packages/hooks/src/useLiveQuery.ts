@@ -1,6 +1,6 @@
-import { useLiveQuery as _useLiveQuery } from "@canvas-js/modeldb/idb"
 import type { Canvas } from "@canvas-js/core"
 import type { ModelValue, QueryParams } from "@canvas-js/modeldb"
+import { useLiveQuery as _useLiveQuery } from "@canvas-js/modeldb-idb"
 
 export function useLiveQuery<T extends ModelValue = ModelValue>(
 	app: Canvas | null | undefined,

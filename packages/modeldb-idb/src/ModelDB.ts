@@ -2,10 +2,7 @@ import { IDBPDatabase, IDBPTransaction, openDB } from "idb"
 
 import { assert, signalInvalidType } from "@canvas-js/utils"
 
-import { AbstractModelDB } from "../AbstractModelDB.js"
-import { Config, Effect, ModelValue, ModelsInit, QueryParams } from "../types.js"
-import { parseConfig } from "../config.js"
-import { Awaitable } from "../utils.js"
+import { AbstractModelDB, Config, Effect, ModelValue, ModelsInit, QueryParams, parseConfig } from "@canvas-js/modeldb"
 
 import { ModelAPI } from "./api.js"
 import { getIndexName, checkForMissingObjectStores } from "./utils.js"
@@ -79,7 +76,7 @@ export class ModelDB extends AbstractModelDB {
 	}
 
 	private async read<T>(
-		fn: (txn: IDBPTransaction<any, any, "readonly">) => Awaitable<T>,
+		fn: (txn: IDBPTransaction<any, any, "readonly">) => T | Promise<T>,
 		objectStoreNames: string[] = [...this.db.objectStoreNames],
 	) {
 		checkForMissingObjectStores(this.db, objectStoreNames)

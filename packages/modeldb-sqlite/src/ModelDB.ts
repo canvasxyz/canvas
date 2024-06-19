@@ -2,10 +2,9 @@ import Database, * as sqlite from "better-sqlite3"
 
 import { assert, signalInvalidType } from "@canvas-js/utils"
 
-import { AbstractModelDB } from "../AbstractModelDB.js"
-import { parseConfig } from "../config.js"
+import { AbstractModelDB, parseConfig, Effect, ModelValue, ModelsInit, QueryParams } from "@canvas-js/modeldb"
+
 import { ModelAPI } from "./api.js"
-import { Effect, ModelValue, ModelsInit, QueryParams } from "../types.js"
 
 export interface ModelDBOptions {
 	path: string | null
