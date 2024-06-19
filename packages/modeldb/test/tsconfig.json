@@ -7,5 +7,10 @@
 		"rootDir": ".",
 		"outDir": "lib"
 	},
-	"references": [{ "path": "../." }]
+	"references": [
+		{ "path": "../." },
+		{ "path": "../../modeldb-idb" },
+		{ "path": "../../modeldb-pg" },
+		{ "path": "../../modeldb-sqlite" }
+	]
 }
