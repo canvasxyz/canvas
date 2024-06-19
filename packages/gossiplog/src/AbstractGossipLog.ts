@@ -45,7 +45,15 @@ export type GossipLogEvents<Payload = unknown> = {
 
 export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmitter<GossipLogEvents<Payload>> {
 	public static schema = {
-		$messages: { id: "primary", signature: "json", message: "json", hash: "string", branch: "integer" },
+		$messages: {
+			id: "primary",
+			signature: "json",
+			message: "json",
+			hash: "string",
+			branch: "integer",
+			clock: "integer",
+			$indexes: [["branch", "clock"]],
+		},
 		$heads: { id: "primary" },
 		...BranchIndex.schema,
 		...BranchMergeIndex.schema,
@@ -242,7 +250,8 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 		const hash = toString(hashEntry(key, value), "hex")
 
-		const branch = await this.getBranch(id, message.parents)
+		const branch = await this.getBranch(id, message.clock, message.parents)
+		const clock = message.clock
 
 		const branchMergeIndex = new BranchMergeIndex(this.db)
 		for (const parentId of message.parents) {
@@ -264,7 +273,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 			}
 		}
 
-		await this.db.set("$messages", { id, signature, message, hash, branch })
+		await this.db.set("$messages", { id, signature, message, hash, branch, clock })
 
 		const heads = await this.db.query<{ id: string }>("$heads")
 		await this.db.apply([
@@ -288,35 +297,29 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message } }))
 	}
 
-	private async getBranch(messageId: string, parentIds: string[]) {
+	private async getBranch(messageId: string, clock: number, parentIds: string[]) {
 		if (parentIds.length == 0) {
 			return await new BranchIndex(this.db).createNewBranch()
 		}
-		const parentsByBranch: Record<number, any> = {}
 
+		const parentBranches: number[] = []
 		for (const parentId of parentIds) {
 			const parentMessage = await this.db.get("$messages", parentId)
 			if (parentMessage == null) {
 				throw new Error(`Parent message ${parentId} not found`)
 			}
-			parentsByBranch[parentMessage.branch] = parentMessage
+			parentBranches.push(parentMessage.branch)
 		}
+		const branch = Math.max(...parentBranches)
 
-		const branches = Object.keys(parentsByBranch).map((k) => parseInt(k))
-		const branch = Math.max(...branches)
+		const messageAtBranchClockPosition = await this.db.query("$messages", {
+			where: {
+				branch,
+				clock,
+			},
+		})
 
-		const parentWithMaxBranch = parentsByBranch[branch]!
-		const children = await new ChildIndex(this.db).getChildren(parentWithMaxBranch.id)
-
-		let createNewBranch = false
-		for (const childId of children) {
-			if (childId !== messageId) {
-				createNewBranch = true
-				break
-			}
-		}
-
-		if (createNewBranch) {
+		if (messageAtBranchClockPosition.length > 0 && messageAtBranchClockPosition[0].id !== messageId) {
 			return await new BranchIndex(this.db).createNewBranch()
 		} else {
 			return branch
