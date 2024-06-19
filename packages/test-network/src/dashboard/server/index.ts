@@ -32,11 +32,11 @@ app.post("/api/disconnect/:source/:target", (req, res) => {
 
 	const ws = sockets.get(source)
 	if (ws === undefined) {
-		return res.status(404).end()
+		return void res.status(404).end()
 	}
 
 	ws.send(JSON.stringify({ type: "disconnect", target }))
-	return res.status(200).end()
+	return void res.status(200).end()
 })
 
 app.post("/api/provide/:peerId", (req, res) => {
@@ -44,22 +44,22 @@ app.post("/api/provide/:peerId", (req, res) => {
 
 	const ws = sockets.get(req.params.peerId)
 	if (ws === undefined) {
-		return res.status(404).end()
+		return void res.status(404).end()
 	}
 
 	ws.send(JSON.stringify({ type: "provide" }))
-	return res.status(200).end()
+	return void res.status(200).end()
 })
 
 app.post("/api/query/:peerId", (req, res) => {
 	console.log("QUERY", req.params.peerId)
 	const ws = sockets.get(req.params.peerId)
 	if (ws === undefined) {
-		return res.status(404).end()
+		return void res.status(404).end()
 	}
 
 	ws.send(JSON.stringify({ type: "query" }))
-	return res.status(200).end()
+	return void res.status(200).end()
 })
 
 app.post("/api/boop/:peerId", (req, res) => {
@@ -67,11 +67,11 @@ app.post("/api/boop/:peerId", (req, res) => {
 
 	const ws = sockets.get(req.params.peerId)
 	if (ws === undefined) {
-		return res.status(404).end()
+		return void res.status(404).end()
 	}
 
 	ws.send(JSON.stringify({ type: "boop" }))
-	return res.status(200).end()
+	return void res.status(200).end()
 })
 
 app.post("/api/events", (req, res) => {
@@ -81,7 +81,7 @@ app.post("/api/events", (req, res) => {
 		queue.add(() => push(res, event))
 	}
 
-	res.status(200).end()
+	return void res.status(200).end()
 })
 
 app.get("/api/events", (req, res) => {
