@@ -257,8 +257,6 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		// const root = await txn.getRoot()
 		// await new MerkleIndex(this.db).commit(root)
 
-		await new MessageBranchIndex(this.db).setMessageBranch(id, branch)
-
 		await new AncestorIndex(this.db).indexAncestors(id, message.parents)
 		const childIndex = new ChildIndex(this.db)
 		for (const parentId of message.parents) {
@@ -289,7 +287,11 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 			// get the max branch out of the parents' branches
 			const parentBranches: number[] = []
 			for (const parentId of parentIds) {
-				parentBranches.push(await messageBranchIndex.getMessageBranch(parentId))
+				const parentMessage = await this.db.get("$messages", parentId)
+				if (parentMessage == null) {
+					throw new Error(`Parent message ${parentId} not found`)
+				}
+				parentBranches.push(parentMessage.branch)
 			}
 			return Math.max(...parentBranches)
 		}
