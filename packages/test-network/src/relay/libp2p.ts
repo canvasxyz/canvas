@@ -4,7 +4,7 @@ import { webSockets } from "@libp2p/websockets"
 import { all } from "@libp2p/websockets/filters"
 import { yamux } from "@chainsafe/libp2p-yamux"
 import { plaintext } from "@libp2p/plaintext"
-import { identify } from "@libp2p/identify"
+import { Identify, identify } from "@libp2p/identify"
 import { Fetch, fetch } from "@libp2p/fetch"
 import { PingService, ping } from "@libp2p/ping"
 
@@ -13,7 +13,7 @@ import { listen, announce, getPeerId } from "./config.js"
 export async function getLibp2p() {
 	const peerId = await getPeerId()
 
-	return await createLibp2p<{ fetch: Fetch; ping: PingService }>({
+	return await createLibp2p<{ identify: Identify; fetch: Fetch; ping: PingService }>({
 		peerId: peerId,
 		start: false,
 		addresses: { listen, announce },
