@@ -5,7 +5,9 @@
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"main": "lib/index.js",
 	"types": "lib/index.d.ts",
-	"files": ["lib"],
+	"files": [
+		"lib"
+	],
 	"exports": {
 		".": "./lib/index.js"
 	},

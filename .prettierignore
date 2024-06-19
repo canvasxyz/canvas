@@ -2,3 +2,6 @@
 .env
 .next/
 node_modules/
+package-lock.json
+docs/
+packages/gossiplog/src/protocols/

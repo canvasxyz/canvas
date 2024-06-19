@@ -1,6 +1,4 @@
 export default {
-  content: [
-    "./src/**/*.{html,js,tsx}",
-  ],
-  plugins: [],
-};
+	content: ["./src/**/*.{html,js,tsx}"],
+	plugins: [],
+}

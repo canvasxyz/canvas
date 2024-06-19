@@ -1,13 +1,11 @@
 {
-  "include": ["src"],
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "module": "Node16",
-    "moduleResolution": "Node16",
-    "rootDir": "src",
-    "outDir": "lib"
-  },
-  "references": [
-    { "path": "../interfaces" }
-  ]
+	"include": ["src"],
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"module": "Node16",
+		"moduleResolution": "Node16",
+		"rootDir": "src",
+		"outDir": "lib"
+	},
+	"references": [{ "path": "../interfaces" }]
 }

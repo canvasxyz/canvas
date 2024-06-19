@@ -1,19 +1,19 @@
 {
-  "include": ["src"],
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "module": "Node16",
-    "moduleResolution": "Node16",
-    "rootDir": "src",
-    "outDir": "dist"
-  },
-  "references": [
-    { "path": "../chain-atp" },
-    { "path": "../chain-ethereum" },
-    { "path": "../chain-cosmos" },
-    { "path": "../chain-solana" },
-    { "path": "../chain-substrate" },
-    { "path": "../core" },
-    { "path": "../interfaces" }
-  ]
+	"include": ["src"],
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"module": "Node16",
+		"moduleResolution": "Node16",
+		"rootDir": "src",
+		"outDir": "dist"
+	},
+	"references": [
+		{ "path": "../chain-atp" },
+		{ "path": "../chain-ethereum" },
+		{ "path": "../chain-cosmos" },
+		{ "path": "../chain-solana" },
+		{ "path": "../chain-substrate" },
+		{ "path": "../core" },
+		{ "path": "../interfaces" }
+	]
 }
