@@ -13,15 +13,15 @@
 		"generate-test-data": "node test/lib/generateTestData.js"
 	},
 	"dependencies": {
-		"@atproto/api": "^0.12.5",
+		"@atproto/api": "^0.12.21",
 		"@atproto/crypto": "^0.4.0",
 		"@canvas-js/interfaces": "0.10.0-beta.3",
 		"@canvas-js/signatures": "0.10.0-beta.3",
 		"@canvas-js/utils": "0.10.0-beta.3",
 		"@ipld/car": "^5.3.1",
 		"@ipld/dag-cbor": "^9.2.0",
-		"@ipld/dag-json": "^10.1.5",
-		"@libp2p/logger": "^4.0.14",
+		"@ipld/dag-json": "^10.2.1",
+		"@libp2p/logger": "^4.0.15",
 		"@noble/hashes": "^1.4.0",
 		"multiformats": "^13.1.1"
 	},

@@ -15,10 +15,10 @@
 		"@canvas-js/interfaces": "0.10.0-beta.3",
 		"@canvas-js/signatures": "0.10.0-beta.3",
 		"@canvas-js/utils": "0.10.0-beta.3",
-		"@ipld/dag-json": "^10.1.5",
-		"@libp2p/logger": "^4.0.14",
+		"@ipld/dag-json": "^10.2.1",
+		"@libp2p/logger": "^4.0.15",
 		"@noble/curves": "^1.4.0",
-		"@solana/web3.js": "^1.87.6",
+		"@solana/web3.js": "^1.93.0",
 		"multiformats": "^13.1.1"
 	},
 	"devDependencies": {

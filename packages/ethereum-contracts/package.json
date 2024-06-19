@@ -17,14 +17,14 @@
 		"@ethersproject/providers": "^5.7.2",
 		"@noble/hashes": "^1.4.0",
 		"@nomicfoundation/hardhat-chai-matchers": "^1.0.6",
-		"@nomicfoundation/hardhat-network-helpers": "^1.0.10",
+		"@nomicfoundation/hardhat-network-helpers": "^1.0.11",
 		"@nomicfoundation/hardhat-toolbox": "^2.0.0",
 		"@nomiclabs/hardhat-etherscan": "^3.1.8",
-		"@types/chai": "^4.3.14",
+		"@types/chai": "^4.3.16",
 		"@types/mocha": "^10.0.6",
-		"chai-as-promised": "^7.1.1",
+		"chai-as-promised": "^7.1.2",
 		"ethers": "5.7.2",
-		"hardhat": "^2.12.7",
+		"hardhat": "^2.22.5",
 		"hardhat-gas-reporter": "^1.0.10",
 		"multiformats": "^13.1.1",
 		"ordinal": "^1.0.3",
@@ -47,7 +47,7 @@
 	"dependencies": {
 		"@canvas-js/chain-ethereum": "0.10.0-beta.3",
 		"@lazyledger/protobuf3-solidity-lib": "^0.6.0",
-		"@openzeppelin/contracts": "^4.8.1",
+		"@openzeppelin/contracts": "^4.9.6",
 		"base58-solidity": "^1.0.2"
 	}
 }

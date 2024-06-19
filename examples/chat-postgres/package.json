@@ -14,22 +14,22 @@
 		"@canvas-js/client": "0.10.0-beta.3",
 		"@canvas-js/core": "0.10.0-beta.3",
 		"@canvas-js/utils": "0.10.0-beta.3",
-		"@ipld/dag-json": "^10.2.0",
+		"@ipld/dag-json": "^10.2.1",
 		"next": "14.1.4",
-		"react": "^18",
+		"react": "^18.3.1",
 		"react-dom": "^18.3.1"
 	},
 	"devDependencies": {
-		"@types/node": "^20.14.2",
+		"@types/node": "^20.14.6",
 		"@types/react": "^18.3.3",
 		"@types/react-dom": "^18.3.0",
-		"autoprefixer": "^10.0.1",
-		"eslint": "^8",
+		"autoprefixer": "^10.4.19",
+		"eslint": "^8.57.0",
 		"eslint-config-next": "14.1.4",
-		"postcss": "^8",
+		"postcss": "^8.4.38",
 		"tailwindcss": "^3.4.4",
 		"ts-node": "^10.9.2",
-		"tsx": "^4.7.2",
-		"typescript": "^5"
+		"tsx": "^4.15.6",
+		"typescript": "^5.4.5"
 	}
 }
