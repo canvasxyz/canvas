@@ -12,6 +12,9 @@
 		{ "path": "../interfaces" },
 		{ "path": "../signatures" },
 		{ "path": "../modeldb" },
+		{ "path": "../modeldb-idb" },
+		{ "path": "../modeldb-pg" },
+		{ "path": "../modeldb-sqlite" },
 		{ "path": "../gossiplog" },
 		{ "path": "../vm" }
 	]
