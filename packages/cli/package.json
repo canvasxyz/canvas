@@ -19,7 +19,7 @@
 		"@canvas-js/core": "0.10.0-beta.3",
 		"@canvas-js/interfaces": "0.10.0-beta.3",
 		"@ipld/dag-json": "^10.1.5",
-		"@libp2p/peer-id": "^4.1.2",
+		"@libp2p/peer-id": "^4.1.4",
 		"@multiformats/multiaddr": "^12.3.0",
 		"@multiformats/multiaddr-matcher": "^1.2.4",
 		"@types/websocket": "^1.0.10",
