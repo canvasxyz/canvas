@@ -11,7 +11,7 @@ type BranchMergeEntry = {
 
 export class BranchMergeIndex {
 	public static schema = {
-		$branchMerges: {
+		$branch_merges: {
 			id: "primary",
 			source_branch: "integer",
 			source_message_id: "string",
@@ -26,6 +26,6 @@ export class BranchMergeIndex {
 
 	public async insertBranchMerge(entry: BranchMergeEntry) {
 		const id = `${entry.source_branch}:${entry.source_message_id}:${entry.target_branch}:${entry.target_message_id}`
-		await this.db.set("$branchMerges", { id, ...entry })
+		await this.db.set("$branch_merges", { id, ...entry })
 	}
 }
