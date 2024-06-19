@@ -13,7 +13,8 @@ import { Driver } from "./sync/driver.js"
 import type { SyncServer } from "./interface.js"
 import { AncestorIndex } from "./AncestorIndex.js"
 import { ChildIndex } from "./ChildIndex.js"
-import { MessageBranchIndex } from "./MessageBranchIndex.js"
+import { BranchIndex } from "./BranchIndex.js"
+import { BranchMergeIndex } from "./BranchMergeIndex.js"
 import { SignedMessage } from "./SignedMessage.js"
 import { decodeId, encodeId, messageIdPattern } from "./ids.js"
 import { getNextClock } from "./schema.js"
@@ -46,7 +47,8 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 	public static schema = {
 		$messages: { id: "primary", signature: "json", message: "json", hash: "string", branch: "integer" },
 		$heads: { id: "primary" },
-		...MessageBranchIndex.schema,
+		...BranchIndex.schema,
+		...BranchMergeIndex.schema,
 		...ChildIndex.schema,
 		...AncestorIndex.schema,
 	} satisfies ModelsInit
@@ -242,6 +244,26 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 		const branch = await this.getBranch(id, message.parents)
 
+		const branchMergeIndex = new BranchMergeIndex(this.db)
+		for (const parentId of message.parents) {
+			const parentMessageResult = await this.db.get("$messages", parentId)
+			if (!parentMessageResult) {
+				throw new Error(`missing parent ${parentId} of message ${id}`)
+			}
+			const parentBranch = parentMessageResult.branch
+			const parentClock = parentMessageResult.message.clock
+			if (parentBranch !== branch) {
+				await branchMergeIndex.insertBranchMerge({
+					source_branch: parentBranch,
+					source_clock: parentClock,
+					source_message_id: parentId,
+					target_branch: branch,
+					target_clock: message.clock,
+					target_message_id: id,
+				})
+			}
+		}
+
 		await this.db.set("$messages", { id, signature, message, hash, branch })
 
 		const heads = await this.db.query<{ id: string }>("$heads")
@@ -279,10 +301,8 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 	}
 
 	private async getBranch(messageId: string, parentIds: string[]) {
-		const messageBranchIndex = new MessageBranchIndex(this.db)
 		if (await this.shouldCreateNewBranch(messageId, parentIds)) {
-			// create a new branch
-			return await messageBranchIndex.createNewBranch()
+			return await new BranchIndex(this.db).createNewBranch()
 		} else {
 			// get the max branch out of the parents' branches
 			const parentBranches: number[] = []

@@ -1,6 +1,6 @@
 import type { AbstractModelDB, ModelsInit } from "@canvas-js/modeldb"
 
-export class MessageBranchIndex {
+export class BranchIndex {
 	public static schema = {
 		// $maxBranch is a singleton
 		$maxBranch: { id: "primary", maxBranch: "integer" },
