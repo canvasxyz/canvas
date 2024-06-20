@@ -306,14 +306,17 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		}
 		const branch = Math.max(...parentBranches)
 
-		const messageAtBranchClockPosition = await this.db.query("$messages", {
+		const messagesAtBranchClockPosition = await this.db.query("$messages", {
 			where: {
 				branch,
-				clock,
+				clock: {
+					gt: clock,
+				},
+				id: { neq: messageId },
 			},
 		})
 
-		if (messageAtBranchClockPosition.length > 0 && messageAtBranchClockPosition[0].id !== messageId) {
+		if (messagesAtBranchClockPosition.length > 0) {
 			return await new BranchIndex(this.db).createNewBranch()
 		} else {
 			return branch
