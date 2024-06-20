@@ -1,6 +1,6 @@
 import type { AbstractModelDB, ModelsInit } from "@canvas-js/modeldb"
 
-type BranchMergeEntry = {
+export type BranchMergeEntry = {
 	source_branch: number
 	source_message_id: string
 	source_clock: number

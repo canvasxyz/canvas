@@ -13,7 +13,7 @@ import { Driver } from "./sync/driver.js"
 import type { SyncServer } from "./interface.js"
 import { AncestorIndex } from "./AncestorIndex.js"
 import { BranchIndex } from "./BranchIndex.js"
-import { BranchMergeIndex } from "./BranchMergeIndex.js"
+import { BranchMergeEntry, BranchMergeIndex } from "./BranchMergeIndex.js"
 import { SignedMessage } from "./SignedMessage.js"
 import { decodeId, encodeId, messageIdPattern } from "./ids.js"
 import { getNextClock } from "./schema.js"
@@ -327,7 +327,45 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 	}
 
 	public async isAncestor(id: string, ancestor: string, visited = new Set<string>()): Promise<boolean> {
-		return await new AncestorIndex(this.db).isAncestor(id, ancestor, visited)
+		const ancestorMessage = await this.db.get("$messages", ancestor)
+		if (!ancestorMessage) {
+			throw new Error(`Message ${ancestor} not found`)
+		}
+
+		const toVisit: string[] = []
+		toVisit.push(id)
+
+		// eslint-disable-next-line no-constant-condition
+		while (true) {
+			const currentMessageId = toVisit.pop()
+			if (!currentMessageId) {
+				break
+			}
+			visited.add(currentMessageId)
+
+			// visit
+			const getCurrentMessageResult = await this.db.get("$messages", currentMessageId)
+			if (!getCurrentMessageResult) {
+				throw new Error(`Message ${currentMessageId} not found`)
+			}
+
+			if (
+				getCurrentMessageResult.branch == ancestorMessage.branch &&
+				getCurrentMessageResult.clock >= ancestorMessage.clock
+			) {
+				// found the message
+				return true
+			} else {
+				// get parents
+				const branchMerges = await this.db.query<BranchMergeEntry>("$branch_merges", {
+					where: { target_message_id: getCurrentMessageResult.id },
+				})
+				for (const branchMerge of branchMerges) {
+					toVisit.push(branchMerge.source_message_id)
+				}
+			}
+		}
+		return false
 	}
 
 	/**
