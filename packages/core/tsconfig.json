@@ -1,9 +1,7 @@
 {
-	"include": ["src", "types"],
 	"extends": "../../tsconfig.base.json",
+	"include": ["src", "types"],
 	"compilerOptions": {
-		"module": "Node16",
-		"moduleResolution": "Node16",
 		"rootDir": "src",
 		"outDir": "lib"
 	},
