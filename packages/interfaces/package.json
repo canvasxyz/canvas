@@ -1,6 +1,6 @@
 {
 	"name": "@canvas-js/interfaces",
-	"version": "0.10.0-beta.3",
+	"version": "0.10.0-beta.4",
 	"type": "module",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"main": "lib/index.js",

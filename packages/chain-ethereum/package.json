@@ -1,6 +1,6 @@
 {
 	"name": "@canvas-js/chain-ethereum",
-	"version": "0.10.0-beta.3",
+	"version": "0.10.0-beta.4",
 	"type": "module",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"main": "lib/index.js",
@@ -12,9 +12,9 @@
 		"test": "ava"
 	},
 	"dependencies": {
-		"@canvas-js/interfaces": "0.10.0-beta.3",
-		"@canvas-js/signatures": "0.10.0-beta.3",
-		"@canvas-js/utils": "0.10.0-beta.3",
+		"@canvas-js/interfaces": "0.10.0-beta.4",
+		"@canvas-js/signatures": "0.10.0-beta.4",
+		"@canvas-js/utils": "0.10.0-beta.4",
 		"@ipld/dag-json": "^10.2.1",
 		"@libp2p/logger": "^4.0.15",
 		"ethers": "^6.13.1",

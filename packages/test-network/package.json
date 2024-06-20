@@ -1,7 +1,7 @@
 {
 	"private": true,
 	"name": "@canvas-js/test-network",
-	"version": "0.10.0-beta.3",
+	"version": "0.10.0-beta.4",
 	"type": "module",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"main": "lib/index.js",
@@ -32,8 +32,8 @@
 		"vite": "^5.3.1"
 	},
 	"dependencies": {
-		"@canvas-js/gossiplog": "0.10.0-beta.3",
-		"@canvas-js/interfaces": "0.10.0-beta.3",
+		"@canvas-js/gossiplog": "0.10.0-beta.4",
+		"@canvas-js/interfaces": "0.10.0-beta.4",
 		"@chainsafe/libp2p-gossipsub": "^13.0.0",
 		"@chainsafe/libp2p-noise": "^15.0.0",
 		"@chainsafe/libp2p-yamux": "^6.0.2",
