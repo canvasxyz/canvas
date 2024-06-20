@@ -11,17 +11,7 @@
 	"scripts": {
 		"test": "ava"
 	},
-	"dependencies": {
-		"multiformats": "^13.1.1"
-	},
 	"devDependencies": {
-		"@canvas-js/chain-cosmos": "0.10.0-beta.3",
-		"@canvas-js/chain-ethereum": "0.10.0-beta.3",
-		"@canvas-js/chain-ethereum-viem": "0.10.0-beta.3",
-		"@canvas-js/chain-solana": "0.10.0-beta.3",
-		"@canvas-js/chain-substrate": "0.10.0-beta.3",
-		"@canvas-js/interfaces": "0.10.0-beta.3",
-		"@canvas-js/signatures": "0.10.0-beta.3",
 		"@cosmjs/amino": "^0.32.3",
 		"@noble/curves": "^1.4.0"
 	}
