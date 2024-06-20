@@ -358,7 +358,12 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 			} else {
 				// get parents
 				const branchMerges = await this.db.query<BranchMergeEntry>("$branch_merges", {
-					where: { target_message_id: getCurrentMessageResult.id },
+					where: {
+						target_branch: getCurrentMessageResult.branch,
+						target_clock: {
+							lte: getCurrentMessageResult.clock,
+						},
+					},
 				})
 				for (const branchMerge of branchMerges) {
 					toVisit.push(branchMerge.source_message_id)
