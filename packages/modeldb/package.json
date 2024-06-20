@@ -16,9 +16,6 @@
 		"test": "ava --serial"
 	},
 	"devDependencies": {
-		"@canvas-js/modeldb-idb": "0.10.0-beta.3",
-		"@canvas-js/modeldb-pg": "0.10.0-beta.3",
-		"@canvas-js/modeldb-sqlite": "0.10.0-beta.3",
 		"fake-indexeddb": "^6.0.0",
 		"nanoid": "^5.0.7"
 	},
