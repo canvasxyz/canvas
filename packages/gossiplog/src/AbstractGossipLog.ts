@@ -41,6 +41,15 @@ export type GossipLogEvents<Payload = unknown> = {
 	error: CustomEvent<{ error: Error }>
 }
 
+type MessageEntry<Payload> = {
+	id: string
+	signature: Signature
+	message: Message<Payload>
+	hash: string
+	branch: number
+	clock: number
+}
+
 export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmitter<GossipLogEvents<Payload>> {
 	public static schema = {
 		$messages: {
@@ -246,9 +255,30 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 		const hash = toString(hashEntry(key, value), "hex")
 
-		const branch = await this.getBranch(id, message)
+		const parentMessageEntries: MessageEntry<Payload>[] = []
+		for (const parentId of message.parents) {
+			const parentMessageEntry = await this.db.get<MessageEntry<Payload>>("$messages", parentId)
+			if (parentMessageEntry === null) {
+				throw new Error(`missing parent ${parentId} of message ${id}`)
+			}
+			parentMessageEntries.push(parentMessageEntry)
+		}
 
-		await new BranchMergeIndex(this.db).insertBranchMerges(id, branch, message)
+		const branch = await this.getBranch(id, parentMessageEntries)
+
+		const branchMergeIndex = new BranchMergeIndex(this.db)
+		for (const parentMessageEntry of parentMessageEntries) {
+			if (parentMessageEntry.branch !== branch) {
+				await branchMergeIndex.insertBranchMerge({
+					source_branch: parentMessageEntry.branch,
+					source_clock: parentMessageEntry.clock,
+					source_message_id: parentMessageEntry.id,
+					target_branch: branch,
+					target_clock: message.clock,
+					target_message_id: id,
+				})
+			}
+		}
 
 		await this.db.set("$messages", { id, signature, message, hash, branch, clock: message.clock })
 
@@ -268,18 +298,14 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message } }))
 	}
 
-	private async getBranch(messageId: string, message: Message<any>) {
-		if (message.parents.length == 0) {
+	private async getBranch(messageId: string, parentMessages: MessageEntry<Payload>[]) {
+		if (parentMessages.length == 0) {
 			return await new BranchIndex(this.db).createNewBranch()
 		}
 
 		let maxBranch = -1
 		let parentMessageWithMaxClock: any = null
-		for (const parentId of message.parents) {
-			const parentMessage = await this.db.get("$messages", parentId)
-			if (parentMessage == null) {
-				throw new Error(`Parent message ${parentId} not found`)
-			}
+		for (const parentMessage of parentMessages) {
 			if (parentMessage.branch > maxBranch) {
 				parentMessageWithMaxClock = parentMessage
 				maxBranch = parentMessage.branch
@@ -287,7 +313,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		}
 		const branch = maxBranch
 
-		const messagesAtBranchClockPosition = await this.db.query("$messages", {
+		const messagesAtBranchClockPosition = await this.db.query<MessageEntry<Payload>>("$messages", {
 			where: {
 				branch,
 				clock: {
