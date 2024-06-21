@@ -246,30 +246,11 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 		const hash = toString(hashEntry(key, value), "hex")
 
-		const branch = await this.getBranch(id, message.clock, message.parents)
-		const clock = message.clock
+		const branch = await this.getBranch(id, message)
 
-		const branchMergeIndex = new BranchMergeIndex(this.db)
-		for (const parentId of message.parents) {
-			const parentMessageResult = await this.db.get("$messages", parentId)
-			if (!parentMessageResult) {
-				throw new Error(`missing parent ${parentId} of message ${id}`)
-			}
-			const parentBranch = parentMessageResult.branch
-			const parentClock = parentMessageResult.message.clock
-			if (parentBranch !== branch) {
-				await branchMergeIndex.insertBranchMerge({
-					source_branch: parentBranch,
-					source_clock: parentClock,
-					source_message_id: parentId,
-					target_branch: branch,
-					target_clock: message.clock,
-					target_message_id: id,
-				})
-			}
-		}
+		await new BranchMergeIndex(this.db).insertBranchMerges(id, branch, message)
 
-		await this.db.set("$messages", { id, signature, message, hash, branch, clock })
+		await this.db.set("$messages", { id, signature, message, hash, branch, clock: message.clock })
 
 		const heads = await this.db.query<{ id: string }>("$heads")
 		await this.db.apply([
@@ -287,14 +268,14 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message } }))
 	}
 
-	private async getBranch(messageId: string, clock: number, parentIds: string[]) {
-		if (parentIds.length == 0) {
+	private async getBranch(messageId: string, message: Message<any>) {
+		if (message.parents.length == 0) {
 			return await new BranchIndex(this.db).createNewBranch()
 		}
 
 		let maxBranch = -1
 		let parentMessageWithMaxClock: any = null
-		for (const parentId of parentIds) {
+		for (const parentId of message.parents) {
 			const parentMessage = await this.db.get("$messages", parentId)
 			if (parentMessage == null) {
 				throw new Error(`Parent message ${parentId} not found`)
