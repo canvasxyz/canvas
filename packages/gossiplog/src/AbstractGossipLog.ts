@@ -363,19 +363,28 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 			) {
 				// found the message
 				return true
-			} else {
-				// get parents
-				const branchMerges = await this.db.query<BranchMergeEntry>("$branch_merges", {
-					where: {
-						target_branch: getCurrentMessageResult.branch,
-						target_clock: {
-							lte: getCurrentMessageResult.clock,
-						},
+			}
+
+			// this message has a lower clock or branch value than the ancestor message
+			// so none of its parents will be children of the ancestor
+			if (
+				getCurrentMessageResult.clock < ancestorMessage.clock ||
+				getCurrentMessageResult.branch < ancestorMessage.branch
+			) {
+				continue
+			}
+
+			// get parents
+			const branchMerges = await this.db.query<BranchMergeEntry>("$branch_merges", {
+				where: {
+					target_branch: getCurrentMessageResult.branch,
+					target_clock: {
+						lte: getCurrentMessageResult.clock,
 					},
-				})
-				for (const branchMerge of branchMerges) {
-					toVisit.push(branchMerge.source_message_id)
-				}
+				},
+			})
+			for (const branchMerge of branchMerges) {
+				toVisit.push(branchMerge.source_message_id)
 			}
 		}
 		return false
