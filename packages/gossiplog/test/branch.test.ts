@@ -174,3 +174,36 @@ testPlatforms("branch (P1 -> C1, P1 -> C2, P2 -> C2, P1 -> C3, P2 -> C3)", async
 		target_clock: 2,
 	})
 })
+
+testPlatforms("branch something", async (t, openGossipLog) => {
+	const topic = randomUUID()
+	const log = await openGossipLog(t, { topic, apply, indexAncestors: true })
+	const signer = ed25519.create()
+
+	const { id: a1 } = await insert(log, signer, { topic, clock: 1, parents: [], payload: nanoid() })
+	const { id: a2 } = await insert(log, signer, { topic, clock: 1, parents: [], payload: nanoid() })
+
+	const { id: b1 } = await insert(log, signer, { topic, clock: 2, parents: [a1], payload: nanoid() })
+	const { id: b2 } = await insert(log, signer, { topic, clock: 2, parents: [a1, a2], payload: nanoid() })
+
+	const { id: c1 } = await insert(log, signer, { topic, clock: 3, parents: [b1, a2], payload: nanoid() })
+
+	t.deepEqual((await log.db.get("$messages", a1))!.branch, 0)
+	t.deepEqual((await log.db.get("$messages", a2))!.branch, 1)
+	t.deepEqual((await log.db.get("$messages", b1))!.branch, 0)
+	t.deepEqual((await log.db.get("$messages", b2))!.branch, 1)
+	t.deepEqual((await log.db.get("$messages", c1))!.branch, 2)
+
+	// t.deepEqual((await log.db.query("$branch_merges", {})).length, 3)
+
+	// const res1 = await log.db.query("$branch_merges", { where: { source_branch: 0, target_branch: 1 } })
+	// const { id: _id1, ...branchMerge1 } = res1[0]
+	// t.deepEqual(branchMerge1, {
+	// 	source_branch: 0,
+	// 	source_message_id: parent1,
+	// 	source_clock: 1,
+	// 	target_branch: 1,
+	// 	target_message_id: child2,
+	// 	target_clock: 2,
+	// })
+})
