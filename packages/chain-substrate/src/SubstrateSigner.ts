@@ -8,7 +8,7 @@ import { KeypairType } from "@polkadot/util-crypto/types"
 
 import type { Awaitable, Session, AbstractSessionData, DidIdentifier } from "@canvas-js/interfaces"
 import { AbstractSessionSigner, ed25519 } from "@canvas-js/signatures"
-import { assert } from "@canvas-js/utils"
+import { assert, DAYS } from "@canvas-js/utils"
 
 import type { SubstrateMessage, SubstrateSessionData } from "./types.js"
 import { validateSessionData, randomKeypair, parseAddress, addressPattern } from "./utils.js"
@@ -41,7 +41,9 @@ export class SubstrateSigner extends AbstractSessionSigner<SubstrateSessionData>
 	// a generated wallet
 	_signer: AbstractSigner
 
-	public constructor({ sessionDuration, substrateKeyType, extension }: SubstrateSignerInit = {}) {
+	public constructor(
+		{ sessionDuration, substrateKeyType, extension }: SubstrateSignerInit = { sessionDuration: 14 * DAYS },
+	) {
 		super("chain-substrate", ed25519, { sessionDuration })
 		if (extension) {
 			const signRaw = extension.signer.signRaw
