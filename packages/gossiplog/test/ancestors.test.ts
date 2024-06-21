@@ -177,6 +177,18 @@ export const simulateRandomNetwork = async (
 		}
 	}
 
+	// for every branch and clock value
+	// assert that only one message exists
+	const messageByBranchAndClock: Record<string, number> = {}
+	for (const message of await self.db.query("$messages")) {
+		const key = `${message.branch}:${message.clock}`
+		if (!messageByBranchAndClock[key]) messageByBranchAndClock[key] = 0
+		messageByBranchAndClock[key] += 1
+		if (messageByBranchAndClock[key] > 1) {
+			t.fail(`Multiple messages exist with the same branch and clock: ${key}`)
+		}
+	}
+
 	t.log("completed", n, "isAncestor queries with an average of", (sum / n).toPrecision(3), "ms per query")
 
 	for (const log of logs) {
