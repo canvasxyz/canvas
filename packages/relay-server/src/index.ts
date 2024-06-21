@@ -33,9 +33,17 @@ getLibp2p().then(async (libp2p) => {
 	const topicMap = new Map<string, string[]>()
 	const topicIndex = new Map<string, Set<string>>()
 
+	app.get("/topicMap", (req, res) => void res.json(Object.fromEntries(topicMap)))
+	app.get(
+		"/topicIndex",
+		(req, res) => void res.json(Object.fromEntries(Array.from(topicIndex).map(([key, value]) => [key, [...value]]))),
+	)
+
 	libp2p.addEventListener("peer:disconnect", ({ detail: peerId }) => {
+		console.log(`peer:disconnect ${peerId}`)
+
 		for (const topic of topicMap.get(peerId.toString()) ?? []) {
-			topicMap.delete(topic)
+			topicMap.delete(peerId.toString())
 
 			const peers = topicIndex.get(topic)
 			peers?.delete(peerId.toString())
@@ -49,27 +57,28 @@ getLibp2p().then(async (libp2p) => {
 	const protocolPrefix = getProtocol("")
 
 	libp2p.addEventListener("peer:update", ({ detail: { peer, previous } }) => {
-		topicMap.set(peer.id.toString(), peer.protocols)
+		const topics = peer.protocols
+			.filter((protocol) => protocol.startsWith(protocolPrefix))
+			.map((protocol) => protocol.slice(protocolPrefix.length))
 
-		for (const protocol of previous?.protocols ?? []) {
-			if (protocol.startsWith(protocolPrefix)) {
-				const topic = protocol.slice(protocolPrefix.length)
-				topicIndex.get(topic)?.delete(peer.id.toString())
-			}
+		topicMap.set(peer.id.toString(), topics)
+
+		const previousTopics = previous?.protocols
+			.filter((protocol) => protocol.startsWith(protocolPrefix))
+			.map((protocol) => protocol.slice(protocolPrefix.length))
+
+		for (const topic of previousTopics ?? []) {
+			topicIndex.get(topic)?.delete(peer.id.toString())
 		}
 
-		for (const protocol of peer.protocols) {
-			if (protocol.startsWith(protocolPrefix)) {
-				const topic = protocol.slice(protocolPrefix.length)
-
-				let peers = topicIndex.get(topic)
-				if (peers === undefined) {
-					peers = new Set()
-					topicIndex.set(topic, peers)
-				}
-
-				peers.add(peer.id.toString())
+		for (const topic of topics) {
+			let peers = topicIndex.get(topic)
+			if (peers === undefined) {
+				peers = new Set()
+				topicIndex.set(topic, peers)
 			}
+
+			peers.add(peer.id.toString())
 		}
 	})
 

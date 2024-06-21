@@ -15,11 +15,6 @@ ANNOUNCE = '/dns4/canvas-relay-server-thrumming-surf-3764.fly.dev/tcp/443/wss'
 # DEBUG = 'libp2p:*error'
 LISTEN = '/ip4/127.0.0.1/tcp/8080/ws'
 
-[http_service]
-internal_port = 3000
-min_machines_running = 0
-processes = ['app']
-
 [[services]]
 protocol = 'tcp'
 internal_port = 8080
