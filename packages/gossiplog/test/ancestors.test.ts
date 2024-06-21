@@ -233,9 +233,6 @@ export const simulateRandomNetwork = async (
 		await peer.serve((source) => self.sync(source))
 	}
 
-	let passed = true
-	const fails: any[] = []
-
 	for (const id of messageIDs) {
 		const { map } = messageIndices.get(id)!
 
@@ -246,43 +243,14 @@ export const simulateRandomNetwork = async (
 
 			const start = performance.now()
 			const isAncestor = await self.isAncestor(id, ancestorID)
-			const isAncestorOld = await self.isAncestorOld(id, ancestorID)
 			sum += performance.now() - start
 			n++
 
 			const { index: ancestorIndex } = messageIndices.get(ancestorID)!
-			const expected = getBit(map, ancestorIndex)
-			if (isAncestor != expected) {
-				t.log("isAncestor failed for", id, "and", ancestorID)
-				t.log("isAncestor", isAncestor)
-				t.log("isAncestorOld", isAncestorOld)
-				t.log("expected", expected)
-
-				const thisMessage = await self.db.get("$messages", id)
-				const ancestorMessage = await self.db.get("$messages", ancestorID)
-
-				fails.push({ thisMessage, ancestorMessage, isAncestor, expected })
-				passed = false
-			}
-			// t.is(isAncestor, getBit(map, ancestorIndex))
+			t.is(isAncestor, getBit(map, ancestorIndex))
 		}
 	}
 
-	console.log(fails)
-	const data = []
-	const allMessages = await self.db.query("$messages")
-	for (const { id, message, branch } of allMessages) {
-		data.push({
-			id,
-			branch,
-			clock: message.clock,
-			effects: [{ type: "set", key: "X", value: "Y" }],
-			parents: message.parents,
-		})
-	}
-	console.log(JSON.stringify(data))
-
-	t.is(passed, true, "some isAncestor queries failed")
 	t.log("completed", n, "isAncestor queries with an average of", (sum / n).toPrecision(3), "ms per query")
 
 	for (const log of logs) {
