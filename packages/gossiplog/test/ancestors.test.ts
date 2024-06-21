@@ -11,7 +11,7 @@ import { GossipLog } from "@canvas-js/gossiplog/sqlite"
 
 import { appendChain, getDirectory, testPlatforms } from "./utils.js"
 
-const rng = new Prando.default("seed784142")
+const rng = new Prando.default()
 
 const random = (n: number) => rng.nextInt(0, n - 1)
 
@@ -19,16 +19,20 @@ const nanoid = customRandom(urlAlphabet, 10, (size) => {
 	return new Uint8Array(size).map(() => rng.nextInt(0, 255))
 })
 
+const pseudoRandomEd25519 = () =>
+	ed25519.create({ type: "ed25519", privateKey: new Uint8Array(32).map(() => rng.nextInt(0, 255)) })
+
 const apply: GossipLogConsumer<string> = ({}) => {}
 
 testPlatforms("get ancestors (append, linear history)", async (t, openGossipLog) => {
 	const topic = nanoid()
 	const log = await openGossipLog(t, { topic, apply, indexAncestors: true })
+	const signer = pseudoRandomEd25519()
 
 	const n = 20
 	const ids: string[] = []
 	for (let i = 0; i < n; i++) {
-		const { id } = await log.append(nanoid())
+		const { id } = await log.append(nanoid(), { signer })
 		ids.push(id)
 	}
 
@@ -41,7 +45,7 @@ testPlatforms("get ancestors (append, linear history)", async (t, openGossipLog)
 
 testPlatforms("get ancestors (insert, linear history)", async (t, openGossipLog) => {
 	const topic = nanoid()
-	const signer = ed25519.create()
+	const signer = pseudoRandomEd25519()
 	const log = await openGossipLog(t, { topic, apply, indexAncestors: true })
 
 	const n = 20
@@ -69,13 +73,14 @@ testPlatforms("get ancestors (insert, linear history)", async (t, openGossipLog)
 testPlatforms("get ancestors (insert, concurrent history, fixed)", async (t, openGossipLog) => {
 	const topic = nanoid()
 	const log = await openGossipLog(t, { topic, apply, indexAncestors: true })
+	const signer = pseudoRandomEd25519()
 
-	const { id: idX } = await log.append(nanoid())
-	const { id: idY } = await log.append(nanoid())
-	const { id: idZ } = await log.append(nanoid())
-	const chainA = await appendChain(log, idZ, 5)
-	const chainB = await appendChain(log, idZ, 3)
-	const { id: tailId } = await log.append(nanoid())
+	const { id: idX } = await log.append(nanoid(), { signer })
+	const { id: idY } = await log.append(nanoid(), { signer })
+	const { id: idZ } = await log.append(nanoid(), { signer })
+	const chainA = await appendChain(log, idZ, 5, { signer })
+	const chainB = await appendChain(log, idZ, 3, { signer })
+	const { id: tailId } = await log.append(nanoid(), { signer })
 
 	t.deepEqual(await log.getAncestors(idZ, 1), [idX])
 	t.deepEqual(await log.getAncestors(tailId, 1), [idX])
@@ -148,9 +153,7 @@ export const simulateRandomNetwork = async (
 	maxMessageCount: number,
 	maxChainLength: number,
 ) => {
-	const signers = logs.map(() =>
-		ed25519.create({ type: "ed25519", privateKey: new Uint8Array(32).map(() => rng.nextInt(0, 255)) }),
-	)
+	const signers = logs.map(() => pseudoRandomEd25519())
 
 	const messageIDs: string[] = []
 	const messageIndices = new Map<string, { index: number; map: Uint8Array }>()
