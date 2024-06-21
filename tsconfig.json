@@ -18,6 +18,7 @@
 		{ "path": "./packages/client" },
 		{ "path": "./packages/core" },
 		{ "path": "./packages/core/test" },
+		{ "path": "./packages/relay-server" },
 		{ "path": "./packages/signatures" },
 		{ "path": "./packages/signatures/test" },
 		{ "path": "./packages/modeldb" },

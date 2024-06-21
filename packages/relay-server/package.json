@@ -1,0 +1,37 @@
+{
+	"private": true,
+	"name": "@canvas-js/relay-server",
+	"version": "0.10.0-beta.4",
+	"type": "module",
+	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
+	"main": "lib/index.js",
+	"types": "lib/index.d.ts",
+	"files": [
+		"lib"
+	],
+	"scripts": {
+		"start": "node lib/index.js"
+	},
+	"dependencies": {
+		"@chainsafe/libp2p-gossipsub": "^13.0.0",
+		"@chainsafe/libp2p-noise": "^15.0.0",
+		"@chainsafe/libp2p-yamux": "^6.0.2",
+		"@ipld/dag-cbor": "^9.2.0",
+		"@libp2p/circuit-relay-v2": "^1.1.0",
+		"@libp2p/fetch": "^1.1.0",
+		"@libp2p/identify": "^2.1.0",
+		"@libp2p/peer-id": "^4.1.4",
+		"@libp2p/peer-id-factory": "^4.1.4",
+		"@libp2p/ping": "^1.1.0",
+		"@libp2p/prometheus-metrics": "^3.1.0",
+		"@libp2p/websockets": "^8.1.0",
+		"@multiformats/multiaddr": "^12.3.0",
+		"@multiformats/multiaddr-matcher": "^1.2.4",
+		"@types/express": "^4.17.21",
+		"express": "^4.19.2",
+		"http-status-codes": "^2.3.0",
+		"libp2p": "^1.7.0",
+		"multiformats": "^13.1.1",
+		"prom-client": "^15.1.2"
+	}
+}
