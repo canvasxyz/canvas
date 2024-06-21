@@ -296,7 +296,6 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 			return await new BranchIndex(this.db).createNewBranch()
 		}
 
-		// const parentBranches: number[] = []
 		let maxBranch = -1
 		let parentMessageWithMaxClock: any = null
 		for (const parentId of parentIds) {
