@@ -175,7 +175,7 @@ testPlatforms("branch (P1 -> C1, P1 -> C2, P2 -> C2, P1 -> C3, P2 -> C3)", async
 	})
 })
 
-testPlatforms("branch something", async (t, openGossipLog) => {
+testPlatforms("branch where parents have different clock values", async (t, openGossipLog) => {
 	const topic = randomUUID()
 	const log = await openGossipLog(t, { topic, apply, indexAncestors: true })
 	const signer = ed25519.create()
