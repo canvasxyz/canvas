@@ -11,7 +11,6 @@ import { assert, zip } from "@canvas-js/utils"
 import { Driver } from "./sync/driver.js"
 
 import type { SyncServer } from "./interface.js"
-import { AncestorIndex } from "./AncestorIndex.js"
 import { BranchIndex } from "./BranchIndex.js"
 import { BranchMergeEntry, BranchMergeIndex } from "./BranchMergeIndex.js"
 import { SignedMessage } from "./SignedMessage.js"
@@ -56,7 +55,6 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		$heads: { id: "primary" },
 		...BranchIndex.schema,
 		...BranchMergeIndex.schema,
-		...AncestorIndex.schema,
 	} satisfies ModelsInit
 
 	public readonly topic: string
@@ -286,8 +284,6 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		// const root = await txn.getRoot()
 		// await new MerkleIndex(this.db).commit(root)
 
-		await new AncestorIndex(this.db).indexAncestors(id, message.parents)
-
 		this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message } }))
 	}
 
@@ -325,12 +321,6 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		} else {
 			return branch
 		}
-	}
-
-	public async getAncestors(id: string, atOrBefore: number): Promise<string[]> {
-		const results = await new AncestorIndex(this.db).getAncestors(id, atOrBefore)
-		this.log("getAncestors of %s atOrBefore %d: %o", id, atOrBefore, results)
-		return Array.from(results).sort()
 	}
 
 	public async isAncestor(id: string, ancestor: string, visited = new Set<string>()): Promise<boolean> {

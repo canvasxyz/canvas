@@ -228,7 +228,10 @@ TODO
 
 If `init.indexAncestors` is `true`, GossipLog will maintain an additional "ancestor index" that allows users to look up transitive ancestors of any message at an arbitrary clock in the message's past.
 
-In the example below, `await gossiplog.getAncestors(l, 6)` would return `[h, i]`, while `await gossiplog.getAncestors(k, 6)` would only return `[i]`. The dotted arrows depict the exponential decay links in the ancestor index.
+In the example below, `await gossiplog.isAncestor(d, l)` would return `true` while `await gossiplog.isAncestor(d, k)` would return `false`.
+
+```ts
+
 
 ```
    ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┬ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┬ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
@@ -329,8 +332,6 @@ interface AbstractGossipLog<Payload = unknown>
   ): AsyncIterable<[id: string, signature: Signature, message: Message<Payload>]>
 
   public getClock(): Promise<[clock: number, parents: string[]]>
-
-  public getAncestors(id: string, ancestorClock: number): Promise<string[]>
 
   public replay(): Promise<void>
 }

@@ -3,13 +3,12 @@ import Prando from "prando"
 import test, { ExecutionContext } from "ava"
 import { customRandom, urlAlphabet } from "nanoid"
 
-import type { Message } from "@canvas-js/interfaces"
 import { ed25519 } from "@canvas-js/signatures"
 import { AbstractGossipLog, GossipLogConsumer } from "@canvas-js/gossiplog"
 import { GossipLog } from "@canvas-js/gossiplog/sqlite"
 // import { GossipLog as PostgresGossipLog } from "@canvas-js/gossiplog/pg"
 
-import { appendChain, getDirectory, testPlatforms } from "./utils.js"
+import { getDirectory } from "./utils.js"
 
 const rng = new Prando.default()
 
@@ -23,81 +22,6 @@ const pseudoRandomEd25519 = () =>
 	ed25519.create({ type: "ed25519", privateKey: new Uint8Array(32).map(() => rng.nextInt(0, 255)) })
 
 const apply: GossipLogConsumer<string> = ({}) => {}
-
-testPlatforms("get ancestors (append, linear history)", async (t, openGossipLog) => {
-	const topic = nanoid()
-	const log = await openGossipLog(t, { topic, apply, indexAncestors: true })
-	const signer = pseudoRandomEd25519()
-
-	const n = 20
-	const ids: string[] = []
-	for (let i = 0; i < n; i++) {
-		const { id } = await log.append(nanoid(), { signer })
-		ids.push(id)
-	}
-
-	for (let i = 0; i < n; i++) {
-		for (let j = 0; j < i; j++) {
-			t.deepEqual(await log.getAncestors(ids[i], j + 1), [ids[j]], `i=${i} j=${j}`)
-		}
-	}
-})
-
-testPlatforms("get ancestors (insert, linear history)", async (t, openGossipLog) => {
-	const topic = nanoid()
-	const signer = pseudoRandomEd25519()
-	const log = await openGossipLog(t, { topic, apply, indexAncestors: true })
-
-	const n = 20
-	const ids: string[] = []
-	for (let i = 0; i < n; i++) {
-		const message: Message<string> = {
-			topic,
-			clock: i + 1,
-			parents: i === 0 ? [] : [ids[i - 1]],
-			payload: nanoid(),
-		}
-
-		const signature = signer.sign(message)
-		const { id } = await log.insert(log.encode(signature, message))
-		ids.push(id)
-	}
-
-	for (let i = 0; i < n; i++) {
-		for (let j = 0; j < i; j++) {
-			t.deepEqual(await log.getAncestors(ids[i], j + 1), [ids[j]], `i=${i} j=${j}`)
-		}
-	}
-})
-
-testPlatforms("get ancestors (insert, concurrent history, fixed)", async (t, openGossipLog) => {
-	const topic = nanoid()
-	const log = await openGossipLog(t, { topic, apply, indexAncestors: true })
-	const signer = pseudoRandomEd25519()
-
-	const { id: idX } = await log.append(nanoid(), { signer })
-	const { id: idY } = await log.append(nanoid(), { signer })
-	const { id: idZ } = await log.append(nanoid(), { signer })
-	const chainA = await appendChain(log, idZ, 5, { signer })
-	const chainB = await appendChain(log, idZ, 3, { signer })
-	const { id: tailId } = await log.append(nanoid(), { signer })
-
-	t.deepEqual(await log.getAncestors(idZ, 1), [idX])
-	t.deepEqual(await log.getAncestors(tailId, 1), [idX])
-	t.deepEqual(await log.getAncestors(tailId, 3), [idZ])
-	t.deepEqual(await log.getAncestors(chainA[0], 3), [idZ])
-	t.deepEqual(await log.getAncestors(chainB[0], 3), [idZ])
-
-	t.deepEqual(await log.getAncestors(tailId, 4), [chainA[0], chainB[0]].sort())
-	t.deepEqual(await log.getAncestors(tailId, 5), [chainA[1], chainB[1]].sort())
-	t.deepEqual(await log.getAncestors(tailId, 6), [chainA[2], chainB[2]].sort())
-
-	t.deepEqual(await log.getAncestors(tailId, 7), [chainA[3], chainB[2]].sort())
-	t.deepEqual(await log.getAncestors(chainA[4], 7), [chainA[3]])
-
-	t.deepEqual(await log.getAncestors(chainA[2], 4), [chainA[0]])
-	t.deepEqual(await log.getAncestors(chainB[2], 4), [chainB[0]])
-})
 
 test("simulate a randomly partitioned network, logs on disk", async (t) => {
 	t.timeout(30 * 1000)
