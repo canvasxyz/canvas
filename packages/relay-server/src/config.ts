@@ -1,8 +1,9 @@
+import { PeerId } from "@libp2p/interface"
 import { createFromProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
 
 const { PEER_ID, LISTEN, ANNOUNCE } = process.env
 
-export async function getPeerId() {
+export async function getPeerId(): Promise<PeerId> {
 	if (typeof PEER_ID === "string") {
 		return await createFromProtobuf(Buffer.from(PEER_ID, "base64"))
 	} else {
