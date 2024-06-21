@@ -184,7 +184,6 @@ export const simulateRandomNetwork = async (
 		// sync with a random peer
 		const peerIndex = random(logs.length)
 		if (peerIndex !== selfIndex) {
-			console.log("synced with ", peerIndex)
 			const peer = logs[peerIndex]
 			await peer.serve((source) => self.sync(source))
 
