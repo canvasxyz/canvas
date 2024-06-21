@@ -47,7 +47,7 @@ import { equals } from "uint8arrays"
 import { SignedMessage } from "../SignedMessage.js"
 
 export const getSyncProtocol = (topic: string) => `/canvas/sync/v1/${topic}`
-export const getPushProtocol = (topic: string) => `/canvas/sync/v1/${topic}/push`
+export const getPushProtocol = (topic: string) => `/canvas/push/v1/${topic}`
 
 export type GossipLogServiceComponents = {
 	peerId: PeerId

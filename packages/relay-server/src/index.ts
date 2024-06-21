@@ -86,7 +86,7 @@ getLibp2p().then(async (libp2p) => {
 		const [_, topic] = key.split("/")
 		const results: {
 			id: Uint8Array
-			addresses: { isCertified: boolean; multiaddr: Uint8Array }[]
+			addresses: Uint8Array[]
 			protocols: string[]
 			peerRecordEnvelope: Uint8Array | null
 		}[] = []
@@ -94,14 +94,11 @@ getLibp2p().then(async (libp2p) => {
 		for (const peerId of topicIndex.get(topic) ?? []) {
 			const id = peerIdFromString(peerId)
 			const peer = await libp2p.peerStore.get(id)
-			const addresses = peer.addresses.map(({ isCertified, multiaddr }) => ({
-				isCertified,
-				multiaddr: multiaddr.bytes,
-			}))
+			const addresses = peer.addresses.map(({ multiaddr }) => multiaddr.bytes)
 
 			results.push({
 				id: id.toBytes(),
-				addresses,
+				addresses: addresses,
 				protocols: peer.protocols,
 				peerRecordEnvelope: peer.peerRecordEnvelope ?? null,
 			})
