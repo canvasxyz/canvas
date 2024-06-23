@@ -1,10 +1,17 @@
 import { mkdirSync } from "fs"
 import { ActionImplementation, ActionContext, Canvas, ModelAPI } from "@canvas-js/core"
-import { Signer, SessionSigner, Session, Action } from "@canvas-js/interfaces"
-import { ReplicatedConfig, ReplicatedObjectError, Call } from "./types.js"
+import { Awaitable, Signer, SessionSigner, Session, Action } from "@canvas-js/interfaces"
+import { SIWESigner } from "@canvas-js/chain-ethereum"
+
+export class ReplicatedConfig {
+	topic?: string
+	signers?: SessionSigner[]
+}
+
+export type AnyCall = (...args: any[]) => Awaitable<any>
 
 export abstract class ReplicatedObject<
-	T extends Record<string, Call> = any,
+	T extends Record<string, AnyCall> = any,
 	K extends typeof ReplicatedObject = typeof ReplicatedObject,
 > {
 	#app?: Canvas
@@ -27,7 +34,7 @@ export abstract class ReplicatedObject<
 	[handler: `on${string}`]: (...args: any[]) => void
 	[action: Exclude<string, `on${string}`>]: any
 
-	as: (signer: SessionSigner<any>) => { [k: string]: Call }
+	as: (signer: SessionSigner<any>) => { [k: string]: AnyCall }
 
 	static db = {}
 
@@ -36,7 +43,7 @@ export abstract class ReplicatedObject<
 	}
 	get db() {
 		if (this.#db === undefined) throw new Error("app not initialized")
-			return this.#db
+		return this.#db
 	}
 	get address(): string {
 		if (this.#address === undefined) throw new Error("app not initialized")
@@ -56,15 +63,15 @@ export abstract class ReplicatedObject<
 		const instance = this
 		const parent = Object.getPrototypeOf(this) // TODO: not parent, but root (repeat until we find a base ReplicatedObject)
 
-		this.#signers = []
+		this.#signers = config.signers ?? [new SIWESigner()]
 		this.#tx = {}
 
 		// set up topic, models, and actions
 		this.#topic = this.#topic ?? config.topic
 		const models = (this.constructor as K).db
 
-		if (this.#topic === undefined) throw new ReplicatedObjectError("Must define a topic on class or constructor")
-		if (Object.keys(models).length === 0) throw new ReplicatedObjectError("Must define a model")
+		if (this.#topic === undefined) throw new Error("must define a topic on class or constructor")
+		if (Object.keys(models).length === 0) throw new Error("must define a model")
 
 		// set up keys
 		const isHandlerKey = (key: string | symbol): key is `on${string}` => {
@@ -79,7 +86,7 @@ export abstract class ReplicatedObject<
 		const actionHandlerKeys: `on${string}`[] = keys.filter(isHandlerKey)
 
 		// set up contract
-		const contract: { models: any; actions: Record<string, Call> } = { models, actions: {} }
+		const contract: { models: any; actions: Record<string, AnyCall> } = { models, actions: {} }
 		for (const handlerKey of actionHandlerKeys) {
 			if (typeof handlerKey === "symbol") continue
 			if (typeof (this as any)[handlerKey] !== "function") continue
@@ -160,6 +167,7 @@ export abstract class ReplicatedObject<
 			const app = Canvas.initialize({
 				topic: this.#topic,
 				contract,
+				signers: this.#signers,
 			})
 				.then(async (app) => {
 					this.#app = app
