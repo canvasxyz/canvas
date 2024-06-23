@@ -1,4 +1,4 @@
-import { Awaitable } from "@canvas-js/interfaces"
+import { Awaitable, SessionSigner } from "@canvas-js/interfaces"
 
 export class ReplicatedConfig {
 	topic?: string

@@ -20,7 +20,7 @@ class Chat extends ReplicatedObject<{
 		},
 	}
 	async messageFromChild(message: string): Promise<void> {
-		super.tx.message(message)
+		super.tx.message("[" + this.address + "] " + message)
 	}
 	async onMessage(message: string): Promise<void> {
 		this.db.set("messages", { id: this.id, message, address: this.address, timestamp: this.timestamp })
@@ -37,10 +37,10 @@ test.afterEach.always(async (t) => {
 	await chat.stop()
 })
 
-test.serial("object calls have this.id, this.address, and this.timestamp", async (t) => {
+test.serial("handlers called with this.id, this.address, this.timestamp", async (t) => {
 	const { chat } = t.context
 
-	await chat.tx.message("hi")
+	await chat.message("hi")
 	await new Promise<void>((resolve) => setTimeout(() => resolve(), 100))
 	const messages = await chat.app?.db.query("messages")
 	const message = messages?.[0]
@@ -59,11 +59,11 @@ test.serial("send two messages", async (t) => {
 
 	t.is(await chat.app?.db.count("messages"), 0)
 
-	await chat.tx.message("hi")
+	await chat.message("hi")
 	await new Promise<void>((resolve) => setTimeout(() => resolve(), 100))
 	t.is(await chat.app?.db.count("messages"), 1)
 
-	await chat.tx.message("hello")
+	await chat.message("hello")
 	await new Promise<void>((resolve) => setTimeout(() => resolve(), 100))
 	t.is(await chat.app?.db.count("messages"), 2)
 })
@@ -73,13 +73,16 @@ test.serial("send messages using an explicit call", async (t) => {
 
 	t.is(await chat.app?.db.count("messages"), 0)
 
-	await chat.tx.message("hi")
+	await chat.message("hi")
 	await new Promise<void>((resolve) => setTimeout(() => resolve(), 100))
 	t.is(await chat.app?.db.count("messages"), 1)
 
-	await chat.tx.messageFromChild("hi from explicit call")
+	await chat.messageFromChild("hi from explicit call")
 	await new Promise<void>((resolve) => setTimeout(() => resolve(), 100))
 	t.is(await chat.app?.db.count("messages"), 2)
+
+	const messages = await chat.app?.db.query("messages")
+	t.is(messages?.[1].message, `[${messages?.[0].address}] hi from explicit call`)
 })
 
 test.serial("send messages using an implicit call and .as()", async (t) => {
@@ -90,6 +93,10 @@ test.serial("send messages using an implicit call and .as()", async (t) => {
 	await chat.as(signer).message("hi")
 	await new Promise<void>((resolve) => setTimeout(() => resolve(), 100))
 	t.is(await chat.app?.db.count("messages"), 1)
+
+	const messages = await chat.app?.db.query("messages", { orderBy: { timestamp: "desc" } })
+	t.is(messages?.[0].message, "hi")
+	t.is(messages?.[0].address, await signer.getWalletAddress())
 })
 
 test.serial("send messages using an explicit call and .as()", async (t) => {
@@ -102,5 +109,6 @@ test.serial("send messages using an explicit call and .as()", async (t) => {
 	t.is(await chat.app?.db.count("messages"), 1)
 
 	const messages = await chat.app?.db.query("messages", { orderBy: { timestamp: "desc" } })
-	t.is(messages?.[0].message, "hi from explicit call")
+	t.is(messages?.[0].message, `[${messages?.[0].address}] hi from explicit call`)
+	t.is(messages?.[0].address, await signer.getWalletAddress())
 })

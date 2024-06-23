@@ -9,43 +9,41 @@ export abstract class ReplicatedObject<
 > {
 	#app: Canvas | null
 	#ready: Promise<ReplicatedObject<T, K>>
-	#contextSigner?: SessionSigner<any>
 
-	topic?: string;
+	#signers: SessionSigner[] // signers are async, so these fields aren't available in the constructor
+	#address?: string
+	#did?: `did:${string}`
+	#publicKey?: string
+
+	#contextSigner?: SessionSigner
+	#contextAddress?: string
+	#contextDid?: `did:${string}`
+	#contextPublicKey?: string
+
+	#topic?: string
+	#tx: Record<string, (...args: any[]) => any>;
 
 	[handler: `on${string}`]: (...args: any[]) => void
+	[action: Exclude<string, `on${string}`>]: any
 
 	as: (signer: SessionSigner<any>) => { [k: string]: Call }
 
-	_tx: { [K in keyof T]: T[K] }
-	get tx() {
-		return this._tx ?? Object.getPrototypeOf(this)._tx
-	}
-
 	static db = {}
 
-	// Stubs for action handlers to read from `this`. Action handlers
-	// are always provided a context when called so these are never used
-	get db(): ModelAPI {
-		throw "Unexpected"
+	get tx() {
+		return this.#tx
 	}
-	get id(): ActionContext["id"] {
-		throw "Unexpected"
+	get address(): string {
+		if (this.#address === undefined) throw new Error("app not initialized")
+		return this.#contextAddress ?? this.#address
 	}
-	get did(): ActionContext["did"] {
-		throw "Unexpected"
+	get did(): string {
+		if (this.#did === undefined) throw new Error("app not initialized")
+		return this.#contextDid ?? this.#did
 	}
-	get address(): ActionContext["address"] {
-		throw "Unexpected"
-	}
-	get timestamp(): ActionContext["timestamp"] {
-		throw "Unexpected"
-	}
-	get blockhash(): ActionContext["blockhash"] {
-		throw "Unexpected"
-	}
-	get publicKey(): ActionContext["publicKey"] {
-		throw "Unexpected"
+	get publicKey(): string {
+		if (this.#publicKey === undefined) throw new Error("app not initialized")
+		return this.#contextPublicKey ?? this.#publicKey
 	}
 
 	constructor(config: ReplicatedConfig = {}) {
@@ -54,12 +52,14 @@ export abstract class ReplicatedObject<
 		const parent = Object.getPrototypeOf(this) // TODO: not parent, but root (repeat until we find a base ReplicatedObject)
 
 		this.#app = null
+		this.#signers = []
+		this.#tx = {}
 
 		// set up topic, models, and actions
-		this.topic = this.topic ?? config.topic
+		this.#topic = this.#topic ?? config.topic
 		const models = (this.constructor as K).db
 
-		if (this.topic === undefined) throw new ReplicatedObjectError("Must define a topic on class or constructor")
+		if (this.#topic === undefined) throw new ReplicatedObjectError("Must define a topic on class or constructor")
 		if (Object.keys(models).length === 0) throw new ReplicatedObjectError("Must define a model")
 
 		// set up keys
@@ -91,72 +91,76 @@ export abstract class ReplicatedObject<
 		}
 
 		// set up calls
-		// explicitly defined calls (this.message()) go on child
-		// implicitly defined calls (this.onMessage()) go on root
-		const rootCalls: Record<string, ActionImplementation<any>> = {}
-		const childCalls: Record<string, ActionImplementation<any>> = {}
-
-		const rootCallsAs: Record<string, (signer: SessionSigner<any>, ...args: any[]) => any> = {}
-		const childCallsAs: Record<string, (signer: SessionSigner<any>, ...args: any[]) => any> = {}
-
 		for (const key of keys) {
 			const name = isHandlerKey(key) ? fromHandlerKey(key) : key
 			const explicit = !isHandlerKey(key)
 			if (typeof name === "symbol") continue
 
-			// skip fields on the child object that aren't functions,
-			// but don't perform this check for implicit calls, since
-			// they won't be defined as a function
+			if (explicit) {
+				this.#tx[name] = this[name]
+			} else {
+				this[name] = async function (...args: any[]) {
+					const signer = instance.#contextSigner
+					if (signer) {
+						instance.#contextSigner = undefined
+						const result = instance.#app?.actions[name].call(instance, args, { signer })
+						instance.#contextAddress = undefined
+						instance.#contextDid = undefined
+						instance.#contextPublicKey = undefined
+						return result
+					} else {
+						return instance.#app?.actions[name].call(instance, args, { signer })
+					}
+				}
+				this.#tx[name] = this[name]
+			}
+		}
+
+		// set up calls with .as()
+		const parentCalls: Record<string, (signer: SessionSigner<any>, ...args: any[]) => any> = {}
+		const childCalls: Record<string, (signer: SessionSigner<any>, ...args: any[]) => any> = {}
+		for (const key of keys) {
+			const name = isHandlerKey(key) ? fromHandlerKey(key) : key
+			const explicit = !isHandlerKey(key)
+			if (typeof name === "symbol") continue
 			if (explicit && typeof (this as any)[name] !== "function") continue
 
-			// set up direct calls
 			if (explicit) {
-				// handle explicitly defined call (this.message()) on child
-				childCalls[name] = function (...args: any[]) {
-					return parent[name].apply(instance, args)
+				childCalls[name] = async function (signer: SessionSigner<any>, ...args: any[]) {
+					// TODO: lock the object here
+					let session = await signer.getSession(instance.#topic!)
+					if (!session) {
+						session = await signer.newSession(instance.#topic!)
+					}
+					instance.#contextSigner = signer
+					instance.#contextAddress = signer.getAddressFromDid(session?.payload.did)
+					instance.#contextDid = session.payload.did
+					instance.#contextPublicKey = session.payload.publicKey
+					return instance.#tx[name].apply(instance, args)
 				}
 			} else {
-				// handle implicitly defined call (this.onMessage()) on root
-				rootCalls[name] = function (...args: any[]) {
-					return instance.#app?.actions[name].call(this, args)
+				parentCalls[name] = function (signer: SessionSigner<any>, ...args: any[]) {
+					return instance.#app?.actions[name].call(this, args, { signer })
 				}
-			}
-
-			// set up .as() calls
-			if (explicit) {
-				childCallsAs[name] = function (signer: SessionSigner<any>, ...args: any[]) {
-					instance.#contextSigner = signer // TODO: pass signer?
-					return instance._tx[name].apply(instance, args)
-				}
-			}
-			// root calls always need to be assigned on the parent because
-			// we don't benefit from prototypal inheritance
-			rootCallsAs[name] = function (signer: SessionSigner<any>, ...args: any[]) {
-				return instance.#app?.actions[name].call(this, args, { signer })
 			}
 		}
-
-		parent._tx = rootCalls as typeof this._tx
-		this._tx = { ...childCalls, ...rootCalls } as typeof this._tx // child shadows root
-		Object.assign(parent, rootCalls)
-		Object.assign(this, childCalls)
 
 		this.as = (signer: SessionSigner<any>) => {
-			return Object.fromEntries(Object.entries(childCallsAs).map(([key, call]) => [key, call.bind(instance, signer)]))
-		}
-
-		parent.as = (signer: SessionSigner<any>) => {
-			const calls = { ...rootCallsAs } // root shadows child
+			const calls = { ...parentCalls, ...childCalls } // root shadows child
 			return Object.fromEntries(Object.entries(calls).map(([key, call]) => [key, call.bind(instance, signer)]))
 		}
 
 		this.#ready = new Promise((resolve, reject) => {
-			Canvas.initialize({
-				topic: this.topic,
+			const app = Canvas.initialize({
+				topic: this.#topic,
 				contract,
 			})
-				.then((app) => {
+				.then(async (app) => {
 					this.#app = app
+					this.#signers = app.signers.getAll()
+					this.#did = await this.#signers[0].getDid()
+					this.#address = this.#signers[0].getAddressFromDid(this.#did)
+					this.#publicKey = (await this.#signers[0].getSession(instance.#topic!, { did: this.#did }))?.payload.publicKey
 					resolve(instance)
 				})
 				.catch((err) => {
