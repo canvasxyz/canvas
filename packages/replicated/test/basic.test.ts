@@ -37,6 +37,23 @@ test.afterEach.always(async (t) => {
 	await chat.stop()
 })
 
+test.serial("object calls have this.id, this.address, and this.timestamp", async (t) => {
+	const { chat } = t.context
+
+	await chat.tx.message("hi")
+	await new Promise<void>((resolve) => setTimeout(() => resolve(), 100))
+	const messages = await chat.app?.db.query("messages")
+	const message = messages?.[0]
+
+	t.assert(messages?.length === 1, "one message")
+	t.assert(typeof message?.id === "string", "message id is string")
+	t.assert(message?.id.length === 32, "message id is 32 bytes")
+	t.assert(typeof message?.address === "string", "message address is string")
+	t.assert(message?.address.startsWith("0x"), "message address starts with 0x")
+	t.assert(typeof message?.timestamp === "number", "message timestamp is number")
+	t.assert(message?.timestamp !== 0, "message timestamp is nonzero")
+})
+
 test.serial("send two messages", async (t) => {
 	const { chat } = t.context
 

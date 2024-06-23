@@ -32,6 +32,9 @@ export abstract class ReplicatedObject<
 	get id(): ActionContext["id"] {
 		throw "Unexpected"
 	}
+	get did(): ActionContext["did"] {
+		throw "Unexpected"
+	}
 	get address(): ActionContext["address"] {
 		throw "Unexpected"
 	}
