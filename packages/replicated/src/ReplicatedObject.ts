@@ -7,7 +7,8 @@ export abstract class ReplicatedObject<
 	T extends Record<string, Call> = any,
 	K extends typeof ReplicatedObject = typeof ReplicatedObject,
 > {
-	#app: Canvas | null
+	#app?: Canvas
+	#db?: ModelAPI
 	#ready: Promise<ReplicatedObject<T, K>>
 
 	#signers: SessionSigner[] // signers are async, so these fields aren't available in the constructor
@@ -33,6 +34,10 @@ export abstract class ReplicatedObject<
 	get tx() {
 		return this.#tx
 	}
+	get db() {
+		if (this.#db === undefined) throw new Error("app not initialized")
+			return this.#db
+	}
 	get address(): string {
 		if (this.#address === undefined) throw new Error("app not initialized")
 		return this.#contextAddress ?? this.#address
@@ -51,7 +56,6 @@ export abstract class ReplicatedObject<
 		const instance = this
 		const parent = Object.getPrototypeOf(this) // TODO: not parent, but root (repeat until we find a base ReplicatedObject)
 
-		this.#app = null
 		this.#signers = []
 		this.#tx = {}
 
@@ -99,7 +103,7 @@ export abstract class ReplicatedObject<
 			if (explicit) {
 				this.#tx[name] = this[name]
 			} else {
-				this[name] = async function (...args: any[]) {
+				const fn = async function (...args: any[]) {
 					const signer = instance.#contextSigner
 					if (signer) {
 						instance.#contextSigner = undefined
@@ -112,7 +116,8 @@ export abstract class ReplicatedObject<
 						return instance.#app?.actions[name].call(instance, args, { signer })
 					}
 				}
-				this.#tx[name] = this[name]
+				if (!this[name]) this[name] = fn
+				this.#tx[name] = fn
 			}
 		}
 
@@ -136,7 +141,8 @@ export abstract class ReplicatedObject<
 					instance.#contextAddress = signer.getAddressFromDid(session?.payload.did)
 					instance.#contextDid = session.payload.did
 					instance.#contextPublicKey = session.payload.publicKey
-					return instance.#tx[name].apply(instance, args)
+					// eslint-disable-next-line prefer-spread
+					return instance[name].apply(instance, args) ?? instance.#tx[name].apply(instance, args)
 				}
 			} else {
 				parentCalls[name] = function (signer: SessionSigner<any>, ...args: any[]) {
@@ -157,6 +163,7 @@ export abstract class ReplicatedObject<
 			})
 				.then(async (app) => {
 					this.#app = app
+					this.#db = app.db
 					this.#signers = app.signers.getAll()
 					this.#did = await this.#signers[0].getDid()
 					this.#address = this.#signers[0].getAddressFromDid(this.#did)
