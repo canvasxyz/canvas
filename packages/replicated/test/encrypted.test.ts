@@ -7,6 +7,10 @@ import { SIWESigner } from "@canvas-js/chain-ethereum"
 
 import { encryptSafely, decryptSafely, getEncryptionPublicKey, EthEncryptedData } from "@metamask/eth-sig-util"
 
+function getGroupId(address1: string, address2: string) {
+	return address1 < address2 ? `${address1}:${address2}` : `${address1}:${address2}`
+}
+
 /*
  * Encrypted chat with non-ratcheting groups.
  */
@@ -33,13 +37,47 @@ class EncryptedChat extends ReplicatedObject<{
 		privateMessages: {
 			id: "primary",
 			ciphertext: "string",
-			group: "string",
+			groupId: "string",
 			timestamp: "integer",
 			$indexes: [["timestamp"]],
 		},
 	}
 
 	// client actor functions - should be on a `client` scope instead?
+	async decrypt(id: string, privateKey: string) {
+		const message = await this.db.get("privateMessages", id)
+		if (!message) return null
+
+		// TODO: infer types
+		const group = await this.db.get("encryptionGroups", message.groupId as string)
+		if (!group) return null
+
+		const groupAddresses = (group.id as string).split(":")
+		const groupKeys = JSON.parse(group.groupKeys as string)
+		const index = groupAddresses.indexOf(this.address)
+
+		const groupPrivateKey = decryptSafely({ encryptedData: groupKeys[index], privateKey: privateKey.slice(2) })
+
+		const encryptedData = JSON.parse(message.ciphertext as string)
+		const plaintext = decryptSafely({ encryptedData, privateKey: groupPrivateKey.slice(2) })
+
+		return plaintext
+	}
+
+	async sendPrivateMessage(recipient: string, message: string) {
+		const groupId = getGroupId(this.address, recipient)
+		const encryptionGroup = await this.db.get("encryptionGroups", groupId)
+		if (!encryptionGroup) throw new Error("Invalid group")
+
+		const encryptedData = encryptSafely({
+			publicKey: encryptionGroup.key as string,
+			data: message,
+			version: "x25519-xsalsa20-poly1305",
+		})
+		const ciphertext = JSON.stringify(encryptedData)
+		await super.tx.sendPrivateMessage(groupId, ciphertext)
+	}
+
 	async registerEncryptionKey(privateKey: string): Promise<void> {
 		const encryptionPublicKey = getEncryptionPublicKey(privateKey.slice(2))
 		return super.tx.registerEncryptionKey(encryptionPublicKey)
@@ -51,9 +89,6 @@ class EncryptedChat extends ReplicatedObject<{
 		const recipientKey = await this.db.get("encryptionKeys", recipient)
 		if (!recipientKey) throw new Error("Recipient has not registered an encryption key")
 
-		function getGroupId(address1: string, address2: string) {
-			return address1 < address2 ? `${address1}:${address2}` : `${address1}:${address2}`
-		}
 		const members = [this.address, recipient]
 		const groupId = getGroupId(this.address, recipient)
 
@@ -73,7 +108,7 @@ class EncryptedChat extends ReplicatedObject<{
 		this.db.set("encryptionKeys", { address: this.address, key })
 	}
 	onCreateEncryptionGroup(groupId: string, groupKeys: string[], groupPublicKey: string) {
-		const members = groupId.split(':')
+		const members = groupId.split(":")
 		if (members.indexOf(this.address) === -1) throw new Error()
 
 		this.db.set("encryptionGroups", {
@@ -82,9 +117,9 @@ class EncryptedChat extends ReplicatedObject<{
 			key: groupPublicKey,
 		})
 	}
-	onSendPrivateMessage(group: string, ciphertext: string) {
+	onSendPrivateMessage(groupId: string, ciphertext: string) {
 		// TODO: check address is in group
-		this.db.set("privateMessages", { id: this.id, ciphertext, group, timestamp: this.timestamp })
+		this.db.set("privateMessages", { id: this.id, ciphertext, groupId, timestamp: this.timestamp })
 	}
 }
 
@@ -121,10 +156,17 @@ test.serial("exchange two messages", async (t) => {
 	await bobChat.registerEncryptionKey(bobPrivkey)
 
 	const groupId = await aliceChat.createEncryptionGroup(bob.getAddressFromDid(await bob.getDid()))
-	await aliceChat.sendPrivateMessage(groupId, "psst hello")
+	await aliceChat.sendPrivateMessage(await bob.getWalletAddress(), "psst hello")
 
-	t.is(await chat.app?.db.count("encryptionKeys"), 2)
-	t.is(await chat.app?.db.count("encryptionGroups"), 1)
-	t.is(await chat.app?.db.count("privateMessages"), 1)
-	// TODO: decrypt chat as bob
+	const keys = await chat.app?.db.query("encryptionKeys")
+	t.is(keys?.length, 2)
+
+	const groups = await chat.app?.db.query("encryptionGroups")
+	t.is(groups?.length, 1)
+
+	const messages = await chat.app?.db.query("privateMessages")
+	t.is(messages?.length, 1)
+
+	const decrypted = await bobChat.decrypt(messages?.[0].id, bobPrivkey)
+	t.is(decrypted, "psst hello")
 })

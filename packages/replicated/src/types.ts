@@ -6,6 +6,6 @@ export class ReplicatedConfig {
 
 export class ReplicatedObjectError extends Error {}
 
-export type Call = (...args: any[]) => Awaitable<void>
+export type Call = (...args: any[]) => Awaitable<any>
 
 export type CallAPI = Record<string, Call>
