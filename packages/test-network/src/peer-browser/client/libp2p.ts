@@ -10,17 +10,18 @@ import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { webRTC } from "@libp2p/webrtc"
 import { kadDHT } from "@libp2p/kad-dht"
 import { circuitRelayTransport } from "@libp2p/circuit-relay-v2"
-import { fetch } from "@libp2p/fetch"
+import { Fetch, fetch } from "@libp2p/fetch"
 import { ping } from "@libp2p/ping"
 
 import { AbstractGossipLog } from "@canvas-js/gossiplog"
 import { gossiplog } from "@canvas-js/gossiplog/service"
 
+import { ServiceMap } from "../../types.js"
 import { topic, getTopicDHTProtocol } from "../../constants.js"
 import { bootstrapList, minConnections, maxConnections, listen, announce, peerId } from "./config.js"
 
 export async function getLibp2p(messageLog: AbstractGossipLog<string>) {
-	return await createLibp2p({
+	return await createLibp2p<ServiceMap & { fetch: Fetch }>({
 		peerId: peerId,
 		start: false,
 		addresses: { listen, announce },

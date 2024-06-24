@@ -4,7 +4,7 @@ import { Tree, Mode } from "@canvas-js/okra"
 import { Tree as PersistentTree } from "@canvas-js/okra-lmdb"
 import { Tree as MemoryTree } from "@canvas-js/okra-memory"
 
-import { ModelDB } from "@canvas-js/modeldb/sqlite"
+import { ModelDB } from "@canvas-js/modeldb-sqlite"
 
 import { AbstractGossipLog, GossipLogInit } from "../AbstractGossipLog.js"
 

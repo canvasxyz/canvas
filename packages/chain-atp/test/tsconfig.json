@@ -1,14 +1,11 @@
 {
-  "exclude": ["lib"],
-  "extends": "../../../tsconfig.base.json",
-  "compilerOptions": {
-    "rootDir": ".",
-    "outDir": "lib",
-    "module": "Node16",
-    "moduleResolution": "Node16"
-  },
-  "references": [
-    { "path": "../." },
-    { "path": "../../interfaces" },
-  ]
+	"exclude": ["lib"],
+	"extends": "../../../tsconfig.base.json",
+	"compilerOptions": {
+		"rootDir": ".",
+		"outDir": "lib",
+		"module": "Node16",
+		"moduleResolution": "Node16"
+	},
+	"references": [{ "path": "../." }, { "path": "../../interfaces" }]
 }

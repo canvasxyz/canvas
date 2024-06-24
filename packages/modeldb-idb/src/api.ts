@@ -4,10 +4,22 @@ import * as json from "@ipld/dag-json"
 
 import { assert, signalInvalidType } from "@canvas-js/utils"
 
-import { Model, ModelValue, NotExpression, Property, PropertyValue, QueryParams, RangeExpression } from "../types.js"
+import {
+	Model,
+	ModelValue,
+	NotExpression,
+	Property,
+	PropertyValue,
+	QueryParams,
+	RangeExpression,
+	getCompare,
+	getFilter,
+	isNotExpression,
+	isLiteralExpression,
+	isRangeExpression,
+	validateModelValue,
+} from "@canvas-js/modeldb"
 
-import { getCompare, getFilter, isNotExpression, isLiteralExpression, isRangeExpression } from "../query.js"
-import { validateModelValue } from "../utils.js"
 import { getIndexName } from "./utils.js"
 
 type ObjectPropertyValue = PropertyValue | PropertyValue[]

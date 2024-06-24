@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
 import type { Canvas, Contract, CanvasLogEvent, ActionImplementation } from "@canvas-js/core"
 import type { Action } from "@canvas-js/interfaces"
 

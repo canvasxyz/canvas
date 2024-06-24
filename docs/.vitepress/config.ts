@@ -17,7 +17,7 @@ export default defineConfig({
 		},
 	},
 	ignoreDeadLinks: [(url) => /^\.\/[0-9]+$/.test(url)], // ignore footnote links
-	title: "Canvas",
+	title: "Canvas Computing",
 	description: "A peer-to-peer runtime for decentralized applications",
 	themeConfig: {
 		logo: {

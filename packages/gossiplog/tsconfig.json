@@ -1,9 +1,7 @@
 {
-	"include": ["src"],
 	"extends": "../../tsconfig.base.json",
+	"include": ["src"],
 	"compilerOptions": {
-		"module": "Node16",
-		"moduleResolution": "Node16",
 		"rootDir": "src",
 		"outDir": "lib"
 	},
@@ -11,6 +9,9 @@
 		{ "path": "../interfaces" },
 		{ "path": "../utils" },
 		{ "path": "../signatures" },
-		{ "path": "../modeldb" }
+		{ "path": "../modeldb" },
+		{ "path": "../modeldb-idb" },
+		{ "path": "../modeldb-pg" },
+		{ "path": "../modeldb-sqlite" }
 	]
 }

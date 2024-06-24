@@ -1,27 +1,27 @@
 {
-  "name": "@canvas-js/chain-cosmos",
-  "version": "0.10.0-beta.2",
-  "type": "module",
-  "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
-  "main": "lib/index.js",
-  "types": "lib/index.d.ts",
-  "files": [
-    "lib"
-  ],
-  "dependencies": {
-    "@canvas-js/interfaces": "0.10.0-beta.2",
-    "@canvas-js/signatures": "0.10.0-beta.2",
-    "@canvas-js/utils": "0.10.0-beta.2",
-    "@cosmjs/amino": "^0.32.3",
-    "@cosmjs/crypto": "^0.32.3",
-    "@cosmjs/encoding": "^0.32.3",
-    "@ipld/dag-cbor": "^9.2.0",
-    "@ipld/dag-json": "^10.1.5",
-    "@keplr-wallet/types": "^0.11.64",
-    "@libp2p/logger": "^4.0.14",
-    "@noble/curves": "^1.4.0",
-    "@noble/hashes": "^1.3.2",
-    "ethers": "^6.9.0",
-    "multiformats": "^13.1.1"
-  }
+	"name": "@canvas-js/chain-cosmos",
+	"version": "0.10.0-beta.4",
+	"type": "module",
+	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
+	"main": "lib/index.js",
+	"types": "lib/index.d.ts",
+	"files": [
+		"lib"
+	],
+	"dependencies": {
+		"@canvas-js/interfaces": "0.10.0-beta.4",
+		"@canvas-js/signatures": "0.10.0-beta.4",
+		"@canvas-js/utils": "0.10.0-beta.4",
+		"@cosmjs/amino": "^0.32.3",
+		"@cosmjs/crypto": "^0.32.3",
+		"@cosmjs/encoding": "^0.32.3",
+		"@ipld/dag-cbor": "^9.2.0",
+		"@ipld/dag-json": "^10.2.1",
+		"@keplr-wallet/types": "^0.11.64",
+		"@libp2p/logger": "^4.0.15",
+		"@noble/curves": "^1.4.0",
+		"@noble/hashes": "^1.3.2",
+		"ethers": "^6.13.1",
+		"multiformats": "^13.1.1"
+	}
 }

@@ -6,6 +6,7 @@ import { AbortError } from "abortable-iterator"
 import { anySignal } from "any-signal"
 import { Counter, Gauge, Summary, Registry, register } from "prom-client"
 
+import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 import type { PeerId } from "@libp2p/interface"
 import { peerIdFromString } from "@libp2p/peer-id"
 
@@ -16,7 +17,6 @@ import { Action, Message, Session, Signature } from "@canvas-js/interfaces"
 import { Canvas } from "./Canvas.js"
 
 import { PING_TIMEOUT } from "./constants.js"
-import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 
 export interface APIOptions {
 	exposeModels?: boolean
@@ -29,24 +29,24 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 
 	api.set("query parser", "simple")
 
-	api.get("/", (req, res) => res.json(app.getApplicationData()))
+	api.get("/", (req, res) => void res.json(app.getApplicationData()))
 
 	if (options.exposeModels) {
 		api.get("/models/:model/:key", async (req, res) => {
 			const { model, key } = req.params
 			if (app.db.models[model] === undefined) {
-				res.status(StatusCodes.NOT_FOUND).end()
+				return void res.status(StatusCodes.NOT_FOUND).end()
 			} else {
 				const value = await app.db.get(model, key)
 				res.status(StatusCodes.OK)
 				res.setHeader("content-type", "application/json")
-				res.end(json.encode(value))
+				return void res.end(json.encode(value))
 			}
 		})
 
 		api.get("/models/:model", async (req, res) => {
 			// TODO: start/limit/offset
-			return res.status(StatusCodes.NOT_IMPLEMENTED).end()
+			return void res.status(StatusCodes.NOT_IMPLEMENTED).end()
 		})
 	}
 
@@ -54,12 +54,12 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 		const { id } = req.params
 		const [signature, message] = await app.getMessage(id)
 		if (signature === null || message === null) {
-			return res.status(StatusCodes.NOT_FOUND).end()
+			return void res.status(StatusCodes.NOT_FOUND).end()
 		}
 
 		res.status(StatusCodes.OK)
 		res.setHeader("content-type", "application/json")
-		res.end(json.encode({ id, signature, message }))
+		return void res.end(json.encode({ id, signature, message }))
 	})
 
 	api.get("/messages", async (req, res) => {
@@ -90,7 +90,7 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 
 		res.status(StatusCodes.OK)
 		res.setHeader("content-type", "application/json")
-		res.end(json.encode(results))
+		return void res.end(json.encode(results))
 	})
 
 	api.post("/messages", ipld(), async (req, res) => {
@@ -99,10 +99,10 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 			const { id } = await app.insert(signature, message)
 			res.status(StatusCodes.CREATED)
 			res.setHeader("Location", `messages/${id}`)
-			res.end()
+			return void res.end()
 		} catch (e) {
 			console.error(e)
-			return res.status(StatusCodes.BAD_REQUEST).end(`${e}`)
+			return void res.status(StatusCodes.BAD_REQUEST).end(`${e}`)
 		}
 	})
 
@@ -117,12 +117,12 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 		}
 
 		const sessions = await app.getSessions({ address, publicKey, minExpiration: minExpirationValue })
-		return res.json(sessions)
+		return void res.json(sessions)
 	})
 
 	api.get("/clock", async (req, res) => {
 		const [clock, parents] = await app.messageLog.getClock()
-		res.json({ clock, parents })
+		return void res.json({ clock, parents })
 	})
 
 	if (options.exposeP2P) {
@@ -143,18 +143,17 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 				})
 			}
 
-			res.json(results)
+			return void res.json(results)
 		})
 
 		api.get("/mesh/:topic", (req, res) => {
 			const gossipsub = app.libp2p.services.pubsub as GossipSub
-			res.json(gossipsub.getMeshPeers(req.params.topic))
+			return void res.json(gossipsub.getMeshPeers(req.params.topic))
 		})
 
 		api.post("/ping/:peerId", async (req, res) => {
 			if (app.libp2p === null) {
-				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end("Offline")
-				return
+				return void res.status(StatusCodes.INTERNAL_SERVER_ERROR).end("Offline")
 			}
 
 			const requestController = new AbortController()
@@ -166,17 +165,17 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 			try {
 				peerId = peerIdFromString(req.params.peerId)
 			} catch (err) {
-				return res.status(StatusCodes.BAD_REQUEST).end(`${err}`)
+				return void res.status(StatusCodes.BAD_REQUEST).end(`${err}`)
 			}
 
 			try {
 				const latency = await app.libp2p.services.ping.ping(peerId, { signal })
-				res.status(StatusCodes.OK).end(`Got response from ${peerId} in ${latency}ms\n`)
+				return void res.status(StatusCodes.OK).end(`Got response from ${peerId} in ${latency}ms\n`)
 			} catch (err) {
 				if (err instanceof AbortError) {
-					res.status(StatusCodes.GATEWAY_TIMEOUT).end(err.toString())
+					return void res.status(StatusCodes.GATEWAY_TIMEOUT).end(err.toString())
 				} else {
-					res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(`${err}`)
+					return void res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(`${err}`)
 				}
 			} finally {
 				signal.clear()
@@ -240,7 +239,7 @@ export function createMetricsAPI(app: Canvas): express.Express {
 		res.header("Content-Type", register.contentType)
 		res.write(appMetrics + "\n")
 		res.write(libp2pMetrics + "\n")
-		res.end()
+		return void res.end()
 	})
 
 	return api

@@ -3,7 +3,7 @@ import { toString } from "uint8arrays"
 import { Mode } from "@canvas-js/okra"
 import { Tree as MemoryTree } from "@canvas-js/okra-memory"
 
-import { ModelDB } from "@canvas-js/modeldb/idb"
+import { ModelDB } from "@canvas-js/modeldb-idb"
 
 import { AbstractGossipLog, GossipLogInit } from "../AbstractGossipLog.js"
 import { MerkleIndex } from "../MerkleIndex.js"

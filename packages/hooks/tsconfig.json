@@ -1,11 +1,14 @@
 {
-	"include": ["src"],
 	"extends": "../../tsconfig.base.json",
+	"include": ["src"],
 	"compilerOptions": {
 		"rootDir": "src",
-		"outDir": "lib",
-		"module": "Node16",
-		"moduleResolution": "Node16"
+		"outDir": "lib"
 	},
-	"references": [{ "path": "../core" }, { "path": "../signatures" }, { "path": "../modeldb" }]
+	"references": [
+		{ "path": "../core" },
+		{ "path": "../interfaces" },
+		{ "path": "../modeldb" },
+		{ "path": "../modeldb-idb" }
+	]
 }
