@@ -231,6 +231,92 @@ export abstract class AbstractRuntime {
 
 	protected static getKeyHash = (key: string) => bytesToHex(blake3(key, { dkLen: 16 }))
 
+	private async getConcurrentAncestors(context: ExecutionContext, model: string, key: string) {
+		const startingMessageId = context.id
+
+		const keyHash = AbstractRuntime.getKeyHash(key)
+		const lowerBound = `${model}/${keyHash}/${MIN_MESSAGE_ID}`
+		const upperBound = `${model}/${keyHash}/${MAX_MESSAGE_ID}`
+
+		const result = new Set<string>()
+
+		const stack: string[] = []
+		stack.push(startingMessageId)
+
+		const visited = new Set()
+
+		// eslint-disable-next-line no-constant-condition
+		while (true) {
+			const currentMessageId = stack.pop()
+			// no more messages to visit
+			if (!currentMessageId) {
+				break
+			}
+			visited.add(currentMessageId)
+
+			const currentMessageEntry = await this.db.get("$messages", currentMessageId)
+			if (!currentMessageEntry) {
+				throw new Error(`missing message ${currentMessageId}`)
+			}
+			const currentMessage = currentMessageEntry.message
+
+			if (currentMessageId != startingMessageId) {
+				if (currentMessage.effects[0].key == key) {
+					result.add(currentMessage.id)
+					// don't explore this message's parents
+					continue
+				}
+			}
+
+			const parentIds: string[] = []
+
+			const matchingEffectOnThisBranch = await this.db.query("$effects", {
+				where: {
+					key: { gte: lowerBound, lt: upperBound },
+					branch: currentMessageEntry.branch,
+					clock: { lte: currentMessageEntry.clock },
+				},
+				orderBy: { clock: "desc" },
+				limit: 1,
+			})
+			if (matchingEffectOnThisBranch !== null) parentIds.push(matchingEffectOnThisBranch[0].id)
+
+			// check for branches that merge into this branch
+			for (const branchMerge of await this.db.query("$branch_merges", {
+				where: {
+					target_branch: currentMessageEntry.branch,
+					target_clock: { lte: currentMessageEntry.clock, gt: matchingEffectOnThisBranch[0]?.clock },
+				},
+			})) {
+				parentIds.push(branchMerge.source_message_id)
+			}
+
+			for (const parentItem of parentIds) {
+				if (!visited.has(parentItem)) {
+					stack.push(parentItem)
+				}
+			}
+		}
+
+		// remove messages that are parents of each other
+		const messagesToRemove = new Set<string>()
+		for (const parentMessageId of result) {
+			for (const otherMessageId of result) {
+				if (parentMessageId !== otherMessageId) {
+					if (await context.messageLog.isAncestor(parentMessageId, otherMessageId)) {
+						messagesToRemove.add(parentMessageId)
+					}
+				}
+			}
+		}
+
+		for (const m of messagesToRemove) {
+			result.delete(m)
+		}
+
+		return Array.from(result)
+	}
+
 	protected async getModelValue<T extends ModelValue = ModelValue>(
 		context: ExecutionContext,
 		model: string,
@@ -245,35 +331,24 @@ export abstract class AbstractRuntime {
 		}
 
 		const keyHash = AbstractRuntime.getKeyHash(key)
-		const lowerBound = `${model}/${keyHash}/${MIN_MESSAGE_ID}`
-		let upperBound = `${model}/${keyHash}/${MAX_MESSAGE_ID}`
 
-		// eslint-disable-next-line no-constant-condition
-		while (true) {
-			const results = await this.db.query<{ key: string; value: Uint8Array; clock: number }>("$effects", {
-				where: { key: { gte: lowerBound, lt: upperBound } },
-				orderBy: { key: "desc" },
-				limit: 1,
-			})
+		const concurrentAncestors = await this.getConcurrentAncestors(context, model, key)
+		const concurrentEffects = []
 
-			if (results.length === 0) {
-				return null
+		for (const ancestorId of concurrentAncestors) {
+			const concurrentEffect = await this.db.get("$effects", `${model}/${keyHash}/${ancestorId}`)
+			if (!concurrentEffect) {
+				throw new Error(`missing concurrent effect ${model}/${keyHash}/${ancestorId}`)
 			}
-
-			const [{ key: effectKey, value }] = results
-			const [{}, {}, messageId] = effectKey.split("/")
-
-			upperBound = effectKey as string
-			const visited = new Set<string>()
-
-			for (const parent of context.message.parents) {
-				const isAncestor = await context.messageLog.isAncestor(parent, messageId, visited)
-				if (isAncestor) {
-					return cbor.decode<null | T>(value)
-				}
-			}
-
-			upperBound = effectKey
+			concurrentEffects.push(concurrentEffect)
 		}
+
+		// TODO: finish this
+		//
+		// default behaviour: last writer wins
+
+		// if a merge function is defined, use it (i.e. for a CRDT)
+
+		return
 	}
 }
