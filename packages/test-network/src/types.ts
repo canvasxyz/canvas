@@ -10,7 +10,7 @@ export type ServiceMap = {
 	pubsub: PubSub<GossipsubEvents>
 	gossiplog: GossipLogService<string>
 	ping: PingService
-	dht: KadDHT
+	dht?: KadDHT
 }
 
 type EventTypes = {
