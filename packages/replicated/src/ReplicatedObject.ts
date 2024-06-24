@@ -1,6 +1,6 @@
-import { mkdirSync } from "fs"
-import { ActionImplementation, ActionContext, Canvas, ModelAPI } from "@canvas-js/core"
-import { Awaitable, Signer, SessionSigner, Session, Action } from "@canvas-js/interfaces"
+/* eslint-disable prefer-spread, @typescript-eslint/no-this-alias */
+import { Canvas, ModelAPI } from "@canvas-js/core"
+import { Awaitable, SessionSigner } from "@canvas-js/interfaces"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 
 export class ReplicatedConfig {
@@ -62,7 +62,6 @@ export abstract class ReplicatedObject<
 	}
 
 	constructor(config: ReplicatedConfig = {}) {
-		// eslint-disable-next-line @typescript-eslint/no-this-alias
 		const instance = this
 		const parent = Object.getPrototypeOf(this) // TODO: not parent, but root (repeat until we find a base ReplicatedObject)
 
@@ -151,7 +150,6 @@ export abstract class ReplicatedObject<
 					instance.#contextAddress = signer.getAddressFromDid(session?.payload.did)
 					instance.#contextDid = session.payload.did
 					instance.#contextPublicKey = session.payload.publicKey
-					// eslint-disable-next-line prefer-spread
 					return instance[name].apply(instance, args) ?? instance.#tx[name].apply(instance, args)
 				}
 			} else {
