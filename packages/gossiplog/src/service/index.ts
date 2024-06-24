@@ -183,10 +183,10 @@ export class GossipLogService<Payload = unknown>
 	private forwardEvent = (event: CustomEvent) =>
 		this.safeDispatchEvent(event.type as keyof GossipLogEvents<unknown>, event)
 
-	public async append(
-		payload: Payload,
+	public async append<T extends Payload = Payload>(
+		payload: T,
 		options: { signer?: Signer<Payload> } = {},
-	): Promise<{ id: string; signature: Signature; message: Message<Payload>; recipients: Promise<PeerId[]> }> {
+	): Promise<{ id: string; signature: Signature; message: Message<T>; recipients: Promise<PeerId[]> }> {
 		const signedMessage = await this.messageLog.append(payload, options)
 		const recipients = this.publish(signedMessage)
 

@@ -21,11 +21,7 @@ import * as cbor from "@ipld/dag-cbor"
 import { AbstractGossipLog } from "@canvas-js/gossiplog"
 import { gossiplog } from "@canvas-js/gossiplog/service"
 
-import type { ServiceMap } from "../ServiceMap.js"
-import type { NetworkConfig } from "../NetworkConfig.js"
-
-export type { ServiceMap } from "../ServiceMap.js"
-export type { NetworkConfig } from "../NetworkConfig.js"
+import type { ServiceMap, NetworkConfig } from "../../interface.js"
 
 export const defaultRelayServer =
 	"/dns4/canvas-relay-server-thrumming-surf-3764.fly.dev/tcp/443/wss/p2p/12D3KooWFfrssaGYVeMQxzQoSPcr7go8uHe2grkSkr3b99Ky1M7R"
@@ -39,6 +35,7 @@ type TopicPeerRecord = {
 
 export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: AbstractGossipLog<Payload>) {
 	const peerId = await createEd25519PeerId()
+	console.log("using PeerId", peerId.toString())
 
 	const bootstrapList = config.bootstrapList ?? []
 	const relayServer = config.relayServer ?? defaultRelayServer
@@ -50,6 +47,9 @@ export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: Abst
 
 	const listen = ["/webrtc"]
 	const announce: string[] = [`${relayServer}/p2p-circuit/webrtc/p2p/${peerId}`]
+
+	console.log("listening on", listen)
+	console.log("announcing on", announce)
 
 	const libp2p = await createLibp2p<ServiceMap<Payload> & { fetch: Fetch }>({
 		start: false,
@@ -88,37 +88,37 @@ export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: Abst
 		},
 	})
 
-	// libp2p.addEventListener("connection:open", ({ detail: { direction, remotePeer, remoteAddr } }) => {
-	// 	console.log(`connection:open ${direction} ${remotePeer} ${remoteAddr}`)
-	// 	if (relayServerPeerId === remotePeer.toString()) {
-	// 		console.log(`[fetch ${relayServerPeerId}]`)
-	// 		libp2p.services.fetch.fetch(peerIdFromString(relayServerPeerId), `topic/${messageLog.topic}`).then(
-	// 			async (result) => {
-	// 				const results = cbor.decode<TopicPeerRecord[]>(result ?? cbor.encode([]))
-	// 				console.log(`[fetch ${relayServerPeerId}] got ${results.length} results`)
-	// 				for (const { id, addresses, protocols, peerRecordEnvelope } of results) {
-	// 					const peerId = peerIdFromBytes(id)
-	// 					if (peerId.equals(libp2p.peerId)) {
-	// 						continue
-	// 					}
+	libp2p.addEventListener("connection:open", ({ detail: { direction, remotePeer, remoteAddr } }) => {
+		// console.log(`connection:open ${direction} ${remotePeer} ${remoteAddr}`)
+		if (relayServerPeerId === remotePeer.toString()) {
+			console.log(`[fetch ${relayServerPeerId}]`)
+			libp2p.services.fetch.fetch(peerIdFromString(relayServerPeerId), `topic/${messageLog.topic}`).then(
+				async (result) => {
+					const results = cbor.decode<TopicPeerRecord[]>(result ?? cbor.encode([]))
+					console.log(`[fetch ${relayServerPeerId}] got ${results.length} results`)
+					for (const { id, addresses, protocols, peerRecordEnvelope } of results) {
+						const peerId = peerIdFromBytes(id)
+						if (peerId.equals(libp2p.peerId)) {
+							continue
+						}
 
-	// 					await libp2p.peerStore.save(peerId, {
-	// 						addresses: addresses.map((addr) => ({ isCertified: true, multiaddr: multiaddr(addr) })),
-	// 						protocols: protocols,
-	// 						peerRecordEnvelope: peerRecordEnvelope ?? undefined,
-	// 					})
+						await libp2p.peerStore.save(peerId, {
+							addresses: addresses.map((addr) => ({ isCertified: true, multiaddr: multiaddr(addr) })),
+							protocols: protocols,
+							peerRecordEnvelope: peerRecordEnvelope ?? undefined,
+						})
 
-	// 					console.log(`[fetch ${relayServerPeerId}] dialing ${peerId}`)
+						// console.log(`[fetch ${relayServerPeerId}] dialing ${peerId}`)
 
-	// 					libp2p.dial(peerId)
-	// 				}
-	// 			},
-	// 			(err) => console.log("fetch failed", err),
-	// 		)
+						// libp2p.dial(peerId)
+					}
+				},
+				(err) => console.log("fetch failed", err),
+			)
 
-	// 		return
-	// 	}
-	// })
+			return
+		}
+	})
 
 	return libp2p
 }

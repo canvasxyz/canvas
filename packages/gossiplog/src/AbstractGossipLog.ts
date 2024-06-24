@@ -107,7 +107,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		})
 	}
 
-	public encode(signature: Signature, message: Message<Payload>): SignedMessage<Payload> {
+	public encode<T extends Payload = Payload>(signature: Signature, message: Message<T>): SignedMessage<T> {
 		assert(this.topic === message.topic, "expected this.topic === topic")
 		assert(this.validatePayload(message.payload), "error encoding message (invalid payload)")
 		return SignedMessage.encode(signature, message)
@@ -158,14 +158,17 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 	 * Sign and append a new *unsigned* message to the end of the log.
 	 * The concurrent heads of the local log are used as parents.
 	 */
-	public async append(payload: Payload, options: { signer?: Signer<Payload> } = {}): Promise<SignedMessage<Payload>> {
+	public async append<T extends Payload = Payload>(
+		payload: T,
+		options: { signer?: Signer<Payload> } = {},
+	): Promise<SignedMessage<T>> {
 		const signer = options.signer ?? this.signer
 
 		let root: Node | null = null
 		const signedMessage = await this.tree.write(async (txn) => {
 			const [clock, parents] = await this.getClock()
 
-			const message: Message<Payload> = { topic: this.topic, clock, parents, payload }
+			const message: Message<T> = { topic: this.topic, clock, parents, payload }
 			const signature = await signer.sign(message)
 
 			const signedMessage = this.encode(signature, message)

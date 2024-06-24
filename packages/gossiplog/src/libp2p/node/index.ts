@@ -12,15 +12,12 @@ import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { kadDHT } from "@libp2p/kad-dht"
 import { ping } from "@libp2p/ping"
+import { fetch as fetchService } from "@libp2p/fetch"
 
 import { AbstractGossipLog } from "@canvas-js/gossiplog"
 import { gossiplog } from "@canvas-js/gossiplog/service"
 
-import type { ServiceMap } from "../ServiceMap.js"
-import type { NetworkConfig } from "../NetworkConfig.js"
-
-export type { ServiceMap } from "../ServiceMap.js"
-export type { NetworkConfig } from "../NetworkConfig.js"
+import type { ServiceMap, NetworkConfig } from "../../interface.js"
 
 export const getTopicDHTProtocol = (topic: string) => `/canvas/kad/${topic}/1.0.0`
 
@@ -66,6 +63,7 @@ export async function getLibp2p<Payload>(
 			identify: identify({ protocolPrefix: "canvas" }),
 			ping: ping({ protocolPrefix: "canvas" }),
 			dht: kadDHT({ protocol: getTopicDHTProtocol(messageLog.topic), kBucketSize: 2 }),
+			fetch: fetchService({ protocolPrefix: "canvas" }),
 
 			pubsub: gossipsub({
 				emitSelf: false,
