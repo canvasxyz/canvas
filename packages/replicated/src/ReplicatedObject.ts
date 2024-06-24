@@ -11,32 +11,35 @@ export class ReplicatedConfig {
 export type AnyCall = (...args: any[]) => Awaitable<any>
 
 export abstract class ReplicatedObject<
-	T extends Record<string, AnyCall> = any,
-	K extends typeof ReplicatedObject = typeof ReplicatedObject,
+	Actions extends Record<string, AnyCall> = any,
+	Class extends typeof ReplicatedObject = typeof ReplicatedObject,
 > {
+	static db = {}
+
+	// private fields only available after async initialization is completed
 	#app?: Canvas
 	#db?: ModelAPI
-	#ready: Promise<ReplicatedObject<T, K>>
+	#ready: Promise<ReplicatedObject<Actions, Class>>
 
-	#signers: SessionSigner[] // signers are async, so these fields aren't available in the constructor
 	#address?: string
 	#did?: `did:${string}`
 	#publicKey?: string
+	#signers: SessionSigner[] // signers are also set up async, unless provided in ReplicatedConfig
 
+	// temporary variables for signer-locked calls
 	#contextSigner?: SessionSigner
 	#contextAddress?: string
 	#contextDid?: `did:${string}`
 	#contextPublicKey?: string
 
-	#topic?: string
-	#tx: Record<string, (...args: any[]) => any>;
+	// internal fields
+	readonly #topic?: string
+	readonly #tx: Record<string, (...args: any[]) => any>;
 
 	[handler: `on${string}`]: (...args: any[]) => void
 	[action: Exclude<string, `on${string}`>]: any
 
 	as: (signer: SessionSigner<any>) => { [k: string]: AnyCall }
-
-	static db = {}
 
 	get tx() {
 		return this.#tx
@@ -68,7 +71,7 @@ export abstract class ReplicatedObject<
 
 		// set up topic, models, and actions
 		this.#topic = this.#topic ?? config.topic
-		const models = (this.constructor as K).db
+		const models = (this.constructor as Class).db
 
 		if (this.#topic === undefined) throw new Error("must define a topic on class or constructor")
 		if (Object.keys(models).length === 0) throw new Error("must define a model")
@@ -128,9 +131,9 @@ export abstract class ReplicatedObject<
 			}
 		}
 
-		// set up calls with .as()
-		const parentCalls: Record<string, (signer: SessionSigner<any>, ...args: any[]) => any> = {}
-		const childCalls: Record<string, (signer: SessionSigner<any>, ...args: any[]) => any> = {}
+		// set up signer-locked calls
+		const implicitCalls: Record<string, (signer: SessionSigner<any>, ...args: any[]) => any> = {}
+		const explicitCalls: Record<string, (signer: SessionSigner<any>, ...args: any[]) => any> = {}
 		for (const key of keys) {
 			const name = isHandlerKey(key) ? fromHandlerKey(key) : key
 			const explicit = !isHandlerKey(key)
@@ -138,7 +141,7 @@ export abstract class ReplicatedObject<
 			if (explicit && typeof (this as any)[name] !== "function") continue
 
 			if (explicit) {
-				childCalls[name] = async function (signer: SessionSigner<any>, ...args: any[]) {
+				explicitCalls[name] = async function (signer: SessionSigner<any>, ...args: any[]) {
 					// TODO: lock the object here
 					let session = await signer.getSession(instance.#topic!)
 					if (!session) {
@@ -152,19 +155,19 @@ export abstract class ReplicatedObject<
 					return instance[name].apply(instance, args) ?? instance.#tx[name].apply(instance, args)
 				}
 			} else {
-				parentCalls[name] = function (signer: SessionSigner<any>, ...args: any[]) {
+				implicitCalls[name] = function (signer: SessionSigner<any>, ...args: any[]) {
 					return instance.#app?.actions[name].call(this, args, { signer })
 				}
 			}
 		}
 
 		this.as = (signer: SessionSigner<any>) => {
-			const calls = { ...parentCalls, ...childCalls } // root shadows child
+			const calls = { ...implicitCalls, ...explicitCalls } // explicit overwrites implicit
 			return Object.fromEntries(Object.entries(calls).map(([key, call]) => [key, call.bind(instance, signer)]))
 		}
 
 		this.#ready = new Promise((resolve, reject) => {
-			const app = Canvas.initialize({
+			Canvas.initialize({
 				topic: this.#topic,
 				contract,
 				signers: this.#signers,
