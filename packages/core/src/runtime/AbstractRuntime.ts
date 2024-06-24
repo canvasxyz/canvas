@@ -349,6 +349,6 @@ export abstract class AbstractRuntime {
 
 		// if a merge function is defined, use it (i.e. for a CRDT)
 
-		return
+		return null
 	}
 }
