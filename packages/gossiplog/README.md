@@ -224,59 +224,6 @@ Given an existing `signature: Signature` and `message: Message<Payload>` - such 
 
 TODO
 
-### Indexing ancestors
-
-If `init.indexAncestors` is `true`, GossipLog will maintain an additional "ancestor index" that allows users to look up transitive ancestors of any message at an arbitrary clock in the message's past.
-
-In the example below, `await gossiplog.isAncestor(d, l)` would return `true` while `await gossiplog.isAncestor(d, k)` would return `false`.
-
-```ts
-
-
-```
-   ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┬ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┬ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
-                                                                                              │
-   │                                                   │                         │                         │
-   ▼                                                   ▼                         ▼            ▼
-                                                                                                           │
-                                          ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┬ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
-                                                                                 │                         │
-                                          │                         │                         │
-                                          ▼                         ▼            ▼                         │
-                                                                                              │
-                                       ┌─────┐      ┌─────┐      ┌─────┐                                   │
-                                   ┌───│  d  │◀─────│  f  │◀─────│  h  │◀──────────────┐      │
-                                   │   └─────┘      └─────┘      └─────┘               │                   │
-┌─────┐      ┌─────┐      ┌─────┐  │                                                   │      │         ┌─────┐
-│  a  │◀─────│  b  │◀─────│  c  │◀─┤                                                   └────────────┬───│  l  │
-└─────┘      └─────┘      └─────┘  │                                                          │     │   └─────┘
-                                   │   ┌─────┐      ┌─────┐      ┌─────┐      ┌─────┐      ┌─────┐  │
-                                   └───│  e  │◀─────│  g  │◀─────│  i  │◀─────│  j  │◀─────│  k  │◀─┘
-                                       └─────┘      └─────┘      └─────┘      └─────┘      └─────┘
-
-
-   1            2            3            4            5            6            7            8            9
-
-                                                       │            │            │
-
-   ▲                         ▲            ▲            │            │            │
-   │                         │
-                                          │            │            │            │
-   └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┴ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
-                                                                    │            │
-
-                ▲                         ▲            ▲            │            │
-                │                         │
-                                                       │            │            │
-                └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┴ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
-                                                                                 │
-
-                             ▲                         ▲            ▲            │
-                             │                         │
-                                                                    │            │
-                             └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┴ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
-```
-
 ### Advanced authentication use cases
 
 Expressing an application's access control logic purely in terms of public keys and signatures can be challenging. The simplest case is one where a only a known fixed set of public keys are allowed to write to the log; at the very least, this generalizes all of Hypercore's use cases. Another simple case is for open-ended applications where end users have keypairs, and the application can access the private key and programmatically sign messages directly.
