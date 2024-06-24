@@ -343,9 +343,18 @@ export abstract class AbstractRuntime {
 			concurrentEffects.push(concurrentEffect)
 		}
 
+		const mergeFunction = null
+
 		// TODO: finish this
 		//
 		// default behaviour: last writer wins
+		if (!mergeFunction) {
+			// choose the ancestor with the highest key
+			const highestKeyAncestor = concurrentEffects.reduce((a, b) => {
+				return a.key > b.key ? a : b
+			})
+			return highestKeyAncestor.value
+		}
 
 		// if a merge function is defined, use it (i.e. for a CRDT)
 
