@@ -27,6 +27,15 @@ class Chat extends ReplicatedObject<{
 	}
 }
 
+class ChildChat extends Chat {
+	async messageFromChild(message: string): Promise<void> {
+		super.tx.messageFromChild("[child] " + message)
+	}
+	async skipMessageFromChild(message: string): Promise<void> {
+		super.tx.message("[child] " + message)
+	}
+}
+
 test.beforeEach(async (t) => {
 	t.context.chat = await Chat.initialize({ topic: crypto.randomBytes(8).toString("hex") })
 	t.context.signer = new SIWESigner({ signer: ethers.Wallet.createRandom() })
@@ -111,4 +120,15 @@ test.serial("send messages using an explicit call and .as()", async (t) => {
 	const messages = await chat.app?.db.query("messages", { orderBy: { timestamp: "desc" } })
 	t.is(messages?.[0].message, `[${messages?.[0].address}] hi from explicit call`)
 	t.is(messages?.[0].address, await signer.getWalletAddress())
+})
+
+test.serial("test multiple levels of inheritance, nested and skip-level calls", async (t) => {
+	const child = await ChildChat.initialize({ topic: crypto.randomBytes(8).toString("hex") })
+
+	await child.messageFromChild("test")
+	await new Promise<void>((resolve) => setTimeout(() => resolve(), 100))
+	t.is(await child.app?.db.count("messages"), 1)
+
+	const messages = await child.app?.db.query("messages", { orderBy: { timestamp: "desc" } })
+	t.is(messages?.[0].message, `[child] [${messages?.[0].address}] test`)
 })
