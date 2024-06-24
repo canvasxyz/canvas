@@ -1,18 +1,10 @@
 import type { Libp2p } from "libp2p"
-import type { PingService } from "@libp2p/ping"
-import type { Fetch as FetchService } from "@libp2p/fetch"
-import type { PubSub } from "@libp2p/interface"
-import type { GossipsubEvents } from "@chainsafe/libp2p-gossipsub"
-import type { KadDHT } from "@libp2p/kad-dht"
 
 import type pg from "pg"
 
-import type { Action, Session, SignerCache } from "@canvas-js/interfaces"
+import type { Action, Session } from "@canvas-js/interfaces"
 import type { AbstractModelDB, ModelsInit } from "@canvas-js/modeldb"
-import type { AbstractGossipLog, GossipLogInit } from "@canvas-js/gossiplog"
-import type { GossipLogService } from "@canvas-js/gossiplog/service"
-
-import type { NetworkConfig } from "../Canvas.js"
+import type { AbstractGossipLog, GossipLogInit, NetworkConfig, ServiceMap } from "@canvas-js/gossiplog"
 
 export interface PlatformTarget {
 	openGossipLog: (
@@ -26,16 +18,7 @@ export interface PlatformTarget {
 	) => Promise<AbstractModelDB>
 
 	createLibp2p: (
+		config: NetworkConfig,
 		messageLog: AbstractGossipLog<Action | Session>,
-		config: NetworkConfig & { signers: SignerCache },
-	) => Promise<Libp2p<ServiceMap>>
-}
-
-export type ServiceMap = {
-	identify: {}
-	dht?: KadDHT
-	ping: PingService
-	fetch: FetchService
-	pubsub: PubSub<GossipsubEvents>
-	gossiplog: GossipLogService<Action | Session>
+	) => Promise<Libp2p<ServiceMap<Action | Session>>>
 }
