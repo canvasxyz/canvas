@@ -1,6 +1,6 @@
 import type { AbstractModelDB, ModelsInit } from "@canvas-js/modeldb"
 
-export type BranchMergeEntry = {
+export type BranchMergeRecord = {
 	source_branch: number
 	source_message_id: string
 	source_clock: number
@@ -24,8 +24,8 @@ export class BranchMergeIndex {
 
 	constructor(private readonly db: AbstractModelDB) {}
 
-	public async insertBranchMerge(entry: BranchMergeEntry) {
-		const id = `${entry.source_branch}:${entry.source_message_id}:${entry.target_branch}:${entry.target_message_id}`
-		await this.db.set("$branch_merges", { id, ...entry })
+	public async insertBranchMerge(record: BranchMergeRecord) {
+		const id = `${record.source_branch}:${record.source_message_id}:${record.target_branch}:${record.target_message_id}`
+		await this.db.set("$branch_merges", { id, ...record })
 	}
 }

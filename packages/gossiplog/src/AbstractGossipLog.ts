@@ -12,7 +12,7 @@ import { Driver } from "./sync/driver.js"
 
 import type { SyncServer } from "./interface.js"
 import { BranchIndex } from "./BranchIndex.js"
-import { BranchMergeEntry, BranchMergeIndex } from "./BranchMergeIndex.js"
+import { BranchMergeRecord, BranchMergeIndex } from "./BranchMergeIndex.js"
 import { SignedMessage } from "./SignedMessage.js"
 import { decodeId, encodeId, messageIdPattern } from "./ids.js"
 import { getNextClock } from "./schema.js"
@@ -41,7 +41,7 @@ export type GossipLogEvents<Payload = unknown> = {
 	error: CustomEvent<{ error: Error }>
 }
 
-type MessageEntry<Payload> = {
+type MessageRecord<Payload> = {
 	id: string
 	signature: Signature
 	message: Message<Payload>
@@ -255,24 +255,24 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 		const hash = toString(hashEntry(key, value), "hex")
 
-		const parentMessageEntries: MessageEntry<Payload>[] = []
+		const parentMessageRecords: MessageRecord<Payload>[] = []
 		for (const parentId of message.parents) {
-			const parentMessageEntry = await this.db.get<MessageEntry<Payload>>("$messages", parentId)
-			if (parentMessageEntry === null) {
+			const parentMessageRecord = await this.db.get<MessageRecord<Payload>>("$messages", parentId)
+			if (parentMessageRecord === null) {
 				throw new Error(`missing parent ${parentId} of message ${id}`)
 			}
-			parentMessageEntries.push(parentMessageEntry)
+			parentMessageRecords.push(parentMessageRecord)
 		}
 
-		const branch = await this.getBranch(id, parentMessageEntries)
+		const branch = await this.getBranch(id, parentMessageRecords)
 
 		const branchMergeIndex = new BranchMergeIndex(this.db)
-		for (const parentMessageEntry of parentMessageEntries) {
-			if (parentMessageEntry.branch !== branch) {
+		for (const parentMessageRecord of parentMessageRecords) {
+			if (parentMessageRecord.branch !== branch) {
 				await branchMergeIndex.insertBranchMerge({
-					source_branch: parentMessageEntry.branch,
-					source_clock: parentMessageEntry.clock,
-					source_message_id: parentMessageEntry.id,
+					source_branch: parentMessageRecord.branch,
+					source_clock: parentMessageRecord.clock,
+					source_message_id: parentMessageRecord.id,
 					target_branch: branch,
 					target_clock: message.clock,
 					target_message_id: id,
@@ -298,7 +298,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message } }))
 	}
 
-	private async getBranch(messageId: string, parentMessages: MessageEntry<Payload>[]) {
+	private async getBranch(messageId: string, parentMessages: MessageRecord<Payload>[]) {
 		if (parentMessages.length == 0) {
 			return await new BranchIndex(this.db).createNewBranch()
 		}
@@ -313,7 +313,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		}
 		const branch = maxBranch
 
-		const messagesAtBranchClockPosition = await this.db.query<MessageEntry<Payload>>("$messages", {
+		const messagesAtBranchClockPosition = await this.db.query<MessageRecord<Payload>>("$messages", {
 			where: {
 				branch,
 				clock: {
@@ -371,7 +371,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 			}
 
 			// get parents
-			const branchMerges = await this.db.query<BranchMergeEntry>("$branch_merges", {
+			const branchMerges = await this.db.query<BranchMergeRecord>("$branch_merges", {
 				where: {
 					target_branch: getCurrentMessageResult.branch,
 					target_clock: {
