@@ -24,6 +24,7 @@ export abstract class AbstractRuntime {
 		$effects: {
 			key: "primary", // `${model}/${hash(key)}/${version}
 			value: "bytes?",
+			clock: "integer",
 		},
 	} satisfies ModelsInit
 
@@ -181,7 +182,7 @@ export abstract class AbstractRuntime {
 					effects.push({
 						model: "$effects",
 						operation: "set",
-						value: { key: effectKey, value: value && cbor.encode(value) },
+						value: { key: effectKey, value: value && cbor.encode(value), clock: message.clock },
 					})
 
 					if (results.length > 0) {
@@ -247,7 +248,7 @@ export abstract class AbstractRuntime {
 
 		// eslint-disable-next-line no-constant-condition
 		while (true) {
-			const results = await this.db.query<{ key: string; value: Uint8Array }>("$effects", {
+			const results = await this.db.query<{ key: string; value: Uint8Array; clock: number }>("$effects", {
 				where: { key: { gte: lowerBound, lt: upperBound } },
 				orderBy: { key: "desc" },
 				limit: 1,
