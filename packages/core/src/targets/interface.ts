@@ -33,7 +33,7 @@ export interface PlatformTarget {
 
 export type ServiceMap = {
 	identify: {}
-	dht: KadDHT
+	dht?: KadDHT
 	ping: PingService
 	fetch: FetchService
 	pubsub: PubSub<GossipsubEvents>

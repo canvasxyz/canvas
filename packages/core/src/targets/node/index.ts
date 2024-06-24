@@ -18,7 +18,7 @@ import { getLibp2pOptions } from "./libp2p.js"
 const isPostgres = (path: string | pg.ConnectionConfig): boolean =>
 	typeof path !== "string" || path.startsWith("postgres://") || path.startsWith("postgresql://")
 
-export default {
+const target: PlatformTarget = {
 	async openDB(location: { path: string | pg.ConnectionConfig | null; topic: string; clear?: boolean }, models) {
 		if (location.path === null) {
 			return new ModelDB({ path: null, models })
@@ -50,7 +50,7 @@ export default {
 		const peerId = await getPeerId()
 		return await createLibp2p(getLibp2pOptions(messageLog, peerId, config))
 	},
-} satisfies PlatformTarget
+}
 
 async function getPeerId() {
 	const { PEER_ID } = process.env
@@ -60,3 +60,5 @@ async function getPeerId() {
 		return await createEd25519PeerId()
 	}
 }
+
+export default target
