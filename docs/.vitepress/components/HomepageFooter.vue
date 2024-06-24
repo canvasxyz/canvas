@@ -29,6 +29,7 @@
 }
 
 .VPHome {
+  margin-bottom: 10px !important;
   padding-bottom: 40px !important;
 }
 </style>

@@ -2,10 +2,9 @@ import pg from "pg"
 
 import { assert, signalInvalidType } from "@canvas-js/utils"
 
-import { AbstractModelDB } from "../AbstractModelDB.js"
-import { parseConfig } from "../config.js"
+import { AbstractModelDB, Config, Effect, ModelValue, ModelsInit, QueryParams, parseConfig } from "@canvas-js/modeldb"
+
 import { ModelAPI } from "./api.js"
-import { Config, Effect, ModelValue, ModelsInit, QueryParams } from "../types.js"
 
 export interface ModelDBOptions {
 	connectionConfig: string | pg.ConnectionConfig

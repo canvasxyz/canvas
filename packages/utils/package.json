@@ -1,15 +1,15 @@
 {
-  "name": "@canvas-js/utils",
-  "version": "0.10.0-beta.2",
-  "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
-  "type": "module",
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "files": [
-    "lib"
-  ],
-  "main": "./lib/index.js",
-  "types": "./lib/index.d.ts",
-  "sideEffects": false
+	"name": "@canvas-js/utils",
+	"version": "0.10.0-beta.4",
+	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
+	"type": "module",
+	"engines": {
+		"node": ">=18.0.0"
+	},
+	"files": [
+		"lib"
+	],
+	"main": "./lib/index.js",
+	"types": "./lib/index.d.ts",
+	"sideEffects": false
 }

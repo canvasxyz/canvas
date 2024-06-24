@@ -1,28 +1,28 @@
 {
-  "private": true,
-  "name": "@canvas-js/chain-near",
-  "version": "0.10.0-beta.2",
-  "type": "module",
-  "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
-  "main": "lib/index.js",
-  "types": "lib/index.d.ts",
-  "files": [
-    "lib"
-  ],
-  "dependencies": {
-    "@canvas-js/interfaces": "0.10.0-beta.2",
-    "@canvas-js/signatures": "0.10.0-beta.2",
-    "@canvas-js/utils": "0.10.0-beta.2",
-    "@ipld/dag-cbor": "^9.2.0",
-    "@ipld/dag-json": "^10.1.5",
-    "@libp2p/logger": "^4.0.14",
-    "@near-js/crypto": "^0.0.5",
-    "@noble/curves": "^1.4.0",
-    "bs58": "^5.0.0",
-    "multiformats": "^13.1.1",
-    "near-api-js": "^2.1.4"
-  },
-  "devDependencies": {
-    "@types/bs58": "^4.0.4"
-  }
+	"private": true,
+	"name": "@canvas-js/chain-near",
+	"version": "0.10.0-beta.4",
+	"type": "module",
+	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
+	"main": "lib/index.js",
+	"types": "lib/index.d.ts",
+	"files": [
+		"lib"
+	],
+	"dependencies": {
+		"@canvas-js/interfaces": "0.10.0-beta.4",
+		"@canvas-js/signatures": "0.10.0-beta.4",
+		"@canvas-js/utils": "0.10.0-beta.4",
+		"@ipld/dag-cbor": "^9.2.0",
+		"@ipld/dag-json": "^10.2.1",
+		"@libp2p/logger": "^4.0.15",
+		"@near-js/crypto": "^0.0.5",
+		"@noble/curves": "^1.4.0",
+		"bs58": "^5.0.0",
+		"multiformats": "^13.1.1",
+		"near-api-js": "^2.1.4"
+	},
+	"devDependencies": {
+		"@types/bs58": "^4.0.4"
+	}
 }

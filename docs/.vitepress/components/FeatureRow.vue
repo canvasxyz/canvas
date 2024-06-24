@@ -35,6 +35,7 @@ defineProps<{
   margin: 0 auto 40px;
   max-width: 640px;
   color: var(--vp-c-text-2);
+  text-align: center;
 }
 
 @media (min-width: 640px) {

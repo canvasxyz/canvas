@@ -5,7 +5,7 @@ import { ed25519 } from "@noble/curves/ed25519"
 
 import type { Session, AbstractSessionData, DidIdentifier } from "@canvas-js/interfaces"
 import { AbstractSessionSigner, ed25519 as Ed25519SignatureScheme } from "@canvas-js/signatures"
-import { assert } from "@canvas-js/utils"
+import { assert, DAYS } from "@canvas-js/utils"
 
 import { NEARMessage, NEARSessionData } from "./types.js"
 import { validateSessionData, addressPattern, parseAddress } from "./utils.js"
@@ -23,7 +23,7 @@ export class NEARSigner extends AbstractSessionSigner<NEARSessionData> {
 	#address: string
 	#keyPair: KeyPair
 
-	public constructor({ keyPair, sessionDuration, chainId }: NEARSignerInit = {}) {
+	public constructor({ keyPair, sessionDuration, chainId }: NEARSignerInit = { sessionDuration: 14 * DAYS }) {
 		super("chain-near", Ed25519SignatureScheme, { sessionDuration })
 
 		this.#keyPair = keyPair ?? KeyPair.fromRandom("ed25519")
