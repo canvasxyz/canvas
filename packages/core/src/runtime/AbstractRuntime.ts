@@ -24,6 +24,7 @@ export abstract class AbstractRuntime {
 		$effects: {
 			key: "primary", // `${model}/${hash(key)}/${version}
 			value: "bytes?",
+			branch: "integer",
 			clock: "integer",
 		},
 	} satisfies ModelsInit
@@ -92,11 +93,11 @@ export abstract class AbstractRuntime {
 		const handleSession = this.handleSession.bind(this)
 		const handleAction = this.handleAction.bind(this)
 
-		return async function (this: AbstractGossipLog<Action | Session>, { id, signature, message }) {
+		return async function (this: AbstractGossipLog<Action | Session>, { id, signature, message }, branch) {
 			if (AbstractRuntime.isSession(message)) {
 				await handleSession(id, signature, message)
 			} else if (AbstractRuntime.isAction(message)) {
-				await handleAction(id, signature, message, this)
+				await handleAction(id, signature, message, this, branch)
 			} else {
 				throw new Error("invalid message payload type")
 			}
@@ -137,6 +138,7 @@ export abstract class AbstractRuntime {
 		signature: Signature,
 		message: Message<Action>,
 		messageLog: AbstractGossipLog<Action | Session>,
+		branch: number,
 	) {
 		const {
 			did,
@@ -182,7 +184,7 @@ export abstract class AbstractRuntime {
 					effects.push({
 						model: "$effects",
 						operation: "set",
-						value: { key: effectKey, value: value && cbor.encode(value), clock: message.clock },
+						value: { key: effectKey, value: value && cbor.encode(value), branch: branch, clock: message.clock },
 					})
 
 					if (results.length > 0) {
