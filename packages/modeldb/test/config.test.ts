@@ -1,9 +1,9 @@
 import test from "ava"
 
-import { ModelsInit, parseConfig } from "@canvas-js/modeldb"
+import { ModelSchema, parseConfig } from "@canvas-js/modeldb"
 
 test("parse config", (t) => {
-	const models: ModelsInit = {
+	const models: ModelSchema = {
 		user: {
 			id: "primary",
 			address: "string",

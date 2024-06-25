@@ -18,12 +18,12 @@ export type PropertyType =
 export type IndexInit = string | string[]
 
 type MergeFunction = (value1: any, value2: any) => any
-export type ModelsInit = Record<
+export type ModelSchema = Record<
 	string,
-	{ $indexes?: IndexInit[] } & Record<string, PropertyType | IndexInit[] | MergeFunction>
+	{ $indexes?: IndexInit[]; $merge?: MergeFunction } & Record<string, PropertyType | IndexInit[] | MergeFunction>
 >
 
-// These are more structured representations of the schema defined by ModelsInit that are easier
+// These are more structured representations of the schema defined by ModelSchema that are easier
 // to work with at runtime
 
 export type PrimaryKeyProperty = { name: string; kind: "primary" }

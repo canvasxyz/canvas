@@ -1,8 +1,8 @@
-import type { ModelValue, ModelsInit } from "@canvas-js/modeldb"
+import type { ModelValue, ModelSchema } from "@canvas-js/modeldb"
 
 import { testOnModelDB } from "./utils.js"
 
-const models: ModelsInit = {
+const models: ModelSchema = {
 	user: { address: "primary" },
 	room: {
 		id: "primary",

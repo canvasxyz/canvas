@@ -1,10 +1,10 @@
-import type { AbstractModelDB, ModelsInit } from "@canvas-js/modeldb"
+import type { AbstractModelDB, ModelSchema } from "@canvas-js/modeldb"
 
 export class BranchIndex {
 	public static schema = {
 		// $maxBranch is a singleton
 		$maxBranch: { id: "primary", maxBranch: "integer" },
-	} satisfies ModelsInit
+	} satisfies ModelSchema
 
 	constructor(private readonly db: AbstractModelDB) {}
 

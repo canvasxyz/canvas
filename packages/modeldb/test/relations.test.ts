@@ -1,10 +1,10 @@
 import { nanoid } from "nanoid"
 
-import type { ModelsInit } from "@canvas-js/modeldb"
+import type { ModelSchema } from "@canvas-js/modeldb"
 
 import { testOnModelDB } from "./utils.js"
 
-const models: ModelsInit = {
+const models: ModelSchema = {
 	user: { address: "primary" },
 	room: {
 		id: "primary",

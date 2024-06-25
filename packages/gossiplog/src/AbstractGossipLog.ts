@@ -4,7 +4,7 @@ import { equals, toString } from "uint8arrays"
 
 import { Node, Tree, ReadWriteTransaction, hashEntry } from "@canvas-js/okra"
 import type { Signature, Signer, Message, Awaitable } from "@canvas-js/interfaces"
-import type { AbstractModelDB, ModelsInit, Effect } from "@canvas-js/modeldb"
+import type { AbstractModelDB, ModelSchema, Effect } from "@canvas-js/modeldb"
 import { ed25519 } from "@canvas-js/signatures"
 import { assert, zip } from "@canvas-js/utils"
 
@@ -65,7 +65,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		$heads: { id: "primary" },
 		...BranchIndex.schema,
 		...BranchMergeIndex.schema,
-	} satisfies ModelsInit
+	} satisfies ModelSchema
 
 	public readonly topic: string
 	public readonly indexAncestors: boolean

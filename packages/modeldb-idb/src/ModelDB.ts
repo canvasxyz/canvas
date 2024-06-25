@@ -2,14 +2,14 @@ import { IDBPDatabase, IDBPTransaction, openDB } from "idb"
 
 import { assert, signalInvalidType } from "@canvas-js/utils"
 
-import { AbstractModelDB, Config, Effect, ModelValue, ModelsInit, QueryParams, parseConfig } from "@canvas-js/modeldb"
+import { AbstractModelDB, Config, Effect, ModelValue, ModelSchema, QueryParams, parseConfig } from "@canvas-js/modeldb"
 
 import { ModelAPI } from "./api.js"
 import { getIndexName, checkForMissingObjectStores } from "./utils.js"
 
 export interface ModelDBOptions {
 	name: string
-	models: ModelsInit
+	models: ModelSchema
 }
 
 export class ModelDB extends AbstractModelDB {
