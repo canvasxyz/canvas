@@ -36,11 +36,9 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({}) => {
 		if (app !== null) {
 			await app.stop()
 
-			console.log("deleting model database")
-			await deleteDB(`canvas/${app.topic}/db`, {})
+			console.log("deleting database")
+			await deleteDB(`canvas/${app.topic}`, {})
 
-			console.log("deleting message log", app.topic)
-			await deleteDB(`canvas/${app.topic}/log`, {})
 			console.log("clearing session signer data", sessionSigner)
 			// await sessionSigner?.clear?.()
 			window.location.reload()
