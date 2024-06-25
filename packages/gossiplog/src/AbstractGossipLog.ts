@@ -37,7 +37,7 @@ export interface GossipLogInit<Payload = unknown> {
 
 export type GossipLogEvents<Payload = unknown> = {
 	message: CustomEvent<{ id: string; signature: Signature; message: Message<Payload> }>
-	commit: CustomEvent<{ root: Node }>
+	commit: CustomEvent<{ root: Node; heads: string[] }>
 	sync: CustomEvent<{ peerId?: string; duration: number; messageCount: number }>
 	error: CustomEvent<{ error: Error }>
 }
@@ -165,6 +165,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		const signer = options.signer ?? this.signer
 
 		let root: Node | null = null
+		let heads: string[] | null = null
 		const signedMessage = await this.tree.write(async (txn) => {
 			const [clock, parents] = await this.getClock()
 
@@ -175,13 +176,16 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 			this.log("appending message %s", signedMessage.id)
 
-			await this.apply(txn, signedMessage)
-			root = txn.getRoot()
+			const result = await this.apply(txn, signedMessage)
+			root = result.root
+			heads = result.heads
+
 			return signedMessage
 		})
 
 		assert(root !== null, "failed to commit transaction")
-		this.dispatchEvent(new CustomEvent("commit", { detail: { root } }))
+		assert(heads !== null, "failed to commit transaction")
+		this.dispatchEvent(new CustomEvent("commit", { detail: { root, heads } }))
 		return signedMessage
 	}
 
@@ -213,6 +217,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		const parentKeys = signedMessage.message.parents.map(encodeId)
 
 		let root: Node | null = null
+		let heads: string[] | null = null
 		await this.tree.write(async (txn) => {
 			const hasSignedMessage = await this.has(signedMessage.id)
 			if (hasSignedMessage) {
@@ -227,17 +232,22 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 				}
 			}
 
-			await this.apply(txn, signedMessage)
-			root = txn.getRoot()
+			const result = await this.apply(txn, signedMessage)
+			root = result.root
+			heads = result.heads
 		})
 
 		assert(root !== null, "failed to commit transaction")
-		this.dispatchEvent(new CustomEvent("commit", { detail: { root } }))
+		assert(heads !== null, "failed to commit transaction")
+		this.dispatchEvent(new CustomEvent("commit", { detail: { root, heads } }))
 
 		return { id: signedMessage.id }
 	}
 
-	private async apply(txn: ReadWriteTransaction, signedMessage: SignedMessage<Payload>): Promise<void> {
+	private async apply(
+		txn: ReadWriteTransaction,
+		signedMessage: SignedMessage<Payload>,
+	): Promise<{ root: Node; heads: string[] }> {
 		this.log("applying %s %O", signedMessage.id, signedMessage.message)
 
 		try {
@@ -260,6 +270,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 			if (!parentMessageResult) {
 				throw new Error(`missing parent ${parentId} of message ${id}`)
 			}
+
 			const parentBranch = parentMessageResult.branch
 			const parentClock = parentMessageResult.message.clock
 			if (parentBranch !== branch) {
@@ -276,22 +287,23 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 		await this.db.set("$messages", { id, signature, message, hash, branch, clock })
 
-		const heads = await this.db.query<{ id: string }>("$heads")
+		const heads = await this.db
+			.query<{ id: string }>("$heads")
+			.then((heads) => heads.filter((head) => message.parents.includes(head.id)))
+
 		await this.db.apply([
-			...heads
-				.filter((head) => message.parents.includes(head.id))
-				.map<Effect>((head) => ({ model: "$heads", operation: "delete", key: head.id })),
+			...heads.map<Effect>((head) => ({ model: "$heads", operation: "delete", key: head.id })),
 			{ model: "$heads", operation: "set", value: { id } },
 		])
 
 		txn.set(key, value)
 
-		// const root = await txn.getRoot()
-		// await new MerkleIndex(this.db).commit(root)
-
 		await new AncestorIndex(this.db).indexAncestors(id, message.parents)
 
 		this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message } }))
+
+		const root = txn.getRoot()
+		return { root, heads: heads.map((head) => head.id) }
 	}
 
 	private async getBranch(messageId: string, clock: number, parentIds: string[]) {
