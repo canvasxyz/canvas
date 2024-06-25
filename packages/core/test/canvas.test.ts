@@ -241,6 +241,61 @@ test("get a value set by another action", async (t) => {
 	)
 })
 
+test("get a value set by another action that has been merged", async (t) => {
+	const wallet = ethers.Wallet.createRandom()
+
+	type CounterRecord = {
+		id: string
+		value: string
+	}
+	const app = await Canvas.initialize({
+		signers: [new SIWESigner({ signer: wallet })],
+		contract: {
+			topic: "com.example.app",
+			models: {
+				counter: {
+					id: "primary",
+					value: "string",
+					$merge: (counter1: CounterRecord, counter2: CounterRecord): CounterRecord => {
+						const value1 = JSON.parse(counter1.value)
+						const value2 = JSON.parse(counter2.value)
+
+						const outputValue: Record<string, number> = {}
+						for (const key of Object.keys({ ...value1, ...value2 })) {
+							outputValue[key] = Math.max(value1[key] || 0, value2[key] || 0)
+						}
+						return { id: counter1.id, value: JSON.stringify(outputValue) }
+					},
+				},
+			},
+			actions: {
+				async createCounter(db, {}, { id }) {
+					await db.set("counter", { id, value: "{}" })
+				},
+				async incrementCounter(db, { id }: { id: string }, { did }) {
+					const counter = await db.get("counter", id)
+					assert(counter !== null)
+					assert(typeof counter.value === "string")
+					const value = JSON.parse(counter.value)
+					if (!value[did]) {
+						value[did] = 0
+					}
+					value[did] += 1
+					await db.set("counter", { id, value: JSON.stringify(value) })
+				},
+			},
+		},
+		start: false,
+	})
+
+	t.teardown(() => app.stop())
+
+	const { id: counterId } = await app.actions.createCounter({})
+	t.log(`${counterId}: created counter`)
+
+	// TODO: multiple canvas apps sync with each other and merge the counter value
+})
+
 test("validate action args using IPLD schemas", async (t) => {
 	const schema = `
 		type CreatePostPayload struct {
