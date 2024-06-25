@@ -108,9 +108,9 @@ export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: Abst
 							peerRecordEnvelope: peerRecordEnvelope ?? undefined,
 						})
 
-						// console.log(`[fetch ${relayServerPeerId}] dialing ${peerId}`)
+						console.log(`[fetch ${relayServerPeerId}] dialing ${peerId}`)
 
-						// libp2p.dial(peerId)
+						libp2p.dial(peerId)
 					}
 				},
 				(err) => console.log("fetch failed", err),

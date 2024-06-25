@@ -20,6 +20,7 @@ import { pipe } from "it-pipe"
 import * as cbor from "@ipld/dag-cbor"
 
 import { pushable } from "it-pushable"
+import { equals } from "uint8arrays"
 
 import type { Entry } from "@canvas-js/okra"
 import type { Signature, Message, Signer } from "@canvas-js/interfaces"
@@ -31,6 +32,7 @@ import {
 	DEFAULT_PROTOCOL_SELECT_TIMEOUT,
 	MAX_INBOUND_STREAMS,
 	MAX_OUTBOUND_STREAMS,
+	NEGOTIATE_FULLY,
 	SYNC_RETRY_INTERVAL,
 	SYNC_RETRY_LIMIT,
 	second,
@@ -43,7 +45,7 @@ import { Client, decodeRequests, encodeResponses } from "../sync/index.js"
 
 import { DelayableController, SyncDeadlockError, SyncTimeoutError, wait } from "../utils.js"
 import { Server } from "../sync/server.js"
-import { equals } from "uint8arrays"
+
 import { SignedMessage } from "../SignedMessage.js"
 
 export const getSyncProtocol = (topic: string) => `/canvas/sync/v1/${topic}`
@@ -324,7 +326,7 @@ export class GossipLogService<Payload = unknown>
 		const peerId = connection.remotePeer
 		this.log("opened incoming push stream %s from peer %p", stream.id, peerId)
 
-		pipe(stream.source, lp.decode, async (msgs) => {
+		await pipe(stream.source, lp.decode, async (msgs) => {
 			const { value: msg, done } = await msgs.next()
 			assert(done === false && msg !== undefined)
 			const heads = cbor.decode<Uint8Array[]>(msg.subarray())
@@ -332,6 +334,8 @@ export class GossipLogService<Payload = unknown>
 
 			this.handleUpdate(connection.remotePeer, heads)
 		})
+
+		this.log("closed incoming push stream %s from peer %p", stream.id, peerId)
 	}
 
 	private handleIncomingSync: StreamHandler = async ({ connection, stream }) => {
@@ -405,7 +409,7 @@ export class GossipLogService<Payload = unknown>
 
 		const protocolSelectSignal = AbortSignal.timeout(DEFAULT_PROTOCOL_SELECT_TIMEOUT)
 		const stream = await connection
-			.newStream(this.pushProtocol, { negotiateFully: false, signal: protocolSelectSignal })
+			.newStream(this.pushProtocol, { negotiateFully: NEGOTIATE_FULLY, signal: protocolSelectSignal })
 			.catch((err) => {
 				this.log.error("failed to open outgoing push stream: %O", err)
 				throw err
@@ -423,6 +427,7 @@ export class GossipLogService<Payload = unknown>
 			])
 
 			await stream.close()
+			this.log("closed outgoing push stream %s to peer %p", stream.id, peerId)
 		} catch (err) {
 			this.log.error("error sending push: %o", err)
 			if (err instanceof Error) {
@@ -494,7 +499,7 @@ export class GossipLogService<Payload = unknown>
 
 		const protocolSelectSignal = AbortSignal.timeout(DEFAULT_PROTOCOL_SELECT_TIMEOUT)
 		const stream = await connection
-			.newStream(this.syncProtocol, { negotiateFully: false, signal: protocolSelectSignal })
+			.newStream(this.syncProtocol, { negotiateFully: NEGOTIATE_FULLY, signal: protocolSelectSignal })
 			.catch((err) => {
 				this.log.error("failed to open outgoing sync stream: %O", err)
 				throw err
