@@ -39,6 +39,8 @@
 		{ "path": "./packages/chain-substrate" },
 		{ "path": "./packages/ethereum-contracts" },
 		{ "path": "./packages/hooks" },
+		{ "path": "./packages/replicated" },
+		{ "path": "./packages/replicated/test" },
 		{ "path": "./packages/templates" },
 		{ "path": "./packages/test-network" },
 		{ "path": "./packages/utils" }
