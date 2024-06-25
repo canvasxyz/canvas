@@ -48,7 +48,7 @@ export const App: React.FC<{}> = ({}) => {
 	})
 
 	return (
-		<AppContext.Provider value={{ address, setAddress, sessionSigner, setSessionSigner, app: app || null }}>
+		<AppContext.Provider value={{ address, setAddress, sessionSigner, setSessionSigner, app: app ?? null }}>
 			{app ? (
 				<main>
 					<div className="flex flex-row gap-4 h-full">

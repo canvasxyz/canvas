@@ -2,6 +2,7 @@ import React, { useCallback, useContext, useState } from "react"
 import { deleteDB } from "idb"
 
 import { AppContext } from "./AppContext.js"
+import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 
 export interface ControlPanelProps {}
 
@@ -22,26 +23,41 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({}) => {
 	}, [app])
 
 	const stop = useCallback(async () => {
-		if (app !== null) {
-			try {
-				await app.libp2p.stop()
-				setIsStarted(false)
-			} catch (err) {
-				console.error(err)
-			}
+		if (app === null) {
+			return
+		}
+		try {
+			await app.libp2p.stop()
+			setIsStarted(false)
+		} catch (err) {
+			console.error(err)
 		}
 	}, [app])
 
 	const clear = useCallback(async () => {
-		if (app !== null) {
-			await app.stop()
+		if (app === null) {
+			return
+		}
 
-			console.log("deleting database")
-			await deleteDB(`canvas/${app.topic}`, {})
+		await app.stop()
 
-			console.log("clearing session signer data", sessionSigner)
-			// await sessionSigner?.clear?.()
-			window.location.reload()
+		console.log("deleting database")
+		await deleteDB(`canvas/${app.topic}`, {})
+
+		console.log("clearing session signer data", sessionSigner)
+		await sessionSigner?.clear?.(app.topic)
+
+		window.location.reload()
+	}, [app, sessionSigner])
+
+	const spam = useCallback(async () => {
+		if (app === null || sessionSigner === null) {
+			return
+		}
+
+		for (let i = 0; i < 100; i++) {
+			const content = bytesToHex(randomBytes(8))
+			const { id, recipients } = await app.actions.createMessage({ content }, { signer: sessionSigner })
 		}
 	}, [app, sessionSigner])
 
@@ -67,6 +83,13 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({}) => {
 				<button onClick={() => stop()} className={`flex-1 ${button} ${enabledRed}`}>
 					Stop libp2p
 				</button>
+				<button
+					disabled={sessionSigner === null}
+					onClick={() => spam()}
+					className={`${button} ${sessionSigner === null ? disabled : enabledRed}`}
+				>
+					Spam
+				</button>
 				<button disabled className={`${button} ${disabled}`}>
 					Clear data
 				</button>
@@ -77,6 +100,13 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({}) => {
 			<div className="flex flex-row gap-4">
 				<button onClick={() => start()} className={`flex-1 ${button} ${enabledGreen}`}>
 					Start libp2p
+				</button>
+				<button
+					disabled={sessionSigner === null}
+					onClick={() => spam()}
+					className={`${button} ${sessionSigner === null ? disabled : enabledRed}`}
+				>
+					Spam
 				</button>
 				<button onClick={() => clear()} className={`${button} ${enabledRed}`}>
 					Clear data
