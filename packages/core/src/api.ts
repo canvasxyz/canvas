@@ -38,8 +38,8 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 				return void res.status(StatusCodes.NOT_FOUND).end()
 			} else {
 				const value = await app.db.get(model, key)
-				res.status(StatusCodes.OK)
-				res.setHeader("content-type", "application/json")
+
+				res.writeHead(StatusCodes.OK, { "content-type": "application/json" })
 				return void res.end(json.encode(value))
 			}
 		})
@@ -57,8 +57,7 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 			return void res.status(StatusCodes.NOT_FOUND).end()
 		}
 
-		res.status(StatusCodes.OK)
-		res.setHeader("content-type", "application/json")
+		res.writeHead(StatusCodes.OK, { "content-type": "application/json" })
 		return void res.end(json.encode({ id, signature, message }))
 	})
 
@@ -89,8 +88,7 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 			results.push([id, signature, message])
 		}
 
-		res.status(StatusCodes.OK)
-		res.setHeader("content-type", "application/json")
+		res.writeHead(StatusCodes.OK, { "content-type": "application/json" })
 		return void res.end(json.encode(results))
 	})
 
