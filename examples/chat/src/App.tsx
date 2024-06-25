@@ -58,7 +58,7 @@ export const App: React.FC<{}> = ({}) => {
 							</div>
 							<MessageComposer />
 						</div>
-						<div className="min-w-max flex flex-col gap-4">
+						<div className="flex flex-col gap-4">
 							<Connect />
 							<SessionStatus />
 							<ConnectionStatus topic={topicRef.current} />
