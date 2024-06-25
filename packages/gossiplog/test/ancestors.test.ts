@@ -1,7 +1,7 @@
 import Prando from "prando"
 
 import test, { ExecutionContext } from "ava"
-import { customRandom, urlAlphabet } from "nanoid"
+import { customRandom } from "nanoid"
 
 import { ed25519 } from "@canvas-js/signatures"
 import { AbstractGossipLog, GossipLogConsumer } from "@canvas-js/gossiplog"
@@ -14,7 +14,7 @@ const rng = new Prando.default()
 
 const random = (n: number) => rng.nextInt(0, n - 1)
 
-const nanoid = customRandom(urlAlphabet, 10, (size) => {
+const nanoid = customRandom("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-", 10, (size) => {
 	return new Uint8Array(size).map(() => rng.nextInt(0, 255))
 })
 
