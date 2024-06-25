@@ -15,7 +15,6 @@ The `useCanvas` hook initializes a Canvas application contract inside a React co
 ```ts
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { useCanvas } from "@canvas-js/hooks"
-import { Forum } from "@canvas-js/templates"
 import { useMemo } from "react"
 
 export function MyApp() {
@@ -24,7 +23,9 @@ export function MyApp() {
   }, [])
   const { app, error } = useCanvas({
     topic: "com.example.forum",
-    contract: Forum,
+    contract: {
+      // ...
+    },
     signers: [new SIWESigner({ signer: wallet })],
     topic: "myapp",
   })

@@ -1,6 +1,5 @@
 import React, { useCallback, useState, useEffect, useRef, lazy } from "react"
 import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
-import { PublicChat } from "@canvas-js/templates"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 
 import { ethers } from "ethers"
@@ -177,16 +176,16 @@ const GameDemo = () => {
 						{chess.in_checkmate()
 							? "Checkmate!"
 							: chess.in_stalemate()
-							? "Stalemate"
-							: chess.in_threefold_repetition()
-							? "Draw by repetition"
-							: chess.insufficient_material()
-							? "Draw by insufficient material"
-							: chess.game_over()
-							? "Game over" // I think we caught everything, but maybe not?
-							: chess.turn() === "w"
-							? "White to move"
-							: "Black to move"}
+								? "Stalemate"
+								: chess.in_threefold_repetition()
+									? "Draw by repetition"
+									: chess.insufficient_material()
+										? "Draw by insufficient material"
+										: chess.game_over()
+											? "Game over" // I think we caught everything, but maybe not?
+											: chess.turn() === "w"
+												? "White to move"
+												: "Black to move"}
 					</span>
 				)}
 				<div className="peers" onClick={() => setShowPeers(!showPeers)}>
