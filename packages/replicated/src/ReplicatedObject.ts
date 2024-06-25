@@ -14,9 +14,9 @@ export class ReplicatedConfig {
 	topic?: string
 }
 
-export abstract class ReplicatedObject<T extends object> {
+export abstract class ReplicatedObject {
 	#app: Canvas | null
-	#ready: Promise<ReplicatedObject<T>>;
+	#ready: Promise<ReplicatedObject>;
 
 	// When index signatures are more flexible, we can derive
 	// the full set of action calls from T. But right now,

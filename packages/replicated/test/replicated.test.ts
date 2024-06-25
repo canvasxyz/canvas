@@ -4,9 +4,7 @@ import { Awaitable } from "@canvas-js/interfaces"
 
 const test = ava as TestFn<{ app: Chat }>
 
-class Chat extends ReplicatedObject<{
-	sendMessage: (message: string) => Awaitable<void>
-}> {
+class Chat extends ReplicatedObject {
 	static db = {
 		messages: {
 			id: "primary",
