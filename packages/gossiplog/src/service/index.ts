@@ -69,8 +69,8 @@ export class GossipLogService<Payload = unknown>
 {
 	private static extractGossipSub(components: GossipLogServiceComponents): GossipSub {
 		const { pubsub } = components
-		assert(pubsub !== undefined, "pubsub service not found")
-		assert(pubsub instanceof GossipSub)
+		assert(pubsub !== undefined, "expected pubsub !== undefined")
+		assert(pubsub instanceof GossipSub, "expected pubsub instanceof GossipSub")
 		return pubsub
 	}
 
@@ -327,12 +327,16 @@ export class GossipLogService<Payload = unknown>
 		this.log("opened incoming push stream %s from peer %p", stream.id, peerId)
 
 		await pipe(stream.source, lp.decode, async (msgs) => {
-			const { value: msg, done } = await msgs.next()
-			assert(done === false && msg !== undefined)
-			const heads = cbor.decode<Uint8Array[]>(msg.subarray())
-			await msgs.next().then((result) => assert(result.done))
+			try {
+				const { value: msg, done } = await msgs.next()
+				assert(done === false && msg !== undefined, "expected done === false && msg !== undefined")
+				const heads = cbor.decode<Uint8Array[]>(msg.subarray())
+				await msgs.next().then((result) => assert(result.done, "expected result.done"))
 
-			this.handleUpdate(connection.remotePeer, heads)
+				this.handleUpdate(connection.remotePeer, heads)
+			} catch (err) {
+				stream.close()
+			}
 		})
 
 		this.log("closed incoming push stream %s from peer %p", stream.id, peerId)
