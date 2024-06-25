@@ -173,8 +173,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 			const signature = await signer.sign(message)
 
 			const signedMessage = this.encode(signature, message)
-
-			this.log("appending message %s", signedMessage.id)
+			this.log("appending message %s at clock %d with parents %o", signedMessage.id, clock, parents)
 
 			const result = await this.apply(txn, signedMessage)
 			root = result.root
@@ -211,7 +210,8 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 	 * If any of the parents are not present, throw an error.
 	 */
 	public async insert(signedMessage: SignedMessage<Payload>): Promise<{ id: string }> {
-		this.log("inserting message %s", signedMessage.id)
+		const { clock, parents } = signedMessage.message
+		this.log("inserting message %s at clock %d with parents %o", signedMessage.id, clock, parents)
 
 		await this.verifySignature(signedMessage.signature, signedMessage.message)
 		const parentKeys = signedMessage.message.parents.map(encodeId)
@@ -248,7 +248,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		txn: ReadWriteTransaction,
 		signedMessage: SignedMessage<Payload>,
 	): Promise<{ root: Node; heads: string[] }> {
-		this.log("applying %s %O", signedMessage.id, signedMessage.message)
+		this.log("applying payload %O", signedMessage.message.payload)
 
 		try {
 			await this.#apply.apply(this, [signedMessage])
