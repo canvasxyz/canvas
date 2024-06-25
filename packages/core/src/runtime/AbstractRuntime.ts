@@ -7,8 +7,16 @@ import { TypeTransformerFunction } from "@ipld/schema/typed.js"
 import type { Signature, Action, Message, Session, SignerCache } from "@canvas-js/interfaces"
 
 import { AbstractModelDB, Effect, ModelValue, ModelsInit, lessThan } from "@canvas-js/modeldb"
-import { GossipLogConsumer, encodeId, MAX_MESSAGE_ID, MIN_MESSAGE_ID, AbstractGossipLog } from "@canvas-js/gossiplog"
+import {
+	GossipLogConsumer,
+	encodeId,
+	MAX_MESSAGE_ID,
+	MIN_MESSAGE_ID,
+	AbstractGossipLog,
+	MessageRecord,
+} from "@canvas-js/gossiplog"
 import { assert, mapValues } from "@canvas-js/utils"
+import { BranchMergeRecord } from "../../../gossiplog/src/BranchMergeIndex.js"
 
 export type ExecutionContext = {
 	messageLog: AbstractGossipLog<Action | Session>
@@ -17,6 +25,7 @@ export type ExecutionContext = {
 	message: Message<Action>
 	address: string
 	modelEntries: Record<string, Record<string, ModelValue | null>>
+	branch: number
 }
 
 export abstract class AbstractRuntime {
@@ -158,7 +167,7 @@ export abstract class AbstractRuntime {
 
 		const modelEntries: Record<string, Record<string, ModelValue | null>> = mapValues(this.db.models, () => ({}))
 
-		const result = await this.execute({ messageLog, modelEntries, id, signature, message, address })
+		const result = await this.execute({ messageLog, modelEntries, id, signature, message, address, branch })
 
 		const effects: Effect[] = []
 
@@ -225,68 +234,78 @@ export abstract class AbstractRuntime {
 	protected static getKeyHash = (key: string) => bytesToHex(blake3(key, { dkLen: 16 }))
 
 	private async getConcurrentAncestors(context: ExecutionContext, model: string, key: string) {
-		const startingMessageId = context.id
-
 		const keyHash = AbstractRuntime.getKeyHash(key)
 		const lowerBound = `${model}/${keyHash}/${MIN_MESSAGE_ID}`
 		const upperBound = `${model}/${keyHash}/${MAX_MESSAGE_ID}`
 
 		const result = new Set<string>()
 
-		const stack: string[] = []
-		stack.push(startingMessageId)
+		type Position = { branch: number; clock: number }
+		const stack: Position[] = []
+
+		for (const parentMessageId of context.message.parents) {
+			const parentMessageRecord = await context.messageLog.db.get("$messages", parentMessageId)
+			if (!parentMessageRecord) {
+				throw new Error(`message ${parentMessageId} not found`)
+			}
+			stack.push({ branch: parentMessageRecord.branch, clock: parentMessageRecord.message.clock })
+		}
 
 		const visited = new Set()
 
 		// eslint-disable-next-line no-constant-condition
 		while (true) {
-			const currentMessageId = stack.pop()
+			const currentMessagePosition = stack.pop()
 			// no more messages to visit
-			if (!currentMessageId) {
+			if (!currentMessagePosition) {
 				break
 			}
-			visited.add(currentMessageId)
+			visited.add(`${currentMessagePosition.branch}/${currentMessagePosition.clock}`)
 
-			const currentMessageEntry = await this.db.get("$messages", currentMessageId)
-			if (!currentMessageEntry) {
-				throw new Error(`missing message ${currentMessageId}`)
-			}
-			const currentMessage = currentMessageEntry.message
-
-			if (currentMessageId != startingMessageId) {
-				if (currentMessage.effects[0].key == key) {
-					result.add(currentMessage.id)
-					// don't explore this message's parents
-					continue
-				}
-			}
-
-			const parentIds: string[] = []
-
-			const matchingEffectOnThisBranch = await this.db.query("$effects", {
+			const effectsOnThisBranch = await this.db.query<{
+				key: string
+				value: Uint8Array | undefined
+				branch: number
+				clock: number
+			}>("$effects", {
 				where: {
 					key: { gte: lowerBound, lt: upperBound },
-					branch: currentMessageEntry.branch,
-					clock: { lte: currentMessageEntry.clock },
+					branch: currentMessagePosition.branch,
+					clock: { lte: currentMessagePosition.clock },
 				},
 				orderBy: { clock: "desc" },
 				limit: 1,
 			})
-			if (matchingEffectOnThisBranch !== null) parentIds.push(matchingEffectOnThisBranch[0].id)
 
-			// check for branches that merge into this branch
-			for (const branchMerge of await this.db.query("$branch_merges", {
-				where: {
-					target_branch: currentMessageEntry.branch,
-					target_clock: { lte: currentMessageEntry.clock, gt: matchingEffectOnThisBranch[0]?.clock },
-				},
-			})) {
-				parentIds.push(branchMerge.source_message_id)
+			const parentPositions: Position[] = []
+			const matchingEffectOnThisBranch = effectsOnThisBranch[0]
+			if (matchingEffectOnThisBranch) {
+				if (matchingEffectOnThisBranch.clock == currentMessagePosition.clock) {
+					// the current message is the latest effect on this branch
+					result.add(matchingEffectOnThisBranch.key)
+					// don't explore this message's parents
+					continue
+				} else {
+					parentPositions.push({ branch: matchingEffectOnThisBranch.branch, clock: matchingEffectOnThisBranch.clock })
+				}
 			}
 
-			for (const parentItem of parentIds) {
-				if (!visited.has(parentItem)) {
-					stack.push(parentItem)
+			// check for branches that merge into this branch
+			for (const branchMerge of await context.messageLog.db.query<BranchMergeRecord>("$branch_merges", {
+				where: {
+					target_branch: currentMessagePosition.branch,
+					target_clock: { lte: currentMessagePosition.clock, gt: matchingEffectOnThisBranch?.clock },
+				},
+			})) {
+				parentPositions.push({
+					branch: branchMerge.source_branch,
+					clock: branchMerge.source_clock,
+				})
+			}
+
+			for (const parentPosition of parentPositions) {
+				if (!visited.has(`${parentPosition.branch}/${parentPosition.clock}`)) {
+					stack.push(parentPosition)
 				}
 			}
 		}
@@ -323,15 +342,13 @@ export abstract class AbstractRuntime {
 			return context.modelEntries[model][key] as T
 		}
 
-		const keyHash = AbstractRuntime.getKeyHash(key)
-
 		const concurrentAncestors = await this.getConcurrentAncestors(context, model, key)
 		const concurrentEffects = []
 
-		for (const ancestorId of concurrentAncestors) {
-			const concurrentEffect = await this.db.get("$effects", `${model}/${keyHash}/${ancestorId}`)
+		for (const ancestorKey of concurrentAncestors) {
+			const concurrentEffect = await this.db.get("$effects", ancestorKey)
 			if (!concurrentEffect) {
-				throw new Error(`missing concurrent effect ${model}/${keyHash}/${ancestorId}`)
+				throw new Error(`missing concurrent effect ${ancestorKey}`)
 			}
 			concurrentEffects.push(concurrentEffect)
 		}

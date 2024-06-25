@@ -42,7 +42,7 @@ export type GossipLogEvents<Payload = unknown> = {
 	error: CustomEvent<{ error: Error }>
 }
 
-type MessageRecord<Payload> = {
+export type MessageRecord<Payload> = {
 	id: string
 	signature: Signature
 	message: Message<Payload>
