@@ -3,7 +3,7 @@ import * as siwe from "siwe"
 
 import type { Awaitable, Session, AbstractSessionData, DidIdentifier } from "@canvas-js/interfaces"
 import { AbstractSessionSigner, ed25519 } from "@canvas-js/signatures"
-import { assert } from "@canvas-js/utils"
+import { assert, DAYS } from "@canvas-js/utils"
 
 import type { SIWESessionData, SIWEMessage } from "./types.js"
 import {
@@ -33,7 +33,7 @@ export class SIWESigner extends AbstractSessionSigner<SIWESessionData> {
 
 	_signer: AbstractSigner
 
-	public constructor({ sessionDuration, ...init }: SIWESignerInit = {}) {
+	public constructor({ sessionDuration, ...init }: SIWESignerInit = { sessionDuration: 14 * DAYS }) {
 		super("chain-ethereum", ed25519, { sessionDuration })
 
 		this._signer = init.signer ?? Wallet.createRandom()
