@@ -27,6 +27,7 @@
 		"relay:dev": "npm run relay:build -- --watch"
 	},
 	"devDependencies": {
+		"@flydotio/dockerfile": "^0.5.7",
 		"concurrently": "^8.2.2",
 		"esbuild": "^0.20.2",
 		"vite": "^5.3.1"

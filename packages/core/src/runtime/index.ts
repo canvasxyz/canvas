@@ -13,7 +13,7 @@ export async function createRuntime(
 	topic: string,
 	signers: SignerCache,
 	contract: string | Contract,
-	options: { runtimeMemoryLimit?: number; indexHistory?: boolean; clearModelDB?: boolean } = {},
+	options: { runtimeMemoryLimit?: number; indexHistory?: boolean } = {},
 ): Promise<AbstractRuntime> {
 	if (typeof contract === "string") {
 		return ContractRuntime.init(location, topic, signers, contract, options)

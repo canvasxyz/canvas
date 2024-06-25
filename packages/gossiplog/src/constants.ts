@@ -9,3 +9,4 @@ export const SYNC_RETRY_INTERVAL = 3 * second // this is multiplied by Math.rand
 export const SYNC_RETRY_LIMIT = 5
 
 export const DEFAULT_PROTOCOL_SELECT_TIMEOUT = 1000
+export const NEGOTIATE_FULLY = true

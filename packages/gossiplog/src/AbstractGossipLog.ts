@@ -36,7 +36,7 @@ export interface GossipLogInit<Payload = unknown> {
 
 export type GossipLogEvents<Payload = unknown> = {
 	message: CustomEvent<{ id: string; signature: Signature; message: Message<Payload> }>
-	commit: CustomEvent<{ root: Node }>
+	commit: CustomEvent<{ root: Node; heads: string[] }>
 	sync: CustomEvent<{ peerId?: string; duration: number; messageCount: number }>
 	error: CustomEvent<{ error: Error }>
 }
@@ -114,7 +114,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		})
 	}
 
-	public encode(signature: Signature, message: Message<Payload>): SignedMessage<Payload> {
+	public encode<T extends Payload = Payload>(signature: Signature, message: Message<T>): SignedMessage<T> {
 		assert(this.topic === message.topic, "expected this.topic === topic")
 		assert(this.validatePayload(message.payload), "error encoding message (invalid payload)")
 		return SignedMessage.encode(signature, message)
@@ -165,27 +165,33 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 	 * Sign and append a new *unsigned* message to the end of the log.
 	 * The concurrent heads of the local log are used as parents.
 	 */
-	public async append(payload: Payload, options: { signer?: Signer<Payload> } = {}): Promise<SignedMessage<Payload>> {
+	public async append<T extends Payload = Payload>(
+		payload: T,
+		options: { signer?: Signer<Payload> } = {},
+	): Promise<SignedMessage<T>> {
 		const signer = options.signer ?? this.signer
 
 		let root: Node | null = null
+		let heads: string[] | null = null
 		const signedMessage = await this.tree.write(async (txn) => {
 			const [clock, parents] = await this.getClock()
 
-			const message: Message<Payload> = { topic: this.topic, clock, parents, payload }
+			const message: Message<T> = { topic: this.topic, clock, parents, payload }
 			const signature = await signer.sign(message)
 
 			const signedMessage = this.encode(signature, message)
+			this.log("appending message %s at clock %d with parents %o", signedMessage.id, clock, parents)
 
-			this.log("appending message %s", signedMessage.id)
+			const result = await this.apply(txn, signedMessage)
+			root = result.root
+			heads = result.heads
 
-			await this.apply(txn, signedMessage)
-			root = txn.getRoot()
 			return signedMessage
 		})
 
 		assert(root !== null, "failed to commit transaction")
-		this.dispatchEvent(new CustomEvent("commit", { detail: { root } }))
+		assert(heads !== null, "failed to commit transaction")
+		this.dispatchEvent(new CustomEvent("commit", { detail: { root, heads } }))
 		return signedMessage
 	}
 
@@ -211,12 +217,14 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 	 * If any of the parents are not present, throw an error.
 	 */
 	public async insert(signedMessage: SignedMessage<Payload>): Promise<{ id: string }> {
-		this.log("inserting message %s", signedMessage.id)
+		const { clock, parents } = signedMessage.message
+		this.log("inserting message %s at clock %d with parents %o", signedMessage.id, clock, parents)
 
 		await this.verifySignature(signedMessage.signature, signedMessage.message)
 		const parentKeys = signedMessage.message.parents.map(encodeId)
 
 		let root: Node | null = null
+		let heads: string[] | null = null
 		await this.tree.write(async (txn) => {
 			const hasSignedMessage = await this.has(signedMessage.id)
 			if (hasSignedMessage) {
@@ -231,18 +239,23 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 				}
 			}
 
-			await this.apply(txn, signedMessage)
-			root = txn.getRoot()
+			const result = await this.apply(txn, signedMessage)
+			root = result.root
+			heads = result.heads
 		})
 
 		assert(root !== null, "failed to commit transaction")
-		this.dispatchEvent(new CustomEvent("commit", { detail: { root } }))
+		assert(heads !== null, "failed to commit transaction")
+		this.dispatchEvent(new CustomEvent("commit", { detail: { root, heads } }))
 
 		return { id: signedMessage.id }
 	}
 
-	private async apply(txn: ReadWriteTransaction, signedMessage: SignedMessage<Payload>): Promise<void> {
-		this.log("applying %s %O", signedMessage.id, signedMessage.message)
+	private async apply(
+		txn: ReadWriteTransaction,
+		signedMessage: SignedMessage<Payload>,
+	): Promise<{ root: Node; heads: string[] }> {
+		this.log("applying payload %O", signedMessage.message.payload)
 
 		try {
 			await this.#apply.apply(this, [signedMessage])
@@ -282,20 +295,21 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 		await this.db.set("$messages", { id, signature, message, hash, branch, clock: message.clock })
 
-		const heads = await this.db.query<{ id: string }>("$heads")
+		const heads: { id: string }[] = await this.db
+			.query<{ id: string }>("$heads")
+			.then((heads) => heads.filter((head) => message.parents.includes(head.id)))
+
 		await this.db.apply([
-			...heads
-				.filter((head) => message.parents.includes(head.id))
-				.map<Effect>((head) => ({ model: "$heads", operation: "delete", key: head.id })),
+			...heads.map<Effect>((head) => ({ model: "$heads", operation: "delete", key: head.id })),
 			{ model: "$heads", operation: "set", value: { id } },
 		])
 
 		txn.set(key, value)
 
-		// const root = await txn.getRoot()
-		// await new MerkleIndex(this.db).commit(root)
-
 		this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message } }))
+
+		const root = txn.getRoot()
+		return { root, heads: heads.map((head) => head.id) }
 	}
 
 	private async getBranch(messageId: string, parentMessages: MessageRecord<Payload>[]) {

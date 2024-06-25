@@ -1,11 +1,11 @@
 import React, { useContext, useEffect, useState } from "react"
+import type { Connection } from "@libp2p/interface"
 
-import { Canvas } from "@canvas-js/core"
+import type { Canvas } from "@canvas-js/core"
 
 import { AppContext } from "./AppContext.js"
 
 import { PeerIdView } from "./components/PeerIdView.js"
-import { Connection } from "@libp2p/interface"
 
 export interface ConnectionStatusProps {
 	topic: string
@@ -32,6 +32,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({ topic }) => 
 			<div>
 				<PeerIdView peerId={app.libp2p.peerId} />
 			</div>
+
 			<hr />
 			<div>
 				<span className="text-sm">Connections</span>

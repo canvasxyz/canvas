@@ -1,6 +1,6 @@
 import { AbstractSigner, Wallet, computeAddress, getBytes, hexlify, TypedDataField, verifyTypedData } from "ethers"
 import { Session, AbstractSessionData, DidIdentifier } from "@canvas-js/interfaces"
-import { assert } from "@canvas-js/utils"
+import { assert, DAYS } from "@canvas-js/utils"
 
 import { AbstractSessionSigner, decodeURI } from "@canvas-js/signatures"
 
@@ -27,7 +27,9 @@ export class Eip712Signer extends AbstractSessionSigner<Eip712SessionData> {
 	public readonly chainId: number
 	_signer: AbstractSigner
 
-	constructor(init: { signer?: AbstractSigner; chainId?: number; sessionDuration?: number } = {}) {
+	constructor(
+		init: { signer?: AbstractSigner; chainId?: number; sessionDuration?: number } = { sessionDuration: 14 * DAYS },
+	) {
 		super("chain-ethereum-eip712", Secp256k1SignatureScheme, { sessionDuration: init.sessionDuration })
 		this._signer = init.signer ?? Wallet.createRandom()
 		this.chainId = init.chainId ?? 1
