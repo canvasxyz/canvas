@@ -6,11 +6,10 @@ import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 
 import type pg from "pg"
 
-import { Signature, Action, Session, Message, Signer, SessionSigner, SignerCache } from "@canvas-js/interfaces"
+import { Signature, Action, Session, Message, SessionSigner, SignerCache } from "@canvas-js/interfaces"
 import { AbstractModelDB, Model } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { AbstractGossipLog, GossipLogEvents, NetworkConfig, ServiceMap } from "@canvas-js/gossiplog"
-import { AbstractSessionSigner } from "@canvas-js/signatures"
 import { assert } from "@canvas-js/utils"
 
 import target from "#target"
@@ -132,7 +131,11 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		this.log("initialized with peerId %p", libp2p.peerId)
 
 		this.libp2p.addEventListener("peer:discovery", ({ detail: { id, multiaddrs } }) => {
-			this.log("discovered peer %p with addresses %o", id, multiaddrs)
+			this.log(
+				"discovered peer %p with addresses %o",
+				id,
+				multiaddrs.map((addr) => addr.toString()),
+			)
 		})
 
 		this.libp2p.addEventListener("peer:connect", ({ detail: peerId }) => {
@@ -151,22 +154,29 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 
 		for (const name of runtime.actionNames) {
 			const action: ActionAPI = async (args: any, options: ActionOptions = {}) => {
+				this.log("executing action %s %o", name, args)
 				const timestamp = Date.now()
 
-				const sessionSigner = (options.signer ?? signers.getFirst()) as AbstractSessionSigner<any>
+				const sessionSigner = options.signer ?? signers.getFirst()
 				assert(sessionSigner !== undefined, "signer not found")
 
+				this.log("using session signer %s", sessionSigner.key)
 				let session = await sessionSigner.getSession(this.topic)
 
 				// check that a session for the delegate signer exists in the log and hasn't expired
-				if (session !== null) {
+				if (session === null) {
+					this.log("no session found")
+				} else {
+					this.log("got session for public key %s", session.payload.publicKey)
+
 					const sessionIds = await this.getSessions({
-						address: session.payload.did,
+						did: session.payload.did,
 						publicKey: session.signer.publicKey,
 						minExpiration: timestamp,
 					})
 
 					if (sessionIds.length === 0) {
+						this.log("the session was lost or has expired")
 						session = null
 					}
 				}
@@ -174,6 +184,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 				// if the delegate signer doesn't exist, or if the session expired,
 				// create and append a new one
 				if (session === null) {
+					this.log("creating a new session topic %s with signer %s", this.topic, sessionSigner.key)
 					session = await sessionSigner.newSession(this.topic)
 					await this.libp2p.services.gossiplog.append(session.payload, { signer: session.signer })
 				}
@@ -208,30 +219,35 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 	 * Get existing sessions
 	 */
 	public async getSessions(query: {
-		address: string
+		did: string
 		publicKey: string
 		minExpiration?: number
-	}): Promise<{ id: string; address: string; publicKey: string; expiration: number | null }[]> {
+	}): Promise<{ id: string; did: string; publicKey: string; expiration: number | null }[]> {
+		this.log(
+			"get sessions for did %s and public key %s with min expiration %d",
+			query.did,
+			query.publicKey,
+			query.minExpiration ?? Infinity,
+		)
+
 		const sessions = await this.db.query<{
 			message_id: string
 			public_key: string
-			address: string
-			expiration: number
+			did: string
+			expiration: number | null
 		}>("$sessions", {
-			select: { message_id: true, public_key: true, address: true, expiration: true },
-			where: {
-				public_key: query.publicKey,
-				address: query.address,
-				expiration: { gte: query.minExpiration ?? 0 },
-			},
+			select: { message_id: true, public_key: true, did: true, expiration: true },
+			where: { public_key: query.publicKey, did: query.did },
 		})
 
-		return sessions.map(({ message_id, public_key, address, expiration }) => ({
-			id: message_id,
-			publicKey: public_key,
-			address,
-			expiration: expiration === Number.MAX_SAFE_INTEGER ? null : expiration,
-		}))
+		return sessions
+			.filter(({ expiration }) => (expiration ?? 0) <= (query.minExpiration ?? Infinity))
+			.map((record) => ({
+				id: record.message_id,
+				publicKey: record.public_key,
+				did: record.did,
+				expiration: record.expiration,
+			}))
 	}
 
 	public updateSigners(signers: SessionSigner[]) {

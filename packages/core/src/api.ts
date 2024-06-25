@@ -64,6 +64,7 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 
 	api.get("/messages", async (req, res) => {
 		const { gt, gte, lt, lte, order, type } = req.query
+
 		assert(gt === undefined || typeof gt === "string", "invalid `gt` query parameter")
 		assert(gte === undefined || typeof gte === "string", "invalid `gte` query parameter")
 		assert(lt === undefined || typeof lt === "string", "invalid `lt` query parameter")
@@ -107,16 +108,19 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 	})
 
 	api.get("/sessions", async (req, res) => {
-		const { address, publicKey, minExpiration } = req.query
-		assert(typeof address === "string", "missing address query parameter")
-		assert(typeof publicKey === "string", "missing publicKey query parameter")
+		const { did, publicKey, minExpiration } = req.query
+		if (typeof did !== "string") {
+			return void res.status(StatusCodes.BAD_REQUEST).end("missing did query parameter")
+		} else if (typeof publicKey !== "string") {
+			return void res.status(StatusCodes.BAD_REQUEST).end("missing publicKey query parameter")
+		}
 
 		let minExpirationValue: number | undefined = undefined
 		if (typeof minExpiration === "string") {
 			minExpirationValue = parseInt(minExpiration)
 		}
 
-		const sessions = await app.getSessions({ address, publicKey, minExpiration: minExpirationValue })
+		const sessions = await app.getSessions({ did, publicKey, minExpiration: minExpirationValue })
 		return void res.json(sessions)
 	})
 
