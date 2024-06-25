@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from "react"
 import { bytesToHex } from "@noble/hashes/utils"
 
-import type { GossipLogEvents } from "@canvas-js/gossiplog"
+import type { CanvasEvents } from "@canvas-js/core"
 
 import { AppContext } from "./AppContext.js"
 
@@ -20,7 +20,7 @@ export const LogStatus: React.FC<LogStatusProps> = ({}) => {
 		app.messageLog.tree.read((txn) => txn.getRoot()).then((root) => setRoot(`${root.level}:${bytesToHex(root.hash)}`))
 		app.db.query<{ id: string }>("$heads").then((records) => setHeads(records.map((record) => record.id)))
 
-		const handleCommit = ({ detail: { root, heads } }: GossipLogEvents["commit"]) => {
+		const handleCommit = ({ detail: { root, heads } }: CanvasEvents["commit"]) => {
 			const rootValue = `${root.level}:${bytesToHex(root.hash)}`
 			setRoot(rootValue)
 			setHeads(heads)
