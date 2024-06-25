@@ -3,7 +3,10 @@ import type * as sqlite from "better-sqlite3"
 export class Query<P, R> {
 	private readonly statement: sqlite.Statement
 
-	constructor(db: sqlite.Database, private readonly sql: string) {
+	constructor(
+		db: sqlite.Database,
+		private readonly sql: string,
+	) {
 		this.statement = db.prepare(sql)
 	}
 
@@ -24,7 +27,10 @@ export class Query<P, R> {
 export class Method<P> {
 	private readonly statement: sqlite.Statement
 
-	constructor(db: sqlite.Database, private readonly sql: string) {
+	constructor(
+		db: sqlite.Database,
+		private readonly sql: string,
+	) {
 		this.statement = db.prepare(sql)
 	}
 

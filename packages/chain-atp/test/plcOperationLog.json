@@ -9,9 +9,7 @@
 				"endpoint": "https://morel.us-east.host.bsky.network"
 			}
 		},
-		"alsoKnownAs": [
-			"at://canvastest.bsky.social"
-		],
+		"alsoKnownAs": ["at://canvastest.bsky.social"],
 		"rotationKeys": [
 			"did:key:zQ3shhCGUqDKjStzuDxPkTxN6ujddP4RkEKJJouJGRRkaLGbg",
 			"did:key:zQ3shpKnbdPx3g3CmPf5cRVTPe1HtSwVn5ish3wSnDPQCbLJK"

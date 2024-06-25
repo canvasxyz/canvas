@@ -20,7 +20,7 @@ export class ContractRuntime extends AbstractRuntime {
 		topic: string,
 		signers: SignerCache,
 		contract: string,
-		options: { runtimeMemoryLimit?: number; indexHistory?: boolean; clearModelDB?: boolean } = {},
+		options: { runtimeMemoryLimit?: number; indexHistory?: boolean } = {},
 	): Promise<ContractRuntime> {
 		const { runtimeMemoryLimit, indexHistory = true } = options
 
@@ -72,10 +72,7 @@ export class ContractRuntime extends AbstractRuntime {
 		assert(modelsHandle !== undefined, "missing `models` export")
 		const modelsInit = modelsHandle.consume(vm.context.dump) as ModelsInit
 
-		const db = await target.openDB(
-			{ path, topic, clear: options.clearModelDB },
-			AbstractRuntime.getModelSchema(modelsInit, { indexHistory }),
-		)
+		const db = await target.openDB({ path, topic }, AbstractRuntime.getModelSchema(modelsInit, { indexHistory }))
 		return new ContractRuntime(topic, signers, db, vm, actions, argsTransformers, indexHistory)
 	}
 

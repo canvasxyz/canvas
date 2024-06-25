@@ -1,5 +1,6 @@
 import type { Awaitable, Session, AbstractSessionData, DidIdentifier } from "@canvas-js/interfaces"
 import { AbstractSessionSigner, ed25519 } from "@canvas-js/signatures"
+import { DAYS } from "@canvas-js/utils"
 
 import { addressPattern, parseAddress } from "./utils.js"
 import { CosmosMessage, CosmosSessionData, ExternalCosmosSigner } from "./types.js"
@@ -32,7 +33,7 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 
 	_signer: GenericSigner
 
-	public constructor({ signer, sessionDuration, bech32Prefix }: CosmosSignerInit = {}) {
+	public constructor({ signer, sessionDuration, bech32Prefix }: CosmosSignerInit = { sessionDuration: 14 * DAYS }) {
 		super("chain-cosmos", ed25519, { sessionDuration })
 
 		this.bech32Prefix = bech32Prefix == undefined ? "cosmos" : bech32Prefix

@@ -4,11 +4,6 @@ import * as siwe from "siwe"
 import { assert } from "@canvas-js/utils"
 import type { SIWESessionData, SIWEMessage, EIP712AuthorizationData } from "./types.js"
 
-export const SECONDS = 1000
-export const MINUTES = 60 * SECONDS
-export const HOURS = 60 * MINUTES
-export const DAYS = 24 * HOURS
-
 export function validateSIWESessionData(authorizationData: unknown): authorizationData is SIWESessionData {
 	if (authorizationData === undefined || authorizationData === null) {
 		return false

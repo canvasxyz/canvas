@@ -1,4 +1,4 @@
-import { assert, signalInvalidType } from "@canvas-js/utils"
+import { signalInvalidType } from "@canvas-js/utils"
 
 import type { Model, ModelValue, Property, PropertyValue } from "./types.js"
 
@@ -6,21 +6,6 @@ export type Awaitable<T> = T | Promise<T>
 
 // eslint-disable-next-line no-useless-escape
 export const namePattern = /^[a-zA-Z0-9$:_\-\.]+$/
-
-export const mapValuesAsync = async <K extends string, S, T>(object: Record<K, S>, map: (value: S) => Promise<T>) => {
-	const values = await Promise.all(Object.values<S>(object).map((value) => map(value)))
-	return Object.fromEntries(zip(Object.keys(object), values))
-}
-
-export function zip<A, B>(a: A[], b: B[]): [A, B][] {
-	assert(a.length === b.length, "cannot zip arrays of different sizes")
-	const result = new Array(a.length)
-	for (let i = 0; i < a.length; i++) {
-		result[i] = [a[i], b[i]]
-	}
-
-	return result
-}
 
 export function validateModelValue(model: Model, value: ModelValue) {
 	for (const property of model.properties) {

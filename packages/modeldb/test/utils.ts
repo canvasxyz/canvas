@@ -3,9 +3,9 @@ import test, { ExecutionContext } from "ava"
 import { nanoid } from "nanoid"
 
 import type { AbstractModelDB, ModelsInit } from "@canvas-js/modeldb"
-import { ModelDB as ModelDBSqlite } from "@canvas-js/modeldb/sqlite"
-import { ModelDB as ModelDBIdb } from "@canvas-js/modeldb/idb"
-import { ModelDB as ModelDBPostgres } from "@canvas-js/modeldb/pg"
+import { ModelDB as ModelDBSqlite } from "@canvas-js/modeldb-sqlite"
+import { ModelDB as ModelDBIdb } from "@canvas-js/modeldb-idb"
+import { ModelDB as ModelDBPostgres } from "@canvas-js/modeldb-pg"
 
 export const testOnModelDB = (
 	name: string,

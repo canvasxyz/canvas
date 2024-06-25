@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react"
 
 import type { SessionSigner } from "@canvas-js/interfaces"
+
 import type { Contract } from "@canvas-js/core"
 
 import { useCanvas } from "@canvas-js/hooks"
@@ -12,6 +13,7 @@ import { ControlPanel } from "./ControlPanel.js"
 import { SessionStatus } from "./SessionStatus.js"
 import { ConnectionStatus } from "./ConnectionStatus.js"
 import { Connect } from "./connect/index.js"
+import { LogStatus } from "./LogStatus.js"
 
 const topic = "chat-example.canvas.xyz"
 
@@ -48,7 +50,7 @@ export const App: React.FC<{}> = ({}) => {
 	})
 
 	return (
-		<AppContext.Provider value={{ address, setAddress, sessionSigner, setSessionSigner, app: app || null }}>
+		<AppContext.Provider value={{ address, setAddress, sessionSigner, setSessionSigner, app: app ?? null }}>
 			{app ? (
 				<main>
 					<div className="flex flex-row gap-4 h-full">
@@ -58,10 +60,11 @@ export const App: React.FC<{}> = ({}) => {
 							</div>
 							<MessageComposer />
 						</div>
-						<div className="min-w-max flex flex-col gap-4">
+						<div className="flex flex-col gap-4">
 							<Connect />
 							<SessionStatus />
 							<ConnectionStatus topic={topicRef.current} />
+							<LogStatus />
 							<ControlPanel />
 						</div>
 					</div>

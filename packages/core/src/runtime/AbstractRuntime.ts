@@ -4,7 +4,7 @@ import { bytesToHex } from "@noble/hashes/utils"
 import { logger } from "@libp2p/logger"
 import { TypeTransformerFunction } from "@ipld/schema/typed.js"
 
-import type { Signature, Action, Message, Session, SessionSigner, SignerCache } from "@canvas-js/interfaces"
+import type { Signature, Action, Message, Session, SignerCache } from "@canvas-js/interfaces"
 
 import { AbstractModelDB, Effect, ModelValue, ModelsInit, lessThan } from "@canvas-js/modeldb"
 import { GossipLogConsumer, encodeId, MAX_MESSAGE_ID, MIN_MESSAGE_ID, AbstractGossipLog } from "@canvas-js/gossiplog"
@@ -43,8 +43,6 @@ export abstract class AbstractRuntime {
 			address: "string",
 			did: "string",
 			expiration: "integer?",
-			rawMessage: "string",
-			rawSignature: "string",
 			$indexes: [["address"], ["public_key"]],
 		},
 	} satisfies ModelsInit
@@ -127,9 +125,7 @@ export abstract class AbstractRuntime {
 			public_key: publicKey,
 			did: did,
 			address: address,
-			expiration: duration === undefined ? Number.MAX_SAFE_INTEGER : timestamp + duration,
-			rawMessage: bytesToHex(cbor.encode(message)),
-			rawSignature: bytesToHex(cbor.encode(signature)),
+			expiration: duration === undefined ? null : timestamp + duration,
 		})
 	}
 
@@ -140,27 +136,24 @@ export abstract class AbstractRuntime {
 		messageLog: AbstractGossipLog<Action | Session>,
 		branch: number,
 	) {
-		const {
-			did,
-			context: { timestamp },
-		} = message.payload
+		const { did, context } = message.payload
 
 		const signer = this.signers
 			.getAll()
 			.find((signer) => signer.scheme.codecs.includes(signature.codec) && signer.match(did))
-		if (!signer) throw new Error("unexpected missing signer")
+
+		if (!signer) {
+			throw new Error("unexpected missing signer")
+		}
+
 		const address = signer.getAddressFromDid(did)
 
-		const sessions = await this.db.query("$sessions", {
-			where: {
-				public_key: signature.publicKey,
-				did: did,
-				expiration: { gte: timestamp },
-			},
+		const sessions = await this.db.query<{ id: string; expiration: number | null }>("$sessions", {
+			where: { public_key: signature.publicKey, did: did },
 		})
 
-		if (sessions.length === 0) {
-			throw new Error(`missing session ${signature.publicKey} for $${did}`)
+		if (sessions.every(({ expiration }) => expiration !== null && expiration < context.timestamp)) {
+			throw new Error(`missing session ${signature.publicKey} for ${did}`)
 		}
 
 		const modelEntries: Record<string, Record<string, ModelValue | null>> = mapValues(this.db.models, () => ({}))

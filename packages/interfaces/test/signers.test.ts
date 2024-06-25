@@ -11,7 +11,7 @@ import { SIWESigner, Eip712Signer } from "@canvas-js/chain-ethereum"
 import { SIWESignerViem } from "@canvas-js/chain-ethereum-viem"
 import { SolanaSigner } from "@canvas-js/chain-solana"
 import { SubstrateSigner } from "@canvas-js/chain-substrate"
-import { AbstractSessionSignerOptions } from "@canvas-js/signatures"
+// import { AbstractSessionSignerOptions } from "@canvas-js/signatures"
 // import { ATPSigner } from "@canvas-js/chain-atp"
 
 type AdditionalSignerArgs = {

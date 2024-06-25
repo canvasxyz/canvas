@@ -1,12 +1,12 @@
 {
-  "compilerOptions": {
-    "composite": true,
-    "strict": true,
-    "declaration": true,
-    "module": "es2022",
-    "target": "es2020",
-    "moduleResolution": "node",
-    "allowSyntheticDefaultImports": true,
-    "skipLibCheck": true
-  },
+	"compilerOptions": {
+		"composite": true,
+		"strict": true,
+		"declaration": true,
+		"module": "node16",
+		"target": "es2020",
+		"moduleResolution": "node16",
+		"allowSyntheticDefaultImports": true,
+		"skipLibCheck": true
+	}
 }

@@ -1,27 +1,27 @@
 {
-  "name": "@canvas-js/chain-substrate",
-  "version": "0.10.0-beta.2",
-  "type": "module",
-  "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
-  "main": "lib/index.js",
-  "types": "lib/index.d.ts",
-  "files": [
-    "lib"
-  ],
-  "dependencies": {
-    "@canvas-js/interfaces": "0.10.0-beta.2",
-    "@canvas-js/signatures": "0.10.0-beta.2",
-    "@canvas-js/utils": "0.10.0-beta.2",
-    "@ipld/dag-json": "^10.1.5",
-    "@libp2p/logger": "^4.0.14",
-    "@noble/curves": "^1.4.0",
-    "@noble/hashes": "^1.4.0",
-    "@polkadot/extension-inject": "^0.46.3",
-    "@polkadot/keyring": "^12.6.1",
-    "@polkadot/util-crypto": "^12.2.1",
-    "multiformats": "^13.1.1"
-  },
-  "devDependencies": {
-    "@polkadot/types": "^10.7.1"
-  }
+	"name": "@canvas-js/chain-substrate",
+	"version": "0.10.0-beta.4",
+	"type": "module",
+	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
+	"main": "lib/index.js",
+	"types": "lib/index.d.ts",
+	"files": [
+		"lib"
+	],
+	"dependencies": {
+		"@canvas-js/interfaces": "0.10.0-beta.4",
+		"@canvas-js/signatures": "0.10.0-beta.4",
+		"@canvas-js/utils": "0.10.0-beta.4",
+		"@ipld/dag-json": "^10.2.1",
+		"@libp2p/logger": "^4.0.15",
+		"@noble/curves": "^1.4.0",
+		"@noble/hashes": "^1.4.0",
+		"@polkadot/extension-inject": "^0.46.3",
+		"@polkadot/keyring": "^12.6.2",
+		"@polkadot/util-crypto": "^12.2.1",
+		"multiformats": "^13.1.1"
+	},
+	"devDependencies": {
+		"@polkadot/types": "^10.7.1"
+	}
 }

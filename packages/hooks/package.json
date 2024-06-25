@@ -1,23 +1,27 @@
 {
-  "name": "@canvas-js/hooks",
-  "version": "0.10.0-beta.2",
-  "type": "module",
-  "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
-  "main": "lib/index.js",
-  "types": "lib/index.d.ts",
-  "files": [
-    "lib"
-  ],
-  "exports": {
-    ".": "./lib/index.js"
-  },
-  "dependencies": {
-    "@canvas-js/core": "0.10.0-beta.2",
-    "@canvas-js/interfaces": "0.10.0-beta.2",
-    "@canvas-js/modeldb": "0.10.0-beta.2",
-    "react": "^18.3.1"
-  },
-  "devDependencies": {
-    "@types/react": "^18.3.3"
-  }
+	"name": "@canvas-js/hooks",
+	"version": "0.10.0-beta.4",
+	"type": "module",
+	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
+	"main": "lib/index.js",
+	"types": "lib/index.d.ts",
+	"files": [
+		"lib"
+	],
+	"exports": {
+		".": "./lib/index.js"
+	},
+	"peerDependencies": {
+		"react": "^18.3.1"
+	},
+	"dependencies": {
+		"@canvas-js/core": "0.10.0-beta.4",
+		"@canvas-js/interfaces": "0.10.0-beta.4",
+		"@canvas-js/modeldb": "0.10.0-beta.4",
+		"@canvas-js/modeldb-idb": "0.10.0-beta.4"
+	},
+	"devDependencies": {
+		"@types/react": "^18.3.3",
+		"react": "^18.3.1"
+	}
 }
