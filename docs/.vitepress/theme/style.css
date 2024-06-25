@@ -5,7 +5,7 @@
   --vp-font-family-base: "Instrument Sans", -apple-system, BlinkMacSystemFont, Inter, sans-serif;
   --vp-font-family-mono: "PT Mono", ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
   --vp-c-text-1: rgba(72, 72, 79);
-  --vp-c-text-2: rgba(235, 235, 245, 0.8);
+  --vp-c-text-2: #67666a;
   --vp-c-gutter: var(--vp-c-divider);
   --vp-c-bg: #fffbf3;
   --vp-c-bg-soft: #f7f3eb;
@@ -16,6 +16,7 @@
 }
 .dark {
   --vp-c-text-1: rgba(255, 255, 245, 0.86);
+  --vp-c-text-2: rgba(235, 235, 245, 0.8);
   --vp-c-bg: #101012;
   --vp-c-bg-soft: #202126;
   --vp-c-bg-alt: #202126;
