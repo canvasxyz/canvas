@@ -22,7 +22,6 @@ export const LogStatus: React.FC<LogStatusProps> = ({}) => {
 
 		const handleCommit = ({ detail: { root, heads } }: GossipLogEvents["commit"]) => {
 			const rootValue = `${root.level}:${bytesToHex(root.hash)}`
-			console.log("HANDLING COMMIT", rootValue, heads)
 			setRoot(rootValue)
 			setHeads(heads)
 		}
