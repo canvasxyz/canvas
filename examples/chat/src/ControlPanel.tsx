@@ -57,20 +57,24 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({}) => {
 
 		for (let i = 0; i < 100; i++) {
 			const content = bytesToHex(randomBytes(8))
-			const { id, recipients } = await app.actions.createMessage({ content }, { signer: sessionSigner })
+			await app.actions.createMessage({ content }, { signer: sessionSigner })
 		}
 	}, [app, sessionSigner])
 
 	const button = `p-2 border rounded flex`
 	const disabled = `bg-gray-100 text-gray-500 hover:cursor-not-allowed`
-	const enabledGreen = `bg-green-100 hover:cursor-pointer hover:bg-green-200 active:bg-green-300`
-	const enabledRed = `bg-red-100 hover:cursor-pointer hover:bg-red-200 active:bg-red-300`
+	const enabledGreen = `bg-green-100 active:bg-green-300 hover:cursor-pointer hover:bg-green-200`
+	const enabledRed = `bg-red-100 active:bg-red-300 hover:cursor-pointer hover:bg-red-200`
+	const enabledYellow = `bg-yellow-100 active:bg-yellow-300 hover:cursor-pointer hover:bg-yellow-200`
 
 	if (app === null) {
 		return (
 			<div className="flex flex-row gap-4">
 				<button disabled className={`flex-1 ${button} ${disabled}`}>
 					Start libp2p
+				</button>
+				<button disabled className={`${button} ${disabled}`}>
+					Spam
 				</button>
 				<button disabled className={`${button} ${disabled}`}>
 					Clear data
@@ -86,7 +90,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({}) => {
 				<button
 					disabled={sessionSigner === null}
 					onClick={() => spam()}
-					className={`${button} ${sessionSigner === null ? disabled : enabledRed}`}
+					className={`${button} ${sessionSigner === null ? disabled : enabledYellow}`}
 				>
 					Spam
 				</button>
@@ -104,7 +108,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({}) => {
 				<button
 					disabled={sessionSigner === null}
 					onClick={() => spam()}
-					className={`${button} ${sessionSigner === null ? disabled : enabledRed}`}
+					className={`${button} ${sessionSigner === null ? disabled : enabledYellow}`}
 				>
 					Spam
 				</button>

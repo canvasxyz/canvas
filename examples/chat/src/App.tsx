@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react"
 
 import type { SessionSigner } from "@canvas-js/interfaces"
+
 import type { Contract } from "@canvas-js/core"
 
 import { useCanvas } from "@canvas-js/hooks"
@@ -12,6 +13,7 @@ import { ControlPanel } from "./ControlPanel.js"
 import { SessionStatus } from "./SessionStatus.js"
 import { ConnectionStatus } from "./ConnectionStatus.js"
 import { Connect } from "./connect/index.js"
+import { LogStatus } from "./LogStatus.js"
 
 const topic = "chat-example.canvas.xyz"
 
@@ -62,6 +64,7 @@ export const App: React.FC<{}> = ({}) => {
 							<Connect />
 							<SessionStatus />
 							<ConnectionStatus topic={topicRef.current} />
+							<LogStatus />
 							<ControlPanel />
 						</div>
 					</div>
