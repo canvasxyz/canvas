@@ -15,7 +15,7 @@ import { Connect } from "./connect/index.js"
 
 const topic = "chat-example.canvas.xyz"
 
-export const contract = {
+const contract = {
 	models: {
 		message: {
 			id: "primary",

@@ -1,7 +1,7 @@
 import crypto from "crypto"
 import ava, { TestFn } from "ava"
 import { ethers } from "ethers"
-import { ReplicatedObject } from "@canvas-js/replicated"
+import { ReplicatedObject } from "@canvas-js/core"
 import { Awaitable } from "@canvas-js/interfaces"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 

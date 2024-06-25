@@ -1,7 +1,7 @@
 import crypto from "crypto"
 import ava, { TestFn } from "ava"
 import { ethers } from "ethers"
-import { ReplicatedObject } from "@canvas-js/replicated"
+import { ReplicatedObject } from "@canvas-js/core"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 
 const test = ava as TestFn<{ chat: Chat; signer: SIWESigner }>
