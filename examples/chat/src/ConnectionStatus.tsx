@@ -6,6 +6,7 @@ import type { Canvas } from "@canvas-js/core"
 import { AppContext } from "./AppContext.js"
 
 import { PeerIdView } from "./components/PeerIdView.js"
+import { MultiaddrView } from "./components/MultiaddrView.js"
 
 export interface ConnectionStatusProps {
 	topic: string
@@ -50,18 +51,22 @@ const ConnectionList: React.FC<ConnectionListProps> = ({ app }) => {
 	const [connections, setConnections] = useState<Connection[]>([])
 
 	useEffect(() => {
+		if (app === null) {
+			return
+		}
+
 		const handleConnectionOpen = ({ detail: connection }: CustomEvent<Connection>) =>
 			void setConnections((connections) => [...connections, connection])
 
 		const handleConnectionClose = ({ detail: connection }: CustomEvent<Connection>) =>
 			void setConnections((connections) => connections.filter(({ id }) => connection.id !== id))
 
-		app?.libp2p.addEventListener("connection:open", handleConnectionOpen)
-		app?.libp2p.addEventListener("connection:close", handleConnectionClose)
+		app.libp2p.addEventListener("connection:open", handleConnectionOpen)
+		app.libp2p.addEventListener("connection:close", handleConnectionClose)
 
 		return () => {
-			app?.libp2p.removeEventListener("connection:open", handleConnectionOpen)
-			app?.libp2p.removeEventListener("connection:close", handleConnectionClose)
+			app.libp2p.removeEventListener("connection:open", handleConnectionOpen)
+			app.libp2p.removeEventListener("connection:close", handleConnectionClose)
 		}
 	}, [app])
 
@@ -71,14 +76,13 @@ const ConnectionList: React.FC<ConnectionListProps> = ({ app }) => {
 		return (
 			<ul className="list-disc pl-4">
 				{connections.map(({ id, remotePeer, remoteAddr }) => {
-					const address = remoteAddr.decapsulateCode(421).toString()
 					return (
 						<li key={id}>
 							<div>
 								<PeerIdView peerId={remotePeer} />
 							</div>
 							<div>
-								<code className="text-sm break-all text-gray-500">{address}</code>
+								<MultiaddrView addr={remoteAddr} peerId={remotePeer} />
 							</div>
 						</li>
 					)
