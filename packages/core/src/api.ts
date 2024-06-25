@@ -6,8 +6,8 @@ import { AbortError } from "abortable-iterator"
 import { anySignal } from "any-signal"
 import { Counter, Gauge, Summary, Registry, register } from "prom-client"
 
-import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 import type { PeerId } from "@libp2p/interface"
+import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 import { peerIdFromString } from "@libp2p/peer-id"
 
 import * as json from "@ipld/dag-json"
