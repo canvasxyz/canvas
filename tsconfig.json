@@ -3,6 +3,7 @@
 	"exclude": ["**/vite.config.ts"],
 	"references": [
 		{ "path": "./examples/chat" },
+		{ "path": "./examples/crdt-counter" },
 		{ "path": "./examples/encrypted-chat" },
 		{ "path": "./examples/forum" },
 		{ "path": "./examples/snake" },

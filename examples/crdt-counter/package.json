@@ -1,0 +1,51 @@
+{
+	"private": true,
+	"name": "@canvas-js/crdt-counter",
+	"version": "0.10.0-beta.4",
+	"type": "module",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"dev": "vite",
+		"build": "vite build"
+	},
+	"dependencies": {
+		"@canvas-js/chain-atp": "0.10.0-beta.4",
+		"@canvas-js/chain-cosmos": "0.10.0-beta.4",
+		"@canvas-js/chain-ethereum": "0.10.0-beta.4",
+		"@canvas-js/chain-ethereum-viem": "0.10.0-beta.4",
+		"@canvas-js/chain-solana": "0.10.0-beta.4",
+		"@canvas-js/chain-substrate": "0.10.0-beta.4",
+		"@canvas-js/core": "0.10.0-beta.4",
+		"@canvas-js/hooks": "0.10.0-beta.4",
+		"@canvas-js/interfaces": "0.10.0-beta.4",
+		"@cosmjs/encoding": "^0.32.3",
+		"@keplr-wallet/types": "^0.11.64",
+		"@libp2p/interface": "^1.5.0",
+		"@magic-ext/auth": "^4.3.2",
+		"@metamask/providers": "^14.0.2",
+		"@noble/hashes": "^1.4.0",
+		"@polkadot/extension-dapp": "^0.46.9",
+		"@terra-money/feather.js": "^2.0.4",
+		"@types/react": "^18.3.3",
+		"@types/react-dom": "^18.3.0",
+		"buffer": "^6.0.3",
+		"ethers": "^6.13.1",
+		"idb": "^8.0.0",
+		"magic-sdk": "^21.5.0",
+		"multiformats": "^13.1.1",
+		"near-api-js": "^2.1.4",
+		"process": "^0.11.10",
+		"react": "^18.3.1",
+		"react-dom": "^18.3.1",
+		"viem": "^2.15.1",
+		"web3": "^4.10.0"
+	},
+	"devDependencies": {
+		"autoprefixer": "^10.4.19",
+		"postcss": "^8.4.38",
+		"tailwindcss": "^3.4.4",
+		"typescript": "^5.4.5",
+		"vite": "^5.3.1",
+		"vite-plugin-node-polyfills": "^0.22.0"
+	}
+}
