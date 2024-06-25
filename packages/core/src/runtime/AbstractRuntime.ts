@@ -353,21 +353,19 @@ export abstract class AbstractRuntime {
 			concurrentEffects.push(concurrentEffect)
 		}
 
-		const mergeFunction = null
+		const mergeFunction = this.db.models[model].merge
 
-		// TODO: finish this
-		//
-		// default behaviour: last writer wins
-		if (!mergeFunction) {
+		if (mergeFunction) {
+			// if a merge function is defined, use it (i.e. for a CRDT)
+			const values = concurrentEffects.map((e) => e.value as T)
+			return values.reduce((a, b) => mergeFunction(a, b))
+		} else {
+			// default behaviour: last writer wins
 			// choose the ancestor with the highest key
 			const highestKeyAncestor = concurrentEffects.reduce((a, b) => {
 				return a.key > b.key ? a : b
 			})
 			return highestKeyAncestor.value
 		}
-
-		// if a merge function is defined, use it (i.e. for a CRDT)
-
-		return null
 	}
 }
