@@ -312,8 +312,10 @@ export abstract class AbstractRuntime {
 
 		// remove messages that are parents of each other
 		const messagesToRemove = new Set<string>()
-		for (const parentMessageId of result) {
-			for (const otherMessageId of result) {
+		for (const parentEffectId of result) {
+			const parentMessageId = parentEffectId.split("/")[2]
+			for (const otherEffectId of result) {
+				const otherMessageId = otherEffectId.split("/")[2]
 				if (parentMessageId !== otherMessageId) {
 					if (await context.messageLog.isAncestor(parentMessageId, otherMessageId)) {
 						messagesToRemove.add(parentMessageId)
