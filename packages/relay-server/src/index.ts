@@ -83,8 +83,8 @@ getLibp2p().then(async (libp2p) => {
 		}
 	})
 
-	libp2p.services.fetch.registerLookupFunction("topic/", async (key) => {
-		const [_, topic] = key.split("/")
+	libp2p.services.fetch.registerLookupFunction("canvas/v1/", async (key) => {
+		const topic = key.split("/").pop()!
 		const results: {
 			id: Uint8Array
 			addresses: Uint8Array[]
