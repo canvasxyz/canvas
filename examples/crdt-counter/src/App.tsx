@@ -42,7 +42,6 @@ export const contract = {
 			const counter = await db.get("counter", id)
 			assert(counter, "Counter not found")
 			assert(counter.value, "Counter value not found")
-			console.log(counter.value)
 			// @ts-ignore
 			const value = JSON.parse(counter.value)
 			value[did] = (value[did] || 0) + 1
