@@ -74,7 +74,12 @@ export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: Abst
 		start: false,
 		peerId: peerId,
 		addresses: { listen, announce },
-		transports: [webSockets({ filter: all }), webRTC({}), circuitRelayTransport({ discoverRelays: 1 })],
+		transports: [
+			webSockets({ filter: all }),
+			webRTC({ rtcConfiguration: { iceServers: [{ urls: ["stun:stun.l.google.com:19302"] }] } }),
+			circuitRelayTransport({ discoverRelays: 1 }),
+		],
+
 		connectionGater: { denyDialMultiaddr: (addr: Multiaddr) => false },
 
 		connectionManager: {
