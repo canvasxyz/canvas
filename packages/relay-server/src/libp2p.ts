@@ -41,7 +41,12 @@ export async function getLibp2p() {
 
 			services: {
 				identify: identify({ protocolPrefix: "canvas" }),
-				circuitRelay: circuitRelayServer(),
+				circuitRelay: circuitRelayServer({
+					reservations: {
+						maxReservations: 256,
+						reservationClearInterval: 1 * 60 * 1000,
+					},
+				}),
 				fetch: fetch({ protocolPrefix: "canvas" }),
 				ping: ping({ protocolPrefix: "canvas" }),
 			},
