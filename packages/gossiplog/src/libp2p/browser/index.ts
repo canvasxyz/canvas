@@ -36,7 +36,7 @@ type TopicPeerRecord = {
 }
 
 async function getPeerId(topic: string): Promise<PeerId> {
-	const peerIdKey = `canvas/${topic}/peer-id`
+	const peerIdKey = `canvas/v1/${topic}/peer-id`
 	const peerIdRecord = localStorage.getItem(peerIdKey)
 	if (peerIdRecord !== null) {
 		try {
@@ -116,7 +116,7 @@ export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: Abst
 		// console.log(`connection:open ${direction} ${remotePeer} ${remoteAddr}`)
 		if (relayServerPeerId === remotePeer.toString()) {
 			console.log(`[fetch ${relayServerPeerId}]`)
-			libp2p.services.fetch.fetch(peerIdFromString(relayServerPeerId), `topic/${messageLog.topic}`).then(
+			libp2p.services.fetch.fetch(peerIdFromString(relayServerPeerId), `canvas/v1/${messageLog.topic}`).then(
 				async (result) => {
 					const results = cbor.decode<TopicPeerRecord[]>(result ?? cbor.encode([]))
 					console.log(`[fetch ${relayServerPeerId}] got ${results.length} results`)
