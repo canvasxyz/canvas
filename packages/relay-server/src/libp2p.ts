@@ -11,6 +11,8 @@ import { prometheusMetrics } from "@libp2p/prometheus-metrics"
 
 import { listen, announce, getPeerId } from "./config.js"
 
+const { MIN_CONNECTIONS = "0", MAX_CONNECTIONS = "1024" } = process.env
+
 export async function getLibp2p() {
 	const peerId = await getPeerId()
 
@@ -28,8 +30,8 @@ export async function getLibp2p() {
 			addresses: { listen, announce },
 			transports: [webSockets({ filter: all })],
 			connectionManager: {
-				minConnections: 0,
-				maxConnections: 512,
+				minConnections: parseInt(MIN_CONNECTIONS),
+				maxConnections: parseInt(MAX_CONNECTIONS),
 			},
 
 			streamMuxers: [yamux()],
