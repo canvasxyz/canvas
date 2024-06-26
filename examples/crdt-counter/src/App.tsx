@@ -99,17 +99,30 @@ export const App: React.FC<{}> = ({}) => {
 							>
 								create counter
 							</button>
+
 							{counters &&
 								counters.map((counter) => {
 									return (
-										<div key={counter.id as string} className="flex flex-row gap-2">
-											<button
-												className={`border p-2 rounded font-bold ${!canInteract && `cursor-not-allowed`}`}
-												onClick={() => increment(counter.id)}
-											>
-												increment {counter.id}
-											</button>
-											<div>{resolveCounterValue(counter.value)}</div>
+										<div key={counter.id as string} className="flex flex-col gap-3">
+											<div className="grid grid-cols-6 gap-4 items-center">
+												<div className={`col-span-4`}>{counter.id}</div>
+												<button
+													className={`border p-2 rounded font-bold ${!canInteract && `cursor-not-allowed`}`}
+													onClick={() => increment(counter.id)}
+												>
+													+
+												</button>
+												<div>{resolveCounterValue(counter.value)}</div>
+											</div>
+											<div className="pl-2">
+												{typeof counter.value == "string" &&
+													Object.entries(JSON.parse(counter.value)).map(([key, value]) => (
+														<div key={key} className="grid grid-cols-8 gap-2">
+															<div className="col-span-7">{key.split(":")[4]}:</div>
+															<div>{value as string}</div>
+														</div>
+													))}
+											</div>
 										</div>
 									)
 								})}
