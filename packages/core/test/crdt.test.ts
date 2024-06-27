@@ -73,40 +73,6 @@ async function createCanvasCounterApp() {
 	})
 }
 
-// test("get a value set by another action that has been merged", async (t) => {
-// 	const app1 = await createCanvasCounterApp()
-// 	const app2 = await createCanvasCounterApp()
-
-// 	t.teardown(() => {
-// 		app1.stop()
-// 		app2.stop()
-// 	})
-
-// 	console.log(`app1 did:${await app1.signers.getFirst().getDid()}`)
-// 	console.log(`app2 did:${await app2.signers.getFirst().getDid()}`)
-
-// 	const { id: counterId } = await app1.actions.createCounter({})
-// 	t.is(resolveCounterValue((await app1.db.get("counter", counterId))!.value), 0)
-// 	t.is(await app2.db.get("counter", counterId), null)
-
-// 	// sync app2 with app1
-// 	await app1.messageLog.serve((source) => app2.messageLog.sync(source))
-
-// 	t.is(resolveCounterValue((await app2.db.get("counter", counterId))!.value), 0)
-
-// 	// increment the counter in app1
-// 	await app1.actions.incrementCounter({ id: counterId })
-
-// 	// should update app1's counter
-// 	t.is(resolveCounterValue((await app1.db.get("counter", counterId))!.value), 1)
-
-// 	// sync app2 with app1
-// 	await app1.messageLog.serve((source) => app2.messageLog.sync(source))
-
-// 	// should update app2's counter now
-// 	t.is(resolveCounterValue((await app2.db.get("counter", counterId))!.value), 1)
-// })
-
 test("get a value set by another action that has been merged", async (t) => {
 	const app1 = await createCanvasCounterApp()
 	const app2 = await createCanvasCounterApp()
@@ -116,58 +82,57 @@ test("get a value set by another action that has been merged", async (t) => {
 		app2.stop()
 	})
 
-	console.log(`app1 did:${await app1.signers.getFirst().getDid()}`)
-	console.log(`app2 did:${await app2.signers.getFirst().getDid()}`)
+	async function getCounterValue(app: Awaited<ReturnType<typeof createCanvasCounterApp>>, id: string) {
+		const result = await app.db.get("counter", id)
+		if (result == null) {
+			return null
+		}
+		return resolveCounterValue(result.value)
+	}
 
+	// app1 creates a counter
 	const { id: counterId } = await app1.actions.createCounter({})
-	console.log(counterId)
-	t.is(resolveCounterValue((await app1.db.get("counter", counterId))!.value), 0)
-	t.is(await app2.db.get("counter", counterId), null)
+
+	// app1 has an empty counter
+	t.is(await getCounterValue(app1, counterId), 0)
+	// app2 does not have a counter yet
+	t.is(await getCounterValue(app2, counterId), null)
 
 	// sync app2 with app1
 	await app1.messageLog.serve((source) => app2.messageLog.sync(source))
 
-	t.is(resolveCounterValue((await app2.db.get("counter", counterId))!.value), 0)
+	// app2 should have the empty counter now
+	t.is(await getCounterValue(app2, counterId), 0)
 
 	// increment the counter in app1
-	// console.log(await app1.db.query("$effects"))
 	await app1.actions.incrementCounter({ id: counterId })
 
 	// should update app1's counter
-	console.log("app1 counter after updating")
-	console.log(await app1.db.get("counter", counterId))
-	t.is(resolveCounterValue((await app1.db.get("counter", counterId))!.value), 1)
+	t.is(await getCounterValue(app1, counterId), 1)
 	// app2 is not synced yet so its the same
-	t.is(resolveCounterValue((await app2.db.get("counter", counterId))!.value), 0)
+	t.is(await getCounterValue(app2, counterId), 0)
 
 	// increment the counter in app2
 	await app2.actions.incrementCounter({ id: counterId })
+
 	// app1 is not synced yet
-	t.is(resolveCounterValue((await app1.db.get("counter", counterId))!.value), 1)
+	t.is(await getCounterValue(app1, counterId), 1)
 	// should update app2's counter
-	console.log("app2 counter after updating")
-	console.log(await app2.db.get("counter", counterId))
-	t.is(resolveCounterValue((await app2.db.get("counter", counterId))!.value), 1)
+	t.is(await getCounterValue(app2, counterId), 1)
 
 	// sync app2 with app1 again
-
-	console.log("syncing app1 -> app2")
 	await app1.messageLog.serve((source) => app2.messageLog.sync(source))
+
 	// app1 is still not synced yet
-	t.is(resolveCounterValue((await app1.db.get("counter", counterId))!.value), 1)
+	t.is(await getCounterValue(app1, counterId), 1)
 	// app2 now has app1 and app2's counter increment
-	t.is(resolveCounterValue((await app2.db.get("counter", counterId))!.value), 2)
+	t.is(await getCounterValue(app2, counterId), 2)
 
 	// sync app1 with app2
-	console.log("syncing app2 -> app1")
-	console.log(JSON.stringify(JSON.parse(json.stringify(await app1.messageLog.export())), null, 2))
-	console.log(JSON.stringify(JSON.parse(json.stringify(await app2.messageLog.export())), null, 2))
 	await app2.messageLog.serve((source) => app1.messageLog.sync(source))
+
 	// now app1 has app2's counter increment
-	console.log("c")
-	t.is(resolveCounterValue((await app1.db.get("counter", counterId))!.value), 2)
-	console.log("d")
+	t.is(await getCounterValue(app1, counterId), 2)
 	// app2 now has app1 and app2's counter increment
-	t.is(resolveCounterValue((await app2.db.get("counter", counterId))!.value), 2)
-	console.log("e")
+	t.is(await getCounterValue(app2, counterId), 2)
 })
