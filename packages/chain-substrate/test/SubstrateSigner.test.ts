@@ -29,12 +29,11 @@ test("create and verify session and action", async (t) => {
 
 	const action: Action = {
 		type: "action",
-		did: session.did,
+		address: session.address,
 		name: "foo",
 		args: { bar: 7 },
-		context: {
-			timestamp: session.context.timestamp,
-		},
+		timestamp: session.timestamp,
+		blockhash: null,
 	}
 
 	const actionMessage = { topic, clock: 1, parents: [], payload: action }
