@@ -360,14 +360,15 @@ export abstract class AbstractRuntime {
 		if (mergeFunction) {
 			// if a merge function is defined, use it (i.e. for a CRDT)
 			const values = concurrentEffects.map((e) => e.value as T)
-			return values.reduce((a, b) => mergeFunction(a, b))
+			const decodedValues = values.map((v: any) => cbor.decode(v))
+			return decodedValues.reduce((a, b) => mergeFunction(a, b)) as T
 		} else {
 			// default behaviour: last writer wins
 			// choose the ancestor with the highest key
 			const highestKeyAncestor = concurrentEffects.reduce((a, b) => {
 				return a.key > b.key ? a : b
 			})
-			return highestKeyAncestor.value
+			return cbor.decode(highestKeyAncestor.value)
 		}
 	}
 }
