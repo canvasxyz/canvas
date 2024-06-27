@@ -79,12 +79,8 @@ export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: Abst
 			webSockets({ filter: all }),
 			webRTC({
 				rtcConfiguration: {
-					iceServers: [
-						{ urls: ["stun:stun1.l.google.com:19302"] },
-						{ urls: ["stun:stun2.l.google.com:19302"] },
-						{ urls: ["stun:stun3.l.google.com:19302"] },
-						{ urls: ["stun:stun4.l.google.com:19302"] },
-					],
+					iceServers: [{ urls: ["stun:stun.l.google.com:19302"] }],
+					iceTransportPolicy: "all",
 				},
 			}),
 			circuitRelayTransport({ discoverRelays: 1 }),
