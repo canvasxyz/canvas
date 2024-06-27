@@ -242,58 +242,112 @@ test("get a value set by another action", async (t) => {
 })
 
 test("get a value set by another action that has been merged", async (t) => {
-	const wallet = ethers.Wallet.createRandom()
-
-	type CounterRecord = {
-		id: string
-		value: string
+	function resolveCounterValue(v: any) {
+		if (typeof v != "string") {
+			return
+		}
+		let total = 0
+		for (const value of Object.values(JSON.parse(v)) as number[]) {
+			total += value
+		}
+		return total
 	}
-	const app = await Canvas.initialize({
-		signers: [new SIWESigner({ signer: wallet })],
-		contract: {
-			topic: "com.example.app",
-			models: {
-				counter: {
-					id: "primary",
-					value: "string",
-					$merge: (counter1: CounterRecord, counter2: CounterRecord): CounterRecord => {
-						const value1 = JSON.parse(counter1.value)
-						const value2 = JSON.parse(counter2.value)
 
-						const outputValue: Record<string, number> = {}
-						for (const key of Object.keys({ ...value1, ...value2 })) {
-							outputValue[key] = Math.max(value1[key] || 0, value2[key] || 0)
+	async function createCanvasCounterApp() {
+		const wallet = ethers.Wallet.createRandom()
+
+		type CounterRecord = {
+			id: string
+			value: string
+		}
+		const topic = "xyz.canvas.crdt-counter"
+		return await Canvas.initialize({
+			topic,
+			signers: [new SIWESigner({ signer: wallet })],
+			contract: {
+				topic,
+				models: {
+					counter: {
+						id: "primary",
+						value: "string",
+						$merge: (counter1: CounterRecord, counter2: CounterRecord): CounterRecord => {
+							const value1 = JSON.parse(counter1.value)
+							const value2 = JSON.parse(counter2.value)
+
+							const outputValue: Record<string, number> = {}
+							for (const key of Object.keys({ ...value1, ...value2 })) {
+								outputValue[key] = Math.max(value1[key] || 0, value2[key] || 0)
+							}
+							return { id: counter1.id, value: JSON.stringify(outputValue) }
+						},
+					},
+				},
+				actions: {
+					async createCounter(db, {}, { id }) {
+						await db.set("counter", { id, value: "{}" })
+					},
+					async incrementCounter(db, { id }: { id: string }, { did }) {
+						const counter = await db.get("counter", id)
+						console.log(`counter:`, counter)
+						assert(counter !== null)
+						assert(typeof counter.value === "string")
+						const value = JSON.parse(counter.value)
+						if (!value[did]) {
+							value[did] = 0
 						}
-						return { id: counter1.id, value: JSON.stringify(outputValue) }
+						value[did] += 1
+						await db.set("counter", { id, value: JSON.stringify(value) })
 					},
 				},
 			},
-			actions: {
-				async createCounter(db, {}, { id }) {
-					await db.set("counter", { id, value: "{}" })
-				},
-				async incrementCounter(db, { id }: { id: string }, { did }) {
-					const counter = await db.get("counter", id)
-					assert(counter !== null)
-					assert(typeof counter.value === "string")
-					const value = JSON.parse(counter.value)
-					if (!value[did]) {
-						value[did] = 0
-					}
-					value[did] += 1
-					await db.set("counter", { id, value: JSON.stringify(value) })
-				},
-			},
-		},
-		start: false,
+			start: false,
+		})
+	}
+	const app1 = await createCanvasCounterApp()
+	const app2 = await createCanvasCounterApp()
+
+	t.teardown(() => {
+		app1.stop()
+		app2.stop()
 	})
 
-	t.teardown(() => app.stop())
-
-	const { id: counterId } = await app.actions.createCounter({})
+	const { id: counterId } = await app1.actions.createCounter({})
 	t.log(`${counterId}: created counter`)
 
-	// TODO: multiple canvas apps sync with each other and merge the counter value
+	// sync app2 with app1
+	await app1.messageLog.serve((source) => app2.messageLog.sync(source))
+
+	// app2.actions.incrementCounter({ id: counterId })
+	t.is(resolveCounterValue((await app2.db.get("counter", counterId))!.value), 0)
+
+	console.log(counterId)
+	// increment the counter in app1
+	await app1.actions.incrementCounter({ id: counterId })
+	// should update app1's counter
+	t.is(resolveCounterValue((await app1.db.get("counter", counterId))!.value), 1)
+	// app2 is not synced yet so its the same
+	t.is(resolveCounterValue((await app2.db.get("counter", counterId))!.value), 0)
+
+	// increment the counter in app2
+	await app2.actions.incrementCounter({ id: counterId })
+	// app1 is not synced yet
+	t.is(resolveCounterValue((await app1.db.get("counter", counterId))!.value), 1)
+	// should update app2's counter
+	t.is(resolveCounterValue((await app2.db.get("counter", counterId))!.value), 1)
+
+	// sync app2 with app1 again
+	await app1.messageLog.serve((source) => app2.messageLog.sync(source))
+	// app1 is still not synced yet
+	t.is(resolveCounterValue((await app1.db.get("counter", counterId))!.value), 1)
+	// app2 now has app1 and app2's counter increment
+	t.is(resolveCounterValue((await app2.db.get("counter", counterId))!.value), 2)
+
+	// sync app1 with app2
+	await app2.messageLog.serve((source) => app1.messageLog.sync(source))
+	// now app1 has app2's counter increment
+	t.is(resolveCounterValue((await app1.db.get("counter", counterId))!.value), 2)
+	// app2 now has app1 and app2's counter increment
+	t.is(resolveCounterValue((await app2.db.get("counter", counterId))!.value), 2)
 })
 
 test("validate action args using IPLD schemas", async (t) => {
