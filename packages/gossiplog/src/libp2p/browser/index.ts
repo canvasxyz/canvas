@@ -77,7 +77,16 @@ export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: Abst
 		addresses: { listen, announce },
 		transports: [
 			webSockets({ filter: all }),
-			webRTC({ rtcConfiguration: { iceServers: [{ urls: ["stun:stun.l.google.com:19302"] }] } }),
+			webRTC({
+				rtcConfiguration: {
+					iceServers: [
+						{ urls: ["stun:stun1.l.google.com:19302"] },
+						{ urls: ["stun:stun2.l.google.com:19302"] },
+						{ urls: ["stun:stun3.l.google.com:19302"] },
+						{ urls: ["stun:stun4.l.google.com:19302"] },
+					],
+				},
+			}),
 			circuitRelayTransport({ discoverRelays: 1 }),
 		],
 
@@ -134,9 +143,9 @@ export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: Abst
 							peerRecordEnvelope: peerRecordEnvelope ?? undefined,
 						})
 
-						console.log(`[fetch ${relayServerPeerId}] dialing ${peerId}`)
+						// console.log(`[fetch ${relayServerPeerId}] dialing ${peerId}`)
 
-						libp2p.dial(peerId)
+						// libp2p.dial(peerId)
 					}
 				},
 				(err) => console.log("fetch failed", err),
