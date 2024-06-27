@@ -17,11 +17,17 @@ export async function getLibp2p() {
 	const peerId = await getPeerId()
 
 	console.log("using PeerId", peerId.toString())
-	console.log("listening on", listen)
 	console.log(
-		"announcing on",
-		announce.map((addr) => `${addr}/p2p/${peerId}`),
+		"listening on",
+		listen.map((addr) => `${addr}/p2p/${peerId}`),
 	)
+
+	if (announce.length > 0) {
+		console.log(
+			"announcing on",
+			announce.map((addr) => `${addr}/p2p/${peerId}`),
+		)
+	}
 
 	return await createLibp2p<{ identify: Identify; circuitRelay: CircuitRelayService; fetch: Fetch; ping: PingService }>(
 		{
