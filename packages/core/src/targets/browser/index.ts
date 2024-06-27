@@ -7,7 +7,7 @@ import type { PlatformTarget } from "../interface.js"
 
 const target: PlatformTarget = {
 	openDB: ({ topic }, models) =>
-		ModelDB.initialize({ name: `canvas/${topic}`, models: { ...models, ...AbstractGossipLog.schema } }),
+		ModelDB.initialize({ name: `canvas/v1/${topic}`, models: { ...models, ...AbstractGossipLog.schema } }),
 
 	openGossipLog: ({}, init) => GossipLog.open(init),
 

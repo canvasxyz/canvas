@@ -1,7 +1,7 @@
 import type { GossipLogService } from "@canvas-js/gossiplog/service"
 import type { GossipsubEvents } from "@chainsafe/libp2p-gossipsub"
 import type { Identify } from "@libp2p/identify"
-import type { PubSub } from "@libp2p/interface"
+import type { PeerId, PubSub } from "@libp2p/interface"
 import type { KadDHT } from "@libp2p/kad-dht"
 import type { PingService } from "@libp2p/ping"
 import type { Fetch } from "@libp2p/fetch"
@@ -34,4 +34,5 @@ export interface NetworkConfig {
 	bootstrapList?: string[]
 	minConnections?: number
 	maxConnections?: number
+	peerId?: PeerId
 }

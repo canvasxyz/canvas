@@ -17,11 +17,17 @@ export async function getLibp2p() {
 	const peerId = await getPeerId()
 
 	console.log("using PeerId", peerId.toString())
-	console.log("listening on", listen)
 	console.log(
-		"announcing on",
-		announce.map((addr) => `${addr}/p2p/${peerId}`),
+		"listening on",
+		listen.map((addr) => `${addr}/p2p/${peerId}`),
 	)
+
+	if (announce.length > 0) {
+		console.log(
+			"announcing on",
+			announce.map((addr) => `${addr}/p2p/${peerId}`),
+		)
+	}
 
 	return await createLibp2p<{ identify: Identify; circuitRelay: CircuitRelayService; fetch: Fetch; ping: PingService }>(
 		{
@@ -41,7 +47,12 @@ export async function getLibp2p() {
 
 			services: {
 				identify: identify({ protocolPrefix: "canvas" }),
-				circuitRelay: circuitRelayServer(),
+				circuitRelay: circuitRelayServer({
+					reservations: {
+						maxReservations: 256,
+						reservationClearInterval: 1 * 60 * 1000,
+					},
+				}),
 				fetch: fetch({ protocolPrefix: "canvas" }),
 				ping: ping({ protocolPrefix: "canvas" }),
 			},

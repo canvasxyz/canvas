@@ -53,3 +53,13 @@ test("reject corrupt session signature", async (t) => {
 	session.authorizationData.signature[3] = 1
 	await t.throwsAsync(async () => signer.verifySession(topic, session))
 })
+
+test("reject session signature for wrong topic", async (t) => {
+	const topic = "example:signer"
+	const topic2 = "example:signer2"
+	const signer = new SolanaSigner()
+	const { payload: session } = await signer.newSession(topic)
+	const { payload: session2 } = await signer.newSession(topic2)
+
+	await t.throwsAsync(async () => signer.verifySession(topic, session2))
+})

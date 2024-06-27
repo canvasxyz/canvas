@@ -36,6 +36,7 @@ export function prepareSIWEMessage(message: SIWEMessage): string {
 		chainId: message.chainId,
 		issuedAt: message.issuedAt,
 		expirationTime: message.expirationTime ?? undefined,
+		resources: message.resources,
 	}).prepareMessage()
 }
 

@@ -13,7 +13,7 @@ import { Fetch, fetch } from "@libp2p/fetch"
 import { ping } from "@libp2p/ping"
 
 import { peerIdFromBytes, peerIdFromString } from "@libp2p/peer-id"
-import { createEd25519PeerId } from "@libp2p/peer-id-factory"
+import { createEd25519PeerId, exportToProtobuf, createFromProtobuf } from "@libp2p/peer-id-factory"
 import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 
 import * as cbor from "@ipld/dag-cbor"
@@ -22,6 +22,8 @@ import { AbstractGossipLog } from "@canvas-js/gossiplog"
 import { gossiplog } from "@canvas-js/gossiplog/service"
 
 import type { ServiceMap, NetworkConfig } from "../../interface.js"
+import { fromString, toString } from "uint8arrays"
+import { PeerId } from "@libp2p/interface"
 
 export const defaultRelayServer =
 	"/dns4/canvas-relay-server.fly.dev/tcp/443/wss/p2p/12D3KooWLR64DxxPcW1vA6uyC74RYHEsoHwJEmCJRavTihLYmBZN"
@@ -33,9 +35,26 @@ type TopicPeerRecord = {
 	peerRecordEnvelope: Uint8Array | null
 }
 
-export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: AbstractGossipLog<Payload>) {
+async function getPeerId(topic: string): Promise<PeerId> {
+	const peerIdKey = `canvas/v1/${topic}/peer-id`
+	const peerIdRecord = localStorage.getItem(peerIdKey)
+	if (peerIdRecord !== null) {
+		try {
+			return await createFromProtobuf(fromString(peerIdRecord, "base64"))
+		} catch (err) {
+			console.error(err)
+		}
+	}
+
 	const peerId = await createEd25519PeerId()
-	console.log("using PeerId", peerId.toString())
+	localStorage.setItem(peerIdKey, toString(exportToProtobuf(peerId), "base64"))
+	return peerId
+}
+
+export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: AbstractGossipLog<Payload>) {
+	const peerId = await getPeerId(messageLog.topic)
+
+	if (typeof localStorage.peerId === "string") console.log("using PeerId", peerId.toString())
 
 	const bootstrapList = config.bootstrapList ?? []
 	const relayServer = config.relayServer ?? defaultRelayServer
@@ -55,7 +74,12 @@ export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: Abst
 		start: false,
 		peerId: peerId,
 		addresses: { listen, announce },
-		transports: [webSockets({ filter: all }), webRTC({}), circuitRelayTransport({ discoverRelays: 1 })],
+		transports: [
+			webSockets({ filter: all }),
+			webRTC({ rtcConfiguration: { iceServers: [{ urls: ["stun:stun.l.google.com:19302"] }] } }),
+			circuitRelayTransport({ discoverRelays: 1 }),
+		],
+
 		connectionGater: { denyDialMultiaddr: (addr: Multiaddr) => false },
 
 		connectionManager: {
@@ -92,7 +116,7 @@ export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: Abst
 		// console.log(`connection:open ${direction} ${remotePeer} ${remoteAddr}`)
 		if (relayServerPeerId === remotePeer.toString()) {
 			console.log(`[fetch ${relayServerPeerId}]`)
-			libp2p.services.fetch.fetch(peerIdFromString(relayServerPeerId), `topic/${messageLog.topic}`).then(
+			libp2p.services.fetch.fetch(peerIdFromString(relayServerPeerId), `canvas/v1/${messageLog.topic}`).then(
 				async (result) => {
 					const results = cbor.decode<TopicPeerRecord[]>(result ?? cbor.encode([]))
 					console.log(`[fetch ${relayServerPeerId}] got ${results.length} results`)
