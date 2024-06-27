@@ -24,6 +24,7 @@ import { gossiplog } from "@canvas-js/gossiplog/service"
 import type { ServiceMap, NetworkConfig } from "../../interface.js"
 import { fromString, toString } from "uint8arrays"
 import { PeerId } from "@libp2p/interface"
+import { second } from "../../constants.js"
 
 export const defaultRelayServer =
 	"/dns4/canvas-relay-server.fly.dev/tcp/443/wss/p2p/12D3KooWLR64DxxPcW1vA6uyC74RYHEsoHwJEmCJRavTihLYmBZN"
@@ -85,6 +86,7 @@ export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: Abst
 		connectionManager: {
 			minConnections: config.minConnections,
 			maxConnections: config.maxConnections,
+			dialTimeout: 20 * second,
 		},
 
 		peerDiscovery: bootstrapList.length > 0 ? [bootstrap({ list: bootstrapList })] : [],
