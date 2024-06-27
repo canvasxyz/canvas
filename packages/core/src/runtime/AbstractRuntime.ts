@@ -172,8 +172,11 @@ export abstract class AbstractRuntime {
 		const effects: Effect[] = []
 
 		for (const [model, entries] of Object.entries(modelEntries)) {
-			for (const [key, value] of Object.entries(entries)) {
+			for (const [key, value_] of Object.entries(entries)) {
 				const keyHash = AbstractRuntime.getKeyHash(key)
+				let value = value_
+
+				const mergeFunction = this.db.models[model].merge
 
 				if (this.indexHistory) {
 					const effectKey = `${model}/${keyHash}/${id}`
@@ -189,9 +192,16 @@ export abstract class AbstractRuntime {
 						value: { key: effectKey, value: value && cbor.encode(value), branch: branch, clock: message.clock },
 					})
 
-					if (results.length > 0) {
-						this.log("skipping effect %o because it is superceeded by effects %O", [key, value], results)
-						continue
+					if (mergeFunction) {
+						const existingValue = await this.db.get(model, key)
+						if (existingValue !== null) {
+							value = mergeFunction(existingValue, value)
+						}
+					} else {
+						if (results.length > 0) {
+							this.log("skipping effect %o because it is superceeded by effects %O", [key, value], results)
+							continue
+						}
 					}
 				} else {
 					const versionKey = `${model}/${keyHash}`
