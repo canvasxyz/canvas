@@ -54,7 +54,7 @@ async function getPeerId(topic: string): Promise<PeerId> {
 export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: AbstractGossipLog<Payload>) {
 	const peerId = await getPeerId(messageLog.topic)
 
-	if (typeof localStorage.peerId === "string") console.log("using PeerId", peerId.toString())
+	console.log("using PeerId", peerId.toString())
 
 	const bootstrapList = config.bootstrapList ?? []
 	const relayServer = config.relayServer ?? defaultRelayServer
