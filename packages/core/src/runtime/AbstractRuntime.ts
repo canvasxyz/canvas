@@ -7,14 +7,7 @@ import { TypeTransformerFunction } from "@ipld/schema/typed.js"
 import type { Signature, Action, Message, Session, SignerCache } from "@canvas-js/interfaces"
 
 import { AbstractModelDB, Effect, ModelValue, ModelSchema, lessThan } from "@canvas-js/modeldb"
-import {
-	GossipLogConsumer,
-	encodeId,
-	MAX_MESSAGE_ID,
-	MIN_MESSAGE_ID,
-	AbstractGossipLog,
-	MessageRecord,
-} from "@canvas-js/gossiplog"
+import { GossipLogConsumer, encodeId, MAX_MESSAGE_ID, MIN_MESSAGE_ID, AbstractGossipLog } from "@canvas-js/gossiplog"
 import { assert, mapValues } from "@canvas-js/utils"
 import { BranchMergeRecord } from "../../../gossiplog/src/BranchMergeIndex.js"
 
@@ -301,12 +294,20 @@ export abstract class AbstractRuntime {
 			}
 
 			// check for branches that merge into this branch
-			for (const branchMerge of await context.messageLog.db.query<BranchMergeRecord>("$branch_merges", {
+			const branchMergeQuery = {
 				where: {
 					target_branch: currentMessagePosition.branch,
-					target_clock: { lte: currentMessagePosition.clock, gt: matchingEffectOnThisBranch?.clock },
+					target_clock: { lte: currentMessagePosition.clock },
 				},
-			})) {
+			}
+			if (matchingEffectOnThisBranch) {
+				// @ts-ignore
+				branchMergeQuery.where.target_clock.gt = matchingEffectOnThisBranch.clock
+			}
+			for (const branchMerge of await context.messageLog.db.query<BranchMergeRecord>(
+				"$branch_merges",
+				branchMergeQuery,
+			)) {
 				parentPositions.push({
 					branch: branchMerge.source_branch,
 					clock: branchMerge.source_clock,
