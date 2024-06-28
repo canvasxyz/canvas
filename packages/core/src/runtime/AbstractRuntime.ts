@@ -46,16 +46,16 @@ export abstract class AbstractRuntime {
 		},
 	} satisfies ModelSchema
 
-	protected static getModelSchema(ModelSchema: ModelSchema, options: { indexHistory: boolean }): ModelSchema {
+	protected static getModelSchema(modelSchema: ModelSchema, options: { indexHistory: boolean }): ModelSchema {
 		if (options.indexHistory) {
 			return {
-				...ModelSchema,
+				...modelSchema,
 				...AbstractRuntime.sessionsModel,
 				...AbstractRuntime.effectsModel,
 			}
 		} else {
 			return {
-				...ModelSchema,
+				...modelSchema,
 				...AbstractRuntime.sessionsModel,
 				...AbstractRuntime.versionsModel,
 			}

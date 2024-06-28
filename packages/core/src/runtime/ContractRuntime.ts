@@ -70,9 +70,9 @@ export class ContractRuntime extends AbstractRuntime {
 
 		// TODO: validate that models satisfies ModelSchema
 		assert(modelsHandle !== undefined, "missing `models` export")
-		const ModelSchema = modelsHandle.consume(vm.context.dump) as ModelSchema
+		const modelSchema = modelsHandle.consume(vm.context.dump) as ModelSchema
 
-		const db = await target.openDB({ path, topic }, AbstractRuntime.getModelSchema(ModelSchema, { indexHistory }))
+		const db = await target.openDB({ path, topic }, AbstractRuntime.getModelSchema(modelSchema, { indexHistory }))
 		return new ContractRuntime(topic, signers, db, vm, actions, argsTransformers, indexHistory)
 	}
 
