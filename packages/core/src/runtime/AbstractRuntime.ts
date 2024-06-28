@@ -7,14 +7,7 @@ import { TypeTransformerFunction } from "@ipld/schema/typed.js"
 import type { Signature, Action, Message, Session, SignerCache } from "@canvas-js/interfaces"
 
 import { AbstractModelDB, Effect, ModelValue, ModelSchema, lessThan } from "@canvas-js/modeldb"
-import {
-	GossipLogConsumer,
-	encodeId,
-	MAX_MESSAGE_ID,
-	MIN_MESSAGE_ID,
-	AbstractGossipLog,
-	MessageRecord,
-} from "@canvas-js/gossiplog"
+import { GossipLogConsumer, encodeId, MAX_MESSAGE_ID, MIN_MESSAGE_ID, AbstractGossipLog } from "@canvas-js/gossiplog"
 import { assert, mapValues } from "@canvas-js/utils"
 import { BranchMergeRecord } from "../../../gossiplog/src/BranchMergeIndex.js"
 
@@ -172,8 +165,11 @@ export abstract class AbstractRuntime {
 		const effects: Effect[] = []
 
 		for (const [model, entries] of Object.entries(modelEntries)) {
-			for (const [key, value] of Object.entries(entries)) {
+			for (const [key, value_] of Object.entries(entries)) {
 				const keyHash = AbstractRuntime.getKeyHash(key)
+				let value = value_
+
+				const mergeFunction = this.db.models[model].merge
 
 				if (this.indexHistory) {
 					const effectKey = `${model}/${keyHash}/${id}`
@@ -189,9 +185,16 @@ export abstract class AbstractRuntime {
 						value: { key: effectKey, value: value && cbor.encode(value), branch: branch, clock: message.clock },
 					})
 
-					if (results.length > 0) {
-						this.log("skipping effect %o because it is superceeded by effects %O", [key, value], results)
-						continue
+					if (mergeFunction) {
+						const existingValue = await this.db.get(model, key)
+						if (existingValue !== null) {
+							value = mergeFunction(existingValue, value)
+						}
+					} else {
+						if (results.length > 0) {
+							this.log("skipping effect %o because it is superceeded by effects %O", [key, value], results)
+							continue
+						}
 					}
 				} else {
 					const versionKey = `${model}/${keyHash}`
@@ -291,12 +294,20 @@ export abstract class AbstractRuntime {
 			}
 
 			// check for branches that merge into this branch
-			for (const branchMerge of await context.messageLog.db.query<BranchMergeRecord>("$branch_merges", {
+			const branchMergeQuery = {
 				where: {
 					target_branch: currentMessagePosition.branch,
-					target_clock: { lte: currentMessagePosition.clock, gt: matchingEffectOnThisBranch?.clock },
+					target_clock: { lte: currentMessagePosition.clock },
 				},
-			})) {
+			}
+			if (matchingEffectOnThisBranch) {
+				// @ts-ignore
+				branchMergeQuery.where.target_clock.gt = matchingEffectOnThisBranch.clock
+			}
+			for (const branchMerge of await context.messageLog.db.query<BranchMergeRecord>(
+				"$branch_merges",
+				branchMergeQuery,
+			)) {
 				parentPositions.push({
 					branch: branchMerge.source_branch,
 					clock: branchMerge.source_clock,
