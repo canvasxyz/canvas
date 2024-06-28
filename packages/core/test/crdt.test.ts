@@ -12,6 +12,33 @@ const rng = new Prando.default()
 
 const random = (n: number) => rng.nextInt(0, n - 1)
 
+function arrayRandom<T>(list: T[]): T {
+	const index = random(list.length)
+	return list[index]
+}
+
+function arrayRandomN<T>(list: T[], n: number): T[] {
+	if (n > list.length) {
+		throw new Error(`Cannot select ${n} distinct elements from a list of length ${list.length}`)
+	}
+	// make an array of indices
+	const bucket = Array.from({ length: list.length }, (_, i) => i)
+
+	const output: T[] = []
+	for (let i = 0; i < n; i++) {
+		const index = arrayRandom(bucket)
+		bucket.splice(index, 1)
+		output.push(list[index])
+	}
+	return output
+}
+
+function enumRandom<T extends object>(enumObj: T): T[keyof T] {
+	const values = Object.values(enumObj)
+	const index = random(values.length)
+	return values[index]
+}
+
 function resolveCounterValue(v: any) {
 	if (typeof v != "string") {
 		return
@@ -89,7 +116,7 @@ async function getCounterValue(app: Awaited<ReturnType<typeof createCanvasCounte
 	return resolveCounterValue(result.value)
 }
 
-test("get a value set by another action that has been merged", async (t) => {
+test("crdt counter manually created events", async (t) => {
 	const app1 = await createCanvasCounterApp()
 	const app2 = await createCanvasCounterApp()
 
@@ -154,43 +181,46 @@ test("get a value set by another action that has been merged", async (t) => {
 })
 
 test("crdt counter with randomized events", async (t) => {
-	const app1 = await createCanvasCounterApp()
-	const app2 = await createCanvasCounterApp()
+	const apps = await Promise.all(Array.from({ length: 10 }, () => createCanvasCounterApp()))
 
 	t.teardown(() => {
-		app1.stop()
-		app2.stop()
+		for (const app of apps) {
+			app.stop()
+		}
 	})
-
+	const [app1, ...otherApps] = apps
 	// app1 creates a counter
 	const { id: counterId } = await app1.actions.createCounter({})
 
 	// app1 has an empty counter
 	t.is(await getCounterValue(app1, counterId), 0)
-	// app2 does not have a counter yet
-	t.is(await getCounterValue(app2, counterId), null)
 
-	// sync app2 with app1
-	await app1.messageLog.serve((source) => app2.messageLog.sync(source))
+	for (const otherApp of otherApps) {
+		// assert the other app does not have a counter
+		t.is(await getCounterValue(otherApp, counterId), null)
+		// sync the other app
+		await app1.messageLog.serve((source) => otherApp.messageLog.sync(source))
+		// it should have a counter now
+		t.is(await getCounterValue(otherApp, counterId), 0)
+	}
 
-	// app2 should have the empty counter now
-	t.is(await getCounterValue(app2, counterId), 0)
+	enum Actions {
+		Increment,
+		Sync,
+	}
 
 	// perform some random actions
-	const actions = ["increment", "sync"] as const
-	for (let i = 0; i < 100; i++) {
-		const selectedAction = actions[random(actions.length)]
-		if (selectedAction == "increment") {
-			const app = [app1, app2][random(2)]
+	for (let i = 0; i < 200; i++) {
+		// written this way so that it keeps the typescript literal type
+		const selectedAction = enumRandom(Actions)
+		if (selectedAction == Actions.Increment) {
+			const app = apps[random(apps.length)]
 			const beforeValue = await getCounterValue(app, counterId)
 			await app.actions.incrementCounter({ id: counterId })
 			const afterValue = await getCounterValue(app, counterId)
 			t.is(afterValue!, beforeValue! + 1)
-		} else if (selectedAction == "sync") {
-			const [sourceApp, targetApp] = [
-				[app2, app1],
-				[app1, app2],
-			][random(2)]
+		} else if (selectedAction == Actions.Sync) {
+			const [sourceApp, targetApp] = arrayRandomN(apps, 2)
 			const sourceCounterRecord = await sourceApp.db.get<CounterRecord>("counter", counterId)
 			const targetCounterRecord = await targetApp.db.get<CounterRecord>("counter", counterId)
 			if (sourceCounterRecord == null) {
@@ -209,6 +239,7 @@ test("crdt counter with randomized events", async (t) => {
 				return
 			}
 			t.is(expectedCounterRecord.id, targetCounterRecordAfterSync.id)
+			t.deepEqual(JSON.parse(expectedCounterRecord.value), JSON.parse(targetCounterRecordAfterSync.value))
 		}
 	}
 })
