@@ -22,8 +22,8 @@ test("sort 10000 random keys", async (t) => {
 	}
 })
 
-test("sort 20000 random message IDs", async (t) => {
-	const n = 20000
+test("sort 100000 random message IDs", async (t) => {
+	const n = 100000
 	const keys: Uint8Array[] = new Array(n)
 	const ids: string[] = new Array(n)
 	for (let i = 0; i < n; i++) {
