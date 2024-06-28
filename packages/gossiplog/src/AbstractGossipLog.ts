@@ -30,7 +30,6 @@ export interface GossipLogInit<Payload = unknown> {
 	verifySignature?: (signature: Signature, message: Message<Payload>) => Awaitable<void>
 
 	signer?: Signer<Payload>
-	indexAncestors?: boolean
 	rebuildMerkleIndex?: boolean
 }
 
@@ -67,7 +66,6 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 	} satisfies ModelSchema
 
 	public readonly topic: string
-	public readonly indexAncestors: boolean
 	public readonly signer: Signer<Payload>
 
 	public abstract db: AbstractModelDB
@@ -86,7 +84,6 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		assert(topicPattern.test(init.topic), "invalid topic (must match [a-zA-Z0-9\\.\\-])")
 
 		this.topic = init.topic
-		this.indexAncestors = init.indexAncestors ?? false
 		this.signer = init.signer ?? ed25519.create()
 
 		this.#apply = init.apply
