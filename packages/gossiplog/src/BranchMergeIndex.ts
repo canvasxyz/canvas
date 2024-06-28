@@ -1,4 +1,4 @@
-import type { AbstractModelDB, ModelsInit } from "@canvas-js/modeldb"
+import type { AbstractModelDB, ModelSchema } from "@canvas-js/modeldb"
 
 export type BranchMergeRecord = {
 	source_branch: number
@@ -20,7 +20,7 @@ export class BranchMergeIndex {
 			target_message_id: "string",
 			target_clock: "integer",
 		},
-	} satisfies ModelsInit
+	} satisfies ModelSchema
 
 	constructor(private readonly db: AbstractModelDB) {}
 

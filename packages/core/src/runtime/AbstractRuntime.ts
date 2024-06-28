@@ -6,7 +6,7 @@ import { TypeTransformerFunction } from "@ipld/schema/typed.js"
 
 import type { Signature, Action, Message, Session, SignerCache } from "@canvas-js/interfaces"
 
-import { AbstractModelDB, Effect, ModelValue, ModelsInit, lessThan } from "@canvas-js/modeldb"
+import { AbstractModelDB, Effect, ModelValue, ModelSchema, lessThan } from "@canvas-js/modeldb"
 import { GossipLogConsumer, encodeId, MAX_MESSAGE_ID, MIN_MESSAGE_ID, AbstractGossipLog } from "@canvas-js/gossiplog"
 import { assert, mapValues } from "@canvas-js/utils"
 
@@ -20,20 +20,20 @@ export type ExecutionContext = {
 }
 
 export abstract class AbstractRuntime {
-	protected static effectsModel: ModelsInit = {
+	protected static effectsModel: ModelSchema = {
 		$effects: {
 			key: "primary", // `${model}/${hash(key)}/${version}
 			value: "bytes?",
 			clock: "integer",
 		},
-	} satisfies ModelsInit
+	} satisfies ModelSchema
 
 	protected static versionsModel = {
 		$versions: {
 			key: "primary", // `${model}/${hash(key)}
 			version: "bytes",
 		},
-	} satisfies ModelsInit
+	} satisfies ModelSchema
 
 	protected static sessionsModel = {
 		$sessions: {
@@ -44,18 +44,18 @@ export abstract class AbstractRuntime {
 			expiration: "integer?",
 			$indexes: [["address"], ["public_key"]],
 		},
-	} satisfies ModelsInit
+	} satisfies ModelSchema
 
-	protected static getModelSchema(modelsInit: ModelsInit, options: { indexHistory: boolean }): ModelsInit {
+	protected static getModelSchema(ModelSchema: ModelSchema, options: { indexHistory: boolean }): ModelSchema {
 		if (options.indexHistory) {
 			return {
-				...modelsInit,
+				...ModelSchema,
 				...AbstractRuntime.sessionsModel,
 				...AbstractRuntime.effectsModel,
 			}
 		} else {
 			return {
-				...modelsInit,
+				...ModelSchema,
 				...AbstractRuntime.sessionsModel,
 				...AbstractRuntime.versionsModel,
 			}

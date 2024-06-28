@@ -2,13 +2,13 @@ import Database, * as sqlite from "better-sqlite3"
 
 import { assert, signalInvalidType } from "@canvas-js/utils"
 
-import { AbstractModelDB, parseConfig, Effect, ModelValue, ModelsInit, QueryParams } from "@canvas-js/modeldb"
+import { AbstractModelDB, parseConfig, Effect, ModelValue, ModelSchema, QueryParams } from "@canvas-js/modeldb"
 
 import { ModelAPI } from "./api.js"
 
 export interface ModelDBOptions {
 	path: string | null
-	models: ModelsInit
+	models: ModelSchema
 }
 
 export class ModelDB extends AbstractModelDB {

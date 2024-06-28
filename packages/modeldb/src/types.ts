@@ -17,9 +17,9 @@ export type PropertyType =
 
 export type IndexInit = string | string[]
 
-export type ModelsInit = Record<string, { $indexes?: IndexInit[] } & Record<string, PropertyType | IndexInit[]>>
+export type ModelSchema = Record<string, { $indexes?: IndexInit[] } & Record<string, PropertyType | IndexInit[]>>
 
-// These are more structured representations of the schema defined by ModelsInit that are easier
+// These are more structured representations of the schema defined by ModelSchema that are easier
 // to work with at runtime
 
 export type PrimaryKeyProperty = { name: string; kind: "primary" }
