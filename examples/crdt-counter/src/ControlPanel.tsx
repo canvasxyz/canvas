@@ -41,8 +41,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({}) => {
 
 		await app.stop()
 
-		console.log("deleting database")
-		await deleteDB(`canvas/${app.topic}`, {})
+		await deleteDB(`canvas/v1/${app.topic}`, {})
 
 		console.log("clearing session signer data", sessionSigner)
 		await sessionSigner?.clear?.(app.topic)
