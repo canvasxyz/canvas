@@ -33,6 +33,8 @@ import {
 	MAX_INBOUND_STREAMS,
 	MAX_OUTBOUND_STREAMS,
 	NEGOTIATE_FULLY,
+	PUSH_RETRY_INTERVAL,
+	PUSH_RETRY_LIMIT,
 	SYNC_RETRY_INTERVAL,
 	SYNC_RETRY_LIMIT,
 	second,
@@ -40,7 +42,7 @@ import {
 
 import { AbstractGossipLog, GossipLogEvents } from "../AbstractGossipLog.js"
 
-import { decodeId, encodeId } from "../ids.js"
+import { decodeId, encodeId, MAX_MESSAGE_ID, MIN_MESSAGE_ID } from "../ids.js"
 import { Client, decodeRequests, encodeResponses } from "../sync/index.js"
 
 import { DelayableController, SyncDeadlockError, SyncTimeoutError, wait } from "../utils.js"
@@ -143,9 +145,7 @@ export class GossipLogService<Payload = unknown>
 					await this.wait(interval)
 				}
 
-				const [_, parentIds] = await this.messageLog.getClock()
-				const heads = parentIds.map(encodeId)
-				this.schedulePush(peerId, heads)
+				this.schedulePush(peerId)
 			},
 
 			onDisconnect: (peerId) => {
@@ -392,24 +392,37 @@ export class GossipLogService<Payload = unknown>
 		}
 	}
 
-	private schedulePush(peerId: PeerId, heads: Uint8Array[]) {
+	private schedulePush(peerId: PeerId) {
 		this.log("scheduling push to %p", peerId)
 		this.pushQueue
-			.add(async () => {
-				await this.push(peerId, heads)
+			.add(() => this.push(peerId))
+			.catch((err) => {
+				this.log.error("push failed: %O", err)
 			})
-			.catch((err) => this.log.error("push failed: %O", err))
 	}
 
-	private async push(peerId: PeerId, heads: Uint8Array[]) {
+	private async push(peerId: PeerId) {
+		this.log("initiating push to %p", peerId)
 		const connection = this.components.connectionManager
 			.getConnections(peerId)
 			.find((connection) => connection.transient === false)
 
 		if (connection === undefined) {
-			this.log("cancelling push: no longer connected to %p", peerId)
+			this.log("no longer connected to %p", peerId)
 			return
 		}
+
+		await this.retry("push", () => this.#push(connection), {
+			interval: PUSH_RETRY_INTERVAL,
+			limit: PUSH_RETRY_LIMIT,
+		})
+	}
+
+	async #push(connection: Connection) {
+		const peerId = connection.remotePeer
+
+		const [_, heads] = await this.messageLog.getClock()
+		this.log("pushing heads %o to peer %p", heads, peerId)
 
 		const protocolSelectSignal = AbortSignal.timeout(DEFAULT_PROTOCOL_SELECT_TIMEOUT)
 		const stream = await connection
@@ -422,13 +435,9 @@ export class GossipLogService<Payload = unknown>
 		this.log("opened outgoing push stream %s to peer %p", stream.id, peerId)
 
 		try {
+			const data = cbor.encode(heads.map(encodeId))
 			const source = pushable()
-			await Promise.all([
-				// ...
-				pipe(source, lp.encode, stream.sink),
-				// ...
-				source.push(cbor.encode(heads)).end().onEmpty(),
-			])
+			await Promise.all([pipe(source, lp.encode, stream.sink), source.push(data).end().onEmpty()])
 
 			await stream.close()
 			this.log("closed outgoing push stream %s to peer %p", stream.id, peerId)
@@ -468,29 +477,10 @@ export class GossipLogService<Payload = unknown>
 			return
 		}
 
-		for (let n = 0; n < SYNC_RETRY_LIMIT; n++) {
-			try {
-				await this.#sync(connection)
-				return
-			} catch (err) {
-				if (err instanceof SyncDeadlockError) {
-					this.log("deadlock with %p", peerId)
-				} else {
-					this.log.error("failed to sync with peer: %O", err)
-				}
-
-				if (this.controller.signal.aborted) {
-					break
-				} else {
-					const interval = Math.floor(Math.random() * SYNC_RETRY_INTERVAL)
-					this.log("waiting %dms before trying again (%d/%d)", interval, n + 1, SYNC_RETRY_LIMIT)
-					await this.wait(interval)
-					continue
-				}
-			}
-		}
-
-		throw new Error("exceeded sync retry limit")
+		await this.retry("sync", () => this.#sync(connection), {
+			interval: SYNC_RETRY_INTERVAL,
+			limit: SYNC_RETRY_LIMIT,
+		})
 	}
 
 	async #sync(connection: Connection): Promise<void> {
@@ -534,12 +524,31 @@ export class GossipLogService<Payload = unknown>
 		}
 
 		if (messageCount !== 0) {
-			const [_, parentIds] = await this.messageLog.getClock()
-			const heads = parentIds.map(encodeId)
 			for (const peer of this.#pubsub.getSubscribers(this.messageLog.topic)) {
-				this.schedulePush(peer, heads)
+				this.schedulePush(peer)
 			}
 		}
+	}
+
+	private async retry(name: string, callback: () => Promise<void>, options: { interval: number; limit: number }) {
+		for (let n = 0; n < options.limit; n++) {
+			try {
+				await callback()
+				return
+			} catch (err) {
+				this.log.error("%s failed: %O", name, err)
+				if (this.controller.signal.aborted) {
+					break
+				} else {
+					const interval = Math.floor(Math.random() * options.interval)
+					this.log("waiting %dms before trying %s again (%d/%d)", interval, name, n + 1, options.limit)
+					await this.wait(interval)
+					continue
+				}
+			}
+		}
+
+		throw new Error("exceeded sync retry limit")
 	}
 
 	private async wait(interval: number) {
