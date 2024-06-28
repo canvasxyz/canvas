@@ -1,4 +1,5 @@
 import { createLibp2p } from "libp2p"
+import { PeerId } from "@libp2p/interface"
 import { identify } from "@libp2p/identify"
 import { webSockets } from "@libp2p/websockets"
 import { all } from "@libp2p/websockets/filters"
@@ -14,20 +15,24 @@ import { ping } from "@libp2p/ping"
 
 import { peerIdFromBytes, peerIdFromString } from "@libp2p/peer-id"
 import { createEd25519PeerId, exportToProtobuf, createFromProtobuf } from "@libp2p/peer-id-factory"
-import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 
 import * as cbor from "@ipld/dag-cbor"
+import { fromString, toString } from "uint8arrays"
+import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
+import { bytesToHex } from "@noble/hashes/utils"
+import { sha256 } from "@noble/hashes/sha256"
 
 import { AbstractGossipLog } from "@canvas-js/gossiplog"
 import { gossiplog } from "@canvas-js/gossiplog/service"
 
 import type { ServiceMap, NetworkConfig } from "../../interface.js"
-import { fromString, toString } from "uint8arrays"
-import { PeerId } from "@libp2p/interface"
 import { second } from "../../constants.js"
 
 export const defaultRelayServer =
 	"/dns4/canvas-relay-server.fly.dev/tcp/443/wss/p2p/12D3KooWLR64DxxPcW1vA6uyC74RYHEsoHwJEmCJRavTihLYmBZN"
+
+export const defaultTurnServer = "turn:canvas-turn-server.fly.dev:3478?transport=udp"
+export const defaultStunServer = "stun:stun.l.google.com:19302"
 
 type TopicPeerRecord = {
 	id: Uint8Array
@@ -79,8 +84,15 @@ export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: Abst
 			webSockets({ filter: all }),
 			webRTC({
 				rtcConfiguration: {
-					iceServers: [{ urls: ["stun:stun.l.google.com:19302"] }],
 					iceTransportPolicy: "all",
+					iceServers: [
+						{ urls: [defaultStunServer] },
+						{
+							urls: [defaultTurnServer],
+							username: messageLog.topic,
+							credential: bytesToHex(sha256(messageLog.topic)),
+						},
+					],
 				},
 			}),
 			circuitRelayTransport({ discoverRelays: 1 }),
