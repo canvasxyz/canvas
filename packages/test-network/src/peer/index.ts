@@ -5,18 +5,18 @@ import { bytesToHex } from "@noble/hashes/utils"
 import { nanoid } from "nanoid"
 
 import { GossipLog } from "@canvas-js/gossiplog/sqlite"
+import { getLibp2p } from "@canvas-js/gossiplog/libp2p/node"
 
 import { Socket } from "../socket.js"
 import { topic } from "../constants.js"
-
-import { getLibp2p } from "./libp2p.js"
+import { bootstrapList, listen, announce } from "./config.js"
 
 const { SERVICE_NAME } = process.env
 
 async function start() {
 	const messageLog = new GossipLog<string>({ directory: "data", topic, apply: () => {} })
 
-	const libp2p = await getLibp2p(messageLog)
+	const libp2p = await getLibp2p({ bootstrapList, listen, announce }, messageLog)
 
 	const socket = await Socket.open(libp2p, `ws://dashboard:8000`)
 
@@ -56,11 +56,13 @@ async function start() {
 
 	const gossipsub = libp2p.services.pubsub as GossipSub
 	gossipsub.addEventListener("gossipsub:graft", ({ detail: { topic, peerId } }) => {
+		console.log("gossipsub:graft", topic, peerId)
 		const peers = gossipsub.getMeshPeers(topic)
 		socket.post("gossipsub:mesh:update", { topic, peers })
 	})
 
 	gossipsub.addEventListener("gossipsub:prune", ({ detail: { topic, peerId } }) => {
+		console.log("gossipsub:prune", topic, peerId)
 		const peers = gossipsub.getMeshPeers(topic)
 		socket.post("gossipsub:mesh:update", { topic, peers })
 	})
@@ -84,12 +86,6 @@ async function start() {
 
 	await setTimeout(delay)
 	await libp2p.start()
-
-	// const topicPeers = new Set<string>()
-	// libp2p.register(getTopicDHTProtocol(topic), {
-	// 	onConnect: (peerId) => void topicPeers.add(peerId.toString()),
-	// 	onDisconnect: (peerId) => void topicPeers.delete(peerId.toString()),
-	// })
 
 	const intervalId = setInterval(() => void libp2p.services.gossiplog.append(nanoid()), 2000)
 	controller.signal.addEventListener("abort", () => clearInterval(intervalId))

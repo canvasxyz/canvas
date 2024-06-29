@@ -19,14 +19,14 @@ export class FunctionRuntime extends AbstractRuntime {
 		topic: string,
 		signers: SignerCache,
 		contract: Contract,
-		options: { indexHistory?: boolean; clearModelDB?: boolean } = {},
+		options: { indexHistory?: boolean } = {},
 	): Promise<FunctionRuntime> {
 		assert(contract.actions !== undefined, "contract initialized without actions")
 		assert(contract.models !== undefined, "contract initialized without models")
 
 		const { indexHistory = true } = options
 		const models = AbstractRuntime.getModelSchema(contract.models, { indexHistory })
-		const db = await target.openDB({ path, topic, clear: options.clearModelDB }, models)
+		const db = await target.openDB({ path, topic }, models)
 
 		const argsTransformers: Record<
 			string,

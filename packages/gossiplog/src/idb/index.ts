@@ -11,7 +11,7 @@ import { MerkleIndex } from "../MerkleIndex.js"
 export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 	public static async open<Payload>(init: GossipLogInit<Payload>) {
 		const db = await ModelDB.initialize({
-			name: `canvas/${init.topic}`,
+			name: `canvas/v1/${init.topic}`,
 			models: AbstractGossipLog.schema,
 		})
 

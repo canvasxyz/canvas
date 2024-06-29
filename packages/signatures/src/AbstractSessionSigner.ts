@@ -33,7 +33,7 @@ export abstract class AbstractSessionSigner<AuthorizationData, WalletAddress ext
 		public readonly scheme: SignatureScheme<Action | Session<AuthorizationData>>,
 		options: AbstractSessionSignerOptions = {},
 	) {
-		this.log = logger(`canvas:${key}`)
+		this.log = logger(`canvas:signer:${key}`)
 		this.sessionDuration = options.sessionDuration ?? null
 	}
 
@@ -85,13 +85,17 @@ export abstract class AbstractSessionSigner<AuthorizationData, WalletAddress ext
 		const did = await Promise.resolve(options.did ?? this.getDid())
 		const key = `canvas/${topic}/${did}`
 
+		this.log("getting session for topic %s and DID %s", topic, did)
+
 		if (this.#cache.has(key)) {
 			const { session, signer } = this.#cache.get(key)!
+			this.log("found session and signer in cache")
 			return { payload: session, signer }
 		}
 
 		const value = target.get(key)
 		if (value !== null) {
+			this.log("found session and signer in storage")
 			const entry = json.parse<{ type: string; privateKey: Uint8Array; session: Session }>(value)
 			const { type, privateKey, session } = entry
 
@@ -99,6 +103,7 @@ export abstract class AbstractSessionSigner<AuthorizationData, WalletAddress ext
 			return { payload: session, signer }
 		}
 
+		this.log("session and signer not found")
 		return null
 	}
 

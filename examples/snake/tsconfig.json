@@ -15,7 +15,6 @@
 	"references": [
 		{ "path": "../../packages/chain-ethereum" },
 		{ "path": "../../packages/core" },
-		{ "path": "../../packages/hooks" },
-		{ "path": "../../packages/templates" }
+		{ "path": "../../packages/hooks" }
 	]
 }

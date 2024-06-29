@@ -1,5 +1,5 @@
-import React, { useCallback, useContext, useEffect, useRef, useState } from "react"
-import { Eip1193Provider, BrowserProvider, EventEmitterable } from "ethers"
+import React, { useCallback, useContext, useState } from "react"
+import { Eip1193Provider, EventEmitterable } from "ethers"
 
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 
@@ -15,7 +15,6 @@ export interface ConnectSIWEBurnerProps {}
 export const ConnectSIWEBurner: React.FC<ConnectSIWEBurnerProps> = ({}) => {
 	const { app, sessionSigner, setSessionSigner, address, setAddress } = useContext(AppContext)
 
-	const [provider, setProvider] = useState<BrowserProvider | null>(null)
 	const [error, setError] = useState<Error | null>(null)
 
 	const connect = useCallback(async () => {
@@ -25,13 +24,10 @@ export const ConnectSIWEBurner: React.FC<ConnectSIWEBurnerProps> = ({}) => {
 		}
 
 		const signer = new SIWESigner({ chainId: 1 })
-		const {
-			payload: { did },
-		} = await signer.newSession(app.topic)
-		const address = did
-		setAddress(address)
+		const did = await signer.getDid()
+		setAddress(did)
 		setSessionSigner(signer)
-	}, [app, provider])
+	}, [app])
 
 	const disconnect = useCallback(async () => {
 		setAddress(null)

@@ -1,10 +1,9 @@
 import * as cbor from "@ipld/dag-cbor"
 
-import { bytesToHex } from "@noble/hashes/utils"
+import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 import { peerIdFromBytes, peerIdFromString } from "@libp2p/peer-id"
 import { multiaddr } from "@multiformats/multiaddr"
 import { GossipSub } from "@chainsafe/libp2p-gossipsub"
-import { nanoid } from "nanoid"
 
 import Debugger from "debug"
 
@@ -12,16 +11,14 @@ import Debugger from "debug"
 ;(Debugger as any).useColors = () => false
 
 import { GossipLog } from "@canvas-js/gossiplog/idb"
+import { getLibp2p, defaultRelayServer } from "@canvas-js/gossiplog/libp2p/browser"
 
 import { Socket } from "../../socket.js"
 import { topic } from "../../constants.js"
 
-import { getLibp2p } from "./libp2p.js"
-import { relayServer } from "./config.js"
-
 const messageLog = await GossipLog.open<string>({ topic, apply: () => {} })
 
-const libp2p = await getLibp2p(messageLog)
+const libp2p = await getLibp2p({}, messageLog)
 const socket = await Socket.open(libp2p, `ws://localhost:8000`)
 
 Object.assign(window, { libp2p, ping: (peerId: string) => libp2p.services.ping.ping(peerIdFromString(peerId)) })
@@ -43,13 +40,11 @@ libp2p.addEventListener("stop", () => {
 	socket.post("stop", {})
 })
 
-const relayServerPeerId = relayServer && relayServer.getPeerId()
-
-// const getProtocol = (topic: string) => `/canvas/sync/v1/${topic}`
+const relayServerPeerId = multiaddr(defaultRelayServer).getPeerId()
 
 type TopicPeerRecord = {
 	id: Uint8Array
-	addresses: { isCertified: boolean; multiaddr: Uint8Array }[]
+	addresses: Uint8Array[]
 	protocols: string[]
 	peerRecordEnvelope: Uint8Array | null
 }
@@ -69,7 +64,7 @@ libp2p.addEventListener("connection:open", ({ detail: { id, remotePeer, remoteAd
 					}
 
 					await libp2p.peerStore.save(peerId, {
-						addresses: addresses.map(({ isCertified, multiaddr: ma }) => ({ isCertified, multiaddr: multiaddr(ma) })),
+						addresses: addresses.map((addr) => ({ isCertified: true, multiaddr: multiaddr(addr) })),
 						protocols: protocols,
 						peerRecordEnvelope: peerRecordEnvelope ?? undefined,
 					})
@@ -119,8 +114,10 @@ libp2p.services.pubsub.addEventListener("gossipsub:prune", ({ detail: { topic } 
 
 // libp2p.start()
 
-const delay = 1000 + Math.random() * 20000
-setTimeout(() => libp2p.start(), delay)
+// const delay = 1000 + Math.random() * 20000
+// setTimeout(() => libp2p.start(), delay)
+
+libp2p.start()
 
 // const topicPeers = new Set<string>()
 // libp2p.register(getTopicDHTProtocol(topic), {
@@ -128,4 +125,4 @@ setTimeout(() => libp2p.start(), delay)
 // 	onDisconnect: (peerId) => void topicPeers.delete(peerId.toString()),
 // })
 
-setInterval(() => void libp2p.services.gossiplog.append(nanoid()), 1000)
+// setInterval(() => void libp2p.services.gossiplog.append(nanoid()), 1000)

@@ -8,6 +8,9 @@
 	"files": [
 		"lib"
 	],
+	"scripts": {
+		"test": "ava"
+	},
 	"dependencies": {
 		"@canvas-js/interfaces": "0.10.0-beta.4",
 		"@canvas-js/signatures": "0.10.0-beta.4",

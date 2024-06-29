@@ -15,7 +15,6 @@
 		"@canvas-js/gossiplog": "0.10.0-beta.4",
 		"@canvas-js/hooks": "0.10.0-beta.4",
 		"@canvas-js/interfaces": "0.10.0-beta.4",
-		"@canvas-js/templates": "0.10.0-beta.4",
 		"@headlessui/react": "^1.7.19",
 		"@heroicons/react": "^2.1.4",
 		"@irys/query": "^0.0.2",

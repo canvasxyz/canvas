@@ -5,9 +5,56 @@ import { ethers } from "ethers"
 
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
-import { ChannelChat } from "@canvas-js/templates"
+import type { Contract } from "@canvas-js/core"
 
 type Channel = { name: string }
+
+const ChannelChat = {
+	models: {
+		channels: {
+			name: "primary",
+		},
+		memberships: {
+			id: "primary",
+			user: "string",
+			channel: "string",
+			timestamp: "integer",
+		},
+		messages: {
+			id: "primary",
+			message: "string",
+			address: "string",
+			timestamp: "integer",
+			channel: "string",
+			$indexes: [["channel"], ["address"]],
+		},
+	},
+	actions: {
+		async leaveChannel(db, { channel }, { address }) {
+			await db.delete("memberships", address + channel)
+		},
+		async joinChannel(db, { channel }, { address }) {
+			if (!channel || !channel.trim()) {
+				throw new Error()
+			}
+
+			await db.set("channels", { name: channel })
+			await db.set("memberships", { id: `${address}/${channel}`, user: address, channel })
+		},
+		async sendMessage(db, { message, channel }, { address, timestamp, id }) {
+			if (!message || !channel || !message.trim() || !channel.trim()) {
+				throw new Error()
+			}
+
+			await db.set("messages", { id, message, address, channel, timestamp })
+		},
+		async deleteMessage(db, { id }, { address }) {
+			const message = await db.get("messages", id)
+			if (!message || message.address !== address) throw new Error()
+			await db.delete("messages", id)
+		},
+	},
+} satisfies Contract
 
 function App() {
 	const wallet = ethers.Wallet.createRandom()

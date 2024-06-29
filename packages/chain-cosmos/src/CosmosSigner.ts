@@ -149,3 +149,10 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 		}
 	}
 }
+
+export {
+	validateAminoSignedSessionData,
+	validateEthereumSignedSessionData,
+	validateArbitrarySignedSessionData,
+	validateBytesSignedSessionData,
+}

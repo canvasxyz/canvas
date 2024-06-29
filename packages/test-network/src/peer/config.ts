@@ -1,15 +1,6 @@
-import { createFromProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
 import { multiaddr } from "@multiformats/multiaddr"
 
-const { PEER_ID, BOOTSTRAP_LIST, LISTEN, ANNOUNCE } = process.env
-
-export async function getPeerId() {
-	if (typeof PEER_ID === "string") {
-		return await createFromProtobuf(Buffer.from(PEER_ID, "base64"))
-	} else {
-		return await createEd25519PeerId()
-	}
-}
+const { BOOTSTRAP_LIST, LISTEN, ANNOUNCE } = process.env
 
 export const bootstrapList = BOOTSTRAP_LIST === undefined ? [] : BOOTSTRAP_LIST.split(" ")
 

@@ -1,6 +1,5 @@
 <script>
   import { ref } from 'vue'
-  import MessagingDemo from "./MessagingDemo.jsx"
   import GameDemo from "./GameDemo.jsx"
 
   // import { applyPureReactInVue } from "veaury"
@@ -10,7 +9,6 @@
 
   export default {
     components: {
-      MessagingDemo: applyPureReactInVue(MessagingDemo),
       GameDemo: applyPureReactInVue(GameDemo)
     }
   }
@@ -20,11 +18,6 @@
   <div class="DemoCell GameDemo">
 		<client-only>
       <GameDemo />
-		</client-only>
-  </div>
-  <div class="DemoCell MessagingDemo">
-		<client-only>
-      <MessagingDemo />
 		</client-only>
   </div>
 </template>
@@ -61,16 +54,6 @@
     z-index: 10;
     box-shadow: 1px 1px 6px rgba(0,0,0,0.2);
   }
-}
-.DemoCell.MessagingDemo input[type="text"] {
-  background: var(--vp-c-bg);
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-family: var(--vp-font-family-base);
-  font-size: 15px;
-  width: calc(100% - 40px);
-  position: absolute;
-  bottom: 12px;
 }
 .DemoCell input[type="submit"] {
   display: inline-block;

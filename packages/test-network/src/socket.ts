@@ -38,7 +38,7 @@ export class Socket {
 			} else if (event.type === "provide") {
 				// libp2p.services.dht.refreshRoutingTable().catch((err) => console.error(err))
 			} else if (event.type === "query") {
-				libp2p.services.dht.refreshRoutingTable().catch((err) => console.error(err))
+				libp2p.services.dht?.refreshRoutingTable().catch((err) => console.error(err))
 			} else if (event.type === "disconnect") {
 				libp2p.hangUp(peerIdFromString(event.target)).then(
 					() => console.log(`disconnected from ${event.target}`),

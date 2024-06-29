@@ -48,10 +48,7 @@ export const ConnectMagic = ({ publicMagicApiKey, rpcUrl, chainId }: ConnectMagi
 						const signer = await provider.getSigner()
 						const network = await provider.getNetwork()
 						const sessionSigner = new SIWESigner({ signer, chainId: Number(network.chainId) })
-						const {
-							payload: { did },
-						} = await sessionSigner.newSession(app!.topic)
-						const address = did
+						const address = await sessionSigner.getDid()
 						setAddress(address)
 						setSessionSigner(sessionSigner)
 					}

@@ -1,41 +1,24 @@
-import { PeerId, TypedEventEmitter, CustomEvent } from "@libp2p/interface"
-import { Libp2p } from "@libp2p/interface"
+import { Libp2p, PeerId, TypedEventEmitter, CustomEvent } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
 import { sha256 } from "@noble/hashes/sha2"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 
 import type pg from "pg"
 
-import { Signature, Action, Session, Message, Signer, SessionSigner, SignerCache } from "@canvas-js/interfaces"
+import { Signature, Action, Session, Message, SessionSigner, SignerCache } from "@canvas-js/interfaces"
 import { AbstractModelDB, Model } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
-import { AbstractGossipLog, GossipLogEvents } from "@canvas-js/gossiplog"
-import type { AbstractSessionSigner } from "@canvas-js/signatures"
+import { AbstractGossipLog, GossipLogEvents, NetworkConfig, ServiceMap } from "@canvas-js/gossiplog"
 import { assert } from "@canvas-js/utils"
 
 import target from "#target"
 
 import type { Contract, ActionImplementationFunction, ActionImplementationObject } from "./types.js"
-import type { ServiceMap } from "./targets/interface.js"
 import { Runtime, createRuntime } from "./runtime/index.js"
 import { validatePayload } from "./schema.js"
 
 export type { Model } from "@canvas-js/modeldb"
 export type { PeerId } from "@libp2p/interface"
-
-export interface NetworkConfig {
-	start?: boolean
-
-	/** array of local WebSocket multiaddrs, e.g. "/ip4/127.0.0.1/tcp/3000/ws" */
-	listen?: string[]
-
-	/** array of public WebSocket multiaddrs, e.g. "/dns4/myapp.com/tcp/443/wss" */
-	announce?: string[]
-
-	bootstrapList?: string[]
-	minConnections?: number
-	maxConnections?: number
-}
 
 export interface CanvasConfig<T extends Contract = Contract> extends NetworkConfig {
 	topic?: string
@@ -82,15 +65,8 @@ export type ApplicationData = {
 }
 
 export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<CanvasEvents> {
-	public static async initialize<T_ extends Contract>(config: CanvasConfig<T_>): Promise<Canvas<T_>> {
-		const {
-			path = null,
-			contract,
-			signers: initSigners = [],
-			runtimeMemoryLimit,
-			indexHistory = true,
-			reset = false,
-		} = config
+	public static async initialize<T extends Contract>(config: CanvasConfig<T>): Promise<Canvas<T>> {
+		const { path = null, contract, signers: initSigners = [], runtimeMemoryLimit, indexHistory = true } = config
 
 		const signers = new SignerCache(initSigners.length === 0 ? [new SIWESigner()] : initSigners)
 
@@ -111,14 +87,13 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 
 		const runtime = await createRuntime(path, topic, signers, contract, {
 			runtimeMemoryLimit,
-			clearModelDB: reset,
 			indexHistory: indexHistory,
 		})
 
 		const messageLog = await target.openGossipLog(
-			{ topic, path, clear: reset },
+			{ topic, path },
 			{
-				topic: runtime.topic,
+				topic: topic,
 				apply: runtime.getConsumer(),
 				validatePayload: validatePayload,
 				verifySignature: verifySignature,
@@ -126,7 +101,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			},
 		)
 
-		const libp2p = await target.createLibp2p(messageLog, { ...config, signers })
+		const libp2p = await target.createLibp2p(config, messageLog)
 
 		return new Canvas(signers, messageLog, libp2p, runtime)
 	}
@@ -146,7 +121,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 	private constructor(
 		public readonly signers: SignerCache,
 		public readonly messageLog: AbstractGossipLog<Action | Session>,
-		public readonly libp2p: Libp2p<ServiceMap>,
+		public readonly libp2p: Libp2p<ServiceMap<Action | Session>>,
 		private readonly runtime: Runtime,
 	) {
 		super()
@@ -155,7 +130,11 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		this.log("initialized with peerId %p", libp2p.peerId)
 
 		this.libp2p.addEventListener("peer:discovery", ({ detail: { id, multiaddrs } }) => {
-			this.log("discovered peer %p with addresses %o", id, multiaddrs)
+			this.log(
+				"discovered peer %p with addresses %o",
+				id,
+				multiaddrs.map((addr) => addr.toString()),
+			)
 		})
 
 		this.libp2p.addEventListener("peer:connect", ({ detail: peerId }) => {
@@ -174,22 +153,29 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 
 		for (const name of runtime.actionNames) {
 			const action: ActionAPI = async (args: any, options: ActionOptions = {}) => {
+				this.log("executing action %s %o", name, args)
 				const timestamp = Date.now()
 
-				const sessionSigner = (options.signer ?? signers.getFirst()) as AbstractSessionSigner<any>
+				const sessionSigner = options.signer ?? signers.getFirst()
 				assert(sessionSigner !== undefined, "signer not found")
 
+				this.log("using session signer %s", sessionSigner.key)
 				let session = await sessionSigner.getSession(this.topic)
 
 				// check that a session for the delegate signer exists in the log and hasn't expired
-				if (session !== null) {
+				if (session === null) {
+					this.log("no session found")
+				} else {
+					this.log("got session for public key %s", session.payload.publicKey)
+
 					const sessionIds = await this.getSessions({
-						address: session.payload.did,
+						did: session.payload.did,
 						publicKey: session.signer.publicKey,
 						minExpiration: timestamp,
 					})
 
 					if (sessionIds.length === 0) {
+						this.log("the session was lost or has expired")
 						session = null
 					}
 				}
@@ -197,8 +183,9 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 				// if the delegate signer doesn't exist, or if the session expired,
 				// create and append a new one
 				if (session === null) {
+					this.log("creating a new session topic %s with signer %s", this.topic, sessionSigner.key)
 					session = await sessionSigner.newSession(this.topic)
-					await this.append(session.payload, { signer: session.signer })
+					await this.libp2p.services.gossiplog.append(session.payload, { signer: session.signer })
 				}
 
 				const argsTransformer = runtime.argsTransformers[name]
@@ -207,15 +194,13 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 				const argsRepresentation = argsTransformer.toRepresentation(args)
 				assert(argsRepresentation !== undefined, "action args did not validate the provided schema type")
 
-				const { id, signature, message, recipients } = await this.append<Action>(
+				const { id, signature, message, recipients } = await this.libp2p.services.gossiplog.append<Action>(
 					{
 						type: "action",
 						did: session.payload.did,
 						name,
 						args: argsRepresentation,
-						context: {
-							timestamp,
-						},
+						context: { timestamp },
 					},
 					{ signer: session.signer },
 				)
@@ -233,30 +218,35 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 	 * Get existing sessions
 	 */
 	public async getSessions(query: {
-		address: string
+		did: string
 		publicKey: string
 		minExpiration?: number
-	}): Promise<{ id: string; address: string; publicKey: string; expiration: number | null }[]> {
+	}): Promise<{ id: string; did: string; publicKey: string; expiration: number | null }[]> {
+		this.log(
+			"get sessions for did %s and public key %s with min expiration %d",
+			query.did,
+			query.publicKey,
+			query.minExpiration ?? Infinity,
+		)
+
 		const sessions = await this.db.query<{
 			message_id: string
 			public_key: string
-			address: string
-			expiration: number
+			did: string
+			expiration: number | null
 		}>("$sessions", {
-			select: { message_id: true, public_key: true, address: true, expiration: true },
-			where: {
-				public_key: query.publicKey,
-				address: query.address,
-				expiration: { gte: query.minExpiration ?? 0 },
-			},
+			select: { message_id: true, public_key: true, did: true, expiration: true },
+			where: { public_key: query.publicKey, did: query.did },
 		})
 
-		return sessions.map(({ message_id, public_key, address, expiration }) => ({
-			id: message_id,
-			publicKey: public_key,
-			address,
-			expiration: expiration === Number.MAX_SAFE_INTEGER ? null : expiration,
-		}))
+		return sessions
+			.filter(({ expiration }) => (expiration ?? 0) <= (query.minExpiration ?? Infinity))
+			.map((record) => ({
+				id: record.message_id,
+				publicKey: record.public_key,
+				did: record.did,
+				expiration: record.expiration,
+			}))
 	}
 
 	public updateSigners(signers: SessionSigner[]) {
@@ -304,21 +294,6 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		return { id, recipients }
 	}
 
-	/**
-	 * Append a new unsigned message to the end of the log (ie an action generated locally)
-	 * Low-level utility method for internal and debugging use.
-	 *
-	 * The default signer on the message log will be used if none is provided.
-	 * The normal way to apply actions is to use the `Canvas.actions[name](...)` functions.
-	 */
-	public async append<Payload extends Session | Action>(
-		payload: Payload,
-		options: { signer?: Signer<Session | Action> },
-	): Promise<{ id: string; signature: Signature; message: Message<Payload>; recipients: Promise<PeerId[]> }> {
-		const { id, signature, message, recipients } = await this.libp2p.services.gossiplog.append(payload, options)
-		return { id, signature, message: message as Message<Payload>, recipients }
-	}
-
 	public async getMessage(
 		id: string,
 	): Promise<[signature: Signature, message: Message<Action | Session>] | [null, null]> {
@@ -338,6 +313,8 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 	 */
 	public async getSession(query: { address: string; publicKey: string; timestamp?: number }): Promise<string | null> {
 		const sessions = await this.db.query<{ message_id: string }>("$sessions", {
+			select: { message_id: true },
+			orderBy: { message_id: "desc" },
 			where: {
 				public_key: query.publicKey,
 				address: query.address,

@@ -1,8 +1,6 @@
-import type { Libp2p } from "libp2p"
+import type { PlatformTarget } from "../interface.js"
 
-import type { PlatformTarget, ServiceMap } from "../interface.js"
-
-export default {
+const target: PlatformTarget = {
 	async openDB(location, models) {
 		throw new Error("Unsupported platform")
 	},
@@ -11,7 +9,9 @@ export default {
 		throw new Error("Unsupported platform")
 	},
 
-	async createLibp2p(messageLog, config): Promise<Libp2p<ServiceMap>> {
+	async createLibp2p(config, messageLog) {
 		throw new Error("Unsupported platform")
 	},
-} satisfies PlatformTarget
+}
+
+export default target

@@ -2,42 +2,36 @@ import type { ExecutionContext } from "ava"
 
 import pDefer, { DeferredPromise } from "p-defer"
 
-import type { PeerId, PubSub, EventHandler } from "@libp2p/interface"
+import type { PeerId, EventHandler } from "@libp2p/interface"
 
 import { Libp2p, createLibp2p } from "libp2p"
 import { identify as identifyService } from "@libp2p/identify"
-import { plaintext } from "@libp2p/plaintext"
+import { noise } from "@chainsafe/libp2p-noise"
 import { yamux } from "@chainsafe/libp2p-yamux"
 import { webSockets } from "@libp2p/websockets"
 import { all } from "@libp2p/websockets/filters"
 import { bootstrap } from "@libp2p/bootstrap"
-import { GossipsubEvents, gossipsub } from "@chainsafe/libp2p-gossipsub"
+import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 
 import { createEd25519PeerId } from "@libp2p/peer-id-factory"
 import { logger } from "@libp2p/logger"
 
 import { Awaitable, Message, Signature } from "@canvas-js/interfaces"
-import { AbstractGossipLog, GossipLogEvents } from "@canvas-js/gossiplog"
-import { GossipLogService, GossipLogServiceInit, gossiplog } from "@canvas-js/gossiplog/service"
+import { ServiceMap, AbstractGossipLog, GossipLogEvents } from "@canvas-js/gossiplog"
+import { GossipLogServiceInit, gossiplog } from "@canvas-js/gossiplog/service"
 
-export type NetworkConfig = Record<string, { port: number; peers?: string[] }>
+export type NetworkInit = Record<string, { port: number; peers?: string[] }>
 
 const getAddress = (port: number) => `/ip4/127.0.0.1/tcp/${port}/ws`
 
-export type ServiceMap<Payload> = {
-	identify: {}
-	pubsub: PubSub<GossipsubEvents>
-	gossiplog: GossipLogService<Payload>
-}
-
-export async function createNetwork<T extends NetworkConfig, Payload>(
+export async function createNetwork<T extends NetworkInit, Payload>(
 	t: ExecutionContext<unknown>,
 	openMessageLog: () => Awaitable<AbstractGossipLog<Payload>>,
-	networkConfig: T,
+	networkInit: T,
 	serviceInit: GossipLogServiceInit = {},
 	options: { start?: boolean; minConnections?: number; maxConnections?: number } = {},
 ): Promise<{ [K in keyof T]: Libp2p<ServiceMap<Payload>> }> {
-	const names = Object.keys(networkConfig)
+	const names = Object.keys(networkInit)
 
 	const peerIds = await Promise.all(
 		names.map<Promise<[string, PeerId]>>((name) => createEd25519PeerId().then((peerId) => [name, peerId])),
@@ -46,12 +40,12 @@ export async function createNetwork<T extends NetworkConfig, Payload>(
 	const log = logger("canvas:gossiplog:test")
 
 	const network: Record<string, Libp2p<ServiceMap<Payload>>> = await Promise.all(
-		Object.entries(networkConfig).map(async ([name, { port, peers }]) => {
+		Object.entries(networkInit).map(async ([name, { port, peers }]) => {
 			const messageLog = await openMessageLog()
 			const peerId = peerIds[name]
 			const address = getAddress(port)
 			const bootstrapList =
-				peers?.map((peerName) => `${getAddress(networkConfig[peerName].port)}/p2p/${peerIds[peerName]}`) ?? []
+				peers?.map((peerName) => `${getAddress(networkInit[peerName].port)}/p2p/${peerIds[peerName]}`) ?? []
 
 			const minConnections = peers?.length ?? 0
 
@@ -60,7 +54,7 @@ export async function createNetwork<T extends NetworkConfig, Payload>(
 				start: false,
 				addresses: { listen: [address] },
 				transports: [webSockets({ filter: all })],
-				connectionEncryption: [plaintext()],
+				connectionEncryption: [noise()],
 				streamMuxers: [yamux()],
 				peerDiscovery: bootstrapList.length > 0 ? [bootstrap({ list: bootstrapList, timeout: 0 })] : [],
 				connectionManager: { minConnections, autoDialInterval: 200 },
@@ -73,7 +67,6 @@ export async function createNetwork<T extends NetworkConfig, Payload>(
 						fallbackToFloodsub: false,
 						allowPublishToZeroTopicPeers: true,
 						globalSignaturePolicy: "StrictSign",
-
 						asyncValidation: true,
 					}),
 

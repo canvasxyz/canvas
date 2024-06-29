@@ -30,7 +30,7 @@ getLibp2p().then(async (libp2p) => {
 		console.log(`connection:close ${remotePeer} ${remoteAddr}`)
 	})
 
-	const topicMap = new Map<string, string[]>()
+	const topicMap = new Map<string, Set<string>>()
 	const topicIndex = new Map<string, Set<string>>()
 
 	app.get("/topicMap", (req, res) => void res.json(Object.fromEntries(topicMap)))
@@ -53,13 +53,14 @@ getLibp2p().then(async (libp2p) => {
 		}
 	})
 
-	const getProtocol = (topic: string) => `/canvas/sync/v1/${topic}`
-	const protocolPrefix = getProtocol("")
+	const protocolPrefix = "/canvas/v1/"
 
 	libp2p.addEventListener("peer:update", ({ detail: { peer, previous } }) => {
-		const topics = peer.protocols
-			.filter((protocol) => protocol.startsWith(protocolPrefix))
-			.map((protocol) => protocol.slice(protocolPrefix.length))
+		const topics = new Set(
+			peer.protocols
+				.filter((protocol) => protocol.startsWith(protocolPrefix))
+				.map((protocol) => protocol.slice(protocolPrefix.length, protocol.lastIndexOf("/"))),
+		)
 
 		topicMap.set(peer.id.toString(), topics)
 
@@ -82,8 +83,8 @@ getLibp2p().then(async (libp2p) => {
 		}
 	})
 
-	libp2p.services.fetch.registerLookupFunction("topic/", async (key) => {
-		const [_, topic] = key.split("/")
+	libp2p.services.fetch.registerLookupFunction("canvas/v1/", async (key) => {
+		const topic = key.split("/").pop()!
 		const results: {
 			id: Uint8Array
 			addresses: Uint8Array[]

@@ -1,9 +1,9 @@
 import { useState } from "react"
 import { ethers } from "ethers"
 
+import type { Contract } from "@canvas-js/core"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { useCanvas } from "@canvas-js/hooks"
-import { Forum } from "@canvas-js/templates"
 import { default as useHashParam } from "use-hash-param"
 
 import { Persister } from "./Persister.js"
@@ -33,6 +33,80 @@ export type Reply = {
 	address: string
 	timestamp: number
 }
+
+const Forum = {
+	models: {
+		categories: {
+			name: "primary",
+		},
+		tags: {
+			name: "primary",
+		},
+		memberships: {
+			id: "primary",
+			user: "string",
+			category: "string",
+			timestamp: "integer",
+		},
+		threads: {
+			id: "primary",
+			title: "string",
+			message: "string",
+			address: "string",
+			timestamp: "integer",
+			category: "string",
+			replies: "integer",
+			$indexes: [["category"], ["address"], ["timestamp"]],
+		},
+		replies: {
+			id: "primary",
+			threadId: "@threads",
+			reply: "string",
+			address: "string",
+			timestamp: "integer",
+			$indexes: [["threadId"]],
+		},
+	},
+	actions: {
+		async createTag(db, { tag }, { address, timestamp, id }) {
+			if (!tag || !tag.trim()) throw new Error()
+			await db.set("tags", { name: tag })
+		},
+		async deleteTag(db, { tag }, { address, timestamp, id }) {
+			await db.delete("tags", tag)
+		},
+		async createCategory(db, { category }, { address, timestamp, id }) {
+			if (!category || !category.trim()) throw new Error()
+			await db.set("categories", { name: category })
+		},
+		async deleteCategory(db, { category }, { address, timestamp, id }) {
+			await db.delete("categories", category)
+		},
+		async createThread(db, { title, message, category }, { address, timestamp, id }) {
+			if (!message || !category || !title || !message.trim() || !category.trim() || !title.trim()) throw new Error()
+			await db.set("threads", { id, title, message, category, address, timestamp, replies: 0 })
+		},
+		async deleteMessage(db, { id }, { address, timestamp }) {
+			const message = await db.get("threads", id)
+			if (!message || message.address !== address) throw new Error()
+			await db.delete("threads", id)
+		},
+		async createReply(db, { threadId, reply }, { address, timestamp, id }) {
+			const thread = await db.get("threads", threadId)
+			if (!thread || !threadId) throw new Error()
+			await db.set("threads", { ...thread, replies: (thread.replies as number) + 1 })
+			await db.set("replies", { id, threadId, reply, address, timestamp })
+		},
+		async deleteReply(db, { replyId }, { address, timestamp, id }) {
+			const reply = await db.get("replies", replyId)
+			if (!reply) throw new Error()
+			const thread = await db.get("threads", reply.threadId as string)
+			if (!thread) throw new Error()
+			await db.set("threads", { ...thread, replies: (thread.replies as number) - 1 })
+			await db.delete("replies", replyId)
+		},
+	},
+} satisfies Contract
 
 export function Placeholder({ text }: { text: string }) {
 	return <div className="text-gray-400 mb-4">{text}</div>

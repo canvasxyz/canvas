@@ -6,8 +6,8 @@ import { AbortError } from "abortable-iterator"
 import { anySignal } from "any-signal"
 import { Counter, Gauge, Summary, Registry, register } from "prom-client"
 
-import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 import type { PeerId } from "@libp2p/interface"
+import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 import { peerIdFromString } from "@libp2p/peer-id"
 
 import * as json from "@ipld/dag-json"
@@ -38,8 +38,8 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 				return void res.status(StatusCodes.NOT_FOUND).end()
 			} else {
 				const value = await app.db.get(model, key)
-				res.status(StatusCodes.OK)
-				res.setHeader("content-type", "application/json")
+
+				res.writeHead(StatusCodes.OK, { "content-type": "application/json" })
 				return void res.end(json.encode(value))
 			}
 		})
@@ -57,13 +57,13 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 			return void res.status(StatusCodes.NOT_FOUND).end()
 		}
 
-		res.status(StatusCodes.OK)
-		res.setHeader("content-type", "application/json")
+		res.writeHead(StatusCodes.OK, { "content-type": "application/json" })
 		return void res.end(json.encode({ id, signature, message }))
 	})
 
 	api.get("/messages", async (req, res) => {
 		const { gt, gte, lt, lte, order, type } = req.query
+
 		assert(gt === undefined || typeof gt === "string", "invalid `gt` query parameter")
 		assert(gte === undefined || typeof gte === "string", "invalid `gte` query parameter")
 		assert(lt === undefined || typeof lt === "string", "invalid `lt` query parameter")
@@ -88,8 +88,7 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 			results.push([id, signature, message])
 		}
 
-		res.status(StatusCodes.OK)
-		res.setHeader("content-type", "application/json")
+		res.writeHead(StatusCodes.OK, { "content-type": "application/json" })
 		return void res.end(json.encode(results))
 	})
 
@@ -107,16 +106,19 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 	})
 
 	api.get("/sessions", async (req, res) => {
-		const { address, publicKey, minExpiration } = req.query
-		assert(typeof address === "string", "missing address query parameter")
-		assert(typeof publicKey === "string", "missing publicKey query parameter")
+		const { did, publicKey, minExpiration } = req.query
+		if (typeof did !== "string") {
+			return void res.status(StatusCodes.BAD_REQUEST).end("missing did query parameter")
+		} else if (typeof publicKey !== "string") {
+			return void res.status(StatusCodes.BAD_REQUEST).end("missing publicKey query parameter")
+		}
 
 		let minExpirationValue: number | undefined = undefined
 		if (typeof minExpiration === "string") {
 			minExpirationValue = parseInt(minExpiration)
 		}
 
-		const sessions = await app.getSessions({ address, publicKey, minExpiration: minExpirationValue })
+		const sessions = await app.getSessions({ did, publicKey, minExpiration: minExpirationValue })
 		return void res.json(sessions)
 	})
 
