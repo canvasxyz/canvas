@@ -11,7 +11,6 @@ import { assert, zip } from "@canvas-js/utils"
 import { Driver } from "./sync/driver.js"
 
 import type { SyncServer } from "./interface.js"
-import { BranchIndex } from "./BranchIndex.js"
 import { BranchMergeRecord, BranchMergeIndex } from "./BranchMergeIndex.js"
 import { SignedMessage } from "./SignedMessage.js"
 import { decodeId, encodeId, messageIdPattern } from "./ids.js"
@@ -61,7 +60,6 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 			$indexes: ["branch", "clock"],
 		},
 		$heads: { id: "primary" },
-		...BranchIndex.schema,
 		...BranchMergeIndex.schema,
 	} satisfies ModelSchema
 
@@ -309,9 +307,23 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		return { root, heads: heads.map((head) => head.id) }
 	}
 
+	private async newBranch() {
+		const maxBranchRecords = await this.db.query("$messages", {
+			select: { id: true, branch: true },
+			limit: 1,
+			orderBy: { branch: "desc" },
+		})
+
+		if (maxBranchRecords.length == 0) {
+			return 0
+		} else {
+			return maxBranchRecords[0].branch + 1
+		}
+	}
+
 	private async getBranch(messageId: string, parentMessages: MessageRecord<Payload>[]) {
 		if (parentMessages.length == 0) {
-			return await new BranchIndex(this.db).createNewBranch()
+			return await this.newBranch()
 		}
 
 		const parentMessageWithMaxClock = parentMessages.reduce((max, parentMessage) =>
@@ -332,7 +344,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		})
 
 		if (messagesAtBranchClockPosition.length > 0) {
-			return await new BranchIndex(this.db).createNewBranch()
+			return await this.newBranch()
 		} else {
 			return branch
 		}
