@@ -314,15 +314,10 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 			return await new BranchIndex(this.db).createNewBranch()
 		}
 
-		let maxBranch = -1
-		let parentMessageWithMaxClock: any = null
-		for (const parentMessage of parentMessages) {
-			if (parentMessage.branch > maxBranch) {
-				parentMessageWithMaxClock = parentMessage
-				maxBranch = parentMessage.branch
-			}
-		}
-		const branch = maxBranch
+		const parentMessageWithMaxClock = parentMessages.reduce((max, parentMessage) =>
+			max.branch > parentMessage.branch ? max : parentMessage,
+		)
+		const branch = parentMessageWithMaxClock.branch
 
 		const messagesAtBranchClockPosition = await this.db.query<MessageRecord<Payload>>("$messages", {
 			where: {
