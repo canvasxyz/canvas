@@ -320,6 +320,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		const branch = parentMessageWithMaxClock.branch
 
 		const messagesAtBranchClockPosition = await this.db.query<MessageRecord<Payload>>("$messages", {
+			select: { id: true, branch: true, clock: true },
 			where: {
 				branch,
 				clock: {
@@ -327,6 +328,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 				},
 				id: { neq: messageId },
 			},
+			limit: 1,
 		})
 
 		if (messagesAtBranchClockPosition.length > 0) {
