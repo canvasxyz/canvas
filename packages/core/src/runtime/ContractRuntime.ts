@@ -20,9 +20,9 @@ export class ContractRuntime extends AbstractRuntime {
 		topic: string,
 		signers: SignerCache,
 		contract: string,
-		options: { runtimeMemoryLimit?: number; indexHistory?: boolean } = {},
+		options: { runtimeMemoryLimit?: number } = {},
 	): Promise<ContractRuntime> {
-		const { runtimeMemoryLimit, indexHistory = true } = options
+		const { runtimeMemoryLimit } = options
 
 		const uri = `canvas:${bytesToHex(sha256(contract))}`
 
@@ -72,8 +72,8 @@ export class ContractRuntime extends AbstractRuntime {
 		assert(modelsHandle !== undefined, "missing `models` export")
 		const modelSchema = modelsHandle.consume(vm.context.dump) as ModelSchema
 
-		const db = await target.openDB({ path, topic }, AbstractRuntime.getModelSchema(modelSchema, { indexHistory }))
-		return new ContractRuntime(topic, signers, db, vm, actions, argsTransformers, indexHistory)
+		const db = await target.openDB({ path, topic }, AbstractRuntime.getModelSchema(modelSchema))
+		return new ContractRuntime(topic, signers, db, vm, actions, argsTransformers)
 	}
 
 	readonly #databaseAPI: QuickJSHandle
@@ -90,9 +90,8 @@ export class ContractRuntime extends AbstractRuntime {
 			string,
 			{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
 		>,
-		indexHistory: boolean,
 	) {
-		super(indexHistory)
+		super()
 		this.#databaseAPI = vm
 			.wrapObject({
 				get: vm.wrapFunction((model, key) => {

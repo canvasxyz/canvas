@@ -28,9 +28,6 @@ export interface CanvasConfig<T extends Contract = Contract> extends NetworkConf
 	/** data directory path (NodeJS/sqlite), or postgres connection config (NodeJS/pg) */
 	path?: string | pg.ConnectionConfig | null
 
-	/** set to `false` to disable history indexing and db.get(..) within actions */
-	indexHistory?: boolean
-
 	/** set a memory limit for the quickjs runtime, only used if `contract` is a string */
 	runtimeMemoryLimit?: number
 
@@ -66,7 +63,7 @@ export type ApplicationData = {
 
 export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<CanvasEvents> {
 	public static async initialize<T extends Contract>(config: CanvasConfig<T>): Promise<Canvas<T>> {
-		const { path = null, contract, signers: initSigners = [], runtimeMemoryLimit, indexHistory = true } = config
+		const { path = null, contract, signers: initSigners = [], runtimeMemoryLimit } = config
 
 		const signers = new SignerCache(initSigners.length === 0 ? [new SIWESigner()] : initSigners)
 
@@ -87,7 +84,6 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 
 		const runtime = await createRuntime(path, topic, signers, contract, {
 			runtimeMemoryLimit,
-			indexHistory: indexHistory,
 		})
 
 		const messageLog = await target.openGossipLog(

@@ -20,6 +20,7 @@ import { topicPattern } from "./utils.js"
 export type GossipLogConsumer<Payload = unknown> = (
 	this: AbstractGossipLog<Payload>,
 	{ id, signature, message }: SignedMessage<Payload>,
+	branch: number,
 ) => Awaitable<void>
 
 export interface GossipLogInit<Payload = unknown> {
@@ -39,7 +40,7 @@ export type GossipLogEvents<Payload = unknown> = {
 	error: CustomEvent<{ error: Error }>
 }
 
-type MessageRecord<Payload> = {
+export type MessageRecord<Payload> = {
 	id: string
 	signature: Signature
 	message: Message<Payload>
@@ -95,7 +96,10 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		await this.tree.read(async (txn) => {
 			for (const leaf of txn.keys()) {
 				const id = decodeId(leaf)
-				const record = await this.db.get<{ signature: Signature; message: Message<Payload> }>("$messages", id)
+				const record = await this.db.get<{ signature: Signature; message: Message<Payload>; branch: number }>(
+					"$messages",
+					id,
+				)
 
 				if (record === null) {
 					this.log.error("failed to get message %s from database", id)
@@ -104,7 +108,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 				const signedMessage = this.encode(record.signature, record.message)
 				assert(signedMessage.id === id)
-				await this.#apply.apply(this, [signedMessage])
+				await this.#apply.apply(this, [signedMessage, record.branch])
 			}
 		})
 	}
@@ -250,18 +254,8 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		txn: ReadWriteTransaction,
 		signedMessage: SignedMessage<Payload>,
 	): Promise<{ root: Node; heads: string[] }> {
-		this.log("applying payload %O", signedMessage.message.payload)
-
-		try {
-			await this.#apply.apply(this, [signedMessage])
-		} catch (error) {
-			this.dispatchEvent(new CustomEvent("error", { detail: { error } }))
-			throw error
-		}
-
 		const { id, signature, message, key, value } = signedMessage
-
-		const hash = toString(hashEntry(key, value), "hex")
+		this.log("applying %s %O", id, message)
 
 		const parentMessageRecords: MessageRecord<Payload>[] = []
 		for (const parentId of message.parents) {
@@ -273,6 +267,15 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		}
 
 		const branch = await this.getBranch(id, parentMessageRecords)
+
+		try {
+			await this.#apply.apply(this, [signedMessage, branch])
+		} catch (error) {
+			this.dispatchEvent(new CustomEvent("error", { detail: { error } }))
+			throw error
+		}
+
+		const hash = toString(hashEntry(key, value), "hex")
 
 		const branchMergeIndex = new BranchMergeIndex(this.db)
 		for (const parentMessageRecord of parentMessageRecords) {

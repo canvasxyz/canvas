@@ -4,7 +4,7 @@
 	"version": "0.10.0-beta.4",
 	"type": "module",
 	"scripts": {
-		"dev": "canvas run --port 8080 --disableHistoryIndexing --topic chat-example.canvas.xyz contract.canvas.js"
+		"dev": "canvas run --port 8080 --topic chat-example.canvas.xyz contract.canvas.js"
 	},
 	"dependencies": {
 		"@canvas-js/cli": "0.10.0-beta.4"

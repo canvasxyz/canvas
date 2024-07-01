@@ -32,6 +32,7 @@ test("parse config", (t) => {
 			{
 				name: "user",
 				indexes: [],
+				merge: undefined,
 				primaryKey: "id",
 				properties: [
 					{ name: "id", kind: "primary" },
@@ -43,6 +44,7 @@ test("parse config", (t) => {
 			{
 				name: "room",
 				indexes: [],
+				merge: undefined,
 				primaryKey: "id",
 				properties: [
 					{ name: "id", kind: "primary" },
@@ -53,6 +55,7 @@ test("parse config", (t) => {
 			{
 				name: "message",
 				indexes: [],
+				merge: undefined,
 				primaryKey: "id",
 				properties: [
 					{ name: "id", kind: "primary" },

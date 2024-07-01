@@ -138,8 +138,6 @@ export interface CanvasConfig<T extends Contract = Contract> extends NetworkConf
   path?: string | null
   /** provide an existing libp2p instance instead of creating a new one */
   libp2p?: Libp2p<ServiceMap>
-  /** set to `false` to disable history indexing and db.get(..) within actions */
-  indexHistory?: boolean
   runtimeMemoryLimit?: number
 }
 
