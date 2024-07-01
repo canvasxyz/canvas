@@ -37,15 +37,16 @@ import {
 	PUSH_RETRY_LIMIT,
 	SYNC_RETRY_INTERVAL,
 	SYNC_RETRY_LIMIT,
+	SYNC_TIMEOUT,
 	second,
 } from "../constants.js"
 
 import { AbstractGossipLog, GossipLogEvents } from "../AbstractGossipLog.js"
 
-import { decodeId, encodeId, MAX_MESSAGE_ID, MIN_MESSAGE_ID } from "../ids.js"
+import { decodeId, encodeId } from "../ids.js"
 import { Client, decodeRequests, encodeResponses } from "../sync/index.js"
 
-import { DelayableController, SyncDeadlockError, SyncTimeoutError, wait } from "../utils.js"
+import { DelayableController, SyncTimeoutError, wait } from "../utils.js"
 import { Server } from "../sync/server.js"
 
 import { SignedMessage } from "../SignedMessage.js"
@@ -501,7 +502,7 @@ export class GossipLogService<Payload = unknown>
 
 		this.log("opened outgoing sync stream %s to peer %p", stream.id, peerId)
 
-		const timeoutController = new DelayableController(3 * second)
+		const timeoutController = new DelayableController(SYNC_TIMEOUT)
 		const signal = anySignal([this.controller.signal, timeoutController.signal])
 		signal.addEventListener("abort", (err) => {
 			if (stream.status === "open") {
