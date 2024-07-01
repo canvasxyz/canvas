@@ -25,7 +25,7 @@ export class BranchMergeIndex {
 	constructor(private readonly db: AbstractModelDB) {}
 
 	public async insertBranchMerge(record: BranchMergeRecord) {
-		const id = `${record.source_branch}:${record.source_message_id}:${record.target_branch}:${record.target_message_id}`
+		const id = `${record.source_branch}:${record.source_clock}:${record.target_branch}:${record.target_clock}`
 		await this.db.set("$branch_merges", { id, ...record })
 	}
 }
