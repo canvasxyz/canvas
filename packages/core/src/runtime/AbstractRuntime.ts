@@ -49,19 +49,11 @@ export abstract class AbstractRuntime {
 		},
 	} satisfies ModelSchema
 
-	protected static getModelSchema(modelSchema: ModelSchema, options: { indexHistory: boolean }): ModelSchema {
-		if (options.indexHistory) {
-			return {
-				...modelSchema,
-				...AbstractRuntime.sessionsModel,
-				...AbstractRuntime.effectsModel,
-			}
-		} else {
-			return {
-				...modelSchema,
-				...AbstractRuntime.sessionsModel,
-				...AbstractRuntime.versionsModel,
-			}
+	protected static getModelSchema(modelSchema: ModelSchema): ModelSchema {
+		return {
+			...modelSchema,
+			...AbstractRuntime.sessionsModel,
+			...AbstractRuntime.effectsModel,
 		}
 	}
 
@@ -75,7 +67,7 @@ export abstract class AbstractRuntime {
 	>
 
 	protected readonly log = logger("canvas:runtime")
-	protected constructor(public readonly indexHistory: boolean) {}
+	protected constructor() {}
 
 	protected abstract execute(context: ExecutionContext): Promise<void | any>
 
@@ -171,51 +163,29 @@ export abstract class AbstractRuntime {
 
 				const mergeFunction = this.db.models[model].merge
 
-				if (this.indexHistory) {
-					const effectKey = `${model}/${keyHash}/${id}`
-					const results = await this.db.query("$effects", {
-						select: { key: true },
-						where: { key: { gt: effectKey, lte: `${model}/${keyHash}/${MAX_MESSAGE_ID}` } },
-						limit: 1,
-					})
+				const effectKey = `${model}/${keyHash}/${id}`
+				const results = await this.db.query("$effects", {
+					select: { key: true },
+					where: { key: { gt: effectKey, lte: `${model}/${keyHash}/${MAX_MESSAGE_ID}` } },
+					limit: 1,
+				})
 
-					effects.push({
-						model: "$effects",
-						operation: "set",
-						value: { key: effectKey, value: value && cbor.encode(value), branch: branch, clock: message.clock },
-					})
+				effects.push({
+					model: "$effects",
+					operation: "set",
+					value: { key: effectKey, value: value && cbor.encode(value), branch: branch, clock: message.clock },
+				})
 
-					if (mergeFunction) {
-						const existingValue = await this.db.get(model, key)
-						if (existingValue !== null) {
-							value = mergeFunction(existingValue, value)
-						}
-					} else {
-						if (results.length > 0) {
-							this.log("skipping effect %o because it is superceeded by effects %O", [key, value], results)
-							continue
-						}
+				if (mergeFunction) {
+					const existingValue = await this.db.get(model, key)
+					if (existingValue !== null) {
+						value = mergeFunction(existingValue, value)
 					}
 				} else {
-					const versionKey = `${model}/${keyHash}`
-					const existingVersionRecord = await this.db.get("$versions", versionKey)
-					const { version: existingVersion } = existingVersionRecord ?? { version: null }
-
-					assert(
-						existingVersion === null || existingVersion instanceof Uint8Array,
-						"expected version === null || version instanceof Uint8Array",
-					)
-
-					const currentVersion = encodeId(id)
-					if (existingVersion !== null && lessThan(currentVersion, existingVersion)) {
+					if (results.length > 0) {
+						this.log("skipping effect %o because it is superceeded by effects %O", [key, value], results)
 						continue
 					}
-
-					effects.push({
-						model: "$versions",
-						operation: "set",
-						value: { key: versionKey, version: currentVersion },
-					})
 				}
 
 				if (value === null) {
@@ -347,10 +317,6 @@ export abstract class AbstractRuntime {
 		model: string,
 		key: string,
 	): Promise<null | T> {
-		if (!this.indexHistory) {
-			throw new Error("cannot call .get if indexHistory is disabled")
-		}
-
 		if (context.modelEntries[model][key] !== undefined) {
 			return context.modelEntries[model][key] as T
 		}

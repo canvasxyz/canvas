@@ -11,7 +11,6 @@ import { assert, zip } from "@canvas-js/utils"
 import { Driver } from "./sync/driver.js"
 
 import type { SyncServer } from "./interface.js"
-import { BranchIndex } from "./BranchIndex.js"
 import { BranchMergeRecord, BranchMergeIndex } from "./BranchMergeIndex.js"
 import { SignedMessage } from "./SignedMessage.js"
 import { decodeId, encodeId, messageIdPattern } from "./ids.js"
@@ -31,7 +30,6 @@ export interface GossipLogInit<Payload = unknown> {
 	verifySignature?: (signature: Signature, message: Message<Payload>) => Awaitable<void>
 
 	signer?: Signer<Payload>
-	indexAncestors?: boolean
 	rebuildMerkleIndex?: boolean
 }
 
@@ -63,12 +61,10 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 			$indexes: ["branch", "clock"],
 		},
 		$heads: { id: "primary" },
-		...BranchIndex.schema,
 		...BranchMergeIndex.schema,
 	} satisfies ModelSchema
 
 	public readonly topic: string
-	public readonly indexAncestors: boolean
 	public readonly signer: Signer<Payload>
 
 	public abstract db: AbstractModelDB
@@ -87,7 +83,6 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		assert(topicPattern.test(init.topic), "invalid topic (must match [a-zA-Z0-9\\.\\-])")
 
 		this.topic = init.topic
-		this.indexAncestors = init.indexAncestors ?? false
 		this.signer = init.signer ?? ed25519.create()
 
 		this.#apply = init.apply
@@ -315,22 +310,32 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		return { root, heads: heads.map((head) => head.id) }
 	}
 
+	private async newBranch() {
+		const maxBranchRecords = await this.db.query("$messages", {
+			select: { id: true, branch: true },
+			limit: 1,
+			orderBy: { branch: "desc" },
+		})
+
+		if (maxBranchRecords.length == 0) {
+			return 0
+		} else {
+			return maxBranchRecords[0].branch + 1
+		}
+	}
+
 	private async getBranch(messageId: string, parentMessages: MessageRecord<Payload>[]) {
 		if (parentMessages.length == 0) {
-			return await new BranchIndex(this.db).createNewBranch()
+			return await this.newBranch()
 		}
 
-		let maxBranch = -1
-		let parentMessageWithMaxClock: any = null
-		for (const parentMessage of parentMessages) {
-			if (parentMessage.branch > maxBranch) {
-				parentMessageWithMaxClock = parentMessage
-				maxBranch = parentMessage.branch
-			}
-		}
-		const branch = maxBranch
+		const parentMessageWithMaxClock = parentMessages.reduce((max, parentMessage) =>
+			max.branch > parentMessage.branch ? max : parentMessage,
+		)
+		const branch = parentMessageWithMaxClock.branch
 
 		const messagesAtBranchClockPosition = await this.db.query<MessageRecord<Payload>>("$messages", {
+			select: { id: true, branch: true, clock: true },
 			where: {
 				branch,
 				clock: {
@@ -338,10 +343,11 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 				},
 				id: { neq: messageId },
 			},
+			limit: 1,
 		})
 
 		if (messagesAtBranchClockPosition.length > 0) {
-			return await new BranchIndex(this.db).createNewBranch()
+			return await this.newBranch()
 		} else {
 			return branch
 		}

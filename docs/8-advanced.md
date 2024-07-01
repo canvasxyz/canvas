@@ -283,7 +283,6 @@ const { app } = useCanvas({
     // models: ...
     // actions: ...
   },
-  indexHistory: false,
   discoveryTopic: "canvas-discovery",
   bootstrapList: [
     "/dns4/canvas-chat-discovery-p0.fly.dev/tcp/443/wss/p2p/12D3KooWG1zzEepzv5ib5Rz16Z4PXVfNRffXBGwf7wM8xoNAbJW7",
@@ -293,16 +292,6 @@ const { app } = useCanvas({
   ],
 })
 ```
-
-## Disabling sequencing
-
-By default, applications are configured with sequencing ("history indexing") on, which ensures that actions are delivered in exact causal order.
-
-When your application doesn't depend on actions executing in exact order, you can turn this off for better performance. This prevents applications from stalling if a user sends a message while they're on a transient or flaky internet connection.
-
-You can do this by setting `indexHistory: false` when configuring your application. This causes all actions to be executed in realtime as they are received. ([Example](https://github.com/canvasxyz/canvas/blob/46bef2263d6e7ec9b746ced2c47da52cb7d8190b/examples/chat/src/App.tsx#L48))
-
-Note that doing this also disables `db.get()` getters inside actions, because atomic transactions require consistent order of delivery.
 
 ## Debugging
 

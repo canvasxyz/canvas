@@ -28,9 +28,9 @@ test("simulate a randomly partitioned network, logs on disk", async (t) => {
 	const topic = nanoid()
 
 	const logs: AbstractGossipLog<string>[] = [
-		new GossipLog({ directory: getDirectory(t), topic, apply, indexAncestors: true }),
-		new GossipLog({ directory: getDirectory(t), topic, apply, indexAncestors: true }),
-		new GossipLog({ directory: getDirectory(t), topic, apply, indexAncestors: true }),
+		new GossipLog({ directory: getDirectory(t), topic, apply }),
+		new GossipLog({ directory: getDirectory(t), topic, apply }),
+		new GossipLog({ directory: getDirectory(t), topic, apply }),
 	]
 
 	// const maxMessageCount = 2048
@@ -60,9 +60,9 @@ test("simulate a randomly partitioned network, logs on disk", async (t) => {
 // 	}
 
 // 	const logs: AbstractGossipLog<string>[] = await Promise.all([
-// 		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, getPgConfig("test"), true),
-// 		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, getPgConfig("test2"), true),
-// 		PostgresGossipLog.open({ topic, apply, indexAncestors: true }, getPgConfig("test3"), true),
+// 		PostgresGossipLog.open({ topic, apply }, getPgConfig("test"), true),
+// 		PostgresGossipLog.open({ topic, apply }, getPgConfig("test2"), true),
+// 		PostgresGossipLog.open({ topic, apply }, getPgConfig("test3"), true),
 // 	])
 
 // 	const maxMessageCount = 128
