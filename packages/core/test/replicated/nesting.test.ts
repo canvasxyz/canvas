@@ -5,9 +5,6 @@ import { ReplicatedObject } from "@canvas-js/core"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 
 const test = ava as TestFn<{
-	app1: any
-	app2: any
-	app3: any
 	chat: Chat
 	child: ChatChild
 	grandchild: ChatGrandchild
@@ -46,6 +43,9 @@ class ChatChild extends Chat {
 	async message2(message: string) {
 		await this.tx.message("11" + message)
 	}
+	async message4(message: string) {
+		await this.tx.message("1111" + message)
+	}
 }
 
 class ChatGrandchild extends ChatChild {
@@ -58,11 +58,14 @@ class ChatGrandchild extends ChatChild {
 	async message3(message: string) {
 		await this.tx.message2("222" + message)
 	}
+	async message4(message: string) {
+		await this.tx.message4("2222" + message)
+	}
 	async messageSkip(message: string) {
-		//await super.super.messageSkip("2222" + message)
+		await this.tx.messageSkip("22222" + message)
 	}
 	async messageSkip2(message: string) {
-		//await super.super.message("22222" + message)
+		await this.tx.message("222222" + message)
 	}
 }
 
@@ -72,10 +75,6 @@ test.before(async (t) => {
 	t.context.child = await ChatChild.initialize({ topic: rand() })
 	t.context.grandchild = await ChatGrandchild.initialize({ topic: rand() })
 	t.context.messages = 0
-
-	t.context.app1 = t.context.chat.app
-	t.context.app1 = t.context.child.app
-	t.context.app1 = t.context.grandchild.app
 
 	t.context.signer = new SIWESigner({
 		signer: ethers.Wallet.createRandom(),
@@ -112,12 +111,12 @@ test.serial("doubly nested call, unaliased", async (t) => {
 	t.is(message?.[0].message, "011222hello world")
 })
 
-// message2 -> message2 -> message
+// message4 -> message4 -> message
 test.serial("doubly nested call, first nesting aliased", async (t) => {
-	await t.context.grandchild.message2("hello world")
+	await t.context.grandchild.message4("hello world")
 	t.context.messages++
 	const message = await t.context.grandchild.app?.db.query("messages", { orderBy: { timestamp: "desc" } })
-	t.is(message?.[0].message, "01122hello world")
+	t.is(message?.[0].message, "011112222hello world")
 })
 
 // message2 -> message -> message
@@ -129,17 +128,6 @@ test.serial("doubly nested call, second nesting aliased", async (t) => {
 })
 
 // messageSkip -> [skip] -> messageSkip
-test.serial("skip level call, aliased", async (t) => {
-	await t.context.grandchild.messageSkip("hello world")
-	t.context.messages++
-	const message = await t.context.grandchild.app?.db.query("messages", { orderBy: { timestamp: "desc" } })
-	t.is(message?.[0].message, "002222hello world")
-})
-
-// messageSkip2 -> [skip] -> message
-test.serial("skip level call, unaliased", async (t) => {
-	await t.context.grandchild.messageSkip2("hello world")
-	t.context.messages++
-	const message = await t.context.grandchild.app?.db.query("messages", { orderBy: { timestamp: "desc" } })
-	t.is(message?.[0].message, "022222hello world")
+test.serial("skip level call throws error", async (t) => {
+	await t.throwsAsync(async () => t.context.grandchild.messageSkip("hello world"))
 })
