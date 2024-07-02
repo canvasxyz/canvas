@@ -23,53 +23,6 @@ const pseudoRandomEd25519 = () =>
 
 const apply: GossipLogConsumer<string> = ({}) => {}
 
-test("simulate a randomly partitioned network, logs on disk", async (t) => {
-	t.timeout(30 * 1000)
-	const topic = nanoid()
-
-	const logs: AbstractGossipLog<string>[] = [
-		new GossipLog({ directory: getDirectory(t), topic, apply }),
-		new GossipLog({ directory: getDirectory(t), topic, apply }),
-		new GossipLog({ directory: getDirectory(t), topic, apply }),
-	]
-
-	// const maxMessageCount = 2048
-	// const maxChainLength = 6
-	const maxMessageCount = 256
-	const maxChainLength = 5
-	await simulateRandomNetwork(t, topic, logs, maxMessageCount, maxChainLength)
-})
-
-// test("simulate a randomly partitioned network, logs on postgres", async (t) => {
-// 	t.timeout(240 * 1000)
-// 	const topic = nanoid()
-
-// 	const getPgConfig = (db: string) => {
-// 		const { POSTGRES_HOST, POSTGRES_PORT } = process.env
-// 		if (POSTGRES_HOST && POSTGRES_PORT) {
-// 			return {
-// 				user: "postgres",
-// 				database: db,
-// 				password: "postgres",
-// 				port: parseInt(POSTGRES_PORT),
-// 				host: POSTGRES_HOST,
-// 			}
-// 		} else {
-// 			return `postgresql://localhost:5432/${db}`
-// 		}
-// 	}
-
-// 	const logs: AbstractGossipLog<string>[] = await Promise.all([
-// 		PostgresGossipLog.open({ topic, apply }, getPgConfig("test"), true),
-// 		PostgresGossipLog.open({ topic, apply }, getPgConfig("test2"), true),
-// 		PostgresGossipLog.open({ topic, apply }, getPgConfig("test3"), true),
-// 	])
-
-// 	const maxMessageCount = 128
-// 	const maxChainLength = 5
-// 	await simulateRandomNetwork(t, topic, logs, maxMessageCount, maxChainLength)
-// })
-
 export const simulateRandomNetwork = async (
 	t: ExecutionContext<unknown>,
 	topic: string,
@@ -151,13 +104,45 @@ export const simulateRandomNetwork = async (
 	// the indexes are just for indexing bitMaps now.
 	messageIDs.sort()
 
-	let sum: number = 0
-	let n: number = 0
-
 	const [self, ...peers] = logs
 	for (const peer of peers) {
 		await peer.serve((source) => self.sync(source))
 	}
+
+	return { messageIDs, messageIndices, getBit }
+}
+
+test("simulate a randomly partitioned network, logs on disk", async (t) => {
+	t.timeout(30 * 1000)
+	const topic = nanoid()
+
+	const logs: AbstractGossipLog<string>[] = [
+		new GossipLog({ directory: getDirectory(t), topic, apply }),
+		new GossipLog({ directory: getDirectory(t), topic, apply }),
+		new GossipLog({ directory: getDirectory(t), topic, apply }),
+	]
+
+	t.teardown(async () => {
+		for (const log of logs) {
+			await log.close()
+		}
+	})
+
+	// const maxMessageCount = 2048
+	// const maxChainLength = 6
+	const maxMessageCount = 256
+	const maxChainLength = 5
+
+	const { messageIDs, messageIndices, getBit } = await simulateRandomNetwork(
+		t,
+		topic,
+		logs,
+		maxMessageCount,
+		maxChainLength,
+	)
+
+	let sum: number = 0
+	let n: number = 0
 
 	for (const id of messageIDs) {
 		const { map } = messageIndices.get(id)!
@@ -168,7 +153,7 @@ export const simulateRandomNetwork = async (
 			}
 
 			const start = performance.now()
-			const isAncestor = await self.isAncestor(id, ancestorID)
+			const isAncestor = await logs[0].isAncestor(id, ancestorID)
 			sum += performance.now() - start
 			n++
 
@@ -180,7 +165,7 @@ export const simulateRandomNetwork = async (
 	// for every branch and clock value
 	// assert that only one message exists
 	const messageByBranchAndClock: Record<string, number> = {}
-	for (const message of await self.db.query("$messages")) {
+	for (const message of await logs[0].db.query("$messages")) {
 		const key = `${message.branch}:${message.clock}`
 		if (!messageByBranchAndClock[key]) messageByBranchAndClock[key] = 0
 		messageByBranchAndClock[key] += 1
@@ -190,8 +175,34 @@ export const simulateRandomNetwork = async (
 	}
 
 	t.log("completed", n, "isAncestor queries with an average of", (sum / n).toPrecision(3), "ms per query")
+})
 
-	for (const log of logs) {
-		await log.close()
-	}
-}
+// test("simulate a randomly partitioned network, logs on postgres", async (t) => {
+// 	t.timeout(240 * 1000)
+// 	const topic = nanoid()
+
+// 	const getPgConfig = (db: string) => {
+// 		const { POSTGRES_HOST, POSTGRES_PORT } = process.env
+// 		if (POSTGRES_HOST && POSTGRES_PORT) {
+// 			return {
+// 				user: "postgres",
+// 				database: db,
+// 				password: "postgres",
+// 				port: parseInt(POSTGRES_PORT),
+// 				host: POSTGRES_HOST,
+// 			}
+// 		} else {
+// 			return `postgresql://localhost:5432/${db}`
+// 		}
+// 	}
+
+// 	const logs: AbstractGossipLog<string>[] = await Promise.all([
+// 		PostgresGossipLog.open({ topic, apply }, getPgConfig("test"), true),
+// 		PostgresGossipLog.open({ topic, apply }, getPgConfig("test2"), true),
+// 		PostgresGossipLog.open({ topic, apply }, getPgConfig("test3"), true),
+// 	])
+
+// 	const maxMessageCount = 128
+// 	const maxChainLength = 5
+// 	await simulateRandomNetwork(t, topic, logs, maxMessageCount, maxChainLength)
+// })
