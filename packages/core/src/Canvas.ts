@@ -97,7 +97,6 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 				apply: runtime.getConsumer(),
 				validatePayload: validatePayload,
 				verifySignature: verifySignature,
-				indexAncestors: indexHistory,
 			},
 		)
 

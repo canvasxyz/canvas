@@ -22,7 +22,7 @@ test("append messages (on-disk, linear, 100)", async (t) => {
 })
 
 // test("append messages (node, linear, 100, indexed)", async (t) => {
-// 	const log = await GossipLog.open(getDirectory(t), { topic, apply, validate, indexAncestors: true })
+// 	const log = await GossipLog.open(getDirectory(t), { topic, apply, validate })
 // 	t.teardown(() => log.close())
 // 	await append(t, log, 100)
 // })
@@ -34,7 +34,7 @@ test("append messages (on-disk, linear, 100)", async (t) => {
 // })
 
 // test("append messages (node, linear, 10000, indexed)", async (t) => {
-// 	const log = await GossipLog.open(getDirectory(t), { topic, apply, validate, signatures: false, indexAncestors: true })
+// 	const log = await GossipLog.open(getDirectory(t), { topic, apply, validate, signatures: false })
 // 	t.teardown(() => log.close())
 // 	await append(t, log, 10_000)
 // })

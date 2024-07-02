@@ -4,7 +4,7 @@ import { fromDSL } from "@ipld/schema/from-dsl.js"
 import type pg from "pg"
 
 import type { SignerCache } from "@canvas-js/interfaces"
-import { AbstractModelDB, ModelValue, ModelsInit, validateModelValue } from "@canvas-js/modeldb"
+import { AbstractModelDB, ModelValue, ModelSchema, validateModelValue } from "@canvas-js/modeldb"
 import { VM } from "@canvas-js/vm"
 import { assert, mapEntries } from "@canvas-js/utils"
 
@@ -68,11 +68,11 @@ export class ContractRuntime extends AbstractRuntime {
 			return apply.consume(vm.cache)
 		})
 
-		// TODO: validate that models satisfies ModelsInit
+		// TODO: validate that models satisfies ModelSchema
 		assert(modelsHandle !== undefined, "missing `models` export")
-		const modelsInit = modelsHandle.consume(vm.context.dump) as ModelsInit
+		const modelSchema = modelsHandle.consume(vm.context.dump) as ModelSchema
 
-		const db = await target.openDB({ path, topic }, AbstractRuntime.getModelSchema(modelsInit, { indexHistory }))
+		const db = await target.openDB({ path, topic }, AbstractRuntime.getModelSchema(modelSchema, { indexHistory }))
 		return new ContractRuntime(topic, signers, db, vm, actions, argsTransformers, indexHistory)
 	}
 

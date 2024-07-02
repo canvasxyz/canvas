@@ -75,12 +75,12 @@ const results = await app.db.query("posts", {})
 ### Contract types
 
 ```ts
-import type { ModelsInit, ModelValue } from "@canvas-js/modeldb"
+import type { ModelSchema, ModelValue } from "@canvas-js/modeldb"
 import type { Awaitable } from "@canvas-js/interfaces"
 
 export type Contract = {
   topic: string
-  models: ModelsInit
+  models: ModelSchema
   actions: Record<string, ActionImplementationFunction | ActionImplementationObject>
 }
 
