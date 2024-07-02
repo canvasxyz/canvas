@@ -12,7 +12,7 @@ function getGroupId(address1: string, address2: string) {
 }
 
 /*
- * Encrypted chat with non-ratcheting groups.
+ * Test objects: Encrypted chat with non-ratcheting groups.
  */
 class EncryptedChat extends ReplicatedObject<{
 	registerEncryptionKey: (key: string) => Awaitable<void>
@@ -123,6 +123,9 @@ class EncryptedChat extends ReplicatedObject<{
 	}
 }
 
+/**
+ * Test initializers
+ */
 const test = ava as TestFn<{
 	alice: SIWESigner
 	bob: SIWESigner
@@ -146,6 +149,9 @@ test.afterEach.always(async (t) => {
 	await chat.stop()
 })
 
+/**
+ * Tests
+ */
 test.serial("exchange two messages", async (t) => {
 	const { chat, alice, alicePrivkey, bob, bobPrivkey } = t.context
 

@@ -42,6 +42,9 @@ test.afterEach.always(async (t) => {
 	await chat.stop()
 })
 
+/**
+ * Tests
+ */
 test.serial("handlers called with this.id, this.address, this.timestamp", async (t) => {
 	const { chat } = t.context
 
@@ -85,32 +88,6 @@ test.serial("send messages using an explicit call", async (t) => {
 	const messages = await chat.app?.db.query("messages")
 	t.is(messages?.[1].message, `[${messages?.[0].address}] hi from explicit call`)
 })
-
-// test.serial("send messages using an implicit call and .as()", async (t) => {
-// 	const { chat, signer } = t.context
-
-// 	t.is(await chat.app?.db.count("messages"), 0)
-
-// 	await chat.as(signer).message("hi")
-// 	t.is(await chat.app?.db.count("messages"), 1)
-
-// 	const messages = await chat.app?.db.query("messages", { orderBy: { timestamp: "desc" } })
-// 	t.is(messages?.[0].message, "hi")
-// 	t.is(messages?.[0].address, await signer.getWalletAddress())
-// })
-
-// test.serial("send messages using an explicit call and .as()", async (t) => {
-// 	const { chat, signer } = t.context
-
-// 	t.is(await chat.app?.db.count("messages"), 0)
-
-// 	await chat.as(signer).messageFromChild("hi from explicit call")
-// 	t.is(await chat.app?.db.count("messages"), 1)
-
-// 	const messages = await chat.app?.db.query("messages", { orderBy: { timestamp: "desc" } })
-// 	t.is(messages?.[0].message, `[${messages?.[0].address}] hi from explicit call`)
-// 	t.is(messages?.[0].address, await signer.getWalletAddress())
-// })
 
 test.serial("test multiple levels of inheritance, nested and skip-level calls", async (t) => {
 	class ChildChat extends Chat {
