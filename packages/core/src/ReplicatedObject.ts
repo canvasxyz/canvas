@@ -81,6 +81,15 @@ export abstract class ReplicatedObject<
 	constructor(config: ReplicatedConfig = {}) {
 		const instance = this
 
+		// check for invalid keys
+		for (const key of Reflect.ownKeys(Object.getPrototypeOf(this)).filter(
+			(key) => typeof key !== "symbol" && key !== "constructor" && !key.startsWith("_"),
+		)) {
+			if (typeof key !== "symbol" && accessors.includes(key)) {
+				throw new Error(`ReplicatedObject: reserved keyword ${key}`)
+			}
+		}
+
 		// helpers
 		const isHandlerKey = (key: string | symbol): key is `on${string}` => {
 			return typeof key === "string" && key.match(/^on[A-Z].*/) !== null
