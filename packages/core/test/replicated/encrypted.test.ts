@@ -155,14 +155,17 @@ test.afterEach.always(async (t) => {
 test.serial("exchange two messages", async (t) => {
 	const { chat, alice, alicePrivkey, bob, bobPrivkey } = t.context
 
-	const aliceChat = chat.as(alice)
-	const bobChat = chat.as(bob)
+	// TODO: replace these once .as() actually implements partial application
+	const aliceAddress = await alice._signer.getAddress()
+	const bobAddress = await bob._signer.getAddress()
+	const aliceChat = () => chat.as(alice, aliceAddress)
+	const bobChat = () => chat.as(bob, bobAddress)
 
-	await aliceChat.registerEncryptionKey(alicePrivkey)
-	await bobChat.registerEncryptionKey(bobPrivkey)
+	await aliceChat().registerEncryptionKey(alicePrivkey)
+	await bobChat().registerEncryptionKey(bobPrivkey)
 
-	const groupId = await aliceChat.createEncryptionGroup(bob.getAddressFromDid(await bob.getDid()))
-	await aliceChat.sendPrivateMessage(await bob.getWalletAddress(), "psst hello")
+	const groupId = await aliceChat().createEncryptionGroup(bob.getAddressFromDid(await bob.getDid()))
+	await aliceChat().sendPrivateMessage(await bob.getWalletAddress(), "psst hello")
 
 	const keys = await chat.app?.db.query("encryptionKeys")
 	t.is(keys?.length, 2)
@@ -173,6 +176,6 @@ test.serial("exchange two messages", async (t) => {
 	const messages = await chat.app?.db.query("privateMessages")
 	t.is(messages?.length, 1)
 
-	const decrypted = await bobChat.decrypt(messages?.[0].id, bobPrivkey)
+	const decrypted = await bobChat().decrypt(messages?.[0].id, bobPrivkey)
 	t.is(decrypted, "psst hello")
 })

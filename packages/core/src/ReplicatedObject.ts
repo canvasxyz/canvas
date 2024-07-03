@@ -115,7 +115,8 @@ export abstract class ReplicatedObject<
 		const implicitCalls: Record<string, AnyCall> = Object.fromEntries(
 			implicitKeys.map((name) => {
 				async function fn(...args: any[]) {
-					await instance._app?.actions[name].call(instance, args)
+					const signer = instance._contextSigner
+					await instance._app?.actions[name].call(instance, args, { signer })
 				}
 				return [name, fn]
 			}),
@@ -140,16 +141,20 @@ export abstract class ReplicatedObject<
 				const explicits = Reflect.ownKeys(grandparent).filter((key) => !accessors.includes(key))
 				for (let explicit of explicits) {
 					if (isHandlerKey(explicit) || typeof explicit === "symbol") continue
-					child._tx[explicit] = (thing: any) => {
-						Object.getPrototypeOf(Object.getPrototypeOf(instance))._contextAddress = instance._address
-						return grandparent[explicit]?.bind(grandparent)(thing)
+					child._tx[explicit] = async (...args: any[]) => {
+						// should be Object.getPrototypeOf(Object.getPrototypeOf(instance))?
+						grandparent._contextAddress = instance._address
+						return grandparent[explicit]?.bind(grandparent).apply(grandparent, args)
 					}
 				}
 			} else {
 				const explicits = Reflect.ownKeys(parent).filter((key) => !accessors.includes(key))
 				for (let explicit of explicits) {
 					if (isHandlerKey(explicit) || typeof explicit === "symbol") continue
-					child._tx[explicit] = parent[explicit]?.bind(parent)
+					child._tx[explicit] = async (...args: any[]) => {
+						parent._contextAddress = instance._address
+						return parent[explicit]?.bind(parent).apply(parent, args)
+					}
 				}
 			}
 		}
@@ -169,6 +174,7 @@ export abstract class ReplicatedObject<
 				if (typeof (this as any)[handlerKey] !== "function") continue
 				const name = fromHandlerKey(handlerKey)
 
+				// contract to handler
 				contract.actions[name] = async (parentDb, parentArgs, parentContext) => {
 					const context = {
 						db: { set: parentDb.set, get: parentDb.get },
@@ -187,23 +193,15 @@ export abstract class ReplicatedObject<
 			if (typeof name === "symbol") continue
 
 			if (explicit) {
-				// TODO: remove unnecessary rebinding
-				const inner = Object.getPrototypeOf(instance)
-				const fn = async function (fn: AnyCall, ...args: any[]) {
-					Object.getPrototypeOf(Object.getPrototypeOf(instance))._contextAddress = "123" // TODO
-					await fn.apply(inner, args)
-				}
 				const child = Object.getPrototypeOf(instance)
-				const parent = Object.getPrototypeOf(child)
-				if (!this._tx[name]) {
-					this._tx[name] = fn.bind(null, child[name].bind(child))
-				}
+				if (!this._tx[name]) this._tx[name] = child[name].bind(child)
 			} else {
 				const fn = async function (...args: any[]) {
 					const signer = instance._contextSigner
 					if (signer) {
 						instance._contextSigner = undefined
 						const result = instance._app?.actions[name].call(instance, args, { signer })
+						// TODO: don't reset here, there might be multiple action calls
 						instance._contextAddress = undefined
 						instance._contextDid = undefined
 						instance._contextPublicKey = undefined
@@ -213,43 +211,20 @@ export abstract class ReplicatedObject<
 					}
 				}
 				if (!this[name]) this[name] = fn
-				// this._tx[name] = fn
 			}
 		}
 
-		// // set up signer-locked calls
-		// const implicitCalls: Record<string, (signer: SessionSigner<any>, ...args: any[]) => any> = {}
-		// const explicitCalls: Record<string, (signer: SessionSigner<any>, ...args: any[]) => any> = {}
-		// for (const key of keys) {
-		// 	const name = isHandlerKey(key) ? fromHandlerKey(key) : key
-		// 	const explicit = !isHandlerKey(key)
-		// 	if (typeof name === "symbol") continue
-		// 	if (explicit && typeof (this as any)[name] !== "function") continue
-
-		// 	if (explicit) {
-		// 		explicitCalls[name] = async function (signer: SessionSigner<any>, ...args: any[]) {
-		// 			// TODO: lock the object here
-		// 			let session = await signer.getSession(instance._topic!)
-		// 			if (!session) {
-		// 				session = await signer.newSession(instance._topic!)
-		// 			}
-		// 			instance._contextSigner = signer
-		// 			instance._contextAddress = signer.getAddressFromDid(session?.payload.did)
-		// 			instance._contextDid = session.payload.did
-		// 			instance._contextPublicKey = session.payload.publicKey
-		// 			return instance[name].apply(instance, args) ?? instance._tx[name].apply(instance, args)
-		// 		}
-		// 	} else {
-		// 		implicitCalls[name] = function (signer: SessionSigner<any>, ...args: any[]) {
-		// 			return instance._app?.actions[name].call(this, args, { signer })
-		// 		}
-		// 	}
-		// }
-
-		// this.as = (signer: SessionSigner<any>) => {
-		// 	const calls = { ...implicitCalls, ...explicitCalls } // explicit overwrites implicit
-		// 	return Object.fromEntries(Object.entries(calls).map(([key, call]) => [key, call.bind(instance, signer)]))
-		// }
+		this.as = (signer: SessionSigner<any>, signerAddress: string) => {
+			// TODO: lock the object
+			// TODO: better way to get the address from signers
+			this._contextSigner = signer
+			this._contextAddress = signerAddress
+			prototypes.slice(prototypes.length - 2).map((p) => {
+				p._contextSigner = signer
+				p._contextAddress = signerAddress
+			})
+			return this
+		}
 
 		this._ready = new Promise((resolve, reject) => {
 			Canvas.initialize({

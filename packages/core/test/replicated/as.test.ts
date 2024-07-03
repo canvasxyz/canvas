@@ -62,8 +62,7 @@ test.serial("send messages using an explicit call and .as()", async (t) => {
 	const { chat, signer } = t.context
 
 	t.is(await chat.app?.db.count("messages"), 0)
-
-	await chat.as(signer).messageFromChild("hi from explicit call")
+	await chat.as(signer, await signer._signer.getAddress()).messageFromChild("hi from explicit call")
 	t.is(await chat.app?.db.count("messages"), 1)
 
 	const messages = await chat.app?.db.query("messages", { orderBy: { timestamp: "desc" } })
