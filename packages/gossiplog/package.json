@@ -6,9 +6,7 @@
 	"engines": {
 		"node": ">=18.0.0"
 	},
-	"files": [
-		"lib"
-	],
+	"files": ["lib"],
 	"main": "./lib/index.js",
 	"types": "./lib/index.d.ts",
 	"sideEffects": false,
@@ -31,6 +29,7 @@
 		}
 	},
 	"scripts": {
+		"benchmark": "node ./test/lib/benchmark-isancestor.js",
 		"generate": "npm run generate-sync && npm run generate-events",
 		"generate-sync": "protons ./src/protocols/sync.proto",
 		"generate-events": "protons ./src/protocols/events.proto",
