@@ -6,7 +6,9 @@
 	"engines": {
 		"node": ">=18.0.0"
 	},
-	"files": ["lib"],
+	"files": [
+		"lib"
+	],
 	"main": "./lib/index.js",
 	"types": "./lib/index.d.ts",
 	"sideEffects": false,
@@ -89,6 +91,7 @@
 		"@types/pg-cursor": "^2.7.2",
 		"fake-indexeddb": "^6.0.0",
 		"p-defer": "^4.0.1",
+		"prando": "^6.0.1",
 		"protons": "^7.5.0",
 		"web-locks": "^0.0.8"
 	}
