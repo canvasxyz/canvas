@@ -36,29 +36,6 @@ export const simulateRandomNetwork = async (
 ) => {
 	const signers = logs.map(() => pseudoRandomEd25519())
 
-	const messageIDs: string[] = []
-	const messageIndices = new Map<string, { index: number; map: Uint8Array }>()
-
-	const bitMaps = logs.map(() => new Uint8Array(maxMessageCount / 8))
-
-	const setBit = (map: Uint8Array, i: number) => {
-		const bit = i % 8
-		const index = (i - bit) / 8
-		map[index] = map[index] | (1 << bit)
-	}
-
-	const getBit = (map: Uint8Array, i: number): boolean => {
-		const bit = i % 8
-		const index = (i - bit) / 8
-		return Boolean(map[index] & (1 << bit))
-	}
-
-	const merge = (self: Uint8Array, peer: Uint8Array) => {
-		for (let i = 0; i < maxMessageCount / 8; i++) {
-			self[i] |= peer[i]
-		}
-	}
-
 	console.log("creating messages...")
 	const start = performance.now()
 	let messageCount = 0
@@ -72,35 +49,24 @@ export const simulateRandomNetwork = async (
 		if (peerIndex !== selfIndex) {
 			const peer = logs[peerIndex]
 			await peer.serve((source) => self.sync(source))
-
-			merge(bitMaps[selfIndex], bitMaps[peerIndex])
 		}
 
 		// append a chain of messages
 		const chainLength = random(maxChainLength)
 		for (let j = 0; j < chainLength && messageCount < maxMessageCount; j++) {
 			const { id } = await self.append(nanoid(), { signer: signers[selfIndex] })
-			const index = messageCount++
-			messageIndices.set(id, { index, map: new Uint8Array(bitMaps[selfIndex]) })
-			messageIDs.push(id)
-			setBit(bitMaps[selfIndex], index)
+			messageCount++
 		}
 	}
 
 	const time = performance.now() - start
 	console.log("created a randomly partitioned network with", messageCount, "total messages in", time.toFixed(3), "ms")
 
-	// we don't need messages to be sorted in index order anymore;
-	// the indexes are just for indexing bitMaps now.
-	messageIDs.sort()
-
 	console.log("syncing...")
 	const [self, ...peers] = logs
 	for (const peer of peers) {
 		await peer.serve((source) => self.sync(source))
 	}
-
-	return { messageIDs, messageIndices, getBit }
 }
 
 const topic = nanoid()
@@ -111,18 +77,19 @@ const logs: AbstractGossipLog<string>[] = [
 	new GossipLog({ directory: getDirectory(), topic, apply }),
 ]
 
-const maxMessageCount = 1024 * 16
+const maxMessageCount = 1000
 const maxChainLength = 5
 const clockOffsets = [1, 10, 100, 1000, 10000, 100000, 1000000]
 
-const { messageIDs } = await simulateRandomNetwork(topic, logs, maxMessageCount, maxChainLength)
+await simulateRandomNetwork(topic, logs, maxMessageCount, maxChainLength)
 
 const timings: Record<string, number[]> = {}
 const numSamples = 100
-for (let i = 0; i < numSamples; i++) {
-	const ancestorRecord = await logs[0].db.query("$messages", { where: { clock: i }, limit: 1 })
-	if (ancestorRecord == null) {
-		break
+for (let i = 1; i < numSamples + 1; i++) {
+	const ancestorRecords = await logs[0].db.query("$messages", { where: { clock: i }, limit: 1 })
+	if (ancestorRecords.length == 0) {
+		console.log("no ancestor records with clock value", i)
+		continue
 	}
 
 	for (const clockOffset of clockOffsets) {
@@ -134,7 +101,7 @@ for (let i = 0; i < numSamples; i++) {
 		const childRecord = messageRecordsWithClock[0]
 
 		const start = performance.now()
-		await logs[0].isAncestor(childRecord.id, messageIDs[0])
+		await logs[0].isAncestor(childRecord.id, ancestorRecords[0].id)
 		const timingMs = performance.now() - start
 		timings[clockOffset] = timings[clockOffset] || []
 		timings[clockOffset].push(timingMs)
