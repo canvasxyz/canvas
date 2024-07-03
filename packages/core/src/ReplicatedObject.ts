@@ -148,7 +148,7 @@ export abstract class ReplicatedObject<
 			if (!Reflect.ownKeys(child).includes("constructor")) {
 				const grandparent = Object.getPrototypeOf(parent)
 				const explicits = Reflect.ownKeys(grandparent).filter((key) => !accessors.includes(key))
-				for (let explicit of explicits) {
+				for (const explicit of explicits) {
 					if (isHandlerKey(explicit) || typeof explicit === "symbol") continue
 					child._tx[explicit] = async (...args: any[]) => {
 						// should be Object.getPrototypeOf(Object.getPrototypeOf(instance))?
@@ -158,7 +158,7 @@ export abstract class ReplicatedObject<
 				}
 			} else {
 				const explicits = Reflect.ownKeys(parent).filter((key) => !accessors.includes(key))
-				for (let explicit of explicits) {
+				for (const explicit of explicits) {
 					if (isHandlerKey(explicit) || typeof explicit === "symbol") continue
 					child._tx[explicit] = async (...args: any[]) => {
 						parent._contextAddress = instance._address
