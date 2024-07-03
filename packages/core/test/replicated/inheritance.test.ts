@@ -112,7 +112,7 @@ test.serial("doubly nested call, unaliased", async (t) => {
 })
 
 // message4 -> message4 -> message
-test.serial("doubly nested call, first nesting aliased", async (t) => {
+test.serial("doubly nested call, first aliased", async (t) => {
 	await t.context.grandchild.message4("hello world")
 	t.context.messages++
 	const message = await t.context.grandchild.app?.db.query("messages", { orderBy: { timestamp: "desc" } })
@@ -120,7 +120,7 @@ test.serial("doubly nested call, first nesting aliased", async (t) => {
 })
 
 // message2 -> message -> message
-test.serial("doubly nested call, second nesting aliased", async (t) => {
+test.serial("doubly nested call, second aliased", async (t) => {
 	await t.context.grandchild.message2("hello world")
 	t.context.messages++
 	const message = await t.context.grandchild.app?.db.query("messages", { orderBy: { timestamp: "desc" } })

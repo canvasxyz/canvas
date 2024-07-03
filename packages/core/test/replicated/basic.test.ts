@@ -45,7 +45,7 @@ test.afterEach.always(async (t) => {
 /**
  * Tests
  */
-test.serial("handlers called with this.id, this.address, this.timestamp", async (t) => {
+test.serial("handlers have correct msgid, address, timestamp", async (t) => {
 	const { chat } = t.context
 
 	await chat.message("hi")
@@ -89,7 +89,7 @@ test.serial("send messages using an explicit call", async (t) => {
 	t.is(messages?.[1].message, `[${messages?.[0].address}] hi from explicit call`)
 })
 
-test.serial("test multiple levels of inheritance, nested and skip-level calls", async (t) => {
+test.serial("sned messages using multiple levels of inheritance", async (t) => {
 	class ChildChat extends Chat {
 		async messageFromChild(message: string): Promise<void> {
 			await this.tx.messageFromChild("[child] " + message)
