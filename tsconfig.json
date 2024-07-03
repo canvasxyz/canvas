@@ -18,6 +18,7 @@
 		{ "path": "./packages/client" },
 		{ "path": "./packages/core" },
 		{ "path": "./packages/core/test" },
+		{ "path": "./packages/relay-server" },
 		{ "path": "./packages/signatures" },
 		{ "path": "./packages/signatures/test" },
 		{ "path": "./packages/modeldb" },
@@ -28,6 +29,7 @@
 		{ "path": "./packages/chain-atp" },
 		{ "path": "./packages/chain-atp/test" },
 		{ "path": "./packages/chain-cosmos" },
+		{ "path": "./packages/chain-cosmos/test" },
 		{ "path": "./packages/chain-ethereum" },
 		{ "path": "./packages/chain-ethereum/test" },
 		{ "path": "./packages/chain-ethereum-viem" },
@@ -36,10 +38,10 @@
 		{ "path": "./packages/chain-solana" },
 		{ "path": "./packages/chain-solana/test" },
 		{ "path": "./packages/chain-substrate" },
+		{ "path": "./packages/chain-substrate/test" },
 		{ "path": "./packages/ethereum-contracts" },
 		{ "path": "./packages/network-explorer" },
 		{ "path": "./packages/hooks" },
-		{ "path": "./packages/templates" },
 		{ "path": "./packages/test-network" },
 		{ "path": "./packages/utils" }
 	]

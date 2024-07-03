@@ -2,9 +2,27 @@ import { useState, useRef, type FormEvent } from "react"
 import { ethers } from "ethers"
 import "./App.css"
 
+import type { Contract } from "@canvas-js/core"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
-import { PublicChat } from "@canvas-js/templates"
 import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
+
+const PublicChat = {
+	models: {
+		messages: {
+			id: "primary",
+			message: "string",
+			address: "string",
+			timestamp: "integer",
+			$indexes: [["timestamp"], ["address"]],
+		},
+	},
+	actions: {
+		sendMessage: (db, { message }: { message: string }, { address, timestamp, id }) => {
+			if (!message || !message.trim()) throw new Error()
+			db.set("messages", { id, message, address, timestamp })
+		},
+	},
+} satisfies Contract
 
 function App() {
 	const wallet = ethers.Wallet.createRandom()

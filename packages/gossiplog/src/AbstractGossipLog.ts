@@ -12,6 +12,8 @@ import { Driver } from "./sync/driver.js"
 
 import type { SyncServer } from "./interface.js"
 import { AncestorIndex } from "./AncestorIndex.js"
+import { BranchIndex } from "./BranchIndex.js"
+import { BranchMergeIndex } from "./BranchMergeIndex.js"
 import { SignedMessage } from "./SignedMessage.js"
 import { decodeId, encodeId, messageIdPattern } from "./ids.js"
 import { getNextClock } from "./schema.js"
@@ -35,15 +37,25 @@ export interface GossipLogInit<Payload = unknown> {
 
 export type GossipLogEvents<Payload = unknown> = {
 	message: CustomEvent<{ id: string; signature: Signature; message: Message<Payload> }>
-	commit: CustomEvent<{ root: Node }>
+	commit: CustomEvent<{ root: Node; heads: string[] }>
 	sync: CustomEvent<{ peerId?: string; duration: number; messageCount: number }>
 	error: CustomEvent<{ error: Error }>
 }
 
 export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmitter<GossipLogEvents<Payload>> {
 	public static schema = {
-		$messages: { id: "primary", signature: "json", message: "json", hash: "string" },
+		$messages: {
+			id: "primary",
+			signature: "json",
+			message: "json",
+			hash: "string",
+			branch: "integer",
+			clock: "integer",
+			$indexes: ["branch", "clock"],
+		},
 		$heads: { id: "primary" },
+		...BranchIndex.schema,
+		...BranchMergeIndex.schema,
 		...AncestorIndex.schema,
 	} satisfies ModelsInit
 
@@ -95,7 +107,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		})
 	}
 
-	public encode(signature: Signature, message: Message<Payload>): SignedMessage<Payload> {
+	public encode<T extends Payload = Payload>(signature: Signature, message: Message<T>): SignedMessage<T> {
 		assert(this.topic === message.topic, "expected this.topic === topic")
 		assert(this.validatePayload(message.payload), "error encoding message (invalid payload)")
 		return SignedMessage.encode(signature, message)
@@ -146,27 +158,33 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 	 * Sign and append a new *unsigned* message to the end of the log.
 	 * The concurrent heads of the local log are used as parents.
 	 */
-	public async append(payload: Payload, options: { signer?: Signer<Payload> } = {}): Promise<SignedMessage<Payload>> {
+	public async append<T extends Payload = Payload>(
+		payload: T,
+		options: { signer?: Signer<Payload> } = {},
+	): Promise<SignedMessage<T>> {
 		const signer = options.signer ?? this.signer
 
 		let root: Node | null = null
+		let heads: string[] | null = null
 		const signedMessage = await this.tree.write(async (txn) => {
 			const [clock, parents] = await this.getClock()
 
-			const message: Message<Payload> = { topic: this.topic, clock, parents, payload }
+			const message: Message<T> = { topic: this.topic, clock, parents, payload }
 			const signature = await signer.sign(message)
 
 			const signedMessage = this.encode(signature, message)
+			this.log("appending message %s at clock %d with parents %o", signedMessage.id, clock, parents)
 
-			this.log("appending message %s", signedMessage.id)
+			const result = await this.apply(txn, signedMessage)
+			root = result.root
+			heads = result.heads
 
-			await this.apply(txn, signedMessage)
-			root = txn.getRoot()
 			return signedMessage
 		})
 
 		assert(root !== null, "failed to commit transaction")
-		this.dispatchEvent(new CustomEvent("commit", { detail: { root } }))
+		assert(heads !== null, "failed to commit transaction")
+		this.dispatchEvent(new CustomEvent("commit", { detail: { root, heads } }))
 		return signedMessage
 	}
 
@@ -192,12 +210,14 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 	 * If any of the parents are not present, throw an error.
 	 */
 	public async insert(signedMessage: SignedMessage<Payload>): Promise<{ id: string }> {
-		this.log("inserting message %s", signedMessage.id)
+		const { clock, parents } = signedMessage.message
+		this.log("inserting message %s at clock %d with parents %o", signedMessage.id, clock, parents)
 
 		await this.verifySignature(signedMessage.signature, signedMessage.message)
 		const parentKeys = signedMessage.message.parents.map(encodeId)
 
 		let root: Node | null = null
+		let heads: string[] | null = null
 		await this.tree.write(async (txn) => {
 			const hasSignedMessage = await this.has(signedMessage.id)
 			if (hasSignedMessage) {
@@ -212,18 +232,23 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 				}
 			}
 
-			await this.apply(txn, signedMessage)
-			root = txn.getRoot()
+			const result = await this.apply(txn, signedMessage)
+			root = result.root
+			heads = result.heads
 		})
 
 		assert(root !== null, "failed to commit transaction")
-		this.dispatchEvent(new CustomEvent("commit", { detail: { root } }))
+		assert(heads !== null, "failed to commit transaction")
+		this.dispatchEvent(new CustomEvent("commit", { detail: { root, heads } }))
 
 		return { id: signedMessage.id }
 	}
 
-	private async apply(txn: ReadWriteTransaction, signedMessage: SignedMessage<Payload>): Promise<void> {
-		this.log("applying %s %O", signedMessage.id, signedMessage.message)
+	private async apply(
+		txn: ReadWriteTransaction,
+		signedMessage: SignedMessage<Payload>,
+	): Promise<{ root: Node; heads: string[] }> {
+		this.log("applying payload %O", signedMessage.message.payload)
 
 		try {
 			await this.#apply.apply(this, [signedMessage])
@@ -236,24 +261,85 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 		const hash = toString(hashEntry(key, value), "hex")
 
-		await this.db.set("$messages", { id, signature, message, hash })
+		const branch = await this.getBranch(id, message.clock, message.parents)
+		const clock = message.clock
 
-		const heads = await this.db.query<{ id: string }>("$heads")
+		const branchMergeIndex = new BranchMergeIndex(this.db)
+		for (const parentId of message.parents) {
+			const parentMessageResult = await this.db.get("$messages", parentId)
+			if (!parentMessageResult) {
+				throw new Error(`missing parent ${parentId} of message ${id}`)
+			}
+
+			const parentBranch = parentMessageResult.branch
+			const parentClock = parentMessageResult.message.clock
+			if (parentBranch !== branch) {
+				await branchMergeIndex.insertBranchMerge({
+					source_branch: parentBranch,
+					source_clock: parentClock,
+					source_message_id: parentId,
+					target_branch: branch,
+					target_clock: message.clock,
+					target_message_id: id,
+				})
+			}
+		}
+
+		await this.db.set("$messages", { id, signature, message, hash, branch, clock })
+
+		const heads = await this.db
+			.query<{ id: string }>("$heads")
+			.then((heads) => heads.filter((head) => message.parents.includes(head.id)))
+
 		await this.db.apply([
-			...heads
-				.filter((head) => message.parents.includes(head.id))
-				.map<Effect>((head) => ({ model: "$heads", operation: "delete", key: head.id })),
+			...heads.map<Effect>((head) => ({ model: "$heads", operation: "delete", key: head.id })),
 			{ model: "$heads", operation: "set", value: { id } },
 		])
 
 		txn.set(key, value)
 
-		// const root = await txn.getRoot()
-		// await new MerkleIndex(this.db).commit(root)
-
 		await new AncestorIndex(this.db).indexAncestors(id, message.parents)
 
 		this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message } }))
+
+		const root = txn.getRoot()
+		return { root, heads: heads.map((head) => head.id) }
+	}
+
+	private async getBranch(messageId: string, clock: number, parentIds: string[]) {
+		if (parentIds.length == 0) {
+			return await new BranchIndex(this.db).createNewBranch()
+		}
+
+		let maxBranch = -1
+		let parentMessageWithMaxClock: any = null
+		for (const parentId of parentIds) {
+			const parentMessage = await this.db.get("$messages", parentId)
+			if (parentMessage == null) {
+				throw new Error(`Parent message ${parentId} not found`)
+			}
+			if (parentMessage.branch > maxBranch) {
+				parentMessageWithMaxClock = parentMessage
+				maxBranch = parentMessage.branch
+			}
+		}
+		const branch = maxBranch
+
+		const messagesAtBranchClockPosition = await this.db.query("$messages", {
+			where: {
+				branch,
+				clock: {
+					gt: parentMessageWithMaxClock.clock,
+				},
+				id: { neq: messageId },
+			},
+		})
+
+		if (messagesAtBranchClockPosition.length > 0) {
+			return await new BranchIndex(this.db).createNewBranch()
+		} else {
+			return branch
+		}
 	}
 
 	public async getAncestors(id: string, atOrBefore: number): Promise<string[]> {
