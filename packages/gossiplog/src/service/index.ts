@@ -13,11 +13,9 @@ import { Registrar, ConnectionManager } from "@libp2p/interface-internal"
 
 import { GossipSub, GossipsubEvents } from "@chainsafe/libp2p-gossipsub"
 import { logger } from "@libp2p/logger"
-import * as cbor from "@ipld/dag-cbor"
 
 import * as lp from "it-length-prefixed"
 import { pipe } from "it-pipe"
-import { pbStream } from "it-protobuf-stream"
 import { pushable } from "it-pushable"
 import { equals } from "uint8arrays"
 import { anySignal } from "any-signal"
