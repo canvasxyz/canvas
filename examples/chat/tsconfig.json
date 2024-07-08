@@ -6,9 +6,7 @@
 		"rootDir": "src",
 		"outDir": "lib",
 		"esModuleInterop": true,
-		"jsx": "react",
-		"module": "Node16",
-		"moduleResolution": "Node16"
+		"jsx": "react"
 	},
 	"references": [
 		{ "path": "../../packages/core" },
