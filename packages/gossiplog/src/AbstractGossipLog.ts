@@ -16,6 +16,7 @@ import { SignedMessage } from "./SignedMessage.js"
 import { decodeId, encodeId, messageIdPattern } from "./ids.js"
 import { getNextClock } from "./schema.js"
 import { topicPattern } from "./utils.js"
+import { AncestorIndex } from "./AncestorIndex.js"
 
 export type GossipLogConsumer<Payload = unknown> = (
 	this: AbstractGossipLog<Payload>,
@@ -61,6 +62,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 			$indexes: ["branch", "clock"],
 		},
 		$heads: { id: "primary" },
+		...AncestorIndex.schema,
 		...BranchMergeIndex.schema,
 	} satisfies ModelSchema
 
@@ -304,6 +306,8 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 		txn.set(key, value)
 
+		await new AncestorIndex(this.db).indexAncestors(id, message.parents)
+
 		this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message } }))
 
 		const root = txn.getRoot()
@@ -354,59 +358,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 	}
 
 	public async isAncestor(id: string, ancestor: string, visited = new Set<string>()): Promise<boolean> {
-		const ancestorMessage = await this.db.get("$messages", ancestor)
-		if (!ancestorMessage) {
-			throw new Error(`Message ${ancestor} not found`)
-		}
-
-		const toVisit: string[] = []
-		toVisit.push(id)
-
-		// eslint-disable-next-line no-constant-condition
-		while (true) {
-			const currentMessageId = toVisit.pop()
-			if (!currentMessageId) {
-				break
-			}
-			visited.add(currentMessageId)
-
-			// visit
-			const getCurrentMessageResult = await this.db.get("$messages", currentMessageId)
-			if (!getCurrentMessageResult) {
-				throw new Error(`Message ${currentMessageId} not found`)
-			}
-
-			if (
-				getCurrentMessageResult.branch == ancestorMessage.branch &&
-				getCurrentMessageResult.clock >= ancestorMessage.clock
-			) {
-				// found the message
-				return true
-			}
-
-			// this message has a lower clock or branch value than the ancestor message
-			// so none of its parents will be children of the ancestor
-			if (
-				getCurrentMessageResult.clock < ancestorMessage.clock ||
-				getCurrentMessageResult.branch < ancestorMessage.branch
-			) {
-				continue
-			}
-
-			// get parents
-			const branchMerges = await this.db.query<BranchMergeRecord>("$branch_merges", {
-				where: {
-					target_branch: getCurrentMessageResult.branch,
-					target_clock: {
-						lte: getCurrentMessageResult.clock,
-					},
-				},
-			})
-			for (const branchMerge of branchMerges) {
-				toVisit.push(branchMerge.source_message_id)
-			}
-		}
-		return false
+		return await new AncestorIndex(this.db).isAncestor(id, ancestor, visited)
 	}
 
 	/**
