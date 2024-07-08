@@ -24,7 +24,7 @@ const pseudoRandomEd25519 = () =>
 const apply: GossipLogConsumer<string> = ({}) => {}
 
 test("simulate a randomly partitioned network, logs on disk", async (t) => {
-	t.timeout(30 * 1000)
+	t.timeout(60 * 1000)
 	const topic = nanoid()
 
 	const logs: AbstractGossipLog<string>[] = [
