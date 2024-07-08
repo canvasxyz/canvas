@@ -15,10 +15,10 @@
 		"@canvas-js/interfaces": "0.10.0-beta.4",
 		"@canvas-js/signatures": "0.10.0-beta.4",
 		"@canvas-js/utils": "0.10.0-beta.4",
-		"@ipld/dag-json": "^10.2.1",
-		"@libp2p/logger": "^4.0.15",
+		"@ipld/dag-json": "^10.2.2",
+		"@libp2p/logger": "^4.0.16",
 		"ethers": "^6.13.1",
-		"multiformats": "^13.1.1",
+		"multiformats": "^13.1.3",
 		"siwe": "^2.3.2"
 	},
 	"devDependencies": {
