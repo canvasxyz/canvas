@@ -8,5 +8,10 @@ export const MAX_OUTBOUND_STREAMS = 64
 export const SYNC_RETRY_INTERVAL = 3 * second // this is multiplied by Math.random()
 export const SYNC_RETRY_LIMIT = 5
 
+export const SYNC_TIMEOUT = 30 * second
+
+export const PUSH_RETRY_INTERVAL = 3 * second // this is multiplied by Math.random()
+export const PUSH_RETRY_LIMIT = 5
+
 export const DEFAULT_PROTOCOL_SELECT_TIMEOUT = 1000
 export const NEGOTIATE_FULLY = true

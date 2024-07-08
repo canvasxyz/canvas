@@ -62,8 +62,11 @@ export async function getLibp2p<Payload>(
 		services: {
 			identify: identify({ protocolPrefix: "canvas" }),
 			ping: ping({ protocolPrefix: "canvas" }),
-			dht: kadDHT({ protocol: getTopicDHTProtocol(messageLog.topic), kBucketSize: 2 }),
 			fetch: fetchService({ protocolPrefix: "canvas" }),
+
+			dht: kadDHT({
+				protocol: getTopicDHTProtocol(messageLog.topic),
+			}),
 
 			pubsub: gossipsub({
 				emitSelf: false,

@@ -13,14 +13,13 @@ import { Registrar, ConnectionManager } from "@libp2p/interface-internal"
 
 import { GossipSub, GossipsubEvents } from "@chainsafe/libp2p-gossipsub"
 import { logger } from "@libp2p/logger"
-import PQueue from "p-queue"
-import { anySignal } from "any-signal"
+
 import * as lp from "it-length-prefixed"
 import { pipe } from "it-pipe"
-import * as cbor from "@ipld/dag-cbor"
-
 import { pushable } from "it-pushable"
 import { equals } from "uint8arrays"
+import { anySignal } from "any-signal"
+import PQueue from "p-queue"
 
 import type { Entry } from "@canvas-js/okra"
 import type { Signature, Message, Signer } from "@canvas-js/interfaces"
@@ -33,8 +32,11 @@ import {
 	MAX_INBOUND_STREAMS,
 	MAX_OUTBOUND_STREAMS,
 	NEGOTIATE_FULLY,
+	PUSH_RETRY_INTERVAL,
+	PUSH_RETRY_LIMIT,
 	SYNC_RETRY_INTERVAL,
 	SYNC_RETRY_LIMIT,
+	SYNC_TIMEOUT,
 	second,
 } from "../constants.js"
 
@@ -43,13 +45,13 @@ import { AbstractGossipLog, GossipLogEvents } from "../AbstractGossipLog.js"
 import { decodeId, encodeId } from "../ids.js"
 import { Client, decodeRequests, encodeResponses } from "../sync/index.js"
 
-import { DelayableController, SyncDeadlockError, SyncTimeoutError, wait } from "../utils.js"
+import { DelayableController, SyncTimeoutError, wait } from "../utils.js"
 import { Server } from "../sync/server.js"
 
 import { SignedMessage } from "../SignedMessage.js"
 
-export const getSyncProtocol = (topic: string) => `/canvas/sync/v1/${topic}`
-export const getPushProtocol = (topic: string) => `/canvas/push/v1/${topic}`
+export const getSyncProtocol = (topic: string) => `/canvas/v1/${topic}/sync`
+export const getPushProtocol = (topic: string) => `/canvas/v1/${topic}/push`
 
 export type GossipLogServiceComponents = {
 	peerId: PeerId
@@ -143,9 +145,7 @@ export class GossipLogService<Payload = unknown>
 					await this.wait(interval)
 				}
 
-				const [_, parentIds] = await this.messageLog.getClock()
-				const heads = parentIds.map(encodeId)
-				this.schedulePush(peerId, heads)
+				this.schedulePush(peerId)
 			},
 
 			onDisconnect: (peerId) => {
@@ -328,15 +328,28 @@ export class GossipLogService<Payload = unknown>
 
 		await pipe(stream.source, lp.decode, async (msgs) => {
 			try {
-				const { value: msg, done } = await msgs.next()
-				assert(done === false && msg !== undefined, "expected done === false && msg !== undefined")
-				const heads = cbor.decode<Uint8Array[]>(msg.subarray())
-				await msgs.next().then((result) => assert(result.done, "expected result.done"))
-
-				this.handleUpdate(connection.remotePeer, heads)
+				for await (const msg of msgs) {
+					const event = Event.decode(msg.subarray())
+					if (event.insert !== undefined) {
+						// ...
+					} else if (event.update !== undefined) {
+						this.handleUpdate(connection.remotePeer, event.update.heads)
+					}
+				}
 			} catch (err) {
-				stream.close()
+				stream.abort(err instanceof Error ? err : new Error(`${err}`))
 			}
+
+			// try {
+			// 	const { value: msg, done } = await msgs.next()
+			// 	assert(done === false && msg !== undefined, "expected done === false && msg !== undefined")
+			// 	const heads = cbor.decode<Uint8Array[]>(msg.subarray())
+			// 	await msgs.next().then((result) => assert(result.done, "expected result.done"))
+
+			// 	this.handleUpdate(connection.remotePeer, heads)
+			// } catch (err) {
+			// 	stream.close()
+			// }
 		})
 
 		this.log("closed incoming push stream %s from peer %p", stream.id, peerId)
@@ -392,24 +405,37 @@ export class GossipLogService<Payload = unknown>
 		}
 	}
 
-	private schedulePush(peerId: PeerId, heads: Uint8Array[]) {
+	private schedulePush(peerId: PeerId) {
 		this.log("scheduling push to %p", peerId)
 		this.pushQueue
-			.add(async () => {
-				await this.push(peerId, heads)
+			.add(() => this.push(peerId))
+			.catch((err) => {
+				this.log.error("push failed: %O", err)
 			})
-			.catch((err) => this.log.error("push failed: %O", err))
 	}
 
-	private async push(peerId: PeerId, heads: Uint8Array[]) {
+	private async push(peerId: PeerId) {
+		this.log("initiating push to %p", peerId)
 		const connection = this.components.connectionManager
 			.getConnections(peerId)
 			.find((connection) => connection.transient === false)
 
 		if (connection === undefined) {
-			this.log("cancelling push: no longer connected to %p", peerId)
+			this.log("no longer connected to %p", peerId)
 			return
 		}
+
+		await this.retry("push", () => this.#push(connection), {
+			interval: PUSH_RETRY_INTERVAL,
+			limit: PUSH_RETRY_LIMIT,
+		})
+	}
+
+	async #push(connection: Connection) {
+		const peerId = connection.remotePeer
+
+		const [_, heads] = await this.messageLog.getClock()
+		this.log("pushing heads %o to peer %p", heads, peerId)
 
 		const protocolSelectSignal = AbortSignal.timeout(DEFAULT_PROTOCOL_SELECT_TIMEOUT)
 		const stream = await connection
@@ -423,22 +449,14 @@ export class GossipLogService<Payload = unknown>
 
 		try {
 			const source = pushable()
-			await Promise.all([
-				// ...
-				pipe(source, lp.encode, stream.sink),
-				// ...
-				source.push(cbor.encode(heads)).end().onEmpty(),
-			])
+			const data = Event.encode({ update: { heads: heads.map(encodeId) } })
+			await Promise.all([pipe(source, lp.encode, stream.sink), source.push(data).end().onEmpty()])
 
 			await stream.close()
 			this.log("closed outgoing push stream %s to peer %p", stream.id, peerId)
 		} catch (err) {
 			this.log.error("error sending push: %o", err)
-			if (err instanceof Error) {
-				stream.abort(err)
-			} else {
-				stream.abort(new Error())
-			}
+			stream.abort(err instanceof Error ? err : new Error(`${err}`))
 		}
 	}
 
@@ -468,29 +486,10 @@ export class GossipLogService<Payload = unknown>
 			return
 		}
 
-		for (let n = 0; n < SYNC_RETRY_LIMIT; n++) {
-			try {
-				await this.#sync(connection)
-				return
-			} catch (err) {
-				if (err instanceof SyncDeadlockError) {
-					this.log("deadlock with %p", peerId)
-				} else {
-					this.log.error("failed to sync with peer: %O", err)
-				}
-
-				if (this.controller.signal.aborted) {
-					break
-				} else {
-					const interval = Math.floor(Math.random() * SYNC_RETRY_INTERVAL)
-					this.log("waiting %dms before trying again (%d/%d)", interval, n + 1, SYNC_RETRY_LIMIT)
-					await this.wait(interval)
-					continue
-				}
-			}
-		}
-
-		throw new Error("exceeded sync retry limit")
+		await this.retry("sync", () => this.#sync(connection), {
+			interval: SYNC_RETRY_INTERVAL,
+			limit: SYNC_RETRY_LIMIT,
+		})
 	}
 
 	async #sync(connection: Connection): Promise<void> {
@@ -511,7 +510,7 @@ export class GossipLogService<Payload = unknown>
 
 		this.log("opened outgoing sync stream %s to peer %p", stream.id, peerId)
 
-		const timeoutController = new DelayableController(3 * second)
+		const timeoutController = new DelayableController(SYNC_TIMEOUT)
 		const signal = anySignal([this.controller.signal, timeoutController.signal])
 		signal.addEventListener("abort", (err) => {
 			if (stream.status === "open") {
@@ -534,12 +533,31 @@ export class GossipLogService<Payload = unknown>
 		}
 
 		if (messageCount !== 0) {
-			const [_, parentIds] = await this.messageLog.getClock()
-			const heads = parentIds.map(encodeId)
 			for (const peer of this.#pubsub.getSubscribers(this.messageLog.topic)) {
-				this.schedulePush(peer, heads)
+				this.schedulePush(peer)
 			}
 		}
+	}
+
+	private async retry(name: string, callback: () => Promise<void>, options: { interval: number; limit: number }) {
+		for (let n = 0; n < options.limit; n++) {
+			try {
+				await callback()
+				return
+			} catch (err) {
+				this.log.error("%s failed: %O", name, err)
+				if (this.controller.signal.aborted) {
+					break
+				} else {
+					const interval = Math.floor(Math.random() * options.interval)
+					this.log("waiting %dms before trying %s again (%d/%d)", interval, name, n + 1, options.limit)
+					await this.wait(interval)
+					continue
+				}
+			}
+		}
+
+		throw new Error("exceeded sync retry limit")
 	}
 
 	private async wait(interval: number) {

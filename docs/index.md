@@ -16,35 +16,9 @@ layout: home
 </FeatureRow>
 -->
 
-<DemoToggle v-bind:options="['Game', 'Messaging']" defaultOption="Game"></DemoToggle>
+<DemoToggle v-bind:options="['Game']" defaultOption="Game"></DemoToggle>
 
 <DemoCell />
-
-```tsx:Messaging preview
-const models = {
-	messages: {
-		id: "primary",
-		message: "string",
-		timestamp: "integer",
-		$indexes: [["timestamp"]],
-	}
-}
-
-const actions = {
-	send: (db, { message }, { address, timestamp, id }) => {
-		if (!message || !message.trim()) throw new Error()
-		db.set("messages", { id, message, timestamp })
-	}
-}
-
-// Use the application in React
-const { app } = useCanvas({
-	topic: "canvas-example-public-chat"
-	contract: { models, actions },
-})
-const messages = useLiveQuery(app, "messages", { limit: 10 })
-return <div>{messages.map((message) => { ... })}</div>
-```
 
 ```tsx:Game preview
 const models = {

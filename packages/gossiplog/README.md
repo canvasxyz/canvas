@@ -98,25 +98,37 @@ await log.append({ ...payload }, { signer: signerB })
 
 ### Message IDs
 
-Message IDs begin with the message clock, encoded as a **reverse** unsigned varint, followed by the sha2-256 hash of the serialized signed message, and truncated to 20 bytes total. These are encoded using the [`base32hex`](https://www.rfc-editor.org/rfc/rfc4648#section-7) alphabet to get 32-character string IDs, like `054ki1oubq8airsc9d8sbg0t7itqbdlf`.
+Message IDs begin with the message clock, followed by the sha2-256 hash of the serialized signed message, and truncated to 20 bytes total. These are encoded using the [`base32hex`](https://www.rfc-editor.org/rfc/rfc4648#section-7) alphabet to get 32-character string IDs, like `054ki1oubq8airsc9d8sbg0t7itqbdlf`.
 
-"Reverse unsigned varint" is similar to the [multiformats varint format](https://github.com/multiformats/unsigned-varint), which encodes integers in sets of 7 bits using the highest bit as a continuation bit, except here the sets are ordered most-signficiant to least-significant.
+The message clock is encoded using a special variable-length format designed to preseve sorting order (ie message IDs sort lexicographically according to their clock values).
+
+Clock values less than 128 are encoded as-is in a single byte.
+
+For clock values larger than 128, the variable-length begins with a unary representation (in bits) of the number of additional *bytes* (not bits) used to represent the clock value, followed by a `0` separator bit, followed by the binary clock value padded on the left.
 
 ```
-| value | value (binary)    | encoded bytes (binary) | encoded bytes (hex) |
-| ----- | ----------------- | ---------------------- | ------------------- |
-| 0     | 00000000          | 00000000               | 0x00                |
-| 1     | 00000001          | 00000001               | 0x01                |
-| 127   | 01111111          | 01111111               | 0x7f                |
-| 128   | 10000000          | 10000001 00000000      | 0x8100              |
-| 255   | 11111111          | 10000001 01111111      | 0x817f              |
-| 256   | 00000001 00000000 | 10000010 00000000      | 0x8200              |
-| 1234  | 00000100 11010010 | 10001001 01010010      | 0x8952              |
+| input   | input (binary)             | output (binary)            | output (hex)  |
+| ------- | -------------------------- | -------------------------- | ------------- |
+| 0       | 00000000                   | 00000000                   | 0x00          |
+| 1       | 00000001                   | 00000001                   | 0x01          |
+| 2       | 00000002                   | 00000010                   | 0x02          |
+| 127     | 01111111                   | 01111111                   | 0x7f          |
+| 128     | 10000000                   | 10000000 10000000          | 0x8080        |
+| 129     | 10000001                   | 10000000 10000001          | 0x8081        |
+| 255     | 11111111                   | 10000000 11111111          | 0x80ff        |
+| 256     | 00000001 00000000          | 10000001 00000000          | 0x8100        |
+| 1234    | 00000100 11010010          | 10000100 11010010          | 0x84d2        |
+| 16383   | 00111111 11111111          | 10111111 11111111          | 0xbfff        |
+| 16384   | 01000000 00000000          | 11000000 01000000 00000000 | 0xc04000      |
+| 87381   | 00000001 01010101 01010101 | 11000001 01010101 01010101 | 0xc15555      |
+| 1398101 | 00010101 01010101 01010101 | 11010101 01010101 01010101 | 0xd55555      |
 ```
 
-The rationale is that prefixing message IDs with a _lexicographically sortable_ logical clock has many useful consquences. Regular Protobuf-style unsigned varints don't sort the same as their decoded values.
+For example, consider the clock value 87381. The encoded output begins with `110` to indicate that two additional bytes are used to encode the clock. Then, the remaining bits `00001 01010101 01010101` are decoded as the clock value.
 
-The upshot is that these string emssage IDs can be sorted directly using the normal JavaScript string comparison to get a total order over messages that respects both logical clock order and transitive dependency order. For example, implementing a last-write-wins register for message effects is as simple as caching and comparing message ID strings.
+The rationale here is that prefixing message IDs with a _lexicographically sortable_ logical clock has many useful consquences. Regular Protobuf-style unsigned varints don't sort the same as their decoded values.
+
+The upshot is that these string message IDs can be sorted directly using the normal JavaScript string comparison to get a total order over messages that respects both logical clock order and transitive dependency order. For example, implementing a last-write-wins register for message effects is as simple as caching and comparing message ID strings.
 
 ## Usage
 
