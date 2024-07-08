@@ -2,12 +2,6 @@
 	"files": [],
 	"exclude": ["**/vite.config.ts"],
 	"references": [
-		{ "path": "./examples/chat" },
-		{ "path": "./examples/chat-postgres" },
-		{ "path": "./examples/chat-server" },
-		{ "path": "./examples/chess-server" },
-		{ "path": "./examples/encrypted-chat" },
-		{ "path": "./examples/snake" },
 		{ "path": "./packages/interfaces" },
 		{ "path": "./packages/interfaces/test" },
 		{ "path": "./packages/vm" },
@@ -42,6 +36,12 @@
 		{ "path": "./packages/ethereum-contracts" },
 		{ "path": "./packages/hooks" },
 		{ "path": "./packages/test-network" },
-		{ "path": "./packages/utils" }
+		{ "path": "./packages/utils" },
+		{ "path": "./examples/chat" },
+		{ "path": "./examples/chat-postgres" },
+		{ "path": "./examples/chat-server" },
+		{ "path": "./examples/chess-server" },
+		{ "path": "./examples/encrypted-chat" },
+		{ "path": "./examples/snake" }
 	]
 }
