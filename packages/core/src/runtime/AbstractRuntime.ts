@@ -150,7 +150,6 @@ export abstract class AbstractRuntime {
 		const address = signer.getAddressFromDid(did)
 
 		const sessions = await this.db.query<{ id: string; expiration: number | null }>("$sessions", {
-			select: { id: true, expiration: true },
 			where: { public_key: signature.publicKey, did: did },
 		})
 
