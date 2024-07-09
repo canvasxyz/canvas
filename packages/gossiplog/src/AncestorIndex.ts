@@ -5,6 +5,8 @@ import { decodeClock } from "./clock.js"
 import { encodeId } from "./ids.js"
 import { getAncestorClocks } from "./utils.js"
 
+export type AncestorRecord = { id: string; links: string[][] }
+
 export class AncestorIndex {
 	public static schema = {
 		$ancestors: { id: "primary", links: "json" },
@@ -13,7 +15,7 @@ export class AncestorIndex {
 	constructor(private readonly db: AbstractModelDB) {}
 
 	private async getLinks(id: string): Promise<string[][]> {
-		const record = await this.db.get<{ id: string; links: string[][] }>("$ancestors", id)
+		const record = await this.db.get<AncestorRecord>("$ancestors", id)
 		if (record === null) {
 			throw new Error(`ancestor links not found for ${id}`)
 		}
@@ -22,7 +24,7 @@ export class AncestorIndex {
 	}
 
 	private async setLinks(id: string, links: string[][]): Promise<void> {
-		await this.db.set<{ id: string; links: string[][] }>("$ancestors", { id, links })
+		await this.db.set<AncestorRecord>("$ancestors", { id, links })
 	}
 
 	public async getAncestors(

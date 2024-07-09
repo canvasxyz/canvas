@@ -7,9 +7,15 @@ import { TypeTransformerFunction } from "@ipld/schema/typed.js"
 import type { Signature, Action, Message, Session, SignerCache } from "@canvas-js/interfaces"
 
 import { AbstractModelDB, Effect, ModelValue, ModelSchema, lessThan } from "@canvas-js/modeldb"
-import { GossipLogConsumer, encodeId, MAX_MESSAGE_ID, MIN_MESSAGE_ID, AbstractGossipLog } from "@canvas-js/gossiplog"
+import {
+	GossipLogConsumer,
+	encodeId,
+	MAX_MESSAGE_ID,
+	MIN_MESSAGE_ID,
+	AbstractGossipLog,
+	BranchMergeRecord,
+} from "@canvas-js/gossiplog"
 import { assert, mapValues } from "@canvas-js/utils"
-import { BranchMergeRecord } from "../../../gossiplog/src/BranchMergeIndex.js"
 
 export type ExecutionContext = {
 	messageLog: AbstractGossipLog<Action | Session>
