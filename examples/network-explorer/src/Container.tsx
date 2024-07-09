@@ -4,8 +4,8 @@ import Navbar from "./Navbar.js"
 function Container({ children }: { children: ReactNode }) {
 	return (
 		<>
-			<div className="bg-[#3556A3] h-24 w-full top-14 -z-10 absolute"></div>
-			<div className="max-w-4xl container mx-auto text-xs flex flex-col gap-5">
+			<div className="bg-[#20232a] h-32 w-full top-16 -z-10 absolute"></div>
+			<div className="max-w-4xl container mx-auto flex flex-col gap-5">
 				<Navbar />
 				{children}
 			</div>

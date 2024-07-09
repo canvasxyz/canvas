@@ -4,7 +4,7 @@
   "type": "module",
   "version": "0.10.0-beta.4",
   "scripts": {
-    "dev:server": "nodemon",
+    "dev:server": "tsx --tsconfig server/tsconfig.json server/server.ts",
     "dev:client": "vite",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "start:server": "cross-env NODE_ENV=production node dist/server.js"
@@ -29,7 +29,6 @@
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.11",
     "@types/express": "^4.17.21",
-    "@types/node": "^18.11.5",
-    "nodemon": "^2.0.20"
+    "@types/node": "^18.11.5"
   }
 }

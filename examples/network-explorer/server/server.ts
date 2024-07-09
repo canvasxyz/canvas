@@ -11,11 +11,13 @@ import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { createDatabase } from "./database.js"
 import { consumeOrderedIterators } from "./utils.js"
 
-const HTTP_PORT = parseInt(process.env.PORT || "3000", 10)
+const LIBP2P_PORT = parseInt(process.env.LIBP2P_PORT || "3334", 10)
+const HTTP_PORT = parseInt(process.env.PORT || "3333", 10)
 const HTTP_ADDR = "0.0.0.0"
 const dev = process.env.NODE_ENV !== "production"
 const topics = ["chat-example.canvas.xyz"]
 
+console.log(`LIBP2P_PORT: ${LIBP2P_PORT}`)
 console.log(`HTTP_PORT: ${HTTP_PORT}`)
 console.log(`HTTP_ADDR: ${HTTP_ADDR}`)
 console.log(`dev: ${dev}`)
@@ -23,7 +25,11 @@ console.log(`dev: ${dev}`)
 const { queries } = createDatabase(":memory:")
 
 const expressApp = express()
-expressApp.use(cors())
+expressApp.use(
+	cors({
+		origin: "*",
+	}),
+)
 
 const canvasApps: Record<string, Canvas> = {}
 
@@ -40,7 +46,7 @@ for (const topic of topics) {
 		},
 		signers: [new SIWESigner()],
 		bootstrapList: [],
-		listen: [`/ip4/0.0.0.0/tcp/8080/ws`],
+		listen: [`/ip4/0.0.0.0/tcp/${LIBP2P_PORT}/ws`],
 	})
 
 	// create empty counts row for this topic in the index table

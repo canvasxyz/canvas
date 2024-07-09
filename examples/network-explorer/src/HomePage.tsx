@@ -26,7 +26,7 @@ function HomePage() {
 
 	return (
 		<>
-			<div className="text-white pt-5">
+			<div className="text-white pt-6">
 				This explorer provides information about signed interactions on Canvas topics.
 			</div>
 			<NetworkStats />

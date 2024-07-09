@@ -11,7 +11,8 @@ npm run dev:client
 
 env vars:
 
-- PORT (default 3000)
+- PORT (default 3333)
+- LIBP2P_PORT
 - DATABASE_URL
 - NODE_ENV
 

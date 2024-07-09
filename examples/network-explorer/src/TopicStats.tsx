@@ -10,7 +10,7 @@ export function TopicStats({ topic }: { topic: string }) {
 		},
 	)
 	return (
-		<div className="flex flex-row bg-white rounded-lg drop-shadow p-3 gap-3">
+		<div className="flex flex-row bg-white rounded-lg drop-shadow p-4 gap-3">
 			<div>
 				<div>Topic</div>
 				<div className="font-bold">{topic}</div>
