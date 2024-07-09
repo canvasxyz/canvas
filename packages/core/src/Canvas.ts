@@ -295,13 +295,26 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		return await this.messageLog.get(id)
 	}
 
-	// public async *getMessages(
-	// 	lowerBound: { id: string; inclusive: boolean } | null = null,
-	// 	upperBound: { id: string; inclusive: boolean } | null = null,
-	// 	options: { reverse?: boolean } = {},
-	// ): AsyncIterable<[id: string, signature: Signature, message: Message<Action | Session>]> {
-	// 	yield* this.messageLog.iterate(lowerBound, upperBound, options)
-	// }
+	public async *getMessages(
+		lowerBound: { id: string; inclusive: boolean } | null = null,
+		upperBound: { id: string; inclusive: boolean } | null = null,
+		options: { reverse?: boolean } = {},
+	): AsyncIterable<[id: string, signature: Signature, message: Message<Action | Session>]> {
+		// yield* this.messageLog.iterate(lowerBound, upperBound, options)
+		const range: { lt?: string; lte?: string; gt?: string; gte?: string; reverse?: boolean; limit?: number } = {}
+		if (lowerBound) {
+			if (lowerBound.inclusive) range.gte = lowerBound.id
+			else range.gt = lowerBound.id
+		}
+		if (upperBound) {
+			if (upperBound.inclusive) range.lte = upperBound.id
+			else range.lt = upperBound.id
+		}
+		if (options.reverse) {
+			range.reverse = true
+		}
+		return this.messageLog.iterate(range)
+	}
 
 	/**
 	 * Get an existing session
