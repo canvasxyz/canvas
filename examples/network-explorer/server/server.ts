@@ -5,11 +5,11 @@ import { StatusCodes } from "http-status-codes"
 import * as json from "@ipld/dag-json"
 
 import { createAPI } from "@canvas-js/core/api"
-import { Canvas, defaultBootstrapList } from "@canvas-js/core"
+import { Canvas } from "@canvas-js/core"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 
-import { createDatabase } from "./database"
-import { consumeOrderedIterators } from "./utils"
+import { createDatabase } from "./database.js"
+import { consumeOrderedIterators } from "./utils.js"
 
 const HTTP_PORT = parseInt(process.env.PORT || "3000", 10)
 const HTTP_ADDR = "0.0.0.0"
@@ -38,12 +38,7 @@ for (const topic of topics) {
 			models: {},
 			actions: {},
 		},
-		ignoreMissingActions: true,
 		signers: [new SIWESigner()],
-		indexHistory: false,
-		discoveryTopic: "canvas-discovery",
-		trackAllPeers: true,
-		presenceTimeout: 12 * 60 * 60 * 1000, // keep up to 12 hours of offline peers
 		bootstrapList: [],
 		listen: [`/ip4/0.0.0.0/tcp/8080/ws`],
 	})
@@ -79,7 +74,7 @@ expressApp.get("/index_api/messages", ipld(), async (req, res) => {
 	)
 	const result = await consumeOrderedIterators(
 		messageIterators,
-		(a, b) => a[2].payload.timestamp > b[2].payload.timestamp,
+		(a, b) => a[2].payload.context.timestamp > b[2].payload.context.timestamp,
 		numMessagesToReturn,
 	)
 
@@ -91,7 +86,7 @@ expressApp.get("/index_api/messages", ipld(), async (req, res) => {
 expressApp.get("/index_api/counts", (req, res) => {
 	const queryResult = queries.selectCountsAll.all() as any
 	const addressCountResult = queries.selectAddressCountsAll.all() as any
-	const addressCountsMap = {}
+	const addressCountsMap: Record<string, number> = {}
 	for (const row of addressCountResult) {
 		addressCountsMap[row.topic] = row.count
 	}

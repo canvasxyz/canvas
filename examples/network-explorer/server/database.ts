@@ -65,5 +65,5 @@ export function createDatabase(location: string) {
 			selectAddressCountsAll,
 			selectAddressCountTotal,
 		},
-	}
+	} as any
 }

@@ -34,7 +34,6 @@
 		{ "path": "./packages/chain-substrate" },
 		{ "path": "./packages/chain-substrate/test" },
 		{ "path": "./packages/ethereum-contracts" },
-		{ "path": "./packages/network-explorer" },
 		{ "path": "./packages/hooks" },
 		{ "path": "./packages/test-network" },
 		{ "path": "./packages/utils" },
@@ -43,6 +42,8 @@
 		{ "path": "./examples/chat-server" },
 		{ "path": "./examples/chess-server" },
 		{ "path": "./examples/encrypted-chat" },
+		{ "path": "./examples/network-explorer" },
+		{ "path": "./examples/network-explorer/server" },
 		{ "path": "./examples/snake" }
 	]
 }

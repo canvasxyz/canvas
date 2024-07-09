@@ -1,12 +1,13 @@
 {
-	"extends": "./tsconfig.json",
+	"extends": "../tsconfig.json",
 	"compilerOptions": {
 		"module": "NodeNext",
-		"outDir": "dist",
+    "rootDir": ".",
+		"outDir": "../dist",
 		"lib": ["es2019"],
 		"target": "es2019",
 		"isolatedModules": false,
 		"noEmit": false
 	},
-	"include": ["server.ts"]
+	"include": ["."]
 }

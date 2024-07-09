@@ -1,8 +1,8 @@
 {
-  "name": "network-explorer",
+  "name": "@canvas-js/network-explorer",
   "private": true,
   "type": "module",
-  "version": "0.10.0-beta.2",
+  "version": "0.10.0-beta.4",
   "scripts": {
     "dev:server": "nodemon",
     "dev:client": "vite",
@@ -10,11 +10,11 @@
     "start:server": "cross-env NODE_ENV=production node dist/server.js"
   },
   "dependencies": {
-    "@canvas-js/chain-ethereum": "^0.10.0-beta.2",
-    "@canvas-js/interfaces": "^0.10.0-beta.2",
-    "@canvas-js/core": "^0.10.0-beta.2",
-    "@ipld/dag-json": "^10.2.0",
-    "better-sqlite3": "^10.0.0",
+    "@canvas-js/chain-ethereum": "^0.10.0-beta.4",
+    "@canvas-js/interfaces": "^0.10.0-beta.4",
+    "@canvas-js/core": "^0.10.0-beta.4",
+    "@ipld/dag-json": "^10.2.2",
+    "better-sqlite3": "^11.1.2",
     "cors": "^2.8.5",
     "cross-env": "^7.0.3",
     "date-fns": "^3.6.0",
@@ -27,6 +27,8 @@
     "swr": "^2.2.5"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/express": "^4.17.21",
     "@types/node": "^18.11.5",
     "nodemon": "^2.0.20"
   }

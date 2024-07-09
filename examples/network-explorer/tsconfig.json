@@ -10,9 +10,8 @@
     "jsx": "react-jsx",
     "strict": true,
     "noUnusedLocals": true,
-    "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "resolveJsonModule": true
 	},
-	"references": [{ "path": "../core" }, { "path": "../signatures" }, { "path": "../chain-ethereum" }]
+	"references": [{ "path": "../../packages/core" }, { "path": "../../packages/signatures" }, { "path": "../../packages/chain-ethereum" }]
 }
