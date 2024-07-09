@@ -17,7 +17,6 @@ GossipLog can run in the browser using IndexedDB for persistence, on NodeJS usin
   - [Appending new messagse](#appending-new-messages)
   - [Inserting existing messages](#inserting-existing-messages)
   - [Syncing with other peers](#syncing-with-other-peers)
-  - [Indexing ancestors](#indexing-ancestors)
   - [Advanced authentication use cases](#advanced-authentication-use-cases)
 - [API](#api)
 
@@ -168,7 +167,6 @@ interface GossipLogInit<Payload = unknown> {
   validate: (payload: unknown) => payload is Payload
 
   signer?: Signer<Payload>
-  indexAncestors?: boolean
 }
 ```
 
@@ -195,7 +193,6 @@ Payloads may require additional application-specific validation beyond what is c
 #### Optional configuration values
 
 - `replay` (default `false`): upon initializing, iterate over all existing messages and invoke the `apply` function for them all
-- `indexAncestors` (default `false`): enable [ancestor indexing](#indexing-ancestors)
 
 \* `apply` is invoked with **at least once** semantics: in rare cases where transactions to the underlying storage layer fail to commit, `apply` might be invoked more than once with the same message. Messages will **never** be persisted without a successful call to `apply`.
 
@@ -236,56 +233,6 @@ Given an existing `signature: Signature` and `message: Message<Payload>` - such 
 
 TODO
 
-### Indexing ancestors
-
-If `init.indexAncestors` is `true`, GossipLog will maintain an additional "ancestor index" that allows users to look up transitive ancestors of any message at an arbitrary clock in the message's past.
-
-In the example below, `await gossiplog.getAncestors(l, 6)` would return `[h, i]`, while `await gossiplog.getAncestors(k, 6)` would only return `[i]`. The dotted arrows depict the exponential decay links in the ancestor index.
-
-```
-   ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┬ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┬ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
-                                                                                              │
-   │                                                   │                         │                         │
-   ▼                                                   ▼                         ▼            ▼
-                                                                                                           │
-                                          ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┬ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
-                                                                                 │                         │
-                                          │                         │                         │
-                                          ▼                         ▼            ▼                         │
-                                                                                              │
-                                       ┌─────┐      ┌─────┐      ┌─────┐                                   │
-                                   ┌───│  d  │◀─────│  f  │◀─────│  h  │◀──────────────┐      │
-                                   │   └─────┘      └─────┘      └─────┘               │                   │
-┌─────┐      ┌─────┐      ┌─────┐  │                                                   │      │         ┌─────┐
-│  a  │◀─────│  b  │◀─────│  c  │◀─┤                                                   └────────────┬───│  l  │
-└─────┘      └─────┘      └─────┘  │                                                          │     │   └─────┘
-                                   │   ┌─────┐      ┌─────┐      ┌─────┐      ┌─────┐      ┌─────┐  │
-                                   └───│  e  │◀─────│  g  │◀─────│  i  │◀─────│  j  │◀─────│  k  │◀─┘
-                                       └─────┘      └─────┘      └─────┘      └─────┘      └─────┘
-
-
-   1            2            3            4            5            6            7            8            9
-
-                                                       │            │            │
-
-   ▲                         ▲            ▲            │            │            │
-   │                         │
-                                          │            │            │            │
-   └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┴ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
-                                                                    │            │
-
-                ▲                         ▲            ▲            │            │
-                │                         │
-                                                       │            │            │
-                └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┴ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
-                                                                                 │
-
-                             ▲                         ▲            ▲            │
-                             │                         │
-                                                                    │            │
-                             └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┴ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
-```
-
 ### Advanced authentication use cases
 
 Expressing an application's access control logic purely in terms of public keys and signatures can be challenging. The simplest case is one where a only a known fixed set of public keys are allowed to write to the log; at the very least, this generalizes all of Hypercore's use cases. Another simple case is for open-ended applications where end users have keypairs, and the application can access the private key and programmatically sign messages directly.
@@ -306,7 +253,6 @@ interface GossipLogInit<Payload = unknown> {
 
   signer?: Signer<Payload>
   replay?: boolean
-  indexAncestors?: boolean
 }
 
 type GossipLogEvents<Payload> = {
@@ -341,8 +287,6 @@ interface AbstractGossipLog<Payload = unknown>
   ): AsyncIterable<[id: string, signature: Signature, message: Message<Payload>]>
 
   public getClock(): Promise<[clock: number, parents: string[]]>
-
-  public getAncestors(id: string, ancestorClock: number): Promise<string[]>
 
   public replay(): Promise<void>
 }

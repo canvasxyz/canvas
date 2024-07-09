@@ -1,13 +1,13 @@
 import { assert } from "@canvas-js/utils"
 
-import { Config, Model, ModelsInit, PrimitiveType, Property, PropertyType, Relation } from "./types.js"
+import { Config, Model, ModelSchema, PrimitiveType, Property, PropertyType, Relation } from "./types.js"
 import { namePattern } from "./utils.js"
 
-export function parseConfig(init: ModelsInit): Config {
+export function parseConfig(init: ModelSchema): Config {
 	const relations: Relation[] = []
 	const models: Model[] = []
 
-	for (const [modelName, { $indexes, ...rest }] of Object.entries(init)) {
+	for (const [modelName, { $indexes, $merge, ...rest }] of Object.entries(init)) {
 		assert(
 			namePattern.test(modelName),
 			`error defining ${modelName}: expected model name to match /^[a-zA-Z0-9$:_\\-\\.]+$/`,
@@ -20,6 +20,10 @@ export function parseConfig(init: ModelsInit): Config {
 			assert(
 				!Array.isArray(propertyType),
 				`error defining ${modelName}: invalid property type for ${propertyName}: ${propertyType}`,
+			)
+			assert(
+				typeof propertyType !== "function",
+				`error defining ${modelName}: invalid property type for ${propertyName}`,
 			)
 			const property = parseProperty(modelName, propertyName, propertyType)
 
@@ -52,7 +56,11 @@ export function parseConfig(init: ModelsInit): Config {
 			}
 		}
 
-		models.push({ name: modelName, primaryKey, properties, indexes })
+		if ($merge !== undefined) {
+			assert(typeof $merge === "function", `error defining ${modelName}: expected $merge to be a function`)
+		}
+
+		models.push({ name: modelName, primaryKey, properties, indexes, merge: $merge })
 	}
 
 	return { relations, models }

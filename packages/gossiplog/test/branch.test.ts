@@ -14,7 +14,7 @@ async function insert(log: AbstractGossipLog<any>, signer: ReturnType<typeof ed2
 
 testPlatforms("branch (append, linear history)", async (t, openGossipLog) => {
 	const topic = randomUUID()
-	const log = await openGossipLog(t, { topic, apply, indexAncestors: true })
+	const log = await openGossipLog(t, { topic, apply })
 
 	const n = 20
 	const ids: string[] = []
@@ -31,7 +31,7 @@ testPlatforms("branch (append, linear history)", async (t, openGossipLog) => {
 
 testPlatforms("branch (insert, unconnected messages)", async (t, openGossipLog) => {
 	const topic = randomUUID()
-	const log = await openGossipLog(t, { topic, apply, indexAncestors: true })
+	const log = await openGossipLog(t, { topic, apply })
 	const signer = ed25519.create()
 
 	const p1 = { topic, clock: 1, parents: [], payload: nanoid() }
@@ -49,7 +49,7 @@ testPlatforms("branch (insert, unconnected messages)", async (t, openGossipLog) 
 
 testPlatforms("branch (insert, P1 -> C1, P1 -> C2)", async (t, openGossipLog) => {
 	const topic = randomUUID()
-	const log = await openGossipLog(t, { topic, apply, indexAncestors: true })
+	const log = await openGossipLog(t, { topic, apply })
 	const signer = ed25519.create()
 
 	const p1 = { topic, clock: 1, parents: [], payload: nanoid() }
@@ -80,7 +80,7 @@ testPlatforms("branch (insert, P1 -> C1, P1 -> C2)", async (t, openGossipLog) =>
 
 testPlatforms("branch (P1 -> C1, P1 -> C2, P2 -> C2)", async (t, openGossipLog) => {
 	const topic = randomUUID()
-	const log = await openGossipLog(t, { topic, apply, indexAncestors: true })
+	const log = await openGossipLog(t, { topic, apply })
 	const signer = ed25519.create()
 
 	const p1 = { topic, clock: 1, parents: [], payload: nanoid() }
@@ -115,7 +115,7 @@ testPlatforms("branch (P1 -> C1, P1 -> C2, P2 -> C2)", async (t, openGossipLog) 
 
 testPlatforms("branch (P1 -> C1, P1 -> C2, P2 -> C2, P1 -> C3, P2 -> C3)", async (t, openGossipLog) => {
 	const topic = randomUUID()
-	const log = await openGossipLog(t, { topic, apply, indexAncestors: true })
+	const log = await openGossipLog(t, { topic, apply })
 	const signer = ed25519.create()
 
 	const p1 = { topic, clock: 1, parents: [], payload: nanoid() }
@@ -175,9 +175,9 @@ testPlatforms("branch (P1 -> C1, P1 -> C2, P2 -> C2, P1 -> C3, P2 -> C3)", async
 	})
 })
 
-testPlatforms("branch something", async (t, openGossipLog) => {
+testPlatforms("branch where parents have different clock values", async (t, openGossipLog) => {
 	const topic = randomUUID()
-	const log = await openGossipLog(t, { topic, apply, indexAncestors: true })
+	const log = await openGossipLog(t, { topic, apply })
 	const signer = ed25519.create()
 
 	const { id: a1 } = await insert(log, signer, { topic, clock: 1, parents: [], payload: nanoid() })
