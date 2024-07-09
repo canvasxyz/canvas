@@ -19,13 +19,11 @@ export class FunctionRuntime extends AbstractRuntime {
 		topic: string,
 		signers: SignerCache,
 		contract: Contract,
-		options: { indexHistory?: boolean } = {},
 	): Promise<FunctionRuntime> {
 		assert(contract.actions !== undefined, "contract initialized without actions")
 		assert(contract.models !== undefined, "contract initialized without models")
 
-		const { indexHistory = true } = options
-		const models = AbstractRuntime.getModelSchema(contract.models, { indexHistory })
+		const models = AbstractRuntime.getModelSchema(contract.models)
 		const db = await target.openDB({ path, topic }, models)
 
 		const argsTransformers: Record<
@@ -49,7 +47,7 @@ export class FunctionRuntime extends AbstractRuntime {
 			return action.apply
 		})
 
-		return new FunctionRuntime(topic, signers, db, actions, argsTransformers, indexHistory)
+		return new FunctionRuntime(topic, signers, db, actions, argsTransformers)
 	}
 
 	#context: ExecutionContext | null = null
@@ -64,9 +62,8 @@ export class FunctionRuntime extends AbstractRuntime {
 			string,
 			{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
 		>,
-		indexHistory: boolean,
 	) {
-		super(indexHistory)
+		super()
 
 		this.#db = {
 			get: async <T extends ModelValue = ModelValue>(model: string, key: string) => {

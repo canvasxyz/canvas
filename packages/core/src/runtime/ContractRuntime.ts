@@ -4,7 +4,7 @@ import { fromDSL } from "@ipld/schema/from-dsl.js"
 import type pg from "pg"
 
 import type { SignerCache } from "@canvas-js/interfaces"
-import { AbstractModelDB, ModelValue, ModelsInit, validateModelValue } from "@canvas-js/modeldb"
+import { AbstractModelDB, ModelValue, ModelSchema, validateModelValue } from "@canvas-js/modeldb"
 import { VM } from "@canvas-js/vm"
 import { assert, mapEntries } from "@canvas-js/utils"
 
@@ -20,9 +20,9 @@ export class ContractRuntime extends AbstractRuntime {
 		topic: string,
 		signers: SignerCache,
 		contract: string,
-		options: { runtimeMemoryLimit?: number; indexHistory?: boolean } = {},
+		options: { runtimeMemoryLimit?: number } = {},
 	): Promise<ContractRuntime> {
-		const { runtimeMemoryLimit, indexHistory = true } = options
+		const { runtimeMemoryLimit } = options
 
 		const uri = `canvas:${bytesToHex(sha256(contract))}`
 
@@ -68,12 +68,12 @@ export class ContractRuntime extends AbstractRuntime {
 			return apply.consume(vm.cache)
 		})
 
-		// TODO: validate that models satisfies ModelsInit
+		// TODO: validate that models satisfies ModelSchema
 		assert(modelsHandle !== undefined, "missing `models` export")
-		const modelsInit = modelsHandle.consume(vm.context.dump) as ModelsInit
+		const modelSchema = modelsHandle.consume(vm.context.dump) as ModelSchema
 
-		const db = await target.openDB({ path, topic }, AbstractRuntime.getModelSchema(modelsInit, { indexHistory }))
-		return new ContractRuntime(topic, signers, db, vm, actions, argsTransformers, indexHistory)
+		const db = await target.openDB({ path, topic }, AbstractRuntime.getModelSchema(modelSchema))
+		return new ContractRuntime(topic, signers, db, vm, actions, argsTransformers)
 	}
 
 	readonly #databaseAPI: QuickJSHandle
@@ -90,9 +90,8 @@ export class ContractRuntime extends AbstractRuntime {
 			string,
 			{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
 		>,
-		indexHistory: boolean,
 	) {
-		super(indexHistory)
+		super()
 		this.#databaseAPI = vm
 			.wrapObject({
 				get: vm.wrapFunction((model, key) => {

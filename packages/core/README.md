@@ -75,12 +75,12 @@ const results = await app.db.query("posts", {})
 ### Contract types
 
 ```ts
-import type { ModelsInit, ModelValue } from "@canvas-js/modeldb"
+import type { ModelSchema, ModelValue } from "@canvas-js/modeldb"
 import type { Awaitable } from "@canvas-js/interfaces"
 
 export type Contract = {
   topic: string
-  models: ModelsInit
+  models: ModelSchema
   actions: Record<string, ActionImplementationFunction | ActionImplementationObject>
 }
 
@@ -138,8 +138,6 @@ export interface CanvasConfig<T extends Contract = Contract> extends NetworkConf
   path?: string | null
   /** provide an existing libp2p instance instead of creating a new one */
   libp2p?: Libp2p<ServiceMap>
-  /** set to `false` to disable history indexing and db.get(..) within actions */
-  indexHistory?: boolean
   runtimeMemoryLimit?: number
 }
 

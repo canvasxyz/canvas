@@ -1,4 +1,4 @@
-import type { AbstractModelDB, ModelsInit } from "@canvas-js/modeldb"
+import type { AbstractModelDB, ModelSchema } from "@canvas-js/modeldb"
 import { assert } from "@canvas-js/utils"
 
 import { decodeClock } from "./clock.js"
@@ -8,7 +8,7 @@ import { getAncestorClocks } from "./utils.js"
 export class AncestorIndex {
 	public static schema = {
 		$ancestors: { id: "primary", links: "json" },
-	} satisfies ModelsInit
+	} satisfies ModelSchema
 
 	constructor(private readonly db: AbstractModelDB) {}
 

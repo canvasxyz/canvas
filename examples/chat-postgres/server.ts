@@ -37,7 +37,6 @@ nextApp.prepare().then(async () => {
 			},
 		},
 		signers: [new SIWESigner()],
-		indexHistory: false,
 		bootstrapList: [
 			"/dns4/canvas-chat-discovery-staging-p0.fly.dev/tcp/443/wss/p2p/12D3KooWFtS485QGEZwquMQbq7MZTMxiuHs6xUKEi664i4yWUhWa",
 			"/dns4/canvas-chat-discovery-staging-p1.fly.dev/tcp/443/wss/p2p/12D3KooWPix1mT8QavTjfiha3hWy85dQDgPb9VWaxRhY8Yq3cC7L",
