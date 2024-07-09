@@ -2,7 +2,7 @@ import "fake-indexeddb/auto"
 import test, { ExecutionContext } from "ava"
 import { nanoid } from "nanoid"
 
-import type { AbstractModelDB, ModelsInit } from "@canvas-js/modeldb"
+import type { AbstractModelDB, ModelSchema } from "@canvas-js/modeldb"
 import { ModelDB as ModelDBSqlite } from "@canvas-js/modeldb-sqlite"
 import { ModelDB as ModelDBIdb } from "@canvas-js/modeldb-idb"
 import { ModelDB as ModelDBPostgres } from "@canvas-js/modeldb-pg"
@@ -11,7 +11,7 @@ export const testOnModelDB = (
 	name: string,
 	run: (
 		t: ExecutionContext<unknown>,
-		openDB: (t: ExecutionContext, models: ModelsInit) => Promise<AbstractModelDB>,
+		openDB: (t: ExecutionContext, models: ModelSchema) => Promise<AbstractModelDB>,
 	) => void,
 ) => {
 	const macro = test.macro(run)

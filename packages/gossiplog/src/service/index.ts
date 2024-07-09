@@ -13,14 +13,13 @@ import { Registrar, ConnectionManager } from "@libp2p/interface-internal"
 
 import { GossipSub, GossipsubEvents } from "@chainsafe/libp2p-gossipsub"
 import { logger } from "@libp2p/logger"
-import PQueue from "p-queue"
-import { anySignal } from "any-signal"
+
 import * as lp from "it-length-prefixed"
 import { pipe } from "it-pipe"
-import * as cbor from "@ipld/dag-cbor"
-
 import { pushable } from "it-pushable"
 import { equals } from "uint8arrays"
+import { anySignal } from "any-signal"
+import PQueue from "p-queue"
 
 import type { Entry } from "@canvas-js/okra"
 import type { Signature, Message, Signer } from "@canvas-js/interfaces"
@@ -329,15 +328,28 @@ export class GossipLogService<Payload = unknown>
 
 		await pipe(stream.source, lp.decode, async (msgs) => {
 			try {
-				const { value: msg, done } = await msgs.next()
-				assert(done === false && msg !== undefined, "expected done === false && msg !== undefined")
-				const heads = cbor.decode<Uint8Array[]>(msg.subarray())
-				await msgs.next().then((result) => assert(result.done, "expected result.done"))
-
-				this.handleUpdate(connection.remotePeer, heads)
+				for await (const msg of msgs) {
+					const event = Event.decode(msg.subarray())
+					if (event.insert !== undefined) {
+						// ...
+					} else if (event.update !== undefined) {
+						this.handleUpdate(connection.remotePeer, event.update.heads)
+					}
+				}
 			} catch (err) {
-				stream.close()
+				stream.abort(err instanceof Error ? err : new Error(`${err}`))
 			}
+
+			// try {
+			// 	const { value: msg, done } = await msgs.next()
+			// 	assert(done === false && msg !== undefined, "expected done === false && msg !== undefined")
+			// 	const heads = cbor.decode<Uint8Array[]>(msg.subarray())
+			// 	await msgs.next().then((result) => assert(result.done, "expected result.done"))
+
+			// 	this.handleUpdate(connection.remotePeer, heads)
+			// } catch (err) {
+			// 	stream.close()
+			// }
 		})
 
 		this.log("closed incoming push stream %s from peer %p", stream.id, peerId)
@@ -436,19 +448,15 @@ export class GossipLogService<Payload = unknown>
 		this.log("opened outgoing push stream %s to peer %p", stream.id, peerId)
 
 		try {
-			const data = cbor.encode(heads.map(encodeId))
 			const source = pushable()
+			const data = Event.encode({ update: { heads: heads.map(encodeId) } })
 			await Promise.all([pipe(source, lp.encode, stream.sink), source.push(data).end().onEmpty()])
 
 			await stream.close()
 			this.log("closed outgoing push stream %s to peer %p", stream.id, peerId)
 		} catch (err) {
 			this.log.error("error sending push: %o", err)
-			if (err instanceof Error) {
-				stream.abort(err)
-			} else {
-				stream.abort(new Error())
-			}
+			stream.abort(err instanceof Error ? err : new Error(`${err}`))
 		}
 	}
 

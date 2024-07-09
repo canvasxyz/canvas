@@ -46,7 +46,6 @@ export const App: React.FC<{}> = ({}) => {
 		topic,
 		contract: { ...contract, topic: topicRef.current },
 		signers: sessionSigner ? [sessionSigner] : undefined,
-		indexHistory: false,
 	})
 
 	return (

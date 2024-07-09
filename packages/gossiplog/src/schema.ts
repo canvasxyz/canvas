@@ -3,8 +3,8 @@ import * as cbor from "@ipld/dag-cbor"
 import { Message, Signature } from "@canvas-js/interfaces"
 import { assert } from "@canvas-js/utils"
 
-import { encodeId, decodeId, getKey, KEY_LENGTH } from "./ids.js"
-import { decodeClock, encodeClock } from "./clock.js"
+import { encodeId, decodeId, KEY_LENGTH } from "./ids.js"
+import { decodeClock } from "./clock.js"
 
 export type SignatureTuple = [codec: string, publicKey: string, signature: Uint8Array]
 export type MessageTuple = [

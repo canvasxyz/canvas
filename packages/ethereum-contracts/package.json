@@ -26,7 +26,7 @@
 		"ethers": "5.7.2",
 		"hardhat": "^2.22.5",
 		"hardhat-gas-reporter": "^1.0.10",
-		"multiformats": "^13.1.1",
+		"multiformats": "^13.1.3",
 		"ordinal": "^1.0.3",
 		"solidity-coverage": "^0.8.12",
 		"ts-node": "^10.9.2",

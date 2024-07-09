@@ -132,7 +132,6 @@ export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: Abst
 	})
 
 	libp2p.addEventListener("connection:open", ({ detail: { direction, remotePeer, remoteAddr } }) => {
-		// console.log(`connection:open ${direction} ${remotePeer} ${remoteAddr}`)
 		if (relayServerPeerId === remotePeer.toString()) {
 			console.log(`[fetch ${relayServerPeerId}]`)
 			libp2p.services.fetch.fetch(peerIdFromString(relayServerPeerId), `canvas/v1/${messageLog.topic}`).then(
@@ -150,10 +149,6 @@ export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: Abst
 							protocols: protocols,
 							peerRecordEnvelope: peerRecordEnvelope ?? undefined,
 						})
-
-						// console.log(`[fetch ${relayServerPeerId}] dialing ${peerId}`)
-
-						// libp2p.dial(peerId)
 					}
 				},
 				(err) => console.log("fetch failed", err),

@@ -1,4 +1,4 @@
-import type { ModelsInit } from "@canvas-js/modeldb"
+import type { ModelSchema } from "@canvas-js/modeldb"
 
 import { testOnModelDB } from "./utils.js"
 
@@ -17,7 +17,7 @@ testOnModelDB("create modeldb with a model with valid fields", async (t, openDB)
 			creator: "@user",
 			members: "@user[]",
 		},
-	} satisfies ModelsInit
+	} satisfies ModelSchema
 
 	await t.notThrowsAsync(async () => {
 		await openDB(t, models)
@@ -30,7 +30,7 @@ testOnModelDB("create modeldb with a model with invalid fields should fail", asy
 		room: {
 			name: "unsupported",
 		},
-	} as ModelsInit
+	} as ModelSchema
 
 	await t.throwsAsync(() => openDB(t, models), { message: `error defining room: invalid property "unsupported"` })
 })
@@ -41,7 +41,7 @@ testOnModelDB("create modeldb with a model with an optional json field should fa
 		room: {
 			name: "json?",
 		},
-	} as ModelsInit
+	} as ModelSchema
 
 	await t.throwsAsync(() => openDB(t, models), {
 		message: `error defining room: field "name" is invalid - json fields cannot be optional`,
@@ -53,7 +53,7 @@ testOnModelDB("create a model without a primary key", async (t, openDB) => {
 		room: {
 			name: "string",
 		},
-	} satisfies ModelsInit
+	} satisfies ModelSchema
 
 	await t.throwsAsync(() => openDB(t, models))
 })
@@ -65,7 +65,7 @@ testOnModelDB("create a model with two primary keys", async (t, openDB) => {
 			address: "primary",
 			name: "string?",
 		},
-	} satisfies ModelsInit
+	} satisfies ModelSchema
 
 	await t.throwsAsync(() => openDB(t, models))
 })
