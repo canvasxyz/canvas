@@ -6,10 +6,9 @@ import { TypeTransformerFunction } from "@ipld/schema/typed.js"
 
 import type { Signature, Action, Message, Session, SignerCache } from "@canvas-js/interfaces"
 
-import { AbstractModelDB, Effect, ModelValue, ModelSchema, lessThan } from "@canvas-js/modeldb"
+import { AbstractModelDB, Effect, ModelValue, ModelSchema } from "@canvas-js/modeldb"
 import {
 	GossipLogConsumer,
-	encodeId,
 	MAX_MESSAGE_ID,
 	MIN_MESSAGE_ID,
 	AbstractGossipLog,
@@ -26,6 +25,8 @@ export type ExecutionContext = {
 	modelEntries: Record<string, Record<string, ModelValue | null>>
 	branch: number
 }
+
+export type EffectRecord = { key: string; value: Uint8Array | null; branch: number; clock: number }
 
 export abstract class AbstractRuntime {
 	protected static effectsModel: ModelSchema = {
@@ -149,6 +150,7 @@ export abstract class AbstractRuntime {
 		const address = signer.getAddressFromDid(did)
 
 		const sessions = await this.db.query<{ id: string; expiration: number | null }>("$sessions", {
+			select: { id: true, expiration: true },
 			where: { public_key: signature.publicKey, did: did },
 		})
 
@@ -170,7 +172,7 @@ export abstract class AbstractRuntime {
 				const mergeFunction = this.db.models[model].merge
 
 				const effectKey = `${model}/${keyHash}/${id}`
-				const results = await this.db.query("$effects", {
+				const results = await this.db.query<{ key: string }>("$effects", {
 					select: { key: true },
 					where: { key: { gt: effectKey, lte: `${model}/${keyHash}/${MAX_MESSAGE_ID}` } },
 					limit: 1,
@@ -327,31 +329,58 @@ export abstract class AbstractRuntime {
 			return context.modelEntries[model][key] as T
 		}
 
-		const concurrentAncestors = await this.getConcurrentAncestors(context, model, key)
-		const concurrentEffects = []
+		const { merge } = this.db.models[model]
+		if (merge !== undefined) {
+			const concurrentAncestors = await this.getConcurrentAncestors(context, model, key)
+			const concurrentEffects: ModelValue<any>[] = []
 
-		for (const ancestorKey of concurrentAncestors) {
-			const concurrentEffect = await this.db.get("$effects", ancestorKey)
-			if (!concurrentEffect) {
-				throw new Error(`missing concurrent effect ${ancestorKey}`)
+			for (const ancestor of concurrentAncestors) {
+				const effect = await this.db.get<EffectRecord>("$effects", ancestor)
+				if (effect === null) {
+					throw new Error(`missing concurrent effect ${ancestor}`)
+				} else if (effect.value === null) {
+					throw new Error(`encountered delete effect for merge table`)
+				}
+
+				concurrentEffects.push(cbor.decode<ModelValue<any>>(effect.value))
 			}
-			concurrentEffects.push(concurrentEffect)
-		}
 
-		const mergeFunction = this.db.models[model].merge
-
-		if (mergeFunction) {
-			// if a merge function is defined, use it (i.e. for a CRDT)
-			const values = concurrentEffects.map((e) => e.value as T)
-			const decodedValues = values.map((v: any) => cbor.decode(v))
-			return decodedValues.reduce((a, b) => mergeFunction(a, b)) as T
+			if (concurrentEffects.length === 0) {
+				return null
+			} else {
+				return concurrentEffects.reduce((a, b) => merge(a, b)) as T
+			}
 		} else {
-			// default behaviour: last writer wins
-			// choose the ancestor with the highest key
-			const highestKeyAncestor = concurrentEffects.reduce((a, b) => {
-				return a.key > b.key ? a : b
-			})
-			return cbor.decode(highestKeyAncestor.value)
+			const keyHash = AbstractRuntime.getKeyHash(key)
+			const lowerBound = `${model}/${keyHash}/${MIN_MESSAGE_ID}`
+			let upperBound = `${model}/${keyHash}/${MAX_MESSAGE_ID}`
+
+			// eslint-disable-next-line no-constant-condition
+			while (true) {
+				const results = await this.db.query<{ key: string; value: Uint8Array }>("$effects", {
+					select: { key: true, value: true },
+					where: { key: { gte: lowerBound, lt: upperBound } },
+					orderBy: { key: "desc" },
+					limit: 1,
+				})
+
+				if (results.length === 0) {
+					return null
+				}
+
+				const [effect] = results
+				const [{}, {}, messageId] = effect.key.split("/")
+
+				const visited = new Set<string>()
+				for (const parent of context.message.parents) {
+					const isAncestor = await context.messageLog.isAncestor(parent, messageId, visited)
+					if (isAncestor) {
+						return cbor.decode<null | T>(effect.value)
+					}
+				}
+
+				upperBound = effect.key
+			}
 		}
 	}
 }
