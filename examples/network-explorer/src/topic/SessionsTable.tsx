@@ -1,8 +1,8 @@
 import useSWR from "swr"
 import { Session } from "@canvas-js/interfaces"
-import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "./utils.js"
-import PaginationButton from "./PaginationButton.js"
-import useCursorStack from "./useCursorStack.js"
+import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "../utils.js"
+import PaginationButton from "../components/PaginationButton.js"
+import useCursorStack from "../useCursorStack.js"
 
 const entriesPerPage = 10
 

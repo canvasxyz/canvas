@@ -1,5 +1,5 @@
 import useSWR from "swr"
-import { fetchAndIpldParseJson } from "./utils.js"
+import { fetchAndIpldParseJson } from "../utils.js"
 
 export function TopicStats({ topic }: { topic: string }) {
 	const { data: countsData } = useSWR(

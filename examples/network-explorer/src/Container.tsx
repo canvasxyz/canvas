@@ -1,5 +1,5 @@
 import { ReactNode } from "react"
-import Navbar from "./Navbar.js"
+import Navbar from "./components/Navbar.js"
 
 function Container({ children }: { children: ReactNode }) {
 	return (

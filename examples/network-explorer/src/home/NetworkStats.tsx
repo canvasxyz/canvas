@@ -1,6 +1,6 @@
 import useSWR from "swr"
-import { fetchAndIpldParseJson } from "./utils.js"
-import { version } from "../package.json"
+import { fetchAndIpldParseJson } from "../utils.js"
+import { version } from "../../package.json"
 
 export function NetworkStats() {
 	const { data } = useSWR(
@@ -16,21 +16,21 @@ export function NetworkStats() {
 	)
 
 	return (
-		<div className="flex flex-row bg-white rounded-lg drop-shadow p-4 gap-3">
+		<div className="flex flex-row bg-white rounded-lg drop-shadow p-4 px-5 gap-3">
 			<div className="w-1/2">
 				<div className="font-bold">Status</div>
-				<div>Online, v{version}</div>
+				<div className="font-medium">Online, v{version}</div>
 			</div>
 			<div>
-				<div className="w-24">Actions</div>
+				<div className="w-24 font-bold">Actions</div>
 				<div className="font-medium">{data ? data.action_count : "..."}</div>
 			</div>
 			<div>
-				<div className="w-24">Sessions</div>
+				<div className="w-24 font-bold">Sessions</div>
 				<div className="font-medium">{data ? data.session_count : "..."}</div>
 			</div>
 			<div>
-				<div className="w-24">Addresses</div>
+				<div className="w-24 font-bold">Addresses</div>
 				<div className="font-medium">{data ? data.address_count : "..."}</div>
 			</div>
 		</div>

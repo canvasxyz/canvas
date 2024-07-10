@@ -1,9 +1,10 @@
 import useSWR from "swr"
-import ArgsPopout from "./ArgsPopout.js"
-import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "./utils.js"
 import { Action, Message, Session, Signature } from "@canvas-js/interfaces"
-import PaginationButton from "./PaginationButton.js"
-import useCursorStack from "./useCursorStack.js"
+
+import ArgsPopout from "../components/ArgsPopout.js"
+import PaginationButton from "../components/PaginationButton.js"
+import useCursorStack from "../useCursorStack.js"
+import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "../utils.js"
 
 function SessionField({ signature, message }: { signature: Signature; message: Message<Action> }) {
 	const { data: session, error } = useSWR(

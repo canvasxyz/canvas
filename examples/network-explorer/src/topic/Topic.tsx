@@ -1,5 +1,6 @@
-import { TopicStats } from "./TopicStats.js"
 import { useParams } from "react-router-dom"
+
+import { TopicStats } from "./TopicStats.js"
 import ActionsTable from "./ActionsTable.js"
 import SessionsTable from "./SessionsTable.js"
 
