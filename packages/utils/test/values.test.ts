@@ -1,6 +1,6 @@
 import test from "ava"
 
-import { prepare, JSValue } from "@canvas-js/utils"
+import { prepare, JSValue } from "../src/index.js"
 
 test("prepare values, objects, Uint8Arrays, nested arrays", async (t) => {
 	const arr1 = [null, true, false, 4, 89.1923, 1392138213321, -0.0, Infinity, -Infinity, NaN, "hellooo world", ""]
