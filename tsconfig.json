@@ -43,6 +43,8 @@
 		{ "path": "./examples/chat-server" },
 		{ "path": "./examples/chess-server" },
 		{ "path": "./examples/encrypted-chat" },
+		{ "path": "./examples/network-explorer" },
+		{ "path": "./examples/network-explorer/server" },
 		{ "path": "./examples/snake" }
 	]
 }

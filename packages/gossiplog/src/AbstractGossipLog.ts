@@ -2,7 +2,7 @@ import { TypedEventEmitter, CustomEvent } from "@libp2p/interface"
 import { Logger, logger } from "@libp2p/logger"
 import { equals, toString } from "uint8arrays"
 
-import { Node, Tree, ReadWriteTransaction, hashEntry } from "@canvas-js/okra"
+import { Node, Tree, ReadWriteTransaction, hashEntry, ReadOnlyTransaction } from "@canvas-js/okra"
 import type { Signature, Signer, Message, Awaitable } from "@canvas-js/interfaces"
 import type { AbstractModelDB, ModelSchema, Effect } from "@canvas-js/modeldb"
 import { ed25519 } from "@canvas-js/signatures"
@@ -165,6 +165,23 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 			orderBy: { id: reverse ? "desc" : "asc" },
 			limit,
 		})
+	}
+
+
+	public async *iterate(
+		range: { lt?: string; lte?: string; gt?: string; gte?: string; reverse?: boolean; limit?: number } = {},
+	): AsyncIterable<{ id: string; signature: Signature; message: Message<Payload> }> {
+		const { reverse = false, limit, ...where } = range
+		// TODO: use this.db.iterate()
+		const query = await this.db.query<{ id: string; signature: Signature; message: Message<Payload> }>("$messages", {
+			where: { id: where },
+			select: { id: true, signature: true, message: true },
+			orderBy: { id: reverse ? "desc" : "asc" },
+			limit,
+		})
+		for await (const row of query) {
+			yield row;
+		}
 	}
 
 	/**
