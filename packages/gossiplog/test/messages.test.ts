@@ -7,6 +7,7 @@ import { ed25519 } from "@canvas-js/signatures"
 
 import type { GossipLogConsumer } from "@canvas-js/gossiplog"
 import { testPlatforms, expectLogEntries } from "./utils.js"
+import { prepareMessage } from "@canvas-js/utils"
 
 const apply: GossipLogConsumer<string> = ({}) => {}
 
@@ -95,4 +96,48 @@ testPlatforms("reject invalid message", async (t, openGossipLog) => {
 
 	await t.notThrowsAsync(() => log.append(nanoid()))
 	await t.throwsAsync(() => log.append(4))
+})
+
+testPlatforms("handle undefined message", async (t, openGossipLog) => {
+	const topic = randomUUID()
+	const log = await openGossipLog(t, {
+		topic,
+		apply: ({ message }) => {},
+	})
+
+	const signer = ed25519.create()
+	const { id: idA } = await log.append(null, { signer })
+	const { id: idB } = await log.append({ key1: 1, key2: undefined }, { signer })
+	const { id: idC } = await log.append(undefined, { signer })
+
+	await expectLogEntries(t, log, [
+		[idA, signer.publicKey, { topic, clock: 1, parents: [], payload: null }],
+		[idB, signer.publicKey, { topic, clock: 2, parents: [idA], payload: { key1: 1 } }],
+		[idC, signer.publicKey, { topic, clock: 3, parents: [idB], payload: null }],
+	])
+})
+
+testPlatforms("handle undefined message when using log.encode() and signer.sign()", async (t, openGossipLog) => {
+	const topic = randomUUID()
+	const log = await openGossipLog(t, {
+		topic,
+		apply: ({ message }) => {},
+	})
+
+	const signer = ed25519.create()
+
+	const a = { topic, clock: 1, parents: [], payload: { a: [null] } }
+	const { id: idA } = await log.insert(log.encode(signer.sign(a), a))
+
+	const b = { topic, clock: 2, parents: [idA], payload: { b: [undefined] } }
+	const { id: idB } = await log.insert(log.encode(signer.sign(b), b))
+
+	const c = { topic, clock: 3, parents: [idB], payload: { foo: null, bar: undefined } }
+	const { id: idC } = await log.insert(log.encode(signer.sign(c), c))
+
+	await expectLogEntries(t, log, [
+		[idA, signer.publicKey, prepareMessage({ topic, clock: 1, parents: [], payload: { a: [null] } })],
+		[idB, signer.publicKey, prepareMessage({ topic, clock: 2, parents: [idA], payload: { b: [null] } })],
+		[idC, signer.publicKey, prepareMessage({ topic, clock: 3, parents: [idB], payload: { foo: null } })],
+	])
 })

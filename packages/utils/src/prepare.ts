@@ -1,4 +1,9 @@
+import { Message } from "@canvas-js/interfaces"
 import { JSValue } from "./values.js"
+
+export function prepareMessage<T>(message: Message<T>, options: { replaceUndefined?: boolean } = { replaceUndefined: true }): Message<T> {
+	return { ...message, payload: prepare(message.payload, options) }
+}
 
 /*
  * Prepare a DAG-JSON or DAG-CBOR object for
@@ -29,7 +34,7 @@ export function prepare<T>(node: T, { replaceUndefined }: { replaceUndefined?: b
 		if (replaceUndefined) {
 			return null as T
 		} else {
-			throw new Error("invalid value 'undefined'")
+			throw new Error("cannot encode message with value 'undefined'")
 		}
 	}
 

@@ -6,7 +6,7 @@ import { Node, Tree, ReadWriteTransaction, hashEntry } from "@canvas-js/okra"
 import type { Signature, Signer, Message, Awaitable } from "@canvas-js/interfaces"
 import type { AbstractModelDB, ModelSchema, Effect } from "@canvas-js/modeldb"
 import { ed25519 } from "@canvas-js/signatures"
-import { assert, zip } from "@canvas-js/utils"
+import { assert, zip, prepare, prepareMessage } from "@canvas-js/utils"
 
 import { Driver } from "./sync/driver.js"
 
@@ -115,10 +115,15 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		})
 	}
 
-	public encode<T extends Payload = Payload>(signature: Signature, message: Message<T>): SignedMessage<T> {
+	public encode<T extends Payload = Payload>(
+		signature: Signature,
+		message: Message<T>,
+		{ replaceUndefined }: { replaceUndefined: boolean } = { replaceUndefined: true },
+	): SignedMessage<T> {
 		assert(this.topic === message.topic, "expected this.topic === topic")
-		assert(this.validatePayload(message.payload), "error encoding message (invalid payload)")
-		return SignedMessage.encode(signature, message)
+		const preparedMessage = prepareMessage(message)
+		assert(this.validatePayload(preparedMessage.payload), "error encoding message (invalid payload)")
+		return SignedMessage.encode(signature, preparedMessage)
 	}
 
 	public decode(value: Uint8Array): SignedMessage<Payload> {
@@ -177,7 +182,12 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		const signedMessage = await this.tree.write(async (txn) => {
 			const [clock, parents] = await this.getClock()
 
-			const message: Message<T> = { topic: this.topic, clock, parents, payload }
+			const message: Message<T> = {
+				topic: this.topic,
+				clock,
+				parents,
+				payload: prepare(payload, { replaceUndefined: true }),
+			}
 			const signature = await signer.sign(message)
 
 			const signedMessage = this.encode(signature, message)
