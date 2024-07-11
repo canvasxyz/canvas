@@ -28,10 +28,10 @@ import {
 	encodeRecordParams,
 } from "./encoding.js"
 import { Method, Query } from "./utils.js"
-import { OpfsDatabase } from "@sqlite.org/sqlite-wasm"
+import { OpfsDatabase, SqlValue } from "@sqlite.org/sqlite-wasm"
 
-type RecordValue = Record<string, string | number | Buffer | null>
-type Params = Record<`p${string}`, string | number | Buffer | null>
+type RecordValue = Record<string, SqlValue>
+type Params = Record<`p${string}`, SqlValue>
 
 const primitiveColumnTypes = {
 	integer: "INTEGER",
@@ -263,7 +263,7 @@ export class ModelAPI {
 			params.limit = query.offset
 		}
 
-		const results = this.db.prepare(sql.join(" ")).all(params) as RecordValue[]
+		const results = this.db.selectObjects(sql.join(" "))
 		return results.map((record): ModelValue => {
 			const key = record[this.#primaryKeyName]
 			assert(typeof key === "string", 'expected typeof primaryKey === "string"')
@@ -526,7 +526,7 @@ export class RelationAPI {
 	readonly #delete: Method<{ _source: string }>
 
 	public constructor(
-		readonly db: Database,
+		readonly db: OpfsDatabase,
 		readonly relation: Relation,
 	) {
 		const columns = [`_source TEXT NOT NULL`, `_target TEXT NOT NULL`]

@@ -1,8 +1,6 @@
-import { OpfsDatabase, PreparedStatement } from "@sqlite.org/sqlite-wasm"
+import { BindingSpec, OpfsDatabase, PreparedStatement, SqlValue } from "@sqlite.org/sqlite-wasm"
 
-type Params = Record<`p${string}`, string | number | Buffer | null>
-
-export class Query<P, R> {
+export class Query<P extends BindingSpec, R> {
 	private readonly statement: PreparedStatement
 
 	constructor(
@@ -12,35 +10,55 @@ export class Query<P, R> {
 		this.statement = db.prepare(sql)
 	}
 
-	public get(params: Params): R | null {
+	public get(params: P): R | null {
+		const statement = this.statement
 		try {
-			this.statement.bind(params)
-			const result = this.statement.get({}) as R | null
+			statement.bind(params)
+			const result = statement.get({}) as R | null
 			return result ?? null
 		} finally {
-			this.statement.clearBindings()
+			statement.reset(true)
 		}
 	}
 
-	public all(params: Params): R[] {
+	public all(params: P): R[] {
+		const statement = this.statement
 		try {
-			this.statement.bind(params)
+			statement.bind(params)
 			const result = []
-			while (this.statement.step()) {
-				result.push(this.statement.get({}) as R)
+			while (statement.step()) {
+				result.push(statement.get({}) as R)
 			}
 			return result
 		} finally {
-			this.statement.clearBindings()
+			statement.reset(true)
 		}
 	}
 
 	public iterate(params: P): IterableIterator<R> {
-		return this.statement.iterate(params) as IterableIterator<R>
+		const statement = this.statement
+		try {
+			statement.bind(params)
+			return {
+				[Symbol.iterator]() {
+					return this
+				},
+				next() {
+					const done = statement.step()
+					if (done) {
+						return { done: true, value: undefined }
+					} else {
+						return { done: false, value: statement.get({}) as R }
+					}
+				},
+			}
+		} finally {
+			statement.reset(true)
+		}
 	}
 }
 
-export class Method<P> {
+export class Method<P extends BindingSpec> {
 	private readonly statement: PreparedStatement
 
 	constructor(
@@ -51,6 +69,9 @@ export class Method<P> {
 	}
 
 	public run(params: P) {
-		this.statement.run(params)
+		const statement = this.statement
+		statement.bind(params)
+		statement.step()
+		statement.reset(true)
 	}
 }

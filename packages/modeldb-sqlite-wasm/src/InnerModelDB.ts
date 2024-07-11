@@ -1,4 +1,4 @@
-import { Config, Effect, ModelValue } from "@canvas-js/modeldb"
+import { Config, Effect, ModelValue, QueryParams } from "@canvas-js/modeldb"
 import { assert, signalInvalidType } from "@canvas-js/utils"
 import { OpfsDatabase } from "@sqlite.org/sqlite-wasm"
 import { ModelAPI } from "./ModelAPI.js"
