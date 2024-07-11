@@ -155,7 +155,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		}
 	}
 
-	public export(
+	public getMessages(
 		range: { lt?: string; lte?: string; gt?: string; gte?: string; reverse?: boolean; limit?: number } = {},
 	): Promise<{ id: string; signature: Signature; message: Message<Payload> }[]> {
 		const { reverse = false, limit, ...where } = range
@@ -166,7 +166,6 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 			limit,
 		})
 	}
-
 
 	public async *iterate(
 		range: { lt?: string; lte?: string; gt?: string; gte?: string; reverse?: boolean; limit?: number } = {},
@@ -180,7 +179,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 			limit,
 		})
 		for await (const row of query) {
-			yield row;
+			yield row
 		}
 	}
 

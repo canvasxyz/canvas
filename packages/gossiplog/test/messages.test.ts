@@ -50,7 +50,7 @@ testPlatforms("insert concurrent messages", async (t, openGossipLog) => {
 
 	t.deepEqual(
 		await log
-			.export()
+			.getMessages()
 			.then((results) => results.map(({ id, signature: { publicKey }, message }) => [id, publicKey, message])),
 		entries,
 	)

@@ -24,7 +24,7 @@ export async function handler(args: Args) {
 	}
 
 	const app = await Canvas.initialize({ path: location, contract, start: false })
-	const records = await app.messageLog.export()
+	const records = await app.messageLog.getMessages()
 	for (const { id, signature, message } of records) {
 		process.stdout.write(json.stringify({ id, signature, message }))
 		process.stdout.write("\n")
