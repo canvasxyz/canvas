@@ -84,7 +84,7 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 
 		const results: [id: string, signature: Signature, message: Message<Action | Session>][] = []
 
-		for (const { id, signature, message } of await app.messageLog.export({ gt, gte, lt, lte, reverse, limit })) {
+		for (const { id, signature, message } of await app.messageLog.getMessages({ gt, gte, lt, lte, reverse, limit })) {
 			results.push([id, signature, message])
 		}
 
