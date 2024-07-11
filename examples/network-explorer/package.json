@@ -1,0 +1,38 @@
+{
+  "name": "@canvas-js/network-explorer",
+  "private": true,
+  "type": "module",
+  "version": "0.10.0-beta.4",
+  "scripts": {
+    "dev:server": "tsx --tsconfig server/tsconfig.json server/server.ts",
+    "dev:client": "vite",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "start:server": "cross-env NODE_ENV=production node dist/server.js"
+  },
+  "dependencies": {
+    "@canvas-js/chain-ethereum": "^0.10.0-beta.4",
+    "@canvas-js/core": "^0.10.0-beta.4",
+    "@canvas-js/interfaces": "^0.10.0-beta.4",
+    "@ipld/dag-json": "^10.2.2",
+    "better-sqlite3": "^11.1.2",
+    "cors": "^2.8.5",
+    "cross-env": "^7.0.3",
+    "date-fns": "^3.6.0",
+    "express": "^4.19.2",
+    "express-ipld": "^0.0.1",
+    "http-status-codes": "^2.3.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.20.1",
+    "swr": "^2.2.5",
+    "vite": "^5.3.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^18.11.5",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0"
+  }
+}

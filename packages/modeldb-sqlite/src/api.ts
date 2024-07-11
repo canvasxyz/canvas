@@ -353,25 +353,28 @@ export class ModelAPI {
 					return [`"${name}" != :${p}`]
 				} else if (isRangeExpression(expression)) {
 					const keys = Object.keys(expression) as (keyof RangeExpression)[]
-					return keys.flatMap((key, j) => {
-						const value = expression[key]
-						if (typeof value !== "string") {
-							throw new TypeError("invalid primary key value (expected string)")
-						}
 
-						const p = `p${i}q${j}`
-						params[p] = value
-						switch (key) {
-							case "gt":
-								return [`"${name}" > :${p}`]
-							case "gte":
-								return [`"${name}" >= :${p}`]
-							case "lt":
-								return [`"${name}" < :${p}`]
-							case "lte":
-								return [`"${name}" <= :${p}`]
-						}
-					})
+					return keys
+						.filter((key) => expression[key] !== undefined)
+						.flatMap((key, j) => {
+							const value = expression[key]
+							if (typeof value !== "string") {
+								throw new TypeError("invalid primary key value (expected string)")
+							}
+
+							const p = `p${i}q${j}`
+							params[p] = value
+							switch (key) {
+								case "gt":
+									return [`"${name}" > :${p}`]
+								case "gte":
+									return [`"${name}" >= :${p}`]
+								case "lt":
+									return [`"${name}" < :${p}`]
+								case "lte":
+									return [`"${name}" <= :${p}`]
+							}
+						})
 				} else {
 					signalInvalidType(expression)
 				}
@@ -406,34 +409,37 @@ export class ModelAPI {
 					}
 				} else if (isRangeExpression(expression)) {
 					const keys = Object.keys(expression) as (keyof RangeExpression)[]
-					return keys.flatMap((key, j) => {
-						const value = expression[key] as PrimitiveValue
-						if (value === null) {
+
+					return keys
+						.filter((key) => expression[key] !== undefined)
+						.flatMap((key, j) => {
+							const value = expression[key] as PrimitiveValue
+							if (value === null) {
+								switch (key) {
+									case "gt":
+										return [`"${name}" NOTNULL`]
+									case "gte":
+										return []
+									case "lt":
+										return ["0 = 1"]
+									case "lte":
+										return []
+								}
+							}
+
+							const p = `p${i}q${j}`
+							params[p] = value instanceof Uint8Array ? Buffer.from(value) : value
 							switch (key) {
 								case "gt":
-									return [`"${name}" NOTNULL`]
+									return [`("${name}" NOTNULL) AND ("${name}" > :${p})`]
 								case "gte":
-									return []
+									return [`("${name}" NOTNULL) AND ("${name}" >= :${p})`]
 								case "lt":
-									return ["0 = 1"]
+									return [`("${name}" ISNULL) OR ("${name}" < :${p})`]
 								case "lte":
-									return []
+									return [`("${name}" ISNULL) OR ("${name}" <= :${p})`]
 							}
-						}
-
-						const p = `p${i}q${j}`
-						params[p] = value instanceof Uint8Array ? Buffer.from(value) : value
-						switch (key) {
-							case "gt":
-								return [`("${name}" NOTNULL) AND ("${name}" > :${p})`]
-							case "gte":
-								return [`("${name}" NOTNULL) AND ("${name}" >= :${p})`]
-							case "lt":
-								return [`("${name}" ISNULL) OR ("${name}" < :${p})`]
-							case "lte":
-								return [`("${name}" ISNULL) OR ("${name}" <= :${p})`]
-						}
-					})
+						})
 				} else {
 					signalInvalidType(expression)
 				}

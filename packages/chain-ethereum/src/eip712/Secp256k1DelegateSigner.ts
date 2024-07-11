@@ -13,7 +13,7 @@ import { AbiCoder } from "ethers/abi"
 
 import type { Action, Message, Session, Signature, SignatureScheme, Signer } from "@canvas-js/interfaces"
 import { decodeURI, encodeURI } from "@canvas-js/signatures"
-import { assert, signalInvalidType } from "@canvas-js/utils"
+import { assert, prepareMessage, signalInvalidType } from "@canvas-js/utils"
 
 import { Eip712SessionData } from "./types.js"
 import { parseAddress } from "./utils.js"
@@ -81,7 +81,7 @@ export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712Se
 	}
 
 	public async sign(message: Message<Action | Session<Eip712SessionData>>): Promise<Signature> {
-		const { topic, clock, parents, payload } = message
+		const { topic, clock, parents, payload } = prepareMessage(message)
 
 		if (payload.type === "action") {
 			const { address } = parseAddress(payload.did)
@@ -193,7 +193,7 @@ export const Secp256k1SignatureScheme: SignatureScheme<Action | Session<Eip712Se
 
 		const sessionAddress = computeAddress(hexlify(publicKey))
 
-		const { topic, clock, parents, payload } = message
+		const { topic, clock, parents, payload } = prepareMessage(message)
 		if (payload.type === "action") {
 			assert(signature.codec === codecs.action, "expected signature.codec === codecs.action")
 

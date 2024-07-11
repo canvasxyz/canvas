@@ -2,7 +2,7 @@
 
 GossipLog is a decentralized, authenticated, multi-writer log designed to serve as a **general-purpose foundation for peer-to-peer applications**. It can be used as a simple replicated data store, the transaction log of a database, or the execution log of a full-fledged VM.
 
-GossipLog can run in the browser using IndexedDB for persistence, on NodeJS using LMDB, or entirely in-memory.
+GossipLog can run in the browser using IndexedDB for persistence, on NodeJS using SQLite + LMDB, or entirely in-memory.
 
 ## Table of contents
 

@@ -1,7 +1,8 @@
 import assert from "node:assert"
 import test from "ava"
 
-import { JSValue, VM } from "@canvas-js/vm"
+import { JSValue } from "@canvas-js/utils"
+import { VM } from "@canvas-js/vm"
 
 test("wrap a function", async (t) => {
 	const vm = await VM.initialize()
