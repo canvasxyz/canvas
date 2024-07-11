@@ -3,7 +3,7 @@ import * as cbor from "@ipld/dag-cbor"
 import * as json from "@ipld/dag-json"
 
 import type { Message, Signature, SignatureScheme, Signer } from "@canvas-js/interfaces"
-import { assert } from "@canvas-js/utils"
+import { assert, prepareMessage } from "@canvas-js/utils"
 
 import { decodeURI, encodeURI } from "./utils.js"
 
@@ -39,11 +39,11 @@ class Ed25519Signer<Payload = unknown> implements Signer<Payload> {
 	public sign(message: Message<Payload>, options: { codec?: string } = {}): Signature {
 		const codec = options.codec ?? codecs.cbor
 		if (codec === codecs.cbor) {
-			const bytes = cbor.encode(message)
+			const bytes = cbor.encode(prepareMessage(message))
 			const signature = ed25519.sign(bytes, this.#privateKey)
 			return { codec, publicKey: this.publicKey, signature }
 		} else if (codec === codecs.json) {
-			const bytes = json.encode(message)
+			const bytes = json.encode(prepareMessage(message))
 			const signature = ed25519.sign(bytes, this.#privateKey)
 			return { codec, publicKey: this.publicKey, signature }
 		} else {
@@ -64,10 +64,10 @@ export const Ed25519SignatureScheme = {
 		const { type, publicKey } = decodeURI(signature.publicKey)
 		assert(type === Ed25519SignatureScheme.type)
 		if (signature.codec === codecs.cbor) {
-			const bytes = cbor.encode(message)
+			const bytes = cbor.encode(prepareMessage(message))
 			assert(ed25519.verify(signature.signature, bytes, publicKey), "invalid ed25519 dag-cbor signature")
 		} else if (signature.codec === codecs.json) {
-			const bytes = json.encode(message)
+			const bytes = json.encode(prepareMessage(message))
 			assert(ed25519.verify(signature.signature, bytes, publicKey), "invalid ed25519 dag-json signature")
 		} else {
 			throw new Error("ed25519 only supports 'dag-cbor' and 'dag-json' codecs")
