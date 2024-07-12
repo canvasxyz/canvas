@@ -1,7 +1,7 @@
 {
 	"private": true,
 	"name": "@canvas-js/example-chat",
-	"version": "0.10.0-beta.4",
+	"version": "0.10.0",
 	"type": "module",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
@@ -9,15 +9,15 @@
 		"build": "vite build"
 	},
 	"dependencies": {
-		"@canvas-js/chain-atp": "0.10.0-beta.4",
-		"@canvas-js/chain-cosmos": "0.10.0-beta.4",
-		"@canvas-js/chain-ethereum": "0.10.0-beta.4",
-		"@canvas-js/chain-ethereum-viem": "0.10.0-beta.4",
-		"@canvas-js/chain-solana": "0.10.0-beta.4",
-		"@canvas-js/chain-substrate": "0.10.0-beta.4",
-		"@canvas-js/core": "0.10.0-beta.4",
-		"@canvas-js/hooks": "0.10.0-beta.4",
-		"@canvas-js/interfaces": "0.10.0-beta.4",
+		"@canvas-js/chain-atp": "0.10.0",
+		"@canvas-js/chain-cosmos": "0.10.0",
+		"@canvas-js/chain-ethereum": "0.10.0",
+		"@canvas-js/chain-ethereum-viem": "0.10.0",
+		"@canvas-js/chain-solana": "0.10.0",
+		"@canvas-js/chain-substrate": "0.10.0",
+		"@canvas-js/core": "0.10.0",
+		"@canvas-js/hooks": "0.10.0",
+		"@canvas-js/interfaces": "0.10.0",
 		"@cosmjs/encoding": "^0.32.3",
 		"@keplr-wallet/types": "^0.11.64",
 		"@libp2p/interface": "^1.6.0",
