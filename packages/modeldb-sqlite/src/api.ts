@@ -37,6 +37,7 @@ type Params = Record<`p${string}`, string | number | Buffer | null>
 const primitiveColumnTypes = {
 	integer: "INTEGER",
 	float: "FLOAT",
+	number: "NUMERIC",
 	string: "TEXT",
 	bytes: "BLOB",
 	boolean: "INTEGER",

@@ -66,7 +66,7 @@ export function parseConfig(init: ModelSchema): Config {
 	return { relations, models }
 }
 
-export const primitivePropertyPattern = /^(integer|float|string|bytes|boolean|json)(\??)$/
+export const primitivePropertyPattern = /^(integer|float|number|string|bytes|boolean|json)(\??)$/
 export const referencePropertyPattern = /^@([a-z0-9.-]+)(\??)$/
 export const relationPropertyPattern = /^@([a-z0-9.-]+)\[\]$/
 
