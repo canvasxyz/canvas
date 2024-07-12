@@ -1,64 +1,58 @@
-[Documentation](../../../index.md) / [@canvas-js/chain-solana](../index.md) / SolanaSigner
+[Documentation](../../../packages.md) / [@canvas-js/chain-solana](../index.md) / SolanaSigner
 
 # Class: SolanaSigner
 
-## Implements
+## Extends
 
-- [`SessionSigner`](../../interfaces/interfaces/SessionSigner.md)
+- `AbstractSessionSigner`\<`SolanaSessionData`\>
 
 ## Constructors
 
-### new SolanaSigner(__namedParameters)
+### new SolanaSigner()
 
 > **new SolanaSigner**(`__namedParameters`): [`SolanaSigner`](SolanaSigner.md)
 
 #### Parameters
 
-• **\_\_namedParameters**: [`SolanaSignerInit`](../interfaces/SolanaSignerInit.md)= `{}`
+• **\_\_namedParameters**: [`SolanaSignerInit`](../interfaces/SolanaSignerInit.md) = `{}`
 
 #### Returns
 
 [`SolanaSigner`](SolanaSigner.md)
 
-#### Source
+#### Overrides
 
-[SolanaSigner.ts:45](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-solana/src/SolanaSigner.ts#L45)
+`AbstractSessionSigner<SolanaSessionData>.constructor`
+
+#### Defined in
+
+[chain-solana/src/SolanaSigner.ts:58](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-solana/src/SolanaSigner.ts#L58)
 
 ## Properties
 
-### #signer
+### \_signer
 
-> **`private`** **#signer**: `GenericSigner`
+> **\_signer**: `GenericSigner`
 
-#### Source
+#### Defined in
 
-[SolanaSigner.ts:43](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-solana/src/SolanaSigner.ts#L43)
-
-***
-
-### #store
-
-> **`private`** **#store**: `SessionStore`
-
-#### Source
-
-[SolanaSigner.ts:42](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-solana/src/SolanaSigner.ts#L42)
+[chain-solana/src/SolanaSigner.ts:56](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-solana/src/SolanaSigner.ts#L56)
 
 ***
 
 ### chainId
 
-> **`readonly`** **chainId**: `string`
+> `readonly` **chainId**: `string`
 
-#### Source
+#### Defined in
 
-[SolanaSigner.ts:38](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-solana/src/SolanaSigner.ts#L38)
+[chain-solana/src/SolanaSigner.ts:54](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-solana/src/SolanaSigner.ts#L54)
 
 ***
 
 ### key
 
-> **`readonly`** **key**: `string`
+> `readonly` **key**: `string`
 
 A unique identifier based on the signer's arguments, used to trigger React effects.
 This should not change unless user-provided arguments to the signers change.
@@ -66,35 +60,131 @@ This should not change unless user-provided arguments to the signers change.
 For example, the key for `new SIWESigner()` should always remain the same, even if
 a different burner wallet is generated on every call.
 
-#### Implementation of
+#### Inherited from
 
-[`SessionSigner`](../../interfaces/interfaces/SessionSigner.md).[`key`](../../interfaces/interfaces/SessionSigner.md#key)
+`AbstractSessionSigner.key`
 
-#### Source
+#### Defined in
 
-[SolanaSigner.ts:36](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-solana/src/SolanaSigner.ts#L36)
+signatures/lib/AbstractSessionSigner.d.ts:8
 
 ***
 
 ### log
 
-> **`private`** **`readonly`** **log**: `Logger`
+> `protected` `readonly` **log**: `Logger`
 
-#### Source
+#### Inherited from
 
-[SolanaSigner.ts:40](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-solana/src/SolanaSigner.ts#L40)
+`AbstractSessionSigner.log`
+
+#### Defined in
+
+signatures/lib/AbstractSessionSigner.d.ts:17
+
+***
+
+### scheme
+
+> `readonly` **scheme**: [`SignatureScheme`](../../interfaces/interfaces/SignatureScheme.md)\<[`Session`](../../interfaces/type-aliases/Session.md)\<`SolanaSessionData`\> \| [`Action`](../../interfaces/type-aliases/Action.md)\>
+
+#### Inherited from
+
+`AbstractSessionSigner.scheme`
+
+#### Defined in
+
+signatures/lib/AbstractSessionSigner.d.ts:9
 
 ***
 
 ### sessionDuration
 
-> **`readonly`** **sessionDuration**: `null` \| `number`
+> `readonly` **sessionDuration**: `null` \| `number`
 
-#### Source
+#### Inherited from
 
-[SolanaSigner.ts:37](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-solana/src/SolanaSigner.ts#L37)
+`AbstractSessionSigner.sessionDuration`
+
+#### Defined in
+
+signatures/lib/AbstractSessionSigner.d.ts:16
+
+***
+
+### target
+
+> `readonly` **target**: `object`
+
+#### clear()
+
+##### Parameters
+
+• **prefix?**: `string`
+
+##### Returns
+
+`void`
+
+#### get()
+
+##### Parameters
+
+• **key**: `string`
+
+##### Returns
+
+`null` \| `string`
+
+#### getDomain()
+
+##### Returns
+
+`string`
+
+#### set()
+
+##### Parameters
+
+• **key**: `string`
+
+• **value**: `any`
+
+##### Returns
+
+`void`
+
+#### Inherited from
+
+`AbstractSessionSigner.target`
+
+#### Defined in
+
+signatures/lib/AbstractSessionSigner.d.ts:10
 
 ## Methods
+
+### authorize()
+
+> **authorize**(`data`): `Promise`\<[`Session`](../../interfaces/type-aliases/Session.md)\<`SolanaSessionData`\>\>
+
+#### Parameters
+
+• **data**: [`AbstractSessionData`](../../interfaces/interfaces/AbstractSessionData.md)
+
+#### Returns
+
+`Promise`\<[`Session`](../../interfaces/type-aliases/Session.md)\<`SolanaSessionData`\>\>
+
+#### Overrides
+
+`AbstractSessionSigner.authorize`
+
+#### Defined in
+
+[chain-solana/src/SolanaSigner.ts:130](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-solana/src/SolanaSigner.ts#L130)
+
+***
 
 ### clear()
 
@@ -108,60 +198,145 @@ a different burner wallet is generated on every call.
 
 `Promise`\<`void`\>
 
-#### Implementation of
+#### Inherited from
 
-[`SessionSigner`](../../interfaces/interfaces/SessionSigner.md).[`clear`](../../interfaces/interfaces/SessionSigner.md#clear)
+`AbstractSessionSigner.clear`
 
-#### Source
+#### Defined in
 
-[SolanaSigner.ts:182](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-solana/src/SolanaSigner.ts#L182)
+signatures/lib/AbstractSessionSigner.d.ts:37
+
+***
+
+### getAddressFromDid()
+
+> **getAddressFromDid**(`did`): `string`
+
+#### Parameters
+
+• **did**: \`did:$\{string\}\`
+
+#### Returns
+
+`string`
+
+#### Overrides
+
+`AbstractSessionSigner.getAddressFromDid`
+
+#### Defined in
+
+[chain-solana/src/SolanaSigner.ts:125](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-solana/src/SolanaSigner.ts#L125)
+
+***
+
+### getDid()
+
+> **getDid**(): \`did:$\{string\}\`
+
+#### Returns
+
+\`did:$\{string\}\`
+
+#### Overrides
+
+`AbstractSessionSigner.getDid`
+
+#### Defined in
+
+[chain-solana/src/SolanaSigner.ts:116](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-solana/src/SolanaSigner.ts#L116)
+
+***
+
+### getDidParts()
+
+> **getDidParts**(): `number`
+
+#### Returns
+
+`number`
+
+#### Overrides
+
+`AbstractSessionSigner.getDidParts`
+
+#### Defined in
+
+[chain-solana/src/SolanaSigner.ts:121](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-solana/src/SolanaSigner.ts#L121)
 
 ***
 
 ### getSession()
 
-> **getSession**(`topic`, `options`): `Promise`\<[`Session`](../../interfaces/type-aliases/Session.md)\<`SolanaSessionData`\>\>
-
-`getSession` is called by the Canvas runtime for every new action appended
-to the log (ie for new actions taken by local users, not existing messages
-received from other peers via merkle sync or GossipSub).
-
-It's responsible for returning a `Session` that matches the given parameters,
-either by looking up a cached session, or by getting user authorization to create
-a new one (and then caching it).
-
-"Matching the given parameters" means that the caller passes a `topic: string`
-and an optional `chain?: string; timestamp?: number`, and `getSession` must return
-a `Session` authorized for that topic, that specific chain (if provided), and that
-is valid for the given timestamp (if provided).
+> **getSession**(`topic`, `options`?): `Promise`\<`null` \| `object`\>
 
 #### Parameters
 
 • **topic**: `string`
 
-• **options**= `{}`
+• **options?**
 
-• **options\.fromCache?**: `boolean`
-
-• **options\.timestamp?**: `number`
+• **options.did?**: `string`
 
 #### Returns
 
-`Promise`\<[`Session`](../../interfaces/type-aliases/Session.md)\<`SolanaSessionData`\>\>
+`Promise`\<`null` \| `object`\>
 
-#### Implementation of
+#### Inherited from
 
-[`SessionSigner`](../../interfaces/interfaces/SessionSigner.md).[`getSession`](../../interfaces/interfaces/SessionSigner.md#getsession)
+`AbstractSessionSigner.getSession`
 
-#### Source
+#### Defined in
 
-[SolanaSigner.ts:95](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-solana/src/SolanaSigner.ts#L95)
+signatures/lib/AbstractSessionSigner.d.ts:30
+
+***
+
+### getWalletAddress()
+
+> **getWalletAddress**(): `Promise`\<`string`\>
+
+#### Returns
+
+`Promise`\<`string`\>
+
+#### Inherited from
+
+`AbstractSessionSigner.getWalletAddress`
+
+#### Defined in
+
+signatures/lib/AbstractSessionSigner.d.ts:24
+
+***
+
+### hasSession()
+
+> **hasSession**(`topic`, `did`): `boolean`
+
+#### Parameters
+
+• **topic**: `string`
+
+• **did**: \`did:$\{string\}\`
+
+#### Returns
+
+`boolean`
+
+#### Inherited from
+
+`AbstractSessionSigner.hasSession`
+
+#### Defined in
+
+signatures/lib/AbstractSessionSigner.d.ts:36
 
 ***
 
 ### match()
 
-> **`readonly`** **match**(`chain`): `boolean`
+> `readonly` **match**(`chain`): `boolean`
 
 #### Parameters
 
@@ -171,44 +346,49 @@ is valid for the given timestamp (if provided).
 
 `boolean`
 
-#### Implementation of
+#### Overrides
 
-[`SessionSigner`](../../interfaces/interfaces/SessionSigner.md).[`match`](../../interfaces/interfaces/SessionSigner.md#match)
+`AbstractSessionSigner.match`
 
-#### Source
+#### Defined in
 
-[SolanaSigner.ts:73](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-solana/src/SolanaSigner.ts#L73)
+[chain-solana/src/SolanaSigner.ts:53](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-solana/src/SolanaSigner.ts#L53)
 
 ***
 
-### sign()
+### newSession()
 
-> **sign**(`message`): [`Signature`](../../interfaces/type-aliases/Signature.md)
+> **newSession**(`topic`): `Promise`\<`object`\>
 
 #### Parameters
 
-• **message**: [`Message`](../../gossiplog/type-aliases/Message.md)\<[`Session`](../../interfaces/type-aliases/Session.md) \| [`Action`](../../interfaces/type-aliases/Action.md)\>
+• **topic**: `string`
 
 #### Returns
 
-[`Signature`](../../interfaces/type-aliases/Signature.md)
+`Promise`\<`object`\>
 
-#### Implementation of
+##### payload
 
-[`SessionSigner`](../../interfaces/interfaces/SessionSigner.md).[`sign`](../../interfaces/interfaces/SessionSigner.md#sign)
+> **payload**: [`Session`](../../interfaces/type-aliases/Session.md)\<`SolanaSessionData`\>
 
-#### Source
+##### signer
 
-[SolanaSigner.ts:159](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-solana/src/SolanaSigner.ts#L159)
+> **signer**: [`Signer`](../../interfaces/interfaces/Signer.md)\<[`Session`](../../interfaces/type-aliases/Session.md)\<`SolanaSessionData`\> \| [`Action`](../../interfaces/type-aliases/Action.md)\>
+
+#### Inherited from
+
+`AbstractSessionSigner.newSession`
+
+#### Defined in
+
+signatures/lib/AbstractSessionSigner.d.ts:26
 
 ***
 
 ### verifySession()
 
 > **verifySession**(`topic`, `session`): `void`
-
-Verify that `session.data` authorizes `session.publicKey`
-to take actions on behalf of the user `${session.chain}:${session.address}`
 
 #### Parameters
 
@@ -220,10 +400,10 @@ to take actions on behalf of the user `${session.chain}:${session.address}`
 
 `void`
 
-#### Implementation of
+#### Overrides
 
-[`SessionSigner`](../../interfaces/interfaces/SessionSigner.md).[`verifySession`](../../interfaces/interfaces/SessionSigner.md#verifysession)
+`AbstractSessionSigner.verifySession`
 
-#### Source
+#### Defined in
 
-[SolanaSigner.ts:75](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-solana/src/SolanaSigner.ts#L75)
+[chain-solana/src/SolanaSigner.ts:85](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-solana/src/SolanaSigner.ts#L85)

@@ -1,9 +1,9 @@
-[Documentation](../../../index.md) / [@canvas-js/modeldb](../index.md) / primitivePropertyPattern
+[Documentation](../../../packages.md) / [@canvas-js/modeldb](../index.md) / primitivePropertyPattern
 
 # Variable: primitivePropertyPattern
 
-> **`const`** **primitivePropertyPattern**: `RegExp`
+> `const` **primitivePropertyPattern**: `RegExp`
 
-## Source
+## Defined in
 
-[config.ts:50](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/modeldb/src/config.ts#L50)
+[config.ts:69](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/modeldb/src/config.ts#L69)

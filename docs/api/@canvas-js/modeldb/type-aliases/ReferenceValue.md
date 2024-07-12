@@ -1,9 +1,9 @@
-[Documentation](../../../index.md) / [@canvas-js/modeldb](../index.md) / ReferenceValue
+[Documentation](../../../packages.md) / [@canvas-js/modeldb](../index.md) / ReferenceValue
 
-# Type alias: ReferenceValue
+# Type Alias: ReferenceValue
 
 > **ReferenceValue**: `string` \| `null`
 
-## Source
+## Defined in
 
-[types.ts:53](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/modeldb/src/types.ts#L53)
+[types.ts:58](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/modeldb/src/types.ts#L58)

@@ -1,4 +1,4 @@
-[Documentation](../../index.md) / @canvas-js/modeldb
+[Documentation](../../packages.md) / @canvas-js/modeldb
 
 # @canvas-js/modeldb
 
@@ -19,10 +19,10 @@ ModelDB is a minimalist cross-platform relational database wrapper. It currently
 
 ### Initialization
 
-Import `ModelDB` from either `@canvas-js/modeldb/idb` (browser) or `@canvas-js/modeldb/sqlite` (NodeJS).
+Import `ModelDB` from either `@canvas-js/modeldb-idb` (browser) or `@canvas-js/modeldb-sqlite` (NodeJS).
 
 ```ts
-import { ModelDB } from "@canvas-js/modeldb/sqlite"
+import { ModelDB } from "@canvas-js/modeldb-sqlite"
 
 const db = await ModelDB.init({
   path: "/path/to/db.sqlite", // set `path: null` for an in-memory database
@@ -31,7 +31,7 @@ const db = await ModelDB.init({
 ```
 
 ```ts
-import { ModelDB } from "@canvas-js/modeldb/idb"
+import { ModelDB } from "@canvas-js/modeldb-idb"
 
 const db = await ModelDB.init({
   name: "my-database-name", // used as the IndexedDB database name

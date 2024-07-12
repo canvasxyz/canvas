@@ -1,42 +1,40 @@
-[Documentation](../../../index.md) / [@canvas-js/gossiplog](../index.md) / GossipLogInit
+[Documentation](../../../packages.md) / [@canvas-js/gossiplog](../index.md) / GossipLogInit
 
-# Interface: GossipLogInit\<Payload, Result\>
+# Interface: GossipLogInit\<Payload\>
 
-## Type parameters
+## Type Parameters
 
 • **Payload** = `unknown`
-
-• **Result** = `void`
 
 ## Properties
 
 ### apply
 
-> **apply**: [`GossipLogConsumer`](../type-aliases/GossipLogConsumer.md)\<`Payload`, `Result`\>
+> **apply**: [`GossipLogConsumer`](../type-aliases/GossipLogConsumer.md)\<`Payload`\>
 
-#### Source
+#### Defined in
 
-[packages/gossiplog/src/AbstractGossipLog.ts:56](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L56)
+[packages/gossiplog/src/AbstractGossipLog.ts:29](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/AbstractGossipLog.ts#L29)
 
 ***
 
-### indexAncestors?
+### rebuildMerkleIndex?
 
-> **`optional`** **indexAncestors**: `boolean`
+> `optional` **rebuildMerkleIndex**: `boolean`
 
-#### Source
+#### Defined in
 
-[packages/gossiplog/src/AbstractGossipLog.ts:60](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L60)
+[packages/gossiplog/src/AbstractGossipLog.ts:34](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/AbstractGossipLog.ts#L34)
 
 ***
 
 ### signer?
 
-> **`optional`** **signer**: [`Signer`](../../interfaces/interfaces/Signer.md)\<[`Message`](../type-aliases/Message.md)\<`Payload`\>\>
+> `optional` **signer**: [`Signer`](../../interfaces/interfaces/Signer.md)\<`Payload`\>
 
-#### Source
+#### Defined in
 
-[packages/gossiplog/src/AbstractGossipLog.ts:59](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L59)
+[packages/gossiplog/src/AbstractGossipLog.ts:33](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/AbstractGossipLog.ts#L33)
 
 ***
 
@@ -44,16 +42,44 @@
 
 > **topic**: `string`
 
-#### Source
+#### Defined in
 
-[packages/gossiplog/src/AbstractGossipLog.ts:55](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L55)
+[packages/gossiplog/src/AbstractGossipLog.ts:28](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/AbstractGossipLog.ts#L28)
 
 ***
 
-### validate
+### validatePayload()?
 
-> **validate**: `Object` \| (`payload`) => `payload is Payload`
+> `optional` **validatePayload**: (`payload`) => `payload is Payload`
 
-#### Source
+#### Parameters
 
-[packages/gossiplog/src/AbstractGossipLog.ts:57](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L57)
+• **payload**: `unknown`
+
+#### Returns
+
+`payload is Payload`
+
+#### Defined in
+
+[packages/gossiplog/src/AbstractGossipLog.ts:30](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/AbstractGossipLog.ts#L30)
+
+***
+
+### verifySignature()?
+
+> `optional` **verifySignature**: (`signature`, `message`) => [`Awaitable`](../../interfaces/type-aliases/Awaitable.md)\<`void`\>
+
+#### Parameters
+
+• **signature**: [`Signature`](../../interfaces/type-aliases/Signature.md)
+
+• **message**: [`Message`](../type-aliases/Message.md)\<`Payload`\>
+
+#### Returns
+
+[`Awaitable`](../../interfaces/type-aliases/Awaitable.md)\<`void`\>
+
+#### Defined in
+
+[packages/gossiplog/src/AbstractGossipLog.ts:31](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/AbstractGossipLog.ts#L31)

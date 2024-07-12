@@ -1,4 +1,4 @@
-[Documentation](../../../index.md) / [@canvas-js/gossiplog](../index.md) / encodeClock
+[Documentation](../../../packages.md) / [@canvas-js/gossiplog](../index.md) / encodeClock
 
 # Function: encodeClock()
 
@@ -14,6 +14,6 @@
 
 `number`
 
-## Source
+## Defined in
 
-[packages/gossiplog/src/clock.ts:24](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/clock.ts#L24)
+[packages/gossiplog/src/clock.ts:26](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/clock.ts#L26)

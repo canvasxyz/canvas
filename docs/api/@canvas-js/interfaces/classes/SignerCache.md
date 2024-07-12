@@ -1,44 +1,34 @@
-[Documentation](../../../index.md) / [@canvas-js/interfaces](../index.md) / SignerCache
+[Documentation](../../../packages.md) / [@canvas-js/interfaces](../index.md) / SignerCache
 
 # Class: SignerCache
 
 ## Constructors
 
-### new SignerCache(signers)
+### new SignerCache()
 
 > **new SignerCache**(`signers`): [`SignerCache`](SignerCache.md)
 
 #### Parameters
 
-• **signers**: [`SessionSigner`](../interfaces/SessionSigner.md)\<`any`\>[]= `[]`
+• **signers**: [`SessionSigner`](../interfaces/SessionSigner.md)\<`any`\>[] = `[]`
 
 #### Returns
 
 [`SignerCache`](SignerCache.md)
 
-#### Source
+#### Defined in
 
-[SignerCache.ts:7](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/interfaces/src/SignerCache.ts#L7)
+[SignerCache.ts:7](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/interfaces/src/SignerCache.ts#L7)
 
 ## Properties
-
-### default
-
-> **`private`** **default**: `undefined` \| `string`
-
-#### Source
-
-[SignerCache.ts:5](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/interfaces/src/SignerCache.ts#L5)
-
-***
 
 ### signers
 
 > **signers**: [`SessionSigner`](../interfaces/SessionSigner.md)\<`any`\>[]
 
-#### Source
+#### Defined in
 
-[SignerCache.ts:4](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/interfaces/src/SignerCache.ts#L4)
+[SignerCache.ts:4](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/interfaces/src/SignerCache.ts#L4)
 
 ## Methods
 
@@ -50,9 +40,9 @@
 
 [`SessionSigner`](../interfaces/SessionSigner.md)\<`any`\>[]
 
-#### Source
+#### Defined in
 
-[SignerCache.ts:21](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/interfaces/src/SignerCache.ts#L21)
+[SignerCache.ts:21](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/interfaces/src/SignerCache.ts#L21)
 
 ***
 
@@ -64,9 +54,9 @@
 
 [`SessionSigner`](../interfaces/SessionSigner.md)\<`any`\>
 
-#### Source
+#### Defined in
 
-[SignerCache.ts:25](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/interfaces/src/SignerCache.ts#L25)
+[SignerCache.ts:25](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/interfaces/src/SignerCache.ts#L25)
 
 ***
 
@@ -82,6 +72,6 @@
 
 `void`
 
-#### Source
+#### Defined in
 
-[SignerCache.ts:14](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/interfaces/src/SignerCache.ts#L14)
+[SignerCache.ts:14](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/interfaces/src/SignerCache.ts#L14)

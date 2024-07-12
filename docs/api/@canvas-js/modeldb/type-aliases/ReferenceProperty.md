@@ -1,8 +1,8 @@
-[Documentation](../../../index.md) / [@canvas-js/modeldb](../index.md) / ReferenceProperty
+[Documentation](../../../packages.md) / [@canvas-js/modeldb](../index.md) / ReferenceProperty
 
-# Type alias: ReferenceProperty
+# Type Alias: ReferenceProperty
 
-> **ReferenceProperty**: `Object`
+> **ReferenceProperty**: `object`
 
 ## Type declaration
 
@@ -22,6 +22,6 @@
 
 > **target**: `string`
 
-## Source
+## Defined in
 
-[types.ts:27](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/modeldb/src/types.ts#L27)
+[types.ts:31](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/modeldb/src/types.ts#L31)

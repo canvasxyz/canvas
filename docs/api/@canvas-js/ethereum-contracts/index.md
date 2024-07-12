@@ -1,4 +1,4 @@
-[Documentation](../../index.md) / @canvas-js/ethereum-contracts
+[Documentation](../../packages.md) / @canvas-js/ethereum-contracts
 
 # @canvas-js/ethereum-contracts
 
@@ -6,16 +6,26 @@ Contracts for onchain verification of Canvas messages created by the `EIP712Sign
 
 ### Usage
 
-See `contracts/Contract_Test.sol` and `tests/Contract_Test.ts`.
+TODO
 
-### API
+### How it works
 
-- `library CID`: Utilities.
-  - `createDigest`: Creates a concatenated `<code><digest>` bytearray.
-  - `encodeCID`: Creates a concatenated `<version><code><multihash>` bytearray.
-- `library EIP712_Canvas`:
-  - `verifySession`
-  - `verifySessionMessage`
-  - `verifySessionActionMessage`
-- `contract CID_Test`: Exports CID functions for use in the test suite.
-- `contract EIP712_Canvas_Test`: Exports EIP712 Canvas functions for use in the test suite.
+Canvas is a CRDT/causal-graph environment where all operations are
+represented on a log.
+
+Every log entry is a signed `[Message<Action | Session>, Signature]`
+tuple.
+
+For example, a `Session` authorizes a new session key (did:key) and is
+serialized as a `Message<Session>`, which is then signed by the
+did:key that was authorized to create a `Signature`.
+
+To exhaustively verify that a message was correctly signed to be
+appended to the log, you should verify that:
+
+- A session key (e.g. did:key) was authorized by a user (e.g. did:pkh:eip155:1:0x123...)
+  in a `Session`. Sessions are verified using logic in the EIP712 signer.
+- That authorization message was signed by the did:key it authoriaed, i.e. there exists a
+  `Signature` corresponding to the session wrapped as a message `Message<Session>`.
+- An action message was also signed by that did:key, i.e. there exists a valid
+  `Signature` corresponding to the user's action wrapped as a message `Message<Action>`.

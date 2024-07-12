@@ -1,4 +1,4 @@
-[Documentation](../../index.md) / @canvas-js/core
+[Documentation](../../packages.md) / @canvas-js/core
 
 # @canvas-js/core
 
@@ -10,8 +10,7 @@
 
 - [CanvasConfig](interfaces/CanvasConfig.md)
 - [CanvasEvents](interfaces/CanvasEvents.md)
-- [Connection](interfaces/Connection.md)
-- [NetworkConfig](interfaces/NetworkConfig.md)
+- [PeerId](interfaces/PeerId.md)
 
 ## Type Aliases
 
@@ -21,19 +20,8 @@
 - [ActionImplementationFunction](type-aliases/ActionImplementationFunction.md)
 - [ActionImplementationObject](type-aliases/ActionImplementationObject.md)
 - [ActionOptions](type-aliases/ActionOptions.md)
-- [AppConnectionStatus](type-aliases/AppConnectionStatus.md)
 - [ApplicationData](type-aliases/ApplicationData.md)
 - [CanvasLogEvent](type-aliases/CanvasLogEvent.md)
-- [ConnectionStatus](type-aliases/ConnectionStatus.md)
-- [Connections](type-aliases/Connections.md)
-- [ConnectionsInfo](type-aliases/ConnectionsInfo.md)
 - [Contract](type-aliases/Contract.md)
 - [Model](type-aliases/Model.md)
 - [ModelAPI](type-aliases/ModelAPI.md)
-- [PeerId](type-aliases/PeerId.md)
-- [PresenceInfo](type-aliases/PresenceInfo.md)
-
-## Variables
-
-- [defaultBootstrapList](variables/defaultBootstrapList.md)
-- [testnetBootstrapList](variables/testnetBootstrapList.md)

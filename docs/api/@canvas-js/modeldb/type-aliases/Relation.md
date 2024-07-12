@@ -1,8 +1,8 @@
-[Documentation](../../../index.md) / [@canvas-js/modeldb](../index.md) / Relation
+[Documentation](../../../packages.md) / [@canvas-js/modeldb](../index.md) / Relation
 
-# Type alias: Relation
+# Type Alias: Relation
 
-> **Relation**: `Object`
+> **Relation**: `object`
 
 ## Type declaration
 
@@ -22,6 +22,6 @@
 
 > **target**: `string`
 
-## Source
+## Defined in
 
-[types.ts:35](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/modeldb/src/types.ts#L35)
+[types.ts:39](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/modeldb/src/types.ts#L39)

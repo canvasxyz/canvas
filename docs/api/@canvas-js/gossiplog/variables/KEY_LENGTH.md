@@ -1,9 +1,9 @@
-[Documentation](../../../index.md) / [@canvas-js/gossiplog](../index.md) / KEY\_LENGTH
+[Documentation](../../../packages.md) / [@canvas-js/gossiplog](../index.md) / KEY\_LENGTH
 
 # Variable: KEY\_LENGTH
 
-> **`const`** **KEY\_LENGTH**: `20` = `20`
+> `const` **KEY\_LENGTH**: `20` = `20`
 
-## Source
+## Defined in
 
-[packages/gossiplog/src/schema.ts:58](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/schema.ts#L58)
+[packages/gossiplog/src/ids.ts:8](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/ids.ts#L8)

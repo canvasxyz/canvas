@@ -1,4 +1,4 @@
-[Documentation](../../../index.md) / [@canvas-js/modeldb](../index.md) / validateModelValue
+[Documentation](../../../packages.md) / [@canvas-js/modeldb](../index.md) / validateModelValue
 
 # Function: validateModelValue()
 
@@ -14,6 +14,6 @@
 
 `void`
 
-## Source
+## Defined in
 
-[utils.ts:38](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/modeldb/src/utils.ts#L38)
+[utils.ts:10](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/modeldb/src/utils.ts#L10)

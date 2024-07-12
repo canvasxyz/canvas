@@ -1,6 +1,10 @@
-[Documentation](../../index.md) / @canvas-js/hooks
+[Documentation](../../packages.md) / @canvas-js/hooks
 
 # @canvas-js/hooks
+
+## Type Aliases
+
+- [TickingContract](type-aliases/TickingContract.md)
 
 ## Functions
 

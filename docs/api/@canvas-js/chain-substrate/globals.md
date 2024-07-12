@@ -1,4 +1,4 @@
-[Documentation](../../index.md) / @canvas-js/chain-substrate
+[Documentation](../../packages.md) / @canvas-js/chain-substrate
 
 # @canvas-js/chain-substrate
 

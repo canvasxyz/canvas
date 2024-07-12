@@ -1,4 +1,4 @@
-[Documentation](../../../index.md) / [@canvas-js/modeldb](../index.md) / isLiteralExpression
+[Documentation](../../../packages.md) / [@canvas-js/modeldb](../index.md) / isLiteralExpression
 
 # Function: isLiteralExpression()
 
@@ -12,6 +12,6 @@
 
 `expr is PropertyValue`
 
-## Source
+## Defined in
 
-[query.ts:35](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/modeldb/src/query.ts#L35)
+[query.ts:38](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/modeldb/src/query.ts#L38)

@@ -1,26 +1,25 @@
-[Documentation](../../../index.md) / [@canvas-js/chain-atp](../index.md) / ATPSignerOptions
+[Documentation](../../../packages.md) / [@canvas-js/chain-atp](../index.md) / ATPSignerOptions
 
 # Interface: ATPSignerOptions
 
 ## Properties
 
-### login?
+### login()?
 
-> **`optional`** **login**: () => `Promise`\<`Object`\>
+> `optional` **login**: () => `Promise`\<`object`\>
 
 #### Returns
 
-`Promise`\<`Object`\>
+`Promise`\<`object`\>
 
-> ##### identifier
->
-> > **identifier**: `string`
->
-> ##### password
->
-> > **password**: `string`
->
+##### identifier
 
-#### Source
+> **identifier**: `string`
 
-[ATPSigner.ts:29](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-atp/src/ATPSigner.ts#L29)
+##### password
+
+> **password**: `string`
+
+#### Defined in
+
+[chain-atp/src/ATPSigner.ts:27](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-atp/src/ATPSigner.ts#L27)

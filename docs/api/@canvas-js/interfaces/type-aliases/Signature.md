@@ -1,25 +1,23 @@
-[Documentation](../../../index.md) / [@canvas-js/interfaces](../index.md) / Signature
+[Documentation](../../../packages.md) / [@canvas-js/interfaces](../index.md) / Signature
 
-# Type alias: Signature
+# Type Alias: Signature
 
-> **Signature**: `Object`
+> **Signature**: `object`
 
 ## Type declaration
 
-### cid
+### codec
 
-> **cid**: `CID`
+> **codec**: `string`
 
 ### publicKey
 
 > **publicKey**: `string`
 
-did:key URI
-
 ### signature
 
 > **signature**: `Uint8Array`
 
-## Source
+## Defined in
 
-[Signature.ts:3](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/interfaces/src/Signature.ts#L3)
+[Signature.ts:1](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/interfaces/src/Signature.ts#L1)

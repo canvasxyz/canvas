@@ -1,4 +1,4 @@
-[Documentation](../../../index.md) / [@canvas-js/chain-ethereum-viem](../index.md) / SIWESignerViemInit
+[Documentation](../../../packages.md) / [@canvas-js/chain-ethereum-viem](../index.md) / SIWESignerViemInit
 
 # Interface: SIWESignerViemInit
 
@@ -6,28 +6,28 @@
 
 ### chainId?
 
-> **`optional`** **chainId**: `number`
+> `optional` **chainId**: `number`
 
-#### Source
+#### Defined in
 
-[packages/chain-ethereum-viem/src/SIWESignerViem.ts:24](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-ethereum-viem/src/SIWESignerViem.ts#L24)
+[packages/chain-ethereum-viem/src/SIWESignerViem.ts:14](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-ethereum-viem/src/SIWESignerViem.ts#L14)
 
 ***
 
 ### sessionDuration?
 
-> **`optional`** **sessionDuration**: `number`
+> `optional` **sessionDuration**: `number`
 
-#### Source
+#### Defined in
 
-[packages/chain-ethereum-viem/src/SIWESignerViem.ts:26](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-ethereum-viem/src/SIWESignerViem.ts#L26)
+[packages/chain-ethereum-viem/src/SIWESignerViem.ts:16](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-ethereum-viem/src/SIWESignerViem.ts#L16)
 
 ***
 
 ### signer?
 
-> **`optional`** **signer**: `Object` \| `PrivateKeyAccount`
+> `optional` **signer**: `object` \| `PrivateKeyAccount`
 
-#### Source
+#### Defined in
 
-[packages/chain-ethereum-viem/src/SIWESignerViem.ts:25](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-ethereum-viem/src/SIWESignerViem.ts#L25)
+[packages/chain-ethereum-viem/src/SIWESignerViem.ts:15](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-ethereum-viem/src/SIWESignerViem.ts#L15)

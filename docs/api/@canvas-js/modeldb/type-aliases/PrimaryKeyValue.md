@@ -1,9 +1,9 @@
-[Documentation](../../../index.md) / [@canvas-js/modeldb](../index.md) / PrimaryKeyValue
+[Documentation](../../../packages.md) / [@canvas-js/modeldb](../index.md) / PrimaryKeyValue
 
-# Type alias: PrimaryKeyValue
+# Type Alias: PrimaryKeyValue
 
 > **PrimaryKeyValue**: `string`
 
-## Source
+## Defined in
 
-[types.ts:51](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/modeldb/src/types.ts#L51)
+[types.ts:56](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/modeldb/src/types.ts#L56)

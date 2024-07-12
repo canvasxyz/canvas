@@ -1,12 +1,12 @@
-[Documentation](../../../index.md) / [@canvas-js/core](../index.md) / ModelAPI
+[Documentation](../../../packages.md) / [@canvas-js/core](../index.md) / ModelAPI
 
-# Type alias: ModelAPI
+# Type Alias: ModelAPI
 
-> **ModelAPI**: `Object`
+> **ModelAPI**: `object`
 
 ## Type declaration
 
-### delete
+### delete()
 
 > **delete**: (`model`, `key`) => `Promise`\<`void`\>
 
@@ -20,13 +20,13 @@
 
 `Promise`\<`void`\>
 
-### get
+### get()
 
 > **get**: \<`T`\>(`model`, `key`) => `Promise`\<`T` \| `null`\>
 
-#### Type parameters
+#### Type Parameters
 
-• **T** extends [`ModelValue`](../../modeldb/type-aliases/ModelValue.md) = [`ModelValue`](../../modeldb/type-aliases/ModelValue.md)
+• **T** *extends* [`ModelValue`](../../modeldb/type-aliases/ModelValue.md) = [`ModelValue`](../../modeldb/type-aliases/ModelValue.md)
 
 #### Parameters
 
@@ -38,7 +38,7 @@
 
 `Promise`\<`T` \| `null`\>
 
-### set
+### set()
 
 > **set**: (`model`, `value`) => `Promise`\<`void`\>
 
@@ -52,6 +52,6 @@
 
 `Promise`\<`void`\>
 
-## Source
+## Defined in
 
-[packages/core/src/types.ts:25](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/types.ts#L25)
+[packages/core/src/types.ts:22](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/core/src/types.ts#L22)

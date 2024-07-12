@@ -1,27 +1,25 @@
-[Documentation](../../../index.md) / [@canvas-js/gossiplog](../index.md) / GossipLogConsumer
+[Documentation](../../../packages.md) / [@canvas-js/gossiplog](../index.md) / GossipLogConsumer
 
-# Type alias: GossipLogConsumer\<Payload, Result\>
+# Type Alias: GossipLogConsumer()\<Payload\>
 
-> **GossipLogConsumer**\<`Payload`, `Result`\>: (`id`, `signature`, `message`) => [`Awaitable`](../../interfaces/type-aliases/Awaitable.md)\<`Result`\>
+> **GossipLogConsumer**\<`Payload`\>: (`this`, `{ id, signature, message }`, `branch`) => [`Awaitable`](../../interfaces/type-aliases/Awaitable.md)\<`void`\>
 
-## Type parameters
+## Type Parameters
 
 • **Payload** = `unknown`
 
-• **Result** = `void`
-
 ## Parameters
 
-• **id**: `string`
+• **this**: [`AbstractGossipLog`](../classes/AbstractGossipLog.md)\<`Payload`\>
 
-• **signature**: [`Signature`](../../interfaces/type-aliases/Signature.md)
+• **\{ id, signature, message \}**: `SignedMessage`\<`Payload`\>
 
-• **message**: [`Message`](Message.md)\<`Payload`\>
+• **branch**: `number`
 
 ## Returns
 
-[`Awaitable`](../../interfaces/type-aliases/Awaitable.md)\<`Result`\>
+[`Awaitable`](../../interfaces/type-aliases/Awaitable.md)\<`void`\>
 
-## Source
+## Defined in
 
-[packages/gossiplog/src/AbstractGossipLog.ts:48](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L48)
+[packages/gossiplog/src/AbstractGossipLog.ts:21](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/AbstractGossipLog.ts#L21)

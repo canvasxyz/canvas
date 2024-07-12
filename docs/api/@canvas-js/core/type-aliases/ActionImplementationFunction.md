@@ -1,14 +1,12 @@
-[Documentation](../../../index.md) / [@canvas-js/core](../index.md) / ActionImplementationFunction
+[Documentation](../../../packages.md) / [@canvas-js/core](../index.md) / ActionImplementationFunction
 
-# Type alias: ActionImplementationFunction\<Args, Result\>
+# Type Alias: ActionImplementationFunction()\<Args\>
 
-> **ActionImplementationFunction**\<`Args`, `Result`\>: (`db`, `args`, `context`) => [`Awaitable`](../../interfaces/type-aliases/Awaitable.md)\<`Result`\>
+> **ActionImplementationFunction**\<`Args`\>: (`db`, `args`, `context`) => [`Awaitable`](../../interfaces/type-aliases/Awaitable.md)\<`void`\>
 
-## Type parameters
+## Type Parameters
 
 • **Args** = `any`
-
-• **Result** = `any`
 
 ## Parameters
 
@@ -20,8 +18,8 @@
 
 ## Returns
 
-[`Awaitable`](../../interfaces/type-aliases/Awaitable.md)\<`Result`\>
+[`Awaitable`](../../interfaces/type-aliases/Awaitable.md)\<`void`\>
 
-## Source
+## Defined in
 
-[packages/core/src/types.ts:19](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/types.ts#L19)
+[packages/core/src/types.ts:16](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/core/src/types.ts#L16)

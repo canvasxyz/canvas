@@ -1,4 +1,4 @@
-[Documentation](../../../index.md) / [@canvas-js/core](../index.md) / Canvas
+[Documentation](../../../packages.md) / [@canvas-js/core](../index.md) / Canvas
 
 # Class: Canvas\<T\>
 
@@ -6,223 +6,87 @@
 
 - `TypedEventEmitter`\<[`CanvasEvents`](../interfaces/CanvasEvents.md)\>
 
-## Type parameters
+## Type Parameters
 
-• **T** extends [`Contract`](../type-aliases/Contract.md) = [`Contract`](../type-aliases/Contract.md)
-
-## Constructors
-
-### new Canvas(signers, libp2p, messageLog, runtime, offline, disablePing)
-
-> **`private`** **new Canvas**\<`T`\>(`signers`, `libp2p`, `messageLog`, `runtime`, `offline`?, `disablePing`?): [`Canvas`](Canvas.md)\<`T`\>
-
-#### Parameters
-
-• **signers**: [`SignerCache`](../../interfaces/classes/SignerCache.md)
-
-• **libp2p**: `Libp2p`\<`ServiceMap`\>
-
-• **messageLog**: [`AbstractGossipLog`](../../gossiplog/classes/AbstractGossipLog.md)\<[`Action`](../../interfaces/type-aliases/Action.md) \| [`Session`](../../interfaces/type-aliases/Session.md), `any`\>
-
-• **runtime**: `AbstractRuntime`
-
-• **offline?**: `boolean`
-
-• **disablePing?**: `boolean`
-
-#### Returns
-
-[`Canvas`](Canvas.md)\<`T`\>
-
-#### Overrides
-
-`TypedEventEmitter<CanvasEvents>.constructor`
-
-#### Source
-
-[packages/core/src/Canvas.ts:160](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/Canvas.ts#L160)
+• **T** *extends* [`Contract`](../type-aliases/Contract.md) = [`Contract`](../type-aliases/Contract.md)
 
 ## Properties
 
-### #open
-
-> **`private`** **#open**: `boolean` = `true`
-
-#### Source
-
-[packages/core/src/Canvas.ts:158](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/Canvas.ts#L158)
-
-***
-
-### #private
-
-> **`private`** **#private**: `any`
-
-#### Inherited from
-
-`TypedEventEmitter.#private`
-
-#### Source
-
-node\_modules/@libp2p/interface/dist/src/event-target.d.ts:28
-
-***
-
-### \_abortController
-
-> **`private`** **`readonly`** **\_abortController**: `AbortController`
-
-#### Source
-
-[packages/core/src/Canvas.ts:155](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/Canvas.ts#L155)
-
-***
-
-### \_connections
-
-> **`private`** **\_connections**: [`Connection`](../interfaces/Connection.md)[] = `[]`
-
-#### Source
-
-[packages/core/src/Canvas.ts:152](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/Canvas.ts#L152)
-
-***
-
-### \_log
-
-> **`private`** **`readonly`** **\_log**: `Logger`
-
-#### Source
-
-[packages/core/src/Canvas.ts:156](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/Canvas.ts#L156)
-
-***
-
-### \_peers
-
-> **`private`** **\_peers**: [`PeerId`](../type-aliases/PeerId.md)[] = `[]`
-
-#### Source
-
-[packages/core/src/Canvas.ts:151](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/Canvas.ts#L151)
-
-***
-
-### \_pingTimer
-
-> **`private`** **\_pingTimer**: `undefined` \| `Timeout`
-
-#### Source
-
-[packages/core/src/Canvas.ts:153](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/Canvas.ts#L153)
-
-***
-
 ### actions
 
-> **`readonly`** **actions**: `{ [K in string | number | symbol]: T["actions"][K] extends ActionImplementationFunction<Args, Result> ? ActionAPI<Args, Result> : T["actions"][K] extends ActionImplementationObject<Args, Result> ? ActionAPI<Args, Result> : never }`
+> `readonly` **actions**: \{ \[K in string \| number \| symbol\]: T\["actions"\]\[K\] extends ActionImplementationFunction\<Args\> ? ActionAPI\<Args\> : T\["actions"\]\[K\] extends ActionImplementationObject\<Args\> ? ActionAPI\<Args\> : never \}
 
-#### Source
+#### Defined in
 
-[packages/core/src/Canvas.ts:139](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/Canvas.ts#L139)
-
-***
-
-### connections
-
-> **`readonly`** **connections**: [`Connections`](../type-aliases/Connections.md) = `{}`
-
-#### Source
-
-[packages/core/src/Canvas.ts:147](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/Canvas.ts#L147)
+[packages/core/src/Canvas.ts:105](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/core/src/Canvas.ts#L105)
 
 ***
 
 ### db
 
-> **`readonly`** **db**: [`AbstractModelDB`](../../modeldb/classes/AbstractModelDB.md)
+> `readonly` **db**: [`AbstractModelDB`](../../modeldb/classes/AbstractModelDB.md)
 
-#### Source
+#### Defined in
 
-[packages/core/src/Canvas.ts:138](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/Canvas.ts#L138)
+[packages/core/src/Canvas.ts:104](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/core/src/Canvas.ts#L104)
 
 ***
 
 ### libp2p
 
-> **`readonly`** **libp2p**: `Libp2p`\<`ServiceMap`\>
+> `readonly` **libp2p**: `Libp2p`\<[`ServiceMap`](../../gossiplog/type-aliases/ServiceMap.md)\<[`Action`](../../interfaces/type-aliases/Action.md) \| [`Session`](../../interfaces/type-aliases/Session.md)\>\>
 
-#### Source
+#### Defined in
 
-[packages/core/src/Canvas.ts:162](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/Canvas.ts#L162)
+[packages/core/src/Canvas.ts:119](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/core/src/Canvas.ts#L119)
 
 ***
 
 ### messageLog
 
-> **`readonly`** **messageLog**: [`AbstractGossipLog`](../../gossiplog/classes/AbstractGossipLog.md)\<[`Action`](../../interfaces/type-aliases/Action.md) \| [`Session`](../../interfaces/type-aliases/Session.md), `any`\>
+> `readonly` **messageLog**: [`AbstractGossipLog`](../../gossiplog/classes/AbstractGossipLog.md)\<[`Action`](../../interfaces/type-aliases/Action.md) \| [`Session`](../../interfaces/type-aliases/Session.md)\>
 
-#### Source
+#### Defined in
 
-[packages/core/src/Canvas.ts:163](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/Canvas.ts#L163)
-
-***
-
-### runtime
-
-> **`private`** **`readonly`** **runtime**: `AbstractRuntime`
-
-#### Source
-
-[packages/core/src/Canvas.ts:164](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/Canvas.ts#L164)
+[packages/core/src/Canvas.ts:118](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/core/src/Canvas.ts#L118)
 
 ***
 
 ### signers
 
-> **`readonly`** **signers**: [`SignerCache`](../../interfaces/classes/SignerCache.md)
+> `readonly` **signers**: [`SignerCache`](../../interfaces/classes/SignerCache.md)
 
-#### Source
+#### Defined in
 
-[packages/core/src/Canvas.ts:161](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/Canvas.ts#L161)
-
-***
-
-### status
-
-> **status**: [`AppConnectionStatus`](../type-aliases/AppConnectionStatus.md) = `"disconnected"`
-
-#### Source
-
-[packages/core/src/Canvas.ts:148](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/Canvas.ts#L148)
+[packages/core/src/Canvas.ts:117](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/core/src/Canvas.ts#L117)
 
 ## Accessors
 
 ### peerId
 
-> **`get`** **peerId**(): [`PeerId`](../type-aliases/PeerId.md)
+> `get` **peerId**(): [`PeerId`](../interfaces/PeerId.md)
 
 #### Returns
 
-[`PeerId`](../type-aliases/PeerId.md)
+[`PeerId`](../interfaces/PeerId.md)
 
-#### Source
+#### Defined in
 
-[packages/core/src/Canvas.ts:346](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/Canvas.ts#L346)
+[packages/core/src/Canvas.ts:251](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/core/src/Canvas.ts#L251)
 
 ***
 
 ### topic
 
-> **`get`** **topic**(): `string`
+> `get` **topic**(): `string`
 
 #### Returns
 
 `string`
 
-#### Source
+#### Defined in
 
-[packages/core/src/Canvas.ts:350](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/Canvas.ts#L350)
+[packages/core/src/Canvas.ts:255](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/core/src/Canvas.ts#L255)
 
 ## Methods
 
@@ -230,9 +94,25 @@ node\_modules/@libp2p/interface/dist/src/event-target.d.ts:28
 
 > **addEventListener**\<`K`\>(`type`, `listener`, `options`?): `void`
 
-#### Type parameters
+Appends an event listener for events whose type attribute value is type. The callback argument sets the callback that will be invoked when the event is dispatched.
 
-• **K** extends keyof [`CanvasEvents`](../interfaces/CanvasEvents.md)
+The options argument sets listener-specific options. For compatibility this can be a boolean, in which case the method behaves exactly as if the value was specified as options's capture.
+
+When set to true, options's capture prevents callback from being invoked when the event's eventPhase attribute value is BUBBLING_PHASE. When false (or not present), callback will not be invoked when event's eventPhase attribute value is CAPTURING_PHASE. Either way, callback will be invoked if event's eventPhase attribute value is AT_TARGET.
+
+When set to true, options's passive indicates that the callback will not cancel the event by invoking preventDefault(). This is used to enable performance optimizations described in § 2.8 Observing event listeners.
+
+When set to true, options's once indicates that the callback will only be invoked once after which the event listener will be removed.
+
+If an AbortSignal is passed for options's signal, then the event listener will be removed when signal is aborted.
+
+The event listener is appended to target's event listener list and is not appended if it has the same type, callback, and capture.
+
+[MDN Reference](https://developer.mozilla.org/docs/Web/API/EventTarget/addEventListener)
+
+#### Type Parameters
+
+• **K** *extends* keyof [`CanvasEvents`](../interfaces/CanvasEvents.md)
 
 #### Parameters
 
@@ -250,68 +130,19 @@ node\_modules/@libp2p/interface/dist/src/event-target.d.ts:28
 
 `TypedEventEmitter.addEventListener`
 
-#### Source
+#### Defined in
 
-node\_modules/@libp2p/interface/dist/src/event-target.d.ts:30
-
-***
-
-### append()
-
-> **append**(`payload`, `options`): `Promise`\<`Object`\>
-
-Append a new message to the end of the log (ie an action generated locally)
-Low-level utility method for internal and debugging use.
-The normal way to apply actions is to use the `Canvas.actions[name](...)` functions.
-
-#### Parameters
-
-• **payload**: [`Action`](../../interfaces/type-aliases/Action.md) \| [`Session`](../../interfaces/type-aliases/Session.md)
-
-• **options**
-
-• **options\.signer?**: [`Signer`](../../interfaces/interfaces/Signer.md)\<[`Message`](../../gossiplog/type-aliases/Message.md)\<[`Action`](../../interfaces/type-aliases/Action.md) \| [`Session`](../../interfaces/type-aliases/Session.md)\>\>
-
-#### Returns
-
-`Promise`\<`Object`\>
-
-> ##### id
->
-> > **id**: `string`
->
-> ##### recipients
->
-> > **recipients**: `Promise`\<[`PeerId`](../type-aliases/PeerId.md)[]\>
->
-> ##### result
->
-> > **result**: `any`
->
-
-#### Source
-
-[packages/core/src/Canvas.ts:393](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/Canvas.ts#L393)
-
-***
-
-### close()
-
-> **close**(): `Promise`\<`void`\>
-
-#### Returns
-
-`Promise`\<`void`\>
-
-#### Source
-
-[packages/core/src/Canvas.ts:354](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/Canvas.ts#L354)
+node\_modules/@libp2p/interface/dist/src/event-target.d.ts:31
 
 ***
 
 ### dispatchEvent()
 
 > **dispatchEvent**(`event`): `boolean`
+
+Dispatches a synthetic event event to target and returns true if either event's cancelable attribute value is false or its preventDefault() method was not invoked, and false otherwise.
+
+[MDN Reference](https://developer.mozilla.org/docs/Web/API/EventTarget/dispatchEvent)
 
 #### Parameters
 
@@ -325,9 +156,9 @@ The normal way to apply actions is to use the `Canvas.actions[name](...)` functi
 
 `TypedEventEmitter.dispatchEvent`
 
-#### Source
+#### Defined in
 
-node\_modules/@libp2p/interface/dist/src/event-target.d.ts:32
+node\_modules/@libp2p/interface/dist/src/event-target.d.ts:33
 
 ***
 
@@ -339,9 +170,9 @@ node\_modules/@libp2p/interface/dist/src/event-target.d.ts:32
 
 [`ApplicationData`](../type-aliases/ApplicationData.md)
 
-#### Source
+#### Defined in
 
-[packages/core/src/Canvas.ts:367](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/Canvas.ts#L367)
+[packages/core/src/Canvas.ts:268](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/core/src/Canvas.ts#L268)
 
 ***
 
@@ -357,9 +188,9 @@ node\_modules/@libp2p/interface/dist/src/event-target.d.ts:32
 
 `Promise`\<[`null`, `null`] \| [[`Signature`](../../interfaces/type-aliases/Signature.md), [`Message`](../../gossiplog/type-aliases/Message.md)\<[`Action`](../../interfaces/type-aliases/Action.md) \| [`Session`](../../interfaces/type-aliases/Session.md)\>]\>
 
-#### Source
+#### Defined in
 
-[packages/core/src/Canvas.ts:400](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/Canvas.ts#L400)
+[packages/core/src/Canvas.ts:292](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/core/src/Canvas.ts#L292)
 
 ***
 
@@ -369,27 +200,79 @@ node\_modules/@libp2p/interface/dist/src/event-target.d.ts:32
 
 #### Parameters
 
-• **lowerBound**: `null` \| `Object`= `null`
+• **lowerBound**: `null` \| `object` = `null`
 
-• **upperBound**: `null` \| `Object`= `null`
+• **upperBound**: `null` \| `object` = `null`
 
-• **options**= `{}`
+• **options** = `{}`
 
-• **options\.reverse?**: `boolean`
+• **options.reverse?**: `boolean`
 
 #### Returns
 
 `AsyncIterable`\<[`string`, [`Signature`](../../interfaces/type-aliases/Signature.md), [`Message`](../../gossiplog/type-aliases/Message.md)\<[`Action`](../../interfaces/type-aliases/Action.md) \| [`Session`](../../interfaces/type-aliases/Session.md)\>]\>
 
-#### Source
+#### Defined in
 
-[packages/core/src/Canvas.ts:406](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/Canvas.ts#L406)
+[packages/core/src/Canvas.ts:298](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/core/src/Canvas.ts#L298)
+
+***
+
+### getSession()
+
+> **getSession**(`query`): `Promise`\<`null` \| `string`\>
+
+Get an existing session
+
+#### Parameters
+
+• **query**
+
+• **query.address**: `string`
+
+• **query.publicKey**: `string`
+
+• **query.timestamp?**: `number`
+
+#### Returns
+
+`Promise`\<`null` \| `string`\>
+
+#### Defined in
+
+[packages/core/src/Canvas.ts:322](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/core/src/Canvas.ts#L322)
+
+***
+
+### getSessions()
+
+> **getSessions**(`query`): `Promise`\<`object`[]\>
+
+Get existing sessions
+
+#### Parameters
+
+• **query**
+
+• **query.did**: `string`
+
+• **query.minExpiration?**: `number`
+
+• **query.publicKey**: `string`
+
+#### Returns
+
+`Promise`\<`object`[]\>
+
+#### Defined in
+
+[packages/core/src/Canvas.ts:215](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/core/src/Canvas.ts#L215)
 
 ***
 
 ### insert()
 
-> **insert**(`signature`, `message`): `Promise`\<`Object`\>
+> **insert**(`signature`, `message`): `Promise`\<`object`\>
 
 Insert an existing signed message into the log (ie received via PubSub)
 Low-level utility method for internal and debugging use.
@@ -403,16 +286,19 @@ The normal way to apply actions is to use the `Canvas.actions[name](...)` functi
 
 #### Returns
 
-`Promise`\<`Object`\>
+`Promise`\<`object`\>
 
-> ##### id
->
-> > **id**: `string`
->
+##### id
 
-#### Source
+> **id**: `string`
 
-[packages/core/src/Canvas.ts:382](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/Canvas.ts#L382)
+##### recipients
+
+> **recipients**: `Promise`\<[`PeerId`](../interfaces/PeerId.md)[]\>
+
+#### Defined in
+
+[packages/core/src/Canvas.ts:283](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/core/src/Canvas.ts#L283)
 
 ***
 
@@ -432,9 +318,9 @@ The normal way to apply actions is to use the `Canvas.actions[name](...)` functi
 
 `TypedEventEmitter.listenerCount`
 
-#### Source
+#### Defined in
 
-node\_modules/@libp2p/interface/dist/src/event-target.d.ts:29
+node\_modules/@libp2p/interface/dist/src/event-target.d.ts:30
 
 ***
 
@@ -442,9 +328,13 @@ node\_modules/@libp2p/interface/dist/src/event-target.d.ts:29
 
 > **removeEventListener**\<`K`\>(`type`, `listener`?, `options`?): `void`
 
-#### Type parameters
+Removes the event listener in target's event listener list with the same type, callback, and options.
 
-• **K** extends keyof [`CanvasEvents`](../interfaces/CanvasEvents.md)
+[MDN Reference](https://developer.mozilla.org/docs/Web/API/EventTarget/removeEventListener)
+
+#### Type Parameters
+
+• **K** *extends* keyof [`CanvasEvents`](../interfaces/CanvasEvents.md)
 
 #### Parameters
 
@@ -462,9 +352,9 @@ node\_modules/@libp2p/interface/dist/src/event-target.d.ts:29
 
 `TypedEventEmitter.removeEventListener`
 
-#### Source
+#### Defined in
 
-node\_modules/@libp2p/interface/dist/src/event-target.d.ts:31
+node\_modules/@libp2p/interface/dist/src/event-target.d.ts:32
 
 ***
 
@@ -472,7 +362,7 @@ node\_modules/@libp2p/interface/dist/src/event-target.d.ts:31
 
 > **safeDispatchEvent**\<`Detail`\>(`type`, `detail`?): `boolean`
 
-#### Type parameters
+#### Type Parameters
 
 • **Detail**
 
@@ -490,9 +380,23 @@ node\_modules/@libp2p/interface/dist/src/event-target.d.ts:31
 
 `TypedEventEmitter.safeDispatchEvent`
 
-#### Source
+#### Defined in
 
-node\_modules/@libp2p/interface/dist/src/event-target.d.ts:33
+node\_modules/@libp2p/interface/dist/src/event-target.d.ts:34
+
+***
+
+### stop()
+
+> **stop**(): `Promise`\<`void`\>
+
+#### Returns
+
+`Promise`\<`void`\>
+
+#### Defined in
+
+[packages/core/src/Canvas.ts:259](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/core/src/Canvas.ts#L259)
 
 ***
 
@@ -508,33 +412,19 @@ node\_modules/@libp2p/interface/dist/src/event-target.d.ts:33
 
 `void`
 
-#### Source
+#### Defined in
 
-[packages/core/src/Canvas.ts:331](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/Canvas.ts#L331)
-
-***
-
-### updateStatus()
-
-> **`private`** **updateStatus**(): `void`
-
-#### Returns
-
-`void`
-
-#### Source
-
-[packages/core/src/Canvas.ts:335](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/Canvas.ts#L335)
+[packages/core/src/Canvas.ts:247](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/core/src/Canvas.ts#L247)
 
 ***
 
 ### initialize()
 
-> **`static`** **initialize**\<`T`\>(`config`): `Promise`\<[`Canvas`](Canvas.md)\<`T`\>\>
+> `static` **initialize**\<`T`\>(`config`): `Promise`\<[`Canvas`](Canvas.md)\<`T`\>\>
 
-#### Type parameters
+#### Type Parameters
 
-• **T** extends [`Contract`](../type-aliases/Contract.md)
+• **T** *extends* [`Contract`](../type-aliases/Contract.md)
 
 #### Parameters
 
@@ -544,6 +434,6 @@ node\_modules/@libp2p/interface/dist/src/event-target.d.ts:33
 
 `Promise`\<[`Canvas`](Canvas.md)\<`T`\>\>
 
-#### Source
+#### Defined in
 
-[packages/core/src/Canvas.ts:103](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/Canvas.ts#L103)
+[packages/core/src/Canvas.ts:65](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/core/src/Canvas.ts#L65)

@@ -1,4 +1,4 @@
-[Documentation](../../index.md) / @canvas-js/modeldb
+[Documentation](../../packages.md) / @canvas-js/modeldb
 
 # @canvas-js/modeldb
 
@@ -12,8 +12,8 @@
 - [Effect](type-aliases/Effect.md)
 - [IndexInit](type-aliases/IndexInit.md)
 - [Model](type-aliases/Model.md)
+- [ModelSchema](type-aliases/ModelSchema.md)
 - [ModelValue](type-aliases/ModelValue.md)
-- [ModelsInit](type-aliases/ModelsInit.md)
 - [NotExpression](type-aliases/NotExpression.md)
 - [OptionalPrimitiveType](type-aliases/OptionalPrimitiveType.md)
 - [OptionalReferenceType](type-aliases/OptionalReferenceType.md)

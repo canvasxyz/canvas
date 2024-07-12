@@ -1,9 +1,13 @@
-[Documentation](../../../index.md) / [@canvas-js/modeldb](../index.md) / ModelValue
+[Documentation](../../../packages.md) / [@canvas-js/modeldb](../index.md) / ModelValue
 
-# Type alias: ModelValue
+# Type Alias: ModelValue\<T\>
 
-> **ModelValue**: `Record`\<`string`, [`PropertyValue`](PropertyValue.md)\>
+> **ModelValue**\<`T`\>: `Record`\<`string`, `T`\>
 
-## Source
+## Type Parameters
 
-[types.ts:58](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/modeldb/src/types.ts#L58)
+• **T** = [`PropertyValue`](PropertyValue.md)
+
+## Defined in
+
+[types.ts:63](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/modeldb/src/types.ts#L63)

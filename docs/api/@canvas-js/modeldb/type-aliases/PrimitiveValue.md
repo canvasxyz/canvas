@@ -1,9 +1,9 @@
-[Documentation](../../../index.md) / [@canvas-js/modeldb](../index.md) / PrimitiveValue
+[Documentation](../../../packages.md) / [@canvas-js/modeldb](../index.md) / PrimitiveValue
 
-# Type alias: PrimitiveValue
+# Type Alias: PrimitiveValue
 
 > **PrimitiveValue**: `number` \| `string` \| `Uint8Array` \| `null` \| `boolean`
 
-## Source
+## Defined in
 
-[types.ts:52](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/modeldb/src/types.ts#L52)
+[types.ts:57](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/modeldb/src/types.ts#L57)

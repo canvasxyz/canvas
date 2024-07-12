@@ -1,4 +1,4 @@
-[Documentation](../../index.md) / @canvas-js/core
+[Documentation](../../packages.md) / @canvas-js/core
 
 # @canvas-js/core
 
@@ -65,7 +65,7 @@ const results = await app.db.query("posts", {})
 // [
 //   {
 //     id: '09p5qn7affkhtbflscr663tet8ddeu41',
-//     user: 'eip155:1:0x79c5158f81ebb0c2bcF877E9e1813aed2Eb652B7',
+//     user: 'did:pkh:eip155:1:0x79c5158f81ebb0c2bcF877E9e1813aed2Eb652B7',
 //     content: 'hello world!',
 //     updated_at: 1698339861041
 //   }
@@ -77,12 +77,12 @@ const results = await app.db.query("posts", {})
 ### Contract types
 
 ```ts
-import type { ModelsInit, ModelValue } from "@canvas-js/modeldb"
+import type { ModelSchema, ModelValue } from "@canvas-js/modeldb"
 import type { Awaitable } from "@canvas-js/interfaces"
 
 export type Contract = {
   topic: string
-  models: ModelsInit
+  models: ModelSchema
   actions: Record<string, ActionImplementationFunction | ActionImplementationObject>
 }
 
@@ -119,44 +119,41 @@ import { Signature, Action, Session, SessionSigner } from "@canvas-js/interfaces
 import { AbstractModelDB } from "@canvas-js/modeldb"
 
 export interface NetworkConfig {
-    offline?: boolean;
-    disablePing?: boolean;
-    /** array of local WebSocket multiaddrs, e.g. "/ip4/127.0.0.1/tcp/3000/ws" */
-    listen?: string[];
-    /** array of public WebSocket multiaddrs, e.g. "/dns4/myapp.com/tcp/443/wss" */
-    announce?: string[];
-    bootstrapList?: string[];
-    minConnections?: number;
-    maxConnections?: number;
-    discoveryTopic?: string;
-    discoveryInterval?: number;
-    trackAllPeers?: boolean;
-    enableWebRTC?: boolean;
+  offline?: boolean
+  disablePing?: boolean
+  /** array of local WebSocket multiaddrs, e.g. "/ip4/127.0.0.1/tcp/3000/ws" */
+  listen?: string[]
+  /** array of public WebSocket multiaddrs, e.g. "/dns4/myapp.com/tcp/443/wss" */
+  announce?: string[]
+  bootstrapList?: string[]
+  minConnections?: number
+  maxConnections?: number
+  discoveryTopic?: string
+  discoveryInterval?: number
+  trackAllPeers?: boolean
+  enableWebRTC?: boolean
 }
 export interface CanvasConfig<T extends Contract = Contract> extends NetworkConfig {
-    contract: string | T;
-    signers?: SessionSigner[];
-    /** data directory path (NodeJS only) */
-    path?: string | null;
-    /** provide an existing libp2p instance instead of creating a new one */
-    libp2p?: Libp2p<ServiceMap>;
-    /** set to `false` to disable history indexing and db.get(..) within actions */
-    indexHistory?: boolean;
-    runtimeMemoryLimit?: number;
-    ignoreMissingActions?: boolean;
+  contract: string | T
+  signers?: SessionSigner[]
+  /** data directory path (NodeJS only) */
+  path?: string | null
+  /** provide an existing libp2p instance instead of creating a new one */
+  libp2p?: Libp2p<ServiceMap>
+  runtimeMemoryLimit?: number
 }
 
 export interface CanvasEvents extends GossipLogEvents<Action | Session, unknown> {
-    close: Event;
-    connect: CustomEvent<{
-        peer: PeerId;
-    }>;
-    disconnect: CustomEvent<{
-        peer: PeerId;
-    }>;
-    "connections:updated": CustomEvent<ConnectionsInfo>;
-    "presence:join": CustomEvent<PresenceInfo>;
-    "presence:leave": CustomEvent<PresenceInfo>;
+  close: Event
+  connect: CustomEvent<{
+    peer: PeerId
+  }>
+  disconnect: CustomEvent<{
+    peer: PeerId
+  }>
+  "connections:updated": CustomEvent<ConnectionsInfo>
+  "presence:join": CustomEvent<PresenceInfo>
+  "presence:leave": CustomEvent<PresenceInfo>
 }
 
 export declare class Canvas extends EventEmitter<CanvasEvents> {

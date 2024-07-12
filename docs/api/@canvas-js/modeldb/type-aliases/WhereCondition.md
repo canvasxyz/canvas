@@ -1,9 +1,9 @@
-[Documentation](../../../index.md) / [@canvas-js/modeldb](../index.md) / WhereCondition
+[Documentation](../../../packages.md) / [@canvas-js/modeldb](../index.md) / WhereCondition
 
-# Type alias: WhereCondition
+# Type Alias: WhereCondition
 
 > **WhereCondition**: `Record`\<`string`, [`PropertyValue`](PropertyValue.md) \| [`NotExpression`](NotExpression.md) \| [`RangeExpression`](RangeExpression.md)\>
 
-## Source
+## Defined in
 
-[types.ts:60](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/modeldb/src/types.ts#L60)
+[types.ts:65](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/modeldb/src/types.ts#L65)

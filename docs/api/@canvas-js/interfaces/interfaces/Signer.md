@@ -1,29 +1,71 @@
-[Documentation](../../../index.md) / [@canvas-js/interfaces](../index.md) / Signer
+[Documentation](../../../packages.md) / [@canvas-js/interfaces](../index.md) / Signer
 
-# Interface: Signer\<T\>
+# Interface: Signer\<Payload\>
 
-## Extended by
+## Type Parameters
 
-- [`SessionSigner`](SessionSigner.md)
+• **Payload** = `unknown`
 
-## Type parameters
+## Properties
 
-• **T** = `any`
+### publicKey
+
+> **publicKey**: `string`
+
+#### Defined in
+
+[Signer.ts:15](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/interfaces/src/Signer.ts#L15)
+
+***
+
+### scheme
+
+> **scheme**: [`SignatureScheme`](SignatureScheme.md)\<`Payload`\>
+
+#### Defined in
+
+[Signer.ts:13](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/interfaces/src/Signer.ts#L13)
 
 ## Methods
 
-### sign()
+### export()
 
-> **sign**(`value`): [`Signature`](../type-aliases/Signature.md)
-
-#### Parameters
-
-• **value**: `T`
+> **export**(): `object`
 
 #### Returns
 
-[`Signature`](../type-aliases/Signature.md)
+`object`
 
-#### Source
+##### privateKey
 
-[Signer.ts:4](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/interfaces/src/Signer.ts#L4)
+> **privateKey**: `Uint8Array`
+
+##### type
+
+> **type**: `string`
+
+#### Defined in
+
+[Signer.ts:19](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/interfaces/src/Signer.ts#L19)
+
+***
+
+### sign()
+
+> **sign**(`message`, `options`?): [`Awaitable`](../type-aliases/Awaitable.md)\<[`Signature`](../type-aliases/Signature.md)\>
+
+#### Parameters
+
+• **message**: [`Message`](../type-aliases/Message.md)\<`Payload`\>
+
+• **options?**
+
+• **options.codec?**: `string`
+
+#### Returns
+
+[`Awaitable`](../type-aliases/Awaitable.md)\<[`Signature`](../type-aliases/Signature.md)\>
+
+#### Defined in
+
+[Signer.ts:17](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/interfaces/src/Signer.ts#L17)

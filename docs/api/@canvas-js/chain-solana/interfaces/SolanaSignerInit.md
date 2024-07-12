@@ -1,4 +1,4 @@
-[Documentation](../../../index.md) / [@canvas-js/chain-solana](../index.md) / SolanaSignerInit
+[Documentation](../../../packages.md) / [@canvas-js/chain-solana](../index.md) / SolanaSignerInit
 
 # Interface: SolanaSignerInit
 
@@ -6,28 +6,28 @@
 
 ### chainId?
 
-> **`optional`** **chainId**: `string`
+> `optional` **chainId**: `string`
 
-#### Source
+#### Defined in
 
-[SolanaSigner.ts:25](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-solana/src/SolanaSigner.ts#L25)
+[chain-solana/src/SolanaSigner.ts:44](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-solana/src/SolanaSigner.ts#L44)
 
 ***
 
 ### sessionDuration?
 
-> **`optional`** **sessionDuration**: `number`
+> `optional` **sessionDuration**: `number`
 
-#### Source
+#### Defined in
 
-[SolanaSigner.ts:27](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-solana/src/SolanaSigner.ts#L27)
+[chain-solana/src/SolanaSigner.ts:43](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-solana/src/SolanaSigner.ts#L43)
 
 ***
 
 ### signer?
 
-> **`optional`** **signer**: `SolanaWindowSigner`
+> `optional` **signer**: `SolanaWindowSigner`
 
-#### Source
+#### Defined in
 
-[SolanaSigner.ts:26](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-solana/src/SolanaSigner.ts#L26)
+[chain-solana/src/SolanaSigner.ts:42](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-solana/src/SolanaSigner.ts#L42)

@@ -1,64 +1,64 @@
-[Documentation](../../../index.md) / [@canvas-js/chain-ethereum](../index.md) / EIP712Signer
+[Documentation](../../../packages.md) / [@canvas-js/chain-ethereum](../index.md) / Eip712Signer
 
-# Class: EIP712Signer
+# Class: Eip712Signer
 
-## Implements
+## Extends
 
-- [`SessionSigner`](../../interfaces/interfaces/SessionSigner.md)\<[`EIP712AuthorizationData`](../type-aliases/EIP712AuthorizationData.md)\>
+- `AbstractSessionSigner`\<`Eip712SessionData`\>
 
 ## Constructors
 
-### new EIP712Signer(init)
+### new Eip712Signer()
 
-> **new EIP712Signer**(`init`): [`EIP712Signer`](EIP712Signer.md)
+> **new Eip712Signer**(`init`): [`Eip712Signer`](Eip712Signer.md)
 
 #### Parameters
 
-• **init**: [`EIP712SignerInit`](../interfaces/EIP712SignerInit.md)= `{}`
+• **init** = `...`
+
+• **init.chainId?**: `number`
+
+• **init.sessionDuration?**: `number`
+
+• **init.signer?**: `AbstractSigner`\<`null` \| `Provider`\>
 
 #### Returns
 
-[`EIP712Signer`](EIP712Signer.md)
+[`Eip712Signer`](Eip712Signer.md)
 
-#### Source
+#### Overrides
 
-[EIP712Signer.ts:51](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-ethereum/src/EIP712Signer.ts#L51)
+`AbstractSessionSigner<Eip712SessionData>.constructor`
+
+#### Defined in
+
+[chain-ethereum/src/eip712/Eip712Signer.ts:30](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-ethereum/src/eip712/Eip712Signer.ts#L30)
 
 ## Properties
 
-### #ethersSigner
+### \_signer
 
-> **`private`** **#ethersSigner**: `AbstractSigner`\<`null` \| `Provider`\>
+> **\_signer**: `AbstractSigner`\<`null` \| `Provider`\>
 
-#### Source
+#### Defined in
 
-[EIP712Signer.ts:49](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-ethereum/src/EIP712Signer.ts#L49)
-
-***
-
-### #store
-
-> **`private`** **#store**: `SessionStore`
-
-#### Source
-
-[EIP712Signer.ts:48](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-ethereum/src/EIP712Signer.ts#L48)
+[chain-ethereum/src/eip712/Eip712Signer.ts:28](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-ethereum/src/eip712/Eip712Signer.ts#L28)
 
 ***
 
 ### chainId
 
-> **`readonly`** **chainId**: `number`
+> `readonly` **chainId**: `number`
 
-#### Source
+#### Defined in
 
-[EIP712Signer.ts:44](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-ethereum/src/EIP712Signer.ts#L44)
+[chain-ethereum/src/eip712/Eip712Signer.ts:27](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-ethereum/src/eip712/Eip712Signer.ts#L27)
 
 ***
 
 ### key
 
-> **`readonly`** **key**: `string`
+> `readonly` **key**: `string`
 
 A unique identifier based on the signer's arguments, used to trigger React effects.
 This should not change unless user-provided arguments to the signers change.
@@ -66,35 +66,145 @@ This should not change unless user-provided arguments to the signers change.
 For example, the key for `new SIWESigner()` should always remain the same, even if
 a different burner wallet is generated on every call.
 
-#### Implementation of
+#### Inherited from
 
-[`SessionSigner`](../../interfaces/interfaces/SessionSigner.md).[`key`](../../interfaces/interfaces/SessionSigner.md#key)
+`AbstractSessionSigner.key`
 
-#### Source
+#### Defined in
 
-[EIP712Signer.ts:42](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-ethereum/src/EIP712Signer.ts#L42)
+signatures/lib/AbstractSessionSigner.d.ts:8
 
 ***
 
 ### log
 
-> **`private`** **`readonly`** **log**: `Logger`
+> `protected` `readonly` **log**: `Logger`
 
-#### Source
+#### Inherited from
 
-[EIP712Signer.ts:46](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-ethereum/src/EIP712Signer.ts#L46)
+`AbstractSessionSigner.log`
+
+#### Defined in
+
+signatures/lib/AbstractSessionSigner.d.ts:17
+
+***
+
+### scheme
+
+> `readonly` **scheme**: [`SignatureScheme`](../../interfaces/interfaces/SignatureScheme.md)\<[`Action`](../../interfaces/type-aliases/Action.md) \| [`Session`](../../interfaces/type-aliases/Session.md)\<`Eip712SessionData`\>\>
+
+#### Inherited from
+
+`AbstractSessionSigner.scheme`
+
+#### Defined in
+
+signatures/lib/AbstractSessionSigner.d.ts:9
 
 ***
 
 ### sessionDuration
 
-> **`readonly`** **sessionDuration**: `number`
+> `readonly` **sessionDuration**: `null` \| `number`
 
-#### Source
+#### Inherited from
 
-[EIP712Signer.ts:43](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-ethereum/src/EIP712Signer.ts#L43)
+`AbstractSessionSigner.sessionDuration`
+
+#### Defined in
+
+signatures/lib/AbstractSessionSigner.d.ts:16
+
+***
+
+### target
+
+> `readonly` **target**: `object`
+
+#### clear()
+
+##### Parameters
+
+• **prefix?**: `string`
+
+##### Returns
+
+`void`
+
+#### get()
+
+##### Parameters
+
+• **key**: `string`
+
+##### Returns
+
+`null` \| `string`
+
+#### getDomain()
+
+##### Returns
+
+`string`
+
+#### set()
+
+##### Parameters
+
+• **key**: `string`
+
+• **value**: `any`
+
+##### Returns
+
+`void`
+
+#### Inherited from
+
+`AbstractSessionSigner.target`
+
+#### Defined in
+
+signatures/lib/AbstractSessionSigner.d.ts:10
+
+***
+
+### sessionDataTypes
+
+> `static` **sessionDataTypes**: `object`
+
+#### SessionData
+
+> **SessionData**: `object`[]
+
+#### Defined in
+
+[chain-ethereum/src/eip712/Eip712Signer.ts:15](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-ethereum/src/eip712/Eip712Signer.ts#L15)
 
 ## Methods
+
+### authorize()
+
+> **authorize**(`sessionData`): `Promise`\<[`Session`](../../interfaces/type-aliases/Session.md)\<`Eip712SessionData`\>\>
+
+#### Parameters
+
+• **sessionData**: [`AbstractSessionData`](../../interfaces/interfaces/AbstractSessionData.md)
+
+#### Returns
+
+`Promise`\<[`Session`](../../interfaces/type-aliases/Session.md)\<`Eip712SessionData`\>\>
+
+#### Overrides
+
+`AbstractSessionSigner.authorize`
+
+#### Defined in
+
+[chain-ethereum/src/eip712/Eip712Signer.ts:52](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-ethereum/src/eip712/Eip712Signer.ts#L52)
+
+***
 
 ### clear()
 
@@ -108,60 +218,145 @@ a different burner wallet is generated on every call.
 
 `Promise`\<`void`\>
 
-#### Implementation of
+#### Inherited from
 
-[`SessionSigner`](../../interfaces/interfaces/SessionSigner.md).[`clear`](../../interfaces/interfaces/SessionSigner.md#clear)
+`AbstractSessionSigner.clear`
 
-#### Source
+#### Defined in
 
-[EIP712Signer.ts:161](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-ethereum/src/EIP712Signer.ts#L161)
+signatures/lib/AbstractSessionSigner.d.ts:37
+
+***
+
+### getAddressFromDid()
+
+> **getAddressFromDid**(`did`): \`0x$\{string\}\`
+
+#### Parameters
+
+• **did**: \`did:$\{string\}\`
+
+#### Returns
+
+\`0x$\{string\}\`
+
+#### Overrides
+
+`AbstractSessionSigner.getAddressFromDid`
+
+#### Defined in
+
+[chain-ethereum/src/eip712/Eip712Signer.ts:47](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-ethereum/src/eip712/Eip712Signer.ts#L47)
+
+***
+
+### getDid()
+
+> **getDid**(): `Promise`\<\`did:$\{string\}\`\>
+
+#### Returns
+
+`Promise`\<\`did:$\{string\}\`\>
+
+#### Overrides
+
+`AbstractSessionSigner.getDid`
+
+#### Defined in
+
+[chain-ethereum/src/eip712/Eip712Signer.ts:38](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-ethereum/src/eip712/Eip712Signer.ts#L38)
+
+***
+
+### getDidParts()
+
+> **getDidParts**(): `number`
+
+#### Returns
+
+`number`
+
+#### Overrides
+
+`AbstractSessionSigner.getDidParts`
+
+#### Defined in
+
+[chain-ethereum/src/eip712/Eip712Signer.ts:43](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-ethereum/src/eip712/Eip712Signer.ts#L43)
 
 ***
 
 ### getSession()
 
-> **getSession**(`topic`, `options`): `Promise`\<[`Session`](../../interfaces/type-aliases/Session.md)\<[`EIP712AuthorizationData`](../type-aliases/EIP712AuthorizationData.md)\>\>
-
-`getSession` is called by the Canvas runtime for every new action appended
-to the log (ie for new actions taken by local users, not existing messages
-received from other peers via merkle sync or GossipSub).
-
-It's responsible for returning a `Session` that matches the given parameters,
-either by looking up a cached session, or by getting user authorization to create
-a new one (and then caching it).
-
-"Matching the given parameters" means that the caller passes a `topic: string`
-and an optional `chain?: string; timestamp?: number`, and `getSession` must return
-a `Session` authorized for that topic, that specific chain (if provided), and that
-is valid for the given timestamp (if provided).
+> **getSession**(`topic`, `options`?): `Promise`\<`null` \| `object`\>
 
 #### Parameters
 
 • **topic**: `string`
 
-• **options**= `{}`
+• **options?**
 
-• **options\.fromCache?**: `boolean`
-
-• **options\.timestamp?**: `number`
+• **options.did?**: `string`
 
 #### Returns
 
-`Promise`\<[`Session`](../../interfaces/type-aliases/Session.md)\<[`EIP712AuthorizationData`](../type-aliases/EIP712AuthorizationData.md)\>\>
+`Promise`\<`null` \| `object`\>
 
-#### Implementation of
+#### Inherited from
 
-[`SessionSigner`](../../interfaces/interfaces/SessionSigner.md).[`getSession`](../../interfaces/interfaces/SessionSigner.md#getsession)
+`AbstractSessionSigner.getSession`
 
-#### Source
+#### Defined in
 
-[EIP712Signer.ts:81](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-ethereum/src/EIP712Signer.ts#L81)
+signatures/lib/AbstractSessionSigner.d.ts:30
+
+***
+
+### getWalletAddress()
+
+> **getWalletAddress**(): `Promise`\<`string`\>
+
+#### Returns
+
+`Promise`\<`string`\>
+
+#### Inherited from
+
+`AbstractSessionSigner.getWalletAddress`
+
+#### Defined in
+
+signatures/lib/AbstractSessionSigner.d.ts:24
+
+***
+
+### hasSession()
+
+> **hasSession**(`topic`, `did`): `boolean`
+
+#### Parameters
+
+• **topic**: `string`
+
+• **did**: \`did:$\{string\}\`
+
+#### Returns
+
+`boolean`
+
+#### Inherited from
+
+`AbstractSessionSigner.hasSession`
+
+#### Defined in
+
+signatures/lib/AbstractSessionSigner.d.ts:36
 
 ***
 
 ### match()
 
-> **`readonly`** **match**(`address`): `boolean`
+> `readonly` **match**(`address`): `boolean`
 
 #### Parameters
 
@@ -171,35 +366,43 @@ is valid for the given timestamp (if provided).
 
 `boolean`
 
-#### Implementation of
+#### Overrides
 
-[`SessionSigner`](../../interfaces/interfaces/SessionSigner.md).[`match`](../../interfaces/interfaces/SessionSigner.md#match)
+`AbstractSessionSigner.match`
 
-#### Source
+#### Defined in
 
-[EIP712Signer.ts:58](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-ethereum/src/EIP712Signer.ts#L58)
+[chain-ethereum/src/eip712/Eip712Signer.ts:25](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-ethereum/src/eip712/Eip712Signer.ts#L25)
 
 ***
 
-### sign()
+### newSession()
 
-> **sign**(`message`): [`Signature`](../../interfaces/type-aliases/Signature.md)
+> **newSession**(`topic`): `Promise`\<`object`\>
 
 #### Parameters
 
-• **message**: [`Message`](../../gossiplog/type-aliases/Message.md)\<[`Session`](../../interfaces/type-aliases/Session.md) \| [`Action`](../../interfaces/type-aliases/Action.md)\>
+• **topic**: `string`
 
 #### Returns
 
-[`Signature`](../../interfaces/type-aliases/Signature.md)
+`Promise`\<`object`\>
 
-#### Implementation of
+##### payload
 
-[`SessionSigner`](../../interfaces/interfaces/SessionSigner.md).[`sign`](../../interfaces/interfaces/SessionSigner.md#sign)
+> **payload**: [`Session`](../../interfaces/type-aliases/Session.md)\<`Eip712SessionData`\>
 
-#### Source
+##### signer
 
-[EIP712Signer.ts:138](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-ethereum/src/EIP712Signer.ts#L138)
+> **signer**: [`Signer`](../../interfaces/interfaces/Signer.md)\<[`Action`](../../interfaces/type-aliases/Action.md) \| [`Session`](../../interfaces/type-aliases/Session.md)\<`Eip712SessionData`\>\>
+
+#### Inherited from
+
+`AbstractSessionSigner.newSession`
+
+#### Defined in
+
+signatures/lib/AbstractSessionSigner.d.ts:26
 
 ***
 
@@ -207,23 +410,20 @@ is valid for the given timestamp (if provided).
 
 > **verifySession**(`topic`, `session`): `void`
 
-Verify that `session.data` authorizes `session.publicKey`
-to take actions on behalf of the user `${session.chain}:${session.address}`
-
 #### Parameters
 
 • **topic**: `string`
 
-• **session**: [`Session`](../../interfaces/type-aliases/Session.md)\<[`EIP712AuthorizationData`](../type-aliases/EIP712AuthorizationData.md)\>
+• **session**: [`Session`](../../interfaces/type-aliases/Session.md)\<`Eip712SessionData`\>
 
 #### Returns
 
 `void`
 
-#### Implementation of
+#### Overrides
 
-[`SessionSigner`](../../interfaces/interfaces/SessionSigner.md).[`verifySession`](../../interfaces/interfaces/SessionSigner.md#verifysession)
+`AbstractSessionSigner.verifySession`
 
-#### Source
+#### Defined in
 
-[EIP712Signer.ts:60](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-ethereum/src/EIP712Signer.ts#L60)
+[chain-ethereum/src/eip712/Eip712Signer.ts:82](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-ethereum/src/eip712/Eip712Signer.ts#L82)

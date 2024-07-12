@@ -1,8 +1,8 @@
-[Documentation](../../../index.md) / [@canvas-js/core](../index.md) / Contract
+[Documentation](../../../packages.md) / [@canvas-js/core](../index.md) / Contract
 
-# Type alias: Contract
+# Type Alias: Contract
 
-> **Contract**: `Object`
+> **Contract**: `object`
 
 ## Type declaration
 
@@ -12,12 +12,8 @@
 
 ### models
 
-> **models**: [`ModelsInit`](../../modeldb/type-aliases/ModelsInit.md)
+> **models**: [`ModelSchema`](../../modeldb/type-aliases/ModelSchema.md)
 
-### topic
+## Defined in
 
-> **topic**: `string`
-
-## Source
-
-[packages/core/src/types.ts:4](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/types.ts#L4)
+[packages/core/src/types.ts:4](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/core/src/types.ts#L4)

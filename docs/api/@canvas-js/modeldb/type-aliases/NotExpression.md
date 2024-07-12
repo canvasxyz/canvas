@@ -1,8 +1,8 @@
-[Documentation](../../../index.md) / [@canvas-js/modeldb](../index.md) / NotExpression
+[Documentation](../../../packages.md) / [@canvas-js/modeldb](../index.md) / NotExpression
 
-# Type alias: NotExpression
+# Type Alias: NotExpression
 
-> **NotExpression**: `Object`
+> **NotExpression**: `object`
 
 ## Type declaration
 
@@ -10,6 +10,6 @@
 
 > **neq**: [`PropertyValue`](PropertyValue.md)
 
-## Source
+## Defined in
 
-[types.ts:61](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/modeldb/src/types.ts#L61)
+[types.ts:66](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/modeldb/src/types.ts#L66)

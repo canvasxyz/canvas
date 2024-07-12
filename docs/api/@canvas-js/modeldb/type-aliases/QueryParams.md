@@ -1,31 +1,31 @@
-[Documentation](../../../index.md) / [@canvas-js/modeldb](../index.md) / QueryParams
+[Documentation](../../../packages.md) / [@canvas-js/modeldb](../index.md) / QueryParams
 
-# Type alias: QueryParams
+# Type Alias: QueryParams
 
-> **QueryParams**: `Object`
+> **QueryParams**: `object`
 
 ## Type declaration
 
 ### limit?
 
-> **`optional`** **limit**: `number`
+> `optional` **limit**: `number`
 
 ### offset?
 
-> **`optional`** **offset**: `number`
+> `optional` **offset**: `number`
 
 ### orderBy?
 
-> **`optional`** **orderBy**: `Record`\<`string`, `"asc"` \| `"desc"`\>
+> `optional` **orderBy**: `Record`\<`string`, `"asc"` \| `"desc"`\>
 
 ### select?
 
-> **`optional`** **select**: `Record`\<`string`, `boolean`\>
+> `optional` **select**: `Record`\<`string`, `boolean`\>
 
 ### where?
 
-> **`optional`** **where**: [`WhereCondition`](WhereCondition.md)
+> `optional` **where**: [`WhereCondition`](WhereCondition.md)
 
-## Source
+## Defined in
 
-[types.ts:64](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/modeldb/src/types.ts#L64)
+[types.ts:69](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/modeldb/src/types.ts#L69)

@@ -1,9 +1,9 @@
-[Documentation](../../../index.md) / [@canvas-js/modeldb](../index.md) / RelationValue
+[Documentation](../../../packages.md) / [@canvas-js/modeldb](../index.md) / RelationValue
 
-# Type alias: RelationValue
+# Type Alias: RelationValue
 
 > **RelationValue**: `string`[]
 
-## Source
+## Defined in
 
-[types.ts:54](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/modeldb/src/types.ts#L54)
+[types.ts:59](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/modeldb/src/types.ts#L59)

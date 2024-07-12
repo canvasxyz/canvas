@@ -1,14 +1,18 @@
-[Documentation](../../../index.md) / [@canvas-js/core](../index.md) / Model
+[Documentation](../../../packages.md) / [@canvas-js/core](../index.md) / Model
 
-# Type alias: Model
+# Type Alias: Model
 
-> **Model**: `Object`
+> **Model**: `object`
 
 ## Type declaration
 
 ### indexes
 
 > **indexes**: `string`[][]
+
+### merge
+
+> **merge**: `MergeFunction` \| `undefined`
 
 ### name
 
@@ -22,6 +26,6 @@
 
 > **properties**: [`Property`](../../modeldb/type-aliases/Property.md)[]
 
-## Source
+## Defined in
 
-packages/modeldb/lib/types.d.ts:40
+packages/modeldb/lib/types.d.ts:42

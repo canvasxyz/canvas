@@ -1,4 +1,4 @@
-[Documentation](../../../index.md) / [@canvas-js/modeldb](../index.md) / parseConfig
+[Documentation](../../../packages.md) / [@canvas-js/modeldb](../index.md) / parseConfig
 
 # Function: parseConfig()
 
@@ -6,12 +6,12 @@
 
 ## Parameters
 
-• **init**: [`ModelsInit`](../type-aliases/ModelsInit.md)
+• **init**: [`ModelSchema`](../type-aliases/ModelSchema.md)
 
 ## Returns
 
 [`Config`](../type-aliases/Config.md)
 
-## Source
+## Defined in
 
-[config.ts:4](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/modeldb/src/config.ts#L4)
+[config.ts:6](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/modeldb/src/config.ts#L6)

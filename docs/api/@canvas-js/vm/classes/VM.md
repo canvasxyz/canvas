@@ -1,88 +1,36 @@
-[Documentation](../../../index.md) / [@canvas-js/vm](../index.md) / VM
+[Documentation](../../../packages.md) / [@canvas-js/vm](../index.md) / VM
 
 # Class: VM
 
-## Constructors
-
-### new VM(runtime, context, options)
-
-> **`private`** **new VM**(`runtime`, `context`, `options`): [`VM`](VM.md)
-
-#### Parameters
-
-• **runtime**: `QuickJSRuntime`
-
-• **context**: `QuickJSContext`
-
-• **options**: [`VMOptions`](../interfaces/VMOptions.md)
-
-#### Returns
-
-[`VM`](VM.md)
-
-#### Source
-
-[packages/vm/src/vm.ts:30](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L30)
-
 ## Properties
-
-### #globalCache
-
-> **`private`** **`readonly`** **#globalCache**: `Map`\<`string`, `QuickJSHandle`\>
-
-#### Source
-
-[packages/vm/src/vm.ts:20](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L20)
-
-***
-
-### #localCache
-
-> **`private`** **`readonly`** **#localCache**: `Set`\<`QuickJSHandle`\>
-
-#### Source
-
-[packages/vm/src/vm.ts:21](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L21)
-
-***
 
 ### context
 
-> **`readonly`** **context**: `QuickJSContext`
+> `readonly` **context**: `QuickJSContext`
 
-#### Source
+#### Defined in
 
-[packages/vm/src/vm.ts:32](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L32)
-
-***
-
-### log
-
-> **`private`** **`readonly`** **log**: `Logger`
-
-#### Source
-
-[packages/vm/src/vm.ts:18](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L18)
+[packages/vm/src/vm.ts:33](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/vm/src/vm.ts#L33)
 
 ***
 
 ### runtime
 
-> **`readonly`** **runtime**: `QuickJSRuntime`
+> `readonly` **runtime**: `QuickJSRuntime`
 
-#### Source
+#### Defined in
 
-[packages/vm/src/vm.ts:31](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L31)
+[packages/vm/src/vm.ts:32](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/vm/src/vm.ts#L32)
 
 ***
 
 ### RUNTIME\_MEMORY\_LIMIT
 
-> **`static`** **RUNTIME\_MEMORY\_LIMIT**: `number`
+> `static` **RUNTIME\_MEMORY\_LIMIT**: `number`
 
-#### Source
+#### Defined in
 
-[packages/vm/src/vm.ts:16](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L16)
+[packages/vm/src/vm.ts:17](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/vm/src/vm.ts#L17)
 
 ## Methods
 
@@ -98,9 +46,9 @@
 
 `QuickJSHandle`
 
-#### Source
+#### Defined in
 
-[packages/vm/src/vm.ts:411](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L411)
+[packages/vm/src/vm.ts:412](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/vm/src/vm.ts#L412)
 
 ***
 
@@ -120,9 +68,9 @@
 
 `QuickJSHandle`
 
-#### Source
+#### Defined in
 
-[packages/vm/src/vm.ts:133](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L133)
+[packages/vm/src/vm.ts:134](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/vm/src/vm.ts#L134)
 
 ***
 
@@ -142,9 +90,9 @@
 
 `Promise`\<`QuickJSHandle`\>
 
-#### Source
+#### Defined in
 
-[packages/vm/src/vm.ts:143](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L143)
+[packages/vm/src/vm.ts:144](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/vm/src/vm.ts#L144)
 
 ***
 
@@ -158,9 +106,9 @@ Cleans up this VM instance.
 
 `void`
 
-#### Source
+#### Defined in
 
-[packages/vm/src/vm.ts:47](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L47)
+[packages/vm/src/vm.ts:48](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/vm/src/vm.ts#L48)
 
 ***
 
@@ -172,17 +120,17 @@ Cleans up this VM instance.
 
 • **contract**: `string`
 
-• **options**= `{}`
+• **options** = `{}`
 
-• **options\.uri?**: `string`
+• **options.uri?**: `string`
 
 #### Returns
 
 `void`
 
-#### Source
+#### Defined in
 
-[packages/vm/src/vm.ts:68](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L68)
+[packages/vm/src/vm.ts:69](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/vm/src/vm.ts#L69)
 
 ***
 
@@ -198,9 +146,9 @@ Cleans up this VM instance.
 
 `QuickJSHandle`
 
-#### Source
+#### Defined in
 
-[packages/vm/src/vm.ts:97](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L97)
+[packages/vm/src/vm.ts:98](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/vm/src/vm.ts#L98)
 
 ***
 
@@ -216,9 +164,9 @@ Cleans up this VM instance.
 
 `boolean`
 
-#### Source
+#### Defined in
 
-[packages/vm/src/vm.ts:193](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L193)
+[packages/vm/src/vm.ts:194](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/vm/src/vm.ts#L194)
 
 ***
 
@@ -234,9 +182,9 @@ Cleans up this VM instance.
 
 `Uint8Array`
 
-#### Source
+#### Defined in
 
-[packages/vm/src/vm.ts:195](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L195)
+[packages/vm/src/vm.ts:196](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/vm/src/vm.ts#L196)
 
 ***
 
@@ -248,17 +196,17 @@ Cleans up this VM instance.
 
 • **contract**: `string`
 
-• **options**= `{}`
+• **options** = `{}`
 
-• **options\.uri?**: `string`
+• **options.uri?**: `string`
 
 #### Returns
 
 `Promise`\<`QuickJSHandle`\>
 
-#### Source
+#### Defined in
 
-[packages/vm/src/vm.ts:74](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L74)
+[packages/vm/src/vm.ts:75](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/vm/src/vm.ts#L75)
 
 ***
 
@@ -276,9 +224,9 @@ Cleans up this VM instance.
 
 `boolean`
 
-#### Source
+#### Defined in
 
-[packages/vm/src/vm.ts:299](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L299)
+[packages/vm/src/vm.ts:300](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/vm/src/vm.ts#L300)
 
 ***
 
@@ -294,9 +242,9 @@ Cleans up this VM instance.
 
 `boolean`
 
-#### Source
+#### Defined in
 
-[packages/vm/src/vm.ts:302](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L302)
+[packages/vm/src/vm.ts:303](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/vm/src/vm.ts#L303)
 
 ***
 
@@ -314,9 +262,9 @@ Cleans up this VM instance.
 
 `boolean`
 
-#### Source
+#### Defined in
 
-[packages/vm/src/vm.ts:306](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L306)
+[packages/vm/src/vm.ts:307](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/vm/src/vm.ts#L307)
 
 ***
 
@@ -332,9 +280,9 @@ Cleans up this VM instance.
 
 `boolean`
 
-#### Source
+#### Defined in
 
-[packages/vm/src/vm.ts:312](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L312)
+[packages/vm/src/vm.ts:313](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/vm/src/vm.ts#L313)
 
 ***
 
@@ -350,9 +298,9 @@ Cleans up this VM instance.
 
 `QuickJSHandle`
 
-#### Source
+#### Defined in
 
-[packages/vm/src/vm.ts:198](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L198)
+[packages/vm/src/vm.ts:199](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/vm/src/vm.ts#L199)
 
 ***
 
@@ -373,9 +321,9 @@ native Promise. This is a utility method that lets you use await.
 
 `Promise`\<`QuickJSHandle`\>
 
-#### Source
+#### Defined in
 
-[packages/vm/src/vm.ts:119](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L119)
+[packages/vm/src/vm.ts:120](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/vm/src/vm.ts#L120)
 
 ***
 
@@ -391,9 +339,9 @@ native Promise. This is a utility method that lets you use await.
 
 `void`
 
-#### Source
+#### Defined in
 
-[packages/vm/src/vm.ts:62](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L62)
+[packages/vm/src/vm.ts:63](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/vm/src/vm.ts#L63)
 
 ***
 
@@ -405,7 +353,7 @@ Unwrap an array inside a QuickJS VM by one level,
 returning a QuickJSHandle[] in the host environment.
 `unwrapArray` does NOT dispose of the original handle.
 
-#### Type parameters
+#### Type Parameters
 
 • **T** = `QuickJSHandle`
 
@@ -419,9 +367,9 @@ returning a QuickJSHandle[] in the host environment.
 
 `T`[]
 
-#### Source
+#### Defined in
 
-[packages/vm/src/vm.ts:223](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L223)
+[packages/vm/src/vm.ts:224](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/vm/src/vm.ts#L224)
 
 ***
 
@@ -437,15 +385,15 @@ returning a QuickJSHandle[] in the host environment.
 
 [`VMError`](VMError.md)
 
-#### Source
+#### Defined in
 
-[packages/vm/src/vm.ts:156](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L156)
+[packages/vm/src/vm.ts:157](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/vm/src/vm.ts#L157)
 
 ***
 
 ### unwrapFunction()
 
-> **unwrapFunction**(`handle`, `thisArg`?): [`JSFunction`](../type-aliases/JSFunction.md)
+> **unwrapFunction**(`handle`, `thisArg`?): [`JSFunction`](../../utils/type-aliases/JSFunction.md)
 
 #### Parameters
 
@@ -455,17 +403,17 @@ returning a QuickJSHandle[] in the host environment.
 
 #### Returns
 
-[`JSFunction`](../type-aliases/JSFunction.md)
+[`JSFunction`](../../utils/type-aliases/JSFunction.md)
 
-#### Source
+#### Defined in
 
-[packages/vm/src/vm.ts:372](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L372)
+[packages/vm/src/vm.ts:373](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/vm/src/vm.ts#L373)
 
 ***
 
 ### unwrapFunctionAsync()
 
-> **unwrapFunctionAsync**(`handle`, `thisArg`?): [`JSFunctionAsync`](../type-aliases/JSFunctionAsync.md)
+> **unwrapFunctionAsync**(`handle`, `thisArg`?): [`JSFunctionAsync`](../../utils/type-aliases/JSFunctionAsync.md)
 
 #### Parameters
 
@@ -475,11 +423,11 @@ returning a QuickJSHandle[] in the host environment.
 
 #### Returns
 
-[`JSFunctionAsync`](../type-aliases/JSFunctionAsync.md)
+[`JSFunctionAsync`](../../utils/type-aliases/JSFunctionAsync.md)
 
-#### Source
+#### Defined in
 
-[packages/vm/src/vm.ts:395](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L395)
+[packages/vm/src/vm.ts:396](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/vm/src/vm.ts#L396)
 
 ***
 
@@ -488,10 +436,10 @@ returning a QuickJSHandle[] in the host environment.
 > **unwrapObject**\<`T`\>(`handle`, `map`?): `Record`\<`string`, `T`\>
 
 Unwrap an object inside a QuickJS VM by one level,
-returning a Record`<string, QuickJSHandle>` in the host environment.
+returning a Record<string, QuickJSHandle> in the host environment.
 `unwrapObject` does NOT dispose of the original handle.
 
-#### Type parameters
+#### Type Parameters
 
 • **T** = `QuickJSHandle`
 
@@ -505,9 +453,9 @@ returning a Record`<string, QuickJSHandle>` in the host environment.
 
 `Record`\<`string`, `T`\>
 
-#### Source
+#### Defined in
 
-[packages/vm/src/vm.ts:260](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L260)
+[packages/vm/src/vm.ts:261](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/vm/src/vm.ts#L261)
 
 ***
 
@@ -523,15 +471,15 @@ returning a Record`<string, QuickJSHandle>` in the host environment.
 
 `QuickJSHandle`
 
-#### Source
+#### Defined in
 
-[packages/vm/src/vm.ts:185](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L185)
+[packages/vm/src/vm.ts:186](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/vm/src/vm.ts#L186)
 
 ***
 
 ### unwrapValue()
 
-> **unwrapValue**(`handle`): [`JSValue`](../type-aliases/JSValue.md)
+> **unwrapValue**(`handle`): [`JSValue`](../../utils/type-aliases/JSValue.md)
 
 #### Parameters
 
@@ -539,11 +487,11 @@ returning a Record`<string, QuickJSHandle>` in the host environment.
 
 #### Returns
 
-[`JSValue`](../type-aliases/JSValue.md)
+[`JSValue`](../../utils/type-aliases/JSValue.md)
 
-#### Source
+#### Defined in
 
-[packages/vm/src/vm.ts:314](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L314)
+[packages/vm/src/vm.ts:315](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/vm/src/vm.ts#L315)
 
 ***
 
@@ -563,9 +511,9 @@ returning a QuickJSHandle in the host environment.
 
 `QuickJSHandle`
 
-#### Source
+#### Defined in
 
-[packages/vm/src/vm.ts:208](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L208)
+[packages/vm/src/vm.ts:209](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/vm/src/vm.ts#L209)
 
 ***
 
@@ -581,9 +529,9 @@ returning a QuickJSHandle in the host environment.
 
 `QuickJSHandle`
 
-#### Source
+#### Defined in
 
-[packages/vm/src/vm.ts:160](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L160)
+[packages/vm/src/vm.ts:161](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/vm/src/vm.ts#L161)
 
 ***
 
@@ -593,15 +541,15 @@ returning a QuickJSHandle in the host environment.
 
 #### Parameters
 
-• **fn**: [`JSFunction`](../type-aliases/JSFunction.md) \| [`JSFunctionAsync`](../type-aliases/JSFunctionAsync.md)
+• **fn**: [`JSFunction`](../../utils/type-aliases/JSFunction.md) \| [`JSFunctionAsync`](../../utils/type-aliases/JSFunctionAsync.md)
 
 #### Returns
 
 `QuickJSHandle`
 
-#### Source
+#### Defined in
 
-[packages/vm/src/vm.ts:334](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L334)
+[packages/vm/src/vm.ts:335](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/vm/src/vm.ts#L335)
 
 ***
 
@@ -621,9 +569,9 @@ returning a QuickJSHandle in the host environment.
 
 `QuickJSHandle`
 
-#### Source
+#### Defined in
 
-[packages/vm/src/vm.ts:246](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L246)
+[packages/vm/src/vm.ts:247](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/vm/src/vm.ts#L247)
 
 ***
 
@@ -633,30 +581,30 @@ returning a QuickJSHandle in the host environment.
 
 #### Parameters
 
-• **value**: [`JSValue`](../type-aliases/JSValue.md)
+• **value**: [`JSValue`](../../utils/type-aliases/JSValue.md)
 
 #### Returns
 
 `QuickJSHandle`
 
-#### Source
+#### Defined in
 
-[packages/vm/src/vm.ts:279](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L279)
+[packages/vm/src/vm.ts:280](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/vm/src/vm.ts#L280)
 
 ***
 
 ### initialize()
 
-> **`static`** **initialize**(`options`): `Promise`\<[`VM`](VM.md)\>
+> `static` **initialize**(`options`): `Promise`\<[`VM`](VM.md)\>
 
 #### Parameters
 
-• **options**: [`VMOptions`](../interfaces/VMOptions.md)= `{}`
+• **options**: [`VMOptions`](../interfaces/VMOptions.md) = `{}`
 
 #### Returns
 
 `Promise`\<[`VM`](VM.md)\>
 
-#### Source
+#### Defined in
 
-[packages/vm/src/vm.ts:23](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/vm.ts#L23)
+[packages/vm/src/vm.ts:24](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/vm/src/vm.ts#L24)

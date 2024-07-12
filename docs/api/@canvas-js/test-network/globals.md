@@ -1,3 +1,3 @@
-[Documentation](../../index.md) / @canvas-js/test-network
+[Documentation](../../packages.md) / @canvas-js/test-network
 
 # @canvas-js/test-network

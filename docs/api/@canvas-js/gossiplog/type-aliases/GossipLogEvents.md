@@ -1,22 +1,24 @@
-[Documentation](../../../index.md) / [@canvas-js/gossiplog](../index.md) / GossipLogEvents
+[Documentation](../../../packages.md) / [@canvas-js/gossiplog](../index.md) / GossipLogEvents
 
-# Type alias: GossipLogEvents\<Payload, Result\>
+# Type Alias: GossipLogEvents\<Payload\>
 
-> **GossipLogEvents**\<`Payload`, `Result`\>: `Object`
+> **GossipLogEvents**\<`Payload`\>: `object`
 
-## Type parameters
+## Type Parameters
 
 • **Payload** = `unknown`
-
-• **Result** = `void`
 
 ## Type declaration
 
 ### commit
 
-> **commit**: `CustomEvent`\<`Object`\>
+> **commit**: `CustomEvent`\<`object`\>
 
 #### Type declaration
+
+##### heads
+
+> **heads**: `string`[]
 
 ##### root
 
@@ -24,7 +26,7 @@
 
 ### error
 
-> **error**: `CustomEvent`\<`Object`\>
+> **error**: `CustomEvent`\<`object`\>
 
 #### Type declaration
 
@@ -34,7 +36,7 @@
 
 ### message
 
-> **message**: `CustomEvent`\<`Object`\>
+> **message**: `CustomEvent`\<`object`\>
 
 #### Type declaration
 
@@ -46,17 +48,13 @@
 
 > **message**: [`Message`](Message.md)\<`Payload`\>
 
-##### result
-
-> **result**: `Result`
-
 ##### signature
 
 > **signature**: [`Signature`](../../interfaces/type-aliases/Signature.md)
 
 ### sync
 
-> **sync**: `CustomEvent`\<`Object`\>
+> **sync**: `CustomEvent`\<`object`\>
 
 #### Type declaration
 
@@ -68,10 +66,10 @@
 
 > **messageCount**: `number`
 
-##### peer?
+##### peerId?
 
-> **`optional`** **peer**: `string`
+> `optional` **peerId**: `string`
 
-## Source
+## Defined in
 
-[packages/gossiplog/src/AbstractGossipLog.ts:63](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L63)
+[packages/gossiplog/src/AbstractGossipLog.ts:37](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/AbstractGossipLog.ts#L37)

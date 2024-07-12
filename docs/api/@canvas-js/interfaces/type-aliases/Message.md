@@ -1,10 +1,10 @@
-[Documentation](../../../index.md) / [@canvas-js/interfaces](../index.md) / Message
+[Documentation](../../../packages.md) / [@canvas-js/interfaces](../index.md) / Message
 
-# Type alias: Message\<Payload\>
+# Type Alias: Message\<Payload\>
 
-> **Message**\<`Payload`\>: `Object`
+> **Message**\<`Payload`\>: `object`
 
-## Type parameters
+## Type Parameters
 
 • **Payload** = `unknown`
 
@@ -26,6 +26,6 @@
 
 > **topic**: `string`
 
-## Source
+## Defined in
 
-[Message.ts:1](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/interfaces/src/Message.ts#L1)
+[Message.ts:1](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/interfaces/src/Message.ts#L1)

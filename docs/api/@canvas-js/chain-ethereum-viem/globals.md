@@ -1,4 +1,4 @@
-[Documentation](../../index.md) / @canvas-js/chain-ethereum-viem
+[Documentation](../../packages.md) / @canvas-js/chain-ethereum-viem
 
 # @canvas-js/chain-ethereum-viem
 

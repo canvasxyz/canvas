@@ -1,4 +1,4 @@
-[Documentation](../../../index.md) / [@canvas-js/modeldb](../index.md) / getCompare
+[Documentation](../../../packages.md) / [@canvas-js/modeldb](../index.md) / getCompare
 
 # Function: getCompare()
 
@@ -14,17 +14,16 @@
 
 `Function`
 
-> ### Parameters
->
-> • **a**: [`ModelValue`](../type-aliases/ModelValue.md)
->
-> • **b**: [`ModelValue`](../type-aliases/ModelValue.md)
->
-> ### Returns
->
-> `-1` \| `0` \| `1`
->
+### Parameters
 
-## Source
+• **a**: [`ModelValue`](../type-aliases/ModelValue.md)
 
-[query.ts:167](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/modeldb/src/query.ts#L167)
+• **b**: [`ModelValue`](../type-aliases/ModelValue.md)
+
+### Returns
+
+`-1` \| `0` \| `1`
+
+## Defined in
+
+[query.ts:170](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/modeldb/src/query.ts#L170)

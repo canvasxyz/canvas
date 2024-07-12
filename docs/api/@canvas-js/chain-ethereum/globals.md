@@ -1,15 +1,15 @@
-[Documentation](../../index.md) / @canvas-js/chain-ethereum
+[Documentation](../../packages.md) / @canvas-js/chain-ethereum
 
 # @canvas-js/chain-ethereum
 
 ## Classes
 
-- [EIP712Signer](classes/EIP712Signer.md)
+- [Eip712Signer](classes/Eip712Signer.md)
 - [SIWESigner](classes/SIWESigner.md)
+- [Secp256k1DelegateSigner](classes/Secp256k1DelegateSigner.md)
 
 ## Interfaces
 
-- [EIP712SignerInit](interfaces/EIP712SignerInit.md)
 - [SIWESignerInit](interfaces/SIWESignerInit.md)
 
 ## Type Aliases
@@ -18,9 +18,12 @@
 
 ## Variables
 
-- [eip712TypeDefinitions](variables/eip712TypeDefinitions.md)
+- [Secp256k1SignatureScheme](variables/Secp256k1SignatureScheme.md)
+- [codecs](variables/codecs.md)
 
 ## Functions
 
-- [validateEIP712AuthorizationData](functions/validateEIP712AuthorizationData.md)
+- [getAbiString](functions/getAbiString.md)
+- [getEIP712Args](functions/getEIP712Args.md)
+- [validateEip712SessionData](functions/validateEip712SessionData.md)
 - [validateSIWESessionData](functions/validateSIWESessionData.md)

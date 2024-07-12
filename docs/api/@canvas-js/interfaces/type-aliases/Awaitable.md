@@ -1,13 +1,13 @@
-[Documentation](../../../index.md) / [@canvas-js/interfaces](../index.md) / Awaitable
+[Documentation](../../../packages.md) / [@canvas-js/interfaces](../index.md) / Awaitable
 
-# Type alias: Awaitable\<T\>
+# Type Alias: Awaitable\<T\>
 
 > **Awaitable**\<`T`\>: `T` \| `Promise`\<`T`\>
 
-## Type parameters
+## Type Parameters
 
 • **T**
 
-## Source
+## Defined in
 
-[Awaitable.ts:1](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/interfaces/src/Awaitable.ts#L1)
+[Awaitable.ts:1](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/interfaces/src/Awaitable.ts#L1)

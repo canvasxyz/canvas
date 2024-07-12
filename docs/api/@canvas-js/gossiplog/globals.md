@@ -1,4 +1,4 @@
-[Documentation](../../index.md) / @canvas-js/gossiplog
+[Documentation](../../packages.md) / @canvas-js/gossiplog
 
 # @canvas-js/gossiplog
 
@@ -9,18 +9,24 @@
 ## Interfaces
 
 - [GossipLogInit](interfaces/GossipLogInit.md)
-- [ReadOnlyTransaction](interfaces/ReadOnlyTransaction.md)
-- [ReadWriteTransaction](interfaces/ReadWriteTransaction.md)
+- [NetworkConfig](interfaces/NetworkConfig.md)
+- [SyncServer](interfaces/SyncServer.md)
 
 ## Type Aliases
 
+- [AncestorRecord](type-aliases/AncestorRecord.md)
+- [BranchMergeRecord](type-aliases/BranchMergeRecord.md)
 - [GossipLogConsumer](type-aliases/GossipLogConsumer.md)
 - [GossipLogEvents](type-aliases/GossipLogEvents.md)
 - [Message](type-aliases/Message.md)
-- [SignedMessage](type-aliases/SignedMessage.md)
+- [MessageRecord](type-aliases/MessageRecord.md)
+- [MessageTuple](type-aliases/MessageTuple.md)
+- [ServiceMap](type-aliases/ServiceMap.md)
+- [SignatureTuple](type-aliases/SignatureTuple.md)
 
 ## Variables
 
+- [ID\_LENGTH](variables/ID_LENGTH.md)
 - [KEY\_LENGTH](variables/KEY_LENGTH.md)
 - [MAX\_MESSAGE\_ID](variables/MAX_MESSAGE_ID.md)
 - [MIN\_MESSAGE\_ID](variables/MIN_MESSAGE_ID.md)
@@ -35,6 +41,5 @@
 - [encodeClock](functions/encodeClock.md)
 - [encodeId](functions/encodeId.md)
 - [encodeSignedMessage](functions/encodeSignedMessage.md)
-- [encodingLength](functions/encodingLength.md)
 - [getKey](functions/getKey.md)
 - [getNextClock](functions/getNextClock.md)

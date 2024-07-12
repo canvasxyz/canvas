@@ -1,4 +1,4 @@
-[Documentation](../../index.md) / @canvas-js/chain-cosmos
+[Documentation](../../packages.md) / @canvas-js/chain-cosmos
 
 # @canvas-js/chain-cosmos
 
@@ -9,3 +9,10 @@
 ## Interfaces
 
 - [CosmosSignerInit](interfaces/CosmosSignerInit.md)
+
+## Functions
+
+- [validateAminoSignedSessionData](functions/validateAminoSignedSessionData.md)
+- [validateArbitrarySignedSessionData](functions/validateArbitrarySignedSessionData.md)
+- [validateBytesSignedSessionData](functions/validateBytesSignedSessionData.md)
+- [validateEthereumSignedSessionData](functions/validateEthereumSignedSessionData.md)

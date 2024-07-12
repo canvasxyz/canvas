@@ -1,9 +1,9 @@
-[Documentation](../../../index.md) / [@canvas-js/gossiplog](../index.md) / messageIdPattern
+[Documentation](../../../packages.md) / [@canvas-js/gossiplog](../index.md) / messageIdPattern
 
 # Variable: messageIdPattern
 
-> **`const`** **messageIdPattern**: `RegExp`
+> `const` **messageIdPattern**: `RegExp`
 
-## Source
+## Defined in
 
-[packages/gossiplog/src/schema.ts:61](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/schema.ts#L61)
+[packages/gossiplog/src/ids.ts:12](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/ids.ts#L12)

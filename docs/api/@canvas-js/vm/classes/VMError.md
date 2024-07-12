@@ -1,4 +1,4 @@
-[Documentation](../../../index.md) / [@canvas-js/vm](../index.md) / VMError
+[Documentation](../../../packages.md) / [@canvas-js/vm](../index.md) / VMError
 
 # Class: VMError
 
@@ -8,7 +8,7 @@
 
 ## Constructors
 
-### new VMError(err)
+### new VMError()
 
 > **new VMError**(`err`): [`VMError`](VMError.md)
 
@@ -16,11 +16,11 @@
 
 • **err**
 
-• **err\.message**: `string`
+• **err.message**: `string`
 
-• **err\.name**: `string`
+• **err.name**: `string`
 
-• **err\.stack**: `string`
+• **err.stack**: `string`
 
 #### Returns
 
@@ -30,33 +30,11 @@
 
 `Error.constructor`
 
-#### Source
+#### Defined in
 
-[packages/vm/src/error.ts:2](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/error.ts#L2)
+[packages/vm/src/error.ts:2](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/vm/src/error.ts#L2)
 
 ## Properties
-
-### err
-
-> **`private`** **`readonly`** **err**: `Object`
-
-#### err.message
-
-> **message**: `string`
-
-#### err.name
-
-> **name**: `string`
-
-#### err.stack
-
-> **stack**: `string`
-
-#### Source
-
-[packages/vm/src/error.ts:2](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/vm/src/error.ts#L2)
-
-***
 
 ### message
 
@@ -66,9 +44,9 @@
 
 `Error.message`
 
-#### Source
+#### Defined in
 
-node\_modules/typescript/lib/lib.es5.d.ts:1076
+node\_modules/typescript/lib/lib.es5.d.ts:1077
 
 ***
 
@@ -80,29 +58,29 @@ node\_modules/typescript/lib/lib.es5.d.ts:1076
 
 `Error.name`
 
-#### Source
+#### Defined in
 
-node\_modules/typescript/lib/lib.es5.d.ts:1075
+node\_modules/typescript/lib/lib.es5.d.ts:1076
 
 ***
 
 ### stack?
 
-> **`optional`** **stack**: `string`
+> `optional` **stack**: `string`
 
 #### Inherited from
 
 `Error.stack`
 
-#### Source
+#### Defined in
 
-node\_modules/typescript/lib/lib.es5.d.ts:1077
+node\_modules/typescript/lib/lib.es5.d.ts:1078
 
 ***
 
-### prepareStackTrace?
+### prepareStackTrace()?
 
-> **`static`** **`optional`** **prepareStackTrace**: (`err`, `stackTraces`) => `any`
+> `static` `optional` **prepareStackTrace**: (`err`, `stackTraces`) => `any`
 
 Optional override for formatting stack traces
 
@@ -124,7 +102,7 @@ https://v8.dev/docs/stack-trace-api#customizing-stack-traces
 
 `Error.prepareStackTrace`
 
-#### Source
+#### Defined in
 
 node\_modules/@types/node/globals.d.ts:28
 
@@ -132,13 +110,13 @@ node\_modules/@types/node/globals.d.ts:28
 
 ### stackTraceLimit
 
-> **`static`** **stackTraceLimit**: `number`
+> `static` **stackTraceLimit**: `number`
 
 #### Inherited from
 
 `Error.stackTraceLimit`
 
-#### Source
+#### Defined in
 
 node\_modules/@types/node/globals.d.ts:30
 
@@ -146,7 +124,7 @@ node\_modules/@types/node/globals.d.ts:30
 
 ### captureStackTrace()
 
-> **`static`** **captureStackTrace**(`targetObject`, `constructorOpt`?): `void`
+> `static` **captureStackTrace**(`targetObject`, `constructorOpt`?): `void`
 
 Create .stack property on a target object
 
@@ -164,6 +142,6 @@ Create .stack property on a target object
 
 `Error.captureStackTrace`
 
-#### Source
+#### Defined in
 
 node\_modules/@types/node/globals.d.ts:21

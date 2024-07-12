@@ -1,84 +1,70 @@
-[Documentation](../../../index.md) / [@canvas-js/modeldb](../index.md) / AbstractModelDB
+[Documentation](../../../packages.md) / [@canvas-js/modeldb](../index.md) / AbstractModelDB
 
 # Class: `abstract` AbstractModelDB
 
 ## Constructors
 
-### new AbstractModelDB(config, options)
+### new AbstractModelDB()
 
-> **`protected`** **new AbstractModelDB**(`config`, `options`): [`AbstractModelDB`](AbstractModelDB.md)
+> `protected` **new AbstractModelDB**(`config`): [`AbstractModelDB`](AbstractModelDB.md)
 
 #### Parameters
 
 • **config**: [`Config`](../type-aliases/Config.md)
 
-• **options**= `{}`
-
-• **options\.indexHistory?**: `Record`\<`string`, `boolean`\>
-
 #### Returns
 
 [`AbstractModelDB`](AbstractModelDB.md)
 
-#### Source
+#### Defined in
 
-[AbstractModelDB.ts:21](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/modeldb/src/AbstractModelDB.ts#L21)
+[AbstractModelDB.ts:23](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/modeldb/src/AbstractModelDB.ts#L23)
 
 ## Properties
 
-### #subscriptionId
-
-> **`private`** **#subscriptionId**: `number` = `0`
-
-#### Source
-
-[AbstractModelDB.ts:19](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/modeldb/src/AbstractModelDB.ts#L19)
-
-***
-
 ### config
 
-> **`readonly`** **config**: [`Config`](../type-aliases/Config.md)
+> `readonly` **config**: [`Config`](../type-aliases/Config.md)
 
-#### Source
+#### Defined in
 
-[AbstractModelDB.ts:21](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/modeldb/src/AbstractModelDB.ts#L21)
+[AbstractModelDB.ts:23](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/modeldb/src/AbstractModelDB.ts#L23)
 
 ***
 
 ### log
 
-> **`protected`** **`readonly`** **log**: `Logger`
+> `protected` `readonly` **log**: `Logger`
 
-#### Source
+#### Defined in
 
-[AbstractModelDB.ts:17](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/modeldb/src/AbstractModelDB.ts#L17)
+[AbstractModelDB.ts:19](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/modeldb/src/AbstractModelDB.ts#L19)
 
 ***
 
 ### models
 
-> **`readonly`** **models**: `Record`\<`string`, [`Model`](../type-aliases/Model.md)\>
+> `readonly` **models**: `Record`\<`string`, [`Model`](../type-aliases/Model.md)\>
 
-#### Source
+#### Defined in
 
-[AbstractModelDB.ts:15](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/modeldb/src/AbstractModelDB.ts#L15)
+[AbstractModelDB.ts:17](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/modeldb/src/AbstractModelDB.ts#L17)
 
 ***
 
 ### subscriptions
 
-> **`protected`** **`readonly`** **subscriptions**: `Map`\<`number`, `Subscription`\>
+> `protected` `readonly` **subscriptions**: `Map`\<`number`, `Subscription`\>
 
-#### Source
+#### Defined in
 
-[AbstractModelDB.ts:18](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/modeldb/src/AbstractModelDB.ts#L18)
+[AbstractModelDB.ts:20](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/modeldb/src/AbstractModelDB.ts#L20)
 
 ## Methods
 
 ### apply()
 
-> **`abstract`** **apply**(`effects`): `Promise`\<`void`\>
+> `abstract` **apply**(`effects`): `Promise`\<`void`\>
 
 #### Parameters
 
@@ -88,29 +74,29 @@
 
 `Promise`\<`void`\>
 
-#### Source
+#### Defined in
 
-[AbstractModelDB.ts:40](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/modeldb/src/AbstractModelDB.ts#L40)
+[AbstractModelDB.ts:42](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/modeldb/src/AbstractModelDB.ts#L42)
 
 ***
 
 ### close()
 
-> **`abstract`** **close**(): `Promise`\<`void`\>
+> `abstract` **close**(): `Promise`\<`void`\>
 
 #### Returns
 
 `Promise`\<`void`\>
 
-#### Source
+#### Defined in
 
-[AbstractModelDB.ts:28](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/modeldb/src/AbstractModelDB.ts#L28)
+[AbstractModelDB.ts:30](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/modeldb/src/AbstractModelDB.ts#L30)
 
 ***
 
 ### count()
 
-> **`abstract`** **count**(`modelName`): `Promise`\<`number`\>
+> `abstract` **count**(`modelName`): `Promise`\<`number`\>
 
 #### Parameters
 
@@ -120,9 +106,9 @@
 
 `Promise`\<`number`\>
 
-#### Source
+#### Defined in
 
-[AbstractModelDB.ts:36](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/modeldb/src/AbstractModelDB.ts#L36)
+[AbstractModelDB.ts:38](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/modeldb/src/AbstractModelDB.ts#L38)
 
 ***
 
@@ -140,15 +126,19 @@
 
 `Promise`\<`void`\>
 
-#### Source
+#### Defined in
 
-[AbstractModelDB.ts:48](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/modeldb/src/AbstractModelDB.ts#L48)
+[AbstractModelDB.ts:50](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/modeldb/src/AbstractModelDB.ts#L50)
 
 ***
 
 ### get()
 
-> **`abstract`** **get**(`modelName`, `key`): `Promise`\<`null` \| [`ModelValue`](../type-aliases/ModelValue.md)\>
+> `abstract` **get**\<`T`\>(`modelName`, `key`): `Promise`\<`null` \| `T`\>
+
+#### Type Parameters
+
+• **T** *extends* [`ModelValue`](../type-aliases/ModelValue.md)\<`any`\> = [`ModelValue`](../type-aliases/ModelValue.md)\<`any`\>
 
 #### Parameters
 
@@ -158,46 +148,17 @@
 
 #### Returns
 
-`Promise`\<`null` \| [`ModelValue`](../type-aliases/ModelValue.md)\>
+`Promise`\<`null` \| `T`\>
 
-#### Source
+#### Defined in
 
-[AbstractModelDB.ts:30](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/modeldb/src/AbstractModelDB.ts#L30)
-
-***
-
-### getEffectFilter()
-
-> **`private`** **getEffectFilter**(`model`, `query`): (`effect`) => `boolean`
-
-#### Parameters
-
-• **model**: [`Model`](../type-aliases/Model.md)
-
-• **query**: [`QueryParams`](../type-aliases/QueryParams.md)
-
-#### Returns
-
-`Function`
-
-> ##### Parameters
->
-> • **effect**: [`Effect`](../type-aliases/Effect.md)
->
-> ##### Returns
->
-> `boolean`
->
-
-#### Source
-
-[AbstractModelDB.ts:82](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/modeldb/src/AbstractModelDB.ts#L82)
+[AbstractModelDB.ts:32](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/modeldb/src/AbstractModelDB.ts#L32)
 
 ***
 
 ### iterate()
 
-> **`abstract`** **iterate**(`modelName`): `AsyncIterable`\<[`ModelValue`](../type-aliases/ModelValue.md)\>
+> `abstract` **iterate**(`modelName`): `AsyncIterable`\<[`ModelValue`](../type-aliases/ModelValue.md)\>
 
 #### Parameters
 
@@ -207,19 +168,19 @@
 
 `AsyncIterable`\<[`ModelValue`](../type-aliases/ModelValue.md)\>
 
-#### Source
+#### Defined in
 
-[AbstractModelDB.ts:32](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/modeldb/src/AbstractModelDB.ts#L32)
+[AbstractModelDB.ts:34](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/modeldb/src/AbstractModelDB.ts#L34)
 
 ***
 
 ### query()
 
-> **`abstract`** **query**\<`T`\>(`modelName`, `query`?): `Promise`\<`T`[]\>
+> `abstract` **query**\<`T`\>(`modelName`, `query`?): `Promise`\<`T`[]\>
 
-#### Type parameters
+#### Type Parameters
 
-• **T** extends [`ModelValue`](../type-aliases/ModelValue.md) = [`ModelValue`](../type-aliases/ModelValue.md)
+• **T** *extends* [`ModelValue`](../type-aliases/ModelValue.md)\<`any`\> = [`ModelValue`](../type-aliases/ModelValue.md)\<`any`\>
 
 #### Parameters
 
@@ -231,35 +192,39 @@
 
 `Promise`\<`T`[]\>
 
-#### Source
+#### Defined in
 
-[AbstractModelDB.ts:34](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/modeldb/src/AbstractModelDB.ts#L34)
+[AbstractModelDB.ts:36](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/modeldb/src/AbstractModelDB.ts#L36)
 
 ***
 
 ### set()
 
-> **set**(`modelName`, `value`): `Promise`\<`void`\>
+> **set**\<`T`\>(`modelName`, `value`): `Promise`\<`void`\>
+
+#### Type Parameters
+
+• **T** *extends* [`ModelValue`](../type-aliases/ModelValue.md)\<`any`\> = [`ModelValue`](../type-aliases/ModelValue.md)\<`any`\>
 
 #### Parameters
 
 • **modelName**: `string`
 
-• **value**: [`ModelValue`](../type-aliases/ModelValue.md)
+• **value**: `T`
 
 #### Returns
 
 `Promise`\<`void`\>
 
-#### Source
+#### Defined in
 
-[AbstractModelDB.ts:44](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/modeldb/src/AbstractModelDB.ts#L44)
+[AbstractModelDB.ts:46](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/modeldb/src/AbstractModelDB.ts#L46)
 
 ***
 
 ### subscribe()
 
-> **subscribe**(`modelName`, `query`, `callback`): `Object`
+> **subscribe**(`modelName`, `query`, `callback`): `object`
 
 #### Parameters
 
@@ -271,7 +236,7 @@
 
 #### Returns
 
-`Object`
+`object`
 
 ##### id
 
@@ -281,9 +246,9 @@
 
 > **results**: `Promise`\<[`ModelValue`](../type-aliases/ModelValue.md)[]\>
 
-#### Source
+#### Defined in
 
-[AbstractModelDB.ts:52](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/modeldb/src/AbstractModelDB.ts#L52)
+[AbstractModelDB.ts:54](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/modeldb/src/AbstractModelDB.ts#L54)
 
 ***
 
@@ -299,6 +264,6 @@
 
 `void`
 
-#### Source
+#### Defined in
 
-[AbstractModelDB.ts:78](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/modeldb/src/AbstractModelDB.ts#L78)
+[AbstractModelDB.ts:80](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/modeldb/src/AbstractModelDB.ts#L80)

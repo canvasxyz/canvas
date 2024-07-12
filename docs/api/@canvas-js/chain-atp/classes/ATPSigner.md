@@ -1,64 +1,38 @@
-[Documentation](../../../index.md) / [@canvas-js/chain-atp](../index.md) / ATPSigner
+[Documentation](../../../packages.md) / [@canvas-js/chain-atp](../index.md) / ATPSigner
 
 # Class: ATPSigner
 
-## Implements
+## Extends
 
-- [`SessionSigner`](../../interfaces/interfaces/SessionSigner.md)\<[`ATPSessionData`](../type-aliases/ATPSessionData.md)\>
+- `AbstractSessionSigner`\<[`ATPSessionData`](../type-aliases/ATPSessionData.md)\>
 
 ## Constructors
 
-### new ATPSigner(options)
+### new ATPSigner()
 
 > **new ATPSigner**(`options`): [`ATPSigner`](ATPSigner.md)
 
 #### Parameters
 
-• **options**: [`ATPSignerOptions`](../interfaces/ATPSignerOptions.md)= `{}`
+• **options**: [`ATPSignerOptions`](../interfaces/ATPSignerOptions.md) = `{}`
 
 #### Returns
 
 [`ATPSigner`](ATPSigner.md)
 
-#### Source
+#### Overrides
 
-[ATPSigner.ts:45](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-atp/src/ATPSigner.ts#L45)
+`AbstractSessionSigner<ATPSessionData>.constructor`
+
+#### Defined in
+
+[chain-atp/src/ATPSigner.ts:38](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-atp/src/ATPSigner.ts#L38)
 
 ## Properties
 
-### #agent
-
-> **`private`** **#agent**: `BskyAgent`
-
-#### Source
-
-[ATPSigner.ts:42](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-atp/src/ATPSigner.ts#L42)
-
-***
-
-### #session
-
-> **`private`** **#session**: `null` \| `AtpSessionData` = `null`
-
-#### Source
-
-[ATPSigner.ts:43](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-atp/src/ATPSigner.ts#L43)
-
-***
-
-### #store
-
-> **`private`** **#store**: `SessionStore`
-
-#### Source
-
-[ATPSigner.ts:41](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-atp/src/ATPSigner.ts#L41)
-
-***
-
 ### key
 
-> **`readonly`** **key**: `string` = `"ATPSigner"`
+> `readonly` **key**: `string`
 
 A unique identifier based on the signer's arguments, used to trigger React effects.
 This should not change unless user-provided arguments to the signers change.
@@ -66,118 +40,283 @@ This should not change unless user-provided arguments to the signers change.
 For example, the key for `new SIWESigner()` should always remain the same, even if
 a different burner wallet is generated on every call.
 
-#### Implementation of
+#### Inherited from
 
-[`SessionSigner`](../../interfaces/interfaces/SessionSigner.md).[`key`](../../interfaces/interfaces/SessionSigner.md#key)
+`AbstractSessionSigner.key`
 
-#### Source
+#### Defined in
 
-[ATPSigner.ts:33](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-atp/src/ATPSigner.ts#L33)
+signatures/lib/AbstractSessionSigner.d.ts:8
 
 ***
 
 ### log
 
-> **`private`** **`readonly`** **log**: `Logger`
+> `protected` `readonly` **log**: `Logger`
 
-#### Source
+#### Inherited from
 
-[ATPSigner.ts:39](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-atp/src/ATPSigner.ts#L39)
+`AbstractSessionSigner.log`
+
+#### Defined in
+
+signatures/lib/AbstractSessionSigner.d.ts:17
 
 ***
 
-### options
+### scheme
 
-> **`private`** **`readonly`** **options**: [`ATPSignerOptions`](../interfaces/ATPSignerOptions.md) = `{}`
+> `readonly` **scheme**: [`SignatureScheme`](../../interfaces/interfaces/SignatureScheme.md)\<[`Session`](../../interfaces/type-aliases/Session.md)\<[`ATPSessionData`](../type-aliases/ATPSessionData.md)\> \| [`Action`](../../interfaces/type-aliases/Action.md)\>
 
-#### Source
+#### Inherited from
 
-[ATPSigner.ts:45](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-atp/src/ATPSigner.ts#L45)
+`AbstractSessionSigner.scheme`
 
-## Methods
+#### Defined in
 
-### clear()
+signatures/lib/AbstractSessionSigner.d.ts:9
 
-> **clear**(`topic`): `void`
+***
 
-#### Parameters
+### sessionDuration
 
-• **topic**: `string`
+> `readonly` **sessionDuration**: `null` \| `number`
 
-#### Returns
+#### Inherited from
+
+`AbstractSessionSigner.sessionDuration`
+
+#### Defined in
+
+signatures/lib/AbstractSessionSigner.d.ts:16
+
+***
+
+### target
+
+> `readonly` **target**: `object`
+
+#### clear()
+
+##### Parameters
+
+• **prefix?**: `string`
+
+##### Returns
 
 `void`
 
-#### Implementation of
+#### get()
 
-[`SessionSigner`](../../interfaces/interfaces/SessionSigner.md).[`clear`](../../interfaces/interfaces/SessionSigner.md#clear)
+##### Parameters
 
-#### Source
+• **key**: `string`
 
-[ATPSigner.ts:186](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-atp/src/ATPSigner.ts#L186)
+##### Returns
 
-***
+`null` \| `string`
 
-### getAddress()
+#### getDomain()
 
-> **`private`** **getAddress**(): `Promise`\<`string`\>
+##### Returns
 
-#### Returns
+`string`
 
-`Promise`\<`string`\>
+#### set()
 
-#### Source
+##### Parameters
 
-[ATPSigner.ts:65](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-atp/src/ATPSigner.ts#L65)
+• **key**: `string`
 
-***
+• **value**: `any`
 
-### getSession()
+##### Returns
 
-> **getSession**(`topic`, `options`): `Promise`\<[`Session`](../../interfaces/type-aliases/Session.md)\<[`ATPSessionData`](../type-aliases/ATPSessionData.md)\>\>
+`void`
 
-`getSession` is called by the Canvas runtime for every new action appended
-to the log (ie for new actions taken by local users, not existing messages
-received from other peers via merkle sync or GossipSub).
+#### Inherited from
 
-It's responsible for returning a `Session` that matches the given parameters,
-either by looking up a cached session, or by getting user authorization to create
-a new one (and then caching it).
+`AbstractSessionSigner.target`
 
-"Matching the given parameters" means that the caller passes a `topic: string`
-and an optional `chain?: string; timestamp?: number`, and `getSession` must return
-a `Session` authorized for that topic, that specific chain (if provided), and that
-is valid for the given timestamp (if provided).
+#### Defined in
+
+signatures/lib/AbstractSessionSigner.d.ts:10
+
+## Methods
+
+### authorize()
+
+> **authorize**(`data`): `Promise`\<[`Session`](../../interfaces/type-aliases/Session.md)\<[`ATPSessionData`](../type-aliases/ATPSessionData.md)\>\>
 
 #### Parameters
 
-• **topic**: `string`
-
-• **options**= `{}`
-
-• **options\.chain?**: `string`
-
-• **options\.fromCache?**: `boolean`
-
-• **options\.timestamp?**: `number`
+• **data**: [`AbstractSessionData`](../../interfaces/interfaces/AbstractSessionData.md)
 
 #### Returns
 
 `Promise`\<[`Session`](../../interfaces/type-aliases/Session.md)\<[`ATPSessionData`](../type-aliases/ATPSessionData.md)\>\>
 
-#### Implementation of
+#### Overrides
 
-[`SessionSigner`](../../interfaces/interfaces/SessionSigner.md).[`getSession`](../../interfaces/interfaces/SessionSigner.md#getsession)
+`AbstractSessionSigner.authorize`
 
-#### Source
+#### Defined in
 
-[ATPSigner.ts:88](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-atp/src/ATPSigner.ts#L88)
+[chain-atp/src/ATPSigner.ts:104](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-atp/src/ATPSigner.ts#L104)
+
+***
+
+### clear()
+
+> **clear**(`topic`): `Promise`\<`void`\>
+
+#### Parameters
+
+• **topic**: `string`
+
+#### Returns
+
+`Promise`\<`void`\>
+
+#### Inherited from
+
+`AbstractSessionSigner.clear`
+
+#### Defined in
+
+signatures/lib/AbstractSessionSigner.d.ts:37
+
+***
+
+### getAddressFromDid()
+
+> **getAddressFromDid**(`did`): \`did:$\{string\}\`
+
+#### Parameters
+
+• **did**: \`did:$\{string\}\`
+
+#### Returns
+
+\`did:$\{string\}\`
+
+#### Overrides
+
+`AbstractSessionSigner.getAddressFromDid`
+
+#### Defined in
+
+[chain-atp/src/ATPSigner.ts:87](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-atp/src/ATPSigner.ts#L87)
+
+***
+
+### getDid()
+
+> **getDid**(): `Promise`\<\`did:$\{string\}\`\>
+
+#### Returns
+
+`Promise`\<\`did:$\{string\}\`\>
+
+#### Overrides
+
+`AbstractSessionSigner.getDid`
+
+#### Defined in
+
+[chain-atp/src/ATPSigner.ts:60](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-atp/src/ATPSigner.ts#L60)
+
+***
+
+### getDidParts()
+
+> **getDidParts**(): `number`
+
+#### Returns
+
+`number`
+
+#### Overrides
+
+`AbstractSessionSigner.getDidParts`
+
+#### Defined in
+
+[chain-atp/src/ATPSigner.ts:83](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-atp/src/ATPSigner.ts#L83)
+
+***
+
+### getSession()
+
+> **getSession**(`topic`, `options`?): `Promise`\<`null` \| `object`\>
+
+#### Parameters
+
+• **topic**: `string`
+
+• **options?**
+
+• **options.did?**: `string`
+
+#### Returns
+
+`Promise`\<`null` \| `object`\>
+
+#### Inherited from
+
+`AbstractSessionSigner.getSession`
+
+#### Defined in
+
+signatures/lib/AbstractSessionSigner.d.ts:30
+
+***
+
+### getWalletAddress()
+
+> **getWalletAddress**(): `Promise`\<`string`\>
+
+#### Returns
+
+`Promise`\<`string`\>
+
+#### Inherited from
+
+`AbstractSessionSigner.getWalletAddress`
+
+#### Defined in
+
+signatures/lib/AbstractSessionSigner.d.ts:24
+
+***
+
+### hasSession()
+
+> **hasSession**(`topic`, `did`): `boolean`
+
+#### Parameters
+
+• **topic**: `string`
+
+• **did**: \`did:$\{string\}\`
+
+#### Returns
+
+`boolean`
+
+#### Inherited from
+
+`AbstractSessionSigner.hasSession`
+
+#### Defined in
+
+signatures/lib/AbstractSessionSigner.d.ts:36
 
 ***
 
 ### match()
 
-> **match**(`address`): `boolean`
+> `readonly` **match**(`address`): `boolean`
 
 #### Parameters
 
@@ -187,44 +326,49 @@ is valid for the given timestamp (if provided).
 
 `boolean`
 
-#### Implementation of
+#### Overrides
 
-[`SessionSigner`](../../interfaces/interfaces/SessionSigner.md).[`match`](../../interfaces/interfaces/SessionSigner.md#match)
+`AbstractSessionSigner.match`
 
-#### Source
+#### Defined in
 
-[ATPSigner.ts:47](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-atp/src/ATPSigner.ts#L47)
+[chain-atp/src/ATPSigner.ts:42](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-atp/src/ATPSigner.ts#L42)
 
 ***
 
-### sign()
+### newSession()
 
-> **sign**(`message`): [`Signature`](../../interfaces/type-aliases/Signature.md)
+> **newSession**(`topic`): `Promise`\<`object`\>
 
 #### Parameters
 
-• **message**: [`Message`](../../gossiplog/type-aliases/Message.md)\<[`Session`](../../interfaces/type-aliases/Session.md) \| [`Action`](../../interfaces/type-aliases/Action.md)\>
+• **topic**: `string`
 
 #### Returns
 
-[`Signature`](../../interfaces/type-aliases/Signature.md)
+`Promise`\<`object`\>
 
-#### Implementation of
+##### payload
 
-[`SessionSigner`](../../interfaces/interfaces/SessionSigner.md).[`sign`](../../interfaces/interfaces/SessionSigner.md#sign)
+> **payload**: [`Session`](../../interfaces/type-aliases/Session.md)\<[`ATPSessionData`](../type-aliases/ATPSessionData.md)\>
 
-#### Source
+##### signer
 
-[ATPSigner.ts:163](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-atp/src/ATPSigner.ts#L163)
+> **signer**: [`Signer`](../../interfaces/interfaces/Signer.md)\<[`Session`](../../interfaces/type-aliases/Session.md)\<[`ATPSessionData`](../type-aliases/ATPSessionData.md)\> \| [`Action`](../../interfaces/type-aliases/Action.md)\>
+
+#### Inherited from
+
+`AbstractSessionSigner.newSession`
+
+#### Defined in
+
+signatures/lib/AbstractSessionSigner.d.ts:26
 
 ***
 
 ### verifySession()
 
 > **verifySession**(`topic`, `session`): `Promise`\<`void`\>
-
-Verify that `session.data` authorizes `session.publicKey`
-to take actions on behalf of the user `${session.chain}:${session.address}`
 
 #### Parameters
 
@@ -236,19 +380,19 @@ to take actions on behalf of the user `${session.chain}:${session.address}`
 
 `Promise`\<`void`\>
 
-#### Implementation of
+#### Overrides
 
-[`SessionSigner`](../../interfaces/interfaces/SessionSigner.md).[`verifySession`](../../interfaces/interfaces/SessionSigner.md#verifysession)
+`AbstractSessionSigner.verifySession`
 
-#### Source
+#### Defined in
 
-[ATPSigner.ts:49](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-atp/src/ATPSigner.ts#L49)
+[chain-atp/src/ATPSigner.ts:44](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-atp/src/ATPSigner.ts#L44)
 
 ***
 
 ### createAuthenticationMessage()
 
-> **`static`** **createAuthenticationMessage**(`topic`, `publicKey`, `address`): `string`
+> `static` **createAuthenticationMessage**(`topic`, `publicKey`, `address`): `string`
 
 #### Parameters
 
@@ -262,6 +406,6 @@ to take actions on behalf of the user `${session.chain}:${session.address}`
 
 `string`
 
-#### Source
+#### Defined in
 
-[ATPSigner.ts:35](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-atp/src/ATPSigner.ts#L35)
+[chain-atp/src/ATPSigner.ts:31](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-atp/src/ATPSigner.ts#L31)

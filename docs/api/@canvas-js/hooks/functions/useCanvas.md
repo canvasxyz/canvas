@@ -1,25 +1,29 @@
-[Documentation](../../../index.md) / [@canvas-js/hooks](../index.md) / useCanvas
+[Documentation](../../../packages.md) / [@canvas-js/hooks](../index.md) / useCanvas
 
 # Function: useCanvas()
 
-> **useCanvas**(`config`): `Object`
+> **useCanvas**\<`T`\>(`config`): `object`
+
+## Type Parameters
+
+• **T** *extends* [`Contract`](../../core/type-aliases/Contract.md) = [`Contract`](../../core/type-aliases/Contract.md)
 
 ## Parameters
 
-• **config**: [`CanvasConfig`](../../core/interfaces/CanvasConfig.md)\<[`Contract`](../../core/type-aliases/Contract.md)\>
+• **config**: [`CanvasConfig`](../../core/interfaces/CanvasConfig.md)\<`T`\>
 
 ## Returns
 
-`Object`
+`object`
 
 ### app
 
-> **app**: `undefined` \| [`Canvas`](../../core/classes/Canvas.md)\<[`Contract`](../../core/type-aliases/Contract.md)\>
+> **app**: `undefined` \| [`Canvas`](../../core/classes/Canvas.md)\<`T`\>
 
 ### error
 
 > **error**: `undefined` \| `Error`
 
-## Source
+## Defined in
 
-[useCanvas.ts:4](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/hooks/src/useCanvas.ts#L4)
+[useCanvas.ts:4](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/hooks/src/useCanvas.ts#L4)

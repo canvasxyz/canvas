@@ -1,3 +1,3 @@
-[Documentation](../../index.md) / @canvas-js/cli
+[Documentation](../../packages.md) / @canvas-js/cli
 
 # @canvas-js/cli

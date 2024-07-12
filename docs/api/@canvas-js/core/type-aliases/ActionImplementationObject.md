@@ -1,33 +1,31 @@
-[Documentation](../../../index.md) / [@canvas-js/core](../index.md) / ActionImplementationObject
+[Documentation](../../../packages.md) / [@canvas-js/core](../index.md) / ActionImplementationObject
 
-# Type alias: ActionImplementationObject\<Args, Result\>
+# Type Alias: ActionImplementationObject\<Args\>
 
-> **ActionImplementationObject**\<`Args`, `Result`\>: `Object`
+> **ActionImplementationObject**\<`Args`\>: `object`
 
-## Type parameters
+## Type Parameters
 
 • **Args** = `any`
-
-• **Result** = `any`
 
 ## Type declaration
 
 ### apply
 
-> **apply**: [`ActionImplementationFunction`](ActionImplementationFunction.md)\<`Args`, `Result`\>
+> **apply**: [`ActionImplementationFunction`](ActionImplementationFunction.md)\<`Args`\>
 
 ### argsType?
 
-> **`optional`** **argsType**: `Object`
+> `optional` **argsType**: `object`
 
 ### argsType.name
 
-> **name**: `string`
+> **argsType.name**: `string`
 
 ### argsType.schema
 
-> **schema**: `string`
+> **argsType.schema**: `string`
 
-## Source
+## Defined in
 
-[packages/core/src/types.ts:14](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/types.ts#L14)
+[packages/core/src/types.ts:11](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/core/src/types.ts#L11)

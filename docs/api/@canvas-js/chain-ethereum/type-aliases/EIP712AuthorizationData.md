@@ -1,8 +1,8 @@
-[Documentation](../../../index.md) / [@canvas-js/chain-ethereum](../index.md) / EIP712AuthorizationData
+[Documentation](../../../packages.md) / [@canvas-js/chain-ethereum](../index.md) / EIP712AuthorizationData
 
-# Type alias: EIP712AuthorizationData
+# Type Alias: EIP712AuthorizationData
 
-> **EIP712AuthorizationData**: `Object`
+> **EIP712AuthorizationData**: `object`
 
 ## Type declaration
 
@@ -10,6 +10,6 @@
 
 > **signature**: `Uint8Array`
 
-## Source
+## Defined in
 
-[types.ts:19](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-ethereum/src/types.ts#L19)
+[chain-ethereum/src/siwe/types.ts:19](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-ethereum/src/siwe/types.ts#L19)

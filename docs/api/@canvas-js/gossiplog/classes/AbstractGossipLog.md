@@ -1,210 +1,250 @@
-[Documentation](../../../index.md) / [@canvas-js/gossiplog](../index.md) / AbstractGossipLog
+[Documentation](../../../packages.md) / [@canvas-js/gossiplog](../index.md) / AbstractGossipLog
 
-# Class: `abstract` AbstractGossipLog\<Payload, Result\>
+# Class: `abstract` AbstractGossipLog\<Payload\>
 
 ## Extends
 
-- `TypedEventEmitter`\<[`GossipLogEvents`](../type-aliases/GossipLogEvents.md)\<`Payload`, `Result`\>\>
+- `TypedEventEmitter`\<[`GossipLogEvents`](../type-aliases/GossipLogEvents.md)\<`Payload`\>\>
 
-## Type parameters
+## Type Parameters
 
 • **Payload** = `unknown`
 
-• **Result** = `unknown`
-
 ## Constructors
 
-### new AbstractGossipLog(init)
+### new AbstractGossipLog()
 
-> **`protected`** **new AbstractGossipLog**\<`Payload`, `Result`\>(`init`): [`AbstractGossipLog`](AbstractGossipLog.md)\<`Payload`, `Result`\>
+> `protected` **new AbstractGossipLog**\<`Payload`\>(`init`): [`AbstractGossipLog`](AbstractGossipLog.md)\<`Payload`\>
 
 #### Parameters
 
-• **init**: [`GossipLogInit`](../interfaces/GossipLogInit.md)\<`Payload`, `Result`\>
+• **init**: [`GossipLogInit`](../interfaces/GossipLogInit.md)\<`Payload`\>
 
 #### Returns
 
-[`AbstractGossipLog`](AbstractGossipLog.md)\<`Payload`, `Result`\>
+[`AbstractGossipLog`](AbstractGossipLog.md)\<`Payload`\>
 
 #### Overrides
 
-`TypedEventEmitter<
-	GossipLogEvents<Payload, Result>
->.constructor`
+`TypedEventEmitter<GossipLogEvents<Payload>>.constructor`
 
-#### Source
+#### Defined in
 
-[packages/gossiplog/src/AbstractGossipLog.ts:101](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L101)
+[packages/gossiplog/src/AbstractGossipLog.ts:83](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/AbstractGossipLog.ts#L83)
 
 ## Properties
 
-### #apply
+### db
 
-> **`private`** **`readonly`** **#apply**: [`GossipLogConsumer`](../type-aliases/GossipLogConsumer.md)\<`Payload`, `Result`\>
+> `abstract` **db**: [`AbstractModelDB`](../../modeldb/classes/AbstractModelDB.md)
 
-#### Source
+#### Defined in
 
-[packages/gossiplog/src/AbstractGossipLog.ts:99](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L99)
-
-***
-
-### #private
-
-> **`private`** **#private**: `any`
-
-#### Inherited from
-
-`TypedEventEmitter.#private`
-
-#### Source
-
-node\_modules/@libp2p/interface/dist/src/event-target.d.ts:28
-
-***
-
-### #transformer
-
-> **`private`** **`readonly`** **#transformer**: `Object`
-
-#### #transformer.toRepresentation
-
-> **toRepresentation**: `TypeTransformerFunction`
-
-#### #transformer.toTyped
-
-> **toTyped**: `TypeTransformerFunction`
-
-#### Source
-
-[packages/gossiplog/src/AbstractGossipLog.ts:98](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L98)
-
-***
-
-### indexAncestors
-
-> **`readonly`** **indexAncestors**: `boolean`
-
-#### Source
-
-[packages/gossiplog/src/AbstractGossipLog.ts:92](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L92)
+[packages/gossiplog/src/AbstractGossipLog.ts:72](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/AbstractGossipLog.ts#L72)
 
 ***
 
 ### log
 
-> **`protected`** **`readonly`** **log**: `Logger`
+> `protected` `readonly` **log**: `Logger`
 
-#### Source
+#### Defined in
 
-[packages/gossiplog/src/AbstractGossipLog.ts:95](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L95)
-
-***
-
-### mempool
-
-> **`protected`** **`readonly`** **mempool**: `Mempool`\<`Object`\>
-
-#### Type declaration
-
-##### message
-
-> **message**: [`Message`](../type-aliases/Message.md)\<`Payload`\>
-
-##### signature
-
-> **signature**: [`Signature`](../../interfaces/type-aliases/Signature.md)
-
-#### Source
-
-[packages/gossiplog/src/AbstractGossipLog.ts:96](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L96)
+[packages/gossiplog/src/AbstractGossipLog.ts:76](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/AbstractGossipLog.ts#L76)
 
 ***
 
 ### signer
 
-> **`readonly`** **signer**: [`Signer`](../../interfaces/interfaces/Signer.md)\<[`Message`](../type-aliases/Message.md)\<`Payload`\>\>
+> `readonly` **signer**: [`Signer`](../../interfaces/interfaces/Signer.md)\<`Payload`\>
 
-#### Source
+#### Defined in
 
-[packages/gossiplog/src/AbstractGossipLog.ts:93](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L93)
+[packages/gossiplog/src/AbstractGossipLog.ts:70](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/AbstractGossipLog.ts#L70)
 
 ***
 
 ### topic
 
-> **`readonly`** **topic**: `string`
+> `readonly` **topic**: `string`
 
-#### Source
+#### Defined in
 
-[packages/gossiplog/src/AbstractGossipLog.ts:91](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L91)
-
-## Methods
-
-### #getAncestors()
-
-> **`private`** **#getAncestors**(`txn`, `key`, `atOrBefore`, `results`, `visited`): `Promise`\<`void`\>
-
-#### Parameters
-
-• **txn**: [`ReadOnlyTransaction`](../interfaces/ReadOnlyTransaction.md)
-
-• **key**: `Uint8Array`
-
-• **atOrBefore**: `number`
-
-• **results**: `Set`\<`string`\>
-
-• **visited**: `Set`\<`string`\>= `undefined`
-
-#### Returns
-
-`Promise`\<`void`\>
-
-#### Source
-
-[packages/gossiplog/src/AbstractGossipLog.ts:383](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L383)
+[packages/gossiplog/src/AbstractGossipLog.ts:69](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/AbstractGossipLog.ts#L69)
 
 ***
 
-### #insert()
+### tree
 
-> **`private`** **#insert**(`txn`, `id`, `signature`, `message`, `__namedParameters`): `Promise`\<`Result`\>
+> `abstract` **tree**: `Tree`
+
+#### Defined in
+
+[packages/gossiplog/src/AbstractGossipLog.ts:73](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/AbstractGossipLog.ts#L73)
+
+***
+
+### validatePayload()
+
+> `readonly` **validatePayload**: (`payload`) => `payload is Payload`
 
 #### Parameters
 
-• **txn**: [`ReadWriteTransaction`](../interfaces/ReadWriteTransaction.md)
+• **payload**: `unknown`
 
-• **id**: `string`
+#### Returns
+
+`payload is Payload`
+
+#### Defined in
+
+[packages/gossiplog/src/AbstractGossipLog.ts:78](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/AbstractGossipLog.ts#L78)
+
+***
+
+### verifySignature()
+
+> `readonly` **verifySignature**: (`signature`, `message`) => [`Awaitable`](../../interfaces/type-aliases/Awaitable.md)\<`void`\>
+
+#### Parameters
 
 • **signature**: [`Signature`](../../interfaces/type-aliases/Signature.md)
 
 • **message**: [`Message`](../type-aliases/Message.md)\<`Payload`\>
 
-• **\_\_namedParameters**: `Entry`= `undefined`
-
 #### Returns
 
-`Promise`\<`Result`\>
+[`Awaitable`](../../interfaces/type-aliases/Awaitable.md)\<`void`\>
 
-#### Source
+#### Defined in
 
-[packages/gossiplog/src/AbstractGossipLog.ts:418](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L418)
+[packages/gossiplog/src/AbstractGossipLog.ts:79](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/AbstractGossipLog.ts#L79)
 
 ***
+
+### schema
+
+> `static` **schema**: `object`
+
+#### $ancestors
+
+> **$ancestors**: `object`
+
+#### $ancestors.id
+
+> **$ancestors.id**: `"primary"` = `"primary"`
+
+#### $ancestors.links
+
+> **$ancestors.links**: `"json"` = `"json"`
+
+#### $branch\_merges
+
+> **$branch\_merges**: `object`
+
+#### $branch\_merges.id
+
+> **$branch\_merges.id**: `"primary"` = `"primary"`
+
+#### $branch\_merges.source\_branch
+
+> **$branch\_merges.source\_branch**: `"integer"` = `"integer"`
+
+#### $branch\_merges.source\_clock
+
+> **$branch\_merges.source\_clock**: `"integer"` = `"integer"`
+
+#### $branch\_merges.source\_message\_id
+
+> **$branch\_merges.source\_message\_id**: `"string"` = `"string"`
+
+#### $branch\_merges.target\_branch
+
+> **$branch\_merges.target\_branch**: `"integer"` = `"integer"`
+
+#### $branch\_merges.target\_clock
+
+> **$branch\_merges.target\_clock**: `"integer"` = `"integer"`
+
+#### $branch\_merges.target\_message\_id
+
+> **$branch\_merges.target\_message\_id**: `"string"` = `"string"`
+
+#### $heads
+
+> **$heads**: `object`
+
+#### $heads.id
+
+> **$heads.id**: `"primary"` = `"primary"`
+
+#### $messages
+
+> **$messages**: `object`
+
+#### $messages.$indexes
+
+> **$messages.$indexes**: `string`[]
+
+#### $messages.branch
+
+> **$messages.branch**: `"integer"` = `"integer"`
+
+#### $messages.clock
+
+> **$messages.clock**: `"integer"` = `"integer"`
+
+#### $messages.hash
+
+> **$messages.hash**: `"string"` = `"string"`
+
+#### $messages.id
+
+> **$messages.id**: `"primary"` = `"primary"`
+
+#### $messages.message
+
+> **$messages.message**: `"json"` = `"json"`
+
+#### $messages.signature
+
+> **$messages.signature**: `"json"` = `"json"`
+
+#### Defined in
+
+[packages/gossiplog/src/AbstractGossipLog.ts:54](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/AbstractGossipLog.ts#L54)
+
+## Methods
 
 ### addEventListener()
 
 > **addEventListener**\<`K`\>(`type`, `listener`, `options`?): `void`
 
-#### Type parameters
+Appends an event listener for events whose type attribute value is type. The callback argument sets the callback that will be invoked when the event is dispatched.
 
-• **K** extends keyof [`GossipLogEvents`](../type-aliases/GossipLogEvents.md)\<`Payload`, `Result`\>
+The options argument sets listener-specific options. For compatibility this can be a boolean, in which case the method behaves exactly as if the value was specified as options's capture.
+
+When set to true, options's capture prevents callback from being invoked when the event's eventPhase attribute value is BUBBLING_PHASE. When false (or not present), callback will not be invoked when event's eventPhase attribute value is CAPTURING_PHASE. Either way, callback will be invoked if event's eventPhase attribute value is AT_TARGET.
+
+When set to true, options's passive indicates that the callback will not cancel the event by invoking preventDefault(). This is used to enable performance optimizations described in § 2.8 Observing event listeners.
+
+When set to true, options's once indicates that the callback will only be invoked once after which the event listener will be removed.
+
+If an AbortSignal is passed for options's signal, then the event listener will be removed when signal is aborted.
+
+The event listener is appended to target's event listener list and is not appended if it has the same type, callback, and capture.
+
+[MDN Reference](https://developer.mozilla.org/docs/Web/API/EventTarget/addEventListener)
+
+#### Type Parameters
+
+• **K** *extends* keyof [`GossipLogEvents`](../type-aliases/GossipLogEvents.md)\<`Payload`\>
 
 #### Parameters
 
 • **type**: `K`
 
-• **listener**: `null` \| `EventHandler`\<[`GossipLogEvents`](../type-aliases/GossipLogEvents.md)\<`Payload`, `Result`\>\[`K`\]\>
+• **listener**: `null` \| `EventHandler`\<[`GossipLogEvents`](../type-aliases/GossipLogEvents.md)\<`Payload`\>\[`K`\]\>
 
 • **options?**: `boolean` \| `AddEventListenerOptions`
 
@@ -216,71 +256,58 @@ node\_modules/@libp2p/interface/dist/src/event-target.d.ts:28
 
 `TypedEventEmitter.addEventListener`
 
-#### Source
+#### Defined in
 
-node\_modules/@libp2p/interface/dist/src/event-target.d.ts:30
+node\_modules/@libp2p/interface/dist/src/event-target.d.ts:31
 
 ***
 
 ### append()
 
-> **append**(`payload`, `options`): `Promise`\<`Object`\>
+> **append**\<`T`\>(`payload`, `options`): `Promise`\<`SignedMessage`\<`T`\>\>
 
 Sign and append a new *unsigned* message to the end of the log.
-The currently unmerged heads of the local log are used as parents.
+The concurrent heads of the local log are used as parents.
+
+#### Type Parameters
+
+• **T** = `Payload`
 
 #### Parameters
 
-• **payload**: `Payload`
+• **payload**: `T`
 
-• **options**= `{}`
+• **options** = `{}`
 
-• **options\.signer?**: [`Signer`](../../interfaces/interfaces/Signer.md)\<[`Message`](../type-aliases/Message.md)\<`Payload`\>\>
+• **options.signer?**: [`Signer`](../../interfaces/interfaces/Signer.md)\<`Payload`\>
 
 #### Returns
 
-`Promise`\<`Object`\>
+`Promise`\<`SignedMessage`\<`T`\>\>
 
-> ##### id
->
-> > **id**: `string`
->
-> ##### message
->
-> > **message**: [`Message`](../type-aliases/Message.md)\<`Payload`\>
->
-> ##### result
->
-> > **result**: `Result`
->
-> ##### signature
->
-> > **signature**: [`Signature`](../../interfaces/type-aliases/Signature.md)
->
+#### Defined in
 
-#### Source
-
-[packages/gossiplog/src/AbstractGossipLog.ts:245](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L245)
+[packages/gossiplog/src/AbstractGossipLog.ts:190](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/AbstractGossipLog.ts#L190)
 
 ***
 
 ### close()
 
-> **`abstract`** **close**(): `Promise`\<`void`\>
+> `abstract` **close**(): `Promise`\<`void`\>
 
 #### Returns
 
 `Promise`\<`void`\>
 
-#### Source
+#### Defined in
 
-[packages/gossiplog/src/AbstractGossipLog.ts:73](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L73)
+[packages/gossiplog/src/AbstractGossipLog.ts:74](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/AbstractGossipLog.ts#L74)
 
 ***
 
 ### decode()
 
-> **decode**(`value`): [`string`, [`Signature`](../../interfaces/type-aliases/Signature.md), [`Message`](../type-aliases/Message.md)\<`Payload`\>]
+> **decode**(`value`): `SignedMessage`\<`Payload`\>
 
 #### Parameters
 
@@ -288,17 +315,21 @@ The currently unmerged heads of the local log are used as parents.
 
 #### Returns
 
-[`string`, [`Signature`](../../interfaces/type-aliases/Signature.md), [`Message`](../type-aliases/Message.md)\<`Payload`\>]
+`SignedMessage`\<`Payload`\>
 
-#### Source
+#### Defined in
 
-[packages/gossiplog/src/AbstractGossipLog.ts:180](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L180)
+[packages/gossiplog/src/AbstractGossipLog.ts:129](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/AbstractGossipLog.ts#L129)
 
 ***
 
 ### dispatchEvent()
 
 > **dispatchEvent**(`event`): `boolean`
+
+Dispatches a synthetic event event to target and returns true if either event's cancelable attribute value is false or its preventDefault() method was not invoked, and false otherwise.
+
+[MDN Reference](https://developer.mozilla.org/docs/Web/API/EventTarget/dispatchEvent)
 
 #### Parameters
 
@@ -312,53 +343,37 @@ The currently unmerged heads of the local log are used as parents.
 
 `TypedEventEmitter.dispatchEvent`
 
-#### Source
+#### Defined in
 
-node\_modules/@libp2p/interface/dist/src/event-target.d.ts:32
+node\_modules/@libp2p/interface/dist/src/event-target.d.ts:33
 
 ***
 
 ### encode()
 
-> **encode**(`signature`, `message`): [`Uint8Array`, `Uint8Array`]
+> **encode**\<`T`\>(`signature`, `message`, `__namedParameters`): `SignedMessage`\<`T`\>
+
+#### Type Parameters
+
+• **T** = `Payload`
 
 #### Parameters
 
 • **signature**: [`Signature`](../../interfaces/type-aliases/Signature.md)
 
-• **message**: [`Message`](../type-aliases/Message.md)\<`Payload`\>
+• **message**: [`Message`](../type-aliases/Message.md)\<`T`\>
+
+• **\_\_namedParameters** = `...`
+
+• **\_\_namedParameters.replaceUndefined**: `boolean`
 
 #### Returns
 
-[`Uint8Array`, `Uint8Array`]
+`SignedMessage`\<`T`\>
 
-#### Source
+#### Defined in
 
-[packages/gossiplog/src/AbstractGossipLog.ts:156](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L156)
-
-***
-
-### entries()
-
-> **`protected`** **`abstract`** **entries**(`lowerBound`?, `upperBound`?, `options`?): `AsyncIterable`\<[`Uint8Array`, `Uint8Array`]\>
-
-#### Parameters
-
-• **lowerBound?**: `null` \| `Bound`\<`Uint8Array`\>
-
-• **upperBound?**: `null` \| `Bound`\<`Uint8Array`\>
-
-• **options?**
-
-• **options\.reverse?**: `boolean`
-
-#### Returns
-
-`AsyncIterable`\<[`Uint8Array`, `Uint8Array`]\>
-
-#### Source
-
-[packages/gossiplog/src/AbstractGossipLog.ts:75](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L75)
+[packages/gossiplog/src/AbstractGossipLog.ts:118](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/AbstractGossipLog.ts#L118)
 
 ***
 
@@ -374,29 +389,9 @@ node\_modules/@libp2p/interface/dist/src/event-target.d.ts:32
 
 `Promise`\<[[`Signature`](../../interfaces/type-aliases/Signature.md), [`Message`](../type-aliases/Message.md)\<`Payload`\>] \| [`null`, `null`]\>
 
-#### Source
+#### Defined in
 
-[packages/gossiplog/src/AbstractGossipLog.ts:218](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L218)
-
-***
-
-### getAncestors()
-
-> **getAncestors**(`id`, `atOrBefore`): `Promise`\<`string`[]\>
-
-#### Parameters
-
-• **id**: `string`
-
-• **atOrBefore**: `number`
-
-#### Returns
-
-`Promise`\<`string`[]\>
-
-#### Source
-
-[packages/gossiplog/src/AbstractGossipLog.ts:323](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L323)
+[packages/gossiplog/src/AbstractGossipLog.ts:149](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/AbstractGossipLog.ts#L149)
 
 ***
 
@@ -408,27 +403,59 @@ node\_modules/@libp2p/interface/dist/src/event-target.d.ts:32
 
 `Promise`\<[`number`, `string`[]]\>
 
-#### Source
+#### Defined in
 
-[packages/gossiplog/src/AbstractGossipLog.ts:207](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L207)
+[packages/gossiplog/src/AbstractGossipLog.ts:136](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/AbstractGossipLog.ts#L136)
 
 ***
 
-### getHeads()
+### getMessages()
 
-> **`private`** **getHeads**(`txn`): `Promise`\<`Uint8Array`[]\>
+> **getMessages**(`range`): `Promise`\<`object`[]\>
 
 #### Parameters
 
-• **txn**: [`ReadOnlyTransaction`](../interfaces/ReadOnlyTransaction.md)
+• **range** = `{}`
+
+• **range.gt?**: `string`
+
+• **range.gte?**: `string`
+
+• **range.limit?**: `number`
+
+• **range.lt?**: `string`
+
+• **range.lte?**: `string`
+
+• **range.reverse?**: `boolean`
 
 #### Returns
 
-`Promise`\<`Uint8Array`[]\>
+`Promise`\<`object`[]\>
 
-#### Source
+#### Defined in
 
-[packages/gossiplog/src/AbstractGossipLog.ts:229](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L229)
+[packages/gossiplog/src/AbstractGossipLog.ts:158](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/AbstractGossipLog.ts#L158)
+
+***
+
+### getMissingParents()
+
+> **getMissingParents**(`txn`, `parents`): `Set`\<`string`\>
+
+#### Parameters
+
+• **txn**: `ReadWriteTransaction`
+
+• **parents**: `string`[]
+
+#### Returns
+
+`Set`\<`string`\>
+
+#### Defined in
+
+[packages/gossiplog/src/AbstractGossipLog.ts:225](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/AbstractGossipLog.ts#L225)
 
 ***
 
@@ -444,43 +471,40 @@ node\_modules/@libp2p/interface/dist/src/event-target.d.ts:32
 
 `Promise`\<`boolean`\>
 
-#### Source
+#### Defined in
 
-[packages/gossiplog/src/AbstractGossipLog.ts:213](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L213)
+[packages/gossiplog/src/AbstractGossipLog.ts:143](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/AbstractGossipLog.ts#L143)
 
 ***
 
 ### insert()
 
-> **insert**(`signature`, `message`): `Promise`\<`Object`\>
+> **insert**(`signedMessage`): `Promise`\<`object`\>
 
-Insert an existing signed message into the log (ie received via PubSub).
-If any of the parents are not present, insert the message into the mempool instead.
+Insert an existing signed message into the log (ie received via HTTP API).
+If any of the parents are not present, throw an error.
 
 #### Parameters
 
-• **signature**: [`Signature`](../../interfaces/type-aliases/Signature.md)
-
-• **message**: [`Message`](../type-aliases/Message.md)\<`Payload`\>
+• **signedMessage**: `SignedMessage`\<`Payload`\>
 
 #### Returns
 
-`Promise`\<`Object`\>
+`Promise`\<`object`\>
 
-> ##### id
->
-> > **id**: `string`
->
+##### id
 
-#### Source
+> **id**: `string`
 
-[packages/gossiplog/src/AbstractGossipLog.ts:277](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L277)
+#### Defined in
+
+[packages/gossiplog/src/AbstractGossipLog.ts:246](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/AbstractGossipLog.ts#L246)
 
 ***
 
 ### isAncestor()
 
-> **isAncestor**(`id`, `ancestor`): `Promise`\<`boolean`\>
+> **isAncestor**(`id`, `ancestor`, `visited`): `Promise`\<`boolean`\>
 
 #### Parameters
 
@@ -488,37 +512,57 @@ If any of the parents are not present, insert the message into the mempool inste
 
 • **ancestor**: `string`
 
+• **visited**: `Set`\<`string`\> = `...`
+
 #### Returns
 
 `Promise`\<`boolean`\>
 
-#### Source
+#### Defined in
 
-[packages/gossiplog/src/AbstractGossipLog.ts:332](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L332)
+[packages/gossiplog/src/AbstractGossipLog.ts:386](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/AbstractGossipLog.ts#L386)
 
 ***
 
 ### iterate()
 
-> **iterate**(`lowerBound`, `upperBound`, `options`): `AsyncIterable`\<[`string`, [`Signature`](../../interfaces/type-aliases/Signature.md), [`Message`](../type-aliases/Message.md)\<`Payload`\>]\>
+> **iterate**(`range`): `AsyncIterable`\<`object`\>
 
 #### Parameters
 
-• **lowerBound**: `null` \| `Object`= `null`
+• **range** = `{}`
 
-• **upperBound**: `null` \| `Object`= `null`
+• **range.gt?**: `string`
 
-• **options**= `{}`
+• **range.gte?**: `string`
 
-• **options\.reverse?**: `boolean`
+• **range.limit?**: `number`
+
+• **range.lt?**: `string`
+
+• **range.lte?**: `string`
+
+• **range.reverse?**: `boolean`
 
 #### Returns
 
-`AsyncIterable`\<[`string`, [`Signature`](../../interfaces/type-aliases/Signature.md), [`Message`](../type-aliases/Message.md)\<`Payload`\>]\>
+`AsyncIterable`\<`object`\>
 
-#### Source
+##### id
 
-[packages/gossiplog/src/AbstractGossipLog.ts:135](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L135)
+> **id**: `string`
+
+##### message
+
+> **message**: [`Message`](../type-aliases/Message.md)\<`Payload`\>
+
+##### signature
+
+> **signature**: [`Signature`](../../interfaces/type-aliases/Signature.md)
+
+#### Defined in
+
+[packages/gossiplog/src/AbstractGossipLog.ts:170](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/AbstractGossipLog.ts#L170)
 
 ***
 
@@ -538,35 +582,9 @@ If any of the parents are not present, insert the message into the mempool inste
 
 `TypedEventEmitter.listenerCount`
 
-#### Source
+#### Defined in
 
-node\_modules/@libp2p/interface/dist/src/event-target.d.ts:29
-
-***
-
-### read()
-
-> **`protected`** **`abstract`** **read**\<`T`\>(`callback`, `options`?): `Promise`\<`T`\>
-
-#### Type parameters
-
-• **T**
-
-#### Parameters
-
-• **callback**
-
-• **options?**
-
-• **options\.targetId?**: `string`
-
-#### Returns
-
-`Promise`\<`T`\>
-
-#### Source
-
-[packages/gossiplog/src/AbstractGossipLog.ts:81](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L81)
+node\_modules/@libp2p/interface/dist/src/event-target.d.ts:30
 
 ***
 
@@ -574,15 +592,19 @@ node\_modules/@libp2p/interface/dist/src/event-target.d.ts:29
 
 > **removeEventListener**\<`K`\>(`type`, `listener`?, `options`?): `void`
 
-#### Type parameters
+Removes the event listener in target's event listener list with the same type, callback, and options.
 
-• **K** extends keyof [`GossipLogEvents`](../type-aliases/GossipLogEvents.md)\<`Payload`, `Result`\>
+[MDN Reference](https://developer.mozilla.org/docs/Web/API/EventTarget/removeEventListener)
+
+#### Type Parameters
+
+• **K** *extends* keyof [`GossipLogEvents`](../type-aliases/GossipLogEvents.md)\<`Payload`\>
 
 #### Parameters
 
 • **type**: `K`
 
-• **listener?**: `null` \| `EventHandler`\<[`GossipLogEvents`](../type-aliases/GossipLogEvents.md)\<`Payload`, `Result`\>\[`K`\]\>
+• **listener?**: `null` \| `EventHandler`\<[`GossipLogEvents`](../type-aliases/GossipLogEvents.md)\<`Payload`\>\[`K`\]\>
 
 • **options?**: `boolean` \| `EventListenerOptions`
 
@@ -594,9 +616,9 @@ node\_modules/@libp2p/interface/dist/src/event-target.d.ts:29
 
 `TypedEventEmitter.removeEventListener`
 
-#### Source
+#### Defined in
 
-node\_modules/@libp2p/interface/dist/src/event-target.d.ts:31
+node\_modules/@libp2p/interface/dist/src/event-target.d.ts:32
 
 ***
 
@@ -608,9 +630,9 @@ node\_modules/@libp2p/interface/dist/src/event-target.d.ts:31
 
 `Promise`\<`void`\>
 
-#### Source
+#### Defined in
 
-[packages/gossiplog/src/AbstractGossipLog.ts:125](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L125)
+[packages/gossiplog/src/AbstractGossipLog.ts:97](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/AbstractGossipLog.ts#L97)
 
 ***
 
@@ -618,13 +640,13 @@ node\_modules/@libp2p/interface/dist/src/event-target.d.ts:31
 
 > **safeDispatchEvent**\<`Detail`\>(`type`, `detail`?): `boolean`
 
-#### Type parameters
+#### Type Parameters
 
 • **Detail**
 
 #### Parameters
 
-• **type**: keyof [`GossipLogEvents`](../type-aliases/GossipLogEvents.md)\<`Payload`, `Result`\>
+• **type**: keyof [`GossipLogEvents`](../type-aliases/GossipLogEvents.md)\<`Payload`\>
 
 • **detail?**: `CustomEventInit`\<`Detail`\>
 
@@ -636,76 +658,17 @@ node\_modules/@libp2p/interface/dist/src/event-target.d.ts:31
 
 `TypedEventEmitter.safeDispatchEvent`
 
-#### Source
+#### Defined in
 
-node\_modules/@libp2p/interface/dist/src/event-target.d.ts:33
+node\_modules/@libp2p/interface/dist/src/event-target.d.ts:34
 
 ***
 
 ### serve()
 
-> **serve**(`callback`, `options`): `Promise`\<`void`\>
+> **serve**\<`T`\>(`callback`): `Promise`\<`T`\>
 
-Serve a read-only snapshot of the merkle tree
-
-#### Parameters
-
-• **callback**
-
-• **options**= `{}`
-
-• **options\.targetId?**: `string`
-
-#### Returns
-
-`Promise`\<`void`\>
-
-#### Source
-
-[packages/gossiplog/src/AbstractGossipLog.ts:526](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L526)
-
-***
-
-### sync()
-
-> **sync**(`source`, `options`): `Promise`\<`Object`\>
-
-Sync with a remote source, applying and inserting all missing messages into the local log
-
-#### Parameters
-
-• **source**: `Source`
-
-• **options**= `{}`
-
-• **options\.sourceId?**: `string`
-
-• **options\.timeoutController?**: `DelayableController`
-
-#### Returns
-
-`Promise`\<`Object`\>
-
-> ##### messageCount
->
-> > **messageCount**: `number`
->
-> ##### root
->
-> > **root**: `Node`
->
-
-#### Source
-
-[packages/gossiplog/src/AbstractGossipLog.ts:480](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L480)
-
-***
-
-### write()
-
-> **`protected`** **`abstract`** **write**\<`T`\>(`callback`, `options`?): `Promise`\<`T`\>
-
-#### Type parameters
+#### Type Parameters
 
 • **T**
 
@@ -713,38 +676,38 @@ Sync with a remote source, applying and inserting all missing messages into the 
 
 • **callback**
 
-• **options?**
-
-• **options\.sourceId?**: `string`
-
 #### Returns
 
 `Promise`\<`T`\>
 
-#### Source
+#### Defined in
 
-[packages/gossiplog/src/AbstractGossipLog.ts:86](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L86)
+[packages/gossiplog/src/AbstractGossipLog.ts:419](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/AbstractGossipLog.ts#L419)
 
 ***
 
-### isAncestor()
+### sync()
 
-> **`static`** **isAncestor**(`txn`, `id`, `ancestor`, `visited`): `Promise`\<`boolean`\>
+> **sync**(`server`, `options`): `Promise`\<`object`\>
+
+Sync with a remote source, applying and inserting all missing messages into the local log
 
 #### Parameters
 
-• **txn**: [`ReadOnlyTransaction`](../interfaces/ReadOnlyTransaction.md)
+• **server**: [`SyncServer`](../interfaces/SyncServer.md)
 
-• **id**: `string`
+• **options** = `{}`
 
-• **ancestor**: `string`
-
-• **visited**: `Set`\<`string`\>= `undefined`
+• **options.sourceId?**: `string`
 
 #### Returns
 
-`Promise`\<`boolean`\>
+`Promise`\<`object`\>
 
-#### Source
+##### messageCount
 
-[packages/gossiplog/src/AbstractGossipLog.ts:337](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/gossiplog/src/AbstractGossipLog.ts#L337)
+> **messageCount**: `number`
+
+#### Defined in
+
+[packages/gossiplog/src/AbstractGossipLog.ts:393](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/gossiplog/src/AbstractGossipLog.ts#L393)

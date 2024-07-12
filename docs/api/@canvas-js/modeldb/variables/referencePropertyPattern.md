@@ -1,9 +1,9 @@
-[Documentation](../../../index.md) / [@canvas-js/modeldb](../index.md) / referencePropertyPattern
+[Documentation](../../../packages.md) / [@canvas-js/modeldb](../index.md) / referencePropertyPattern
 
 # Variable: referencePropertyPattern
 
-> **`const`** **referencePropertyPattern**: `RegExp`
+> `const` **referencePropertyPattern**: `RegExp`
 
-## Source
+## Defined in
 
-[config.ts:51](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/modeldb/src/config.ts#L51)
+[config.ts:70](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/modeldb/src/config.ts#L70)

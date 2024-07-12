@@ -1,8 +1,8 @@
-[Documentation](../../../index.md) / [@canvas-js/modeldb](../index.md) / PrimaryKeyProperty
+[Documentation](../../../packages.md) / [@canvas-js/modeldb](../index.md) / PrimaryKeyProperty
 
-# Type alias: PrimaryKeyProperty
+# Type Alias: PrimaryKeyProperty
 
-> **PrimaryKeyProperty**: `Object`
+> **PrimaryKeyProperty**: `object`
 
 ## Type declaration
 
@@ -14,6 +14,6 @@
 
 > **name**: `string`
 
-## Source
+## Defined in
 
-[types.ts:25](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/modeldb/src/types.ts#L25)
+[types.ts:29](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/modeldb/src/types.ts#L29)

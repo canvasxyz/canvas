@@ -1,4 +1,4 @@
-[Documentation](../../index.md) / @canvas-js/vm
+[Documentation](../../packages.md) / @canvas-js/vm
 
 # @canvas-js/vm
 
@@ -9,16 +9,4 @@
 
 ## Interfaces
 
-- [JSArray](interfaces/JSArray.md)
-- [JSObject](interfaces/JSObject.md)
 - [VMOptions](interfaces/VMOptions.md)
-
-## Type Aliases
-
-- [JSFunction](type-aliases/JSFunction.md)
-- [JSFunctionAsync](type-aliases/JSFunctionAsync.md)
-- [JSValue](type-aliases/JSValue.md)
-
-## Functions
-
-- [typeOf](functions/typeOf.md)

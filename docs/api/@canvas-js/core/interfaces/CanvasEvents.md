@@ -1,28 +1,22 @@
-[Documentation](../../../index.md) / [@canvas-js/core](../index.md) / CanvasEvents
+[Documentation](../../../packages.md) / [@canvas-js/core](../index.md) / CanvasEvents
 
 # Interface: CanvasEvents
 
 ## Extends
 
-- [`GossipLogEvents`](../../gossiplog/type-aliases/GossipLogEvents.md)\<[`Action`](../../interfaces/type-aliases/Action.md) \| [`Session`](../../interfaces/type-aliases/Session.md), `unknown`\>
+- [`GossipLogEvents`](../../gossiplog/type-aliases/GossipLogEvents.md)\<[`Action`](../../interfaces/type-aliases/Action.md) \| [`Session`](../../interfaces/type-aliases/Session.md)\>
 
 ## Properties
 
-### close
-
-> **close**: `Event`
-
-#### Source
-
-[packages/core/src/Canvas.ts:72](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/Canvas.ts#L72)
-
-***
-
 ### commit
 
-> **commit**: `CustomEvent`\<`Object`\>
+> **commit**: `CustomEvent`\<`object`\>
 
 #### Type declaration
+
+##### heads
+
+> **heads**: `string`[]
 
 ##### root
 
@@ -32,57 +26,47 @@
 
 `GossipLogEvents.commit`
 
-#### Source
+#### Defined in
 
-packages/gossiplog/lib/AbstractGossipLog.d.ts:37
+packages/gossiplog/lib/AbstractGossipLog.d.ts:23
 
 ***
 
 ### connect
 
-> **connect**: `CustomEvent`\<`Object`\>
+> **connect**: `CustomEvent`\<`object`\>
 
 #### Type declaration
 
 ##### peer
 
-> **peer**: [`PeerId`](../type-aliases/PeerId.md)
+> **peer**: `string`
 
-#### Source
+#### Defined in
 
-[packages/core/src/Canvas.ts:73](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/Canvas.ts#L73)
-
-***
-
-### connections:updated
-
-> **connections:updated**: `CustomEvent`\<[`ConnectionsInfo`](../type-aliases/ConnectionsInfo.md)\>
-
-#### Source
-
-[packages/core/src/Canvas.ts:75](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/Canvas.ts#L75)
+[packages/core/src/Canvas.ts:46](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/core/src/Canvas.ts#L46)
 
 ***
 
 ### disconnect
 
-> **disconnect**: `CustomEvent`\<`Object`\>
+> **disconnect**: `CustomEvent`\<`object`\>
 
 #### Type declaration
 
 ##### peer
 
-> **peer**: [`PeerId`](../type-aliases/PeerId.md)
+> **peer**: `string`
 
-#### Source
+#### Defined in
 
-[packages/core/src/Canvas.ts:74](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/Canvas.ts#L74)
+[packages/core/src/Canvas.ts:47](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/core/src/Canvas.ts#L47)
 
 ***
 
 ### error
 
-> **error**: `CustomEvent`\<`Object`\>
+> **error**: `CustomEvent`\<`object`\>
 
 #### Type declaration
 
@@ -94,15 +78,15 @@ packages/gossiplog/lib/AbstractGossipLog.d.ts:37
 
 `GossipLogEvents.error`
 
-#### Source
+#### Defined in
 
-packages/gossiplog/lib/AbstractGossipLog.d.ts:45
+packages/gossiplog/lib/AbstractGossipLog.d.ts:32
 
 ***
 
 ### message
 
-> **message**: `CustomEvent`\<`Object`\>
+> **message**: `CustomEvent`\<`object`\>
 
 #### Type declaration
 
@@ -114,10 +98,6 @@ packages/gossiplog/lib/AbstractGossipLog.d.ts:45
 
 > **message**: [`Message`](../../gossiplog/type-aliases/Message.md)\<[`Action`](../../interfaces/type-aliases/Action.md) \| [`Session`](../../interfaces/type-aliases/Session.md)\>
 
-##### result
-
-> **result**: `unknown`
-
 ##### signature
 
 > **signature**: [`Signature`](../../interfaces/type-aliases/Signature.md)
@@ -126,35 +106,25 @@ packages/gossiplog/lib/AbstractGossipLog.d.ts:45
 
 `GossipLogEvents.message`
 
-#### Source
+#### Defined in
 
-packages/gossiplog/lib/AbstractGossipLog.d.ts:31
-
-***
-
-### presence:join
-
-> **presence:join**: `CustomEvent`\<[`PresenceInfo`](../type-aliases/PresenceInfo.md) & `Object`\>
-
-#### Source
-
-[packages/core/src/Canvas.ts:76](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/Canvas.ts#L76)
+packages/gossiplog/lib/AbstractGossipLog.d.ts:18
 
 ***
 
-### presence:leave
+### stop
 
-> **presence:leave**: `CustomEvent`\<[`PresenceInfo`](../type-aliases/PresenceInfo.md)\>
+> **stop**: `Event`
 
-#### Source
+#### Defined in
 
-[packages/core/src/Canvas.ts:79](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/Canvas.ts#L79)
+[packages/core/src/Canvas.ts:45](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/core/src/Canvas.ts#L45)
 
 ***
 
 ### sync
 
-> **sync**: `CustomEvent`\<`Object`\>
+> **sync**: `CustomEvent`\<`object`\>
 
 #### Type declaration
 
@@ -166,14 +136,14 @@ packages/gossiplog/lib/AbstractGossipLog.d.ts:31
 
 > **messageCount**: `number`
 
-##### peer?
+##### peerId?
 
-> **`optional`** **peer**: `string`
+> `optional` **peerId**: `string`
 
 #### Inherited from
 
 `GossipLogEvents.sync`
 
-#### Source
+#### Defined in
 
-packages/gossiplog/lib/AbstractGossipLog.d.ts:40
+packages/gossiplog/lib/AbstractGossipLog.d.ts:27

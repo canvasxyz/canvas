@@ -1,8 +1,8 @@
-[Documentation](../../../index.md) / [@canvas-js/chain-atp](../index.md) / ATPSessionData
+[Documentation](../../../packages.md) / [@canvas-js/chain-atp](../index.md) / ATPSessionData
 
-# Type alias: ATPSessionData
+# Type Alias: ATPSessionData
 
-> **ATPSessionData**: `Object`
+> **ATPSessionData**: `object`
 
 ## Type declaration
 
@@ -22,6 +22,6 @@
 
 > **verificationMethod**: `string`
 
-## Source
+## Defined in
 
-[ATPSigner.ts:21](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-atp/src/ATPSigner.ts#L21)
+[chain-atp/src/ATPSigner.ts:19](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-atp/src/ATPSigner.ts#L19)

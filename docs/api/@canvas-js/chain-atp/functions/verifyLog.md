@@ -1,4 +1,4 @@
-[Documentation](../../../index.md) / [@canvas-js/chain-atp](../index.md) / verifyLog
+[Documentation](../../../packages.md) / [@canvas-js/chain-atp](../index.md) / verifyLog
 
 # Function: verifyLog()
 
@@ -14,6 +14,6 @@
 
 `Promise`\<`string`\>
 
-## Source
+## Defined in
 
-[operation.ts:42](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-atp/src/operation.ts#L42)
+[chain-atp/src/operation.ts:42](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-atp/src/operation.ts#L42)

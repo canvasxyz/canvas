@@ -1,10 +1,10 @@
-[Documentation](../../../index.md) / [@canvas-js/gossiplog](../index.md) / Message
+[Documentation](../../../packages.md) / [@canvas-js/gossiplog](../index.md) / Message
 
-# Type alias: Message\<Payload\>
+# Type Alias: Message\<Payload\>
 
-> **Message**\<`Payload`\>: `Object`
+> **Message**\<`Payload`\>: `object`
 
-## Type parameters
+## Type Parameters
 
 • **Payload** = `unknown`
 
@@ -26,6 +26,6 @@
 
 > **topic**: `string`
 
-## Source
+## Defined in
 
 packages/interfaces/lib/Message.d.ts:1

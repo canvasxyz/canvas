@@ -1,4 +1,4 @@
-[Documentation](../../../index.md) / [@canvas-js/chain-ethereum](../index.md) / validateSIWESessionData
+[Documentation](../../../packages.md) / [@canvas-js/chain-ethereum](../index.md) / validateSIWESessionData
 
 # Function: validateSIWESessionData()
 
@@ -12,6 +12,6 @@
 
 `authorizationData is SIWESessionData`
 
-## Source
+## Defined in
 
-[utils.ts:22](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/chain-ethereum/src/utils.ts#L22)
+[chain-ethereum/src/siwe/utils.ts:7](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/chain-ethereum/src/siwe/utils.ts#L7)

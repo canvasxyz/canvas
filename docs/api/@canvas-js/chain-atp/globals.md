@@ -1,4 +1,4 @@
-[Documentation](../../index.md) / @canvas-js/chain-atp
+[Documentation](../../packages.md) / @canvas-js/chain-atp
 
 # @canvas-js/chain-atp
 

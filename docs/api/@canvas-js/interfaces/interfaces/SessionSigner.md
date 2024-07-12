@@ -1,33 +1,62 @@
-[Documentation](../../../index.md) / [@canvas-js/interfaces](../index.md) / SessionSigner
+[Documentation](../../../packages.md) / [@canvas-js/interfaces](../index.md) / SessionSigner
 
 # Interface: SessionSigner\<AuthorizationData\>
 
-## Extends
-
-- [`Signer`](Signer.md)\<[`Message`](../type-aliases/Message.md)\<[`Action`](../type-aliases/Action.md) \| [`Session`](../type-aliases/Session.md)\<`AuthorizationData`\>\>\>
-
-## Type parameters
+## Type Parameters
 
 • **AuthorizationData** = `any`
 
 ## Properties
 
-### getSession
+### getAddressFromDid()
 
-> **getSession**: (`topic`, `options`?) => [`Awaitable`](../type-aliases/Awaitable.md)\<[`Session`](../type-aliases/Session.md)\<`AuthorizationData`\>\>
+> **getAddressFromDid**: (`did`) => `string`
 
-`getSession` is called by the Canvas runtime for every new action appended
-to the log (ie for new actions taken by local users, not existing messages
-received from other peers via merkle sync or GossipSub).
+#### Parameters
 
-It's responsible for returning a `Session` that matches the given parameters,
-either by looking up a cached session, or by getting user authorization to create
-a new one (and then caching it).
+• **did**: \`did:$\{string\}\`
 
-"Matching the given parameters" means that the caller passes a `topic: string`
-and an optional `chain?: string; timestamp?: number`, and `getSession` must return
-a `Session` authorized for that topic, that specific chain (if provided), and that
-is valid for the given timestamp (if provided).
+#### Returns
+
+`string`
+
+#### Defined in
+
+[SessionSigner.ts:24](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/interfaces/src/SessionSigner.ts#L24)
+
+***
+
+### getDid()
+
+> **getDid**: () => [`Awaitable`](../type-aliases/Awaitable.md)\<\`did:$\{string\}\`\>
+
+#### Returns
+
+[`Awaitable`](../type-aliases/Awaitable.md)\<\`did:$\{string\}\`\>
+
+#### Defined in
+
+[SessionSigner.ts:22](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/interfaces/src/SessionSigner.ts#L22)
+
+***
+
+### getDidParts()
+
+> **getDidParts**: () => `number`
+
+#### Returns
+
+`number`
+
+#### Defined in
+
+[SessionSigner.ts:23](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/interfaces/src/SessionSigner.ts#L23)
+
+***
+
+### getSession()
+
+> **getSession**: (`topic`, `options`?) => [`Awaitable`](../type-aliases/Awaitable.md)\<`null` \| `object`\>
 
 #### Parameters
 
@@ -35,19 +64,35 @@ is valid for the given timestamp (if provided).
 
 • **options?**
 
-• **options\.chain?**: `string`
-
-• **options\.fromCache?**: `boolean`
-
-• **options\.timestamp?**: `number`
+• **options.did?**: \`did:$\{string\}\`
 
 #### Returns
 
-[`Awaitable`](../type-aliases/Awaitable.md)\<[`Session`](../type-aliases/Session.md)\<`AuthorizationData`\>\>
+[`Awaitable`](../type-aliases/Awaitable.md)\<`null` \| `object`\>
 
-#### Source
+#### Defined in
 
-[SessionSigner.ts:24](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/interfaces/src/SessionSigner.ts#L24)
+[SessionSigner.ts:27](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/interfaces/src/SessionSigner.ts#L27)
+
+***
+
+### hasSession()
+
+> **hasSession**: (`topic`, `did`) => `boolean`
+
+#### Parameters
+
+• **topic**: `string`
+
+• **did**: \`did:$\{string\}\`
+
+#### Returns
+
+`boolean`
+
+#### Defined in
+
+[SessionSigner.ts:26](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/interfaces/src/SessionSigner.ts#L26)
 
 ***
 
@@ -61,36 +106,72 @@ This should not change unless user-provided arguments to the signers change.
 For example, the key for `new SIWESigner()` should always remain the same, even if
 a different burner wallet is generated on every call.
 
-#### Source
+#### Defined in
 
-[SessionSigner.ts:44](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/interfaces/src/SessionSigner.ts#L44)
+[SessionSigner.ts:50](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/interfaces/src/SessionSigner.ts#L50)
 
 ***
 
-### match
+### match()
 
-> **match**: (`chain`) => `boolean`
+> **match**: (`did`) => `boolean`
 
 #### Parameters
 
-• **chain**: `string`
+• **did**: \`did:$\{string\}\`
 
 #### Returns
 
 `boolean`
 
-#### Source
+#### Defined in
 
-[SessionSigner.ts:8](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/interfaces/src/SessionSigner.ts#L8)
+[SessionSigner.ts:20](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/interfaces/src/SessionSigner.ts#L20)
 
 ***
 
-### verifySession
+### newSession()
+
+> **newSession**: (`topic`) => [`Awaitable`](../type-aliases/Awaitable.md)\<`object`\>
+
+#### Parameters
+
+• **topic**: `string`
+
+#### Returns
+
+[`Awaitable`](../type-aliases/Awaitable.md)\<`object`\>
+
+##### payload
+
+> **payload**: [`Session`](../type-aliases/Session.md)\<`AuthorizationData`\>
+
+##### signer
+
+> **signer**: [`Signer`](Signer.md)\<[`Action`](../type-aliases/Action.md) \| [`Session`](../type-aliases/Session.md)\<`AuthorizationData`\>\>
+
+#### Defined in
+
+[SessionSigner.ts:31](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/interfaces/src/SessionSigner.ts#L31)
+
+***
+
+### scheme
+
+> **scheme**: [`SignatureScheme`](SignatureScheme.md)\<[`Action`](../type-aliases/Action.md) \| [`Session`](../type-aliases/Session.md)\<`AuthorizationData`\>\>
+
+#### Defined in
+
+[SessionSigner.ts:19](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/interfaces/src/SessionSigner.ts#L19)
+
+***
+
+### verifySession()
 
 > **verifySession**: (`topic`, `session`) => [`Awaitable`](../type-aliases/Awaitable.md)\<`void`\>
 
 Verify that `session.data` authorizes `session.publicKey`
-to take actions on behalf of the user `${session.chain}:${session.address}`
+to take actions on behalf of the user `session.did`
 
 #### Parameters
 
@@ -102,9 +183,9 @@ to take actions on behalf of the user `${session.chain}:${session.address}`
 
 [`Awaitable`](../type-aliases/Awaitable.md)\<`void`\>
 
-#### Source
+#### Defined in
 
-[SessionSigner.ts:33](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/interfaces/src/SessionSigner.ts#L33)
+[SessionSigner.ts:39](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/interfaces/src/SessionSigner.ts#L39)
 
 ## Methods
 
@@ -120,28 +201,6 @@ to take actions on behalf of the user `${session.chain}:${session.address}`
 
 [`Awaitable`](../type-aliases/Awaitable.md)\<`void`\>
 
-#### Source
+#### Defined in
 
-[SessionSigner.ts:35](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/interfaces/src/SessionSigner.ts#L35)
-
-***
-
-### sign()
-
-> **sign**(`value`): [`Signature`](../type-aliases/Signature.md)
-
-#### Parameters
-
-• **value**: [`Message`](../type-aliases/Message.md)\<[`Action`](../type-aliases/Action.md) \| [`Session`](../type-aliases/Session.md)\<`AuthorizationData`\>\>
-
-#### Returns
-
-[`Signature`](../type-aliases/Signature.md)
-
-#### Inherited from
-
-[`Signer`](Signer.md).[`sign`](Signer.md#sign)
-
-#### Source
-
-[Signer.ts:4](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/interfaces/src/Signer.ts#L4)
+[SessionSigner.ts:41](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/interfaces/src/SessionSigner.ts#L41)

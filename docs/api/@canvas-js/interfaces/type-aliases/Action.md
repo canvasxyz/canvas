@@ -1,37 +1,41 @@
-[Documentation](../../../index.md) / [@canvas-js/interfaces](../index.md) / Action
+[Documentation](../../../packages.md) / [@canvas-js/interfaces](../index.md) / Action
 
-# Type alias: Action
+# Type Alias: Action
 
-> **Action**: `Object`
+> **Action**: `object`
 
 ## Type declaration
-
-### address
-
-> **address**: `string`
-
-DID or CAIP-2 address (e.g. "eip155:1:0xb94d27...")
 
 ### args
 
 > **args**: `any`
 
-### blockhash
+### context
 
-> **blockhash**: `string` \| `null`
+> **context**: `object`
+
+### context.blockhash?
+
+> `optional` **context.blockhash**: `string`
+
+### context.timestamp
+
+> **context.timestamp**: `number`
+
+### did
+
+> **did**: \`did:$\{string\}\`
+
+DID of the user that authorized the session (e.g. "did:pkh:eip155:1:0xb94d27...")
 
 ### name
 
 > **name**: `string`
 
-### timestamp
-
-> **timestamp**: `number`
-
 ### type
 
 > **type**: `"action"`
 
-## Source
+## Defined in
 
-[Action.ts:1](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/interfaces/src/Action.ts#L1)
+[Action.ts:1](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/interfaces/src/Action.ts#L1)

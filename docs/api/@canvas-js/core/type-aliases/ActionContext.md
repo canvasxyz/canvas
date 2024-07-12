@@ -1,8 +1,8 @@
-[Documentation](../../../index.md) / [@canvas-js/core](../index.md) / ActionContext
+[Documentation](../../../packages.md) / [@canvas-js/core](../index.md) / ActionContext
 
-# Type alias: ActionContext
+# Type Alias: ActionContext
 
-> **ActionContext**: `Object`
+> **ActionContext**: `object`
 
 ## Type declaration
 
@@ -13,6 +13,10 @@
 ### blockhash
 
 > **blockhash**: `string` \| `null`
+
+### did
+
+> **did**: `string`
 
 ### id
 
@@ -26,6 +30,6 @@
 
 > **timestamp**: `number`
 
-## Source
+## Defined in
 
-[packages/core/src/types.ts:31](https://github.com/canvasxyz/canvas/blob/4c6b729f/packages/core/src/types.ts#L31)
+[packages/core/src/types.ts:28](https://github.com/canvasxyz/canvas/blob/62d177fb446565afa753f83091e84331fbd47245/packages/core/src/types.ts#L28)
