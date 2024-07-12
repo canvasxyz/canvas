@@ -1,12 +1,15 @@
 {
 	"name": "@canvas-js/core",
-	"version": "0.10.0-beta.4",
+	"version": "0.10.0",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"type": "module",
 	"engines": {
 		"node": ">=18.0.0"
 	},
-	"files": ["lib", "types"],
+	"files": [
+		"lib",
+		"types"
+	],
 	"main": "./lib/index.js",
 	"types": "./lib/index.d.ts",
 	"exports": {
@@ -25,16 +28,16 @@
 		"test": "ava"
 	},
 	"dependencies": {
-		"@canvas-js/chain-ethereum": "0.10.0-beta.4",
-		"@canvas-js/gossiplog": "0.10.0-beta.4",
-		"@canvas-js/interfaces": "0.10.0-beta.4",
-		"@canvas-js/modeldb": "0.10.0-beta.4",
-		"@canvas-js/modeldb-idb": "0.10.0-beta.4",
-		"@canvas-js/modeldb-pg": "0.10.0-beta.4",
-		"@canvas-js/modeldb-sqlite": "0.10.0-beta.4",
-		"@canvas-js/signatures": "0.10.0-beta.4",
-		"@canvas-js/utils": "0.10.0-beta.4",
-		"@canvas-js/vm": "0.10.0-beta.4",
+		"@canvas-js/chain-ethereum": "0.10.0",
+		"@canvas-js/gossiplog": "0.10.0",
+		"@canvas-js/interfaces": "0.10.0",
+		"@canvas-js/modeldb": "0.10.0",
+		"@canvas-js/modeldb-idb": "0.10.0",
+		"@canvas-js/modeldb-pg": "0.10.0",
+		"@canvas-js/modeldb-sqlite": "0.10.0",
+		"@canvas-js/signatures": "0.10.0",
+		"@canvas-js/utils": "0.10.0",
+		"@canvas-js/vm": "0.10.0",
 		"@chainsafe/libp2p-gossipsub": "^13.1.0",
 		"@ipld/dag-cbor": "^9.2.1",
 		"@ipld/dag-json": "^10.2.2",
