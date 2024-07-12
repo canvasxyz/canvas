@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 import React, { useCallback, useContext, useEffect, useState } from "react"
 
 import { connect as nearConnect, keyStores, WalletConnection } from "near-api-js"

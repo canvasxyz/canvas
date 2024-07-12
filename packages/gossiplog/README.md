@@ -2,7 +2,7 @@
 
 GossipLog is a decentralized, authenticated, multi-writer log designed to serve as a **general-purpose foundation for peer-to-peer applications**. It can be used as a simple replicated data store, the transaction log of a database, or the execution log of a full-fledged VM.
 
-GossipLog can run in the browser using IndexedDB for persistence, on NodeJS using LMDB, or entirely in-memory.
+GossipLog can run in the browser using IndexedDB for persistence, on NodeJS using SQLite + LMDB, or entirely in-memory.
 
 ## Table of contents
 
@@ -17,7 +17,6 @@ GossipLog can run in the browser using IndexedDB for persistence, on NodeJS usin
   - [Appending new messagse](#appending-new-messages)
   - [Inserting existing messages](#inserting-existing-messages)
   - [Syncing with other peers](#syncing-with-other-peers)
-  - [Indexing ancestors](#indexing-ancestors)
   - [Advanced authentication use cases](#advanced-authentication-use-cases)
 - [API](#api)
 
@@ -53,37 +52,40 @@ type Message<Payload = unknown> = {
 
 Similar to Git commits, every message has zero or more parent messages, giving the log a graph structure.
 
+![](https://github.com/canvasxyz/canvas/blob/069aeecdcd7fdcdb2a012efd79ee9eb4a1215516/packages/gossiplog/Component%201.png)
+
 We can derive a logical clock value for each message from its depth in the graph, or, equivalently, by incrementing the maximum clock value of its direct parents. When a peer appends a new payload value to its local replica, it creates a message with all of its current "heads" (messages without children) as parents, and incrementing the clock.
 
 ### Message signatures
 
-GossipLog requires every message to be signed with a [`@canvas-js/signed-cid`](https://github.com/canvasxyz/canvas/tree/main/packages/signed-cid) signature.
+GossipLog requires every message to be signed with a `Signature` object.
 
 ```ts
 type Signature = {
+  codec: string /** "dag-cbor" | "dag-json" */
   publicKey: string /** did:key URI */
   signature: Uint8Array
-  cid: CID
 }
 ```
 
-The `cid` in a message signature is the CID of the `Message` object using the `dag-cbor` codec and `sha2-256` multihash digest. The `signature` signs the raw bytes of the CID (`cid.bytes`); the `Signature` object carries all the relevant contextual data including the signature type and the public key. Most GossipLog methods pass signatures alongside messages using tuple types like `[signature: Signature, message: Message<Payload>]`.
+The `codec` identifies how the message was serialized to bytes for signing. `dag-cbor` and `dag-json` are the two codecs supported by default. Only Ed25519 did:key URIs are supported by default. These can be extended by providing a custom signer implementation and providing a custom `verifySignature` method to the init object.
 
 ### Message signers
 
-Although it's possible to create and sign messages manually, the simplest way to use GossipLog is to use one of the signer classes exported from `@canvas-js/signed-cid`.
+Although it's possible to create and sign messages manually, the simplest way to use GossipLog is to use the `ed25519` signature scheme exported from `@canvas-js/signatures`.
 
 ```ts
-import { Ed25519Signer, Secp256k1Signer } from "@canvas-js/signed-cid"
+import { ed25519 } from "@canvas-js/signatures"
 
-const signer = new Ed25519Signer()
+const signer = ed25519.create()
+// or ed25519.create({ type: "ed25519", privateKey: Uint8Array([ ... ]) })
 ```
 
-Once you have a signer, you can add it `GossipLogInit` to use it by default for all appends, or pass a specific signer into each call to `append` individually.
+Once you have a signer, you can add it to `GossipLogInit` to use it by default for all appends, or pass a specific signer into each call to `append` individually.
 
 ```ts
-const signerA = new Ed25519Signer()
-const signerB = new Secp256k1Signer()
+const signerA = ed25519.create()
+const signerB = ed25519.create()
 
 const log = await GossipLog.init({ ...init, signer: signerA })
 
@@ -96,25 +98,37 @@ await log.append({ ...payload }, { signer: signerB })
 
 ### Message IDs
 
-Message IDs begin with the message clock, encoded as a **reverse** unsigned varint, followed by the sha2-256 hash of the serialized signed message, and truncated to 20 bytes total. These are encoded using the [`base32hex`](https://www.rfc-editor.org/rfc/rfc4648#section-7) alphabet to get 32-character string IDs, like `054ki1oubq8airsc9d8sbg0t7itqbdlf`.
+Message IDs begin with the message clock, followed by the sha2-256 hash of the serialized signed message, and truncated to 20 bytes total. These are encoded using the [`base32hex`](https://www.rfc-editor.org/rfc/rfc4648#section-7) alphabet to get 32-character string IDs, like `054ki1oubq8airsc9d8sbg0t7itqbdlf`.
 
-"Reverse unsigned varint" is similar to the [multiformats varint format](https://github.com/multiformats/unsigned-varint), which encodes integers in sets of 7 bits using the highest bit as a continuation bit, except here the sets are ordered most-signficiant to least-significant.
+The message clock is encoded using a special variable-length format designed to preseve sorting order (ie message IDs sort lexicographically according to their clock values).
+
+Clock values less than 128 are encoded as-is in a single byte.
+
+For clock values larger than 128, the variable-length begins with a unary representation (in bits) of the number of additional *bytes* (not bits) used to represent the clock value, followed by a `0` separator bit, followed by the binary clock value padded on the left.
 
 ```
-| value | value (binary)    | encoded bytes (binary) | encoded bytes (hex) |
-| ----- | ----------------- | ---------------------- | ------------------- |
-| 0     | 00000000          | 00000000               | 0x00                |
-| 1     | 00000001          | 00000001               | 0x01                |
-| 127   | 01111111          | 01111111               | 0x7f                |
-| 128   | 10000000          | 10000001 00000000      | 0x8100              |
-| 255   | 11111111          | 10000001 01111111      | 0x817f              |
-| 256   | 00000001 00000000 | 10000010 00000000      | 0x8200              |
-| 1234  | 00000100 11010010 | 10001001 01010010      | 0x8952              |
+| input   | input (binary)             | output (binary)            | output (hex)  |
+| ------- | -------------------------- | -------------------------- | ------------- |
+| 0       | 00000000                   | 00000000                   | 0x00          |
+| 1       | 00000001                   | 00000001                   | 0x01          |
+| 2       | 00000002                   | 00000010                   | 0x02          |
+| 127     | 01111111                   | 01111111                   | 0x7f          |
+| 128     | 10000000                   | 10000000 10000000          | 0x8080        |
+| 129     | 10000001                   | 10000000 10000001          | 0x8081        |
+| 255     | 11111111                   | 10000000 11111111          | 0x80ff        |
+| 256     | 00000001 00000000          | 10000001 00000000          | 0x8100        |
+| 1234    | 00000100 11010010          | 10000100 11010010          | 0x84d2        |
+| 16383   | 00111111 11111111          | 10111111 11111111          | 0xbfff        |
+| 16384   | 01000000 00000000          | 11000000 01000000 00000000 | 0xc04000      |
+| 87381   | 00000001 01010101 01010101 | 11000001 01010101 01010101 | 0xc15555      |
+| 1398101 | 00010101 01010101 01010101 | 11010101 01010101 01010101 | 0xd55555      |
 ```
 
-The rationale is that prefixing message IDs with a _lexicographically sortable_ logical clock has many useful consquences. Regular Protobuf-style unsigned varints don't sort the same as their decoded values.
+For example, consider the clock value 87381. The encoded output begins with `110` to indicate that two additional bytes are used to encode the clock. Then, the remaining bits `00001 01010101 01010101` are decoded as the clock value.
 
-The upshot is that these string emssage IDs can be sorted directly using the normal JavaScript string comparison to get a total order over messages that respects both logical clock order and transitive dependency order. For example, implementing a last-write-wins register for message effects is as simple as caching and comparing message ID strings.
+The rationale here is that prefixing message IDs with a _lexicographically sortable_ logical clock has many useful consquences. Regular Protobuf-style unsigned varints don't sort the same as their decoded values.
+
+The upshot is that these string message IDs can be sorted directly using the normal JavaScript string comparison to get a total order over messages that respects both logical clock order and transitive dependency order. For example, implementing a last-write-wins register for message effects is as simple as caching and comparing message ID strings.
 
 ## Usage
 
@@ -147,19 +161,18 @@ All three are configured with the same `init` object:
 ```ts
 import type { Signature, Signer, Message } from "@canvas-js/interfaces"
 
-interface GossipLogInit<Payload = unknown, Result = void> {
+interface GossipLogInit<Payload = unknown> {
   topic: string
-  apply: (id: string, signature: Signature, message: Message<Payload>) => Result | Promise<Result>
+  apply: (id: string, signature: Signature, message: Message<Payload>) => Awaitable<void>
   validate: (payload: unknown) => payload is Payload
 
-  signer?: Signer<Message<Payload>>>
-  indexAncestors?: boolean
+  signer?: Signer<Payload>
 }
 ```
 
 The `topic` is the global topic string identifying the log - we recommend using NSIDs like `com.example.my-app`. Topics must match `/^[a-zA-Z0-9\.\-]+$/`.
 
-Logs are generic in two parameters, `Payload` and `Result`. You must provide a `validate` method as a TypeScript type predicate that synchronously validates an `unknown` value as a `Payload` (it is only guaranteed to be an IPLD data model value). Only use `validate` for type/schema validation, not for authentication or authorization.
+Logs are generic in a `Payload` parameter. You must provide a `validate` method as a TypeScript type predicate that synchronously validates an `unknown` value as a `Payload` (it is only guaranteed to be an IPLD data model value). Only use `validate` for type/schema validation, not for authentication or authorization.
 
 The `apply` function is the main attraction. It is invoked once\* for every message, both for messages appended locally and for messages received from other peers. It is called with the message ID, the signature, and the message itself. If `apply` throws an error, then the message will be discarded and not persisted.
 
@@ -180,7 +193,6 @@ Payloads may require additional application-specific validation beyond what is c
 #### Optional configuration values
 
 - `replay` (default `false`): upon initializing, iterate over all existing messages and invoke the `apply` function for them all
-- `indexAncestors` (default `false`): enable [ancestor indexing](#indexing-ancestors)
 
 \* `apply` is invoked with **at least once** semantics: in rare cases where transactions to the underlying storage layer fail to commit, `apply` might be invoked more than once with the same message. Messages will **never** be persisted without a successful call to `apply`.
 
@@ -194,11 +206,11 @@ Calling `append` executes the following steps:
 2. Look up the current `parents: string[]` and `clock: number` to create the message object `{ topic, clock, parents, payload }`.
 3. Sign the message using the provided `signer` to get a `signature: Signature`.
 4. Serialize the signed message and compute its message ID.
-5. Call `apply(id, signature, message)` and save its return value as `result`. If `apply` throws, abort the transaction and re-throw the error.
+5. Call `apply(id, signature, message)`. If if throws, abort the transaction and re-throw the error.
 6. Write the serialized signed message to the database, using the message ID as the key.
    - If there are messages in the mempool waiting on this message, apply them and save them to the database as well
 7. Commit the transaction.
-8. Return `{ id, signature, message, result }`.
+8. Return `{ id, signature, message }`.
 
 In a peer-to-peer context, the `signature` and `message` can be sent to other peers, who can insert them directly using `gossipLog.insert`.
 
@@ -211,7 +223,7 @@ Given an existing `signature: Signature` and `message: Message<Payload>` - such 
 3. Serialize the signed message and compute its message ID.
 4. Verify that all of the message's parents already exist in the database.
    - If not, add the signed message to the mempool, abort the transaction, and return `{ id }`.
-5. Call `apply(id, signature, message)` and save its return value as `result`. If `apply` throws, abort the transaction and re-throw the error.
+5. Call `apply(id, signature, message)`. If it throws, abort the transaction and re-throw the error.
 6. Write the serialized signed message to the database, using the message ID as the key.
    - If there are messages in the mempool waiting on this message, apply them and save them to the database as well.
 7. Commit the transaction.
@@ -220,56 +232,6 @@ Given an existing `signature: Signature` and `message: Message<Payload>` - such 
 ### Syncing with other peers
 
 TODO
-
-### Indexing ancestors
-
-If `init.indexAncestors` is `true`, GossipLog will maintain an additional "ancestor index" that allows users to look up transitive ancestors of any message at an arbitrary clock in the message's past.
-
-In the example below, `await gossiplog.getAncestors(l, 6)` would return `[h, i]`, while `await gossiplog.getAncestors(k, 6)` would only return `[i]`. The dotted arrows depict the exponential decay links in the ancestor index.
-
-```
-   ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┬ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┬ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
-                                                                                              │
-   │                                                   │                         │                         │
-   ▼                                                   ▼                         ▼            ▼
-                                                                                                           │
-                                          ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┬ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
-                                                                                 │                         │
-                                          │                         │                         │
-                                          ▼                         ▼            ▼                         │
-                                                                                              │
-                                       ┌─────┐      ┌─────┐      ┌─────┐                                   │
-                                   ┌───│  d  │◀─────│  f  │◀─────│  h  │◀──────────────┐      │
-                                   │   └─────┘      └─────┘      └─────┘               │                   │
-┌─────┐      ┌─────┐      ┌─────┐  │                                                   │      │         ┌─────┐
-│  a  │◀─────│  b  │◀─────│  c  │◀─┤                                                   └────────────┬───│  l  │
-└─────┘      └─────┘      └─────┘  │                                                          │     │   └─────┘
-                                   │   ┌─────┐      ┌─────┐      ┌─────┐      ┌─────┐      ┌─────┐  │
-                                   └───│  e  │◀─────│  g  │◀─────│  i  │◀─────│  j  │◀─────│  k  │◀─┘
-                                       └─────┘      └─────┘      └─────┘      └─────┘      └─────┘
-
-
-   1            2            3            4            5            6            7            8            9
-
-                                                       │            │            │
-
-   ▲                         ▲            ▲            │            │            │
-   │                         │
-                                          │            │            │            │
-   └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┴ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
-                                                                    │            │
-
-                ▲                         ▲            ▲            │            │
-                │                         │
-                                                       │            │            │
-                └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┴ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
-                                                                                 │
-
-                             ▲                         ▲            ▲            │
-                             │                         │
-                                                                    │            │
-                             └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┴ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
-```
 
 ### Advanced authentication use cases
 
@@ -284,32 +246,31 @@ Topics must match `/^[a-zA-Z0-9\.\-]+$/`.
 ```ts
 import type { Signature, Signer Message, Awaitable } from "@canvas-js/interfaces"
 
-interface GossipLogInit<Payload = unknown, Result = void> {
+interface GossipLogInit<Payload = unknown> {
   topic: string
-  apply: (id: string, signature: Signature, message: Message<Payload>) => Awaitable<Result>
+  apply: (id: string, signature: Signature, message: Message<Payload>) => Awaitable<void>
   validate: (payload: unknown) => payload is Payload
 
-  signer?: Signer<Message<Payload>>
+  signer?: Signer<Payload>
   replay?: boolean
-  indexAncestors?: boolean
 }
 
-type GossipLogEvents<Payload, Result> = {
-  message: CustomEvent<{ id: string; signature: Signature; message: Message<Payload>; result: Result }>
+type GossipLogEvents<Payload> = {
+  message: CustomEvent<{ id: string; signature: Signature; message: Message<Payload> }>
   commit: CustomEvent<{ root: Node }>
   sync: CustomEvent<{ peerId: PeerId }>
 }
 
-interface AbstractGossipLog<Payload = unknown, Result = unknown>
-  extends EventEmitter<GossipLogEvents<Payload, Result>> {
+interface AbstractGossipLog<Payload = unknown>
+  extends EventEmitter<GossipLogEvents<Payload>> {
   readonly topic: string
 
   public close(): Promise<void>
 
   public append(
     payload: Payload,
-    options?: { signer?: Signer<Message<Payload>> }
-  ): Promise<{ id: string; signature: Signature; message: Message<Payload>; result: Result }>
+    options?: { signer?: Signer<Payload> }
+  ): Promise<{ id: string; signature: Signature; message: Message<Payload> }>
 
   public insert(signature: Signature, message: Message<Payload>): Promise<{ id: string }>
 
@@ -326,8 +287,6 @@ interface AbstractGossipLog<Payload = unknown, Result = unknown>
   ): AsyncIterable<[id: string, signature: Signature, message: Message<Payload>]>
 
   public getClock(): Promise<[clock: number, parents: string[]]>
-
-  public getAncestors(id: string, ancestorClock: number): Promise<string[]>
 
   public replay(): Promise<void>
 }

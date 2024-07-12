@@ -4,32 +4,26 @@ Contracts for onchain verification of Canvas messages created by the `EIP712Sign
 
 ### Usage
 
-See `contracts/Contract_Test.sol` and `tests/Contract_Test.ts`.
+TODO
 
-### API
+### How it works
 
-- `library CID`: Utilities.
-  - `createDigest` Creates a concatenated \<code>\<digest> bytearray.
-  - `encodeCID` Creates a concatenated \<version>\<code>\<multihash> bytearray.
-- `library EIP712_Canvas`
-  - `verifySession`: Verify that the user's wallet authorized a Canvas session.
-  - `verifyActionMessage` Verify that the user's Canvas session authorized an action to be added to the offchain log.
-  - `verifySessionMessage`: Verify that the user's Canvas session authorized a message to add itself to the offchain log.
-- `contract CID_Test`: Exports CID functions for use in the test suite.
-- `contract EIP712_Canvas_Test`: Exports EIP712 Canvas functions for use in the test suite.
+Canvas is a CRDT/causal-graph environment where all operations are
+represented on a log.
 
-### Note on session message verification
+Every log entry is a signed `[Message<Action | Session>, Signature]`
+tuple.
 
-Canvas is a *causal-log-native* runtime; session authorization messages
-are signed with their own session key, before they are added to the log.
-This allows Sessions and Actions to have a uniform interface in the log.
+For example, a `Session` authorizes a new session key (did:key) and is
+serialized as a `Message<Session>`, which is then signed by the
+did:key that was authorized to create a `Signature`.
 
-Applications that aren't strictly mirroring the log can skip verification
-that the session message was signed, if onchain actions do not need to be
-mirrorable back to the log. 
+To exhaustively verify that a message was correctly signed to be
+appended to the log, you should verify that:
 
-Do not do this if the onchain record is intended as a source of truth,
-including if it maybe necessary to replicate the onchain log back offchain
-in the future. Otherwise, the full history of actions submitted onchain
-cannot be replicated offchain.
-
+- A session key (e.g. did:key) was authorized by a user (e.g. did:pkh:eip155:1:0x123...)
+  in a `Session`. Sessions are verified using logic in the EIP712 signer.
+- That authorization message was signed by the did:key it authoriaed, i.e. there exists a
+  `Signature` corresponding to the session wrapped as a message `Message<Session>`.
+- An action message was also signed by that did:key, i.e. there exists a valid
+  `Signature` corresponding to the user's action wrapped as a message `Message<Action>`.

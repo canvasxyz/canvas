@@ -4,6 +4,7 @@ import type { Window as KeplrWindow } from "@keplr-wallet/types"
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
 
 import { AppContext } from "../AppContext.js"
+import { fromBech32 } from "@cosmjs/encoding"
 
 declare global {
 	// eslint-disable-next-line @typescript-eslint/no-empty-interface
@@ -33,20 +34,25 @@ export const ConnectCosmosKeplr: React.FC<ConnectCosmosKeplrProps> = ({ chainId 
 		const offlineSigner = await keplr.getOfflineSignerAuto(chainId)
 		const accounts = await offlineSigner.getAccounts()
 		const address = accounts[0].address
+		const { prefix: bech32Prefix } = fromBech32(address)
 
 		setAddress(address)
 		setSessionSigner(
 			new CosmosSigner({
+				bech32Prefix,
 				signer: {
 					type: "amino",
-					signAmino: keplr.signAmino,
+					signAmino: async (chainId, signer, signDoc) => {
+						console.log("signAmino", chainId, signer, signDoc)
+						return keplr.signAmino(chainId, signer, signDoc)
+					},
 					getAddress: async () => address,
 					getChainId: async () => chainId,
 				},
-			})
+			}),
 		)
 		setThisIsConnected(true)
-	}, [])
+	}, [chainId])
 
 	const disconnect = useCallback(async () => {
 		setAddress(null)

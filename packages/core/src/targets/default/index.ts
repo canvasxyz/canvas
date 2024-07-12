@@ -1,21 +1,17 @@
-import type { Libp2p } from "libp2p"
-import type { PeerId } from "@libp2p/interface"
-import type { GossipLogInit } from "@canvas-js/gossiplog"
-import type { PlatformTarget, ServiceMap } from "../interface.js"
+import type { PlatformTarget } from "../interface.js"
 
-export default {
-	async openDB(location, models, { indexHistory } = {}) {
+const target: PlatformTarget = {
+	async openDB(location, models) {
 		throw new Error("Unsupported platform")
 	},
 
-	async openGossipLog<Payload, Result>(
-		location: { path: string | null; topic: string },
-		init: GossipLogInit<Payload, Result>,
-	) {
+	async openGossipLog(location, init) {
 		throw new Error("Unsupported platform")
 	},
 
-	async createLibp2p(location: { topic: string; path: string | null }, options): Promise<Libp2p<ServiceMap>> {
+	async createLibp2p(config, messageLog) {
 		throw new Error("Unsupported platform")
 	},
-} satisfies PlatformTarget
+}
+
+export default target

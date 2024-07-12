@@ -1,19 +1,19 @@
 {
-  "include": ["src", "types"],
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "module": "Node16",
-    "moduleResolution": "Node16",
-    "rootDir": "src",
-    "outDir": "lib"
-  },
-  "references": [
-    { "path": "../chain-ethereum" },
-    { "path": "../signed-cid" },
-    { "path": "../interfaces" },
-    { "path": "../modeldb" },
-    { "path": "../gossiplog" },
-    { "path": "../vm" },
-    { "path": "../discovery" }
-  ]
+	"extends": "../../tsconfig.base.json",
+	"include": ["src", "types"],
+	"compilerOptions": {
+		"rootDir": "src",
+		"outDir": "lib"
+	},
+	"references": [
+		{ "path": "../chain-ethereum" },
+		{ "path": "../interfaces" },
+		{ "path": "../signatures" },
+		{ "path": "../modeldb" },
+		{ "path": "../modeldb-idb" },
+		{ "path": "../modeldb-pg" },
+		{ "path": "../modeldb-sqlite" },
+		{ "path": "../gossiplog" },
+		{ "path": "../vm" }
+	]
 }

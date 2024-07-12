@@ -1,0 +1,15 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# COPY package.json package.json
+# RUN npm install --omit-dev
+# COPY lib/dashboard/server lib/
+COPY dist/dashboard/server/index.js lib/index.mjs
+
+COPY dist/dashboard/client dist/
+COPY src/peer-browser/client/index.html dist/peer-browser/index.html
+COPY dist/peer-browser/client/index.js dist/peer-browser/index.js
+
+ENTRYPOINT ["node"]
+CMD ["lib/index.mjs"]

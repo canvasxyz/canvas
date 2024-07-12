@@ -2,9 +2,55 @@ import { nanoid } from "nanoid"
 
 import { testOnModelDB } from "./utils.js"
 
+testOnModelDB("get fields of all types", async (t, openDB) => {
+	const db = await openDB(t, {
+		foo: {
+			id: "primary",
+			exampleStr: "string",
+			exampleBool: "boolean",
+			exampleInt: "integer",
+			exampleFloat: "float",
+			exampleJson: "json",
+			exampleBytes: "bytes",
+		},
+	})
+
+	const id = nanoid()
+
+	const jsonValue = { foo: "a", bar: "b", qux: null, baz: 0.3 }
+	await db.set("foo", {
+		id,
+		exampleStr: "hello world",
+		exampleBool: true,
+		exampleInt: -1,
+		exampleFloat: 0.1,
+		exampleJson: jsonValue,
+		exampleBytes: new Uint8Array([0, 255]),
+	})
+
+	const result = await db.get("foo", id)
+
+	t.deepEqual(result, {
+		id,
+		exampleStr: "hello world",
+		exampleBool: true,
+		exampleInt: -1,
+		exampleFloat: 0.1,
+		exampleJson: jsonValue,
+		exampleBytes: new Uint8Array([0, 255]),
+	})
+
+	// assumes stable serialization
+	t.deepEqual(jsonValue, { foo: "a", bar: "b", qux: null, baz: 0.3 })
+})
+
 testOnModelDB("update a value", async (t, openDB) => {
-	const db = await openDB({
-		user: { id: "primary", name: "string", isModerator: "boolean" },
+	const db = await openDB(t, {
+		user: {
+			id: "primary",
+			name: "string",
+			isModerator: "boolean",
+		},
 	})
 
 	const id = nanoid()
@@ -15,7 +61,7 @@ testOnModelDB("update a value", async (t, openDB) => {
 })
 
 testOnModelDB("delete a value ", async (t, openDB) => {
-	const db = await openDB({
+	const db = await openDB(t, {
 		user: { id: "primary", name: "string" },
 	})
 
@@ -23,6 +69,10 @@ testOnModelDB("delete a value ", async (t, openDB) => {
 
 	await db.set("user", { id, name: "John" })
 	t.is(await db.count("user"), 1)
+
+	await db.delete("user", id)
+	t.is(await db.get("user", id), null)
+	t.is(await db.count("user"), 0)
 
 	await db.delete("user", id)
 	t.is(await db.get("user", id), null)

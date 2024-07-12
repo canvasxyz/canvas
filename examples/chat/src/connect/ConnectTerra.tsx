@@ -1,12 +1,16 @@
 import React, { useCallback, useContext, useState } from "react"
-
-import { Extension } from "@terra-money/feather.js"
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
+import { fromBech32, toBase64 } from "@cosmjs/encoding"
 
 import { AppContext } from "../AppContext.js"
-import { Buffer } from "buffer"
 
 export interface ConnectTerraProps {}
+
+declare global {
+	interface Window {
+		station?: any
+	}
+}
 
 export const ConnectTerra: React.FC<ConnectTerraProps> = ({}) => {
 	const { app, sessionSigner, setSessionSigner, address, setAddress } = useContext(AppContext)
@@ -17,41 +21,26 @@ export const ConnectTerra: React.FC<ConnectTerraProps> = ({}) => {
 	const [error, setError] = useState<Error | null>(null)
 
 	const connect = useCallback(async () => {
-		const extension = new Extension()
+		const accountData = await window.station.connect()
 
-		const accountData = await new Promise<{ address: string; network: string }>((resolve) => {
-			extension.once("onConnect", ({ address, network }) => resolve({ address, network }))
-			extension.connect()
-		}).catch((error) => {
-			console.log(error)
-			console.error(`Failed to enable Station ${error.message}`)
-		})
 		if (!accountData) {
 			setError(new Error("address not found"))
 			return
 		}
 
-		setAddress(accountData.address)
+		const accountAddr = accountData?.address
+		const { prefix: bech32Prefix } = fromBech32(accountAddr)
+		setAddress(accountAddr)
 		setSessionSigner(
 			new CosmosSigner({
+				bech32Prefix,
 				signer: {
 					type: "bytes",
 					getAddress: async () => accountData.address,
 					getChainId: async () => accountData.network,
-					signBytes: async (signBytes: Uint8Array) =>
-						new Promise((resolve, reject) => {
-							extension.on("onSign", (payload) => {
-								if (payload.result?.signature) resolve(payload.result)
-								else reject(new Error("no signature"))
-							})
-							try {
-								extension.signBytes({ bytes: Buffer.from(signBytes) })
-							} catch (error) {
-								reject(error)
-							}
-						}),
+					signBytes: (message) => window.station.signBytes(toBase64(message)),
 				},
-			})
+			}),
 		)
 		setThisIsConnected(true)
 	}, [address])

@@ -1,39 +1,11 @@
+import { signalInvalidType } from "@canvas-js/utils"
+
 import type { Model, ModelValue, Property, PropertyValue } from "./types.js"
 
 export type Awaitable<T> = T | Promise<T>
 
 // eslint-disable-next-line no-useless-escape
 export const namePattern = /^[a-zA-Z0-9$:_\-\.]+$/
-
-export function assert(condition: boolean, message?: string): asserts condition {
-	if (!condition) {
-		throw new Error(message ?? `assertion failed`)
-	}
-}
-
-export function signalInvalidType(type: never): never {
-	console.error(type)
-	throw new TypeError("internal error: invalid type")
-}
-
-export const mapEntries = <K extends string, S, T>(object: Record<K, S>, map: (entry: [key: K, value: S]) => T) =>
-	Object.fromEntries(Object.entries<S>(object).map(([key, value]) => [key, map([key as K, value])])) as Record<K, T>
-
-export const mapKeys = <K extends string, S, T>(object: Record<K, S>, map: (key: K) => T) =>
-	Object.fromEntries(Object.entries<S>(object).map(([key, value]) => [key, map(key as K)])) as Record<K, T>
-
-export const mapValues = <K extends string, S, T>(object: Record<K, S>, map: (value: S) => T) =>
-	Object.fromEntries(Object.entries<S>(object).map(([key, value]) => [key, map(value)])) as Record<K, T>
-
-export function zip<A, B>(a: A[], b: B[]): [A, B][] {
-	assert(a.length === b.length, "cannot zip arrays of different sizes")
-	const result = new Array(a.length)
-	for (let i = 0; i < a.length; i++) {
-		result[i] = [a[i], b[i]]
-	}
-
-	return result
-}
 
 export function validateModelValue(model: Model, value: ModelValue) {
 	for (const property of model.properties) {
@@ -48,42 +20,51 @@ export function validateModelValue(model: Model, value: ModelValue) {
 export function validatePropertyValue(modelName: string, property: Property, value: PropertyValue) {
 	if (property.kind === "primary") {
 		if (typeof value !== "string") {
-			throw new TypeError(`${modelName}/${property.name} must be a string`)
+			throw new TypeError(`write to db.${modelName}.${property.name}: expected a string, received a ${typeof value}`)
 		}
 	} else if (property.kind === "primitive") {
 		if (property.optional && value === null) {
 			return
 		} else if (property.type === "integer") {
-			if (typeof value !== "number" || !Number.isSafeInteger(value)) {
-				throw new TypeError(`${modelName}/${property.name} must be an integer`)
+			if (typeof value !== "number") {
+				throw new TypeError(
+					`write to db.${modelName}.${property.name}: expected an integer, received a ${typeof value}`,
+				)
+			} else if (!Number.isSafeInteger(value)) {
+				throw new TypeError(`write to db.${modelName}.${property.name}: must be a valid Number.isSafeInteger()`)
 			}
 		} else if (property.type === "float") {
 			if (typeof value !== "number") {
-				throw new TypeError(`${modelName}/${property.name} must be a number`)
+				throw new TypeError(`write to db.${modelName}.${property.name}: expected a number, received a ${typeof value}`)
 			}
 		} else if (property.type === "string") {
 			if (typeof value !== "string") {
-				throw new TypeError(`${modelName}/${property.name} must be a string`)
+				throw new TypeError(`write to db.${modelName}.${property.name}: expected a string, received a ${typeof value}`)
 			}
 		} else if (property.type === "bytes") {
 			if (value instanceof Uint8Array) {
 				return
 			} else {
-				throw new TypeError(`${modelName}/${property.name} must be a Uint8Array`)
+				throw new TypeError(
+					`write to db.${modelName}.${property.name}: expected a Uint8Array, received a ${typeof value}`,
+				)
 			}
 		} else if (property.type === "boolean") {
 			if (typeof value !== "boolean") {
-				throw new TypeError(`${modelName}/${property.name} must be a boolean`)
+				throw new TypeError(`write to db.${modelName}.${property.name}: expected a boolean, received a ${typeof value}`)
 			}
 		} else if (property.type === "json") {
 			if (value === null) {
-				throw new TypeError(`${modelName}/${property.name} must not be null`)
+				throw new TypeError(`write to db.${modelName}.${property.name}: must not be null`)
 			}
-			try {
-				JSON.stringify(value)
-			} catch (e) {
-				throw new TypeError(`${modelName}/${property.name} must be JSON-serializable`)
-			}
+
+			// TODO: validate IPLD value
+
+			// try {
+			// 	json.encode(value)
+			// } catch (e) {
+			// 	throw new TypeError(`write to db.${modelName}.${property.name}: expected an IPLD-encodable value`)
+			// }
 		} else {
 			signalInvalidType(property.type)
 		}
@@ -91,34 +72,15 @@ export function validatePropertyValue(modelName: string, property: Property, val
 		if (property.optional && value === null) {
 			return
 		} else if (typeof value !== "string") {
-			throw new TypeError(`${modelName}/${property.name} must be a string`)
+			throw new TypeError(`write to db.${modelName}.${property.name}: expected a string, received a ${typeof value}`)
 		}
 	} else if (property.kind === "relation") {
-		if (!Array.isArray(value) || value.some((value) => typeof value !== "string")) {
-			throw new TypeError(`${modelName}/${property.name} must be an array of strings`)
+		if (!Array.isArray(value)) {
+			throw new TypeError(`write to db.${modelName}.${property.name}: expected an array of strings, not an array`)
+		} else if (value.some((value) => typeof value !== "string")) {
+			throw new TypeError(`write to db.${modelName}.${property.name}: expected an array of strings`)
 		}
 	} else {
 		signalInvalidType(property)
 	}
 }
-
-// export const defaultResolver: Resolver = {
-// 	lessThan({ version: a }, { version: b }) {
-// 		if (b === null) {
-// 			return false
-// 		} else if (a === null) {
-// 			return true
-// 		}
-
-// 		let x = a.length
-// 		let y = b.length
-// 		for (let i = 0, len = Math.min(x, y); i < len; ++i) {
-// 			if (a[i] !== b[i]) {
-// 				x = a[i]
-// 				y = b[i]
-// 				break
-// 			}
-// 		}
-// 		return x < y
-// 	},
-// }

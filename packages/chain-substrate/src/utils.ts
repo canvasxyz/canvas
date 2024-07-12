@@ -6,18 +6,7 @@ import { Keyring } from "@polkadot/keyring"
 
 import type { SubstrateMessage, SubstrateSessionData } from "./types.js"
 
-export function assert(condition: boolean, message?: string): asserts condition {
-	if (!condition) {
-		throw new Error(message ?? "assertion failed")
-	}
-}
-
-export function signalInvalidType(type: never): never {
-	console.error(type)
-	throw new TypeError("internal error: invalid type")
-}
-
-export const addressPattern = /^polkadot:([a-f0-9]+):([a-zA-Za-z0-9]+)$/
+export const addressPattern = /^did:pkh:polkadot:([a-f0-9]+):([a-zA-Za-z0-9]+)$/
 
 export function parseAddress(address: string): [chain: string, walletAddress: string] {
 	const result = addressPattern.exec(address)

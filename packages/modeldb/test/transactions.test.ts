@@ -1,7 +1,7 @@
 import { collect, testOnModelDB } from "./utils.js"
 
 testOnModelDB("apply should roll back partially performed updates if it fails", async (t, openDB) => {
-	const db = await openDB({ message: { id: "primary", content: "string" } })
+	const db = await openDB(t, { message: { id: "primary", content: "string" } })
 
 	await t.throwsAsync(
 		() =>
@@ -11,7 +11,7 @@ testOnModelDB("apply should roll back partially performed updates if it fails", 
 				// invalid operation
 				{ operation: "set", model: "message", value: { id: "b", content: 1284 } },
 			]),
-		{ message: "message/content must be a string" }
+		{ message: "write to db.message.content: expected a string, received a number" },
 	)
 
 	// apply should have rolled back after the second operation failed, so the database should be empty

@@ -1,36 +1,34 @@
 import { QuickJSHandle } from "quickjs-emscripten"
 import { TypeTransformerFunction, create } from "@ipld/schema/typed.js"
 import { fromDSL } from "@ipld/schema/from-dsl.js"
+import type pg from "pg"
 
-import type { SessionSigner, SignerCache } from "@canvas-js/interfaces"
-
-import { AbstractModelDB, Model, ModelValue, ModelsInit, validateModelValue } from "@canvas-js/modeldb"
-
+import type { SignerCache } from "@canvas-js/interfaces"
+import { AbstractModelDB, ModelValue, ModelSchema, validateModelValue } from "@canvas-js/modeldb"
 import { VM } from "@canvas-js/vm"
-import { getCID } from "@canvas-js/signed-cid"
+import { assert, mapEntries } from "@canvas-js/utils"
 
 import target from "#target"
 
-import { assert, mapEntries } from "../utils.js"
-
 import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
+import { sha256 } from "@noble/hashes/sha256"
+import { bytesToHex } from "@noble/hashes/utils"
 
 export class ContractRuntime extends AbstractRuntime {
 	public static async init(
-		path: string | null,
+		path: string | pg.ConnectionConfig | null,
+		topic: string,
 		signers: SignerCache,
 		contract: string,
-		options: { runtimeMemoryLimit?: number; indexHistory?: boolean; ignoreMissingActions?: boolean } = {},
+		options: { runtimeMemoryLimit?: number } = {},
 	): Promise<ContractRuntime> {
-		const { runtimeMemoryLimit, indexHistory = true, ignoreMissingActions = false } = options
+		const { runtimeMemoryLimit } = options
 
-		const cid = getCID(contract, { codec: "raw", digest: "blake3-128" })
-		const uri = `canvas:${cid.toString()}`
+		const uri = `canvas:${bytesToHex(sha256(contract))}`
 
 		const vm = await VM.initialize({ runtimeMemoryLimit })
 
 		const {
-			topic: topicHandle,
 			models: modelsHandle,
 			actions: actionsHandle,
 			...rest
@@ -40,9 +38,6 @@ export class ContractRuntime extends AbstractRuntime {
 			console.warn(`extraneous export ${JSON.stringify(name)}`)
 			handle.dispose()
 		}
-
-		assert(topicHandle !== undefined, "missing `topic` export")
-		const topic = topicHandle.consume(vm.context.getString)
 
 		assert(actionsHandle !== undefined, "missing `actions` export")
 
@@ -73,12 +68,12 @@ export class ContractRuntime extends AbstractRuntime {
 			return apply.consume(vm.cache)
 		})
 
-		// TODO: validate that models satisfies ModelsInit
+		// TODO: validate that models satisfies ModelSchema
 		assert(modelsHandle !== undefined, "missing `models` export")
-		const modelsInit = modelsHandle.consume(vm.context.dump) as ModelsInit
+		const modelSchema = modelsHandle.consume(vm.context.dump) as ModelSchema
 
-		const db = await target.openDB({ path, topic }, AbstractRuntime.getModelSchema(modelsInit, { indexHistory }))
-		return new ContractRuntime(topic, signers, db, vm, actions, argsTransformers, indexHistory, ignoreMissingActions)
+		const db = await target.openDB({ path, topic }, AbstractRuntime.getModelSchema(modelSchema))
+		return new ContractRuntime(topic, signers, db, vm, actions, argsTransformers)
 	}
 
 	readonly #databaseAPI: QuickJSHandle
@@ -95,10 +90,8 @@ export class ContractRuntime extends AbstractRuntime {
 			string,
 			{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
 		>,
-		indexHistory: boolean,
-		ignoreMissingActions: boolean,
 	) {
-		super(indexHistory, ignoreMissingActions)
+		super()
 		this.#databaseAPI = vm
 			.wrapObject({
 				get: vm.wrapFunction((model, key) => {
@@ -142,17 +135,20 @@ export class ContractRuntime extends AbstractRuntime {
 	}
 
 	protected async execute(context: ExecutionContext): Promise<void | any> {
-		const { address, name, args, blockhash, timestamp } = context.message.payload
+		const { publicKey } = context.signature
+		const { address } = context
+		const {
+			did,
+			name,
+			args,
+			context: { blockhash, timestamp },
+		} = context.message.payload
 
 		const actionHandle = this.actions[name]
 		const argsTransformer = this.argsTransformers[name]
 
 		if (actionHandle === undefined || argsTransformer === undefined) {
-			if (this.ignoreMissingActions) {
-				return
-			} else {
-				throw new Error(`invalid action name: ${name}`)
-			}
+			throw new Error(`invalid action name: ${name}`)
 		}
 
 		const typedArgs = argsTransformer.toTyped(args)
@@ -161,7 +157,14 @@ export class ContractRuntime extends AbstractRuntime {
 		this.#context = context
 
 		const argsHandle = this.vm.wrapValue(typedArgs)
-		const ctxHandle = this.vm.wrapValue({ id: context.id, address, blockhash, timestamp })
+		const ctxHandle = this.vm.wrapValue({
+			id: context.id,
+			publicKey,
+			did,
+			address,
+			blockhash: blockhash ?? null,
+			timestamp,
+		})
 		try {
 			const result = await this.vm.callAsync(actionHandle, actionHandle, [this.#databaseAPI, argsHandle, ctxHandle])
 

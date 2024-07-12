@@ -1,0 +1,17 @@
+{
+	"extends": "../../tsconfig.base.json",
+	"include": ["src"],
+	"compilerOptions": {
+		"module": "Node16",
+		"moduleResolution": "Node16",
+		"rootDir": "src",
+		"outDir": "lib",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noFallthroughCasesInSwitch": true,
+    "resolveJsonModule": true
+	},
+	"references": [{ "path": "../../packages/core" }, { "path": "../../packages/signatures" }, { "path": "../../packages/chain-ethereum" }]
+}

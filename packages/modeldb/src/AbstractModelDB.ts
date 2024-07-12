@@ -1,8 +1,10 @@
 import { logger } from "@libp2p/logger"
 
+import { assert } from "@canvas-js/utils"
+
 import { Config, ModelValue, Effect, Model, QueryParams } from "./types.js"
 import { getFilter } from "./query.js"
-import { Awaitable, assert } from "./utils.js"
+import { Awaitable } from "./utils.js"
 
 type Subscription = {
 	model: string
@@ -18,7 +20,7 @@ export abstract class AbstractModelDB {
 	protected readonly subscriptions = new Map<number, Subscription>()
 	#subscriptionId = 0
 
-	protected constructor(public readonly config: Config, options: { indexHistory?: Record<string, boolean> } = {}) {
+	protected constructor(public readonly config: Config) {
 		this.models = {}
 		for (const model of config.models) {
 			this.models[model.name] = model
@@ -27,11 +29,11 @@ export abstract class AbstractModelDB {
 
 	abstract close(): Promise<void>
 
-	abstract get(modelName: string, key: string): Promise<ModelValue | null>
+	abstract get<T extends ModelValue<any> = ModelValue<any>>(modelName: string, key: string): Promise<T | null>
 
 	abstract iterate(modelName: string): AsyncIterable<ModelValue>
 
-	abstract query<T extends ModelValue = ModelValue>(modelName: string, query?: QueryParams): Promise<T[]>
+	abstract query<T extends ModelValue<any> = ModelValue<any>>(modelName: string, query?: QueryParams): Promise<T[]>
 
 	abstract count(modelName: string): Promise<number>
 
@@ -41,7 +43,7 @@ export abstract class AbstractModelDB {
 
 	// Model operations
 
-	public async set(modelName: string, value: ModelValue) {
+	public async set<T extends ModelValue<any> = ModelValue<any>>(modelName: string, value: T) {
 		await this.apply([{ operation: "set", model: modelName, value }])
 	}
 

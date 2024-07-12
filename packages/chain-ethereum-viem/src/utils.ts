@@ -3,17 +3,6 @@ import * as siwe from "siwe"
 
 import type { SIWESessionData, SIWEMessage } from "./types.js"
 
-export function assert(condition: boolean, message?: string): asserts condition {
-	if (!condition) {
-		throw new Error(message ?? "assertion failed")
-	}
-}
-
-export function signalInvalidType(type: never): never {
-	console.error(type)
-	throw new TypeError("internal error: invalid type")
-}
-
 export function validateSessionData(authorizationData: unknown): authorizationData is SIWESessionData {
 	if (authorizationData === undefined || authorizationData === null) {
 		return false
@@ -47,10 +36,11 @@ export function prepareSIWEMessage(message: SIWEMessage): string {
 		chainId: message.chainId,
 		issuedAt: message.issuedAt,
 		expirationTime: message.expirationTime ?? undefined,
+		resources: message.resources,
 	}).prepareMessage()
 }
 
-export const addressPattern = /^eip155:(\d+):(0x[A-Fa-f0-9]+)$/
+export const addressPattern = /^did:pkh:eip155:(\d+):(0x[A-Fa-f0-9]+)$/
 
 export function parseAddress(address: string): [chain: number, walletAddress: string] {
 	const result = addressPattern.exec(address)

@@ -1,33 +1,27 @@
 {
-  "name": "@canvas-js/chain-ethereum",
-  "version": "0.8.26",
-  "type": "module",
-  "author": "Canvas Technologies, Inc. (https://canvas.xyz)",
-  "main": "lib/index.js",
-  "types": "lib/index.d.ts",
-  "files": [
-    "lib"
-  ],
-  "scripts": {
-    "test": "ava"
-  },
-  "imports": {
-    "#target": {
-      "node": "./lib/targets/node/index.js",
-      "browser": "./lib/targets/browser/index.js",
-      "default": "./lib/targets/default/index.js"
-    }
-  },
-  "dependencies": {
-    "@canvas-js/interfaces": "0.8.26",
-    "@canvas-js/signed-cid": "0.8.26",
-    "@ipld/dag-json": "^10.1.5",
-    "@libp2p/logger": "^4.0.2",
-    "ethers": "^6.9.0",
-    "multiformats": "^13.0.1",
-    "siwe": "^2.1.4"
-  },
-  "devDependencies": {
-    "base58-solidity": "^1.0.2"
-  }
+	"name": "@canvas-js/chain-ethereum",
+	"version": "0.10.0-beta.4",
+	"type": "module",
+	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
+	"main": "lib/index.js",
+	"types": "lib/index.d.ts",
+	"files": [
+		"lib"
+	],
+	"scripts": {
+		"test": "ava"
+	},
+	"dependencies": {
+		"@canvas-js/interfaces": "0.10.0-beta.4",
+		"@canvas-js/signatures": "0.10.0-beta.4",
+		"@canvas-js/utils": "0.10.0-beta.4",
+		"@ipld/dag-json": "^10.2.2",
+		"@libp2p/logger": "^4.0.16",
+		"ethers": "^6.13.1",
+		"multiformats": "^13.1.3",
+		"siwe": "^2.3.2"
+	},
+	"devDependencies": {
+		"base58-solidity": "^1.0.2"
+	}
 }

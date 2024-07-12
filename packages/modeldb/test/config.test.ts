@@ -1,9 +1,9 @@
 import test from "ava"
 
-import { ModelsInit, parseConfig } from "@canvas-js/modeldb"
+import { ModelSchema, parseConfig } from "@canvas-js/modeldb"
 
 test("parse config", (t) => {
-	const models: ModelsInit = {
+	const models: ModelSchema = {
 		user: {
 			id: "primary",
 			address: "string",
@@ -32,6 +32,7 @@ test("parse config", (t) => {
 			{
 				name: "user",
 				indexes: [],
+				merge: undefined,
 				primaryKey: "id",
 				properties: [
 					{ name: "id", kind: "primary" },
@@ -43,6 +44,7 @@ test("parse config", (t) => {
 			{
 				name: "room",
 				indexes: [],
+				merge: undefined,
 				primaryKey: "id",
 				properties: [
 					{ name: "id", kind: "primary" },
@@ -53,6 +55,7 @@ test("parse config", (t) => {
 			{
 				name: "message",
 				indexes: [],
+				merge: undefined,
 				primaryKey: "id",
 				properties: [
 					{ name: "id", kind: "primary" },

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
 import type { Canvas, Contract, CanvasLogEvent, ActionImplementation } from "@canvas-js/core"
 import type { Action } from "@canvas-js/interfaces"
 
@@ -46,22 +46,22 @@ export const useTick = (app: Canvas<TickingContract> | undefined, condition: str
 				const action = payload as Action
 
 				for (const signer of app.signers.getAll()) {
-					const session = await signer.getSession(app.topic, { fromCache: true })
-					if (action.address === session.address) {
+					if (signer.hasSession(app.topic, action.did)) {
 						return
 					}
 				}
 
 				if (action.name === "tick") {
-					tickState.last = new Date().getTime()
+					tickState.last = Date.now()
 				}
 			}
 		}
+
 		app.addEventListener("message", tickListener)
 
 		const timer = setInterval(async () => {
 			// don't tick if another tick was received recently
-			if (tickState.last > new Date().getTime() - interval) {
+			if (tickState.last > Date.now() - interval) {
 				return
 			}
 

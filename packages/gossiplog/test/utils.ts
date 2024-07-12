@@ -7,19 +7,21 @@ import "fake-indexeddb/auto"
 import { locks, AbortController } from "web-locks"
 
 import { nanoid } from "nanoid"
+import { toString } from "uint8arrays"
+import { PoolConfig } from "pg"
 
-import { bytesToHex } from "@noble/hashes/utils"
 import { Key, Node } from "@canvas-js/okra"
 
-import type { Signature, Signer, Message } from "@canvas-js/interfaces"
-import { Ed25519Signer } from "@canvas-js/signed-cid"
+import type { Signer, Message } from "@canvas-js/interfaces"
+import { ed25519 } from "@canvas-js/signatures"
+import { zip } from "@canvas-js/utils"
 
 import { AbstractGossipLog, GossipLogInit, encodeId, decodeClock } from "@canvas-js/gossiplog"
-import { GossipLog as GossipLogNode } from "@canvas-js/gossiplog/node"
-import { GossipLog as GossipLogBrowser } from "@canvas-js/gossiplog/browser"
-import { GossipLog as GossipLogMemory } from "@canvas-js/gossiplog/memory"
+import { GossipLog as GossipLogSqlite } from "@canvas-js/gossiplog/sqlite"
+import { GossipLog as GossipLogIdb } from "@canvas-js/gossiplog/idb"
+import { GossipLog as GossipLogPostgres } from "@canvas-js/gossiplog/pg"
 
-// @ts-expect-error
+// @ts-expect-error TS2322
 globalThis.AbortController = AbortController
 
 if (globalThis.navigator === undefined) {
@@ -30,27 +32,69 @@ if (globalThis.navigator === undefined) {
 	globalThis.navigator.locks = locks
 }
 
+const { POSTGRES_HOST, POSTGRES_PORT } = process.env
+
+function getPgConfig(): string | PoolConfig {
+	if (POSTGRES_HOST && POSTGRES_PORT) {
+		return {
+			user: "postgres",
+			database: "test",
+			password: "postgres",
+			port: parseInt(POSTGRES_PORT),
+			host: POSTGRES_HOST,
+		}
+	} else {
+		return `postgresql://localhost:5432/test`
+	}
+}
+
 export const testPlatforms = (
 	name: string,
 	run: (
 		t: ExecutionContext<unknown>,
-		openGossipLog: <Payload, Results>(
-			t: ExecutionContext,
-			init: GossipLogInit<Payload, Results>,
-		) => Promise<AbstractGossipLog<Payload, Results>>,
+		openGossipLog: <Payload>(t: ExecutionContext, init: GossipLogInit<Payload>) => Promise<AbstractGossipLog<Payload>>,
 	) => void,
 ) => {
 	const macro = test.macro(run)
-	test(`Memory - ${name}`, macro, (t, init) => GossipLogMemory.open(init))
-	test(`Browser - ${name}`, macro, (t, init) => GossipLogBrowser.open(init))
-	test(`NodeJS - ${name}`, macro, (t, init) => GossipLogNode.open(init, getDirectory(t)))
+
+	test(`Sqlite (on-disk) - ${name}`, macro, async (t, init) => {
+		const log = new GossipLogSqlite({ ...init, directory: getDirectory(t) })
+		t.teardown(() => log.close())
+		return log
+	})
+
+	test(`Sqlite (in-memory) - ${name}`, macro, async (t, init) => {
+		const log = new GossipLogSqlite(init)
+		t.teardown(() => log.close())
+		return log
+	})
+
+	test(`IndexedDB - ${name}`, macro, async (t, init) => {
+		const log = await GossipLogIdb.open(init)
+		t.teardown(() => log.close())
+		return log
+	})
+
+	test(`Postgres - ${name}`, macro, async (t, init) => {
+		const log = await GossipLogPostgres.open(getPgConfig(), { ...init, clear: true })
+		t.teardown(() => log.close())
+		return log
+	})
 }
 
-export const getPublicKey = <T>([id, { publicKey }, message]: [string, Signature, Message<T>]): [
-	id: string,
-	publicKey: string,
-	message: Message<T>,
-] => [id, publicKey, message]
+export async function expectLogEntries<T>(
+	t: ExecutionContext<unknown>,
+	log: AbstractGossipLog<T>,
+	entries: [id: string, publicKey: string, message: Message<T>][],
+) {
+	const records = await log.getMessages()
+	t.is(records.length, entries.length, `unexpected length`)
+	for (const [[id, publicKey, message], record, i] of zip(entries, records)) {
+		t.is(record.id, id, `unexpected id at index ${i}`)
+		t.is(record.signature.publicKey, publicKey, `unexpected public key at index ${i}`)
+		t.deepEqual(record.message, message, `unexpected message at index ${i}`)
+	}
+}
 
 export function getDirectory(t: ExecutionContext<unknown>): string {
 	const directory = path.resolve(os.tmpdir(), nanoid())
@@ -63,30 +107,21 @@ export function getDirectory(t: ExecutionContext<unknown>): string {
 	return directory
 }
 
-export const printKey = (key: Key) => (key === null ? "null" : bytesToHex(key))
-export const printNode = (node: Node) => `{ ${node.level} | ${printKey(node.key)} | ${bytesToHex(node.hash)} }`
+export const printKey = (key: Key) => (key === null ? "null" : toString(key, "hex"))
+export const printNode = (node: Node) => `{ ${node.level} | ${printKey(node.key)} | ${toString(node.hash, "hex")} }`
 
-export const mapEntries = <K extends string, S, T>(object: Record<K, S>, map: (entry: [key: K, value: S]) => T) =>
-	Object.fromEntries(Object.entries<S>(object).map(([key, value]) => [key, map([key as K, value])])) as Record<K, T>
+// export async function collect<T, O = T>(iter: AsyncIterable<T>, map?: (value: T) => O): Promise<O[]> {
+// 	const values: O[] = []
+// 	for await (const value of iter) {
+// 		if (map !== undefined) {
+// 			values.push(map(value))
+// 		} else {
+// 			values.push(value as O)
+// 		}
+// 	}
 
-export const mapKeys = <K extends string, S, T>(object: Record<K, S>, map: (key: K) => T) =>
-	Object.fromEntries(Object.entries<S>(object).map(([key, value]) => [key, map(key as K)])) as Record<K, T>
-
-export const mapValues = <K extends string, S, T>(object: Record<K, S>, map: (value: S) => T) =>
-	Object.fromEntries(Object.entries<S>(object).map(([key, value]) => [key, map(value)])) as Record<K, T>
-
-export async function collect<T, O = T>(iter: AsyncIterable<T>, map?: (value: T) => O): Promise<O[]> {
-	const values: O[] = []
-	for await (const value of iter) {
-		if (map !== undefined) {
-			values.push(map(value))
-		} else {
-			values.push(value as O)
-		}
-	}
-
-	return values
-}
+// 	return values
+// }
 
 export function shuffle<T>(array: T[]) {
 	for (let i = array.length - 1; i > 0; i--) {
@@ -96,12 +131,12 @@ export function shuffle<T>(array: T[]) {
 }
 
 export async function appendChain(
-	log: AbstractGossipLog<string, void>,
+	log: AbstractGossipLog<string>,
 	rootId: string,
 	n: number,
-	options: { signer?: Signer<Message<string>> } = {},
+	options: { signer?: Signer<string> } = {},
 ): Promise<string[]> {
-	const signer = options.signer ?? new Ed25519Signer()
+	const signer = options.signer ?? ed25519.create()
 
 	const [clock] = decodeClock(encodeId(rootId))
 
@@ -109,14 +144,15 @@ export async function appendChain(
 	for (let i = 0; i < n; i++) {
 		const message: Message<string> = {
 			topic: log.topic,
-			clock: Number(clock) + i + 1,
+			clock: clock + i + 1,
 			parents: i === 0 ? [rootId] : [ids[i - 1]],
 			payload: nanoid(),
 		}
 
 		const signature = await signer.sign(message)
-		const { id } = await log.insert(signature, message)
-		ids.push(id)
+		const signedMessage = log.encode(signature, message)
+		await log.insert(signedMessage)
+		ids.push(signedMessage.id)
 	}
 
 	return ids

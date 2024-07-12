@@ -1,61 +1,48 @@
 import path from "node:path"
-import fs from "node:fs"
+import type pg from "pg"
 
-import { createEd25519PeerId, createFromProtobuf, exportToProtobuf } from "@libp2p/peer-id-factory"
-import { PeerId } from "@libp2p/interface"
-import { createLibp2p } from "libp2p"
+import { GossipLog as SqliteGossipLog } from "@canvas-js/gossiplog/sqlite"
+import { GossipLog as PostgresGossipLog } from "@canvas-js/gossiplog/pg"
+import { getLibp2p } from "@canvas-js/gossiplog/libp2p/node"
 
-import { GossipLogInit } from "@canvas-js/gossiplog"
-import { GossipLog } from "@canvas-js/gossiplog/node"
-import { GossipLog as MemoryGossipLog } from "@canvas-js/gossiplog/memory"
-import { ModelDB } from "@canvas-js/modeldb/sqlite"
+import { ModelDB } from "@canvas-js/modeldb-sqlite"
+import { ModelDB as PostgresModelDB } from "@canvas-js/modeldb-pg"
+import { assert } from "@canvas-js/utils"
 
 import type { PlatformTarget } from "../interface.js"
-import { getLibp2pOptions } from "./libp2p.js"
 
-const PEER_ID_FILENAME = ".peer-id"
+const isPostgres = (path: string | pg.ConnectionConfig): boolean =>
+	typeof path !== "string" || path.startsWith("postgres://") || path.startsWith("postgresql://")
 
-export default {
-	async openDB(location, models, { indexHistory } = {}) {
+const target: PlatformTarget = {
+	async openDB(location: { path: string | pg.ConnectionConfig | null; topic: string; clear?: boolean }, models) {
 		if (location.path === null) {
-			return new ModelDB({ path: null, models, indexHistory })
+			return new ModelDB({ path: null, models })
+		} else if (isPostgres(location.path)) {
+			return await PostgresModelDB.initialize({ connectionConfig: location.path, models, clear: location.clear })
 		} else {
-			return new ModelDB({ path: path.resolve(location.path, "db.sqlite"), models, indexHistory })
+			assert(typeof location.path === "string", 'expected typeof location.path === "string"')
+			// TODO: delete db.sqlite
+			return new ModelDB({ path: path.resolve(location.path, "db.sqlite"), models })
 		}
 	},
 
-	async openGossipLog<Payload, Result>(
-		location: { path: string | null; topic: string },
-		init: GossipLogInit<Payload, Result>,
-	) {
+	async openGossipLog(location: { path: string | pg.ConnectionConfig | null; topic: string; clear?: boolean }, init) {
 		if (location.path === null) {
-			return await MemoryGossipLog.open(init)
+			return new SqliteGossipLog(init)
+		} else if (isPostgres(location.path)) {
+			return await PostgresGossipLog.open(location.path, { ...init, clear: location.clear })
 		} else {
-			return await GossipLog.open(init, path.resolve(location.path, "topics", init.topic))
+			// TODO: delete topics/
+			assert(typeof location.path === "string", 'expected typeof location.path === "string"')
+			return new SqliteGossipLog({
+				directory: path.resolve(location.path, "topics", init.topic),
+				...init,
+			})
 		}
 	},
 
-	createLibp2p: async (location, config) => {
-		const peerId = await getPeerId(location)
-		return await createLibp2p(getLibp2pOptions(peerId, config))
-	},
-} satisfies PlatformTarget
-
-async function getPeerId(location: { topic: string; path: string | null }): Promise<PeerId> {
-	if (process.env.PEER_ID !== undefined) {
-		return createFromProtobuf(Buffer.from(process.env.PEER_ID, "base64"))
-	}
-
-	if (location.path === null) {
-		return await createEd25519PeerId()
-	}
-
-	const peerIdPath = path.resolve(location.path, PEER_ID_FILENAME)
-	if (fs.existsSync(peerIdPath)) {
-		return await createFromProtobuf(Buffer.from(fs.readFileSync(peerIdPath, "utf-8"), "base64"))
-	}
-
-	const peerId = await createEd25519PeerId()
-	fs.writeFileSync(peerIdPath, Buffer.from(exportToProtobuf(peerId)).toString("base64"))
-	return peerId
+	createLibp2p: (config, messageLog) => getLibp2p(config, messageLog),
 }
+
+export default target

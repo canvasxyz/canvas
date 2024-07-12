@@ -6,23 +6,20 @@
 		"rootDir": "src",
 		"outDir": "lib",
 		"esModuleInterop": true,
-		"jsx": "react",
-		"module": "Node16",
-		"moduleResolution": "Node16"
+		"jsx": "react"
 	},
 	"references": [
-		{"path": "../../packages/core"},
-		{"path": "../../packages/chain-atp"},
-		{"path": "../../packages/chain-cosmos"},
-		{"path": "../../packages/chain-ethereum"},
-		{"path": "../../packages/chain-ethereum-viem"},
-		{"path": "../../packages/chain-near"},
-		{"path": "../../packages/chain-solana"},
-		{"path": "../../packages/chain-substrate"},
-		{"path": "../../packages/core"},
-		{"path": "../../packages/discovery"},
-		{"path": "../../packages/hooks"},
-		{"path": "../../packages/interfaces"},
-		{"path": "../../packages/modeldb"}
+		{ "path": "../../packages/core" },
+		{ "path": "../../packages/chain-atp" },
+		{ "path": "../../packages/chain-cosmos" },
+		{ "path": "../../packages/chain-ethereum" },
+		{ "path": "../../packages/chain-ethereum-viem" },
+		{ "path": "../../packages/chain-near" },
+		{ "path": "../../packages/chain-solana" },
+		{ "path": "../../packages/chain-substrate" },
+		{ "path": "../../packages/core" },
+		{ "path": "../../packages/hooks" },
+		{ "path": "../../packages/interfaces" },
+		{ "path": "../../packages/modeldb" }
 	]
 }

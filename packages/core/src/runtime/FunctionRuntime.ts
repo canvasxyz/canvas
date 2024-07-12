@@ -1,12 +1,12 @@
 import { TypeTransformerFunction, create } from "@ipld/schema/typed.js"
 import { fromDSL } from "@ipld/schema/from-dsl.js"
+import type pg from "pg"
 
-import type { SessionSigner, SignerCache } from "@canvas-js/interfaces"
+import type { SignerCache } from "@canvas-js/interfaces"
 import { AbstractModelDB, ModelValue, validateModelValue } from "@canvas-js/modeldb"
+import { assert, mapEntries } from "@canvas-js/utils"
 
 import target from "#target"
-
-import { assert, mapEntries } from "../utils.js"
 
 import { ActionImplementationFunction, Contract, ModelAPI } from "../types.js"
 import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
@@ -15,18 +15,16 @@ const identity = (x: any) => x
 
 export class FunctionRuntime extends AbstractRuntime {
 	public static async init(
-		path: string | null,
+		path: string | pg.ConnectionConfig | null,
+		topic: string,
 		signers: SignerCache,
 		contract: Contract,
-		options: { indexHistory?: boolean; ignoreMissingActions?: boolean } = {},
 	): Promise<FunctionRuntime> {
 		assert(contract.actions !== undefined, "contract initialized without actions")
 		assert(contract.models !== undefined, "contract initialized without models")
-		assert(contract.topic !== undefined, "contract initialized without topic")
 
-		const { indexHistory = true, ignoreMissingActions = false } = options
-		const models = AbstractRuntime.getModelSchema(contract.models, { indexHistory })
-		const db = await target.openDB({ path, topic: contract.topic }, models)
+		const models = AbstractRuntime.getModelSchema(contract.models)
+		const db = await target.openDB({ path, topic }, models)
 
 		const argsTransformers: Record<
 			string,
@@ -49,15 +47,7 @@ export class FunctionRuntime extends AbstractRuntime {
 			return action.apply
 		})
 
-		return new FunctionRuntime(
-			contract.topic,
-			signers,
-			db,
-			actions,
-			argsTransformers,
-			indexHistory,
-			ignoreMissingActions,
-		)
+		return new FunctionRuntime(topic, signers, db, actions, argsTransformers)
 	}
 
 	#context: ExecutionContext | null = null
@@ -72,10 +62,8 @@ export class FunctionRuntime extends AbstractRuntime {
 			string,
 			{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
 		>,
-		indexHistory: boolean,
-		ignoreMissingActions: boolean,
 	) {
-		super(indexHistory, ignoreMissingActions)
+		super()
 
 		this.#db = {
 			get: async <T extends ModelValue = ModelValue>(model: string, key: string) => {
@@ -102,16 +90,18 @@ export class FunctionRuntime extends AbstractRuntime {
 
 	protected async execute(context: ExecutionContext): Promise<void | any> {
 		const { publicKey } = context.signature
-		const { address, name, args, blockhash, timestamp } = context.message.payload
+		const { address } = context
+		const {
+			did,
+			name,
+			args,
+			context: { blockhash, timestamp },
+		} = context.message.payload
 
 		const argsTransformer = this.argsTransformers[name]
 		const action = this.actions[name]
 		if (action === undefined || argsTransformer === undefined) {
-			if (this.ignoreMissingActions) {
-				return
-			} else {
-				throw new Error(`invalid action name: ${name}`)
-			}
+			throw new Error(`invalid action name: ${name}`)
 		}
 
 		const typedArgs = argsTransformer.toTyped(args)
@@ -120,7 +110,14 @@ export class FunctionRuntime extends AbstractRuntime {
 		this.#context = context
 
 		try {
-			return await action(this.#db, typedArgs, { id: context.id, publicKey, address, blockhash, timestamp })
+			return await action(this.#db, typedArgs, {
+				id: context.id,
+				publicKey,
+				did,
+				address,
+				blockhash: blockhash ?? null,
+				timestamp,
+			})
 		} finally {
 			this.#context = null
 		}

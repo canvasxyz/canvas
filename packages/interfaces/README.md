@@ -62,35 +62,39 @@ export type Message<Payload = unknown> = {
 export type Action = {
   type: "action"
 
-  /** DID or CAIP-2 address (e.g. "eip155:1:0xb94d27...") */
+  /** DID of the user that authorized the session (e.g. "did:pkh:eip155:1:0xb94d27...") */
   address: string
 
   name: string
   args: any
 
-  timestamp: number
-  blockhash: string | null
+  context: {
+    timestamp: number
+    blockhash?: string
+  }
 }
 ```
 
 ### Sessions
 
 ```ts
-export type Session<Data = any> = {
+export type Session<AuthorizationData = any> = {
   type: "session"
 
-  /** DID or CAIP-2 address (e.g. "eip155:1:0xb94d27...") */
+  /** DID of the user that authorized the session (e.g. "did:pkh:eip155:1:0xb94d27...") */
   address: string
 
   /** did:key URI of the ephemeral session key used to sign subsequent actions */
   publicKey: string
 
-	/** chain-specific session payload, e.g. a SIWE message & signature */
-	authorizationData: AuthorizationData
+  /** chain-specific session payload, e.g. a SIWE message & signature */
+  authorizationData: AuthorizationData
 
-	blockhash: string | null
-	timestamp: number
-	duration: number | null
+  context: {
+    blockhash?: string
+    duration?: number
+    timestamp: number
+  }
 }
 ```
 
@@ -103,7 +107,7 @@ import type { Session } from "./Session.js"
 import type { Action } from "./Action.js"
 import type { Awaitable } from "./Awaitable.js"
 
-export interface SessionSigner extends Signer<Message<Action | Session>> {
+export interface SessionSigner extends Signer<Action | Session> {
   match: (chain: string) => boolean
 
   /**

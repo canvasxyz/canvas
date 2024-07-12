@@ -1,23 +1,19 @@
-import React, { useCallback, useContext, useEffect, useRef, useState } from "react"
+import React, { useCallback, useContext, useState } from "react"
 import { Web3 } from "web3"
-import { MetaMaskInpageProvider } from "@metamask/providers"
 
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
 
 import { AppContext } from "../AppContext.js"
 
-declare global {
-	interface Window {
-		ethereum: MetaMaskInpageProvider
-	}
-}
-
 export interface ConnectCosmosEvmMetamaskProps {
+	bech32Prefix: string
 	chainId: string
 }
 
-export const ConnectCosmosEvmMetamask: React.FC<ConnectCosmosEvmMetamaskProps> = ({ chainId }) => {
-	const { app, sessionSigner, setSessionSigner, address, setAddress } = useContext(AppContext)
+export const ConnectCosmosEvmMetamask: React.FC<ConnectCosmosEvmMetamaskProps> = ({ bech32Prefix, chainId }) => {
+	// The Cosmos EVM Metamask login method needs a `bech32Prefix` argument because we can't
+	// infer the prefix from the chain (because we are using MetaMask to sign the messages, not a Cosmos wallet)
+	const { sessionSigner, setSessionSigner, address, setAddress } = useContext(AppContext)
 
 	// true if this signing method is being used
 	const [thisIsConnected, setThisIsConnected] = useState(false)
@@ -30,7 +26,14 @@ export const ConnectCosmosEvmMetamask: React.FC<ConnectCosmosEvmMetamaskProps> =
 			return
 		}
 
-		const web3 = new Web3(window.ethereum)
+		let ethereum = window.ethereum as any
+		if (ethereum.providers?.length) {
+			ethereum.providers.forEach(async (p: any) => {
+				if (p.isMetaMask) ethereum = p
+			})
+		}
+
+		const web3 = new Web3(ethereum)
 		await web3.eth.requestAccounts()
 		const ethAccounts = await web3.eth.getAccounts()
 
@@ -39,6 +42,7 @@ export const ConnectCosmosEvmMetamask: React.FC<ConnectCosmosEvmMetamaskProps> =
 		setAddress(thisAddress)
 		setSessionSigner(
 			new CosmosSigner({
+				bech32Prefix,
 				signer: {
 					type: "ethereum",
 					signEthereum: (chainId: string, signerAddress: string, message: string) =>
@@ -46,10 +50,10 @@ export const ConnectCosmosEvmMetamask: React.FC<ConnectCosmosEvmMetamaskProps> =
 					getAddress: async () => thisAddress,
 					getChainId: async () => chainId,
 				},
-			})
+			}),
 		)
 		setThisIsConnected(true)
-	}, [])
+	}, [bech32Prefix, chainId])
 
 	const disconnect = useCallback(async () => {
 		setAddress(null)

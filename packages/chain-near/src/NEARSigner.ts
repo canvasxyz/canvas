@@ -1,16 +1,14 @@
 import * as cbor from "@ipld/dag-cbor"
-import { logger } from "@libp2p/logger"
 import { KeyPair } from "near-api-js"
 import { PublicKey } from "@near-js/crypto"
 import { ed25519 } from "@noble/curves/ed25519"
 
-import type { Signature, Signer, SessionSigner, Action, Message, Session } from "@canvas-js/interfaces"
-import { Ed25519Signer } from "@canvas-js/signed-cid"
+import type { Session, AbstractSessionData, DidIdentifier } from "@canvas-js/interfaces"
+import { AbstractSessionSigner, ed25519 as Ed25519SignatureScheme } from "@canvas-js/signatures"
+import { assert, DAYS } from "@canvas-js/utils"
 
 import { NEARMessage, NEARSessionData } from "./types.js"
-import { assert, signalInvalidType, validateSessionData, addressPattern, getKey, parseAddress } from "./utils.js"
-
-import target from "#target"
+import { validateSessionData, addressPattern, parseAddress } from "./utils.js"
 
 export interface NEARSignerInit {
 	chainId?: string
@@ -18,141 +16,99 @@ export interface NEARSignerInit {
 	sessionDuration?: number
 }
 
-export class NEARSigner implements SessionSigner {
-	public readonly key: string
-	public readonly sessionDuration: number | null
+export class NEARSigner extends AbstractSessionSigner<NEARSessionData> {
+	public readonly match = (chain: string) => addressPattern.test(chain)
 	public readonly chainId: string
-
-	private readonly log = logger("canvas:chain-near")
 
 	#address: string
 	#keyPair: KeyPair
-	#store = target.getSessionStore()
-	#signers: Record<string, Signer<Message<Action | Session>>> = {}
-	#sessions: Record<string, Session<NEARSessionData>> = {}
 
-	public constructor({ keyPair, sessionDuration, chainId }: NEARSignerInit = {}) {
+	public constructor({ keyPair, sessionDuration, chainId }: NEARSignerInit = { sessionDuration: 14 * DAYS }) {
+		super("chain-near", Ed25519SignatureScheme, { sessionDuration })
+
 		this.#keyPair = keyPair ?? KeyPair.fromRandom("ed25519")
 		this.#address = this.#keyPair.getPublicKey().toString().split(":")[1]
 
 		this.chainId = chainId ?? "near:mainnet"
-		this.sessionDuration = sessionDuration ?? null
-		this.key = `NearSigner-${keyPair ? "keypair" : "burner"}`
 	}
 
-	public readonly match = (chain: string) => addressPattern.test(chain)
-
 	public verifySession(topic: string, session: Session) {
-		const { publicKey, address, authorizationData: data, timestamp, duration } = session
+		const {
+			publicKey,
+			did,
+			authorizationData: data,
+			context: { timestamp, duration },
+		} = session
 		assert(validateSessionData(data), "invalid session")
-		const [chain, walletAddress] = parseAddress(address)
+		const [chain, walletAddress] = parseAddress(did)
 
 		const walletAddressFromPublicKey = new PublicKey({ keyType: 0, data: data.publicKey }).toString().split(":")[1]
 		assert(walletAddress == walletAddressFromPublicKey, "the wallet address does not match the public key")
 
+		const issuedAt = new Date(timestamp).toISOString()
 		const message: NEARMessage = {
 			topic,
 			publicKey,
-			issuedAt: new Date(timestamp).toISOString(),
-			expirationTime: duration === null ? null : new Date(timestamp + duration).toISOString(),
+			issuedAt,
+			expirationTime: null,
+		}
+
+		if (duration !== undefined) {
+			message.expirationTime = new Date(timestamp + duration).toISOString()
 		}
 
 		const valid = ed25519.verify(data.signature, cbor.encode(message), data.publicKey)
 		assert(valid, "invalid signature")
 	}
 
-	public async getSession(
-		topic: string,
-		options: { timestamp?: number; fromCache?: boolean } = {},
-	): Promise<Session<NEARSessionData>> {
+	public getDid(): DidIdentifier {
 		const walletAddress = this.#address
-		const address = `${this.chainId}:${walletAddress}`
+		return `did:${this.chainId}:${walletAddress}`
+	}
 
-		this.log("getting session for %s", address)
+	public getDidParts(): number {
+		return 5
+	}
 
-		// First check the in-memory cache
-		{
-			const { session, signer } = this.#store.get(topic, address) ?? {}
-			if (session !== undefined && signer !== undefined) {
-				const { timestamp, duration } = session
-				const t = options.timestamp ?? timestamp
-				if (timestamp <= t && t <= timestamp + (duration ?? Infinity)) {
-					this.log("found session for %s in store: %o", address, session)
-					return session
-				} else {
-					this.log("stored session for %s has expired", address)
-				}
-			}
-		}
+	public getAddressFromDid(did: DidIdentifier) {
+		const [_, walletAddress] = parseAddress(did)
+		return walletAddress
+	}
 
-		if (options.fromCache) return Promise.reject()
-
-		this.log("creating new session for %s", address)
-
-		const signer = new Ed25519Signer()
-
-		const timestamp = options.timestamp ?? Date.now()
+	public async authorize(data: AbstractSessionData): Promise<Session<NEARSessionData>> {
+		const {
+			topic,
+			did,
+			publicKey,
+			context: { timestamp, duration },
+		} = data
 		const issuedAt = new Date(timestamp)
 
 		const message: NEARMessage = {
 			topic,
-			publicKey: signer.uri,
+			publicKey: publicKey,
 			issuedAt: issuedAt.toISOString(),
 			expirationTime: null,
 		}
 
-		if (this.sessionDuration !== null) {
+		if (duration !== null) {
 			console.log(issuedAt)
-			const expirationTime = new Date(issuedAt.valueOf() + this.sessionDuration)
+			const expirationTime = new Date(timestamp + duration)
 			console.log(expirationTime)
 			message.expirationTime = expirationTime.toISOString()
 		}
 
-		const { signature, publicKey } = this.#keyPair.sign(cbor.encode(message))
+		const {
+			signature,
+			publicKey: { data: publicKeyData },
+		} = this.#keyPair.sign(cbor.encode(message))
 
-		const session: Session<NEARSessionData> = {
+		return {
 			type: "session",
-			address: address,
-			publicKey: signer.uri,
-			authorizationData: {
-				signature,
-				publicKey: publicKey.data,
-			},
-			blockhash: null,
-			timestamp,
-			duration: this.sessionDuration,
+			did: did,
+			publicKey: publicKey,
+			authorizationData: { signature, publicKey: publicKeyData },
+			context: duration ? { duration, timestamp } : { timestamp },
 		}
-
-		this.#store.set(topic, address, session, signer)
-
-		this.log("created new session for %s: %o", address, session)
-		return session
-	}
-
-	public sign(message: Message<Action | Session>): Signature {
-		if (message.payload.type === "action") {
-			const { address, timestamp } = message.payload
-			const { signer, session } = this.#store.get(message.topic, address) ?? {}
-			assert(signer !== undefined && session !== undefined)
-
-			assert(address === session.address)
-			assert(timestamp >= session.timestamp)
-			assert(timestamp <= session.timestamp + (session.duration ?? Infinity))
-
-			return signer.sign(message)
-		} else if (message.payload.type === "session") {
-			const { signer, session } = this.#store.get(message.topic, message.payload.address) ?? {}
-			assert(signer !== undefined && session !== undefined)
-
-			// only sign our own current sessions
-			assert(message.payload === session)
-			return signer.sign(message)
-		} else {
-			signalInvalidType(message.payload)
-		}
-	}
-
-	public async clear(topic: string) {
-		this.#store.clear(topic)
 	}
 }

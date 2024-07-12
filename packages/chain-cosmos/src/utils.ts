@@ -1,17 +1,28 @@
-import type { CosmosSessionData } from "./types.js"
+import { EthereumSignedSessionData } from "./external_signers/ethereum.js"
+import type { CosmosSessionData, CosmosMessage } from "./types.js"
 
-export function assert(condition: boolean, message?: string): asserts condition {
-	if (!condition) {
-		throw new Error(message ?? "assertion failed")
-	}
+export const addressPattern = /^did:pkh:cosmos:([0-9a-z\-_]+):([a-zA-Fa-f0-9]+)$/
+
+// Later we may want to accept a version of this message that includes
+// the domain we're signing in from. Wallets don't seem to check right now,
+// so we can probably commit to accepting both formats as valid signatures.
+// We may also want to have each signer pass an "ecosystem" string to follow
+// the CAIP-122 recommendation, but inferring the ecosystem from the message is
+// nontrivially difficult.
+export function constructSiwxMessage(message: CosmosMessage): string {
+	return `This website wants you to sign in with your Cosmos account:
+${message.address}
+
+Allow it to read and write to the application on your behalf?
+
+URI: ${message.topic}
+Version: 1
+Issued At: ${message.issuedAt}
+Expiration Time: ${message.expirationTime}
+Chain ID: ${message.chainId}
+Resources:
+- ${message.publicKey}`
 }
-
-export function signalInvalidType(type: never): never {
-	console.error(type)
-	throw new TypeError("internal error: invalid type")
-}
-
-export const addressPattern = /^cosmos:([0-9a-z\-_]+):([a-zA-Fa-f0-9]+)$/
 
 export function parseAddress(address: string): [chain: string, walletAddress: string] {
 	const result = addressPattern.exec(address)
@@ -23,36 +34,13 @@ export function parseAddress(address: string): [chain: string, walletAddress: st
 	return [chain, walletAddress]
 }
 
-export function validateSessionData(data: unknown): data is CosmosSessionData {
-	try {
-		extractSessionData(data)
-	} catch (error) {
-		return false
-	}
-
-	return true
-}
-
 function extractSessionData(data: any): CosmosSessionData {
 	if (data.signatureType == "amino") {
-		const signature = data.signature.signature
-		const pub_key_value = data.signature.pub_key.value
-		const pub_key_type = data.signature.pub_key.type
-		if (
-			signature instanceof Uint8Array &&
-			pub_key_value instanceof Uint8Array &&
-			typeof pub_key_type === "string" &&
-			pub_key_type == "tendermint/PubKeySecp256k1"
-		) {
+		const signature = data.signature
+		if (signature instanceof Uint8Array) {
 			return {
 				signatureType: "amino",
-				signature: {
-					signature: signature,
-					pub_key: {
-						type: pub_key_type,
-						value: pub_key_value,
-					},
-				},
+				signature,
 			}
 		}
 	} else if (data.signatureType == "bytes") {
@@ -82,6 +70,20 @@ function extractSessionData(data: any): CosmosSessionData {
 			return {
 				signatureType: "ethereum",
 				signature: signature,
+			}
+		}
+	} else if (data.signatureType == "arbitrary") {
+		const signature = data.signature
+		if (signature.pub_key instanceof Object && signature.signature instanceof Uint8Array) {
+			return {
+				signatureType: "arbitrary",
+				signature: {
+					pub_key: {
+						type: signature.pub_key.type,
+						value: signature.pub_key.value,
+					},
+					signature: signature.signature,
+				},
 			}
 		}
 	}

@@ -23,7 +23,7 @@ You can listen to the `connections:updated` event to keep track of a list of con
 import { useCanvas } from "@canvas-js/hooks"
 import type { Connections } from "@canvas-js/core"
 
-const { app } = useCanvas({ contract })
+const { app } = useCanvas({ topic: "...", contract: "..." })
 
 useEffect(() => {
   app?.addEventListener("connections:updated", ({ detail: { connections } }) => {
@@ -60,8 +60,8 @@ To use this service, set a `discoveryTopic` in your application configuration:
 
 ```ts{7}
 const { app } = useCanvas({
+  topic: "my-app-room-x",
   contract: {
-    topic: "my-app-room-x",
     // models: ...
     // actions: ...
   },
@@ -104,7 +104,6 @@ useEffect(() => {
 Join events will be triggered whenever someone new joins the network, and leave events
 will be triggered after that peer goes offline, after about a minute of inactivity.
 
-
 You can configure the threshold by setting `presenceTimeout` in your app config.
 (see an example [here](https://github.com/canvasxyz/canvas/blob/main/examples/chat/src/App.tsx#L45)).
 
@@ -113,8 +112,8 @@ You can configure the threshold by setting `presenceTimeout` in your app config.
 The event also provides a `peers` list, which shows a list of online peers:
 
 - `address` is the public address of the user behind this online peer. For an Ethereum signer,
-  this will be a CAIP-2 Ethereum address in the form `eip155:1:0xabc`. Note that this address is
-  self-attested and not cryptographically verified (yet).
+  this will be a did:pkh prefixed blockchain address in the form `did:pkh:eip155:1:0xabc`.
+  Note that this address is self-attested and not cryptographically verified (yet).
 - `env` is the environment that peer is running in, either `browser` or `server`.
 - `lastSeen` is the milliseconds since the last heartbeat from this peer.
 - `topics` is the list of topics the peer is subscribed to.
@@ -134,8 +133,8 @@ with `trackAllPeers: true`.
 
 ```ts{8}
 const { app } = useCanvas({
+  topic: "my-app-room-x",
   contract: {
-    topic: "my-app-room-x",
     // models: ...
     // actions: ...
   },

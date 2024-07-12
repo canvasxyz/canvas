@@ -1,8 +1,6 @@
 import React, { useCallback, useState, useEffect, useRef, lazy } from "react"
 import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
-import { PublicChat } from "@canvas-js/templates"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
-import { defaultBootstrapList } from "@canvas-js/core"
 
 import { ethers } from "ethers"
 
@@ -32,6 +30,7 @@ const GameDemo = () => {
 	const wallet = new ethers.Wallet(privateKey)
 
 	const { app } = useCanvas({
+		topic: "canvas-chess",
 		contract: {
 			models: {
 				boards: {
@@ -50,7 +49,6 @@ const GameDemo = () => {
 					await db.set("boards", { id: "0", fen: new Chess().fen() })
 				},
 			},
-			topic: "canvas-chess",
 		},
 		signers: [new SIWESigner({ signer: wallet })],
 	})
@@ -178,20 +176,20 @@ const GameDemo = () => {
 						{chess.in_checkmate()
 							? "Checkmate!"
 							: chess.in_stalemate()
-							? "Stalemate"
-							: chess.in_threefold_repetition()
-							? "Draw by repetition"
-							: chess.insufficient_material()
-							? "Draw by insufficient material"
-							: chess.game_over()
-							? "Game over" // I think we caught everything, but maybe not?
-							: chess.turn() === "w"
-							? "White to move"
-							: "Black to move"}
+								? "Stalemate"
+								: chess.in_threefold_repetition()
+									? "Draw by repetition"
+									: chess.insufficient_material()
+										? "Draw by insufficient material"
+										: chess.game_over()
+											? "Game over" // I think we caught everything, but maybe not?
+											: chess.turn() === "w"
+												? "White to move"
+												: "Black to move"}
 					</span>
 				)}
 				<div className="peers" onClick={() => setShowPeers(!showPeers)}>
-					{connections.filter((conn) => defaultBootstrapList.indexOf(conn.remoteAddr.toString()) === -1).length} peers
+					{connections} peers
 					{synced ? "" : connections.length === 0 ? ", waiting..." : ", syncing..."}
 				</div>
 			</div>
@@ -199,9 +197,7 @@ const GameDemo = () => {
 				<div className="peer-details">
 					{connections.map((conn) => (
 						<div>
-							{defaultBootstrapList.indexOf(conn.remoteAddr.toString()) !== -1
-								? "[bootstrap] "
-								: `[${conn?.direction}] `}
+							{`[${conn?.direction}] `}
 							{conn?.remoteAddr.toString()}
 						</div>
 					))}

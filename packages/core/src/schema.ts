@@ -3,22 +3,30 @@ import { create } from "@ipld/schema/typed.js"
 
 import type { Action, Session } from "@canvas-js/interfaces"
 
-export const schema = `
+const schema = `
+type ActionContext struct {
+  timestamp Int
+  blockhash optional String
+}
+
 type Action struct {
-  address   String
+  did       String
   name      String
   args      any
+  context   ActionContext
+}
+
+type SessionContext struct {
   timestamp Int
-  blockhash nullable String
+  duration  optional Int
+  blockhash optional String
 }
 
 type Session struct {
-  address   String
+  did       String
   publicKey String
   authorizationData any
-  timestamp Int
-  duration  nullable Int
-  blockhash nullable String
+  context SessionContext
 }
 
 type Payload union {

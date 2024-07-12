@@ -1,5 +1,6 @@
 import React, { useCallback, useContext, useState } from "react"
 import { deleteDB } from "idb"
+import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 
 import { AppContext } from "./AppContext.js"
 
@@ -22,41 +23,58 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({}) => {
 	}, [app])
 
 	const stop = useCallback(async () => {
-		if (app !== null) {
-			try {
-				await app.libp2p.stop()
-				setIsStarted(false)
-			} catch (err) {
-				console.error(err)
-			}
+		if (app === null) {
+			return
+		}
+		try {
+			await app.libp2p.stop()
+			setIsStarted(false)
+		} catch (err) {
+			console.error(err)
 		}
 	}, [app])
 
 	const clear = useCallback(async () => {
-		if (app !== null) {
-			await app.close()
+		if (app === null) {
+			return
+		}
 
-			console.log("deleting model database")
-			await deleteDB(`canvas/${app.topic}/db`, {})
+		await app.stop()
 
-			console.log("deleting message log", app.topic)
-			await deleteDB(`canvas/${app.topic}/log`, {})
-			console.log("clearing session signer data", sessionSigner)
-			// await sessionSigner?.clear?.()
-			window.location.reload()
+		console.log("deleting database")
+		await deleteDB(`canvas/v1/${app.topic}`, {})
+
+		console.log("clearing session signer data", sessionSigner)
+		await sessionSigner?.clear?.(app.topic)
+
+		window.location.reload()
+	}, [app, sessionSigner])
+
+	const spam = useCallback(async () => {
+		if (app === null || sessionSigner === null) {
+			return
+		}
+
+		for (let i = 0; i < 100; i++) {
+			const content = bytesToHex(randomBytes(8))
+			await app.actions.createMessage({ content }, { signer: sessionSigner })
 		}
 	}, [app, sessionSigner])
 
 	const button = `p-2 border rounded flex`
 	const disabled = `bg-gray-100 text-gray-500 hover:cursor-not-allowed`
-	const enabledGreen = `bg-green-100 hover:cursor-pointer hover:bg-green-200 active:bg-green-300`
-	const enabledRed = `bg-red-100 hover:cursor-pointer hover:bg-red-200 active:bg-red-300`
+	const enabledGreen = `bg-green-100 active:bg-green-300 hover:cursor-pointer hover:bg-green-200`
+	const enabledRed = `bg-red-100 active:bg-red-300 hover:cursor-pointer hover:bg-red-200`
+	const enabledYellow = `bg-yellow-100 active:bg-yellow-300 hover:cursor-pointer hover:bg-yellow-200`
 
 	if (app === null) {
 		return (
 			<div className="flex flex-row gap-4">
 				<button disabled className={`flex-1 ${button} ${disabled}`}>
 					Start libp2p
+				</button>
+				<button disabled className={`${button} ${disabled}`}>
+					Spam
 				</button>
 				<button disabled className={`${button} ${disabled}`}>
 					Clear data
@@ -69,6 +87,13 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({}) => {
 				<button onClick={() => stop()} className={`flex-1 ${button} ${enabledRed}`}>
 					Stop libp2p
 				</button>
+				<button
+					disabled={sessionSigner === null}
+					onClick={() => spam()}
+					className={`${button} ${sessionSigner === null ? disabled : enabledYellow}`}
+				>
+					Spam
+				</button>
 				<button disabled className={`${button} ${disabled}`}>
 					Clear data
 				</button>
@@ -79,6 +104,13 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({}) => {
 			<div className="flex flex-row gap-4">
 				<button onClick={() => start()} className={`flex-1 ${button} ${enabledGreen}`}>
 					Start libp2p
+				</button>
+				<button
+					disabled={sessionSigner === null}
+					onClick={() => spam()}
+					className={`${button} ${sessionSigner === null ? disabled : enabledYellow}`}
+				>
+					Spam
 				</button>
 				<button onClick={() => clear()} className={`${button} ${enabledRed}`}>
 					Clear data

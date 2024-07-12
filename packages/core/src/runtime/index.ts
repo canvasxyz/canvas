@@ -1,4 +1,5 @@
 import { SignerCache } from "@canvas-js/interfaces"
+import type pg from "pg"
 
 import type { Contract } from "../types.js"
 import { AbstractRuntime } from "./AbstractRuntime.js"
@@ -8,14 +9,15 @@ import { FunctionRuntime } from "./FunctionRuntime.js"
 export { AbstractRuntime as Runtime } from "./AbstractRuntime.js"
 
 export async function createRuntime(
-	location: string | null,
+	location: string | pg.ConnectionConfig | null,
+	topic: string,
 	signers: SignerCache,
 	contract: string | Contract,
-	options: { runtimeMemoryLimit?: number; indexHistory?: boolean; ignoreMissingActions?: boolean } = {},
+	options: { runtimeMemoryLimit?: number } = {},
 ): Promise<AbstractRuntime> {
 	if (typeof contract === "string") {
-		return ContractRuntime.init(location, signers, contract, options)
+		return ContractRuntime.init(location, topic, signers, contract, options)
 	} else {
-		return FunctionRuntime.init(location, signers, contract, options)
+		return FunctionRuntime.init(location, topic, signers, contract)
 	}
 }

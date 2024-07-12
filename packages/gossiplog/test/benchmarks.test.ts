@@ -1,32 +1,28 @@
 import test, { ExecutionContext } from "ava"
+import { nanoid } from "nanoid"
 
-import { Message } from "@canvas-js/interfaces"
-import { Signature } from "@canvas-js/signed-cid"
-
-import { AbstractGossipLog } from "@canvas-js/gossiplog"
-import { GossipLog as MemoryGossipLog } from "@canvas-js/gossiplog/memory"
-import { GossipLog } from "@canvas-js/gossiplog/node"
+import { AbstractGossipLog, GossipLogConsumer } from "@canvas-js/gossiplog"
+import { GossipLog } from "@canvas-js/gossiplog/sqlite"
 
 import { getDirectory } from "./utils.js"
 
 const topic = "com.example.test"
-const apply = (id: string, signature: Signature, message: Message<string>) => {}
-const validate = (payload: unknown): payload is string => true
+const apply: GossipLogConsumer<string> = ({}) => {}
 
-test("append messages (memory, linear, 100)", async (t) => {
-	const log = await MemoryGossipLog.open({ topic, apply, validate })
+test("append messages (in-memory, linear, 100)", async (t) => {
+	const log = new GossipLog({ topic, apply })
 	t.teardown(() => log.close())
 	await append(t, log, 100)
 })
 
-// test("append messages (node, linear, 100)", async (t) => {
-// 	const log = await GossipLog.open(getDirectory(t), { topic, apply, validate })
-// 	t.teardown(() => log.close())
-// 	await append(t, log, 100)
-// })
+test("append messages (on-disk, linear, 100)", async (t) => {
+	const log = new GossipLog({ directory: getDirectory(t), topic, apply })
+	t.teardown(() => log.close())
+	await append(t, log, 100)
+})
 
 // test("append messages (node, linear, 100, indexed)", async (t) => {
-// 	const log = await GossipLog.open(getDirectory(t), { topic, apply, validate, indexAncestors: true })
+// 	const log = await GossipLog.open(getDirectory(t), { topic, apply, validate })
 // 	t.teardown(() => log.close())
 // 	await append(t, log, 100)
 // })
@@ -38,7 +34,7 @@ test("append messages (memory, linear, 100)", async (t) => {
 // })
 
 // test("append messages (node, linear, 10000, indexed)", async (t) => {
-// 	const log = await GossipLog.open(getDirectory(t), { topic, apply, validate, signatures: false, indexAncestors: true })
+// 	const log = await GossipLog.open(getDirectory(t), { topic, apply, validate, signatures: false })
 // 	t.teardown(() => log.close())
 // 	await append(t, log, 10_000)
 // })
@@ -50,11 +46,11 @@ test("append messages (memory, linear, 100)", async (t) => {
 // 	await append(t, log, 100_000)
 // })
 
-async function append(t: ExecutionContext, log: AbstractGossipLog<string, void>, n: number) {
+async function append(t: ExecutionContext, log: AbstractGossipLog<string>, n: number) {
 	const start = performance.now()
 
 	for (let i = 0; i < n; i++) {
-		await log.append(i.toString())
+		await log.append(nanoid())
 	}
 
 	const time = performance.now() - start

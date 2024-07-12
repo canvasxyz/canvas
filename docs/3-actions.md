@@ -4,19 +4,21 @@ Canvas apps consist of an **action log** and **model database**. Each action in 
 
 - a `name`, e.g. `createPost` or `deletePost`
 - an argument object `args`, e.g. `{ content: "hello world!" }`
-- an authenticated user identifier `address` in either [DID](https://w3c-ccg.github.io/did-primer) or [CAIP-2](https://github.com/ChainAgnostic/CAIPs/blob/main/CAIPs/caip-2.md) format
+- an authenticated user identifier `did`, usually following the [did:pkh](https://github.com/w3c-ccg/did-pkh) method for [CAIP-10](https://namespaces.chainagnostic.org/) prefixed blockchain addresses
 - a `timestamp` and optional `blockhash` (timestamps are unverified / purely informative)
 
 ```ts
 type Action = {
-  /** DID or CAIP-2 address (e.g. "eip155:1:0xb94d27...") */
-  address: string
+	/** DID of the user that authorized the session (e.g. "did:pkh:eip155:1:0xb94d27...") */
+	did: string
 
-  name: string
-  args: any
+	name: string
+	args: any
 
-  timestamp: number
-  blockhash: string | null
+	context: {
+		timestamp: number
+		blockhash?: string
+	}
 }
 ```
 

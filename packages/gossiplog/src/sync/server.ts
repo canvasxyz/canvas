@@ -2,11 +2,11 @@ import type { Uint8ArrayList } from "uint8arraylist"
 
 import { logger } from "@libp2p/logger"
 
-import type { Source } from "@canvas-js/okra"
+import { assert } from "@canvas-js/utils"
 
 import * as Sync from "#protocols/sync"
 
-import { assert } from "../utils.js"
+import { SyncServer } from "../interface.js"
 import { encodeNode } from "./utils.js"
 
 export async function* encodeResponses(responses: AsyncIterable<Sync.Response>): AsyncIterable<Uint8Array> {
@@ -27,7 +27,7 @@ export async function* decodeRequests(
 export class Server {
 	readonly log = logger("canvas:sync:server")
 
-	constructor(readonly source: Source) {}
+	constructor(readonly source: SyncServer) {}
 
 	public async *handle(reqs: AsyncIterable<Sync.Request>): AsyncIterable<Sync.Response> {
 		for await (const req of reqs) {
@@ -44,11 +44,14 @@ export class Server {
 					yield { getNode: { node: encodeNode(node) } }
 				}
 			} else if (req.getChildren !== undefined) {
-				assert(req.getChildren, "missing request body")
 				const { level, key } = req.getChildren
 				assert(level !== null && level !== undefined, "missing level in getChildren request")
 				const children = await this.source.getChildren(level, key ?? null)
 				yield { getChildren: { children: children.map(encodeNode) } }
+			} else if (req.getValues !== undefined) {
+				const { keys } = req.getValues
+				const values = await this.source.getValues(keys)
+				yield { getValues: { values } }
 			} else {
 				throw new Error("invalid request type")
 			}

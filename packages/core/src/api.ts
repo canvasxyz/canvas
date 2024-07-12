@@ -1,12 +1,15 @@
 import assert from "node:assert"
 import express from "express"
+import ipld from "express-ipld"
 import { StatusCodes } from "http-status-codes"
 import { AbortError } from "abortable-iterator"
 import { anySignal } from "any-signal"
 import { Counter, Gauge, Summary, Registry, register } from "prom-client"
 
 import type { PeerId } from "@libp2p/interface"
+import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 import { peerIdFromString } from "@libp2p/peer-id"
+
 import * as json from "@ipld/dag-json"
 
 import { Action, Message, Session, Signature } from "@canvas-js/interfaces"
@@ -25,132 +28,134 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 	const api = express()
 
 	api.set("query parser", "simple")
-	api.use(express.json())
-	api.use(express.text())
 
-	api.get("/", (req, res) => res.json(app.getApplicationData()))
+	api.get("/", (req, res) => void res.json(app.getApplicationData()))
 
 	if (options.exposeModels) {
 		api.get("/models/:model/:key", async (req, res) => {
 			const { model, key } = req.params
 			if (app.db.models[model] === undefined) {
-				return res.status(StatusCodes.NOT_FOUND).end()
+				return void res.status(StatusCodes.NOT_FOUND).end()
 			} else {
 				const value = await app.db.get(model, key)
-				return res.json(value)
+
+				res.writeHead(StatusCodes.OK, { "content-type": "application/json" })
+				return void res.end(json.encode(value))
 			}
 		})
 
 		api.get("/models/:model", async (req, res) => {
 			// TODO: start/limit/offset
-			return res.status(StatusCodes.NOT_IMPLEMENTED).end()
+			return void res.status(StatusCodes.NOT_IMPLEMENTED).end()
 		})
 	}
 
 	api.get("/messages/:id", async (req, res) => {
 		const { id } = req.params
-		const [signature, message] = await app.messageLog.get(id)
+		const [signature, message] = await app.getMessage(id)
 		if (signature === null || message === null) {
-			return res.status(StatusCodes.NOT_FOUND).end()
+			return void res.status(StatusCodes.NOT_FOUND).end()
 		}
 
-		return res.status(StatusCodes.OK).contentType("application/json").end(json.encode({ id, signature, message }))
+		res.writeHead(StatusCodes.OK, { "content-type": "application/json" })
+		return void res.end(json.encode({ id, signature, message }))
 	})
 
 	api.get("/messages", async (req, res) => {
-		const { gt, gte, lt, lte, type } = req.query
+		const { gt, gte, lt, lte, order, type } = req.query
 
-		const limit = typeof req.query.limit === "string" ? Math.min(100, parseInt(req.query.limit)) : 100
-		assert(Number.isSafeInteger(limit) && limit > 0, "invalid `limit` query parameter")
-		assert(type === undefined || type === "action" || type === "session", "invalid `type` query parameter")
+		assert(gt === undefined || typeof gt === "string", "invalid `gt` query parameter")
+		assert(gte === undefined || typeof gte === "string", "invalid `gte` query parameter")
+		assert(lt === undefined || typeof lt === "string", "invalid `lt` query parameter")
+		assert(lte === undefined || typeof lte === "string", "invalid `lte` query parameter")
 
-		let lowerBound: { id: string; inclusive: boolean } | null = null
-		let upperBound: { id: string; inclusive: boolean } | null = null
-
-		if (typeof gte === "string") {
-			lowerBound = { id: gte, inclusive: true }
-		} else if (typeof gt === "string") {
-			lowerBound = { id: gt, inclusive: false }
+		let limit = 64
+		if (typeof req.query.limit === "string") {
+			limit = parseInt(req.query.limit)
 		}
 
-		if (typeof lt === "string") {
-			upperBound = { id: lt, inclusive: false }
-		} else if (typeof lte === "string") {
-			upperBound = { id: lte, inclusive: true }
-		}
+		assert(Number.isSafeInteger(limit) && 0 < limit && limit <= 64, "invalid `limit` query parameter")
+
+		// TODO: add `type` back
+		// assert(type === undefined || type === "action" || type === "session", "invalid `type` query parameter")
+		assert(order === undefined || order === "asc" || order === "desc", "invalid `order` query parameter")
+
+		const reverse = order === "desc"
 
 		const results: [id: string, signature: Signature, message: Message<Action | Session>][] = []
 
-		for await (const [id, signature, message] of app.getMessages(lowerBound, upperBound)) {
-			if (type !== undefined && type !== message.payload.type) {
-				continue
-			}
-
-			if (results.push([id, signature, message]) >= limit) {
-				break
-			}
+		for (const { id, signature, message } of await app.messageLog.getMessages({ gt, gte, lt, lte, reverse, limit })) {
+			results.push([id, signature, message])
 		}
 
-		return res.status(StatusCodes.OK).contentType("application/json").end(json.encode(results))
+		res.writeHead(StatusCodes.OK, { "content-type": "application/json" })
+		return void res.end(json.encode(results))
 	})
 
-	api.post("/messages", async (req, res) => {
-		let data: string
-		if (req.headers["content-type"] === "application/json") {
-			data = JSON.stringify(req.body)
-		} else {
-			return res.status(StatusCodes.UNSUPPORTED_MEDIA_TYPE).end()
-		}
-
+	api.post("/messages", ipld(), async (req, res) => {
 		try {
-			const { signature, message } = json.parse<{ id: string; signature: Signature; message: Message }>(data)
-			const { id } = await app.insert(signature, message as Message<Action | Session>)
-			return res.status(StatusCodes.CREATED).setHeader("Location", `messages/${id}`).end()
+			const { signature, message }: { signature: Signature; message: Message<Action | Session> } = req.body
+			const { id } = await app.insert(signature, message)
+			res.status(StatusCodes.CREATED)
+			res.setHeader("Location", `messages/${id}`)
+			return void res.end()
 		} catch (e) {
 			console.error(e)
-			return res.status(StatusCodes.BAD_REQUEST).end()
+			return void res.status(StatusCodes.BAD_REQUEST).end(`${e}`)
 		}
+	})
+
+	api.get("/sessions", async (req, res) => {
+		const { did, publicKey, minExpiration } = req.query
+		if (typeof did !== "string") {
+			return void res.status(StatusCodes.BAD_REQUEST).end("missing did query parameter")
+		} else if (typeof publicKey !== "string") {
+			return void res.status(StatusCodes.BAD_REQUEST).end("missing publicKey query parameter")
+		}
+
+		let minExpirationValue: number | undefined = undefined
+		if (typeof minExpiration === "string") {
+			minExpirationValue = parseInt(minExpiration)
+		}
+
+		const sessions = await app.getSessions({ did, publicKey, minExpiration: minExpirationValue })
+		return void res.json(sessions)
 	})
 
 	api.get("/clock", async (req, res) => {
 		const [clock, parents] = await app.messageLog.getClock()
-		return res.status(StatusCodes.OK).json({ topic: app.topic, clock, parents })
+		return void res.json({ clock, parents })
 	})
 
 	if (options.exposeP2P) {
 		api.get("/connections", (req, res) => {
-			if (app.libp2p === null) {
-				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end("Offline")
-				return
-			}
-
-			const result: Record<string, { peer: string; addr: string; streams: Record<string, string | null> }> = {}
+			const results: {
+				id: string
+				remotePeer: string
+				remoteAddr: string
+				streams: { id: string; protocol: string | null }[]
+			}[] = []
 
 			for (const { id, remotePeer, remoteAddr, streams } of app.libp2p.getConnections()) {
-				result[id] = {
-					peer: remotePeer.toString(),
-					addr: remoteAddr.toString(),
-					streams: Object.fromEntries(streams.map((stream) => [stream.id, stream.protocol ?? null])),
-				}
+				results.push({
+					id,
+					remotePeer: remotePeer.toString(),
+					remoteAddr: remoteAddr.toString(),
+					streams: streams.map(({ id, protocol }) => ({ id, protocol: protocol ?? null })),
+				})
 			}
 
-			return res.status(StatusCodes.OK).json(result)
+			return void res.json(results)
 		})
 
-		api.get("/peers", (req, res) => {
-			if (app.libp2p === null) {
-				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end("Offline")
-				return
-			}
-
-			const peers = app.libp2p.services.pubsub.getPeers()
-			res.status(StatusCodes.OK).json(peers.map((peerId) => peerId.toString()))
+		api.get("/mesh/:topic", (req, res) => {
+			const gossipsub = app.libp2p.services.pubsub as GossipSub
+			return void res.json(gossipsub.getMeshPeers(req.params.topic))
 		})
 
 		api.post("/ping/:peerId", async (req, res) => {
 			if (app.libp2p === null) {
-				res.status(StatusCodes.INTERNAL_SERVER_ERROR).end("Offline")
-				return
+				return void res.status(StatusCodes.INTERNAL_SERVER_ERROR).end("Offline")
 			}
 
 			const requestController = new AbortController()
@@ -162,17 +167,17 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 			try {
 				peerId = peerIdFromString(req.params.peerId)
 			} catch (err) {
-				return res.status(StatusCodes.BAD_REQUEST).end(`${err}`)
+				return void res.status(StatusCodes.BAD_REQUEST).end(`${err}`)
 			}
 
 			try {
 				const latency = await app.libp2p.services.ping.ping(peerId, { signal })
-				res.status(StatusCodes.OK).end(`Got response from ${peerId} in ${latency}ms\n`)
+				return void res.status(StatusCodes.OK).end(`Got response from ${peerId} in ${latency}ms\n`)
 			} catch (err) {
 				if (err instanceof AbortError) {
-					res.status(StatusCodes.GATEWAY_TIMEOUT).end(err.toString())
+					return void res.status(StatusCodes.GATEWAY_TIMEOUT).end(err.toString())
 				} else {
-					res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(`${err}`)
+					return void res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(`${err}`)
 				}
 			} finally {
 				signal.clear()
@@ -224,8 +229,8 @@ export function createMetricsAPI(app: Canvas): express.Express {
 		canvasMetrics.canvas_messages.inc({ topic: message.topic, type: message.payload.type })
 	})
 
-	app.messageLog.addEventListener("sync", ({ detail: { peer, duration } }) => {
-		canvasMetrics.canvas_sync_time.observe({ topic: app.messageLog.topic, peer }, duration)
+	app.messageLog.addEventListener("sync", ({ detail: { peerId, duration } }) => {
+		canvasMetrics.canvas_sync_time.observe({ topic: app.messageLog.topic, peer: peerId }, duration)
 	})
 
 	const api = express()
@@ -236,7 +241,7 @@ export function createMetricsAPI(app: Canvas): express.Express {
 		res.header("Content-Type", register.contentType)
 		res.write(appMetrics + "\n")
 		res.write(libp2pMetrics + "\n")
-		res.end()
+		return void res.end()
 	})
 
 	return api

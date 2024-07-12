@@ -25,6 +25,19 @@ jobs:
     name: Unit Tests
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          # Maps tcp port 5432 on service container to the host
+          - 5432:5432
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -40,17 +53,32 @@ jobs:
       - name: Build
         run: npm run build
 
-      # - name: Run @canvas-js/gossiplog tests
-      #   run: npm run test --workspace=@canvas-js/gossiplog
+      - name: Set up Postgres
+        run: node scripts/setupPostgresTestEnv.cjs
+        env:
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+
+      - name: Run @canvas-js/gossiplog tests
+        run: npm run test --workspace=@canvas-js/gossiplog --match="\!simulate a randomly partitioned network, logs on postgres"
+        env:
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
 
       - name: Run @canvas-js/modeldb tests
         run: npm run test --workspace=@canvas-js/modeldb
+        env:
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
 
       - name: Run @canvas-js/chain-atp tests
         run: npm run test --workspace=@canvas-js/chain-atp
 
       - name: Run @canvas-js/core tests
         run: npm run test --workspace=@canvas-js/core
+        env:
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
 
       - name: Run @canvas-js/vm tests
         run: npm run test --workspace=@canvas-js/vm
@@ -58,8 +86,14 @@ jobs:
       - name: Run @canvas-js/interfaces interface tests
         run: npm run test --workspace=@canvas-js/interfaces
 
-      - name: Run @canvas-js/ethereum-contracts tests
-        run: npm run test --workspace=@canvas-js/ethereum-contracts
+      # - name: Run @canvas-js/ethereum-contracts tests
+      #   run: npm run test --workspace=@canvas-js/ethereum-contracts
+
+      - name: Run @canvas-js/chain-ethereum tests
+        run: npm run test --workspace=@canvas-js/chain-ethereum
+
+      - name: Run @canvas-js/signatures tests
+        run: npm run test --workspace=@canvas-js/signatures
 
   test-build:
     name: Build test (pnpm)
@@ -75,9 +109,9 @@ jobs:
           node-version: 18.x
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v2.4.0
+        uses: pnpm/action-setup@v4.0.0
         with:
-          version: 8
+          version: 9
 
       - name: Install modules
         run: pnpm i

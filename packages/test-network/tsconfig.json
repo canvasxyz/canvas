@@ -1,13 +1,10 @@
 {
-  "include": ["src"],
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "rootDir": "src",
-    "outDir": "lib",
-    "module": "Node16",
-    "moduleResolution": "Node16"
-  },
-  "references": [
-    { "path": "../core" }
-  ]
+	"extends": "../../tsconfig.base.json",
+	"include": ["src"],
+	"compilerOptions": {
+		"rootDir": "src",
+		"outDir": "lib",
+		"jsx": "react"
+	},
+	"references": [{ "path": "../gossiplog" }, { "path": "../interfaces" }]
 }

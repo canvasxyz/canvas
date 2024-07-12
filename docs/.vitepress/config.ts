@@ -43,7 +43,7 @@ export default defineConfig({
 		},
 	},
 	ignoreDeadLinks: [(url) => /^\.\/[0-9]+$/.test(url)], // ignore footnote links
-	title: "Canvas",
+	title: "Canvas Computing",
 	description: "A peer-to-peer runtime for decentralized applications",
 	themeConfig: {
 		logo: {
@@ -97,7 +97,7 @@ export default defineConfig({
 							items: [
 								{ text: "GossipLog", link: "/readme-gossiplog.md" },
 								{ text: "ModelDB", link: "/readme-modeldb.md" },
-								{ text: "Signed CID", link: "/readme-signed-cid.md" },
+								{ text: "Signatures", link: "/readme-signatures.md" },
 								{ text: "Interfaces", link: "/readme-interfaces.md" },
 								{ text: "Discovery Service", link: "/readme-discovery.md" },
 							],
@@ -118,21 +118,17 @@ export default defineConfig({
 						{
 							text: "Integrations",
 							collapsed: true,
-							items: [
-								{ text: "🚧 &nbsp;Next.js", link: "/readme-next.md" },
-								{ text: "🚧 &nbsp;ATSync", link: "/readme-atsync.md" },
-							],
+							items: [{ text: "🚧 &nbsp;Next.js", link: "/readme-next.md" }],
 						},
 					],
 				},
 				{
 					text: "Examples",
 					items: [
-						{ text: "Chat", link: "/examples-chat.md" },
+						{ text: "Server-Side", link: "/examples-chat-postgres.md" },
+						{ text: "Client-Side", link: "/examples-chat.md" },
 						{ text: "Encrypted Chat", link: "/examples-encrypted-chat.md" },
 						{ text: "Snake", link: "/examples-snake.md" },
-						{ text: "Forum", link: "/examples-forum.md" },
-						// { text: "Notes", link: "/examples-notes.md" }
 					],
 				},
 				{

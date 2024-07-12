@@ -21,14 +21,14 @@ export const ConnectSIWEViem: React.FC<ConnectSIWEViemProps> = ({}) => {
 
 		const client = createWalletClient({
 			chain: mainnet,
-			transport: custom(window.ethereum),
+			transport: custom(window.ethereum as any),
 		})
 
 		const chainId = await client.getChainId()
 		await client.requestAddresses()
 		const signer = new SIWESignerViem({ signer: client, chainId })
 
-		const { address } = await signer.getSession(app.topic)
+		const address = await signer.getDid()
 		setAddress(address)
 		setSessionSigner(signer)
 	}, [app])

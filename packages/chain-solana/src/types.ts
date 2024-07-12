@@ -3,6 +3,8 @@ export type SolanaSessionData = {
 }
 
 export type SolanaMessage = {
+	chainId: string
+	address: string
 	topic: string
 	publicKey: string
 	issuedAt: string
