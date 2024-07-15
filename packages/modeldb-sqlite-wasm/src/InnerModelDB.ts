@@ -1,14 +1,16 @@
 import { Config, Effect, ModelValue, QueryParams } from "@canvas-js/modeldb"
 import { assert, signalInvalidType } from "@canvas-js/utils"
-import { OpfsDatabase } from "@sqlite.org/sqlite-wasm"
+import sqlite3InitModule, { OpfsDatabase } from "@sqlite.org/sqlite-wasm"
 import { ModelAPI } from "./ModelAPI.js"
+
+const sqlite3 = await sqlite3InitModule({ print: console.log, printErr: console.error })
 
 export class InnerModelDB {
 	public readonly db: OpfsDatabase
 	#models: Record<string, ModelAPI> = {}
 
-	public constructor(db: OpfsDatabase, config: Config) {
-		this.db = db
+	public constructor(dbName: string, config: Config) {
+		this.db = new sqlite3.oo1.OpfsDb(`./${dbName}.sqlite3`)
 
 		for (const model of Object.values(config.models)) {
 			this.#models[model.name] = new ModelAPI(this.db, model)
@@ -46,7 +48,7 @@ export class InnerModelDB {
 		// }
 	}
 
-	public async get<T extends ModelValue>(modelName: string, key: string): Promise<T | null> {
+	public get<T extends ModelValue>(modelName: string, key: string): T | null {
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
 		return api.get(key) as T | null
@@ -58,13 +60,13 @@ export class InnerModelDB {
 		yield* api.values()
 	}
 
-	public async count(modelName: string): Promise<number> {
+	public count(modelName: string): number {
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
 		return api.count()
 	}
 
-	public async query<T extends ModelValue = ModelValue>(modelName: string, query: QueryParams = {}): Promise<T[]> {
+	public query<T extends ModelValue = ModelValue>(modelName: string, query: QueryParams = {}): T[] {
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
 		return api.query(query) as T[]

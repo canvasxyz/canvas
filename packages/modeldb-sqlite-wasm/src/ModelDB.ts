@@ -1,9 +1,8 @@
-import { AbstractModelDB, parseConfig, Effect, ModelValue, ModelSchema, QueryParams } from "@canvas-js/modeldb"
-import { assert, signalInvalidType } from "@canvas-js/utils"
+import { AbstractModelDB, parseConfig, Effect, ModelValue, ModelSchema, QueryParams, Config } from "@canvas-js/modeldb"
 import { MessageData } from "./types.js"
 
 export interface ModelDBOptions {
-	path: string | null
+	dbName: string | null
 	models: ModelSchema
 }
 
@@ -44,13 +43,15 @@ export class ModelDB extends AbstractModelDB {
 		return (await callWorker(this.worker, { type: "get", modelName, key })) as any
 	}
 
-	public async *iterate(modelName: string): AsyncIterable<ModelValue> {}
+	public async *iterate(modelName: string): AsyncIterable<ModelValue> {
+		return (await callWorker(this.worker, { type: "iterate", modelName })) as any
+	}
 
 	public async count(modelName: string): Promise<number> {
-		return 0
+		return (await callWorker(this.worker, { type: "count", modelName })) as any
 	}
 
 	public async query<T extends ModelValue = ModelValue>(modelName: string, query: QueryParams = {}): Promise<T[]> {
-		return []
+		return (await callWorker(this.worker, { type: "query", modelName, query })) as any
 	}
 }
