@@ -41,7 +41,9 @@ for (const topic of topics) {
 		path: process.env.DATABASE_URL,
 		contract: {
 			models: {},
-			actions: {},
+			actions: {
+				createMessage() {},
+			},
 		},
 		signers: [new SIWESigner()],
 		bootstrapList: [],
