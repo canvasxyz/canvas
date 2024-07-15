@@ -23,13 +23,18 @@ async function callWorker(worker: Worker, args: MessageData) {
 }
 
 export class ModelDB extends AbstractModelDB {
-	public readonly path: string
 	private readonly worker: Worker
 
-	constructor({ path, models }: ModelDBOptions) {
-		super(parseConfig(models))
-		this.path = path || "canvas"
-		this.worker = new Worker("./worker.js", { type: "module" })
+	public static async initialize({ dbName, models }: ModelDBOptions) {
+		const config = parseConfig(models)
+		const worker = new Worker("./worker.js", { type: "module" })
+		await callWorker(worker, { type: "initialize", config, dbName: dbName || "canvas" })
+		return new ModelDB({ worker, config })
+	}
+
+	private constructor({ worker, config }: { worker: Worker; config: Config }) {
+		super(config)
+		this.worker = worker
 	}
 
 	public async close() {
