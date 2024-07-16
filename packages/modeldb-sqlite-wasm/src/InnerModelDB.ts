@@ -1,15 +1,13 @@
 import { Config, Effect, ModelValue, QueryParams } from "@canvas-js/modeldb"
 import { assert, signalInvalidType } from "@canvas-js/utils"
-import sqlite3InitModule, { OpfsDatabase } from "@sqlite.org/sqlite-wasm"
+import { Sqlite3Static } from "@sqlite.org/sqlite-wasm"
 import { ModelAPI } from "./ModelAPI.js"
 
-const sqlite3 = await sqlite3InitModule({ print: console.log, printErr: console.error })
-
 export class InnerModelDB {
-	public readonly db: OpfsDatabase
+	public readonly db: any
 	#models: Record<string, ModelAPI> = {}
 
-	public constructor(path: string, config: Config) {
+	public constructor(sqlite3: Sqlite3Static, path: string, config: Config) {
 		this.db = new sqlite3.oo1.OpfsDb(path)
 
 		for (const model of Object.values(config.models)) {
@@ -18,7 +16,7 @@ export class InnerModelDB {
 	}
 
 	public async apply(effects: Effect[]) {
-		this.db.transaction((db) => {
+		this.db.transaction(() => {
 			for (const effect of effects) {
 				const model = this.#models[effect.model]
 				assert(model !== undefined, `model ${effect.model} not found`)

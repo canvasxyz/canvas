@@ -1,40 +1,37 @@
+import * as Comlink from "comlink"
 import { AbstractModelDB, parseConfig, Effect, ModelValue, ModelSchema, QueryParams, Config } from "@canvas-js/modeldb"
-import { MessageData } from "./types.js"
+import type { InnerModelDB } from "./InnerModelDB.js"
+import { Remote } from "comlink"
 
 export interface ModelDBOptions {
 	path: string
 	models: ModelSchema
 }
 
-async function callWorker(worker: Worker, args: MessageData) {
-	worker.postMessage(args)
-	const result = await new Promise((resolve, reject) => {
-		worker.onmessage = (event) => {
-			resolve(event.data)
-		}
-		worker.onerror = (event) => {
-			reject(event.error)
-		}
-	})
-	// reset the listener methods
-	worker.onmessage = null
-	worker.onerror = null
-	return result
-}
-
 export class ModelDB extends AbstractModelDB {
 	private readonly worker: Worker
+	private readonly wrappedDB: Remote<InnerModelDB>
 
 	public static async initialize({ path, models }: ModelDBOptions) {
 		const config = parseConfig(models)
 		const worker = new Worker("./worker.js", { type: "module" })
-		await callWorker(worker, { type: "initialize", config, path })
-		return new ModelDB({ worker, config })
+		const initializeDB = Comlink.wrap(worker) as any
+		const wrappedDB = (await initializeDB(path, config)) as Remote<InnerModelDB>
+		return new ModelDB({ worker, wrappedDB, config })
 	}
 
-	private constructor({ worker, config }: { worker: Worker; config: Config }) {
+	private constructor({
+		worker,
+		wrappedDB,
+		config,
+	}: {
+		worker: Worker
+		wrappedDB: Remote<InnerModelDB>
+		config: Config
+	}) {
 		super(config)
 		this.worker = worker
+		this.wrappedDB = wrappedDB
 	}
 
 	public async close() {
@@ -42,21 +39,23 @@ export class ModelDB extends AbstractModelDB {
 		this.worker.terminate()
 	}
 
-	public async apply(effects: Effect[]) {}
+	public async apply(effects: Effect[]) {
+		return this.wrappedDB.apply(effects)
+	}
 
 	public async get<T extends ModelValue>(modelName: string, key: string): Promise<T | null> {
-		return (await callWorker(this.worker, { type: "get", modelName, key })) as any
+		return this.wrappedDB.get(modelName, key) as Promise<T | null>
 	}
 
 	public async *iterate(modelName: string): AsyncIterable<ModelValue> {
-		return (await callWorker(this.worker, { type: "iterate", modelName })) as any
+		return this.wrappedDB.iterate(modelName)
 	}
 
 	public async count(modelName: string): Promise<number> {
-		return (await callWorker(this.worker, { type: "count", modelName })) as any
+		return this.wrappedDB.count(modelName)
 	}
 
 	public async query<T extends ModelValue = ModelValue>(modelName: string, query: QueryParams = {}): Promise<T[]> {
-		return (await callWorker(this.worker, { type: "query", modelName, query })) as any
+		return this.wrappedDB.query(modelName, query) as Promise<T[]>
 	}
 }
