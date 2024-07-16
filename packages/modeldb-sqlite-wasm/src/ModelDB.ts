@@ -2,7 +2,7 @@ import { AbstractModelDB, parseConfig, Effect, ModelValue, ModelSchema, QueryPar
 import { MessageData } from "./types.js"
 
 export interface ModelDBOptions {
-	dbName: string | null
+	path: string
 	models: ModelSchema
 }
 
@@ -25,10 +25,10 @@ async function callWorker(worker: Worker, args: MessageData) {
 export class ModelDB extends AbstractModelDB {
 	private readonly worker: Worker
 
-	public static async initialize({ dbName, models }: ModelDBOptions) {
+	public static async initialize({ path, models }: ModelDBOptions) {
 		const config = parseConfig(models)
 		const worker = new Worker("./worker.js", { type: "module" })
-		await callWorker(worker, { type: "initialize", config, dbName: dbName || "canvas" })
+		await callWorker(worker, { type: "initialize", config, path })
 		return new ModelDB({ worker, config })
 	}
 

@@ -9,8 +9,8 @@ export class InnerModelDB {
 	public readonly db: OpfsDatabase
 	#models: Record<string, ModelAPI> = {}
 
-	public constructor(dbName: string, config: Config) {
-		this.db = new sqlite3.oo1.OpfsDb(`./${dbName}.sqlite3`)
+	public constructor(path: string, config: Config) {
+		this.db = new sqlite3.oo1.OpfsDb(path)
 
 		for (const model of Object.values(config.models)) {
 			this.#models[model.name] = new ModelAPI(this.db, model)

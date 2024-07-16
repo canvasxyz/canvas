@@ -3,7 +3,7 @@ import { Config, QueryParams } from "@canvas-js/modeldb"
 type InitializeMessage = {
 	type: "initialize"
 	config: Config
-	dbName: string
+	path: string
 }
 
 type GetMessage = {
