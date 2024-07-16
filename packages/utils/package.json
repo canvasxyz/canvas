@@ -1,6 +1,6 @@
 {
 	"name": "@canvas-js/utils",
-	"version": "0.10.0",
+	"version": "0.10.1",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"type": "module",
 	"engines": {
