@@ -7,7 +7,7 @@ export class Handler {
 	public handle(data: MessageData) {
 		const messageType = data.type
 		if (messageType == "initialize") {
-			this.innerModelDb = new InnerModelDB(data.dbName, data.config)
+			this.innerModelDb = new InnerModelDB(data.path, data.config)
 			// TODO: should initialize return anything?
 		} else if (messageType == "get") {
 			if (!this.innerModelDb) throw new Error("ModelDB not initialized")
