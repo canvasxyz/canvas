@@ -40,13 +40,15 @@ for (const topic of topics) {
 		// do we need a separate database url for each topic?
 		path: process.env.DATABASE_URL,
 		contract: {
-			topic,
 			models: {},
-			actions: {},
+			actions: {
+				createMessage() {},
+			},
 		},
 		signers: [new SIWESigner()],
 		bootstrapList: [],
 		listen: [`/ip4/0.0.0.0/tcp/${LIBP2P_PORT}/ws`],
+		topic,
 	})
 
 	// create empty counts row for this topic in the index table
