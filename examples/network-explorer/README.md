@@ -1,8 +1,8 @@
 # Network Explorer Example
 
-## Testing locally
+## Running locally (for development)
 
-To test locally, you need to deploy three apps:
+To run the network explorer locally, you need to deploy three apps:
 - The network-explorer server, which consists of a Canvas node plus a database index and some endpoints for exposing information about the network.
 - The network-explorer client, which will query the server API and display the information.
 - A Canvas app that produces events. In this example we will use the chat application in `examples/chat`. This will connect to the server over libp2p.
