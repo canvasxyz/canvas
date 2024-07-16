@@ -8,7 +8,7 @@ import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "../utils.js
 
 function SessionField({ signature, message }: { signature: Signature; message: Message<Action> }) {
 	const { data: session, error } = useSWR(
-		`/index_api/latest_session/${message.topic}?did=${message.payload.did}&public_key=${signature.publicKey}`,
+		`/index_api/latest_session/${message.topic}?address=${message.payload.did}&public_key=${signature.publicKey}`,
 		fetchAndIpldParseJson<Session>,
 	)
 

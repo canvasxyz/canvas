@@ -139,7 +139,7 @@ expressApp.get("/index_api/latest_session/:topic", async (req, res) => {
 	}
 	if (
 		!req.query.address ||
-		typeof req.query.did !== "string" ||
+		typeof req.query.address !== "string" ||
 		!req.query.public_key ||
 		typeof req.query.public_key !== "string"
 	) {
@@ -156,7 +156,7 @@ expressApp.get("/index_api/latest_session/:topic", async (req, res) => {
 	}
 
 	const sessionId = await canvasApp.getSession({
-		did: req.query.did,
+		address: req.query.address,
 		publicKey: req.query.public_key,
 		timestamp: req.query.timestamp ? parseInt(req.query.timestamp) : undefined,
 	})
