@@ -13,6 +13,7 @@
 		"@canvas-js/chain-cosmos": "0.10.1",
 		"@canvas-js/chain-ethereum": "0.10.1",
 		"@canvas-js/chain-ethereum-viem": "0.10.1",
+		"@canvas-js/modeldb-sqlite-wasm": "0.10.1",
 		"@canvas-js/chain-solana": "0.10.1",
 		"@canvas-js/chain-substrate": "0.10.1",
 		"@canvas-js/core": "0.10.1",
