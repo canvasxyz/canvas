@@ -14,8 +14,8 @@
 		"test": "ava --serial"
 	},
 	"dependencies": {
-		"@canvas-js/modeldb": "0.10.0-beta.4",
-		"@canvas-js/utils": "0.10.0-beta.4",
+		"@canvas-js/modeldb": "0.10.1",
+		"@canvas-js/utils": "0.10.1",
 		"@ipld/dag-json": "^10.2.2",
 		"@sqlite.org/sqlite-wasm": "^3.46.0-build2",
 		"comlink": "^4.4.1"
