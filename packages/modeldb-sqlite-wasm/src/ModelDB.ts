@@ -72,30 +72,6 @@ export class ModelDB extends AbstractModelDB {
 		return this.wrappedDB.query(modelName, query) as Promise<T[]>
 	}
 
-	private getEffectFilter_(model: Model, query: QueryParams): (effect: Effect) => boolean {
-		const filter = getFilter(model, query.where)
-
-		return (effect) => {
-			if (effect.model !== model.name) {
-				return false
-			}
-
-			if (effect.operation === "set") {
-				if (!filter(effect.value)) {
-					return false
-				}
-			}
-
-			// TODO: we could do more to filter out more effects:
-			// - look up the previous value before deleting and see if it was a possible query result
-			// - for queries with defined a order and limit, track the order property value of the
-			//   last query result, and if the a new value is set with a later order property value,
-			//   filter the effect out.
-
-			return true
-		}
-	}
-
 	public subscribe(
 		modelName: string,
 		query: QueryParams,
@@ -104,7 +80,7 @@ export class ModelDB extends AbstractModelDB {
 		const model = this.models[modelName]
 		assert(model !== undefined, `model ${modelName} not found`)
 
-		const filter = this.getEffectFilter_(model, query)
+		const filter = this.getEffectFilter(model, query)
 		const id = this.subscriptionId++
 		// this is async but don't wait for it
 		this.wrappedDB.subscribe(id, modelName, query, Comlink.proxy(filter), Comlink.proxy(callback))

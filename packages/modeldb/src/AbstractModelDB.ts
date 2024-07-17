@@ -81,7 +81,7 @@ export abstract class AbstractModelDB {
 		this.subscriptions.delete(id)
 	}
 
-	private getEffectFilter(model: Model, query: QueryParams): (effect: Effect) => boolean {
+	protected getEffectFilter(model: Model, query: QueryParams): (effect: Effect) => boolean {
 		const filter = getFilter(model, query.where)
 
 		return (effect) => {
