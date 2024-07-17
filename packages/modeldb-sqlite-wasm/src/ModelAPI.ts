@@ -143,6 +143,7 @@ export class ModelAPI {
 
 		// Prepare queries
 		this.#count = new Query<{}, { count: number }>(this.db, `SELECT COUNT(*) AS count FROM "${this.#table}"`)
+
 		this.#select = new Query<Record<string, `p${string}`>, RecordValue>(
 			this.db,
 			`SELECT ${columnNames.join(", ")} FROM "${this.#table}" ${where}`,
@@ -152,7 +153,7 @@ export class ModelAPI {
 	}
 
 	public get(key: string): ModelValue | null {
-		const record = this.#select.get({ [this.#primaryKeyParam]: key })
+		const record = this.#select.get({ [`:${this.#primaryKeyParam}`]: key })
 		if (record === null) {
 			return null
 		}
@@ -169,7 +170,7 @@ export class ModelAPI {
 		assert(typeof key === "string", 'expected typeof primaryKey === "string"')
 
 		const encodedParams = encodeRecordParams(this.model, value, this.#params)
-		const existingRecord = this.#select.get({ [this.#primaryKeyParam]: key })
+		const existingRecord = this.#select.get({ [`:${this.#primaryKeyParam}`]: key })
 		if (existingRecord === null) {
 			this.#insert.run(encodedParams)
 		} else {
@@ -186,7 +187,7 @@ export class ModelAPI {
 	}
 
 	public delete(key: string) {
-		const existingRecord = this.#select.get({ [this.#primaryKeyParam]: key })
+		const existingRecord = this.#select.get({ [`:${this.#primaryKeyParam}`]: key })
 		if (existingRecord === null) {
 			return
 		}
@@ -263,7 +264,11 @@ export class ModelAPI {
 			params.limit = query.offset
 		}
 
-		const results = this.db.selectObjects(sql.join(" "))
+		const paramsWithColons: any = {}
+		for (const key of Object.keys(params)) {
+			paramsWithColons[`:${key}`] = params[key]
+		}
+		const results = this.db.selectObjects(sql.join(" "), paramsWithColons)
 		return results.map((record): ModelValue => {
 			const key = record[this.#primaryKeyName]
 			assert(typeof key === "string", 'expected typeof primaryKey === "string"')

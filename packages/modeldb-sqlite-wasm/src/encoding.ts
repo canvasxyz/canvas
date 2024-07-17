@@ -18,8 +18,8 @@ export function encodeRecordParams(
 	model: Model,
 	value: ModelValue,
 	params: Record<string, `p${string}`>,
-): { [arg: `p${string}`]: SqlValue } {
-	const values: Record<`p${string}`, SqlValue> = {}
+): { [arg: `:p${string}`]: SqlValue } {
+	const values: Record<`:p${string}`, SqlValue> = {}
 
 	for (const property of model.properties) {
 		const propertyValue = value[property.name]
@@ -27,7 +27,7 @@ export function encodeRecordParams(
 			throw new Error(`missing value for property ${model.name}/${property.name}`)
 		}
 
-		const param = params[property.name]
+		const param = `:${params[property.name]}` as const
 		if (property.kind === "primary") {
 			values[param] = encodePrimaryKeyValue(model.name, property, value[property.name])
 		} else if (property.kind === "primitive") {

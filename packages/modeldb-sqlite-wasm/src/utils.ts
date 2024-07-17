@@ -12,10 +12,13 @@ export class Query<P extends BindingSpec, R> {
 
 	public get(params: P): R | null {
 		const statement = this.statement
+
 		try {
 			statement.bind(params)
-			const result = statement.get({}) as R | null
-			return result ?? null
+			if (!statement.step()) {
+				return null
+			}
+			return statement.get({}) as R
 		} finally {
 			statement.reset(true)
 		}
