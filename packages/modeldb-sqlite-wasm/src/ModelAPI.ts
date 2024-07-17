@@ -36,6 +36,7 @@ type Params = Record<`p${string}`, SqlValue>
 const primitiveColumnTypes = {
 	integer: "INTEGER",
 	float: "FLOAT",
+	number: "NUMERIC",
 	string: "TEXT",
 	bytes: "BLOB",
 	boolean: "INTEGER",
