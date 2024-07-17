@@ -29,7 +29,7 @@ export abstract class AbstractModelDB {
 
 	abstract close(): Promise<void>
 
-	abstract get<T extends ModelValue<any> = ModelValue<any>>(modelName: string, key: string): Promise<T | null>
+	abstract get<T extends ModelValue<any> = ModelValue<any>>(modelName: string, key: string): Awaitable<T | null>
 
 	abstract iterate(modelName: string): AsyncIterable<ModelValue>
 

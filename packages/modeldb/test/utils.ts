@@ -4,6 +4,7 @@ import { nanoid } from "nanoid"
 
 import type { AbstractModelDB, ModelSchema } from "@canvas-js/modeldb"
 import { ModelDB as ModelDBSqlite } from "@canvas-js/modeldb-sqlite"
+import { TransientModelDB } from "@canvas-js/modeldb-sqlite-wasm"
 import { ModelDB as ModelDBIdb } from "@canvas-js/modeldb-idb"
 import { ModelDB as ModelDBPostgres } from "@canvas-js/modeldb-pg"
 

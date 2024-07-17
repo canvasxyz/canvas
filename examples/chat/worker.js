@@ -4,7 +4,8 @@ import { InnerModelDB } from "@canvas-js/modeldb-sqlite-wasm"
 
 export async function initialize(path, config) {
 	const sqlite3 = await sqlite3InitModule({ print: console.log, printErr: console.error })
-	return Comlink.proxy(new InnerModelDB(sqlite3, path, config))
+	const db = new sqlite3.oo1.OpfsDb(path)
+	return Comlink.proxy(new InnerModelDB(db, config))
 }
 
 Comlink.expose(initialize)

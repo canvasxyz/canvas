@@ -20,7 +20,7 @@ export interface ModelDBOptions {
 	models: ModelSchema
 }
 
-export class ModelDB extends AbstractModelDB {
+export class OpfsModelDB extends AbstractModelDB {
 	private readonly worker: Worker
 	private readonly wrappedDB: Remote<InnerModelDB>
 	private subscriptionId = 0
@@ -30,7 +30,7 @@ export class ModelDB extends AbstractModelDB {
 		const worker = new Worker("./worker.js", { type: "module" })
 		const initializeDB = Comlink.wrap(worker) as any
 		const wrappedDB = (await initializeDB(path, config)) as Remote<InnerModelDB>
-		return new ModelDB({ worker, wrappedDB, config })
+		return new OpfsModelDB({ worker, wrappedDB, config })
 	}
 
 	private constructor({

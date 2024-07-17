@@ -1,6 +1,6 @@
 import { Config, Effect, ModelValue, QueryParams } from "@canvas-js/modeldb"
 import { assert, signalInvalidType } from "@canvas-js/utils"
-import { Sqlite3Static } from "@sqlite.org/sqlite-wasm"
+import { Database } from "@sqlite.org/sqlite-wasm"
 import { ModelAPI } from "./ModelAPI.js"
 
 type Subscription = {
@@ -11,19 +11,23 @@ type Subscription = {
 }
 
 export class InnerModelDB {
-	public readonly db: any
+	public readonly db: Database
 	#models: Record<string, ModelAPI> = {}
 	protected readonly subscriptions = new Map<number, Subscription>()
 
-	public constructor(sqlite3: Sqlite3Static, path: string, config: Config) {
-		this.db = new sqlite3.oo1.OpfsDb(path)
+	public constructor(db: Database, config: Config) {
+		this.db = db
 
 		for (const model of Object.values(config.models)) {
 			this.#models[model.name] = new ModelAPI(this.db, model)
 		}
 	}
 
-	public async apply(effects: Effect[]) {
+	public close() {
+		this.db.close()
+	}
+
+	public apply(effects: Effect[]) {
 		this.db.transaction(() => {
 			for (const effect of effects) {
 				const model = this.#models[effect.model]
@@ -51,10 +55,10 @@ export class InnerModelDB {
 		}
 	}
 
-	public get<T extends ModelValue>(modelName: string, key: string): T | null {
+	public get<T extends ModelValue>(modelName: string, key: string): T {
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
-		return api.get(key) as T | null
+		return api.get(key) as T
 	}
 
 	public async *iterate(modelName: string): AsyncIterable<ModelValue> {
@@ -80,7 +84,7 @@ export class InnerModelDB {
 		modelName: string,
 		query: QueryParams,
 		filter: (effect: Effect) => boolean,
-		callback: (results: ModelValue[]) => Promise<void> | void,
+		callback: (results: ModelValue[]) => void,
 	) {
 		this.subscriptions.set(id, { model: modelName, query, filter, callback })
 	}
