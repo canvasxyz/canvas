@@ -12,7 +12,7 @@ import {
 } from "@canvas-js/modeldb"
 import type { InnerModelDB } from "./InnerModelDB.js"
 import { Remote } from "comlink"
-import { Awaitable } from "@canvas-js/modeldb/src/utils.js"
+import { Awaitable } from "@canvas-js/interfaces"
 import assert from "assert"
 
 export interface ModelDBOptions {

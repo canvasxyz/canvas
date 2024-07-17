@@ -14,6 +14,7 @@
 		"test": "ava --serial"
 	},
 	"dependencies": {
+		"@canvas-js/interfaces": "0.10.1",
 		"@canvas-js/modeldb": "0.10.1",
 		"@canvas-js/utils": "0.10.1",
 		"@ipld/dag-json": "^10.2.2",
