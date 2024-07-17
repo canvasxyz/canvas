@@ -1,12 +1,12 @@
 {
 	"private": true,
 	"name": "@canvas-js/example-chess-server",
-	"version": "0.10.0-beta.4",
+	"version": "0.10.1",
 	"type": "module",
 	"scripts": {
 		"start": "canvas run /data/app --topic canvas-chess --init contract.canvas.js --verbose --metrics --listen /ip6/::/tcp/8080/ws --announce /dns4/canvas-chess.fly.dev/tcp/443/wss"
 	},
 	"dependencies": {
-		"@canvas-js/cli": "0.10.0-beta.4"
+		"@canvas-js/cli": "0.10.1"
 	}
 }

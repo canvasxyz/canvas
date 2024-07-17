@@ -33,7 +33,7 @@ export function validatePropertyValue(modelName: string, property: Property, val
 			} else if (!Number.isSafeInteger(value)) {
 				throw new TypeError(`write to db.${modelName}.${property.name}: must be a valid Number.isSafeInteger()`)
 			}
-		} else if (property.type === "float") {
+		} else if (property.type === "number" || property.type === "float") {
 			if (typeof value !== "number") {
 				throw new TypeError(`write to db.${modelName}.${property.name}: expected a number, received a ${typeof value}`)
 			}

@@ -1,6 +1,6 @@
 {
 	"name": "@canvas-js/modeldb",
-	"version": "0.10.0-beta.4",
+	"version": "0.10.1",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"type": "module",
 	"engines": {
@@ -20,7 +20,7 @@
 		"nanoid": "^5.0.7"
 	},
 	"dependencies": {
-		"@canvas-js/utils": "0.10.0-beta.4",
+		"@canvas-js/utils": "0.10.1",
 		"@ipld/dag-json": "^10.2.2",
 		"@libp2p/logger": "^4.0.16",
 		"uint8arrays": "^5.1.0"

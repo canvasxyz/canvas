@@ -26,7 +26,7 @@ export interface SessionSigner<AuthorizationData = any> {
 	hasSession: (topic: string, did: DidIdentifier) => boolean
 	getSession: (
 		topic: string,
-		options?: { did?: DidIdentifier },
+		options?: { did?: DidIdentifier } | { address: string },
 	) => Awaitable<{ payload: Session<AuthorizationData>; signer: Signer<Action | Session<AuthorizationData>> } | null>
 	newSession: (
 		topic: string,

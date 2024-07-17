@@ -2,11 +2,11 @@ import { TypedEventEmitter, CustomEvent } from "@libp2p/interface"
 import { Logger, logger } from "@libp2p/logger"
 import { equals, toString } from "uint8arrays"
 
-import { Node, Tree, ReadWriteTransaction, hashEntry } from "@canvas-js/okra"
+import { Node, Tree, ReadWriteTransaction, hashEntry, ReadOnlyTransaction } from "@canvas-js/okra"
 import type { Signature, Signer, Message, Awaitable } from "@canvas-js/interfaces"
 import type { AbstractModelDB, ModelSchema, Effect } from "@canvas-js/modeldb"
 import { ed25519 } from "@canvas-js/signatures"
-import { assert, zip } from "@canvas-js/utils"
+import { assert, zip, prepare, prepareMessage } from "@canvas-js/utils"
 
 import { Driver } from "./sync/driver.js"
 
@@ -115,10 +115,15 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		})
 	}
 
-	public encode<T extends Payload = Payload>(signature: Signature, message: Message<T>): SignedMessage<T> {
+	public encode<T extends Payload = Payload>(
+		signature: Signature,
+		message: Message<T>,
+		{ replaceUndefined }: { replaceUndefined: boolean } = { replaceUndefined: true },
+	): SignedMessage<T> {
 		assert(this.topic === message.topic, "expected this.topic === topic")
-		assert(this.validatePayload(message.payload), "error encoding message (invalid payload)")
-		return SignedMessage.encode(signature, message)
+		const preparedMessage = prepareMessage(message)
+		assert(this.validatePayload(preparedMessage.payload), "error encoding message (invalid payload)")
+		return SignedMessage.encode(signature, preparedMessage)
 	}
 
 	public decode(value: Uint8Array): SignedMessage<Payload> {
@@ -150,7 +155,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		}
 	}
 
-	public export(
+	public getMessages(
 		range: { lt?: string; lte?: string; gt?: string; gte?: string; reverse?: boolean; limit?: number } = {},
 	): Promise<{ id: string; signature: Signature; message: Message<Payload> }[]> {
 		const { reverse = false, limit, ...where } = range
@@ -160,6 +165,22 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 			orderBy: { id: reverse ? "desc" : "asc" },
 			limit,
 		})
+	}
+
+	public async *iterate(
+		range: { lt?: string; lte?: string; gt?: string; gte?: string; reverse?: boolean; limit?: number } = {},
+	): AsyncIterable<{ id: string; signature: Signature; message: Message<Payload> }> {
+		const { reverse = false, limit, ...where } = range
+		// TODO: use this.db.iterate()
+		const query = await this.db.query<{ id: string; signature: Signature; message: Message<Payload> }>("$messages", {
+			where: { id: where },
+			select: { id: true, signature: true, message: true },
+			orderBy: { id: reverse ? "desc" : "asc" },
+			limit,
+		})
+		for await (const row of query) {
+			yield row
+		}
 	}
 
 	/**
@@ -177,7 +198,12 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		const signedMessage = await this.tree.write(async (txn) => {
 			const [clock, parents] = await this.getClock()
 
-			const message: Message<T> = { topic: this.topic, clock, parents, payload }
+			const message: Message<T> = {
+				topic: this.topic,
+				clock,
+				parents,
+				payload: prepare(payload, { replaceUndefined: true }),
+			}
 			const signature = await signer.sign(message)
 
 			const signedMessage = this.encode(signature, message)

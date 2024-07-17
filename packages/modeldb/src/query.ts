@@ -159,6 +159,7 @@ const booleanOrder: Order = {
 export const primitiveTypeOrders: Record<PrimitiveType, Order> = {
 	integer: numberOrder,
 	float: numberOrder,
+	number: numberOrder,
 	string: stringOrder,
 	bytes: byteOrder,
 	boolean: booleanOrder,

@@ -128,7 +128,7 @@ test("insert a message created by another app", async (t) => {
 	const [{ app: a }, { app: b }] = await Promise.all([init(t), init(t)])
 
 	await a.actions.createPost({ content: "hello world", isVisible: true, something: "bar", metadata: {} })
-	const records = await a.messageLog.export()
+	const records = await a.messageLog.getMessages()
 	for (const { signature, message } of records) {
 		await t.notThrowsAsync(() => b.insert(signature, message))
 	}

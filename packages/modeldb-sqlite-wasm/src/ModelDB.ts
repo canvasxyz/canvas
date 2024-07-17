@@ -23,7 +23,7 @@ export interface ModelDBOptions {
 export class ModelDB extends AbstractModelDB {
 	private readonly worker: Worker
 	private readonly wrappedDB: Remote<InnerModelDB>
-	#subscriptionId = 0
+	private subscriptionId = 0
 
 	public static async initialize({ path, models }: ModelDBOptions) {
 		const config = parseConfig(models)
@@ -105,7 +105,7 @@ export class ModelDB extends AbstractModelDB {
 		assert(model !== undefined, `model ${modelName} not found`)
 
 		const filter = this.getEffectFilter_(model, query)
-		const id = this.#subscriptionId++
+		const id = this.subscriptionId++
 		// this is async but don't wait for it
 		this.wrappedDB.subscribe(id, modelName, query, Comlink.proxy(filter), Comlink.proxy(callback))
 

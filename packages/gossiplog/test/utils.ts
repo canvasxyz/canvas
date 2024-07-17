@@ -87,8 +87,7 @@ export async function expectLogEntries<T>(
 	log: AbstractGossipLog<T>,
 	entries: [id: string, publicKey: string, message: Message<T>][],
 ) {
-	const records = await log.export()
-	// console.log("got records", records)
+	const records = await log.getMessages()
 	t.is(records.length, entries.length, `unexpected length`)
 	for (const [[id, publicKey, message], record, i] of zip(entries, records)) {
 		t.is(record.id, id, `unexpected id at index ${i}`)

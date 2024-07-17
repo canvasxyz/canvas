@@ -1,7 +1,7 @@
 {
 	"name": "canvas",
 	"private": true,
-	"version": "0.10.0-beta.4",
+	"version": "0.10.1",
 	"type": "module",
 	"scripts": {
 		"dev": "tsc --build --watch",
@@ -24,17 +24,17 @@
 	],
 	"devDependencies": {
 		"@ava/typescript": "^5.0.0",
-		"@canvas-js/chain-ethereum": "0.10.0-beta.4",
-		"@canvas-js/chain-ethereum-viem": "0.10.0-beta.4",
-		"@canvas-js/chain-solana": "0.10.0-beta.4",
-		"@canvas-js/chain-substrate": "0.10.0-beta.4",
-		"@canvas-js/chain-cosmos": "0.10.0-beta.4",
-		"@canvas-js/hooks": "0.10.0-beta.4",
-		"@canvas-js/interfaces": "0.10.0-beta.4",
-		"@canvas-js/modeldb": "0.10.0-beta.4",
-		"@canvas-js/modeldb-sqlite": "0.10.0-beta.4",
-		"@canvas-js/modeldb-idb": "0.10.0-beta.4",
-		"@canvas-js/modeldb-pg": "0.10.0-beta.4",
+		"@canvas-js/chain-ethereum": "0.10.1",
+		"@canvas-js/chain-ethereum-viem": "0.10.1",
+		"@canvas-js/chain-solana": "0.10.1",
+		"@canvas-js/chain-substrate": "0.10.1",
+		"@canvas-js/chain-cosmos": "0.10.1",
+		"@canvas-js/hooks": "0.10.1",
+		"@canvas-js/interfaces": "0.10.1",
+		"@canvas-js/modeldb": "0.10.1",
+		"@canvas-js/modeldb-sqlite": "0.10.1",
+		"@canvas-js/modeldb-idb": "0.10.1",
+		"@canvas-js/modeldb-pg": "0.10.1",
 		"@types/node": "^20.14.6",
 		"@typescript-eslint/eslint-plugin": "^6.21.0",
 		"@typescript-eslint/parser": "^6.21.0",
@@ -50,12 +50,13 @@
 		"react-chessboard": "^4.6.0",
 		"typescript": "^5.4.5",
 		"veaury": "^2.4.0",
+		"vite": "^5.3.3",
 		"vitepress": "^1.2.3",
 		"vue": "^3.3.7",
 		"vue-markdown-render": "^2.2.1"
 	},
 	"optionalDependencies": {
-		"@rollup/rollup-linux-x64-gnu": "4.9.5"
+		"@rollup/rollup-linux-x64-gnu": "4.13.0"
 	},
 	"dependencies": {
 		"@chrisoakman/chessboardjs": "^1.0.0",

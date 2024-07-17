@@ -71,7 +71,7 @@ export function encodePrimitiveValue(
 		} else {
 			throw new TypeError(`${modelName}/${property.name} must be a safely representable integer`)
 		}
-	} else if (property.type === "float") {
+	} else if (property.type === "number" || property.type === "float") {
 		if (typeof value === "number") {
 			return value
 		} else {
@@ -176,7 +176,7 @@ export function decodePrimitiveValue(modelName: string, property: PrimitivePrope
 			console.error("expected integer, got", value)
 			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected integer)`)
 		}
-	} else if (property.type === "float") {
+	} else if (property.type === "number" || property.type === "float") {
 		if (typeof value === "string") {
 			return parseFloat(value)
 		} else {
