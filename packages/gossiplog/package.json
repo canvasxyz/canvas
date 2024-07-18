@@ -1,6 +1,6 @@
 {
 	"name": "@canvas-js/gossiplog",
-	"version": "0.10.2",
+	"version": "0.10.3",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"type": "module",
 	"engines": {
@@ -40,16 +40,16 @@
 		"@chainsafe/libp2p-gossipsub": "^13.1.0"
 	},
 	"dependencies": {
-		"@canvas-js/interfaces": "0.10.2",
-		"@canvas-js/modeldb": "0.10.2",
-		"@canvas-js/modeldb-idb": "0.10.2",
-		"@canvas-js/modeldb-pg": "0.10.2",
-		"@canvas-js/modeldb-sqlite": "0.10.2",
+		"@canvas-js/interfaces": "0.10.3",
+		"@canvas-js/modeldb": "0.10.3",
+		"@canvas-js/modeldb-idb": "0.10.3",
+		"@canvas-js/modeldb-pg": "0.10.3",
+		"@canvas-js/modeldb-sqlite": "0.10.3",
 		"@canvas-js/okra": "^0.4.4",
 		"@canvas-js/okra-lmdb": "^0.1.2",
 		"@canvas-js/okra-memory": "^0.4.4",
-		"@canvas-js/signatures": "0.10.2",
-		"@canvas-js/utils": "0.10.2",
+		"@canvas-js/signatures": "0.10.3",
+		"@canvas-js/utils": "0.10.3",
 		"@chainsafe/libp2p-gossipsub": "^13.1.0",
 		"@chainsafe/libp2p-noise": "^15.1.0",
 		"@chainsafe/libp2p-yamux": "^6.0.2",
