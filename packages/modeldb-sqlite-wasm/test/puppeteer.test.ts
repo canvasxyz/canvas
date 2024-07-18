@@ -1,11 +1,21 @@
-import test, { ExecutionContext } from "ava"
+import test from "ava"
 import puppeteer from "puppeteer"
 import fs from "node:fs"
-import { exec } from "node:child_process"
+import { build } from "esbuild"
+import { polyfillNode } from "esbuild-plugin-polyfill-node"
 
 test("initialize a sqlite-wasm-opfs database", async (t) => {
-	exec("esbuild ./test/lib/bundle.js --bundle --outdir=test/lib/build --platform=browser")
-	const clientJs = fs.readFileSync("./test/lib/build/bundle.js", { encoding: "utf8" })
+	// build the worker bundle
+	const browserBundleFilename = "./test/lib/build/browser.js"
+	await build({
+		entryPoints: ["./test/browser.ts"],
+		bundle: true,
+		outfile: browserBundleFilename,
+		platform: "browser",
+		plugins: [polyfillNode()],
+	})
+
+	const browserBundleJs = fs.readFileSync(browserBundleFilename, { encoding: "utf8" })
 
 	const browser = await puppeteer.launch({
 		dumpio: true,
@@ -34,13 +44,18 @@ test("initialize a sqlite-wasm-opfs database", async (t) => {
 	console.log("setting up browser context...")
 	await page.goto("https:example.com")
 
-	let testResults = {}
-	await page.exposeFunction("updateTestResults", (_testResults: typeof testResults) => (testResults = _testResults))
-	await page.exposeFunction("log", (...args: any[]) => console.log(...args))
+	await new Promise((resolve) => setTimeout(resolve, 2000)) // TODO: find a better way to terminate if tests don't finish
 
-	await page.evaluate(clientJs)
-	await new Promise((resolve) => setTimeout(resolve, 5000)) // TODO: find a better way to terminate if tests don't finish
-	console.log("test results:", testResults) // TODO: pass test results to test runner
+	const testResults: any = await new Promise((resolve) => {
+		async function doThing() {
+			await page.exposeFunction("updateTestResults", resolve)
+			await page.exposeFunction("log", (...args: any[]) => console.log(...args))
+			await page.evaluate(browserBundleJs)
+		}
+		doThing()
+	})
 
+	console.log(testResults)
+	t.true(testResults.done)
 	await browser.close()
 })

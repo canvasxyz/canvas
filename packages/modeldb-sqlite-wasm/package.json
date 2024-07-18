@@ -24,6 +24,7 @@
 		"comlink": "^4.4.1"
 	},
 	"devDependencies": {
+		"esbuild-plugin-polyfill-node": "^0.3.0",
 		"puppeteer": "^22.13.1"
 	}
 }

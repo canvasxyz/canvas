@@ -1,5 +1,5 @@
 {
-	"exclude": ["lib"],
+	"exclude": ["lib", "bundle.ts"],
 	"extends": "../../../tsconfig.base.json",
 	"compilerOptions": {
 		"module": "Node16",
@@ -7,7 +7,5 @@
 		"rootDir": ".",
 		"outDir": "lib"
 	},
-	"references": [
-		{ "path": "../." }
-	]
+	"references": [{ "path": "../." }]
 }
