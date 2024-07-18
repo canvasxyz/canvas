@@ -65,6 +65,7 @@
 		"uint8arrays": "^5.1.0"
 	},
 	"devDependencies": {
+		"@canvas-js/chain-cosmos": "0.10.3",
 		"@types/node": "^20.14.6",
 		"@types/pg": "^8.11.6",
 		"dotenv": "^16.4.5",

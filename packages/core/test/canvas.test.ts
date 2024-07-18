@@ -7,6 +7,7 @@ import pg from "pg"
 import type { Message } from "@canvas-js/interfaces"
 import { ed25519 } from "@canvas-js/signatures"
 import { SIWESigner, Eip712Signer } from "@canvas-js/chain-ethereum"
+import { CosmosSigner } from "@canvas-js/chain-cosmos"
 import { Canvas } from "@canvas-js/core"
 
 const contract = `
@@ -96,6 +97,44 @@ test("insert a message created by another app", async (t) => {
 
 	await a.actions.createPost({ content: "hello world", isVisible: true, something: "bar", metadata: {} })
 	const records = await a.messageLog.getMessages()
+	for (const { signature, message } of records) {
+		await t.notThrowsAsync(() => b.insert(signature, message))
+	}
+})
+
+test("insert a message into an app with multiple signers", async (t) => {
+	const siweSigner = new SIWESigner()
+	const eipSigner = new Eip712Signer()
+	const cosmosSigner = new CosmosSigner()
+
+	const getApp = async () => {
+		const app = await Canvas.initialize({
+			topic: "test",
+			contract: {
+				models: {},
+				actions: { createPost() {} },
+			},
+			start: false,
+			reset: true,
+			signers: [siweSigner, cosmosSigner],
+		})
+		t.teardown(() => app.stop())
+		return app
+	}
+	const a = await getApp()
+	const b = await getApp()
+
+	await a.actions.createPost({ content: "hello siwe" }, { signer: siweSigner })
+	await a.actions.createPost({ content: "hello cosmos" }, { signer: cosmosSigner })
+	await t.throwsAsync(() => a.actions.createPost({ content: "hello eip712" }, { signer: eipSigner }))
+
+	const records = await a.messageLog.getMessages()
+	t.is(records.length, 4)
+	t.is(records[0].signature.codec, "dag-cbor")
+	t.is(records[1].signature.codec, "dag-cbor")
+	t.is(records[2].signature.codec, "dag-cbor")
+	t.is(records[3].signature.codec, "dag-cbor")
+
 	for (const { signature, message } of records) {
 		await t.notThrowsAsync(() => b.insert(signature, message))
 	}
