@@ -2,7 +2,7 @@
 	"name": "@canvas-js/network-explorer",
 	"private": true,
 	"type": "module",
-	"version": "0.10.1",
+	"version": "0.10.2",
 	"scripts": {
 		"dev:server": "tsx --tsconfig server/tsconfig.json server/server.ts",
 		"dev:client": "vite",
@@ -10,9 +10,9 @@
 		"start:server": "cross-env NODE_ENV=production node dist/server.js"
 	},
 	"dependencies": {
-		"@canvas-js/chain-ethereum": "0.10.1",
-		"@canvas-js/core": "0.10.1",
-		"@canvas-js/interfaces": "0.10.1",
+		"@canvas-js/chain-ethereum": "0.10.2",
+		"@canvas-js/core": "0.10.2",
+		"@canvas-js/interfaces": "0.10.2",
 		"@ipld/dag-json": "^10.2.2",
 		"better-sqlite3": "^11.1.2",
 		"cors": "^2.8.5",
