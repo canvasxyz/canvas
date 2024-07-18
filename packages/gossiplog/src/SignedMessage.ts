@@ -4,7 +4,7 @@ import type { Signature, Message } from "@canvas-js/interfaces"
 
 import { encodeClock } from "./clock.js"
 import { encodeSignedMessage, decodeSignedMessage } from "./schema.js"
-import { KEY_LENGTH, decodeId } from "./ids.js"
+import { KEY_LENGTH, decodeId, getKey } from "./ids.js"
 
 export class SignedMessage<Payload = unknown> {
 	public static decode<Payload = unknown>(value: Uint8Array): SignedMessage<Payload> {
@@ -28,12 +28,4 @@ export class SignedMessage<Payload = unknown> {
 		this.key = getKey(message.clock, value)
 		this.id = decodeId(this.key)
 	}
-}
-
-function getKey(clock: number, value: Uint8Array): Uint8Array {
-	const hash = sha256(value)
-	const key = new Uint8Array(KEY_LENGTH)
-	const encodingLength = encodeClock(key, clock)
-	key.set(hash.subarray(0, KEY_LENGTH - encodingLength), encodingLength)
-	return key
 }
