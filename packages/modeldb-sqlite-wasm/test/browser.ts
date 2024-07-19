@@ -30,7 +30,7 @@ startButton.onclick = async () => {
 	try {
 		// puppeteer is weird about requesting the worker js file itself
 		// so we can just pass it in as a blob
-		const sourceURL = `${document.location.origin}/worker.js`
+		const sourceURL = `${document.location.origin}/dist/worker.js`
 		const workerUrl = await loadWorkerScriptAsURL(sourceURL)
 
 		const db = await OpfsModelDB.initialize({ workerUrl, path: "test.db", models: {} })

@@ -5,7 +5,7 @@ import { build } from "esbuild"
 import { polyfillNode } from "esbuild-plugin-polyfill-node"
 
 test("initialize a sqlite-wasm-opfs database", async (t) => {
-	const workerBundleFilename = "./test/worker.js"
+	const workerBundleFilename = "./test/dist/worker.js"
 	await build({
 		entryPoints: ["./test/worker.ts"],
 		bundle: true,
@@ -20,7 +20,7 @@ test("initialize a sqlite-wasm-opfs database", async (t) => {
 	})
 
 	// build the worker bundle
-	const browserBundleFilename = "./test/browser.js"
+	const browserBundleFilename = "./test/dist/browser.js"
 	await build({
 		entryPoints: ["./test/browser.ts"],
 		bundle: true,
@@ -74,7 +74,7 @@ test("initialize a sqlite-wasm-opfs database", async (t) => {
 					"Cross-Origin-Embedder-Policy": "require-corp",
 				},
 			})
-		} else if (url === `${origin}browser.js`) {
+		} else if (url === `${origin}dist/browser.js`) {
 			request.respond({
 				status: 200,
 				contentType: "application/javascript",
@@ -84,7 +84,7 @@ test("initialize a sqlite-wasm-opfs database", async (t) => {
 					"Cross-Origin-Embedder-Policy": "require-corp",
 				},
 			})
-		} else if (url === `${origin}worker.js`) {
+		} else if (url === `${origin}dist/worker.js`) {
 			request.respond({
 				status: 200,
 				contentType: "application/javascript",
