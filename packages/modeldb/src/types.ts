@@ -1,7 +1,7 @@
 // These are "init types" for the `models` value used to initialize the database.
 
 export type PrimaryKeyType = "primary"
-export type PrimitiveType = "integer" | "float" | "string" | "bytes" | "boolean" | "json"
+export type PrimitiveType = "integer" | "float" | "number" | "string" | "bytes" | "boolean" | "json"
 export type OptionalPrimitiveType = `${PrimitiveType}?`
 export type ReferenceType = `@${string}`
 export type OptionalReferenceType = `@${string}?`

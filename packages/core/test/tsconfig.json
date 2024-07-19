@@ -7,5 +7,5 @@
 		"rootDir": ".",
 		"outDir": "lib"
 	},
-	"references": [{ "path": "../." }, { "path": "../../interfaces" }]
+	"references": [{ "path": "../." }, { "path": "../../interfaces" }, { "path": "../../signatures" }, { "path": "../../chain-ethereum" }, { "path": "../../chain-cosmos" }, { "path": "../../core" }]
 }

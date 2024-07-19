@@ -33,6 +33,7 @@ import {
 const primitiveColumnTypes = {
 	integer: "BIGINT",
 	float: "DECIMAL",
+	number: "DOUBLE PRECISION",
 	string: "TEXT",
 	bytes: "BYTEA",
 	boolean: "BOOLEAN",

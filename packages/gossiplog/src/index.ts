@@ -5,6 +5,7 @@ export * from "./schema.js"
 export * from "./clock.js"
 export * from "./ids.js"
 export * from "./interface.js"
+export * from "./SignedMessage.js"
 export type { BranchMergeRecord } from "./BranchMergeIndex.js"
 export type { AncestorRecord } from "./AncestorIndex.js"
 

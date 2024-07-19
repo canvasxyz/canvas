@@ -80,9 +80,16 @@ export abstract class AbstractSessionSigner<AuthorizationData, WalletAddress ext
 	 */
 	public async getSession(
 		topic: string,
-		options: { did?: string } = {},
+		options: { did?: string; address?: string } = {},
 	): Promise<{ payload: Session<AuthorizationData>; signer: Signer<Action | Session<AuthorizationData>> } | null> {
-		const did = await Promise.resolve(options.did ?? this.getDid())
+		let did
+		if (options.address) {
+			const dids = this.listSessions(topic).filter((did) => did.endsWith(":" + options.address))
+			if (dids.length === 0) return null
+			did = dids[0]
+		} else {
+			did = await Promise.resolve(options.did ?? this.getDid())
+		}
 		const key = `canvas/${topic}/${did}`
 
 		this.log("getting session for topic %s and DID %s", topic, did)
@@ -107,12 +114,26 @@ export abstract class AbstractSessionSigner<AuthorizationData, WalletAddress ext
 		return null
 	}
 
+	public listSessions(topic: string): string[] {
+		// TODO: look at target
+		const prefix = `canvas/${topic}/`
+		const result = []
+
+		for (const key of this.#cache.keys()) {
+			if (key.startsWith(prefix)) {
+				result.push(key)
+			}
+		}
+		return result
+	}
+
 	public hasSession(topic: string, did: DidIdentifier): boolean {
 		const key = `canvas/${topic}/${did}`
 		return this.#cache.has(key) || target.get(key) !== null
 	}
 
 	public async clear(topic: string) {
+		// TODO: delete from target
 		const prefix = `canvas/${topic}/`
 
 		for (const key of this.#cache.keys()) {

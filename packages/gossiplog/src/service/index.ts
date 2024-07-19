@@ -207,7 +207,7 @@ export class GossipLogService<Payload = unknown>
 		assert(message.topic === this.messageLog.topic, "wrong topic")
 
 		const signedMessage = this.messageLog.encode(signature, message)
-		this.messageLog.insert(signedMessage)
+		await this.messageLog.insert(signedMessage)
 		const recipients = this.publish(signedMessage)
 
 		return { id: signedMessage.id, recipients }
