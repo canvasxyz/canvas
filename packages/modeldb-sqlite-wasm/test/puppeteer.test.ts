@@ -94,6 +94,16 @@ test("initialize a sqlite-wasm-opfs database", async (t) => {
 					"Cross-Origin-Embedder-Policy": "require-corp",
 				},
 			})
+		} else if (url === `${origin}sqlite3.wasm`) {
+			request.respond({
+				status: 200,
+				contentType: "application/wasm",
+				body: sqliteWasm,
+				headers: {
+					"Cross-Origin-Opener-Policy": "same-origin",
+					"Cross-Origin-Embedder-Policy": "require-corp",
+				},
+			})
 		} else {
 			request.respond({
 				status: 404,
