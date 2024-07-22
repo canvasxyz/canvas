@@ -10,7 +10,8 @@ const target: PlatformTarget = {
 	openDB: async ({ path, topic }, models) => {
 		if (path) {
 			if (typeof path !== "string") throw new Error("Expected path to be a string")
-			return OpfsModelDB.initialize({ path, models: { ...models, ...AbstractGossipLog.schema } })
+			const worker = new Worker(new URL("./worker.js", import.meta.url))
+			return OpfsModelDB.initialize({ worker, path, models: { ...models, ...AbstractGossipLog.schema } })
 		} else {
 			return ModelDB.initialize({ name: `canvas/v1/${topic}`, models: { ...models, ...AbstractGossipLog.schema } })
 		}

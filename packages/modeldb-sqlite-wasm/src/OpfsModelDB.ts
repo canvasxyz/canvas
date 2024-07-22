@@ -16,8 +16,7 @@ import { Awaitable } from "@canvas-js/interfaces"
 import assert from "assert"
 
 export interface ModelDBOptions {
-	origin?: string
-	workerUrl?: string
+	worker: Worker
 	path: string
 	models: ModelSchema
 }
@@ -27,12 +26,11 @@ export class OpfsModelDB extends AbstractModelDB {
 	private readonly wrappedDB: Remote<InnerModelDB>
 	private subscriptionId = 0
 
-	public static async initialize({ origin, workerUrl, path, models }: ModelDBOptions) {
+	public static async initialize({ worker, path, models }: ModelDBOptions) {
 		const config = parseConfig(models)
-		const worker = new Worker(workerUrl || "./worker.js", { type: "module" })
 		const initializeDB = Comlink.wrap(worker) as any
-		const wrappedDB = (await initializeDB(origin, path, config)) as Remote<InnerModelDB>
-		return new OpfsModelDB({ worker, wrappedDB, config })
+		const wrappedDB = (await initializeDB(path, config)) as Remote<InnerModelDB>
+		return new OpfsModelDB({ worker: worker, wrappedDB, config })
 	}
 
 	private constructor({
