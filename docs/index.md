@@ -60,7 +60,7 @@ return <Chessboard position={boards[0].position} onDrop={ ... } />
 </TextRow>
 -->
 
-<FeatureRow title="Distributed execution, no blockchains required" detail="Canvas uses an eventually-consistent programming framework that we developed from scratch.">
+<FeatureRow title="Distributed execution, no blockchains required" detail="Built on web standards, like DIDs and IPLD, and open-source components:">
   <FeatureCard title="Sign in with Web3 DIDs" details="Log in with an Ethereum wallet. Also supports other chains like Cosmos, Solana, and Polkadot." linkText="Demo" link="https://canvas-chat.pages.dev/"/>
   <FeatureCard title="Sign in with Bluesky" details="Log in with your decentralized identity from the Bluesky PLC network." linkText="Demo" link="https://canvas-chat.pages.dev/"/>
   <FeatureCard title="Sign in with OpenID" details="Log in trustlessly with Google, Apple, or other SSO providers." soon="Coming soon"/>
