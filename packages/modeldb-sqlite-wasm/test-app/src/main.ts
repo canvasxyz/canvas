@@ -25,6 +25,15 @@ async function expectThrown(func: () => Promise<void>, message: string) {
 	}
 }
 
+const clearButton = document.getElementById("clear")!
+clearButton.onclick = async () => {
+	const hdl = await navigator.storage.getDirectory()
+	// @ts-ignore
+	for await (const [path, x] of hdl.entries()) {
+		hdl.removeEntry(path)
+	}
+}
+
 // this is so that we can use `waitForSelector` in puppeteer
 // to check the results of the test
 function done(res: any) {
