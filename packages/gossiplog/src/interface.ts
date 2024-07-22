@@ -14,10 +14,10 @@ export interface SyncServer extends SyncSource {
 
 export type ServiceMap<Payload> = {
 	identify: Identify
-	pubsub: PubSub<GossipsubEvents>
-	gossiplog: GossipLogService<Payload>
 	ping: PingService
 	fetch: Fetch
+	gossiplog: GossipLogService<Payload>
+	pubsub?: PubSub<GossipsubEvents>
 	dht?: KadDHT
 }
 

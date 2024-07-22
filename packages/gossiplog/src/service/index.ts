@@ -49,6 +49,7 @@ import { DelayableController, SyncTimeoutError, wait } from "../utils.js"
 import { Server } from "../sync/server.js"
 
 import { SignedMessage } from "../SignedMessage.js"
+import { peerIdFromString } from "@libp2p/peer-id"
 
 export const getSyncProtocol = (topic: string) => `/canvas/v1/${topic}/sync`
 export const getPushProtocol = (topic: string) => `/canvas/v1/${topic}/push`
@@ -69,9 +70,11 @@ export class GossipLogService<Payload = unknown>
 	extends TypedEventEmitter<GossipLogEvents<unknown>>
 	implements Startable
 {
-	private static extractGossipSub(components: GossipLogServiceComponents): GossipSub {
-		const { pubsub } = components
-		assert(pubsub !== undefined, "expected pubsub !== undefined")
+	private static extractGossipSub({ pubsub }: GossipLogServiceComponents): GossipSub | null {
+		if (pubsub === undefined) {
+			return null
+		}
+
 		assert(pubsub instanceof GossipSub, "expected pubsub instanceof GossipSub")
 		return pubsub
 	}
@@ -87,11 +90,11 @@ export class GossipLogService<Payload = unknown>
 
 	private readonly pushQueue = new PQueue({ concurrency: 16 })
 
-	private readonly topologyPeers = new Set<string>()
 	private readonly controller = new AbortController()
+	private readonly topologyPeers = new Set<string>()
 
 	#registrarId: string | null = null
-	#pubsub: GossipSub
+	#pubsub: GossipSub | null = null
 	#started = false
 
 	constructor(
@@ -118,7 +121,7 @@ export class GossipLogService<Payload = unknown>
 		this.messageLog.addEventListener("commit", this.forwardEvent)
 		this.messageLog.addEventListener("message", this.forwardEvent)
 
-		this.#pubsub.addEventListener("gossipsub:message", this.handleMessage)
+		this.#pubsub?.addEventListener("gossipsub:message", this.handleMessage)
 
 		await this.components.registrar.handle(this.pushProtocol, this.handleIncomingPush, {
 			maxInboundStreams: this.maxInboundStreams,
@@ -159,18 +162,18 @@ export class GossipLogService<Payload = unknown>
 
 	public async afterStart() {
 		this.log("afterStart")
-		this.#pubsub.subscribe(this.messageLog.topic)
+		this.#pubsub?.subscribe(this.messageLog.topic)
 	}
 
 	public async beforeStop() {
 		this.log("beforeStop")
-		this.#pubsub.unsubscribe(this.messageLog.topic)
+		this.#pubsub?.unsubscribe(this.messageLog.topic)
 	}
 
 	public async stop() {
 		this.log("stop")
 		this.#started = false
-		this.#pubsub.removeEventListener("gossipsub:message", this.handleMessage)
+		this.#pubsub?.removeEventListener("gossipsub:message", this.handleMessage)
 		this.messageLog.removeEventListener("sync", this.forwardEvent)
 		this.messageLog.removeEventListener("commit", this.forwardEvent)
 		this.messageLog.removeEventListener("message", this.forwardEvent)
@@ -214,11 +217,17 @@ export class GossipLogService<Payload = unknown>
 	}
 
 	private async publish(signedMessage: SignedMessage<Payload>): Promise<PeerId[]> {
-		if (!this.#pubsub.isStarted()) {
+		if (!this.#started) {
 			return []
 		}
 
 		const data = Event.encode({ insert: { key: signedMessage.key, value: signedMessage.value } })
+
+		if (this.#pubsub === null) {
+			// TODO: publish to browser-lite peers
+			return []
+		}
+
 		return this.#pubsub.publish(this.messageLog.topic, data).then(
 			({ recipients }) => {
 				this.log("published message %s to %d recipients %O", signedMessage.id, recipients.length, recipients)
@@ -246,28 +255,29 @@ export class GossipLogService<Payload = unknown>
 		} catch (err) {
 			console.error("error decoding gossipsub message", err)
 			this.log.error("error decoding gossipsub message: %O", err)
-			this.#pubsub.reportMessageValidationResult(msgId, sourceId, TopicValidatorResult.Reject)
+			this.#pubsub?.reportMessageValidationResult(msgId, sourceId, TopicValidatorResult.Reject)
 			return
 		}
 
-		if (event.insert !== undefined) {
-			const { key, value } = event.insert
-			this.handleInsert([key, value]).then(
-				(result) => {
-					this.#pubsub.reportMessageValidationResult(msgId, sourceId, result)
-					if (result === TopicValidatorResult.Ignore) {
-						this.scheduleSync(propagationSource)
-					}
-				},
-				(err) => {
-					this.log.error("error handling gossipsub message: %O", err)
-					this.#pubsub.reportMessageValidationResult(msgId, sourceId, TopicValidatorResult.Reject)
-				},
-			)
-		} else {
-			console.error("IGNORING MESSAGE")
-			this.#pubsub.reportMessageValidationResult(msgId, sourceId, TopicValidatorResult.Ignore)
+		if (event.insert === undefined) {
+			this.log("ignoring gossipsub message %s", msgId)
+			this.#pubsub?.reportMessageValidationResult(msgId, sourceId, TopicValidatorResult.Ignore)
+			return
 		}
+
+		const { key, value } = event.insert
+		this.handleInsert([key, value]).then(
+			(result) => {
+				this.#pubsub?.reportMessageValidationResult(msgId, sourceId, result)
+				if (result === TopicValidatorResult.Ignore) {
+					this.scheduleSync(propagationSource)
+				}
+			},
+			(err) => {
+				this.log.error("rejecting gossipsub message %s: %O", msgId, err)
+				this.#pubsub?.reportMessageValidationResult(msgId, sourceId, TopicValidatorResult.Reject)
+			},
+		)
 	}
 
 	private async handleInsert([key, value]: Entry): Promise<TopicValidatorResult> {
@@ -278,21 +288,6 @@ export class GossipLogService<Payload = unknown>
 
 		await this.messageLog.insert(signedMessage)
 		return TopicValidatorResult.Accept
-
-		// return await this.messageLog.write(async (txn) => {
-		// 	const missingParents = await this.messageLog.getMissingParents(txn, message.parents)
-		// 	if (missingParents.size !== 0) {
-		// 		this.log("missing %d/%d parents", missingParents.size, message.parents.length)
-		// 		return TopicValidatorResult.Ignore
-		// 	}
-
-		// 	try {
-		// 		await this.messageLog.apply(txn, id, signature, message, [key, value])
-		// 		return TopicValidatorResult.Accept
-		// 	} catch (err) {
-		// 		return TopicValidatorResult.Reject
-		// 	}
-		// })
 	}
 
 	private async handleUpdate(propagationSource: PeerId, heads: Uint8Array[]): Promise<TopicValidatorResult> {
@@ -533,8 +528,8 @@ export class GossipLogService<Payload = unknown>
 		}
 
 		if (messageCount !== 0) {
-			for (const peer of this.#pubsub.getSubscribers(this.messageLog.topic)) {
-				this.schedulePush(peer)
+			for (const peer of this.topologyPeers) {
+				this.schedulePush(peerIdFromString(peer))
 			}
 		}
 	}
