@@ -2,10 +2,10 @@
 layout: home
 ---
 
-<HeroRow text="General-purpose compute, built on IPFS & TypeScript" :image="{ light: '/graphic_mainframe_4.png', dark: '/graphic_mainframe_3.png' }" tagline="Write distributed applications using the languages and syntax you already know." v-bind:bullets="['Fully programmable in TypeScript', 'Comes with an embedded database & sync engine', 'Built on open web standards']">
+<HeroRow text="The general computing platform for the decentralized web" :image="{ light: '/graphic_mainframe_4.png', dark: '/graphic_mainframe_3.png' }" tagline="Canvas is a serverless runtime for decentralized TypeScript applications." v-bind:bullets="['Write decentralized applications in idiomatic TypeScript, using Postgres and SQLite', 'Data and compute are automatically replicated using libp2p, with no blockchains required', 'Server-to-server or browser-to-server', 'Built on open web standards']">
   <HeroAction theme="brand big" text="Tutorial" href="/1-introduction" />
-  <HeroAction theme="alt big" text="Docs" href="/readme-core" />
-  <HeroAction theme="alt big" text="Blog" href="/blog" />
+  <HeroAction theme="brand big" text="Blog" href="/blog" />
+  <HeroAction theme="alt big" text="API Docs" href="/readme-core" />
 </HeroRow>
 
 <!--
@@ -60,12 +60,12 @@ return <Chessboard position={boards[0].position} onDrop={ ... } />
 </TextRow>
 -->
 
-<FeatureRow title="Distributed execution, with no blockchains required" detail="Canvas uses CRDTs, the data structures that power Google Docs & Figma, to allow any two nodes running the same application to sync with each other.">
+<FeatureRow title="Distributed execution, no blockchains required" detail="Canvas uses an eventually-consistent programming framework that we developed from scratch.">
   <FeatureCard title="Sign in with Web3 DIDs" details="Log in with an Ethereum wallet. Also supports other chains like Cosmos, Solana, and Polkadot." linkText="Demo" link="https://canvas-chat.pages.dev/"/>
   <FeatureCard title="Sign in with Bluesky" details="Log in with your decentralized identity from the Bluesky PLC network." linkText="Demo" link="https://canvas-chat.pages.dev/"/>
   <FeatureCard title="Sign in with OpenID" details="Log in trustlessly with Google, Apple, or other SSO providers." soon="Coming soon"/>
-  <FeatureCard title="Okra" details="A p2p-optimized data structure called a “Prolly tree” that allows fast sync between ordered sets of actions." link="https://github.com/canvasxyz/okra" linkText="Github" secondaryLink="https://docs.canvas.xyz/blog/2023-05-04-merklizing-the-key-value-store.html" secondaryLinkText="Blog Post"/>
-  <FeatureCard title="GossipLog" details="An authenticated multiwriter log that allows functions to retrieve data from multiple causal histories." link="https://github.com/canvasxyz/canvas/tree/main/packages/gossiplog" linkText="Github" secondaryLinkText="Presentation" secondaryLink="https://www.youtube.com/watch?v=X8nAdx1G-Cs"/>
+  <FeatureCard title="Okra" details="A p2p-optimized Prolly tree that allows fast sync between ordered sets of actions." link="https://github.com/canvasxyz/okra" linkText="Github" secondaryLink="https://docs.canvas.xyz/blog/2023-05-04-merklizing-the-key-value-store.html" secondaryLinkText="Blog Post"/>
+  <FeatureCard title="GossipLog" details="A self-authenticating causal log for multi-writer applications." link="https://github.com/canvasxyz/canvas/tree/main/packages/gossiplog" linkText="Github" secondaryLinkText="Presentation" secondaryLink="https://www.youtube.com/watch?v=X8nAdx1G-Cs"/>
   <FeatureCard title="ModelDB" details="A cross-platform relational database wrapper, supporting IndexedDB and SQLite." link="https://github.com/canvasxyz/canvas/tree/main/packages/modeldb" linkText="Github"/>
 </FeatureRow>
 
