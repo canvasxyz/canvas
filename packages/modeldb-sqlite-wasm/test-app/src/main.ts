@@ -43,17 +43,24 @@ startButton.onclick = async () => {
 		test_create_modeldb_no_models,
 		test_create_modeldb_model_valid_fields,
 		test_create_modeldb_model_invalid_fields,
+		test_create_modeldb_optional_json_fail,
+		test_create_modeldb_no_primary_key_fail,
+		test_create_modeldb_two_primary_keys_fail,
 	]
-	try {
-		for (const test of tests) {
-			await test()
-		}
+	const results: any = {}
+	let suitePassed = true
 
-		done({ done: true })
-	} catch (error: any) {
-		console.log(error)
-		done({ error: error.message, stack: error.stack })
+	for (const test of tests) {
+		try {
+			await test()
+			results[test.name] = { status: "pass" }
+		} catch (error: any) {
+			results[test.name] = { status: "fail", message: error.message }
+			suitePassed = false
+		}
 	}
+
+	done({ suitePassed, results })
 }
 
 async function test_create_modeldb_no_models() {
@@ -96,4 +103,52 @@ async function test_create_modeldb_model_invalid_fields() {
 		})
 		db.close()
 	}, `error defining room: invalid property "unsupported"`)
+}
+
+async function test_create_modeldb_optional_json_fail() {
+	await expectThrown(async () => {
+		const db = await OpfsModelDB.initialize({
+			worker: new DBWorker(),
+			path: `${nanoid()}.db`,
+			models: {
+				room: {
+					// @ts-ignore
+					name: "json?",
+				},
+			},
+		})
+		db.close()
+	}, `error defining room: field "name" is invalid - json fields cannot be optional`)
+}
+
+async function test_create_modeldb_no_primary_key_fail() {
+	await expectThrown(async () => {
+		const db = await OpfsModelDB.initialize({
+			worker: new DBWorker(),
+			path: `${nanoid()}.db`,
+			models: {
+				room: {
+					name: "string",
+				},
+			},
+		})
+		db.close()
+	}, `error defining room: models must have exactly one "primary" property`)
+}
+
+async function test_create_modeldb_two_primary_keys_fail() {
+	await expectThrown(async () => {
+		const db = await OpfsModelDB.initialize({
+			worker: new DBWorker(),
+			path: `${nanoid()}.db`,
+			models: {
+				room: {
+					id: "primary",
+					address: "primary",
+					name: "string?",
+				},
+			},
+		})
+		db.close()
+	}, `error defining room: models must have exactly one "primary" property`)
 }

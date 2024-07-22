@@ -41,7 +41,7 @@ test("initialize a sqlite-wasm-opfs database", async (t) => {
 		throw new Error("elementValue is null")
 	}
 	const result = JSON.parse(elementValue)
-	t.deepEqual(result, { done: true })
+	t.true(result.suitePassed)
 
 	await page.close()
 	await browser.close()
