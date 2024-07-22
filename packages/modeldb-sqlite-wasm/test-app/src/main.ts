@@ -2,6 +2,23 @@ import { nanoid } from "nanoid"
 import { OpfsModelDB } from "@canvas-js/modeldb-sqlite-wasm"
 import DBWorker from "./worker.js?worker"
 
+async function expectThrown(func: () => Promise<void>, message: string) {
+	let exceptionThrown = false
+
+	try {
+		await func()
+	} catch (e: any) {
+		exceptionThrown = true
+		if (e.message !== message) {
+			throw new Error(`Expected error message to be "${message}", but got "${e.message}"`)
+		}
+	}
+
+	if (!exceptionThrown) {
+		throw new Error("Expected an exception to be thrown, but none was thrown")
+	}
+}
+
 // this is so that we can use `waitForSelector` in puppeteer
 // to check the results of the test
 function done(res: any) {
@@ -66,11 +83,8 @@ async function test_create_modeldb_model_valid_fields() {
 }
 
 async function test_create_modeldb_model_invalid_fields() {
-	let exceptionThrown = false
-
-	let db = null
-	try {
-		db = await OpfsModelDB.initialize({
+	await expectThrown(async () => {
+		const db = await OpfsModelDB.initialize({
 			worker: new DBWorker(),
 			path: `${nanoid()}.db`,
 			models: {
@@ -80,18 +94,6 @@ async function test_create_modeldb_model_invalid_fields() {
 				},
 			},
 		})
-	} catch (e: any) {
-		exceptionThrown = true
-		if (e.message !== `error defining room: invalid property "unsupported"`) {
-			throw new Error(
-				`Expected error message to be "error defining room: invalid property 'unsupported'", but got "${e.message}"`,
-			)
-		}
-	} finally {
-		if (db) db.close()
-	}
-
-	if (!exceptionThrown) {
-		throw new Error("Expected an exception to be thrown, but none was thrown")
-	}
+		db.close()
+	}, `error defining room: invalid property "unsupported"`)
 }
