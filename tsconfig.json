@@ -40,7 +40,6 @@
 		{ "path": "./packages/utils/test" },
 		{ "path": "./examples/chat" },
 		{ "path": "./examples/chat-postgres" },
-		{ "path": "./examples/chat-server" },
 		{ "path": "./examples/chess-server" },
 		{ "path": "./examples/encrypted-chat" },
 		{ "path": "./examples/network-explorer" },

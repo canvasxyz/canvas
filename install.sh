@@ -1,5 +1,8 @@
 #!/usr/bin/env sh
 
+# Install the local development build of the Canvas CLI
+# to /usr/bin/dev.
+
 INSTALL_PATH=$(npm config get prefix)/bin/canvas
 
 if test -f "$INSTALL_PATH"; then

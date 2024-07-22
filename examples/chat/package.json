@@ -4,11 +4,13 @@
 	"version": "0.10.3",
 	"type": "module",
 	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1",
+		"build": "vite build",
 		"dev": "vite",
-		"build": "vite build"
+		"server:dev": "canvas run --port 8080 --topic chat-example.canvas.xyz server/contract.canvas.js",
+    "server:start": "canvas run /tmp/canvas-example-chat --port 8080 --topic chat-example.canvas.xyz --init server/contract.canvas.js"
 	},
 	"dependencies": {
+		"@canvas-js/cli": "0.10.3",
 		"@canvas-js/chain-atp": "0.10.3",
 		"@canvas-js/chain-cosmos": "0.10.3",
 		"@canvas-js/chain-ethereum": "0.10.3",
