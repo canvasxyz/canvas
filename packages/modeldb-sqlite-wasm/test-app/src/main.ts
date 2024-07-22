@@ -1,9 +1,6 @@
 import { nanoid } from "nanoid"
 import { OpfsModelDB } from "@canvas-js/modeldb-sqlite-wasm"
-
-function assert(condition: boolean, message: string) {
-	if (!condition) throw new Error(message)
-}
+import DBWorker from "./worker.js?worker"
 
 // this is so that we can use `waitForSelector` in puppeteer
 // to check the results of the test
@@ -23,36 +20,21 @@ function done(res: any) {
 	parent.appendChild(outputDiv)
 }
 
-async function loadWorkerScriptAsURL(sourceURL: string) {
-	const workerResponse = await fetch(sourceURL)
-	const workerSource = await workerResponse.text()
-	const blob = new Blob([workerSource], { type: "application/javascript" })
-	return URL.createObjectURL(blob)
-}
-
 const startButton = document.getElementById("start")!
 startButton.onclick = async () => {
 	try {
-		console.log("import.meta.url:")
-		console.log(import.meta.url)
-		// puppeteer is weird about requesting the worker js file itself
-		// so we can just pass it in as a blob
-		const sourceURL = `${document.location.origin}/dist/worker.js`
-		const workerUrl = await loadWorkerScriptAsURL(sourceURL)
-
 		const db = await OpfsModelDB.initialize({
-			origin,
-			workerUrl,
+			worker: new DBWorker(),
 			path: "test.db",
 			models: {
 				foo: {
 					id: "primary",
 					exampleStr: "string",
-					// exampleBool: "boolean",
-					// exampleInt: "integer",
-					// exampleFloat: "float",
-					// exampleJson: "json",
-					// exampleBytes: "bytes",
+					exampleBool: "boolean",
+					exampleInt: "integer",
+					exampleFloat: "float",
+					exampleJson: "json",
+					exampleBytes: "bytes",
 				},
 			},
 		})
@@ -63,19 +45,20 @@ startButton.onclick = async () => {
 		await db.set("foo", {
 			id,
 			exampleStr: "hello world",
-			// exampleBool: true,
-			// exampleInt: -1,
-			// exampleFloat: 0.1,
-			// exampleJson: jsonValue,
-			// exampleBytes: new Uint8Array([0, 255]),
+			exampleBool: true,
+			exampleInt: -1,
+			exampleFloat: 0.1,
+			exampleJson: jsonValue,
+			exampleBytes: new Uint8Array([0, 255]),
 		})
 
-		// const result = await db.get("foo", id)
+		const result = await db.get("foo", id)
+		console.log(result)
 
 		db.close()
 
 		done({ done: true })
-	} catch (error) {
+	} catch (error: any) {
 		console.log(error)
 		done({ error: error.message, stack: error.stack })
 	}

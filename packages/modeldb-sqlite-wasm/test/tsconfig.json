@@ -1,5 +1,5 @@
 {
-	"exclude": ["lib", "browser.ts", "worker.ts"],
+	"exclude": ["lib"],
 	"extends": "../../../tsconfig.base.json",
 	"compilerOptions": {
 		"module": "Node16",
