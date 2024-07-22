@@ -2,6 +2,12 @@ import { nanoid } from "nanoid"
 import { OpfsModelDB } from "@canvas-js/modeldb-sqlite-wasm"
 import DBWorker from "./worker.js?worker"
 
+function assert(condition: boolean, message: string) {
+	if (!condition) {
+		throw new Error(message)
+	}
+}
+
 async function expectThrown(func: () => Promise<void>, message: string) {
 	let exceptionThrown = false
 
@@ -46,6 +52,7 @@ startButton.onclick = async () => {
 		test_create_modeldb_optional_json_fail,
 		test_create_modeldb_no_primary_key_fail,
 		test_create_modeldb_two_primary_keys_fail,
+		test_example,
 	]
 	const results: any = {}
 	let suitePassed = true
@@ -55,7 +62,7 @@ startButton.onclick = async () => {
 			await test()
 			results[test.name] = { status: "pass" }
 		} catch (error: any) {
-			results[test.name] = { status: "fail", message: error.message }
+			results[test.name] = { status: "fail", message: error.message, stack: error.stack }
 			suitePassed = false
 		}
 	}
@@ -151,4 +158,68 @@ async function test_create_modeldb_two_primary_keys_fail() {
 		})
 		db.close()
 	}, `error defining room: models must have exactly one "primary" property`)
+}
+
+async function test_example() {
+	const db = await OpfsModelDB.initialize({
+		worker: new DBWorker(),
+		path: `${nanoid()}.db`,
+		models: {
+			user: {
+				id: "primary",
+				address: "string",
+				encryptionPublicKey: "bytes",
+				signingPublicKey: "bytes",
+			},
+
+			room: {
+				id: "primary",
+				creator: "@user",
+				members: "@user[]",
+				$indexes: ["members"],
+			},
+		},
+	})
+	const userA = {
+		id: nanoid(),
+		address: "a",
+		encryptionPublicKey: new Uint8Array([1, 2, 3]),
+		signingPublicKey: new Uint8Array([4, 5, 6]),
+	}
+
+	const userB = {
+		id: nanoid(),
+		address: "b",
+		encryptionPublicKey: new Uint8Array([7, 8, 9]),
+		signingPublicKey: new Uint8Array([0xa, 0xb, 0xc]),
+	}
+
+	assert((await db.count("user")) === 0, `expected 0 users, got ${await db.count("user")}`)
+
+	await db.set("user", userA)
+
+	const x = await db.get("user", userA.id)
+	assert(x !== null && x.id === userA.id, `expected userA, got ${x}`)
+	const count1 = await db.count("user")
+	assert(count1 == 1, `expected 1 user, got ${count1}`)
+
+	await db.set("user", userB)
+	const y = await db.get("user", userB.id)
+	assert(y !== null && y.id === userB.id, `expected userB, got ${y}`)
+	const count2 = await db.count("user")
+	assert(count2 == 2, `expected 2 users, got ${count2}`)
+
+	const room = {
+		id: nanoid(),
+		creator: userA.id,
+		members: [userA.id, userB.id],
+	}
+
+	await db.set("room", room)
+	const z = await db.get("room", room.id)
+	assert(z !== null && z.id === room.id, `expected room, got ${z}`)
+	const roomCount = await db.count("room")
+	assert(roomCount === 1, `expected 1 room, got ${roomCount}`)
+
+	db.close()
 }

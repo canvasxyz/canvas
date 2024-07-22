@@ -1,6 +1,6 @@
-import { BindingSpec, OpfsDatabase, PreparedStatement, SqlValue } from "@sqlite.org/sqlite-wasm"
+import { OpfsDatabase, PreparedStatement, SqlValue } from "@sqlite.org/sqlite-wasm"
 
-export class Query<P extends BindingSpec, R> {
+export class Query<P extends { [column: string]: SqlValue }, R> {
 	private readonly statement: PreparedStatement
 
 	constructor(
@@ -13,8 +13,10 @@ export class Query<P extends BindingSpec, R> {
 	public get(params: P): R | null {
 		const statement = this.statement
 
+		const paramsWithColons = Object.fromEntries(Object.entries(params).map(([key, value]) => [":" + key, value]))
+
 		try {
-			statement.bind(params)
+			if (Object.keys(paramsWithColons).length > 0) statement.bind(paramsWithColons)
 			if (!statement.step()) {
 				return null
 			}
@@ -26,8 +28,9 @@ export class Query<P extends BindingSpec, R> {
 
 	public all(params: P): R[] {
 		const statement = this.statement
+		const paramsWithColons = Object.fromEntries(Object.entries(params).map(([key, value]) => [":" + key, value]))
 		try {
-			statement.bind(params)
+			if (Object.keys(paramsWithColons).length > 0) statement.bind(paramsWithColons)
 			const result = []
 			while (statement.step()) {
 				result.push(statement.get({}) as R)
@@ -40,8 +43,9 @@ export class Query<P extends BindingSpec, R> {
 
 	public iterate(params: P): IterableIterator<R> {
 		const statement = this.statement
+		const paramsWithColons = Object.fromEntries(Object.entries(params).map(([key, value]) => [":" + key, value]))
 		try {
-			statement.bind(params)
+			if (Object.keys(paramsWithColons).length > 0) statement.bind(paramsWithColons)
 			return {
 				[Symbol.iterator]() {
 					return this
@@ -61,7 +65,7 @@ export class Query<P extends BindingSpec, R> {
 	}
 }
 
-export class Method<P extends BindingSpec> {
+export class Method<P extends { [column: string]: SqlValue }> {
 	private readonly statement: PreparedStatement
 
 	constructor(
@@ -73,7 +77,8 @@ export class Method<P extends BindingSpec> {
 
 	public run(params: P) {
 		const statement = this.statement
-		statement.bind(params)
+		const paramsWithColons = Object.fromEntries(Object.entries(params).map(([key, value]) => [":" + key, value]))
+		if (Object.keys(paramsWithColons).length > 0) statement.bind(paramsWithColons)
 		statement.step()
 		statement.reset(true)
 	}
