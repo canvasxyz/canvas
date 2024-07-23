@@ -1,4 +1,5 @@
 import { createLibp2p } from "libp2p"
+import { version } from "libp2p/version"
 import type { Libp2p, PeerId } from "@libp2p/interface"
 import type { Multiaddr } from "@multiformats/multiaddr"
 import { createFromProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
@@ -60,7 +61,10 @@ export async function getLibp2p<Payload>(
 		streamMuxers: [yamux()],
 		connectionEncryption: [noise({})],
 		services: {
-			identify: identify({ protocolPrefix: "canvas" }),
+			identify: identify({
+				protocolPrefix: "canvas",
+				// agentVersion: `gossiplog/libp2p/node/${version}`,
+			}),
 			ping: ping({ protocolPrefix: "canvas" }),
 			fetch: fetchService({ protocolPrefix: "canvas" }),
 
