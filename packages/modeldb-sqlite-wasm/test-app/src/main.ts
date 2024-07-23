@@ -80,6 +80,14 @@ function deepEqual(o1: any, o2: any) {
 	}
 }
 
+export async function collect<T>(iter: AsyncIterable<T>): Promise<T[]> {
+	const values: T[] = []
+	for await (const value of iter) {
+		values.push(value)
+	}
+	return values
+}
+
 const clearButton = document.getElementById("clear")!
 clearButton.onclick = async () => {
 	const hdl = await navigator.storage.getDirectory()
@@ -134,6 +142,7 @@ startButton.onclick = async () => {
 		test_relations_query_filtering_on_relation_values,
 		test_subscriptions,
 		test_subscriptions_filtering,
+		test_transactions_apply_should_roll_back,
 	]
 	const results: any = {}
 	let suitePassed = true
@@ -902,4 +911,30 @@ async function test_subscriptions_filtering() {
 		},
 	])
 	db.unsubscribe(id)
+}
+async function test_transactions_apply_should_roll_back() {
+	const db = await OpfsModelDB.initialize({
+		worker: new DBWorker(),
+		path: `${nanoid()}.db`,
+		models: {
+			message: { id: "primary", content: "string" },
+		},
+	})
+
+	await expectThrown(
+		() =>
+			db.apply([
+				// valid operation
+				{ operation: "set", model: "message", value: { id: "a", content: "test" } },
+				// invalid operation
+				{ operation: "set", model: "message", value: { id: "b", content: 1284 } },
+			]),
+		"write to db.message.content: expected a string, received a number",
+	)
+
+	// apply should have rolled back after the second operation failed, so the database should be empty
+	const messages = await collect(db.iterate("message"))
+	assertDeepEqual(messages, [])
+
+	assertIs(await db.count("message"), 0)
 }

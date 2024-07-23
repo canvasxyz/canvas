@@ -1,3 +1,4 @@
+import * as Comlink from "comlink"
 import { Logger } from "@libp2p/logger"
 import { Config, Effect, ModelValue, QueryParams } from "@canvas-js/modeldb"
 import { assert, signalInvalidType } from "@canvas-js/utils"
@@ -44,10 +45,10 @@ export class InnerModelDB {
 		return api.get(key) as T
 	}
 
-	public async *iterate(modelName: string): AsyncIterable<ModelValue> {
+	public iterate(modelName: string): AsyncIterable<ModelValue> {
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
-		yield* api.values()
+		return Comlink.proxy(api.values())
 	}
 
 	public count(modelName: string): number {
