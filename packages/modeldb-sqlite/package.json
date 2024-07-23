@@ -1,6 +1,6 @@
 {
 	"name": "@canvas-js/modeldb-sqlite",
-	"version": "0.10.1",
+	"version": "0.10.3",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"type": "module",
 	"engines": {
@@ -16,8 +16,8 @@
 		"test": "ava --serial"
 	},
 	"dependencies": {
-		"@canvas-js/modeldb": "0.10.1",
-		"@canvas-js/utils": "0.10.1",
+		"@canvas-js/modeldb": "0.10.3",
+		"@canvas-js/utils": "0.10.3",
 		"@ipld/dag-json": "^10.2.2",
 		"@types/better-sqlite3": "^7.6.10",
 		"better-sqlite3": "^11.0.0"

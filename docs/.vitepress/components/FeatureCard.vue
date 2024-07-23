@@ -72,6 +72,11 @@ defineProps<{
   border-color: var(--vp-c-brand-1);
 }
 
+.VPContent.is-home .FeatureCard h2 {
+  font-family: var(--vp-font-family-base);
+  letter-spacing: 0.1px;
+}
+
 .box {
   display: flex;
   flex-direction: column;

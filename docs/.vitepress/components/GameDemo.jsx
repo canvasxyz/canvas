@@ -189,7 +189,7 @@ const GameDemo = () => {
 					</span>
 				)}
 				<div className="peers" onClick={() => setShowPeers(!showPeers)}>
-					{connections} peers
+					{connections.length} peers
 					{synced ? "" : connections.length === 0 ? ", waiting..." : ", syncing..."}
 				</div>
 			</div>

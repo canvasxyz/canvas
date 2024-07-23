@@ -1,6 +1,6 @@
 {
 	"name": "@canvas-js/vm",
-	"version": "0.10.1",
+	"version": "0.10.3",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"type": "module",
 	"engines": {
@@ -19,7 +19,7 @@
 		"test": "ava"
 	},
 	"dependencies": {
-		"@canvas-js/utils": "0.10.1",
+		"@canvas-js/utils": "0.10.3",
 		"@libp2p/logger": "^4.0.16",
 		"@noble/hashes": "^1.4.0",
 		"quickjs-emscripten": "^0.26.0"

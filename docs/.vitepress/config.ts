@@ -17,8 +17,9 @@ export default defineConfig({
 		},
 	},
 	ignoreDeadLinks: [(url) => /^\.\/[0-9]+$/.test(url)], // ignore footnote links
-	title: "Canvas Computing",
-	description: "A peer-to-peer runtime for decentralized applications",
+	title: "Canvas",
+	description:
+		"A TypeScript runtime for distributed applications. Build decentralized applications, using the languages and databases you already know.",
 	themeConfig: {
 		logo: {
 			light: "/icon_logo.png",
@@ -27,7 +28,7 @@ export default defineConfig({
 		outlineTitle: "Contents",
 		nav: [
 			{ text: "Home", link: "/" },
-			{ text: "API", link: "/readme-core" },
+			{ text: "Docs", link: "/1-introduction" },
 			{ text: "Blog", link: "/blog" },
 			{ text: "Changelog", link: "https://github.com/canvasxyz/canvas/releases" },
 		],

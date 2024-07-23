@@ -74,13 +74,13 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 
 @media (min-width: 640px) {
   .HeroRow {
-    padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 80px) 48px 64px;
+    padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 100px) 48px 64px;
   }
 }
 
 @media (min-width: 960px) {
   .HeroRow {
-    padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 80px) 64px 64px;
+    padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 100px) 64px 64px;
   }
 }
 
@@ -127,7 +127,7 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
   }
 
   .HeroRow.has-image .main {
-    max-width: 592px;
+    max-width: 560px;
   }
 }
 

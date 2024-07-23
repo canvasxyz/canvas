@@ -23,10 +23,24 @@ export const actions = {
 }
 ```
 
-## Multiple Topics
+## Server
 
-You can also run this application across multiple topics. This allows
-each instance of the application to sync separately.
+Run `npm run server:dev` to start a temporary in-memory server, or
+`npm run server:start` to persist data to a `.cache` directory.
 
-Try playing with [this example](https://mud-example.vercel.app), with source code
-[available here](https://github.com/canvasxyz/mud-example).
+To deploy the replication server:
+
+```
+./deploy-chat-server.sh
+```
+
+If you are forking this example, you should change:
+
+- the Fly app name
+- the `ANNOUNCE` environment variable to match your Fly app name
+- the data source name (from `canvas_chat_data`) to your own Fly volume
+
+## Running the Docker container locally
+
+Mount a volume to `/data`. Set the `PORT`, `LISTEN`, `ANNOUNCE`, and
+`BOOTSTRAP_LIST` environment variables if appropriate.

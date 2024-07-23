@@ -216,8 +216,8 @@ export function createMetricsAPI(app: Canvas): express.Express {
 			async collect() {
 				if (app.libp2p !== null) {
 					const { pubsub } = app.libp2p.services
-					for (const topic of pubsub.getTopics() ?? []) {
-						const subscribers = pubsub.getSubscribers(topic)
+					for (const topic of pubsub?.getTopics() ?? []) {
+						const subscribers = pubsub?.getSubscribers(topic) ?? []
 						this.set({ topic }, subscribers.length)
 					}
 				}

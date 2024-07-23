@@ -139,7 +139,7 @@ export async function waitForGraft<Payload>(
 ): Promise<void> {
 	const wait = (source: string, target: string) =>
 		new Promise<void>((resolve) => {
-			network[source].services.pubsub.addEventListener(
+			network[source].services.pubsub?.addEventListener(
 				"gossipsub:graft",
 				({ detail: { peerId } }) => {
 					if (peerId === network[target].peerId.toString()) {

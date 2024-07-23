@@ -102,12 +102,12 @@ libp2p.addEventListener("connection:close", ({ detail: { id, remotePeer, remoteA
 
 const gossipsub = libp2p.services.pubsub as GossipSub
 
-libp2p.services.pubsub.addEventListener("gossipsub:graft", ({ detail: { topic } }) => {
+libp2p.services.pubsub?.addEventListener("gossipsub:graft", ({ detail: { topic } }) => {
 	const peers = gossipsub.getMeshPeers(topic)
 	socket.post("gossipsub:mesh:update", { topic, peers })
 })
 
-libp2p.services.pubsub.addEventListener("gossipsub:prune", ({ detail: { topic } }) => {
+libp2p.services.pubsub?.addEventListener("gossipsub:prune", ({ detail: { topic } }) => {
 	const peers = gossipsub.getMeshPeers(topic)
 	socket.post("gossipsub:mesh:update", { topic, peers })
 })
