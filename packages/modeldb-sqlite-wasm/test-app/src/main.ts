@@ -121,6 +121,12 @@ startButton.onclick = async () => {
 		test_operations_get_fields_of_all_types,
 		test_operations_update_a_value,
 		test_operations_delete_a_value,
+		test_query_where,
+		test_query_select,
+		test_query_order_by,
+		test_query_indexed_where,
+		test_query_indexed_order_by,
+		test_query_no_query_json_fields,
 	]
 	const results: any = {}
 	let suitePassed = true
@@ -480,4 +486,161 @@ async function test_operations_delete_a_value() {
 	await db.delete("user", id)
 	assertIs(await db.get("user", id), null)
 	assertIs(await db.count("user"), 0)
+}
+
+async function test_query_select() {
+	const db = await OpfsModelDB.initialize({
+		worker: new DBWorker(),
+		path: `${nanoid()}.db`,
+		models: {
+			user: { id: "primary", isModerator: "boolean", name: "string?" },
+		},
+	})
+
+	const [a, b] = ["a", "b"]
+	await db.set("user", { id: a, isModerator: true, name: "John Doe" })
+	await db.set("user", { id: b, isModerator: false, name: null })
+
+	assertDeepEqual(await db.query("user", {}), [
+		{ id: a, isModerator: true, name: "John Doe" },
+		{ id: b, isModerator: false, name: null },
+	])
+
+	assertDeepEqual(await db.query("user", { select: { id: true } }), [{ id: a }, { id: b }])
+	assertDeepEqual(await db.query("user", { select: { id: true, name: false } }), [{ id: a }, { id: b }])
+	assertDeepEqual(await db.query("user", { select: { id: true, isModerator: true, name: true } }), [
+		{ id: a, isModerator: true, name: "John Doe" },
+		{ id: b, isModerator: false, name: null },
+	])
+	assertDeepEqual(await db.query("user", { select: { id: true, name: true } }), [
+		{ id: a, name: "John Doe" },
+		{ id: b, name: null },
+	])
+}
+
+async function test_query_where() {
+	const db = await OpfsModelDB.initialize({
+		worker: new DBWorker(),
+		path: `${nanoid()}.db`,
+		models: {
+			user: { address: "primary", name: "string?" },
+		},
+	})
+
+	await db.set("user", { address: "a", name: "John Doe" })
+	await db.set("user", { address: "b", name: null })
+	await db.set("user", { address: "c", name: "Jane Doe" })
+
+	// Equality
+	assertDeepEqual(await db.query("user", { where: { address: "a" } }), [{ address: "a", name: "John Doe" }])
+	assertDeepEqual(await db.query("user", { where: { name: "John Doe" } }), [{ address: "a", name: "John Doe" }])
+	assertDeepEqual(await db.query("user", { where: { name: null } }), [{ address: "b", name: null }])
+
+	// Negation
+	assertDeepEqual(await db.query("user", { where: { name: { neq: "John Doe" } } }), [
+		{ address: "b", name: null },
+		{ address: "c", name: "Jane Doe" },
+	])
+	assertDeepEqual(await db.query("user", { where: { name: { neq: null } } }), [
+		{ address: "a", name: "John Doe" },
+		{ address: "c", name: "Jane Doe" },
+	])
+	assertDeepEqual(await db.query("user", { where: { address: { neq: "c" } } }), [
+		{ address: "a", name: "John Doe" },
+		{ address: "b", name: null },
+	])
+
+	// Range
+	assertDeepEqual(await db.query("user", { where: { address: { gte: "a" } } }), [
+		{ address: "a", name: "John Doe" },
+		{ address: "b", name: null },
+		{ address: "c", name: "Jane Doe" },
+	])
+	assertDeepEqual(await db.query("user", { where: { address: { gt: "a" } } }), [
+		{ address: "b", name: null },
+		{ address: "c", name: "Jane Doe" },
+	])
+	assertDeepEqual(await db.query("user", { where: { address: { gt: "a", lt: "c" } } }), [{ address: "b", name: null }])
+	assertDeepEqual(await db.query("user", { where: { address: { gt: "a", lte: "c" } } }), [
+		{ address: "b", name: null },
+		{ address: "c", name: "Jane Doe" },
+	])
+	assertDeepEqual(await db.query("user", { where: { address: { gte: "a", lt: "c" } } }), [
+		{ address: "a", name: "John Doe" },
+		{ address: "b", name: null },
+	])
+
+	// Multiple filters
+	assertDeepEqual(await db.query("user", { where: { name: { neq: null }, address: { gt: "a" } } }), [
+		{ address: "c", name: "Jane Doe" },
+	])
+
+	assertDeepEqual(await db.query("user", { where: { address: { lte: "b" }, name: { gt: null } } }), [
+		{ address: "a", name: "John Doe" },
+	])
+}
+
+async function test_query_order_by() {
+	const db = await OpfsModelDB.initialize({
+		worker: new DBWorker(),
+		path: `${nanoid()}.db`,
+		models: {
+			user: { address: "primary", name: "string?" },
+		},
+	})
+
+	await db.set("user", { address: "a", name: "John Doe" })
+	await db.set("user", { address: "b", name: null })
+	await db.set("user", { address: "c", name: "Jane Doe" })
+
+	// Ascending
+	assertDeepEqual(await db.query("user", { orderBy: { address: "asc" } }), [
+		{ address: "a", name: "John Doe" },
+		{ address: "b", name: null },
+		{ address: "c", name: "Jane Doe" },
+	])
+
+	// Descending
+	assertDeepEqual(await db.query("user", { orderBy: { address: "desc" } }), [
+		{ address: "c", name: "Jane Doe" },
+		{ address: "b", name: null },
+		{ address: "a", name: "John Doe" },
+	])
+
+	// Ascending with nulls
+	assertDeepEqual(await db.query("user", { orderBy: { name: "asc" } }), [
+		{ address: "b", name: null },
+		{ address: "c", name: "Jane Doe" },
+		{ address: "a", name: "John Doe" },
+	])
+
+	// Descending with nulls
+	assertDeepEqual(await db.query("user", { orderBy: { name: "desc" } }), [
+		{ address: "a", name: "John Doe" },
+		{ address: "c", name: "Jane Doe" },
+		{ address: "b", name: null },
+	])
+
+	// Limits
+	assertDeepEqual(await db.query("user", { orderBy: { address: "desc" }, limit: 1 }), [
+		{ address: "c", name: "Jane Doe" },
+	])
+	assertDeepEqual(await db.query("user", { orderBy: { address: "asc" }, limit: 2 }), [
+		{ address: "a", name: "John Doe" },
+		{ address: "b", name: null },
+	])
+}
+
+async function test_query_no_query_json_fields() {
+	const db = await OpfsModelDB.initialize({
+		worker: new DBWorker(),
+		path: `${nanoid()}.db`,
+		models: {
+			user: { address: "primary", metadata: "json" },
+		},
+	})
+
+	expectThrown(async () => {
+		await db.query("user", { where: { metadata: "something" } })
+	}, "")
 }
