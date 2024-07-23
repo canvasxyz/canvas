@@ -1,3 +1,4 @@
+import { Logger } from "@libp2p/logger"
 import { Config, Effect, ModelValue, QueryParams } from "@canvas-js/modeldb"
 import { assert, signalInvalidType } from "@canvas-js/utils"
 import { Database } from "@sqlite.org/sqlite-wasm"
@@ -14,13 +15,15 @@ export class InnerModelDB {
 	public readonly db: Database
 	#models: Record<string, ModelAPI> = {}
 	protected readonly subscriptions = new Map<number, Subscription>()
+	protected readonly log: Logger
 
-	public constructor(db: Database, config: Config) {
+	public constructor(db: Database, config: Config, log: Logger) {
 		this.db = db
 
 		for (const model of Object.values(config.models)) {
 			this.#models[model.name] = new ModelAPI(this.db, model)
 		}
+		this.log = log
 	}
 
 	public close() {

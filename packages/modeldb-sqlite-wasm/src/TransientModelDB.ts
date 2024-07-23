@@ -1,3 +1,4 @@
+import { logger } from "@libp2p/logger"
 import sqlite3InitModule from "@sqlite.org/sqlite-wasm"
 import {
 	AbstractModelDB,
@@ -26,7 +27,8 @@ export class TransientModelDB extends AbstractModelDB {
 		const config = parseConfig(models)
 		const sqlite3 = await sqlite3InitModule({ print: console.log, printErr: console.error })
 		const db = new sqlite3.oo1.DB()
-		const wrappedDB = new InnerModelDB(db, config)
+		const log = logger("canvas:modeldb:transient")
+		const wrappedDB = new InnerModelDB(db, config, log)
 		return new TransientModelDB({ wrappedDB, config })
 	}
 

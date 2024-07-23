@@ -1,3 +1,4 @@
+import { logger } from "@libp2p/logger"
 import * as Comlink from "comlink"
 import {
 	AbstractModelDB,
@@ -29,7 +30,8 @@ export class OpfsModelDB extends AbstractModelDB {
 	public static async initialize({ worker, path, models }: ModelDBOptions) {
 		const config = parseConfig(models)
 		const initializeDB = Comlink.wrap(worker) as any
-		const wrappedDB = (await initializeDB(path, config)) as Remote<InnerModelDB>
+		const logProxy = Comlink.proxy(logger("canvas:modeldb:worker"))
+		const wrappedDB = (await initializeDB(path, config, logProxy)) as Remote<InnerModelDB>
 		return new OpfsModelDB({ worker: worker, wrappedDB, config })
 	}
 

@@ -1,6 +1,7 @@
 import { nanoid } from "nanoid"
 import { OpfsModelDB } from "@canvas-js/modeldb-sqlite-wasm"
 import DBWorker from "./worker.js?worker"
+import { ModelValue } from "@canvas-js/modeldb"
 
 function assert(condition: boolean, message = "Assertion failed") {
 	if (!condition) {
@@ -131,6 +132,8 @@ startButton.onclick = async () => {
 		test_relations_select_reference_relation_values,
 		test_relations_query_reference_values,
 		test_relations_query_filtering_on_relation_values,
+		test_subscriptions,
+		test_subscriptions_filtering,
 	]
 	const results: any = {}
 	let suitePassed = true
@@ -646,7 +649,7 @@ async function test_query_no_query_json_fields() {
 
 	expectThrown(async () => {
 		await db.query("user", { where: { metadata: "something" } })
-	}, "")
+	}, "json properties are not supported in where clauses")
 }
 
 async function test_relations_set_get_reference_and_relation_values() {
@@ -823,4 +826,80 @@ async function test_relations_query_filtering_on_relation_values() {
 	assertDeepEqual(await db.query("room", { where: { members: { neq: ["a", "b"] } } }), [])
 	assertDeepEqual(await db.query("room", { where: { members: { neq: ["b", "c"] } } }), [])
 	assertDeepEqual(await db.query("room", { where: { members: { neq: ["a", "c"] } } }), [])
+}
+
+async function test_subscriptions() {
+	const db = await OpfsModelDB.initialize({
+		worker: new DBWorker(),
+		path: `${nanoid()}.db`,
+		models: {
+			user: { address: "primary" },
+			room: {
+				id: "primary",
+				creator: "@user",
+				members: "@user[]",
+			},
+		},
+	})
+
+	const changes: { results: ModelValue[] }[] = []
+	const { id, results } = db.subscribe("user", {}, (results) => {
+		changes.push({ results })
+	})
+
+	await results
+	await db.set("user", { address: "a" })
+	await db.set("user", { address: "b" })
+
+	assertIs(await db.count("user"), 2)
+	assertDeepEqual(changes, [
+		{ results: [] },
+		{ results: [{ address: "a" }] },
+		{ results: [{ address: "a" }, { address: "b" }] },
+	])
+	db.unsubscribe(id)
+}
+
+async function test_subscriptions_filtering() {
+	const db = await OpfsModelDB.initialize({
+		worker: new DBWorker(),
+		path: `${nanoid()}.db`,
+		models: {
+			user: { address: "primary" },
+			room: {
+				id: "primary",
+				creator: "@user",
+				members: "@user[]",
+			},
+		},
+	})
+
+	await db.set("user", { address: "a" })
+	await db.set("user", { address: "b" })
+	await db.set("user", { address: "c" })
+
+	const changes: { results: ModelValue[] }[] = []
+	const { id, results } = db.subscribe("room", { where: { creator: "a" } }, (results) => {
+		changes.push({ results })
+	})
+
+	await results
+
+	await db.set("room", { id: "x", creator: "a", members: ["a", "b"] })
+	await db.set("room", { id: "y", creator: "b", members: ["b", "c"] })
+	await db.set("room", { id: "z", creator: "a", members: ["a", "c"] })
+	await db.set("user", { address: "d" })
+	await db.set("user", { address: "e" })
+
+	assertDeepEqual(changes, [
+		{ results: [] },
+		{ results: [{ id: "x", creator: "a", members: ["a", "b"] }] },
+		{
+			results: [
+				{ id: "x", creator: "a", members: ["a", "b"] },
+				{ id: "z", creator: "a", members: ["a", "c"] },
+			],
+		},
+	])
+	db.unsubscribe(id)
 }
