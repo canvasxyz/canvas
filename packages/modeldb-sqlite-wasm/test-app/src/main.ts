@@ -9,7 +9,11 @@ function assert(condition: boolean, message = "Assertion failed") {
 }
 
 function assertDeepEqual(o1: any, o2: any) {
-	assert(deepEqual(o1, o2), `${o1} is not equal to ${o2}`)
+	assert(deepEqual(o1, o2), `${o1} is not deep equal to ${o2}`)
+}
+
+function assertIs(o1: any, o2: any) {
+	assert(o1 === o2, `${o1} is not equal to ${o2}`)
 }
 
 async function expectThrown(func: () => Promise<void>, message: string) {
@@ -114,6 +118,9 @@ startButton.onclick = async () => {
 		test_example,
 		test_query_indexed_where,
 		test_query_indexed_order_by,
+		test_operations_get_fields_of_all_types,
+		test_operations_update_a_value,
+		test_operations_delete_a_value,
 	]
 	const results: any = {}
 	let suitePassed = true
@@ -381,4 +388,96 @@ async function test_query_indexed_order_by() {
 		{ address: "a", name: "John Doe" },
 		{ address: "b", name: null },
 	])
+}
+
+async function test_operations_get_fields_of_all_types() {
+	const db = await OpfsModelDB.initialize({
+		worker: new DBWorker(),
+		path: `${nanoid()}.db`,
+		models: {
+			foo: {
+				id: "primary",
+				exampleStr: "string",
+				exampleBool: "boolean",
+				exampleInt: "integer",
+				exampleFloat: "float",
+				exampleJson: "json",
+				exampleBytes: "bytes",
+			},
+		},
+	})
+
+	const id = nanoid()
+
+	const jsonValue = { foo: "a", bar: "b", qux: null, baz: 0.3 }
+	await db.set("foo", {
+		id,
+		exampleStr: "hello world",
+		exampleBool: true,
+		exampleInt: -1,
+		exampleFloat: 0.1,
+		exampleJson: jsonValue,
+		exampleBytes: new Uint8Array([0, 255]),
+	})
+
+	const result = await db.get("foo", id)
+
+	assertDeepEqual(result, {
+		id,
+		exampleStr: "hello world",
+		exampleBool: true,
+		exampleInt: -1,
+		exampleFloat: 0.1,
+		exampleJson: jsonValue,
+		exampleBytes: new Uint8Array([0, 255]),
+	})
+
+	// assumes stable serialization
+	assertDeepEqual(jsonValue, { foo: "a", bar: "b", qux: null, baz: 0.3 })
+}
+
+async function test_operations_update_a_value() {
+	const db = await OpfsModelDB.initialize({
+		worker: new DBWorker(),
+		path: `${nanoid()}.db`,
+		models: {
+			user: {
+				id: "primary",
+				name: "string",
+				isModerator: "boolean",
+			},
+		},
+	})
+
+	const id = nanoid()
+
+	await db.set("user", { id, name: "John", isModerator: false })
+	await db.set("user", { id, name: "John Doe", isModerator: true })
+	assertDeepEqual(await db.get("user", id), { id, isModerator: true, name: "John Doe" })
+}
+
+async function test_operations_delete_a_value() {
+	const db = await OpfsModelDB.initialize({
+		worker: new DBWorker(),
+		path: `${nanoid()}.db`,
+		models: {
+			user: {
+				id: "primary",
+				name: "string",
+			},
+		},
+	})
+
+	const id = nanoid()
+
+	await db.set("user", { id, name: "John" })
+	assertIs(await db.count("user"), 1)
+
+	await db.delete("user", id)
+	assertIs(await db.get("user", id), null)
+	assertIs(await db.count("user"), 0)
+
+	await db.delete("user", id)
+	assertIs(await db.get("user", id), null)
+	assertIs(await db.count("user"), 0)
 }
