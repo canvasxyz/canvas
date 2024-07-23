@@ -18,7 +18,6 @@ export interface GraphProps {
 	roots: Record<string, string>
 
 	bootstrapPeerIds?: string[]
-	// messages?: { peerId: string; data: string }[]
 	onNodeClick?: (id: string, shift: boolean, meta: boolean) => void
 	onLinkClick?: (source: string, target: string) => void
 }

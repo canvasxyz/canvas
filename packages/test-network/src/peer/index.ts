@@ -42,7 +42,7 @@ async function start() {
 	})
 
 	libp2p.addEventListener("connection:close", ({ detail: { id, remotePeer, remoteAddr } }) => {
-		console.log(`connection:close  ${remotePeer} ${remoteAddr}`)
+		console.log(`connection:close ${remotePeer} ${remoteAddr}`)
 		socket.post("connection:close", { id, remotePeer: remotePeer.toString(), remoteAddr: remoteAddr.toString() })
 	})
 
@@ -67,9 +67,7 @@ async function start() {
 		socket.post("gossipsub:mesh:update", { topic, peers })
 	})
 
-	messageLog.addEventListener("sync", (event) => {
-		console.log(`completed sync with ${event.detail.peerId}`)
-	})
+	messageLog.addEventListener("sync", (event) => console.log(`completed sync with ${event.detail.peerId}`))
 
 	const controller = new AbortController()
 
@@ -87,7 +85,7 @@ async function start() {
 	await setTimeout(delay)
 	await libp2p.start()
 
-	const intervalId = setInterval(() => void libp2p.services.gossiplog.append(nanoid()), 2000)
+	const intervalId = setInterval(() => void libp2p.services.gossiplog.append(nanoid()), 5000)
 	controller.signal.addEventListener("abort", () => clearInterval(intervalId))
 }
 

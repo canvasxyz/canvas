@@ -1,9 +1,7 @@
-import * as cbor from "@ipld/dag-cbor"
-
-import { bytesToHex, randomBytes } from "@noble/hashes/utils"
-import { peerIdFromBytes, peerIdFromString } from "@libp2p/peer-id"
-import { multiaddr } from "@multiformats/multiaddr"
 import { GossipSub } from "@chainsafe/libp2p-gossipsub"
+import { peerIdFromString } from "@libp2p/peer-id"
+import { multiaddr } from "@multiformats/multiaddr"
+import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 
 import Debugger from "debug"
 
@@ -11,14 +9,29 @@ import Debugger from "debug"
 ;(Debugger as any).useColors = () => false
 
 import { GossipLog } from "@canvas-js/gossiplog/idb"
-import { getLibp2p, defaultRelayServer } from "@canvas-js/gossiplog/libp2p/browser"
+// import { getLibp2p, defaultRelayServer } from "@canvas-js/gossiplog/libp2p/browser"
+import { defaultRelayServer } from "@canvas-js/gossiplog/libp2p/browser"
+import { getLibp2p } from "@canvas-js/gossiplog/libp2p/browser-lite"
 
 import { Socket } from "../../socket.js"
 import { topic } from "../../constants.js"
 
 const messageLog = await GossipLog.open<string>({ topic, apply: () => {} })
 
-const libp2p = await getLibp2p({}, messageLog)
+const params: Record<string, string> = {}
+
+if (window.location.search.length > 1) {
+	const entries = window.location.search.slice(1).split("&")
+	for (const entry of entries) {
+		const [key, value] = entry.split("=")
+		params[key] = decodeURIComponent(value)
+	}
+}
+
+const bootstrapList = params.bootstrapList?.split(",") ?? []
+console.log(`bootstrap list: ${JSON.stringify(bootstrapList)}`)
+
+const libp2p = await getLibp2p({ bootstrapList }, messageLog)
 const socket = await Socket.open(libp2p, `ws://localhost:8000`)
 
 Object.assign(window, { libp2p, ping: (peerId: string) => libp2p.services.ping.ping(peerIdFromString(peerId)) })
@@ -26,6 +39,8 @@ Object.assign(window, { libp2p, ping: (peerId: string) => libp2p.services.ping.p
 messageLog.addEventListener("commit", ({ detail: { root } }) => {
 	socket.post("gossiplog:commit", { topic, root: `${root.level}:${bytesToHex(root.hash)}` })
 })
+
+messageLog.addEventListener("sync", (event) => console.log(`completed sync with ${event.detail.peerId}`))
 
 libp2p.addEventListener("start", async () => {
 	console.log("libp2p started")
@@ -42,41 +57,9 @@ libp2p.addEventListener("stop", () => {
 
 const relayServerPeerId = multiaddr(defaultRelayServer).getPeerId()
 
-type TopicPeerRecord = {
-	id: Uint8Array
-	addresses: Uint8Array[]
-	protocols: string[]
-	peerRecordEnvelope: Uint8Array | null
-}
-
 libp2p.addEventListener("connection:open", ({ detail: { id, remotePeer, remoteAddr } }) => {
 	console.log(`connection:open ${remotePeer} ${remoteAddr}`)
 	if (relayServerPeerId === remotePeer.toString()) {
-		console.log(`[fetch ${relayServerPeerId}]`)
-		libp2p.services.fetch.fetch(peerIdFromString(relayServerPeerId), `topic/${topic}`).then(
-			async (result) => {
-				const results = cbor.decode<TopicPeerRecord[]>(result ?? cbor.encode([]))
-				console.log(`[fetch ${relayServerPeerId}] got ${results.length} results`)
-				for (const { id, addresses, protocols, peerRecordEnvelope } of results) {
-					const peerId = peerIdFromBytes(id)
-					if (peerId.equals(libp2p.peerId)) {
-						continue
-					}
-
-					await libp2p.peerStore.save(peerId, {
-						addresses: addresses.map((addr) => ({ isCertified: true, multiaddr: multiaddr(addr) })),
-						protocols: protocols,
-						peerRecordEnvelope: peerRecordEnvelope ?? undefined,
-					})
-
-					console.log(`[fetch ${relayServerPeerId}] dialing ${peerId}`)
-
-					libp2p.dial(peerId)
-				}
-			},
-			(err) => console.log("fetch failed", err),
-		)
-
 		return
 	}
 
@@ -114,15 +97,18 @@ libp2p.services.pubsub?.addEventListener("gossipsub:prune", ({ detail: { topic }
 
 // libp2p.start()
 
-// const delay = 1000 + Math.random() * 20000
-// setTimeout(() => libp2p.start(), delay)
+const delay = 1000 + Math.random() * 20000
+console.log(`waiting ${delay}ms...`)
+await new Promise((resolve) => setTimeout(resolve, delay))
 
-libp2p.start()
+console.log("starting...")
+await libp2p.start()
 
 // const topicPeers = new Set<string>()
-// libp2p.register(getTopicDHTProtocol(topic), {
+// libp2p.register(getTopicDHTProtocol(topic), {j
 // 	onConnect: (peerId) => void topicPeers.add(peerId.toString()),
 // 	onDisconnect: (peerId) => void topicPeers.delete(peerId.toString()),
 // })
 
-// setInterval(() => void libp2p.services.gossiplog.append(nanoid()), 1000)
+const id = setInterval(() => void libp2p.services.gossiplog.append(bytesToHex(randomBytes(8))), 5000)
+libp2p.addEventListener("stop", () => clearInterval(id))
