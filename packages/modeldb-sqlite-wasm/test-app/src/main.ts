@@ -2,91 +2,7 @@ import { nanoid } from "nanoid"
 import { OpfsModelDB } from "@canvas-js/modeldb-sqlite-wasm"
 import DBWorker from "./worker.js?worker"
 import { ModelValue } from "@canvas-js/modeldb"
-
-function assert(condition: boolean, message = "Assertion failed") {
-	if (!condition) {
-		throw new Error(message)
-	}
-}
-
-function assertDeepEqual(o1: any, o2: any) {
-	assert(deepEqual(o1, o2), `${o1} is not deep equal to ${o2}`)
-}
-
-function assertIs(o1: any, o2: any) {
-	assert(o1 === o2, `${o1} is not equal to ${o2}`)
-}
-
-async function expectThrown(func: () => Promise<void>, message: string) {
-	let exceptionThrown = false
-
-	try {
-		await func()
-	} catch (e: any) {
-		exceptionThrown = true
-		if (e.message !== message) {
-			throw new Error(`Expected error message to be "${message}", but got "${e.message}"`)
-		}
-	}
-
-	if (!exceptionThrown) {
-		throw new Error("Expected an exception to be thrown, but none was thrown")
-	}
-}
-
-function deepEqual(o1: any, o2: any) {
-	const o1Type = typeof o1
-	const o2Type = typeof o2
-	if (o1Type !== o2Type) {
-		return false
-	} else if (o1Type === "function") {
-		throw new Error("Cannot compare functions")
-		// } else if (o1 instanceof Array) {
-		// 	// compare all elements of o1 and o2
-		// 	if (o1.length !== o2.length) {
-		// 		return false
-		// 	} else {
-		// 		for (let i = 0; i < o1.length; i++) {
-		// 			if (!deepEqual(o1[i], o2[i])) {
-		// 				return false
-		// 			}
-		// 		}
-		// 	}
-	} else if (
-		o1Type === "undefined" ||
-		o1Type === "bigint" ||
-		o1Type === "boolean" ||
-		o1Type === "number" ||
-		o1Type === "string" ||
-		o1Type === "symbol" ||
-		o1 === null ||
-		o2 === null
-	) {
-		return o1 === o2
-	} else if (o1Type === "object") {
-		const keys1 = Object.keys(o1)
-		const keys2 = Object.keys(o2)
-		if (keys1.length !== keys2.length) {
-			return false
-		}
-		for (const key of keys1) {
-			if (!deepEqual(o1[key], o2[key])) {
-				return false
-			}
-		}
-		return true
-	} else {
-		throw new Error(`Unknown type: ${o1Type}`)
-	}
-}
-
-export async function collect<T>(iter: AsyncIterable<T>): Promise<T[]> {
-	const values: T[] = []
-	for await (const value of iter) {
-		values.push(value)
-	}
-	return values
-}
+import { assert, assertDeepEqual, assertIs, assertThrown, collect } from "./utils"
 
 const clearButton = document.getElementById("clear")!
 clearButton.onclick = async () => {
@@ -187,7 +103,7 @@ async function test_create_modeldb_model_valid_fields() {
 }
 
 async function test_create_modeldb_model_invalid_fields() {
-	await expectThrown(async () => {
+	await assertThrown(async () => {
 		const db = await OpfsModelDB.initialize({
 			worker: new DBWorker(),
 			path: `${nanoid()}.db`,
@@ -203,7 +119,7 @@ async function test_create_modeldb_model_invalid_fields() {
 }
 
 async function test_create_modeldb_optional_json_fail() {
-	await expectThrown(async () => {
+	await assertThrown(async () => {
 		const db = await OpfsModelDB.initialize({
 			worker: new DBWorker(),
 			path: `${nanoid()}.db`,
@@ -219,7 +135,7 @@ async function test_create_modeldb_optional_json_fail() {
 }
 
 async function test_create_modeldb_no_primary_key_fail() {
-	await expectThrown(async () => {
+	await assertThrown(async () => {
 		const db = await OpfsModelDB.initialize({
 			worker: new DBWorker(),
 			path: `${nanoid()}.db`,
@@ -234,7 +150,7 @@ async function test_create_modeldb_no_primary_key_fail() {
 }
 
 async function test_create_modeldb_two_primary_keys_fail() {
-	await expectThrown(async () => {
+	await assertThrown(async () => {
 		const db = await OpfsModelDB.initialize({
 			worker: new DBWorker(),
 			path: `${nanoid()}.db`,
@@ -656,7 +572,7 @@ async function test_query_no_query_json_fields() {
 		},
 	})
 
-	expectThrown(async () => {
+	assertThrown(async () => {
 		await db.query("user", { where: { metadata: "something" } })
 	}, "json properties are not supported in where clauses")
 }
@@ -921,7 +837,7 @@ async function test_transactions_apply_should_roll_back() {
 		},
 	})
 
-	await expectThrown(
+	await assertThrown(
 		() =>
 			db.apply([
 				// valid operation
