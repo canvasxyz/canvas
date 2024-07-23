@@ -1,9 +1,10 @@
+import { Logger } from "@libp2p/logger"
 import * as Comlink from "comlink"
 import sqlite3InitModule from "@sqlite.org/sqlite-wasm"
 import { InnerModelDB } from "@canvas-js/modeldb-sqlite-wasm"
 import { Config } from "@canvas-js/modeldb"
 
-export async function initialize(path: string, config: Config, log: (message: string) => void) {
+export async function initialize(path: string, config: Config, log: Logger) {
 	const sqlite3 = await sqlite3InitModule({
 		print: console.log,
 		printErr: console.error,
