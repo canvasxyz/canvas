@@ -6,8 +6,6 @@ import { all } from "@libp2p/websockets/filters"
 import { yamux } from "@chainsafe/libp2p-yamux"
 import { noise } from "@chainsafe/libp2p-noise"
 import { bootstrap } from "@libp2p/bootstrap"
-// import { gossipsub } from "@chainsafe/libp2p-gossipsub"
-import { floodsub } from "@libp2p/floodsub"
 
 import { fetch } from "@libp2p/fetch"
 import { ping } from "@libp2p/ping"
@@ -74,19 +72,6 @@ export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: Abst
 			identify: identify({ protocolPrefix: "canvas" }),
 			fetch: fetch({ protocolPrefix: "canvas" }),
 			ping: ping({ protocolPrefix: "canvas" }),
-
-			// pubsub: floodsub(),
-			// pubsub: gossipsub({
-			// 	emitSelf: false,
-			// 	fallbackToFloodsub: false,
-			// 	allowPublishToZeroTopicPeers: true,
-			// 	globalSignaturePolicy: "StrictNoSign",
-
-			// 	asyncValidation: true,
-			// 	scoreParams: {
-			// 		IPColocationFactorWeight: 0,
-			// 	},
-			// }),
 
 			gossiplog: gossiplog(messageLog, {}),
 		},
