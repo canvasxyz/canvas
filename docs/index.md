@@ -2,19 +2,25 @@
 layout: home
 ---
 
-<HeroRow text="The general computing platform for the decentralized web" :image="{ light: '/graphic_mainframe_4.png', dark: '/graphic_mainframe_3.png' }" tagline="Canvas is a serverless runtime for decentralized TypeScript applications." v-bind:bullets="['Write decentralized applications using idiomatic TypeScript, Postgres, and SQLite', 'Data and compute are automatically replicated using libp2p', 'Built on open web standards']">
+<HeroRow text="The general computing platform for the decentralized web" :image="{ light: '/graphic_mainframe_4.png', dark: '/graphic_mainframe_3.png' }" tagline="Canvas is a serverless runtime, that makes writing distributed & decentralized applications as easy as writing ordinary applications." v-bind:bullets="['Build applications with just TypeScript, using Postgres and SQLite', 'Application data is signed, replicated using libp2p, and automatically merged', 'Supports open web standards like IPLD, and works with any chain or DID provider']">
   <HeroAction theme="brand big" text="Tutorial" href="/1-introduction" />
   <HeroAction theme="brand big" text="Blog" href="/blog" />
   <HeroAction theme="alt big" text="API Docs" href="/readme-core" />
 </HeroRow>
 
-<!--
-<FeatureRow title="Demo">
-  <FeatureCard title="Messaging" details="Deploy simple applications like chat & copresence." />
-  <FeatureCard title="CausalDB" details="Write complex application backends in TypeScript, in your current workflow." />
-  <FeatureCard title="CausalVM" details="Build immutable applications, with code and data stored on IPFS data structures."/>
-</FeatureRow>
--->
+<TextRow title="About the platform">
+  <TextItem>Canvas is a runtime for distributed TypeScript applications.</TextItem>
+  <TextItem>Each application is defined as a <strong>contract</strong>, which defines a set of models and user actions. Contracts can be pinned to IPFS, published to Github Gists, or just hosted in your repo.</TextItem>
+  <TextItem>User actions are relayed between everyone on the network, and executed by nodes who receives them. Apps use an embedded multi-writer, <a href="https://crdt.tech" target="_blank">conflict-free</a> database, so interactions are processed as they're received.</TextItem>
+  <TextItem>Unlike blockchains, there are no transaction delays or gas limits. Actions can call external code, fetch data, or trigger long-running computations.</TextItem>
+</TextRow>
+
+<TextRow title="Eventually-consistent mode">
+  <TextItem>Unlike blockchains, Canvas runs in eventually-consistent mode by default. This means that nodes accept actions from the recent past.</TextItem>
+  <TextItem>Each application's history is a distributed log, like Git, Bluesky, or Farcaster.</TextItem>
+  <TextItem>For stronger guarantees, you can run Canvas on top of a blockchain or data availability network.</TextItem>
+</TextRow>
+
 
 <DemoToggle v-bind:options="['Game']" defaultOption="Game"></DemoToggle>
 
@@ -49,12 +55,6 @@ const { app } = useCanvas({
 const boards = useLiveQuery(app, "boards")
 return <Chessboard position={boards[0].position} onDrop={ ... } />
 ```
-
-<TextRow title="Distributed execution, no blockchains required">
-  <TextItem>Canvas is a platform for distributed TypeScript applications. Each application defines a model, actions, and views, just like in MVC web frameworks.</TextItem>
-  <TextItem>User actions are relayed between everyone on the network, and executed by each client. They read and write from a multi-writer, <a href="https://crdt.tech" target="_blank">conflict-free</a> database, which allows interactions to be merged as they're received.</TextItem>
-  <TextItem>Unlike blockchains, interactions on Canvas applications sync instantly, without tokens or gas limits. They can call outside code, fetch external resources, or process data that would be difficult to put onchain.</TextItem>
-</TextRow>
 
 <FeatureRow title="Core Components" detail="">
   <FeatureCard title="Okra" details="A p2p-optimized Prolly tree that allows fast sync between ordered sets of actions." link="https://github.com/canvasxyz/okra" linkText="Github" secondaryLink="https://docs.canvas.xyz/blog/2023-05-04-merklizing-the-key-value-store.html" secondaryLinkText="Blog Post"/>

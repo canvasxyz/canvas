@@ -1,7 +1,7 @@
 <template>
   <div class="HomepageFooter">
     <img src="./icon_logo.png" width="64">
-    &copy; 2023 Canvas Technologies, Inc.
+    &copy; 2024 Canvas Technologies, Inc.
   </div>
 </template>
 

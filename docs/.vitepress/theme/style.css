@@ -162,6 +162,10 @@ pre {
   margin-right: 10px;
 }
 
+.VPNavBarSearch .DocSearch.DocSearch-Button {
+  background-color: var(--vp-c-bg);
+}
+
 .VPNavBarMenuLink {
   padding: 0 15px !important;
 }
