@@ -21,7 +21,6 @@ export interface ModelDBOptions {
 
 export class TransientModelDB extends AbstractModelDB {
 	private readonly wrappedDB: InnerModelDB
-	private subscriptionId = 0
 
 	public static async initialize({ models }: ModelDBOptions) {
 		const config = parseConfig(models)
@@ -43,7 +42,17 @@ export class TransientModelDB extends AbstractModelDB {
 	}
 
 	public async apply(effects: Effect[]) {
-		return this.wrappedDB.apply(effects)
+		this.wrappedDB.apply(effects)
+		for (const { model, query, filter, callback } of this.subscriptions.values()) {
+			if (effects.some(filter)) {
+				try {
+					const queryRes = this.wrappedDB.query(model, query)
+					callback(queryRes)
+				} catch (err) {
+					console.error(err)
+				}
+			}
+		}
 	}
 
 	public async get<T extends ModelValue>(modelName: string, key: string): Promise<T | null> {
@@ -60,32 +69,5 @@ export class TransientModelDB extends AbstractModelDB {
 
 	public async query<T extends ModelValue = ModelValue>(modelName: string, query: QueryParams = {}): Promise<T[]> {
 		return Promise.resolve(this.wrappedDB.query(modelName, query)) as Promise<T[]>
-	}
-
-	public subscribe<T extends ModelValue = ModelValue>(
-		modelName: string,
-		query: QueryParams,
-		callback: (results: ModelValue[]) => Awaitable<void>,
-	): { id: number; results: Promise<T[]> } {
-		const model = this.models[modelName]
-		assert(model !== undefined, `model ${modelName} not found`)
-
-		const filter = this.getEffectFilter(model, query)
-		const id = this.subscriptionId++
-		// this is async but don't wait for it
-		this.wrappedDB.subscribe(id, modelName, query, filter, callback)
-
-		return {
-			id,
-			results: this.query<T>(modelName, query).then((results) =>
-				Promise.resolve(callback(results as T[])).then(
-					() => results,
-					(err) => {
-						this.log.error(err)
-						return results
-					},
-				),
-			),
-		}
 	}
 }

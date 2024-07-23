@@ -9,7 +9,6 @@ import {
 	QueryParams,
 	Config,
 	getFilter,
-	Model,
 } from "@canvas-js/modeldb"
 import type { InnerModelDB } from "./InnerModelDB.js"
 import { Remote } from "comlink"
@@ -25,7 +24,6 @@ export interface ModelDBOptions {
 export class OpfsModelDB extends AbstractModelDB {
 	private readonly worker: Worker
 	private readonly wrappedDB: Remote<InnerModelDB>
-	private subscriptionId = 0
 
 	public static async initialize({ worker, path, models }: ModelDBOptions) {
 		const config = parseConfig(models)
@@ -55,7 +53,18 @@ export class OpfsModelDB extends AbstractModelDB {
 	}
 
 	public async apply(effects: Effect[]) {
-		return this.wrappedDB.apply(effects)
+		await this.wrappedDB.apply(effects)
+
+		for (const { model, query, filter, callback } of this.subscriptions.values()) {
+			if (effects.some(filter)) {
+				try {
+					const queryRes = await this.wrappedDB.query(model, query)
+					callback(queryRes)
+				} catch (err) {
+					console.error(err)
+				}
+			}
+		}
 	}
 
 	public async get<T extends ModelValue>(modelName: string, key: string): Promise<T | null> {
@@ -72,32 +81,5 @@ export class OpfsModelDB extends AbstractModelDB {
 
 	public async query<T extends ModelValue = ModelValue>(modelName: string, query: QueryParams = {}): Promise<T[]> {
 		return this.wrappedDB.query(modelName, query) as Promise<T[]>
-	}
-
-	public subscribe(
-		modelName: string,
-		query: QueryParams,
-		callback: (results: ModelValue[]) => Awaitable<void>,
-	): { id: number; results: Promise<ModelValue[]> } {
-		const model = this.models[modelName]
-		assert(model !== undefined, `model ${modelName} not found`)
-
-		const filter = this.getEffectFilter(model, query)
-		const id = this.subscriptionId++
-		// this is async but don't wait for it
-		this.wrappedDB.subscribe(id, modelName, query, Comlink.proxy(filter), Comlink.proxy(callback))
-
-		return {
-			id,
-			results: this.query(modelName, query).then((results) =>
-				Promise.resolve(callback(results)).then(
-					() => results,
-					(err) => {
-						this.log.error(err)
-						return results
-					},
-				),
-			),
-		}
 	}
 }
