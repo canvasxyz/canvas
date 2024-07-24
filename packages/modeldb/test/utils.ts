@@ -1,10 +1,10 @@
 import "fake-indexeddb/auto"
 import test, { ExecutionContext } from "ava"
+import puppeteer from "puppeteer"
 import { nanoid } from "nanoid"
 
 import type { AbstractModelDB, ModelSchema } from "@canvas-js/modeldb"
 import { ModelDB as ModelDBSqlite } from "@canvas-js/modeldb-sqlite"
-import { TransientModelDB } from "@canvas-js/modeldb-sqlite-wasm"
 import { ModelDB as ModelDBIdb } from "@canvas-js/modeldb-idb"
 import { ModelDB as ModelDBPostgres } from "@canvas-js/modeldb-pg"
 
@@ -42,6 +42,59 @@ export const testOnModelDB = (
 		const mdb = await ModelDBPostgres.initialize({ connectionConfig, models, clear: true })
 		t.teardown(() => mdb.close())
 		return mdb
+	})
+	test(`Opfs - ${name}`, async (t) => {
+		const browser = await puppeteer.launch({
+			dumpio: true,
+			headless: false,
+			devtools: true,
+			args: [
+				"--no-sandbox",
+				"--disable-setuid-sandbox",
+				"--disable-extensions",
+				"--enable-chrome-browser-cloud-management",
+			],
+		})
+		const page = await browser.newPage()
+
+		page.on("workercreated", (worker) => console.log("Worker created: " + worker.url()))
+		page.on("workerdestroyed", (worker) => console.log("Worker destroyed: " + worker.url()))
+
+		page.on("console", async (e) => {
+			const args = await Promise.all(e.args().map((a) => a.jsonValue()))
+			console.log(...args)
+		})
+
+		const origin = "http://localhost:5173/"
+		await page.goto(origin)
+
+		await new Promise(function (resolve) {
+			setTimeout(resolve, 3000)
+		})
+
+		const testResult = await page.evaluate(async (run) => {
+			// @ts-ignore
+			const ctx = new InnerExecutionContext()
+			const testFunc = eval(`(${run})`)
+			try {
+				// @ts-ignore
+				await testFunc(ctx, openDB)
+				return { result: "passed" }
+			} catch (error: any) {
+				return { result: "failed", error: error.message }
+			} finally {
+				if (ctx.teardownFunction) ctx.teardownFunction()
+			}
+		}, run.toString())
+
+		await page.close()
+		await browser.close()
+
+		if (testResult.result == "passed") {
+			t.pass()
+		} else {
+			t.fail(testResult.error)
+		}
 	})
 }
 

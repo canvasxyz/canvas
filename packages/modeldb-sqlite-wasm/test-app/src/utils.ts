@@ -12,15 +12,15 @@ export function assertIs(o1: any, o2: any) {
 	assert(o1 === o2, `${o1} is not equal to ${o2}`)
 }
 
-export async function assertThrown(func: () => Promise<void>, message: string) {
+export async function assertThrown(func: () => Promise<void>, expected?: { message: string }) {
 	let exceptionThrown = false
 
 	try {
 		await func()
 	} catch (e: any) {
 		exceptionThrown = true
-		if (e.message !== message) {
-			throw new Error(`Expected error message to be "${message}", but got "${e.message}"`)
+		if (expected && e.message !== expected.message) {
+			throw new Error(`Expected error message to be "${expected.message}", but got "${e.message}"`)
 		}
 	}
 

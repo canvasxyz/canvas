@@ -1,18 +1,16 @@
-import type { ModelValue, ModelSchema } from "@canvas-js/modeldb"
+import type { ModelValue } from "@canvas-js/modeldb"
 
 import { testOnModelDB } from "./utils.js"
 
-const models: ModelSchema = {
-	user: { address: "primary" },
-	room: {
-		id: "primary",
-		creator: "@user",
-		members: "@user[]",
-	},
-}
-
 testOnModelDB("subscriptions", async (t, openDB) => {
-	const db = await openDB(t, models)
+	const db = await openDB(t, {
+		user: { address: "primary" },
+		room: {
+			id: "primary",
+			creator: "@user",
+			members: "@user[]",
+		},
+	})
 
 	const changes: { results: ModelValue[] }[] = []
 	const { id, results } = db.subscribe("user", {}, (results) => {
@@ -33,7 +31,14 @@ testOnModelDB("subscriptions", async (t, openDB) => {
 })
 
 testOnModelDB("subscriptions (filtering on model and query)", async (t, openDB) => {
-	const db = await openDB(t, models)
+	const db = await openDB(t, {
+		user: { address: "primary" },
+		room: {
+			id: "primary",
+			creator: "@user",
+			members: "@user[]",
+		},
+	})
 
 	await db.set("user", { address: "a" })
 	await db.set("user", { address: "b" })

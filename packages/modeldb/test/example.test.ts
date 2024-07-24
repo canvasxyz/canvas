@@ -1,27 +1,23 @@
 import { nanoid } from "nanoid"
 
-import type { ModelSchema } from "@canvas-js/modeldb"
-
 import { testOnModelDB } from "./utils.js"
 
-const models: ModelSchema = {
-	user: {
-		id: "primary",
-		address: "string",
-		encryptionPublicKey: "bytes",
-		signingPublicKey: "bytes",
-	},
-
-	room: {
-		id: "primary",
-		creator: "@user",
-		members: "@user[]",
-		$indexes: ["members"],
-	},
-}
-
 testOnModelDB("create ModelDB", async (t, openDB) => {
-	const db = await openDB(t, models)
+	const db = await openDB(t, {
+		user: {
+			id: "primary",
+			address: "string",
+			encryptionPublicKey: "bytes",
+			signingPublicKey: "bytes",
+		},
+
+		room: {
+			id: "primary",
+			creator: "@user",
+			members: "@user[]",
+			$indexes: ["members"],
+		},
+	})
 
 	const userA = {
 		id: nanoid(),

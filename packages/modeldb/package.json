@@ -17,7 +17,8 @@
 	},
 	"devDependencies": {
 		"fake-indexeddb": "^6.0.0",
-		"nanoid": "^5.0.7"
+		"nanoid": "^5.0.7",
+		"puppeteer": "^22.13.1"
 	},
 	"dependencies": {
 		"@canvas-js/utils": "0.10.3",
