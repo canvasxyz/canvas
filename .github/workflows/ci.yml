@@ -67,7 +67,7 @@ jobs:
 
       - name: Run @canvas-js/modeldb tests
         run: |
-          npm run start --workspace=@canvas-js/modeldb-test-server &
+          npm run dev --workspace=@canvas-js/modeldb-test-server &
           npm run test --workspace=@canvas-js/modeldb
         env:
           POSTGRES_HOST: localhost
