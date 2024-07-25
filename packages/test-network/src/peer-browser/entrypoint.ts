@@ -3,8 +3,6 @@ import puppeteer from "puppeteer"
 
 const { RELAY_SERVER, BOOTSTRAP_LIST, MIN_CONNECTIONS, MAX_CONNECTIONS } = process.env
 
-console.log("GOT RELAY SERVER", RELAY_SERVER)
-
 const query: Record<string, string> = {}
 
 if (RELAY_SERVER !== undefined) {

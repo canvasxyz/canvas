@@ -1,8 +1,8 @@
-import { TypedEventEmitter, CustomEvent } from "@libp2p/interface"
+import { TypedEventEmitter, CustomEvent, CodeError } from "@libp2p/interface"
 import { Logger, logger } from "@libp2p/logger"
 import { equals, toString } from "uint8arrays"
 
-import { Node, Tree, ReadWriteTransaction, hashEntry, ReadOnlyTransaction } from "@canvas-js/okra"
+import { Node, Tree, ReadWriteTransaction, hashEntry } from "@canvas-js/okra"
 import type { Signature, Signer, Message, Awaitable } from "@canvas-js/interfaces"
 import type { AbstractModelDB, ModelSchema, Effect } from "@canvas-js/modeldb"
 import { ed25519 } from "@canvas-js/signatures"
@@ -11,12 +11,12 @@ import { assert, zip, prepare, prepareMessage } from "@canvas-js/utils"
 import { Driver } from "./sync/driver.js"
 
 import type { SyncServer } from "./interface.js"
-import { BranchMergeRecord, BranchMergeIndex } from "./BranchMergeIndex.js"
+import { AncestorIndex } from "./AncestorIndex.js"
+import { BranchMergeIndex } from "./BranchMergeIndex.js"
 import { SignedMessage } from "./SignedMessage.js"
 import { decodeId, encodeId, messageIdPattern } from "./ids.js"
 import { getNextClock } from "./schema.js"
-import { topicPattern } from "./utils.js"
-import { AncestorIndex } from "./AncestorIndex.js"
+import { MISSING_PARENT, topicPattern } from "./utils.js"
 
 export type GossipLogConsumer<Payload = unknown> = (
 	this: AbstractGossipLog<Payload>,
@@ -35,7 +35,7 @@ export interface GossipLogInit<Payload = unknown> {
 }
 
 export type GossipLogEvents<Payload = unknown> = {
-	message: CustomEvent<{ id: string; signature: Signature; message: Message<Payload> }>
+	message: CustomEvent<{ id: string; signature: Signature; message: Message<Payload>; peerId?: string }>
 	commit: CustomEvent<{ root: Node; heads: string[] }>
 	sync: CustomEvent<{ peerId?: string; duration: number; messageCount: number }>
 	error: CustomEvent<{ error: Error }>
@@ -189,10 +189,8 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 	 */
 	public async append<T extends Payload = Payload>(
 		payload: T,
-		options: { signer?: Signer<Payload> } = {},
+		{ signer = this.signer, ...options }: { signer?: Signer<Payload>; peerId?: string } = {},
 	): Promise<SignedMessage<T>> {
-		const signer = options.signer ?? this.signer
-
 		let root: Node | null = null
 		let heads: string[] | null = null
 		const signedMessage = await this.tree.write(async (txn) => {
@@ -209,7 +207,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 			const signedMessage = this.encode(signature, message)
 			this.log("appending message %s at clock %d with parents %o", signedMessage.id, clock, parents)
 
-			const result = await this.apply(txn, signedMessage)
+			const result = await this.apply(txn, signedMessage, options)
 			root = result.root
 			heads = result.heads
 
@@ -243,7 +241,10 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 	 * Insert an existing signed message into the log (ie received via HTTP API).
 	 * If any of the parents are not present, throw an error.
 	 */
-	public async insert(signedMessage: SignedMessage<Payload>): Promise<{ id: string }> {
+	public async insert(
+		signedMessage: SignedMessage<Payload>,
+		options: { peerId?: string } = {},
+	): Promise<{ id: string }> {
 		const { clock, parents } = signedMessage.message
 		this.log("inserting message %s at clock %d with parents %o", signedMessage.id, clock, parents)
 
@@ -262,11 +263,11 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 				const leaf = txn.getNode(0, parentKey)
 				if (leaf === null) {
 					this.log.error("missing parent %s of message %s: %O", parent, signedMessage.id, signedMessage.message)
-					throw new Error(`missing parent ${parent} of message ${signedMessage.id}`)
+					throw new CodeError(`missing parent ${parent} of message ${signedMessage.id}`, MISSING_PARENT)
 				}
 			}
 
-			const result = await this.apply(txn, signedMessage)
+			const result = await this.apply(txn, signedMessage, options)
 			root = result.root
 			heads = result.heads
 		})
@@ -281,6 +282,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 	private async apply(
 		txn: ReadWriteTransaction,
 		signedMessage: SignedMessage<Payload>,
+		options: { peerId?: string },
 	): Promise<{ root: Node; heads: string[] }> {
 		const { id, signature, message, key, value } = signedMessage
 		this.log("applying %s %O", id, message)
@@ -334,7 +336,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 		await new AncestorIndex(this.db).indexAncestors(id, message.parents)
 
-		this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message } }))
+		this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message, ...options } }))
 
 		const root = txn.getRoot()
 		return { root, heads: heads.map((head) => head.id) }
@@ -390,7 +392,13 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 	/**
 	 * Sync with a remote source, applying and inserting all missing messages into the local log
 	 */
-	public async sync(server: SyncServer, options: { sourceId?: string } = {}): Promise<{ messageCount: number }> {
+	public async sync(
+		server: SyncServer,
+		callback: (signedMessage: SignedMessage<Payload>) => Awaitable<void> = async (signedMessage) => {
+			await this.insert(signedMessage)
+		},
+		options: { peerId?: string } = {},
+	): Promise<{ messageCount: number }> {
 		const start = performance.now()
 		let messageCount = 0
 
@@ -402,17 +410,15 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 				for (const [key, value] of zip(keys, values)) {
 					const signedMessage = this.decode(value)
 					assert(equals(key, signedMessage.key), "invalid message key")
-					await this.verifySignature(signedMessage.signature, signedMessage.message)
-
-					await this.insert(signedMessage)
+					await callback(signedMessage)
 					messageCount++
 				}
 			}
 		})
 
 		const duration = Math.ceil(performance.now() - start)
-		this.log("finished sync with peer %s (%d messages in %dms)", options.sourceId, messageCount, duration)
-		this.dispatchEvent(new CustomEvent("sync", { detail: { peerId: options.sourceId, messageCount, duration } }))
+		this.log("finished sync with peer %s (%d messages in %dms)", options.peerId, messageCount, duration)
+		this.dispatchEvent(new CustomEvent("sync", { detail: { peerId: options.peerId, messageCount, duration } }))
 		return { messageCount }
 	}
 
@@ -426,13 +432,13 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 					const values: Uint8Array[] = []
 
 					for (const key of keys) {
-						const [signature, message] = await this.get(decodeId(key))
+						const id = decodeId(key)
+						const [signature, message] = await this.get(id)
 						if (signature === null || message === null) {
-							throw new Error("wtf??")
+							throw new CodeError("message not found", "NOT_FOUND", { id })
 						}
 
 						const signedMessage = SignedMessage.encode(signature, message)
-
 						assert(equals(signedMessage.key, key), "invalid message key")
 						values.push(signedMessage.value)
 					}

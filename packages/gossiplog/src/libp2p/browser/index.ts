@@ -1,4 +1,5 @@
 import { createLibp2p } from "libp2p"
+import { version } from "libp2p/version"
 import { PeerId } from "@libp2p/interface"
 import { identify } from "@libp2p/identify"
 import { webSockets } from "@libp2p/websockets"
@@ -10,7 +11,7 @@ import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { webRTC } from "@libp2p/webrtc"
 
 import { circuitRelayTransport } from "@libp2p/circuit-relay-v2"
-import { Fetch, fetch } from "@libp2p/fetch"
+import { fetch } from "@libp2p/fetch"
 import { ping } from "@libp2p/ping"
 
 import { peerIdFromBytes, peerIdFromString } from "@libp2p/peer-id"
@@ -76,7 +77,7 @@ export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: Abst
 	console.log("listening on", listen)
 	console.log("announcing on", announce)
 
-	const libp2p = await createLibp2p<ServiceMap<Payload> & { fetch: Fetch }>({
+	const libp2p = await createLibp2p<ServiceMap<Payload>>({
 		start: false,
 		peerId: peerId,
 		addresses: { listen, announce },
@@ -111,7 +112,10 @@ export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: Abst
 		streamMuxers: [yamux({})],
 		connectionEncryption: [noise({})],
 		services: {
-			identify: identify({ protocolPrefix: "canvas" }),
+			identify: identify({
+				protocolPrefix: "canvas",
+				// agentVersion: `gossiplog/libp2p/browser/${version}`,
+			}),
 			fetch: fetch({ protocolPrefix: "canvas" }),
 			ping: ping({ protocolPrefix: "canvas" }),
 

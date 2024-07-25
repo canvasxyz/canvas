@@ -1,6 +1,8 @@
 import { anySignal } from "any-signal"
 import * as cbor from "@ipld/dag-cbor"
 
+export const MISSING_PARENT = "MISSING_PARENT"
+
 export class SyncDeadlockError extends Error {}
 export class SyncTimeoutError extends Error {}
 export class SyncResourceError extends Error {}
