@@ -12,6 +12,7 @@
 		{ "path": "../modeldb" },
 		{ "path": "../modeldb-idb" },
 		{ "path": "../modeldb-pg" },
-		{ "path": "../modeldb-sqlite" }
+		{ "path": "../modeldb-sqlite" },
+		{ "path": "../modeldb-sqlite-wasm" }
 	]
 }
