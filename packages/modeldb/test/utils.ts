@@ -58,7 +58,7 @@ export const testOnModelDB = (
 					password: "postgres",
 					port: parseInt(process.env.POSTGRES_PORT, 10),
 					host: process.env.POSTGRES_HOST,
-			  }
+				}
 			: `postgresql://localhost:5432/test`
 
 	test(`Sqlite - ${name}`, macro, async (t, models) => {
