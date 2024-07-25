@@ -58,7 +58,7 @@ export const testOnModelDB = (
 					password: "postgres",
 					port: parseInt(process.env.POSTGRES_PORT, 10),
 					host: process.env.POSTGRES_HOST,
-				}
+			  }
 			: `postgresql://localhost:5432/test`
 
 	test(`Sqlite - ${name}`, macro, async (t, models) => {
@@ -83,7 +83,29 @@ export const testOnModelDB = (
 			const testFunc = eval(`(${run})`)
 			try {
 				// @ts-ignore
-				await testFunc(ctx, openDB)
+				await testFunc(ctx, openOpfsDB)
+				return { result: "passed" }
+			} catch (error: any) {
+				return { result: "failed", error: error.message }
+			} finally {
+				if (ctx.teardownFunction) ctx.teardownFunction()
+			}
+		}, run.toString())
+
+		if (testResult.result == "passed") {
+			t.pass()
+		} else {
+			t.fail(testResult.error)
+		}
+	})
+	test(`Sqlite Wasm Transient - ${name}`, async (t) => {
+		const testResult = await page.evaluate(async (run) => {
+			// @ts-ignore
+			const ctx = new InnerExecutionContext()
+			const testFunc = eval(`(${run})`)
+			try {
+				// @ts-ignore
+				await testFunc(ctx, openTransientDB)
 				return { result: "passed" }
 			} catch (error: any) {
 				return { result: "failed", error: error.message }
