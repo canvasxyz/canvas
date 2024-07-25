@@ -1,6 +1,5 @@
 import { nanoid } from "nanoid"
 import { OpfsModelDB, TransientModelDB } from "@canvas-js/modeldb-sqlite-wasm"
-import DBWorker from "./worker.js?worker"
 import { ModelSchema } from "@canvas-js/modeldb"
 import { assert, assertDeepEqual, assertThrown } from "./utils"
 
@@ -30,8 +29,6 @@ class InnerExecutionContext {
 async function openOpfsDB(t: any, models: ModelSchema) {
 	// @ts-ignore
 	const db = await OpfsModelDB.initialize({
-		// @ts-ignore
-		worker: new DBWorker(),
 		path: `${nanoid()}.db`,
 		models,
 	})
