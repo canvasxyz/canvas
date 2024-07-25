@@ -32,7 +32,7 @@ test.before(async (t) => {
 		console.log(...args)
 	})
 
-	const origin = "http://localhost:5173/"
+	const origin = process.env.TEST_SERVER_ORIGIN || "http://localhost:5173"
 	await page.goto(origin)
 })
 
