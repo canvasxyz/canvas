@@ -6,7 +6,7 @@ import { InnerModelDB } from "./InnerModelDB.js"
 import "./worker.js"
 
 export interface ModelDBOptions {
-	path: string
+	path?: string
 	models: ModelSchema
 }
 
