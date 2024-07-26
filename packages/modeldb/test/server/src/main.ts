@@ -1,7 +1,7 @@
 import { nanoid } from "nanoid"
 import { ModelDB } from "@canvas-js/modeldb-sqlite-wasm"
 import { ModelSchema } from "@canvas-js/modeldb"
-import { assert, assertDeepEqual, assertThrown } from "./utils"
+import { assert, assertDeepEqual, assertThrown } from "./utils.js"
 
 class InnerExecutionContext {
 	teardownFunction: null | (() => void)
