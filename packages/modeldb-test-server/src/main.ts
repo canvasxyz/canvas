@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid"
-import { OpfsModelDB, TransientModelDB } from "@canvas-js/modeldb-sqlite-wasm"
+import { ModelDB } from "@canvas-js/modeldb-sqlite-wasm"
 import { ModelSchema } from "@canvas-js/modeldb"
 import { assert, assertDeepEqual, assertThrown } from "./utils"
 
@@ -28,7 +28,7 @@ class InnerExecutionContext {
 // @ts-ignore
 async function openOpfsDB(t: any, models: ModelSchema) {
 	// @ts-ignore
-	const db = await OpfsModelDB.initialize({
+	const db = await ModelDB.initialize({
 		path: `${nanoid()}.db`,
 		models,
 	})
@@ -38,7 +38,7 @@ async function openOpfsDB(t: any, models: ModelSchema) {
 // @ts-ignore
 async function openTransientDB(t: any, models: ModelSchema) {
 	// @ts-ignore
-	const db = await TransientModelDB.initialize({
+	const db = await ModelDB.initialize({
 		models,
 	})
 	return db
@@ -60,10 +60,6 @@ export async function collect<T>(iter: AsyncIterable<T>): Promise<T[]> {
 	return values
 }
 
-// // @ts-ignore
-// global.OpfsModelDB = OpfsModelDB
-// // @ts-ignore
-// global.DBWorker = DBWorker
 // @ts-ignore
 global.nanoid = nanoid
 // @ts-ignore

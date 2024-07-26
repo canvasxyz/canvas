@@ -3,14 +3,14 @@ import { toString } from "uint8arrays"
 import { Mode } from "@canvas-js/okra"
 import { Tree as MemoryTree } from "@canvas-js/okra-memory"
 
-import { OpfsModelDB } from "@canvas-js/modeldb-sqlite-wasm"
+import { ModelDB } from "@canvas-js/modeldb-sqlite-wasm"
 
 import { AbstractGossipLog, GossipLogInit } from "../AbstractGossipLog.js"
 import { MerkleIndex } from "../MerkleIndex.js"
 
 export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 	public static async open<Payload>(init: GossipLogInit<Payload>) {
-		const db = await OpfsModelDB.initialize({
+		const db = await ModelDB.initialize({
 			path: `canvas/v1/${init.topic}.sqlite`,
 			models: AbstractGossipLog.schema,
 		})
@@ -35,11 +35,7 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 		return gossipLog
 	}
 
-	private constructor(
-		public readonly db: OpfsModelDB,
-		public readonly tree: MemoryTree,
-		init: GossipLogInit<Payload>,
-	) {
+	private constructor(public readonly db: ModelDB, public readonly tree: MemoryTree, init: GossipLogInit<Payload>) {
 		super(init)
 	}
 
