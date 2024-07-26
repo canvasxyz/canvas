@@ -11,8 +11,6 @@ import {
 	getFilter,
 } from "@canvas-js/modeldb"
 import { InnerModelDB } from "./InnerModelDB.js"
-import { Awaitable } from "@canvas-js/interfaces"
-import assert from "assert"
 
 export interface ModelDBOptions {
 	path: string
