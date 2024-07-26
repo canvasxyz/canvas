@@ -1,7 +1,8 @@
 import { AbstractGossipLog } from "@canvas-js/gossiplog"
 import { getLibp2p } from "@canvas-js/gossiplog/libp2p/browser"
-import { GossipLog } from "@canvas-js/gossiplog/opfs"
-import { ModelDB } from "@canvas-js/modeldb-idb"
+import { GossipLog as OpfsGossipLog } from "@canvas-js/gossiplog/opfs"
+import { GossipLog as IdbGossipLog } from "@canvas-js/gossiplog/idb"
+import { ModelDB as IdbModelDB } from "@canvas-js/modeldb-idb"
 import { OpfsModelDB } from "@canvas-js/modeldb-sqlite-wasm"
 
 import type { PlatformTarget } from "../interface.js"
@@ -12,11 +13,18 @@ const target: PlatformTarget = {
 			if (typeof path !== "string") throw new Error("Expected path to be a string")
 			return OpfsModelDB.initialize({ path, models: { ...models, ...AbstractGossipLog.schema } })
 		} else {
-			return ModelDB.initialize({ name: `canvas/v1/${topic}`, models: { ...models, ...AbstractGossipLog.schema } })
+			return IdbModelDB.initialize({ name: `canvas/v1/${topic}`, models: { ...models, ...AbstractGossipLog.schema } })
 		}
 	},
 
-	openGossipLog: ({}, init) => GossipLog.open(init),
+	openGossipLog: ({ path }, init) => {
+		if (path) {
+			if (typeof path !== "string") throw new Error("Expected path to be a string")
+			return OpfsGossipLog.open(init)
+		} else {
+			return IdbGossipLog.open(init)
+		}
+	},
 
 	createLibp2p: (config, messageLog) => getLibp2p(config, messageLog),
 }
