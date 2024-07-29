@@ -21,7 +21,7 @@
 		{ "path": "./packages/modeldb-pg" },
 		{ "path": "./packages/modeldb-sqlite" },
 		{ "path": "./packages/modeldb-sqlite-wasm" },
-		{ "path": "./packages/modeldb/test/server" },
+		{ "path": "./packages/modeldb-test-server" },
 		{ "path": "./packages/chain-atp" },
 		{ "path": "./packages/chain-atp/test" },
 		{ "path": "./packages/chain-cosmos" },

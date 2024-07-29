@@ -19,5 +19,5 @@
 		"noFallthroughCasesInSwitch": true
 	},
 	"include": ["src"],
-	"references": [{ "path": "../../../modeldb-sqlite-wasm" }, { "path": "../" }]
+	"references": [{ "path": "../modeldb-sqlite-wasm" }]
 }
