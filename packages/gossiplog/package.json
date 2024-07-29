@@ -16,7 +16,7 @@
 		".": "./lib/index.js",
 		"./idb": "./lib/idb/index.js",
 		"./pg": "./lib/pg/index.js",
-		"./opfs": "./lib/opfs/index.js",
+		"./sqlite-wasm": "./lib/sqlite-wasm/index.js",
 		"./sqlite": "./lib/sqlite/index.js",
 		"./service": "./lib/service/index.js",
 		"./libp2p/browser": "./lib/libp2p/browser/index.js",
