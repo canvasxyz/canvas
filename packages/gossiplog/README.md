@@ -100,6 +100,8 @@ await log.append({ ...payload }, { signer: signerB })
 
 Message IDs begin with the message clock, followed by the sha2-256 hash of the serialized signed message, and truncated to 20 bytes total. These are encoded using the [`base32hex`](https://www.rfc-editor.org/rfc/rfc4648#section-7) alphabet to get 32-character string IDs, like `054ki1oubq8airsc9d8sbg0t7itqbdlf`.
 
+![](https://github.com/canvasxyz/canvas/blob/c2c2b9892558262de658862119da343541301e58/packages/gossiplog/Component%202.png)
+
 The message clock is encoded using a special variable-length format designed to preseve sorting order (ie message IDs sort lexicographically according to their clock values).
 
 Clock values less than 128 are encoded as-is in a single byte.
