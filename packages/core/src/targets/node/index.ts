@@ -1,44 +1,48 @@
-import path from "node:path"
-import type pg from "pg"
+import nodePath from "node:path"
 
 import { GossipLog as SqliteGossipLog } from "@canvas-js/gossiplog/sqlite"
 import { GossipLog as PostgresGossipLog } from "@canvas-js/gossiplog/pg"
 import { getLibp2p } from "@canvas-js/gossiplog/libp2p/node"
-
-import { ModelDB } from "@canvas-js/modeldb-sqlite"
+import { ModelDB as SqliteModelDB } from "@canvas-js/modeldb-sqlite"
 import { ModelDB as PostgresModelDB } from "@canvas-js/modeldb-pg"
 import { assert } from "@canvas-js/utils"
 
-import type { PlatformTarget } from "../interface.js"
-
-const isPostgres = (path: string | pg.ConnectionConfig): boolean =>
-	typeof path !== "string" || path.startsWith("postgres://") || path.startsWith("postgresql://")
+import { isIndexedDbPath, isSqlitePath, isPostgresPath, type PlatformTarget } from "../interface.js"
 
 const target: PlatformTarget = {
-	async openDB(location: { path: string | pg.ConnectionConfig | null; topic: string; clear?: boolean }, models) {
-		if (location.path === null) {
-			return new ModelDB({ path: null, models })
-		} else if (isPostgres(location.path)) {
-			return await PostgresModelDB.initialize({ connectionConfig: location.path, models, clear: location.clear })
-		} else {
-			assert(typeof location.path === "string", 'expected typeof location.path === "string"')
+	async openDB({ path, clear }, models) {
+		if (path === null) {
+			return new SqliteModelDB({ path: null, models })
+		} else if (isIndexedDbPath(path)) {
+			throw new Error("IndexedDB not supported in node")
+		} else if (isPostgresPath(path)) {
+			return await PostgresModelDB.initialize({ connectionConfig: path, models, clear: clear })
+		} else if (isSqlitePath(path)) {
+			assert(typeof path === "string", 'expected typeof location.path === "string"')
 			// TODO: delete db.sqlite
-			return new ModelDB({ path: path.resolve(location.path, "db.sqlite"), models })
+			return new SqliteModelDB({ path: nodePath.resolve(path, "db.sqlite"), models })
+		} else {
+			throw new Error(`Invalid path: ${path}`)
 		}
 	},
 
-	async openGossipLog(location: { path: string | pg.ConnectionConfig | null; topic: string; clear?: boolean }, init) {
-		if (location.path === null) {
+	async openGossipLog({ path, clear }, init) {
+		if (path === null) {
 			return new SqliteGossipLog(init)
-		} else if (isPostgres(location.path)) {
-			return await PostgresGossipLog.open(location.path, { ...init, clear: location.clear })
-		} else {
+		} else if (isIndexedDbPath(path)) {
+			throw new Error("IndexedDB not supported in node")
+		} else if (isPostgresPath(path)) {
+			return await PostgresGossipLog.open(path, { ...init, clear: clear })
+		} else if (isSqlitePath(path)) {
+			assert(typeof path === "string", 'expected typeof location.path === "string"')
 			// TODO: delete topics/
-			assert(typeof location.path === "string", 'expected typeof location.path === "string"')
+			assert(typeof path === "string", 'expected typeof location.path === "string"')
 			return new SqliteGossipLog({
-				directory: path.resolve(location.path, "topics", init.topic),
+				directory: nodePath.resolve(path, "topics", init.topic),
 				...init,
 			})
+		} else {
+			throw new Error(`Invalid path: ${path}`)
 		}
 	},
 

@@ -6,14 +6,35 @@ import type { Action, Session } from "@canvas-js/interfaces"
 import type { AbstractModelDB, ModelSchema } from "@canvas-js/modeldb"
 import type { AbstractGossipLog, GossipLogInit, NetworkConfig, ServiceMap } from "@canvas-js/gossiplog"
 
+export type ModelDBPath = string | pg.ConnectionConfig | null
+
+export function isSqlitePath(path: ModelDBPath): path is `sqlite://${string}` {
+	return typeof path == "string" && path.startsWith("sqlite://")
+}
+
+export function isIndexedDbPath(path: ModelDBPath): path is `indexeddb://${string}` {
+	return typeof path == "string" && path.startsWith("indexeddb://")
+}
+
+type PostgresPath = `postgres://${string}` | `postgresql://${string}` | pg.ConnectionConfig
+export function isPostgresPath(path: ModelDBPath): path is PostgresPath {
+	if (typeof path == "string" && (path.startsWith("postgres://") || path.startsWith("postgresql://"))) {
+		return true
+	}
+	if (path != null && typeof path == "object") {
+		return true
+	}
+	return false
+}
+
 export interface PlatformTarget {
 	openGossipLog: (
-		location: { path: string | pg.ConnectionConfig | null; topic: string },
+		location: { path: ModelDBPath; topic: string; clear?: boolean },
 		init: GossipLogInit<Action | Session>,
 	) => Promise<AbstractGossipLog<Action | Session>>
 
 	openDB: (
-		location: { path: string | pg.ConnectionConfig | null; topic: string },
+		location: { path: ModelDBPath; topic: string; clear?: boolean },
 		models: ModelSchema,
 	) => Promise<AbstractModelDB>
 

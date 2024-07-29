@@ -5,24 +5,33 @@ import { GossipLog as IdbGossipLog } from "@canvas-js/gossiplog/idb"
 import { ModelDB as IdbModelDB } from "@canvas-js/modeldb-idb"
 import { ModelDB as SqliteWasmModelDB } from "@canvas-js/modeldb-sqlite-wasm"
 
-import type { PlatformTarget } from "../interface.js"
+import { isIndexedDbPath, isPostgresPath, isSqlitePath, type PlatformTarget } from "../interface.js"
 
 const target: PlatformTarget = {
 	openDB: async ({ path, topic }, models) => {
-		if (path) {
-			if (typeof path !== "string") throw new Error("Expected path to be a string")
-			return SqliteWasmModelDB.initialize({ path, models: { ...models, ...AbstractGossipLog.schema } })
-		} else {
+		if (path == null) {
+			return SqliteWasmModelDB.initialize({ models })
+		} else if (isSqlitePath(path)) {
+			const innerPath = path.split("sqlite://")[1]
+			return SqliteWasmModelDB.initialize({ path: innerPath, models })
+		} else if (isIndexedDbPath(path)) {
 			return IdbModelDB.initialize({ name: `canvas/v1/${topic}`, models: { ...models, ...AbstractGossipLog.schema } })
+		} else if (isPostgresPath(path)) {
+			throw new Error("Postgres not supported in browser")
+		} else {
+			throw new Error(`Invalid path: ${path}`)
 		}
 	},
 
 	openGossipLog: ({ path }, init) => {
-		if (path) {
-			if (typeof path !== "string") throw new Error("Expected path to be a string")
+		if (path == null || isSqlitePath(path)) {
 			return SqliteWasmGossipLog.open(init)
-		} else {
+		} else if (isIndexedDbPath(path)) {
 			return IdbGossipLog.open(init)
+		} else if (isPostgresPath(path)) {
+			throw new Error("Postgres not supported in browser")
+		} else {
+			throw new Error(`Invalid path: ${path}`)
 		}
 	},
 

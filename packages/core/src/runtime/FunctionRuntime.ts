@@ -10,12 +10,13 @@ import target from "#target"
 
 import { ActionImplementationFunction, Contract, ModelAPI } from "../types.js"
 import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
+import { ModelDBPath } from "../targets/interface.js"
 
 const identity = (x: any) => x
 
 export class FunctionRuntime extends AbstractRuntime {
 	public static async init(
-		path: string | pg.ConnectionConfig | null,
+		path: ModelDBPath,
 		topic: string,
 		signers: SignerCache,
 		contract: Contract,

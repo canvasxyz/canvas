@@ -13,10 +13,11 @@ import target from "#target"
 import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
 import { sha256 } from "@noble/hashes/sha256"
 import { bytesToHex } from "@noble/hashes/utils"
+import { ModelDBPath } from "../targets/interface.js"
 
 export class ContractRuntime extends AbstractRuntime {
 	public static async init(
-		path: string | pg.ConnectionConfig | null,
+		path: ModelDBPath,
 		topic: string,
 		signers: SignerCache,
 		contract: string,

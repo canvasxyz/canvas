@@ -3,8 +3,6 @@ import { logger } from "@libp2p/logger"
 import { sha256 } from "@noble/hashes/sha2"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 
-import type pg from "pg"
-
 import { Signature, Action, Session, Message, SessionSigner, SignerCache } from "@canvas-js/interfaces"
 import { AbstractModelDB, Model } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
@@ -16,6 +14,7 @@ import target from "#target"
 import type { Contract, ActionImplementationFunction, ActionImplementationObject } from "./types.js"
 import { Runtime, createRuntime } from "./runtime/index.js"
 import { validatePayload } from "./schema.js"
+import { ModelDBPath } from "./targets/interface.js"
 
 export type { Model } from "@canvas-js/modeldb"
 export type { PeerId } from "@libp2p/interface"
@@ -26,7 +25,7 @@ export interface CanvasConfig<T extends Contract = Contract> extends NetworkConf
 	signers?: SessionSigner[]
 
 	/** data directory path (NodeJS/sqlite), or postgres connection config (NodeJS/pg) */
-	path?: string | pg.ConnectionConfig | null
+	path?: ModelDBPath
 
 	/** set a memory limit for the quickjs runtime, only used if `contract` is a string */
 	runtimeMemoryLimit?: number
@@ -106,8 +105,8 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		[K in keyof T["actions"]]: T["actions"][K] extends ActionImplementationFunction<infer Args>
 			? ActionAPI<Args>
 			: T["actions"][K] extends ActionImplementationObject<infer Args>
-				? ActionAPI<Args>
-				: never
+			? ActionAPI<Args>
+			: never
 	}
 
 	private readonly controller = new AbortController()
