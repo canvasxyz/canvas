@@ -14,8 +14,8 @@
 		"vite": "^5.3.4"
 	},
 	"dependencies": {
-		"@canvas-js/modeldb": "^0.10.3",
-		"@canvas-js/modeldb-sqlite-wasm": "^0.10.3",
+		"@canvas-js/modeldb": "0.10.3",
+		"@canvas-js/modeldb-sqlite-wasm": "0.10.3",
 		"@libp2p/logger": "^4.0.17",
 		"@sqlite.org/sqlite-wasm": "^3.46.0-build2",
 		"comlink": "^4.4.1",
