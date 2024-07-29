@@ -13,12 +13,15 @@
 	"types": "./lib/index.d.ts",
 	"sideEffects": false,
 	"scripts": {
+		"test-server": "cd test/server && vite",
 		"test": "ava --serial"
 	},
 	"devDependencies": {
+		"@canvas-js/modeldb-sqlite-wasm": "^0.10.3",
 		"fake-indexeddb": "^6.0.0",
 		"nanoid": "^5.0.7",
-		"puppeteer": "^22.13.1"
+		"puppeteer": "^22.13.1",
+		"vite": "^5.3.5"
 	},
 	"dependencies": {
 		"@canvas-js/utils": "0.10.3",
