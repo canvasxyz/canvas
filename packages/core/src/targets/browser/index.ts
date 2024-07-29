@@ -1,6 +1,6 @@
 import { AbstractGossipLog } from "@canvas-js/gossiplog"
 import { getLibp2p } from "@canvas-js/gossiplog/libp2p/browser"
-import { GossipLog as OpfsGossipLog } from "@canvas-js/gossiplog/opfs"
+import { GossipLog as SqliteWasmGossipLog } from "@canvas-js/gossiplog/sqlite-wasm"
 import { GossipLog as IdbGossipLog } from "@canvas-js/gossiplog/idb"
 import { ModelDB as IdbModelDB } from "@canvas-js/modeldb-idb"
 import { ModelDB as SqliteWasmModelDB } from "@canvas-js/modeldb-sqlite-wasm"
@@ -20,7 +20,7 @@ const target: PlatformTarget = {
 	openGossipLog: ({ path }, init) => {
 		if (path) {
 			if (typeof path !== "string") throw new Error("Expected path to be a string")
-			return OpfsGossipLog.open(init)
+			return SqliteWasmGossipLog.open(init)
 		} else {
 			return IdbGossipLog.open(init)
 		}
