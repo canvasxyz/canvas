@@ -1,11 +1,45 @@
 import "fake-indexeddb/auto"
 import test, { ExecutionContext } from "ava"
+import puppeteer from "puppeteer"
 import { nanoid } from "nanoid"
 
 import type { AbstractModelDB, ModelSchema } from "@canvas-js/modeldb"
 import { ModelDB as ModelDBSqlite } from "@canvas-js/modeldb-sqlite"
 import { ModelDB as ModelDBIdb } from "@canvas-js/modeldb-idb"
 import { ModelDB as ModelDBPostgres } from "@canvas-js/modeldb-pg"
+
+let browser: puppeteer.Browser
+let page: puppeteer.Page
+
+test.before(async (t) => {
+	browser = await puppeteer.launch({
+		dumpio: true,
+		headless: true,
+		args: [
+			"--no-sandbox",
+			"--disable-setuid-sandbox",
+			"--disable-extensions",
+			"--enable-chrome-browser-cloud-management",
+		],
+	})
+	page = await browser.newPage()
+
+	page.on("workercreated", (worker) => console.log("Worker created: " + worker.url()))
+	page.on("workerdestroyed", (worker) => console.log("Worker destroyed: " + worker.url()))
+
+	page.on("console", async (e) => {
+		const args = await Promise.all(e.args().map((a) => a.jsonValue()))
+		console.log(...args)
+	})
+
+	const origin = process.env.TEST_SERVER_ORIGIN || "http://localhost:5173"
+	await page.goto(origin)
+})
+
+test.after(async (t) => {
+	await page.close()
+	await browser.close()
+})
 
 export const testOnModelDB = (
 	name: string,
@@ -41,6 +75,50 @@ export const testOnModelDB = (
 		const mdb = await ModelDBPostgres.initialize({ connectionConfig, models, clear: true })
 		t.teardown(() => mdb.close())
 		return mdb
+	})
+	test(`Sqlite Wasm Opfs - ${name}`, async (t) => {
+		const testResult = await page.evaluate(async (run) => {
+			// @ts-ignore
+			const ctx = new InnerExecutionContext()
+			const testFunc = eval(`(${run})`)
+			try {
+				// @ts-ignore
+				await testFunc(ctx, openOpfsDB)
+				return { result: "passed" }
+			} catch (error: any) {
+				return { result: "failed", error: error.message }
+			} finally {
+				if (ctx.teardownFunction) ctx.teardownFunction()
+			}
+		}, run.toString())
+
+		if (testResult.result == "passed") {
+			t.pass()
+		} else {
+			t.fail(testResult.error)
+		}
+	})
+	test(`Sqlite Wasm Transient - ${name}`, async (t) => {
+		const testResult = await page.evaluate(async (run) => {
+			// @ts-ignore
+			const ctx = new InnerExecutionContext()
+			const testFunc = eval(`(${run})`)
+			try {
+				// @ts-ignore
+				await testFunc(ctx, openTransientDB)
+				return { result: "passed" }
+			} catch (error: any) {
+				return { result: "failed", error: error.message }
+			} finally {
+				if (ctx.teardownFunction) ctx.teardownFunction()
+			}
+		}, run.toString())
+
+		if (testResult.result == "passed") {
+			t.pass()
+		} else {
+			t.fail(testResult.error)
+		}
 	})
 }
 

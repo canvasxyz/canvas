@@ -7,7 +7,7 @@
 		"build": "vite build",
 		"dev": "vite",
 		"server:dev": "canvas run --port 8080 --topic chat-example.canvas.xyz server/contract.canvas.js",
-    "server:start": "canvas run /tmp/canvas-example-chat --port 8080 --topic chat-example.canvas.xyz --init server/contract.canvas.js"
+		"server:start": "canvas run /tmp/canvas-example-chat --port 8080 --topic chat-example.canvas.xyz --init server/contract.canvas.js"
 	},
 	"dependencies": {
 		"@canvas-js/cli": "0.10.3",
@@ -15,6 +15,7 @@
 		"@canvas-js/chain-cosmos": "0.10.3",
 		"@canvas-js/chain-ethereum": "0.10.3",
 		"@canvas-js/chain-ethereum-viem": "0.10.3",
+		"@canvas-js/modeldb-sqlite-wasm": "0.10.3",
 		"@canvas-js/chain-solana": "0.10.3",
 		"@canvas-js/chain-substrate": "0.10.3",
 		"@canvas-js/core": "0.10.3",
@@ -32,6 +33,7 @@
 		"@types/react": "^18.3.3",
 		"@types/react-dom": "^18.3.0",
 		"buffer": "^6.0.3",
+		"comlink": "^4.4.1",
 		"ethers": "^6.13.1",
 		"idb": "^8.0.0",
 		"magic-sdk": "^21.5.0",
@@ -41,6 +43,7 @@
 		"react": "^18.3.1",
 		"react-dom": "^18.3.1",
 		"viem": "^2.15.1",
+		"vite-plugin-wasm": "^3.3.0",
 		"web3": "^4.10.0"
 	},
 	"devDependencies": {

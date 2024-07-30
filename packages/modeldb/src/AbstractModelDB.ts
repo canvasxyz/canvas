@@ -29,7 +29,7 @@ export abstract class AbstractModelDB {
 
 	abstract close(): Promise<void>
 
-	abstract get<T extends ModelValue<any> = ModelValue<any>>(modelName: string, key: string): Promise<T | null>
+	abstract get<T extends ModelValue<any> = ModelValue<any>>(modelName: string, key: string): Awaitable<T | null>
 
 	abstract iterate(modelName: string): AsyncIterable<ModelValue>
 
@@ -81,7 +81,7 @@ export abstract class AbstractModelDB {
 		this.subscriptions.delete(id)
 	}
 
-	private getEffectFilter(model: Model, query: QueryParams): (effect: Effect) => boolean {
+	protected getEffectFilter(model: Model, query: QueryParams): (effect: Effect) => boolean {
 		const filter = getFilter(model, query.where)
 
 		return (effect) => {

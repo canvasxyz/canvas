@@ -13,6 +13,7 @@
 		{ "path": "../modeldb-idb" },
 		{ "path": "../modeldb-pg" },
 		{ "path": "../modeldb-sqlite" },
+		{ "path": "../modeldb-sqlite-wasm" },
 		{ "path": "../gossiplog" },
 		{ "path": "../vm" }
 	]

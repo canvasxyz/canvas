@@ -1,6 +1,11 @@
 # @canvas-js/modeldb
 
-ModelDB is a minimalist cross-platform relational database wrapper. It currently supports IndexedDB (browser) and SQLite (NodeJS) backends.
+ModelDB is a minimalist cross-platform relational database wrapper. It currently supports the following backends:
+
+- IndexedDB (browser)
+- Sqlite + Wasm (browser) with either an OPFS store or transient in-memory storage
+- PostgreSQL (NodeJS)
+- Native Sqlite (NodeJS)
 
 ## Table of Contents
 
@@ -11,6 +16,7 @@ ModelDB is a minimalist cross-platform relational database wrapper. It currently
   - [Queries](#queries)
   - [Indexes](#indexes)
   - [Name restrictions](#name-restrictions)
+- [Testing](#testing)
 - [License](#license)
 
 ## Usage
@@ -171,6 +177,25 @@ Multi-property index support will be added soon.
 ### Name restrictions
 
 Model names and property names can contain `[a-zA-Z0-9$:_\-\.]`.
+
+## Testing
+
+ModelDB has a test suite that that uses Ava as its test runner and Puppeteer for browser testing. The SQLite + Wasm implementations make use of Web APIs
+and are tested in the browser. The IndexedDB implementation is tested in NodeJS using a mock IndexedDB implementation.
+
+We first need to run a "test server" app to serve the browser test files:
+
+```sh
+npm run dev --workspace=@canvas-js/modeldb-test-server
+```
+
+Note the URL that the server is running on (e.g. `http://localhost:5173`).
+
+Then in another terminal, run the tests themselves. Set the TEST_SERVER_ORIGIN environment variable to the URL from the previous step:
+
+```sh
+TEST_SERVER_ORIGIN=http://localhost:5173/ npm run test --workspace=@canvas-js/modeldb
+```
 
 ## License
 

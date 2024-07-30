@@ -1,5 +1,5 @@
 {
-	"name": "@canvas-js/modeldb",
+	"name": "@canvas-js/modeldb-sqlite-wasm",
 	"version": "0.10.3",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"type": "module",
@@ -13,20 +13,18 @@
 	"types": "./lib/index.d.ts",
 	"sideEffects": false,
 	"scripts": {
-		"test-server": "cd test/server && vite",
-		"test": "ava --serial"
-	},
-	"devDependencies": {
-		"@canvas-js/modeldb-sqlite-wasm": "^0.10.3",
-		"fake-indexeddb": "^6.0.0",
-		"nanoid": "^5.0.7",
-		"puppeteer": "^22.13.1",
-		"vite": "^5.3.5"
+		"test": "ava"
 	},
 	"dependencies": {
+		"@canvas-js/interfaces": "0.10.3",
+		"@canvas-js/modeldb": "0.10.3",
 		"@canvas-js/utils": "0.10.3",
 		"@ipld/dag-json": "^10.2.2",
-		"@libp2p/logger": "^4.0.16",
-		"uint8arrays": "^5.1.0"
+		"@libp2p/logger": "^4.0.17",
+		"@sqlite.org/sqlite-wasm": "^3.46.0-build2",
+		"comlink": "^4.4.1"
+	},
+	"devDependencies": {
+		"nanoid": "^5.0.7"
 	}
 }

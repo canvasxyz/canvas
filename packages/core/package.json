@@ -35,6 +35,7 @@
 		"@canvas-js/modeldb-idb": "0.10.3",
 		"@canvas-js/modeldb-pg": "0.10.3",
 		"@canvas-js/modeldb-sqlite": "0.10.3",
+		"@canvas-js/modeldb-sqlite-wasm": "0.10.3",
 		"@canvas-js/signatures": "0.10.3",
 		"@canvas-js/utils": "0.10.3",
 		"@canvas-js/vm": "0.10.3",
