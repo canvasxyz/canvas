@@ -14,7 +14,7 @@ export interface SyncServer extends SyncSource {
 	getValues(keys: Uint8Array[]): Awaitable<Uint8Array[]>
 }
 
-export type ServiceMap<Payload> = {
+export type ServiceMap<Payload = unknown> = {
 	identify: Identify
 	ping: PingService
 	fetch: Fetch

@@ -13,10 +13,9 @@ import { circuitRelayTransport } from "@libp2p/circuit-relay-v2"
 import { fetch } from "@libp2p/fetch"
 import { ping } from "@libp2p/ping"
 
-import { peerIdFromBytes, peerIdFromString } from "@libp2p/peer-id"
+import { peerIdFromString } from "@libp2p/peer-id"
 import { createEd25519PeerId, exportToProtobuf, createFromProtobuf } from "@libp2p/peer-id-factory"
 
-import * as cbor from "@ipld/dag-cbor"
 import { fromString, toString } from "uint8arrays"
 import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 import { bytesToHex } from "@noble/hashes/utils"
