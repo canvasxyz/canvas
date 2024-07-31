@@ -2,16 +2,7 @@ import type { ExecutionContext } from "ava"
 
 import pDefer, { DeferredPromise } from "p-defer"
 
-import type { PeerId, EventHandler } from "@libp2p/interface"
-
-import { Libp2p, createLibp2p } from "libp2p"
-import { identify as identifyService } from "@libp2p/identify"
-import { noise } from "@chainsafe/libp2p-noise"
-import { yamux } from "@chainsafe/libp2p-yamux"
-import { webSockets } from "@libp2p/websockets"
-import { all } from "@libp2p/websockets/filters"
-import { bootstrap } from "@libp2p/bootstrap"
-import { gossipsub } from "@chainsafe/libp2p-gossipsub"
+import type { PeerId, EventHandler, Libp2p } from "@libp2p/interface"
 
 import { createEd25519PeerId } from "@libp2p/peer-id-factory"
 import { logger } from "@libp2p/logger"
@@ -19,6 +10,7 @@ import { logger } from "@libp2p/logger"
 import { Awaitable, Message, Signature } from "@canvas-js/interfaces"
 import { ServiceMap, AbstractGossipLog, GossipLogEvents } from "@canvas-js/gossiplog"
 import { GossipLogServiceInit, gossiplog } from "@canvas-js/gossiplog/service"
+import { getLibp2p } from "@canvas-js/gossiplog/libp2p/node"
 
 export type NetworkInit = Record<string, { port: number; peers?: string[] }>
 
@@ -49,30 +41,10 @@ export async function createNetwork<T extends NetworkInit, Payload>(
 
 			const minConnections = peers?.length ?? 0
 
-			const libp2p = await createLibp2p({
-				peerId: peerId,
-				start: false,
-				addresses: { listen: [address] },
-				transports: [webSockets({ filter: all })],
-				connectionEncryption: [noise()],
-				streamMuxers: [yamux()],
-				peerDiscovery: bootstrapList.length > 0 ? [bootstrap({ list: bootstrapList, timeout: 0 })] : [],
-				connectionManager: { minConnections, autoDialInterval: 200 },
-
-				services: {
-					identify: identifyService({ protocolPrefix: "canvas" }),
-
-					pubsub: gossipsub({
-						emitSelf: false,
-						fallbackToFloodsub: false,
-						allowPublishToZeroTopicPeers: true,
-						globalSignaturePolicy: "StrictSign",
-						asyncValidation: true,
-					}),
-
-					gossiplog: gossiplog(messageLog, serviceInit),
-				},
-			})
+			const libp2p = await getLibp2p(
+				{ peerId, start: false, listen: [address], bootstrapList, minConnections },
+				messageLog,
+			)
 
 			libp2p.addEventListener("start", () => log("[%p] started", peerId))
 
@@ -85,20 +57,13 @@ export async function createNetwork<T extends NetworkInit, Payload>(
 				log("[%p] discovered peer %p", peerId, peerInfo.id)
 			})
 
-			libp2p.addEventListener("connection:open", ({ detail: { id, remotePeer } }) => {
-				log("[%p] opened connection %s to peer %p", peerId, id, remotePeer)
-			})
-
-			libp2p.addEventListener("connection:close", ({ detail: { id, remotePeer } }) => {
-				log("[%p] closed connection %s to peer %p", peerId, id, remotePeer)
-			})
-
 			return [name, libp2p]
 		}),
 	).then((entries) => Object.fromEntries(entries))
 
 	if (options.start ?? true) {
-		t.teardown(() => Promise.all(Object.values(network).map((libp2p) => libp2p.stop())))
+		t.teardown(() => Promise.all(Object.entries(network).map(([name, libp2p]) => libp2p.stop())))
+
 		await Promise.all(Object.values(network).map((libp2p) => libp2p.start()))
 	}
 

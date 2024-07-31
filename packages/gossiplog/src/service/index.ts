@@ -10,6 +10,8 @@ import {
 	StreamHandler,
 	CodeError,
 	PeerStore,
+	TypedEventTarget,
+	Libp2pEvents,
 } from "@libp2p/interface"
 
 import { Registrar, ConnectionManager } from "@libp2p/interface-internal"
@@ -57,6 +59,7 @@ export const getPushProtocol = (topic: string) => `/canvas/v1/${topic}/push`
 
 export type GossipLogServiceComponents = {
 	peerId: PeerId
+	events: TypedEventTarget<Libp2pEvents>
 	registrar: Registrar
 	peerStore: PeerStore
 	connectionManager: ConnectionManager
@@ -99,7 +102,7 @@ export class GossipLogService<Payload = unknown>
 	#pubsub: GossipSub | null = null
 	#started = false
 
-	#pushStreams = new Map<string, { source: Pushable<Uint8Array, void, unknown> }>()
+	#pushStreams = new Map<string, { stream: Stream; source: Pushable<Uint8Array, void, unknown> }>()
 
 	constructor(
 		private readonly components: GossipLogServiceComponents,
@@ -126,6 +129,8 @@ export class GossipLogService<Payload = unknown>
 		this.messageLog.addEventListener("message", this.forwardEvent)
 
 		this.#pubsub?.addEventListener("gossipsub:message", this.handleMessage)
+		this.components.events.addEventListener("connection:open", this.handleConnectionOpen)
+		this.components.events.addEventListener("connection:close", this.handleConnectionClose)
 
 		/**
 		 * sync is the protocol for initiating merkle syncs using the Okra index.
@@ -143,22 +148,22 @@ export class GossipLogService<Payload = unknown>
 		})
 
 		/**
-		 * push is the protocol for sending Update and Insert events to specific peers.
-		 * - Update events carry the sender's set of latest concurrent message ids ("heads")
-		 * - Insert events carry a signed message as an encoded [key, value] entry
-		 * Updates are pushed in two cases:
-		 * 1. once for every new connection, so that the recipient can merkle sync
-		 *    back if necessary. this happens from both sides of each connection simultaneously.
-		 * 2. whenever a peer finishes an merkle sync during which it received one or more
-		 *    missing messages, it pushes its new heads to all of its peers, except for
-		 *    the sync source.
-		 * Inserts are used for interacting with "lite client" peers, identified by the lack of
-		 * support for the gossipsub protocol.
-		 * - lite clients always push every new append directly to all of their peers.
-		 * - full clients forward every gossipsub message to all of their lite client peers.
-		 * - full clients forward every insert push to all of their lite client peers, except
-			   for the push sender.
-		 */
+     * push is the protocol for sending Update and Insert events to specific peers.
+     * - Update events carry the sender's set of latest concurrent message ids ("heads")
+     * - Insert events carry a signed message as an encoded [key, value] entry
+     * Updates are pushed in two cases:
+     * 1. once for every new connection, so that the recipient can merkle sync
+     *    back if necessary. this happens from both sides of each connection simultaneously.
+     * 2. whenever a peer finishes an merkle sync during which it received one or more
+     *    missing messages, it pushes its new heads to all of its peers, except for
+     *    the sync source.
+     * Inserts are used for interacting with "lite client" peers, identified by the lack of
+     * support for the gossipsub protocol.
+     * - lite clients always push every new append directly to all of their peers.
+     * - full clients forward every gossipsub message to all of their lite client peers.
+     * - full clients forward every insert push to all of their lite client peers, except
+         for the push sender.
+     */
 		await this.components.registrar.handle(this.pushProtocol, this.handleIncomingPush, {
 			maxInboundStreams: this.maxInboundStreams,
 			maxOutboundStreams: this.maxOutboundStreams,
@@ -167,6 +172,7 @@ export class GossipLogService<Payload = unknown>
 		this.#pushTopologyId = await this.components.registrar.register(this.pushProtocol, {
 			notifyOnTransient: false,
 			onConnect: (peerId, connection) => {
+				this.log("connected to %p", peerId)
 				this.pushTopology.add(peerId.toString())
 
 				const protocolSelectSignal = AbortSignal.timeout(DEFAULT_PROTOCOL_SELECT_TIMEOUT)
@@ -176,7 +182,7 @@ export class GossipLogService<Payload = unknown>
 						this.log("opened outgoing push stream %s to peer %p", stream.id, peerId)
 
 						const source = pushable()
-						this.#pushStreams.set(peerId.toString(), { source })
+						this.#pushStreams.set(peerId.toString(), { stream, source })
 						Promise.all([
 							// outgoing events
 							pipe(source, lp.encode, stream.sink),
@@ -185,7 +191,7 @@ export class GossipLogService<Payload = unknown>
 						]).finally(() => this.log("closed outgoing push stream %s from peer %p", stream.id, peerId))
 
 						this.messageLog.getClock().then(([_, heads]) => {
-							source.push(Event.encode({ update: { heads: heads.map(encodeId) } }))
+							this.#push(peerId.toString(), Event.encode({ update: { heads: heads.map(encodeId) } }))
 						})
 					},
 					(err) => {
@@ -202,13 +208,30 @@ export class GossipLogService<Payload = unknown>
 			},
 
 			onDisconnect: (peerId) => {
-				this.log("[push topology] remove %p", peerId)
+				this.log("disconnected %p", peerId)
 				this.pushTopology.delete(peerId.toString())
 				this.litePeers.delete(peerId.toString())
+
+				this.log("DELETING %s", peerId.toString())
+				const { source, stream } = this.#pushStreams.get(peerId.toString()) ?? {}
+				if (source !== undefined && stream !== undefined) {
+					this.#pushStreams.delete(peerId.toString())
+					source.end()
+					stream.close()
+				}
 			},
 		})
 
 		this.#started = true
+	}
+
+	private handleConnectionOpen = ({ detail: connection }: CustomEvent<Connection>) => {
+		this.log("connection:open %s %p", connection.id, connection.remotePeer)
+	}
+
+	private handleConnectionClose = ({ detail: connection }: CustomEvent<Connection>) => {
+		this.log("connection:close %s %p", connection.id, connection.remotePeer)
+		this.log("push streams: %O", this.#pushStreams)
 	}
 
 	public async afterStart() {
@@ -219,11 +242,17 @@ export class GossipLogService<Payload = unknown>
 	public async beforeStop() {
 		this.log("beforeStop")
 		this.#pubsub?.unsubscribe(this.messageLog.topic)
+		for (const [peer, { stream, source }] of this.#pushStreams) {
+			stream.close()
+			source.end()
+			this.#pushStreams.delete(peer)
+		}
 	}
 
 	public async stop() {
 		this.log("stop")
 		this.#started = false
+
 		this.#pubsub?.removeEventListener("gossipsub:message", this.handleMessage)
 		this.messageLog.removeEventListener("sync", this.forwardEvent)
 		this.messageLog.removeEventListener("commit", this.forwardEvent)
@@ -236,6 +265,11 @@ export class GossipLogService<Payload = unknown>
 			this.components.registrar.unregister(this.#pushTopologyId)
 			this.#pushTopologyId = null
 		}
+	}
+
+	afterStop(): void {
+		this.components.events.removeEventListener("connection:open", this.handleConnectionOpen)
+		this.components.events.removeEventListener("connection:close", this.handleConnectionClose)
 	}
 
 	private forwardEvent = (event: CustomEvent) =>
@@ -288,9 +322,9 @@ export class GossipLogService<Payload = unknown>
 
 			const recipients: PeerId[] = []
 
-			for (const [peer, { source }] of this.#pushStreams) {
+			for (const peer of this.#pushStreams.keys()) {
 				if (peer === options.sourceId) continue
-				source.push(data)
+				this.#push(peer, data) // TODO: doesn't guarantee we actually pushed to the peer...
 				recipients.push(peerIdFromString(peer))
 			}
 
@@ -302,11 +336,9 @@ export class GossipLogService<Payload = unknown>
 
 			for (const peer of this.litePeers) {
 				if (peer === options.sourceId) continue
-				const { source } = this.#pushStreams.get(peer) ?? {}
-				if (source !== undefined) {
-					source.push(data)
-					recipients.push(peerIdFromString(peer))
-				}
+				this.#push(peer, data)
+				// TODO: doesn't guarantee we actually pushed to the peer
+				recipients.push(peerIdFromString(peer))
 			}
 
 			await this.#pubsub.publish(this.messageLog.topic, data).then(
@@ -361,11 +393,8 @@ export class GossipLogService<Payload = unknown>
 
 				let count = 0
 				for (const peer of this.litePeers) {
-					const { source } = this.#pushStreams.get(peer) ?? {}
-					if (source !== undefined) {
-						source.push(msg.data)
-						count += 1
-					}
+					this.#push(peer, msg.data)
+					count += 1
 				}
 
 				if (count > 0) {
@@ -446,20 +475,29 @@ export class GossipLogService<Payload = unknown>
 		this.log("opened incoming push stream %s from peer %p", stream.id, peerId)
 
 		const source = pushable()
-		this.#pushStreams.set(peerId.toString(), { source })
+		this.#pushStreams.set(peerId.toString(), { stream, source })
 		Promise.all([
 			// outgoing events
-			pipe(source, lp.encode, stream.sink),
+			pipe(source, lp.encode, stream.sink).then(() => this.log("FINISHED PIPING PUSH SOURCE TO STREAM SINK")),
 			// incoming events
-			pipe(stream.source, lp.decode, this.getPushSink(connection, stream)),
-		]).finally(() => this.log("closed incoming push stream %s from peer %p", stream.id, peerId))
+			pipe(stream.source, lp.decode, this.getPushSink(connection, stream)).then(() => {
+				this.log("FINISHED PIPING STREAM SOURCE TO PUSH SINK")
+				source.end()
+				stream.close()
+				this.#pushStreams.delete(peerId.toString())
+			}),
+		]).finally(() => {
+			console.log("DELETING FJKDLS", peerId.toString())
+			this.#pushStreams.delete(peerId.toString())
+			this.log("closed incoming push stream %s from peer %p", stream.id, peerId)
+		})
 	}
 
 	private handleIncomingSync: StreamHandler = async ({ connection, stream }) => {
 		const peerId = connection.remotePeer
 		this.log("opened incoming sync stream %s from peer %p", stream.id, peerId)
 
-		const timeoutController = new DelayableController(3 * second)
+		const timeoutController = new DelayableController(SYNC_TIMEOUT)
 		const signal = anySignal([this.controller.signal, timeoutController.signal])
 		signal.addEventListener("abort", (err) => {
 			if (stream.status === "open") {
@@ -501,6 +539,7 @@ export class GossipLogService<Payload = unknown>
 				stream.abort(new Error("internal error"))
 			}
 		} finally {
+			timeoutController.clear()
 			signal.clear()
 		}
 	}
@@ -577,18 +616,36 @@ export class GossipLogService<Payload = unknown>
 				{ peerId: peerId.toString() },
 			)
 		} finally {
+			timeoutController.clear()
 			signal.clear()
 			client.end()
-			this.log("closed outgoing stream %s to peer %p", stream.id, peerId)
+			this.log("closed outgoing sync stream %s to peer %p", stream.id, peerId)
 		}
 
 		if (messageCount !== 0) {
 			const [_, heads] = await this.messageLog.getClock()
 			const data = Event.encode({ update: { heads: heads.map(encodeId) } })
-			for (const [peerId, { source }] of this.#pushStreams) {
-				source.push(data)
+			for (const peer of this.#pushStreams.keys()) {
+				if (peer === peerId.toString()) continue
+				this.#push(peer, data)
 			}
 		}
+	}
+
+	#push(peer: string, data: Uint8Array): void {
+		this.log("pushing data to %s", peer)
+		const { stream, source } = this.#pushStreams.get(peer) ?? {}
+		if (stream === undefined || source === undefined) {
+			return
+		}
+
+		if (stream.status !== "open") {
+			console.log("DELETING")
+			this.#pushStreams.delete(peer)
+			return
+		}
+
+		source.push(data)
 	}
 
 	private async retry(name: string, callback: () => Promise<void>, options: { interval: number; limit: number }) {

@@ -50,10 +50,15 @@ export class DelayableController {
 			this.#controller.abort()
 		}, this.#interval)
 	}
+
 	delay() {
 		clearTimeout(this.#timer)
 		this.#timer = setTimeout(() => {
 			this.#controller.abort()
 		}, this.#interval)
+	}
+
+	clear() {
+		clearTimeout(this.#timer)
 	}
 }

@@ -1,5 +1,4 @@
 import { createLibp2p } from "libp2p"
-import { version } from "libp2p/version"
 import type { Libp2p, PeerId } from "@libp2p/interface"
 import type { Multiaddr } from "@multiformats/multiaddr"
 import { createFromProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
@@ -12,7 +11,7 @@ import { noise } from "@chainsafe/libp2p-noise"
 import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { kadDHT } from "@libp2p/kad-dht"
-import { ping } from "@libp2p/ping"
+import { ping as pingService } from "@libp2p/ping"
 import { fetch as fetchService } from "@libp2p/fetch"
 
 import { AbstractGossipLog } from "@canvas-js/gossiplog"
@@ -36,7 +35,10 @@ export async function getLibp2p<Payload>(
 	config: NetworkConfig,
 	messageLog: AbstractGossipLog<Payload>,
 ): Promise<Libp2p<ServiceMap<Payload>>> {
-	const peerId = await getPeerId()
+	let peerId = config.peerId
+	if (peerId === undefined) {
+		peerId = await getPeerId()
+	}
 
 	const bootstrapList = config.bootstrapList ?? []
 	const listen = config.listen ?? ["/ip4/127.0.0.1/tcp/8080/ws"]
@@ -61,16 +63,11 @@ export async function getLibp2p<Payload>(
 		streamMuxers: [yamux()],
 		connectionEncryption: [noise({})],
 		services: {
-			identify: identify({
-				protocolPrefix: "canvas",
-				// agentVersion: `gossiplog/libp2p/node/${version}`,
-			}),
-			ping: ping({ protocolPrefix: "canvas" }),
+			identify: identify({ protocolPrefix: "canvas" }),
+			ping: pingService({ protocolPrefix: "canvas" }),
 			fetch: fetchService({ protocolPrefix: "canvas" }),
 
-			dht: kadDHT({
-				protocol: getTopicDHTProtocol(messageLog.topic),
-			}),
+			dht: kadDHT({ protocol: getTopicDHTProtocol(messageLog.topic) }),
 
 			pubsub: gossipsub({
 				emitSelf: false,
