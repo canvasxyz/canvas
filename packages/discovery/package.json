@@ -1,0 +1,22 @@
+{
+	"name": "@canvas-js/discovery",
+	"version": "0.10.3",
+	"type": "module",
+	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
+	"main": "lib/index.js",
+	"types": "lib/index.d.ts",
+	"files": [
+		"lib"
+	],
+	"exports": {
+		".": "./lib/index.js"
+	},
+	"dependencies": {
+		"@ipld/dag-cbor": "^9.2.1",
+		"@libp2p/fetch": "^1.1.1",
+		"@libp2p/interface": "^1.6.0",
+		"@libp2p/logger": "^4.0.16",
+		"@libp2p/peer-id": "^4.2.0",
+		"@multiformats/multiaddr": "^12.3.0"
+	}
+}
