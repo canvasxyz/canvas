@@ -1,0 +1,203 @@
+# Canvas Identity Provider
+
+Canvas signed data structures are intended to be used for performing
+distributed calls to compute nodes, but Canvas sessions/actions can
+also be used as self-certifying authentication and authorization
+objects.
+
+This allows developers to emulate the functionality of an OAuth or
+OpenID service for third party developers to build against.
+
+## Authentication/Authorization Flow
+
+In OAuth, a third-party service makes an authorization request
+to a resource owner, then converts it into an access token through
+an authorization server. They can then use an access token to
+read/write protected resources:
+
+```
+     +--------+                               +---------------+
+     |        |--(A)- Authorization Request ->|   Resource    |
+     |        |<-(B)-- Authorization Grant ---|     Owner     |
+     |        |                               +---------------+
+     |        |
+     |        |                               +---------------+
+     |        |--(C)-- Authorization Grant -->| Authorization |
+     | Client |<-(D)----- Access Token -------|     Server    |
+     |        |                               +---------------+
+     |        |
+     |        |                               +---------------+
+     |        |--(E)----- Access Token ------>|    Resource   |
+     |        |<-(F)--- Protected Resource ---|     Server    |
+     +--------+                               +---------------+
+```
+
+To use Canvas as an identity provider involves a different flow since
+sessions and actions are both self-authenticating. The client does
+not interact with a server during the generation of auth material,
+but presents the material at the time of executing an action instead.
+
+The identity provider also requires an authorization token (signature)
+to be constructed for each action that the client wants to take.
+Instead of just presenting a bearer token alongside a REST or HTTP
+request, for example, we must actually sign the request, and then
+present it as a signed object.
+
+```
+     +--------+                               +---------------+
+     |        |--(A)- Request Topic/Nonce   ->|    API        |
+     |        |<-(B)-- Return Topic/Nonce  ---|    Server     |
+     |        |                               +---------------+
+     |        | +----------------------------------+
+     |        | |           SessionSigner          |
+     |        | |                                  |
+     |        |-|-- Generate Authorization Key --  |
+     |        |-|< -----------------------------|  |
+     |        | |                                  |
+     |        |-|-- Sign Session Authorization  -  |
+     |        |-|< -----------------------------|  |
+     |        | |                                  |
+     | Client | +----------------------------------+
+     |        |
+     |        | +----------------------------------+
+     |        | |          DelegateSigner          |
+     |        | |                                  |
+     |        |-|-- Sign Action Authorization - |  |
+     |        |-|< -----------------------------|  |
+     |        | |                                  |
+     |        | +----------------------------------+
+     |        |                               +---------------+
+     |        |--(E)-- Session/Action Pair -->|    API        |
+     |        |<-(F)--- Write Confirmation ---|    Server     |
+     +--------+                               +---------------+
+```
+
+The client is identified by a [did:pkh identifier]([1]), which
+is a generative DID identifier based on a blockchain wallet address. For
+example, `did:pkh:eip155:1:0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045`
+corresponds to vitalik.eth's mainnet address.
+
+[1]: https://github.com/w3c-ccg/did-pkh/blob/main/did-pkh-method-draft.md
+
+When a third-party developer registers itself against a Canvas identity
+service, they should generate and store a private key, e.g. as an environment
+variable. They can then register their public address or did:pkh identifier.
+
+Applications with open federation may not require registration
+(outside services can just participate as federation clients) but API
+providers may provide additional capabilities for registered clients.
+
+## Directory Services
+
+The API server may implement a **directory service** in order to
+restrict readers/writers to a list of acceptable public addresses.
+
+In Canvas-federated applications, this is handled by a file called the
+federation contract ("contract") that defines executable code for each
+incoming action. However, actions outside the contract can also be
+signed and passed over the network (e.g. if a centralized service has
+only decided to federate part of its functionality, it can use
+sessions/actions outside the contract for non-federated
+functionality).
+
+## Signer Types
+
+Any Canvas session signer/action signer can be used to implement an
+identity service, but we recommend using Ethereum signers as those are
+currently the most extensively used and tested.
+
+For the session authorization message, see packages/interfaces/src/Session.ts.
+
+For the action authorization message, see packages/interfaces/src/Action.ts.
+
+For how each message is signed, see:
+- packages/chain-ethereum/src/siwe/SIWESigner.ts (SIWE, used by default)
+- packages/chain-ethereum/src/siwe/types.ts
+- packages/chain-ethereum/src/eip712/Eip712Signer.ts (EIP-712)
+- packages/chain-ethereum/src/eip712/types.ts
+
+## Code Examples
+
+Example code for each of the steps above is provided below.
+
+#### Client: Generating a new public key
+
+```
+import { SIWESigner } from "@canvas-js/chain-ethereum"
+const sessionSigner = new SIWESigner()
+```
+
+#### Client: Importing an existing private key
+
+```
+import { ethers } from "ethers"
+import { SIWESigner } from "@canvas-js/chain-ethereum"
+const wallet = new ethers.Wallet('0x...')
+const sessionSigner = new SIWESigner({ signer: wallet })
+```
+
+#### Client: Generating a session/action pair
+
+```
+import { Action, Session } from "@canvas-js/interfaces"
+import { SIWESessionData } from "@canvas-js/chain-ethereum"
+const { payload, signer: delegateSigner } = await sessionSigner.newSession(topic)
+const session: Session<SIWESessionData> = payload
+
+// TODO: The code for generating actions should be wrapped,
+// and exposed as a single call provided by the federation SDK service.
+
+const action: Action = {
+	type: "action",
+	did: session.did,
+	name: "createThread",
+	args: { title: "Hello world", body: "foobar" },
+	context: {
+		timestamp: session.context.timestamp,
+	},
+}
+const actionSignature = await delegateSigner.sign(actionMessage)
+```
+
+#### Client: Presenting a session/action pair
+
+```
+// TODO: Define a way for presenting session/action pairs,
+// e.g. SWATs or signed web-action tuples
+
+const encoded = cbor.encode([action, actionSignature, session, sessionSignature])
+```
+
+#### Client/Server: Verifying a session/action pair
+
+```
+import { ed25519 } from "@canvas-js/signatures"
+import { SIWESigner } from "@canvas-js/chain-ethereum"
+
+const [action, actionSignature, session, sessionSignature] = cbor.decode(encoded)
+
+// TODO: Check for coupling between action and session
+
+await new SIWESigner().verifySession(topic, session)
+await ed25519.verify(actionSignature, actionMessage)
+```
+
+#### Server: Checking the session/action pair against a directory ACL
+
+```
+const writeAuthorizedUsers = [
+  "did:pkh:eip155:1:0x39963ab005866E0aF9Df3491f8D344f68d47B776",
+  "did:pkh:eip155:1:0x430B93C2fF96Ba02703B34F3380D2eb3f402C760",
+]
+
+const [action, actionSignature, session, sessionSignature] = cbor.decode(encoded)
+
+assert(action.did === session.did)
+assert(writeAuthorizedUsers.includes(action.did))
+```
+
+#### Server: Using a session to authorize read access
+
+```
+// TODO
+```
