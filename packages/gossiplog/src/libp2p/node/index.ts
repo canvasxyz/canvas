@@ -16,6 +16,7 @@ import { fetch as fetchService } from "@libp2p/fetch"
 
 import { AbstractGossipLog } from "@canvas-js/gossiplog"
 import { gossiplog } from "@canvas-js/gossiplog/service"
+import { discovery } from "@canvas-js/discovery"
 
 import type { ServiceMap, NetworkConfig } from "../../interface.js"
 
@@ -82,6 +83,7 @@ export async function getLibp2p<Payload>(
 			}),
 
 			gossiplog: gossiplog(messageLog, {}),
+			discovery: discovery({}),
 		},
 	})
 }

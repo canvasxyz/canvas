@@ -1,5 +1,4 @@
 import { createLibp2p } from "libp2p"
-import { version } from "libp2p/version"
 import { PeerId } from "@libp2p/interface"
 import { identify } from "@libp2p/identify"
 import { webSockets } from "@libp2p/websockets"
@@ -25,6 +24,7 @@ import { sha256 } from "@noble/hashes/sha256"
 
 import { AbstractGossipLog } from "@canvas-js/gossiplog"
 import { gossiplog } from "@canvas-js/gossiplog/service"
+import { discovery } from "@canvas-js/discovery"
 
 import type { ServiceMap, NetworkConfig } from "../../interface.js"
 import { second } from "../../constants.js"
@@ -34,13 +34,6 @@ export const defaultRelayServer =
 
 export const defaultTurnServer = "turn:canvas-turn-server.fly.dev:3478?transport=udp"
 export const defaultStunServer = "stun:stun.l.google.com:19302"
-
-type TopicPeerRecord = {
-	id: Uint8Array
-	addresses: Uint8Array[]
-	protocols: string[]
-	peerRecordEnvelope: Uint8Array | null
-}
 
 async function getPeerId(topic: string): Promise<PeerId> {
 	const peerIdKey = `canvas/v1/${topic}/peer-id`
@@ -112,10 +105,7 @@ export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: Abst
 		streamMuxers: [yamux({})],
 		connectionEncryption: [noise({})],
 		services: {
-			identify: identify({
-				protocolPrefix: "canvas",
-				// agentVersion: `gossiplog/libp2p/browser/${version}`,
-			}),
+			identify: identify({ protocolPrefix: "canvas" }),
 			fetch: fetch({ protocolPrefix: "canvas" }),
 			ping: ping({ protocolPrefix: "canvas" }),
 
@@ -132,30 +122,17 @@ export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: Abst
 			}),
 
 			gossiplog: gossiplog(messageLog, {}),
+			discovery: discovery({}),
 		},
 	})
 
-	libp2p.addEventListener("connection:open", ({ detail: { direction, remotePeer, remoteAddr } }) => {
+	libp2p.addEventListener("connection:open", ({ detail: { remotePeer } }) => {
 		if (relayServerPeerId === remotePeer.toString()) {
 			console.log(`[fetch ${relayServerPeerId}]`)
-			libp2p.services.fetch.fetch(peerIdFromString(relayServerPeerId), `canvas/v1/${messageLog.topic}`).then(
-				async (result) => {
-					const results = cbor.decode<TopicPeerRecord[]>(result ?? cbor.encode([]))
-					console.log(`[fetch ${relayServerPeerId}] got ${results.length} results`)
-					for (const { id, addresses, protocols, peerRecordEnvelope } of results) {
-						const peerId = peerIdFromBytes(id)
-						if (peerId.equals(libp2p.peerId)) {
-							continue
-						}
 
-						await libp2p.peerStore.save(peerId, {
-							addresses: addresses.map((addr) => ({ isCertified: true, multiaddr: multiaddr(addr) })),
-							protocols: protocols,
-							peerRecordEnvelope: peerRecordEnvelope ?? undefined,
-						})
-					}
-				},
-				(err) => console.log("fetch failed", err),
+			libp2p.services.discovery.fetch(peerIdFromString(relayServerPeerId), messageLog.topic).then(
+				(peers) => {},
+				(err) => console.log(`fetch failed: ${err}`),
 			)
 
 			return

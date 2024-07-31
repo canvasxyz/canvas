@@ -42,6 +42,7 @@
 		"@chainsafe/libp2p-gossipsub": "^13.1.0"
 	},
 	"dependencies": {
+		"@canvas-js/discovery": "0.10.3",
 		"@canvas-js/interfaces": "0.10.3",
 		"@canvas-js/modeldb": "0.10.3",
 		"@canvas-js/modeldb-idb": "0.10.3",

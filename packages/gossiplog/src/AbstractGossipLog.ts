@@ -37,7 +37,7 @@ export interface GossipLogInit<Payload = unknown> {
 export type GossipLogEvents<Payload = unknown> = {
 	message: CustomEvent<{ id: string; signature: Signature; message: Message<Payload>; peerId?: string }>
 	commit: CustomEvent<{ root: Node; heads: string[] }>
-	sync: CustomEvent<{ peerId?: string; duration: number; messageCount: number }>
+	sync: CustomEvent<{ duration: number; messageCount: number; peerId?: string }>
 	error: CustomEvent<{ error: Error }>
 }
 
@@ -214,8 +214,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 			return signedMessage
 		})
 
-		assert(root !== null, "failed to commit transaction")
-		assert(heads !== null, "failed to commit transaction")
+		assert(root !== null && heads !== null, "failed to commit transaction")
 		this.dispatchEvent(new CustomEvent("commit", { detail: { root, heads } }))
 		return signedMessage
 	}
@@ -272,8 +271,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 			heads = result.heads
 		})
 
-		assert(root !== null, "failed to commit transaction")
-		assert(heads !== null, "failed to commit transaction")
+		assert(root !== null && heads !== null, "failed to commit transaction")
 		this.dispatchEvent(new CustomEvent("commit", { detail: { root, heads } }))
 
 		return { id: signedMessage.id }
@@ -321,15 +319,17 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 			}
 		}
 
-		await this.db.set("$messages", { id, signature, message, hash, branch, clock: message.clock })
+		const messageRecord: MessageRecord<Payload> = { id, signature, message, hash, branch, clock: message.clock }
 
-		const heads: { id: string }[] = await this.db
-			.query<{ id: string }>("$heads")
-			.then((heads) => heads.filter((head) => message.parents.includes(head.id)))
+		const heads: string[] = await this.db
+			.query<{ id: string }>("$heads", { select: { id: true } })
+			.then((heads) => heads.map((head) => head.id))
+			.then((heads) => heads.filter((head) => message.parents.includes(head)))
 
 		await this.db.apply([
-			...heads.map<Effect>((head) => ({ model: "$heads", operation: "delete", key: head.id })),
+			...heads.map<Effect>((head) => ({ model: "$heads", operation: "delete", key: head })),
 			{ model: "$heads", operation: "set", value: { id } },
+			{ model: "$messages", operation: "set", value: messageRecord },
 		])
 
 		txn.set(key, value)
@@ -339,7 +339,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		this.dispatchEvent(new CustomEvent("message", { detail: { id, signature, message, ...options } }))
 
 		const root = txn.getRoot()
-		return { root, heads: heads.map((head) => head.id) }
+		return { root, heads }
 	}
 
 	private async newBranch() {

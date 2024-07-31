@@ -6,6 +6,8 @@ import type { KadDHT } from "@libp2p/kad-dht"
 import type { PingService } from "@libp2p/ping"
 import type { Fetch } from "@libp2p/fetch"
 
+import type { DiscoveryService } from "@canvas-js/discovery"
+
 import type { SyncSource, Awaitable } from "@canvas-js/okra"
 
 export interface SyncServer extends SyncSource {
@@ -16,6 +18,7 @@ export type ServiceMap<Payload> = {
 	identify: Identify
 	ping: PingService
 	fetch: Fetch
+	discovery: DiscoveryService
 	gossiplog: GossipLogService<Payload>
 	pubsub?: PubSub<GossipsubEvents>
 	dht?: KadDHT

@@ -41,7 +41,6 @@ import {
 	SYNC_RETRY_INTERVAL,
 	SYNC_RETRY_LIMIT,
 	SYNC_TIMEOUT,
-	second,
 } from "../constants.js"
 
 import { AbstractGossipLog, GossipLogEvents } from "../AbstractGossipLog.js"

@@ -17,6 +17,7 @@ import { Multiaddr } from "@multiformats/multiaddr"
 
 import { AbstractGossipLog } from "@canvas-js/gossiplog"
 import { gossiplog } from "@canvas-js/gossiplog/service"
+import { discovery } from "@canvas-js/discovery"
 
 import type { ServiceMap, NetworkConfig } from "../../interface.js"
 import { second } from "../../constants.js"
@@ -74,6 +75,7 @@ export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: Abst
 			ping: ping({ protocolPrefix: "canvas" }),
 
 			gossiplog: gossiplog(messageLog, {}),
+			discovery: discovery({}),
 		},
 	})
 
