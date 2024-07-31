@@ -6,5 +6,5 @@
 		"outDir": "lib",
 		"jsx": "react"
 	},
-	"references": [{ "path": "../gossiplog" }, { "path": "../interfaces" }]
+	"references": [{ "path": "../gossiplog" }, { "path": "../interfaces" }, { "path": "../relay-server" }]
 }

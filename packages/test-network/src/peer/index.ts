@@ -46,14 +46,6 @@ async function start() {
 		socket.post("connection:close", { id, remotePeer: remotePeer.toString(), remoteAddr: remoteAddr.toString() })
 	})
 
-	// libp2p.addEventListener("peer:discovery", ({ detail: { id, multiaddrs } }) =>
-	// 	console.log(`peer:discovery ${id}`, multiaddrs),
-	// )
-
-	// libp2p.addEventListener("peer:identify", ({ detail: { peerId, protocols } }) =>
-	// 	console.log(`peer:identify ${peerId}`, protocols),
-	// )
-
 	const gossipsub = libp2p.services.pubsub as GossipSub
 	gossipsub.addEventListener("gossipsub:graft", ({ detail: { topic, peerId } }) => {
 		console.log("gossipsub:graft", topic, peerId)

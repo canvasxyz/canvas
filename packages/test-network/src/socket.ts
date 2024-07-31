@@ -1,10 +1,11 @@
-import type { Libp2p } from "libp2p"
+import WebSocket from "isomorphic-ws"
+import { nanoid } from "nanoid"
 
 import { peerIdFromString } from "@libp2p/peer-id"
-import WebSocket from "isomorphic-ws"
+import type { Libp2p } from "@libp2p/interface"
+import type { ServiceMap } from "@canvas-js/gossiplog"
 
-import type { Event, ServiceMap } from "./types.js"
-import { nanoid } from "nanoid"
+import type { Event } from "./types.js"
 
 export type SocketEvent =
 	| { type: "boop" }
@@ -13,16 +14,13 @@ export type SocketEvent =
 	| { type: "disconnect"; target: string }
 
 export class Socket {
-	public static async open(libp2p: Libp2p<ServiceMap>, url: string) {
+	public static async open(libp2p: Libp2p<ServiceMap<string>>, url: string) {
 		const ws = new WebSocket(url)
 		await new Promise((resolve) => ws.addEventListener("open", resolve, { once: true }))
 		return new Socket(libp2p, ws)
 	}
 
-	private constructor(
-		readonly libp2p: Libp2p<ServiceMap>,
-		readonly ws: WebSocket,
-	) {
+	private constructor(readonly libp2p: Libp2p<ServiceMap<string>>, readonly ws: WebSocket) {
 		ws.addEventListener("message", (msg) => {
 			const event = JSON.parse(msg.data.toString()) as SocketEvent
 			console.log(`event: ${event.type}`)

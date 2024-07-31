@@ -9,9 +9,9 @@ import Debugger from "debug"
 ;(Debugger as any).useColors = () => false
 
 import { GossipLog } from "@canvas-js/gossiplog/idb"
-// import { getLibp2p, defaultRelayServer } from "@canvas-js/gossiplog/libp2p/browser"
-import { defaultRelayServer } from "@canvas-js/gossiplog/libp2p/browser"
-import { getLibp2p } from "@canvas-js/gossiplog/libp2p/browser-lite"
+import { getLibp2p, defaultRelayServer } from "@canvas-js/gossiplog/libp2p/browser"
+// import { defaultRelayServer } from "@canvas-js/gossiplog/libp2p/browser"
+// import { getLibp2p } from "@canvas-js/gossiplog/libp2p/browser-lite"
 
 import { Socket } from "../../socket.js"
 import { topic } from "../../constants.js"
@@ -31,7 +31,10 @@ if (window.location.search.length > 1) {
 const bootstrapList = params.bootstrapList?.split(",") ?? []
 console.log(`bootstrap list: ${JSON.stringify(bootstrapList)}`)
 
-const libp2p = await getLibp2p({ bootstrapList }, messageLog)
+const relayServer = params.relayServer ?? defaultRelayServer
+console.log(`relay server: ${relayServer}`)
+
+const libp2p = await getLibp2p({ bootstrapList, relayServer }, messageLog)
 const socket = await Socket.open(libp2p, `ws://localhost:8000`)
 
 Object.assign(window, { libp2p, ping: (peerId: string) => libp2p.services.ping.ping(peerIdFromString(peerId)) })
@@ -55,7 +58,7 @@ libp2p.addEventListener("stop", () => {
 	socket.post("stop", {})
 })
 
-const relayServerPeerId = multiaddr(defaultRelayServer).getPeerId()
+const relayServerPeerId = multiaddr(relayServer).getPeerId()
 
 libp2p.addEventListener("connection:open", ({ detail: { id, remotePeer, remoteAddr } }) => {
 	console.log(`connection:open ${remotePeer} ${remoteAddr}`)
