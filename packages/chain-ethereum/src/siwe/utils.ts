@@ -2,7 +2,7 @@ import { CID } from "multiformats/cid"
 import * as siwe from "siwe"
 
 import { assert } from "@canvas-js/utils"
-import type { SIWESessionData, SIWEMessage, EIP712AuthorizationData } from "./types.js"
+import type { SIWESessionData, SIWEMessage } from "./types.js"
 
 export function validateSIWESessionData(authorizationData: unknown): authorizationData is SIWESessionData {
 	if (authorizationData === undefined || authorizationData === null) {
