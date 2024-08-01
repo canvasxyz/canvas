@@ -8,6 +8,14 @@ objects.
 This allows developers to emulate the functionality of an OAuth or
 OpenID service for third party developers.
 
+## Table of Contents
+
+1. [Authentication/Authorization Flow](#authentication-authorization-flow)
+2. [Client Identities](#client-identities)
+3. [Directory Services](#directory-services)
+4. [Signer Types](#signer-types)
+5. [Code Examples](#code-examples)
+
 ## Authentication/Authorization Flow
 
 In OAuth, a third-party service makes an authorization request
