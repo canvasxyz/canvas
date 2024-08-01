@@ -98,7 +98,8 @@ automatically instantiate an internal DelegateSigner.
 The API consumer client is identified by a [did:pkh identifier]([1]), which
 is a generative DID identifier based on a blockchain wallet address. For
 example, `did:pkh:eip155:1:0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045`
-corresponds to vitalik.eth's mainnet address.
+corresponds to vitalik.eth's mainnet address at the time of writing of
+this document.
 
 [1]: https://github.com/w3c-ccg/did-pkh/blob/main/did-pkh-method-draft.md
 
@@ -152,8 +153,6 @@ currently the most extensively used and tested.
 ## Code Examples
 
 Example code for each of the steps above is provided below.
-
-TODO: Define a standard format for presenting session/action pairs.
 
 ### Client: Generating a new public key
 
