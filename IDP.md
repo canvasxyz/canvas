@@ -139,6 +139,8 @@ currently the most extensively used and tested.
 
 Example code for each of the steps above is provided below.
 
+TODO: Define a standard format for presenting session/action pairs.
+
 ### Client: Generating a new public key
 
 ```ts
@@ -155,16 +157,23 @@ const wallet = new ethers.Wallet('0x...')
 const sessionSigner = new SIWESigner({ signer: wallet })
 ```
 
-### Client: Generating a session/action pair
+### Client: Authorizing an identity
 
 ```ts
 import { Action, Session } from "@canvas-js/interfaces"
 import { SIWESessionData } from "@canvas-js/chain-ethereum"
-const { payload, signer: delegateSigner } = await sessionSigner.newSession(topic)
-const session: Session<SIWESessionData> = payload
+const { payload: session, signer: delegateSigner } = await sessionSigner.newSession(topic)
+```
 
-// TODO: The code for generating actions should be wrapped,
-// and exposed as a single call provided by the federation SDK service.
+### Client: Authorizing a write to a resource
+
+TODO: The code for generating actions should be wrapped and exposed as
+a single call by the federation SDK service.
+
+```ts
+import { Action, Session } from "@canvas-js/interfaces"
+import { SIWESessionData } from "@canvas-js/chain-ethereum"
+const { payload: session, signer: delegateSigner } = await sessionSigner.newSession(topic)
 
 const action: Action = {
 	type: "action",
@@ -180,28 +189,15 @@ const actionSignature = await delegateSigner.sign(actionMessage)
 
 ### Client: Presenting a session/action pair
 
-```ts
-// TODO: Define a way for presenting session/action pairs,
-// e.g. SWATs or signed web-action tuples
+TODO: Define a standard format for presenting session/action pairs.
 
+```ts
 const encoded = cbor.encode([action, actionSignature, session, sessionSignature])
 ```
 
-### Client/Server: Verifying a session/action pair
+### Server: Using a session/action to authorize write access
 
-```ts
-import { ed25519 } from "@canvas-js/signatures"
-import { SIWESigner } from "@canvas-js/chain-ethereum"
-
-const [action, actionSignature, session, sessionSignature] = cbor.decode(encoded)
-
-// TODO: Check for coupling between action and session
-
-await new SIWESigner().verifySession(topic, session)
-await ed25519.verify(actionSignature, actionMessage)
-```
-
-### Server: Checking the session/action pair against a directory ACL
+TODO: Encapsulate this logic as a single call by the federation SDK service.
 
 ```ts
 const writeAuthorizedUsers = [
@@ -211,12 +207,26 @@ const writeAuthorizedUsers = [
 
 const [action, actionSignature, session, sessionSignature] = cbor.decode(encoded)
 
+await new SIWESigner().verifySession(topic, session)
+await ed25519.verify(actionSignature, actionMessage)
 assert(action.did === session.did)
 assert(writeAuthorizedUsers.includes(action.did))
 ```
 
 ### Server: Using a session to authorize read access
 
+TODO: Encapsulate this logic as a single call by the federation SDK service.
+
 ```ts
-// TODO
+import { ed25519 } from "@canvas-js/signatures"
+import { SIWESigner } from "@canvas-js/chain-ethereum"
+
+const readAuthorizedUsers = [
+  "did:pkh:eip155:1:0x39963ab005866E0aF9Df3491f8D344f68d47B776",
+  "did:pkh:eip155:1:0x430B93C2fF96Ba02703B34F3380D2eb3f402C760",
+]
+
+const [session, sessionSignature] = cbor.decode(encoded)
+await new SIWESigner().verifySession(topic, session)
+assert(readAuthorizedUsers.includes(action.did))
 ```
