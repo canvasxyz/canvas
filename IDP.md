@@ -10,8 +10,8 @@ OpenID service for third party developers.
 
 ## Table of Contents
 
-1. [Authentication/Authorization Flow](#authentication-authorization-flow)
-2. [Client Identities](#client-identities)
+1. [Authentication/Authorization Flow](#authenticationauthorization-flow)
+2. [Client Identity Format](#client-identity-format)
 3. [Directory Services](#directory-services)
 4. [Signer Types](#signer-types)
 5. [Code Examples](#code-examples)
@@ -93,9 +93,9 @@ We recommend importing SIWESigner from `@canvas-js/chain-ethereum`
 as the default SessionSigner. When creating a SIWESigner, it will
 automatically instantiate an internal DelegateSigner.
 
-## Client Identities
+## Client Identity Format
 
-The client is identified by a [did:pkh identifier]([1]), which
+The API consumer client is identified by a [did:pkh identifier]([1]), which
 is a generative DID identifier based on a blockchain wallet address. For
 example, `did:pkh:eip155:1:0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045`
 corresponds to vitalik.eth's mainnet address.
@@ -103,13 +103,19 @@ corresponds to vitalik.eth's mainnet address.
 [1]: https://github.com/w3c-ccg/did-pkh/blob/main/did-pkh-method-draft.md
 
 When a third-party developer registers itself against a Canvas identity
-service, they should generate and store a private key, e.g. as an environment
-variable. They can then register their public address or did:pkh identifier
+service, they should generate and store a private key as a private
+environment variable.
+
+They should then register their public address or did:pkh identifier
 with the application implementing a Canvas IDP.
 
-Applications with open federation may not require registration
-(outside services can just participate as federation clients) but API
-providers may provide additional capabilities for registered clients.
+Note that applications with open federation may not require registration
+(outside services can just participate as federation clients) but it is
+recommended that API consumers' public keys are handled differently from
+end-users public keys in open federation. This is because they may have
+different rate limits, anti-sybil preventions, and so on. API providers
+may also expose additional capabilities for IDP users' public keys
+(e.g. the ability to read from higher-throughput endpoints).
 
 ## Directory Services
 
