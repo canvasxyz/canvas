@@ -6,6 +6,7 @@
 		"outDir": "lib"
 	},
 	"references": [
+		{ "path": "../discovery" },
 		{ "path": "../interfaces" },
 		{ "path": "../utils" },
 		{ "path": "../signatures" },
