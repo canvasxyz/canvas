@@ -33,12 +33,8 @@ const target: PlatformTarget = {
 		} else if (isPostgres(location.path)) {
 			return await PostgresGossipLog.open(location.path, { ...init, clear: location.clear })
 		} else {
-			// TODO: delete topics/
 			assert(typeof location.path === "string", 'expected typeof location.path === "string"')
-			return new SqliteGossipLog({
-				directory: path.resolve(location.path, "topics", init.topic),
-				...init,
-			})
+			return new SqliteGossipLog({ directory: location.path, ...init })
 		}
 	},
 
