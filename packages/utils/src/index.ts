@@ -1,4 +1,5 @@
 export * from "./assert.js"
+export * from "./DelayableController.js"
 export * from "./signalInvalidType.js"
 export * from "./CacheMap.js"
 export * from "./mapEntries.js"

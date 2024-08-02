@@ -29,7 +29,7 @@ import { anySignal } from "any-signal"
 import PQueue from "p-queue"
 
 import type { Signature, Message, Signer } from "@canvas-js/interfaces"
-import { assert } from "@canvas-js/utils"
+import { assert, DelayableController } from "@canvas-js/utils"
 
 import { Event } from "#protocols/events"
 
@@ -48,7 +48,7 @@ import { AbstractGossipLog, GossipLogEvents } from "../AbstractGossipLog.js"
 import { decodeId, encodeId } from "../ids.js"
 import { Client, decodeRequests, encodeResponses } from "../sync/index.js"
 
-import { DelayableController, MISSING_PARENT, SyncTimeoutError, wait } from "../utils.js"
+import { MISSING_PARENT, SyncTimeoutError, wait } from "../utils.js"
 import { Server } from "../sync/server.js"
 
 import { SignedMessage } from "../SignedMessage.js"
