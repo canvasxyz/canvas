@@ -106,8 +106,8 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		[K in keyof T["actions"]]: T["actions"][K] extends ActionImplementationFunction<infer Args>
 			? ActionAPI<Args>
 			: T["actions"][K] extends ActionImplementationObject<infer Args>
-				? ActionAPI<Args>
-				: never
+			? ActionAPI<Args>
+			: never
 	}
 
 	private readonly controller = new AbortController()
