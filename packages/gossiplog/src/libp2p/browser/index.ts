@@ -70,7 +70,7 @@ export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: Abst
 	console.log("announcing on", announce)
 
 	const libp2p = await createLibp2p<ServiceMap<Payload>>({
-		start: false,
+		start: config.start ?? false,
 		peerId: peerId,
 		addresses: { listen, announce },
 		transports: [

@@ -47,7 +47,7 @@ export async function getLibp2p<Payload>(
 
 	return await createLibp2p({
 		peerId: peerId,
-		start: false,
+		start: config.start ?? false,
 		addresses: { listen, announce },
 		transports: [webSockets({ filter: all })],
 		connectionGater: {

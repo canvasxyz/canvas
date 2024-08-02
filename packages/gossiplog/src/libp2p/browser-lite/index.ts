@@ -52,8 +52,8 @@ export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: Abst
 	console.log("announcing on", announce)
 
 	const libp2p = await createLibp2p<ServiceMap<Payload>>({
-		start: false,
 		peerId: peerId,
+		start: config.start ?? false,
 		addresses: { listen, announce },
 		transports: [webSockets({ filter: all })],
 
