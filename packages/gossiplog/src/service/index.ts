@@ -211,7 +211,6 @@ export class GossipLogService<Payload = unknown>
 				this.pushTopology.delete(peerId.toString())
 				this.litePeers.delete(peerId.toString())
 
-				this.log("DELETING %s", peerId.toString())
 				const { source, stream } = this.#pushStreams.get(peerId.toString()) ?? {}
 				if (source !== undefined && stream !== undefined) {
 					this.#pushStreams.delete(peerId.toString())
@@ -230,7 +229,6 @@ export class GossipLogService<Payload = unknown>
 
 	private handleConnectionClose = ({ detail: connection }: CustomEvent<Connection>) => {
 		this.log("connection:close %s %p", connection.id, connection.remotePeer)
-		this.log("push streams: %O", this.#pushStreams)
 	}
 
 	public async afterStart() {
@@ -486,7 +484,6 @@ export class GossipLogService<Payload = unknown>
 				this.#pushStreams.delete(peerId.toString())
 			}),
 		]).finally(() => {
-			console.log("DELETING FJKDLS", peerId.toString())
 			this.#pushStreams.delete(peerId.toString())
 			this.log("closed incoming push stream %s from peer %p", stream.id, peerId)
 		})
@@ -639,7 +636,6 @@ export class GossipLogService<Payload = unknown>
 		}
 
 		if (stream.status !== "open") {
-			console.log("DELETING")
 			this.#pushStreams.delete(peer)
 			return
 		}
