@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,500;0,700&family=Space+Mono:wght@600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,500;0,700&family=Space+Mono:wght@600;700&family=Space+Grotesk:wght@600&display=swap');
 
 :root {
   --space-font-family: "Space Mono", "Instrument Sans", -apple-system, BlinkMacSystemFont, Inter, sans-serif;
@@ -150,6 +150,10 @@ pre {
 
 .VPNavBar {
   background-color: var(--vp-c-bg-home) !important;
+}
+
+.VPNavBar .content-body {
+  transition: none !important;
 }
 
 .VPNavBarTitle .title {
