@@ -190,7 +190,7 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 .bullets {
   padding-top: 2px;
   max-width: 450px;
-  font-size: 18px;
+  font-size: 17.5px;
   font-weight: 500;
   white-space: pre-wrap;
   color: var(--vp-c-text-2);

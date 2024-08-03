@@ -1,9 +1,55 @@
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,500;0,700&family=Space+Mono:wght@600;700&family=Space+Grotesk:wght@600&display=swap');
+@font-face {
+  font-family: 'Geist';
+  src: url('/fonts/Geist-Regular.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist';
+  src: url('/fonts/Geist-Medium.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist';
+  src: url('/fonts/Geist-Bold.woff') format('woff');
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('/fonts/GeistMono-Regular.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('/fonts/GeistMono-Medium.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('/fonts/GeistMono-Bold.woff') format('woff');
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}
 
 :root {
-  --space-font-family: "Space Mono", "Instrument Sans", -apple-system, BlinkMacSystemFont, Inter, sans-serif;
-  --vp-font-family-base: "Instrument Sans", -apple-system, BlinkMacSystemFont, Inter, sans-serif;
-  --vp-font-family-mono: "PT Mono", ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  --space-font-family: "Space Mono", "Geist", -apple-system, BlinkMacSystemFont, Inter, sans-serif;
+  --vp-font-family-base: "Geist", -apple-system, BlinkMacSystemFont, Inter, sans-serif;
+  --vp-font-family-mono: "Geist Mono", ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
   --vp-c-text-1: rgba(72, 72, 79);
   --vp-c-text-2: #67666a;
   --vp-c-gutter-alt: #5672cd;
@@ -56,7 +102,7 @@ pre {
   display: block;
   border: 1px solid var(--vp-c-bg-soft);
   background-color: var(--vp-c-bg-soft);
-  padding: 10px 24px 18px;
+  padding: 10px 14px 18px;
   max-width: 640px;
   border-radius: 13px;
   margin: 0 auto 40px;
@@ -87,12 +133,12 @@ pre {
   display: none;
 }
 
-.VPContent {
+/* .VPContent {
   font-family: -apple-system, BlinkMacSystemFont, Inter, sans-serif;
 }
 .VPContent.is-home {
-  font-family: "Instrument Sans", -apple-system, BlinkMacSystemFont, Inter, sans-serif;
-}
+  font-family: "Geist", -apple-system, BlinkMacSystemFont, Inter, sans-serif;
+} */
 .VPContent.is-home .text {
   font-family: var(--space-font-family);
 }

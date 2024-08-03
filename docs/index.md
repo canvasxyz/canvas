@@ -2,22 +2,24 @@
 layout: home
 ---
 
-<HeroRow text="The general computing runtime for the decentralized web" :image="{ light: '/graphic_mainframe_4.png', dark: '/graphic_mainframe_3.png' }" tagline="Canvas is a framework that makes writing distributed & decentralized applications as easy as writing ordinary applications." v-bind:bullets="['Build on TypeScript, Postgres, and SQLite', 'User interactions are signed, replicated, and merged using a conflict-free database', 'Works with any chain or DID provider']">
+<HeroRow text="General computing for the decentralized web" :image="{ light: '/graphic_mainframe_4.png', dark: '/graphic_mainframe_3.png' }" tagline="Canvas is a peer-to-peer framework that makes writing distributed applications as easy as writing ordinary applications." v-bind:bullets="['Open-source devs: Build applications with data that syncs automatically between peers', 'Blockchain devs: Write decentralized applications with just TypeScript', 'User interactions are signed, replicated, and merged using a conflict-free database']">
   <HeroAction theme="brand big" text="Tutorial" href="/1-introduction" />
   <HeroAction theme="brand big" text="Blog" href="/blog" />
   <HeroAction theme="alt big" text="API Docs" href="/readme-core" />
 </HeroRow>
 
 <TextRow title="About the platform">
-  <TextItem>Canvas is a runtime for distributed TypeScript applications.</TextItem>
-  <TextItem>Each application is defined as a <strong>contract</strong>, which defines a set of models and user actions. Contracts can be pinned to IPFS, published to Github Gists, or just hosted in your repo.</TextItem>
-  <TextItem>User actions are relayed between everyone on the network, and executed by nodes who receives them. Apps use an embedded multi-writer, <a href="https://crdt.tech" target="_blank">conflict-free</a> database, so interactions are processed as they're received.</TextItem>
-  <TextItem>There are no transaction delays or gas limits. Actions can call external code, fetch data, or trigger long-running computations.</TextItem>
+  <TextItem>Canvas is a framework for distributed TypeScript applications.</TextItem>
+  <TextItem>Each application is a contract, which defines backend actions and a database. Contracts are entirely distributed, and can be pinned to IPFS, hosted as a Github Gist, or just included as a file in your repo.</TextItem>
+  <TextItem>Everyone with the contract can run a replica of the application, and sync with the entire history of everyone else who has used it.</TextItem>
+  <TextItem>Contracts use an embedded, multi-writer, <a href="https://crdt.tech" target="_blank">conflict-free</a> database. Each application has its own network over libp2p, where actions are confirmed immediately, without consensus.
+  </TextItem>
+  <TextItem>Actions can call external code, fetch data, or trigger long-running computations.</TextItem>
 </TextRow>
 
 <TextRow title="Eventually-consistent mode">
-  <TextItem>Unlike blockchains, Canvas runs in eventually-consistent mode by default. Each application's history is a distributed log, like Git, Bluesky, or Farcaster, and you can define custom logic for how to accept actions from the past.</TextItem>
-  <TextItem>For stronger guarantees, you can run Canvas on top of a blockchain or data availability network.</TextItem>
+  <TextItem>Unlike blockchains, Canvas runs in eventually-consistent mode by default. Each application's history is a distributed log similar to Git.</TextItem>
+  <TextItem>For developers who prefer, you can run Canvas on a blockchain or data availability network to get consensus guarantees.</TextItem>
 </TextRow>
 
 
@@ -56,8 +58,8 @@ return <Chessboard position={boards[0].position} onDrop={ ... } />
 ```
 
 <TextRow title="Built for the open web">
-  <TextItem>Canvas enables open-source applications with verifiable networked data. When you clone an application from Github, it usually comes with an empty database. We make it possible to protocolize the database, so that anyone with the application code can sync with everyone else who has used it.</TextItem>
-  <TextItem>Doing this effectively is a distributed systems problem, that combines difficult parts of database engineering and realtime web programming.</TextItem>
+  <TextItem>When you clone an application from Github, it usually comes with an empty database. Peer-to-peer sync makes it possible to verifably replicate the database, so that anyone with a copy of the application can sync with everyone else who has used it.</TextItem>
+  <TextItem>This makes it possible to create open-source applications with verifiable networked data, that can live forever, as long as at least one person has a copy of the application.</TextItem>
   <TextItem>We started working on it after years of experience at tech startups, research labs, and after building Web3 applications used by tens of thousands of people.</TextItem>
 </TextRow>
 

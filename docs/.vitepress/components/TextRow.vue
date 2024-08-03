@@ -34,7 +34,7 @@ defineProps<{
   padding-bottom: 34px;
   margin: 0 auto;
   max-width: 610px;
-  font-size: 18px;
+  font-size: 17.75px;
   font-weight: 500;
   color: var(--vp-c-text-2);
 }
@@ -42,7 +42,7 @@ defineProps<{
 .TextRow .container {
   margin: 0 auto;
   max-width: 610px;
-  font-size: 18px;
+  font-size: 17.75px;
   font-weight: 500;
   color: var(--vp-c-text-2);
 }
