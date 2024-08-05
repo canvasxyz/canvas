@@ -1,6 +1,6 @@
 {
 	"name": "@canvas-js/hooks",
-	"version": "0.10.4",
+	"version": "0.10.5",
 	"type": "module",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"main": "lib/index.js",
@@ -15,10 +15,10 @@
 		"react": "^18.3.1"
 	},
 	"dependencies": {
-		"@canvas-js/core": "0.10.4",
-		"@canvas-js/interfaces": "0.10.4",
-		"@canvas-js/modeldb": "0.10.4",
-		"@canvas-js/modeldb-idb": "0.10.4"
+		"@canvas-js/core": "0.10.5",
+		"@canvas-js/interfaces": "0.10.5",
+		"@canvas-js/modeldb": "0.10.5",
+		"@canvas-js/modeldb-idb": "0.10.5"
 	},
 	"devDependencies": {
 		"@types/react": "^18.3.3",
