@@ -6,7 +6,6 @@ services:
       dockerfile: Dockerfile.dashboard
     ports:
       - "8000:8000"
-      - "8000:8000"
 
   # relay:
   #   init: true
@@ -41,33 +40,33 @@ services:
       # - ANNOUNCE=/dns4/localhost/tcp/8080/ws
       - MIN_CONNECTIONS=0
 
-  # server-1:
-  #   init: true
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.peer
-  #   depends_on:
-  #     - bootstrap
-  #   environment:
-  #     # - DEBUG=canvas:*
-  #     - SERVICE_NAME=server-1
-  #     - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
-  #     - ANNOUNCE=/dns4/server-1/tcp/8080/ws
-  #     - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
+  server-1:
+    init: true
+    build:
+      context: .
+      dockerfile: Dockerfile.peer
+    depends_on:
+      - bootstrap
+    environment:
+      # - DEBUG=canvas:*
+      - SERVICE_NAME=server-1
+      - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+      - ANNOUNCE=/dns4/server-1/tcp/8080/ws
+      - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
 
-  # server-2:
-  #   init: true
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.peer
-  #   depends_on:
-  #     - bootstrap
-  #   environment:
-  #     # - DEBUG=canvas:*
-  #     - SERVICE_NAME=server-2
-  #     - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
-  #     - ANNOUNCE=/dns4/server-2/tcp/8080/ws
-  #     - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
+  server-2:
+    init: true
+    build:
+      context: .
+      dockerfile: Dockerfile.peer
+    depends_on:
+      - bootstrap
+    environment:
+      # - DEBUG=canvas:*
+      - SERVICE_NAME=server-2
+      - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+      - ANNOUNCE=/dns4/server-2/tcp/8080/ws
+      - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
 
   # server-3:
   #   init: true

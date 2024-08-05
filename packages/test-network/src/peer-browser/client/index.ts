@@ -9,9 +9,9 @@ import Debugger from "debug"
 ;(Debugger as any).useColors = () => false
 
 import { GossipLog } from "@canvas-js/gossiplog/idb"
-import { getLibp2p, defaultRelayServer } from "@canvas-js/gossiplog/libp2p/browser"
-// import { defaultRelayServer } from "@canvas-js/gossiplog/libp2p/browser"
-// import { getLibp2p } from "@canvas-js/gossiplog/libp2p/browser-lite"
+import { getLibp2p, defaultRelayServer } from "@canvas-js/gossiplog/libp2p/browser-webrtc"
+// import { defaultRelayServer } from "@canvas-js/gossiplog/libp2p/browser-webrtc"
+// import { getLibp2p } from "@canvas-js/gossiplog/libp2p/browser"
 
 import { Socket } from "../../socket.js"
 import { topic } from "../../constants.js"
