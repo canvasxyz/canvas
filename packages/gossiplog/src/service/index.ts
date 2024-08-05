@@ -475,10 +475,9 @@ export class GossipLogService<Payload = unknown>
 		this.#pushStreams.set(peerId.toString(), { stream, source })
 		Promise.all([
 			// outgoing events
-			pipe(source, lp.encode, stream.sink).then(() => this.log("FINISHED PIPING PUSH SOURCE TO STREAM SINK")),
+			pipe(source, lp.encode, stream.sink),
 			// incoming events
 			pipe(stream.source, lp.decode, this.getPushSink(connection, stream)).then(() => {
-				this.log("FINISHED PIPING STREAM SOURCE TO PUSH SINK")
 				source.end()
 				stream.close()
 				this.#pushStreams.delete(peerId.toString())
