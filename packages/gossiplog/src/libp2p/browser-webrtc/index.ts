@@ -6,14 +6,20 @@ import { all } from "@libp2p/websockets/filters"
 import { yamux } from "@chainsafe/libp2p-yamux"
 import { noise } from "@chainsafe/libp2p-noise"
 import { bootstrap } from "@libp2p/bootstrap"
+import { gossipsub } from "@chainsafe/libp2p-gossipsub"
+import { webRTC } from "@libp2p/webrtc"
 
+import { circuitRelayTransport } from "@libp2p/circuit-relay-v2"
 import { fetch } from "@libp2p/fetch"
 import { ping } from "@libp2p/ping"
 
+import { peerIdFromString } from "@libp2p/peer-id"
 import { createEd25519PeerId, exportToProtobuf, createFromProtobuf } from "@libp2p/peer-id-factory"
 
 import { fromString, toString } from "uint8arrays"
-import { Multiaddr } from "@multiformats/multiaddr"
+import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
+import { bytesToHex } from "@noble/hashes/utils"
+import { sha256 } from "@noble/hashes/sha256"
 
 import { AbstractGossipLog } from "@canvas-js/gossiplog"
 import { gossiplog } from "@canvas-js/gossiplog/service"
@@ -21,6 +27,12 @@ import { discovery } from "@canvas-js/discovery"
 
 import type { ServiceMap, NetworkConfig } from "../../interface.js"
 import { second } from "../../constants.js"
+
+export const defaultRelayServer =
+	"/dns4/canvas-relay-server.fly.dev/tcp/443/wss/p2p/12D3KooWLR64DxxPcW1vA6uyC74RYHEsoHwJEmCJRavTihLYmBZN"
+
+export const defaultTurnServer = "turn:canvas-turn-server.fly.dev:3478?transport=udp"
+export const defaultStunServer = "stun:stun.l.google.com:19302"
 
 async function getPeerId(topic: string): Promise<PeerId> {
 	const peerIdKey = `canvas/v1/${topic}/peer-id`
@@ -44,18 +56,40 @@ export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: Abst
 	console.log("using PeerId", peerId.toString())
 
 	const bootstrapList = config.bootstrapList ?? []
+	const relayServer = config.relayServer ?? defaultRelayServer
+	const relayServerPeerId = multiaddr(relayServer).getPeerId()
 
-	const listen: string[] = []
-	const announce: string[] = []
+	if (!bootstrapList.includes(relayServer)) {
+		bootstrapList.push(relayServer)
+	}
+
+	const listen = ["/webrtc"]
+	const announce: string[] = [`${relayServer}/p2p-circuit/webrtc/p2p/${peerId}`]
 
 	console.log("listening on", listen)
 	console.log("announcing on", announce)
 
 	const libp2p = await createLibp2p<ServiceMap<Payload>>({
-		peerId: peerId,
 		start: config.start ?? false,
+		peerId: peerId,
 		addresses: { listen, announce },
-		transports: [webSockets({ filter: all })],
+		transports: [
+			webSockets({ filter: all }),
+			webRTC({
+				rtcConfiguration: {
+					iceTransportPolicy: "all",
+					iceServers: [
+						{ urls: [defaultStunServer] },
+						{
+							urls: [defaultTurnServer],
+							username: messageLog.topic,
+							credential: bytesToHex(sha256(messageLog.topic)),
+						},
+					],
+				},
+			}),
+			circuitRelayTransport({ discoverRelays: 1 }),
+		],
 
 		connectionGater: { denyDialMultiaddr: (addr: Multiaddr) => false },
 
@@ -74,9 +108,34 @@ export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: Abst
 			fetch: fetch({ protocolPrefix: "canvas" }),
 			ping: ping({ protocolPrefix: "canvas" }),
 
+			pubsub: gossipsub({
+				emitSelf: false,
+				fallbackToFloodsub: false,
+				allowPublishToZeroTopicPeers: true,
+				globalSignaturePolicy: "StrictNoSign",
+
+				asyncValidation: true,
+				scoreParams: {
+					IPColocationFactorWeight: 0,
+				},
+			}),
+
 			gossiplog: gossiplog(messageLog, {}),
 			discovery: discovery({}),
 		},
+	})
+
+	libp2p.addEventListener("connection:open", ({ detail: { remotePeer } }) => {
+		if (relayServerPeerId === remotePeer.toString()) {
+			console.log(`[fetch ${relayServerPeerId}]`)
+
+			libp2p.services.discovery.fetch(peerIdFromString(relayServerPeerId), messageLog.topic).then(
+				(peers) => {},
+				(err) => console.log(`fetch failed: ${err}`),
+			)
+
+			return
+		}
 	})
 
 	return libp2p
