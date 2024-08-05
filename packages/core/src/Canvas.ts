@@ -235,7 +235,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		})
 
 		return sessions
-			.filter(({ expiration }) => (expiration ?? 0) <= (query.minExpiration ?? Infinity))
+			.filter(({ expiration }) => (expiration ?? Infinity) >= (query.minExpiration ?? 0))
 			.map((record) => ({
 				id: record.message_id,
 				publicKey: record.public_key,

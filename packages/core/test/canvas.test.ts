@@ -61,7 +61,7 @@ test("apply an action and read a record from the database", async (t) => {
 	const { app } = await init(t)
 
 	const { id, message } = await app.actions.createPost({
-		content: "hello world",
+		content: "hello",
 		isVisible: true,
 		something: null,
 		metadata: {},
@@ -70,7 +70,20 @@ test("apply an action and read a record from the database", async (t) => {
 	t.log(`applied action ${id}`)
 	const postId = [message.payload.did, id].join("/")
 	const value = await app.db.get("posts", postId)
-	t.is(value?.content, "hello world")
+	t.is(value?.content, "hello")
+
+	const clock = await app.messageLog.getClock()
+	t.is(clock[0], 3)
+
+	const { id: id2 } = await app.actions.createPost({
+		content: "bumping this thread again",
+		isVisible: true,
+		something: null,
+		metadata: {},
+	})
+	t.log(`applied action ${id2}`)
+	const clock2 = await app.messageLog.getClock()
+	t.is(clock2[0], 4)
 })
 
 test("create and delete a post", async (t) => {
