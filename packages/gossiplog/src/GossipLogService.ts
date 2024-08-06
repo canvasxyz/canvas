@@ -98,6 +98,7 @@ export class GossipLogService<Payload = unknown> {
 
 	public async start() {
 		this.log("start")
+		if (this.libp2p.status !== "started") return
 		if (this.#started === true) return
 		this.#started = true
 
@@ -207,6 +208,7 @@ export class GossipLogService<Payload = unknown> {
 
 	public async stop() {
 		this.log("stop")
+		if (this.libp2p.status !== "started") return
 		if (this.#started === false) return
 		this.#started = false
 
