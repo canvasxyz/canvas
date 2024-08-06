@@ -17,7 +17,7 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 	) {
 		const db = await ModelDB.initialize({
 			connectionConfig,
-			models: AbstractGossipLog.schema,
+			models: { ...init.schema, ...AbstractGossipLog.schema },
 			clear: clear,
 		})
 

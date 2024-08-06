@@ -33,6 +33,7 @@ export interface GossipLogInit<Payload = unknown> {
 	verifySignature?: (signature: Signature, message: Message<Payload>) => Awaitable<void>
 
 	signer?: Signer<Payload>
+	schema?: ModelSchema
 }
 
 export type GossipLogEvents<Payload = unknown> = {

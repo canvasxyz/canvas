@@ -19,7 +19,7 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 			this.tree = new MemoryTree({ mode: Mode.Index })
 			this.db = new ModelDB({
 				path: null,
-				models: AbstractGossipLog.schema,
+				models: { ...init.schema, ...AbstractGossipLog.schema },
 			})
 		} else {
 			if (!fs.existsSync(directory)) {
@@ -35,7 +35,7 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 
 			this.db = new ModelDB({
 				path: `${directory}/db.sqlite`,
-				models: AbstractGossipLog.schema,
+				models: { ...init.schema, ...AbstractGossipLog.schema },
 			})
 		}
 	}

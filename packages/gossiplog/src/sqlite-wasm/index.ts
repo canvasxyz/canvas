@@ -12,7 +12,7 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 	public static async open<Payload>(init: GossipLogInit<Payload>) {
 		const db = await ModelDB.initialize({
 			path: `canvas/v1/${init.topic}.sqlite`,
-			models: AbstractGossipLog.schema,
+			models: { ...init.schema, ...AbstractGossipLog.schema },
 		})
 
 		const messageCount = await db.count("$messages")
