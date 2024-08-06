@@ -20,7 +20,11 @@ import { discovery } from "@canvas-js/discovery"
 import type { ServiceMap, NetworkConfig } from "../../interface.js"
 import { second } from "../../constants.js"
 
-async function getPeerId(topic: string): Promise<PeerId> {
+export async function getPeerId(topic?: string): Promise<PeerId> {
+	if (topic === undefined) {
+		return await createEd25519PeerId()
+	}
+
 	const peerIdKey = `canvas/v1/${topic}/peer-id`
 	const peerIdRecord = localStorage.getItem(peerIdKey)
 	if (peerIdRecord !== null) {
@@ -37,7 +41,10 @@ async function getPeerId(topic: string): Promise<PeerId> {
 }
 
 export async function getLibp2p(config: NetworkConfig) {
-	const peerId = await getPeerId(config.topic)
+	let peerId = config.peerId
+	if (peerId === undefined) {
+		peerId = await getPeerId(config.topic)
+	}
 
 	console.log("using PeerId", peerId.toString())
 

@@ -23,7 +23,8 @@ export type ServiceMap = {
 }
 
 export interface NetworkConfig {
-	topic: string
+	/** used for PeerId caching and DHT peer discovery */
+	topic?: string
 	start?: boolean
 	peerId?: PeerId
 

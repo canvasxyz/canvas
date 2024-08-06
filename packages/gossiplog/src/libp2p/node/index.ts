@@ -18,9 +18,15 @@ import { discovery } from "@canvas-js/discovery"
 
 import type { ServiceMap, NetworkConfig } from "../../interface.js"
 
-export const getTopicDHTProtocol = (topic: string) => `/canvas/kad/${topic}/1.0.0`
+export function getTopicDHTProtocol(topic?: string) {
+	if (topic !== undefined) {
+		return `/canvas/kad/1.0.0/${topic}`
+	} else {
+		return `/canvas/kad/1.0.0`
+	}
+}
 
-async function getPeerId(): Promise<PeerId> {
+export async function getPeerId(): Promise<PeerId> {
 	const { PEER_ID } = process.env
 	if (typeof PEER_ID === "string") {
 		return await createFromProtobuf(Buffer.from(PEER_ID, "base64"))
