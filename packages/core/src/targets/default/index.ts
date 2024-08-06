@@ -9,7 +9,7 @@ const target: PlatformTarget = {
 		throw new Error("Unsupported platform")
 	},
 
-	async createLibp2p(config, messageLog) {
+	async createLibp2p(config, topic) {
 		throw new Error("Unsupported platform")
 	},
 }

@@ -38,7 +38,7 @@ const target: PlatformTarget = {
 		}
 	},
 
-	createLibp2p: (config, messageLog) => getLibp2p(config, messageLog),
+	createLibp2p: (config, topic) => getLibp2p(config, topic),
 }
 
 export default target
