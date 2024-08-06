@@ -87,8 +87,8 @@ export async function getLibp2p(config: NetworkConfig) {
 						{ urls: [defaultStunServer] },
 						{
 							urls: [defaultTurnServer],
-							username: config.topic,
-							credential: bytesToHex(sha256(config.topic)),
+							username: peerId.toString(),
+							credential: bytesToHex(sha256(peerId.toString())),
 						},
 					],
 				},
@@ -130,12 +130,12 @@ export async function getLibp2p(config: NetworkConfig) {
 		if (relayServerPeerId === remotePeer.toString()) {
 			console.log(`[fetch ${relayServerPeerId}]`)
 
-			libp2p.services.discovery?.fetch(peerIdFromString(relayServerPeerId), config.topic).then(
-				(peers) => {},
-				(err) => console.log(`fetch failed: ${err}`),
-			)
-
-			return
+			if (config.topic !== undefined) {
+				libp2p.services.discovery?.fetch(peerIdFromString(relayServerPeerId), config.topic).then(
+					(peers) => {},
+					(err) => console.log(`fetch failed: ${err}`),
+				)
+			}
 		}
 	})
 
