@@ -147,17 +147,9 @@ expressApp.get("/index_api/latest_session/:topic", async (req, res) => {
 		return
 	}
 
-	// timestamp is optional but if given, it must be a string
-	if (req.query.timestamp && typeof req.query.timestamp !== "string") {
-		res.status(StatusCodes.BAD_REQUEST)
-		res.end()
-		return
-	}
-
 	const sessionId = await canvasApp.getSession({
 		did: req.query.did,
 		publicKey: req.query.public_key,
-		timestamp: req.query.timestamp ? parseInt(req.query.timestamp) : undefined,
 	})
 
 	if (!sessionId) {
