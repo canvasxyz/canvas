@@ -4,7 +4,6 @@ import process from "node:process"
 
 import chalk from "chalk"
 import prompts from "prompts"
-import { assert } from "@canvas-js/utils"
 
 export const CONTRACT_FILENAME = "contract.canvas.js"
 export const MANIFEST_FILENAME = "canvas.json"
