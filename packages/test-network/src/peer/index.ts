@@ -16,9 +16,9 @@ const { SERVICE_NAME } = process.env
 async function start() {
 	const messageLog = new GossipLog<string>({ directory: "data", topic, apply: () => {} })
 
-	const libp2p = await getLibp2p({ bootstrapList, listen, announce }, messageLog)
+	const libp2p = await getLibp2p({ bootstrapList, listen, announce }, topic)
 
-	const socket = await Socket.open(libp2p, `ws://dashboard:8000`)
+	const socket = await Socket.open(messageLog, libp2p, `ws://dashboard:8000`)
 
 	messageLog.addEventListener("commit", ({ detail: { root } }) => {
 		socket.post("gossiplog:commit", { topic, root: `${root.level}:${bytesToHex(root.hash)}` })
@@ -27,7 +27,7 @@ async function start() {
 	libp2p.addEventListener("start", async () => {
 		console.log("libp2p started")
 
-		const root = await libp2p.services.gossiplog.messageLog.tree.read((txn) => txn.getRoot())
+		const root = await messageLog.tree.read((txn) => txn.getRoot())
 		socket.post("start", { root: `${root.level}:${bytesToHex(root.hash)}` })
 	})
 
@@ -77,7 +77,7 @@ async function start() {
 	await setTimeout(delay)
 	await libp2p.start()
 
-	const intervalId = setInterval(() => void libp2p.services.gossiplog.append(nanoid()), 5000)
+	const intervalId = setInterval(() => void messageLog.append(nanoid()), 5000)
 	controller.signal.addEventListener("abort", () => clearInterval(intervalId))
 }
 
