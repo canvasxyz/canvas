@@ -72,8 +72,8 @@ export class ContractRuntime extends AbstractRuntime {
 		assert(modelsHandle !== undefined, "missing `models` export")
 		const modelSchema = modelsHandle.consume(vm.context.dump) as ModelSchema
 
-		const db = await target.openDB({ path, topic }, AbstractRuntime.getModelSchema(modelSchema))
-		return new ContractRuntime(topic, signers, db, vm, actions, argsTransformers)
+		const schema = AbstractRuntime.getModelSchema(modelSchema)
+		return new ContractRuntime(topic, signers, schema, vm, actions, argsTransformers)
 	}
 
 	readonly #databaseAPI: QuickJSHandle
@@ -83,7 +83,7 @@ export class ContractRuntime extends AbstractRuntime {
 	constructor(
 		public readonly topic: string,
 		public readonly signers: SignerCache,
-		public readonly db: AbstractModelDB,
+		public readonly schema: ModelSchema,
 		public readonly vm: VM,
 		public readonly actions: Record<string, QuickJSHandle>,
 		public readonly argsTransformers: Record<

@@ -56,9 +56,9 @@ export abstract class AbstractRuntime {
 		},
 	} satisfies ModelSchema
 
-	protected static getModelSchema(modelSchema: ModelSchema): ModelSchema {
+	protected static getModelSchema(schema: ModelSchema): ModelSchema {
 		return {
-			...modelSchema,
+			...schema,
 			...AbstractRuntime.sessionsModel,
 			...AbstractRuntime.effectsModel,
 		}
@@ -66,7 +66,7 @@ export abstract class AbstractRuntime {
 
 	public abstract readonly topic: string
 	public abstract readonly signers: SignerCache
-	public abstract readonly db: AbstractModelDB
+	public abstract readonly schema: ModelSchema
 	public abstract readonly actionNames: string[]
 	public abstract readonly argsTransformers: Record<
 		string,
@@ -74,9 +74,20 @@ export abstract class AbstractRuntime {
 	>
 
 	protected readonly log = logger("canvas:runtime")
+	#db: AbstractModelDB | null = null
+
 	protected constructor() {}
 
 	protected abstract execute(context: ExecutionContext): Promise<void | any>
+
+	public get db() {
+		assert(this.#db !== null, "internal error - expected this.#db !== null")
+		return this.#db
+	}
+
+	public set db(db: AbstractModelDB) {
+		this.#db = db
+	}
 
 	public async close() {
 		await this.db.close()

@@ -1,10 +1,6 @@
 import type { PlatformTarget } from "../interface.js"
 
 const target: PlatformTarget = {
-	async openDB(location, models) {
-		throw new Error("Unsupported platform")
-	},
-
 	async openGossipLog(location, init) {
 		throw new Error("Unsupported platform")
 	},

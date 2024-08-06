@@ -12,10 +12,5 @@ export interface PlatformTarget {
 		init: GossipLogInit<Action | Session>,
 	) => Promise<AbstractGossipLog<Action | Session>>
 
-	openDB: (
-		location: { path: string | pg.ConnectionConfig | null; topic: string },
-		models: ModelSchema,
-	) => Promise<AbstractModelDB>
-
 	createLibp2p: (config: NetworkConfig) => Promise<Libp2p<ServiceMap>>
 }

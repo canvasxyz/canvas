@@ -16,6 +16,7 @@ import target from "#target"
 import type { Contract, ActionImplementationFunction, ActionImplementationObject } from "./types.js"
 import { Runtime, createRuntime } from "./runtime/index.js"
 import { validatePayload } from "./schema.js"
+import { AbstractRuntime } from "./runtime/AbstractRuntime.js"
 
 export type { Model } from "@canvas-js/modeldb"
 export type { PeerId } from "@libp2p/interface"
@@ -82,10 +83,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			}
 		}
 
-		const runtime = await createRuntime(path, topic, signers, contract, {
-			runtimeMemoryLimit,
-		})
-
+		const runtime = await createRuntime(path, topic, signers, contract, { runtimeMemoryLimit })
 		const messageLog = await target.openGossipLog(
 			{ topic, path },
 			{
@@ -93,8 +91,11 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 				apply: runtime.getConsumer(),
 				validatePayload: validatePayload,
 				verifySignature: verifySignature,
+				schema: runtime.schema,
 			},
 		)
+
+		runtime.db = messageLog.db
 
 		const libp2p = await target.createLibp2p(config)
 		if (libp2p.status === "started") {

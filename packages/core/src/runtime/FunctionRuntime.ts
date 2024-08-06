@@ -3,7 +3,7 @@ import { fromDSL } from "@ipld/schema/from-dsl.js"
 import type pg from "pg"
 
 import type { SignerCache } from "@canvas-js/interfaces"
-import { AbstractModelDB, ModelValue, validateModelValue } from "@canvas-js/modeldb"
+import { AbstractModelDB, ModelSchema, ModelValue, validateModelValue } from "@canvas-js/modeldb"
 import { assert, mapEntries } from "@canvas-js/utils"
 
 import target from "#target"
@@ -23,8 +23,8 @@ export class FunctionRuntime extends AbstractRuntime {
 		assert(contract.actions !== undefined, "contract initialized without actions")
 		assert(contract.models !== undefined, "contract initialized without models")
 
-		const models = AbstractRuntime.getModelSchema(contract.models)
-		const db = await target.openDB({ path, topic }, models)
+		const schema = AbstractRuntime.getModelSchema(contract.models)
+		// const db = await target.openDB({ path, topic }, schema)
 
 		const argsTransformers: Record<
 			string,
@@ -47,7 +47,7 @@ export class FunctionRuntime extends AbstractRuntime {
 			return action.apply
 		})
 
-		return new FunctionRuntime(topic, signers, db, actions, argsTransformers)
+		return new FunctionRuntime(topic, signers, schema, actions, argsTransformers)
 	}
 
 	#context: ExecutionContext | null = null
@@ -56,7 +56,7 @@ export class FunctionRuntime extends AbstractRuntime {
 	constructor(
 		public readonly topic: string,
 		public readonly signers: SignerCache,
-		public readonly db: AbstractModelDB,
+		public readonly schema: ModelSchema,
 		public readonly actions: Record<string, ActionImplementationFunction>,
 		public readonly argsTransformers: Record<
 			string,
