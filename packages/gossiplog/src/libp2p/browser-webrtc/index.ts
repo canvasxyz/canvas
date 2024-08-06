@@ -21,8 +21,6 @@ import { Multiaddr, multiaddr } from "@multiformats/multiaddr"
 import { bytesToHex } from "@noble/hashes/utils"
 import { sha256 } from "@noble/hashes/sha256"
 
-import { AbstractGossipLog } from "@canvas-js/gossiplog"
-import { gossiplog } from "@canvas-js/gossiplog/service"
 import { discovery } from "@canvas-js/discovery"
 
 import type { ServiceMap, NetworkConfig } from "../../interface.js"
@@ -50,8 +48,8 @@ async function getPeerId(topic: string): Promise<PeerId> {
 	return peerId
 }
 
-export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: AbstractGossipLog<Payload>) {
-	const peerId = await getPeerId(messageLog.topic)
+export async function getLibp2p<Payload>(config: NetworkConfig, topic: string) {
+	const peerId = await getPeerId(topic)
 
 	console.log("using PeerId", peerId.toString())
 
@@ -69,7 +67,7 @@ export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: Abst
 	console.log("listening on", listen)
 	console.log("announcing on", announce)
 
-	const libp2p = await createLibp2p<ServiceMap<Payload>>({
+	const libp2p = await createLibp2p<ServiceMap>({
 		start: config.start ?? false,
 		peerId: peerId,
 		addresses: { listen, announce },
@@ -82,8 +80,8 @@ export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: Abst
 						{ urls: [defaultStunServer] },
 						{
 							urls: [defaultTurnServer],
-							username: messageLog.topic,
-							credential: bytesToHex(sha256(messageLog.topic)),
+							username: topic,
+							credential: bytesToHex(sha256(topic)),
 						},
 					],
 				},
@@ -113,14 +111,10 @@ export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: Abst
 				fallbackToFloodsub: false,
 				allowPublishToZeroTopicPeers: true,
 				globalSignaturePolicy: "StrictNoSign",
-
 				asyncValidation: true,
-				scoreParams: {
-					IPColocationFactorWeight: 0,
-				},
+				scoreParams: { IPColocationFactorWeight: 0 },
 			}),
 
-			gossiplog: gossiplog(messageLog, {}),
 			discovery: discovery({}),
 		},
 	})
@@ -129,7 +123,7 @@ export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: Abst
 		if (relayServerPeerId === remotePeer.toString()) {
 			console.log(`[fetch ${relayServerPeerId}]`)
 
-			libp2p.services.discovery.fetch(peerIdFromString(relayServerPeerId), messageLog.topic).then(
+			libp2p.services.discovery?.fetch(peerIdFromString(relayServerPeerId), topic).then(
 				(peers) => {},
 				(err) => console.log(`fetch failed: ${err}`),
 			)

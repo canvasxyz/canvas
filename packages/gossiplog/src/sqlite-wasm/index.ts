@@ -9,38 +9,40 @@ import { AbstractGossipLog, GossipLogInit } from "../AbstractGossipLog.js"
 import { MerkleIndex } from "../MerkleIndex.js"
 
 export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
-  public static async open<Payload>(init: GossipLogInit<Payload>) {
-    const db = await ModelDB.initialize({
-      path: `canvas/v1/${init.topic}.sqlite`,
-      models: AbstractGossipLog.schema,
-    })
+	public static async open<Payload>(init: GossipLogInit<Payload>) {
+		const db = await ModelDB.initialize({
+			path: `canvas/v1/${init.topic}.sqlite`,
+			models: AbstractGossipLog.schema,
+		})
 
-    const messageCount = await db.count("$messages")
-    const merkleIndex = new MerkleIndex(db)
-    const start = performance.now()
-    const tree = await MemoryTree.fromEntries({ mode: Mode.Index }, merkleIndex.entries())
-    const root = await tree.read((txn) => txn.getRoot())
-    const delta = performance.now() - start
+		const messageCount = await db.count("$messages")
+		const merkleIndex = new MerkleIndex(db)
+		const start = performance.now()
+		const tree = await MemoryTree.fromEntries({ mode: Mode.Index }, merkleIndex.entries())
+		const root = await tree.read((txn) => txn.getRoot())
+		const delta = performance.now() - start
 
-    const gossipLog = new GossipLog(db, tree, init)
+		const gossipLog = new GossipLog(db, tree, init)
 
-    gossipLog.log(
-      `built in-memory merkle tree (root %d:%s, %d entries, %dms)`,
-      root.level,
-      toString(root.hash, "hex"),
-      messageCount,
-      Math.round(delta),
-    )
+		gossipLog.log(
+			`built in-memory merkle tree (root %d:%s, %d entries, %dms)`,
+			root.level,
+			toString(root.hash, "hex"),
+			messageCount,
+			Math.round(delta),
+		)
 
-    return gossipLog
-  }
+		return gossipLog
+	}
 
-  private constructor(public readonly db: ModelDB, public readonly tree: MemoryTree, init: GossipLogInit<Payload>) {
-    super(init)
-  }
+	private constructor(public readonly db: ModelDB, public readonly tree: MemoryTree, init: GossipLogInit<Payload>) {
+		super(init)
+	}
 
-  public async close() {
-    this.log("closing")
-    await this.db.close()
-  }
+	public async close() {
+		this.log("closing")
+		await this.service?.stop()
+		await this.tree.close()
+		await this.db.close()
+	}
 }

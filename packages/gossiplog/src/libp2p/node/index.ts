@@ -14,17 +14,14 @@ import { kadDHT } from "@libp2p/kad-dht"
 import { ping as pingService } from "@libp2p/ping"
 import { fetch as fetchService } from "@libp2p/fetch"
 
-import { AbstractGossipLog } from "@canvas-js/gossiplog"
-import { gossiplog } from "@canvas-js/gossiplog/service"
 import { discovery } from "@canvas-js/discovery"
 
 import type { ServiceMap, NetworkConfig } from "../../interface.js"
 
 export const getTopicDHTProtocol = (topic: string) => `/canvas/kad/${topic}/1.0.0`
 
-const { PEER_ID } = process.env
-
 async function getPeerId(): Promise<PeerId> {
+	const { PEER_ID } = process.env
 	if (typeof PEER_ID === "string") {
 		return await createFromProtobuf(Buffer.from(PEER_ID, "base64"))
 	} else {
@@ -32,10 +29,7 @@ async function getPeerId(): Promise<PeerId> {
 	}
 }
 
-export async function getLibp2p<Payload>(
-	config: NetworkConfig,
-	messageLog: AbstractGossipLog<Payload>,
-): Promise<Libp2p<ServiceMap<Payload>>> {
+export async function getLibp2p(config: NetworkConfig, topic: string): Promise<Libp2p<ServiceMap>> {
 	let peerId = config.peerId
 	if (peerId === undefined) {
 		peerId = await getPeerId()
@@ -68,21 +62,17 @@ export async function getLibp2p<Payload>(
 			ping: pingService({ protocolPrefix: "canvas" }),
 			fetch: fetchService({ protocolPrefix: "canvas" }),
 
-			dht: kadDHT({ protocol: getTopicDHTProtocol(messageLog.topic) }),
+			dht: kadDHT({ protocol: getTopicDHTProtocol(topic) }),
 
 			pubsub: gossipsub({
 				emitSelf: false,
 				fallbackToFloodsub: false,
 				allowPublishToZeroTopicPeers: true,
 				globalSignaturePolicy: "StrictNoSign",
-
 				asyncValidation: true,
-				scoreParams: {
-					IPColocationFactorWeight: 0,
-				},
+				scoreParams: { IPColocationFactorWeight: 0 },
 			}),
 
-			gossiplog: gossiplog(messageLog, {}),
 			discovery: discovery({}),
 		},
 	})
