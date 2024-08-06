@@ -4,24 +4,33 @@ import process from "node:process"
 
 import chalk from "chalk"
 import prompts from "prompts"
+import { assert } from "@canvas-js/utils"
 
 export const CONTRACT_FILENAME = "contract.canvas.js"
-export const CONFIG_FILENAME = "canvas.json"
+export const MANIFEST_FILENAME = "canvas.json"
 
-export function getContractLocation(args: { path: string; init?: string; memory?: boolean }): {
+export function getContractLocation(args: { path: string; topic?: string; init?: string; memory?: boolean }): {
+	topic: string
 	contract: string
 	location: string | null
-	uri: string
 } {
 	const location = path.resolve(args.path)
 	const contractPath = path.resolve(location, CONTRACT_FILENAME)
+	const manifestPath = path.resolve(location, MANIFEST_FILENAME)
 
 	if (!fs.existsSync(location)) {
 		if (!location.endsWith(".canvas.js") && args.init) {
+			if (args.topic === undefined) {
+				console.error(chalk.yellow(`--topic is required upon initialization`))
+				process.exit(1)
+			}
+
 			console.log(`[canvas] Creating application directory ${location}`)
 			fs.mkdirSync(location)
 			console.log(`[canvas] Copying ${args.init} to ${contractPath}`)
 			fs.copyFileSync(args.init, contractPath)
+			console.log(`[canvas] Creating ${manifestPath}`)
+			fs.writeFileSync(manifestPath, JSON.stringify({ version: 1, topic: args.topic }, null, "  "))
 		} else {
 			console.error(chalk.yellow(`${location} does not exist.`))
 			console.error(chalk.yellow(`Try initializing a new app with \`canvas init ${path.relative(".", location)}\``))
@@ -37,11 +46,28 @@ export function getContractLocation(args: { path: string; init?: string; memory?
 			process.exit(1)
 		}
 
+		if (!fs.existsSync(manifestPath)) {
+			if (args.topic !== undefined) {
+				console.log(`[canvas] Creating ${manifestPath}`)
+				fs.writeFileSync(manifestPath, JSON.stringify({ version: 1, topic: args.topic }))
+			} else {
+				console.error(chalk.yellow(`No manfiest found at ${manifestPath}`))
+				process.exit(1)
+			}
+		}
+
 		const contract = fs.readFileSync(contractPath, "utf-8")
-		return { contract, location: args.memory ? null : location, uri: `file://${contractPath}` }
+		const manifest = fs.readFileSync(manifestPath, "utf-8")
+		const { topic } = JSON.parse(manifest) as { topic: string }
+		return { topic, contract, location: args.memory ? null : location }
 	} else if (location.endsWith(".canvas.js")) {
+		if (args.topic === undefined) {
+			console.error(chalk.yellow(`--topic is required for in-memory apps`))
+			process.exit(1)
+		}
+
 		const contract = fs.readFileSync(location, "utf-8")
-		return { contract, location: null, uri: `file://${location}` }
+		return { topic: args.topic, contract, location: null }
 	} else {
 		console.error(chalk.yellow(`Contract files must match *.canvas.js`))
 		process.exit(1)

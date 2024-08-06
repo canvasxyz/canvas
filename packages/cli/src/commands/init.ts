@@ -5,17 +5,23 @@ import { randomUUID } from "node:crypto"
 import chalk from "chalk"
 import type { Argv } from "yargs"
 
-import { CONTRACT_FILENAME } from "../utils.js"
+import { CONTRACT_FILENAME, MANIFEST_FILENAME } from "../utils.js"
 
 export const command = "init <path>"
 export const desc = "Initialize a new application"
 
 export const builder = (yargs: Argv) =>
-	yargs.positional("path", {
-		describe: "Path to application directory",
-		type: "string",
-		default: ".",
-	})
+	yargs
+		.positional("path", {
+			describe: "Path to application directory",
+			type: "string",
+			default: ".",
+		})
+		.option("topic", {
+			desc: "Application topic",
+			type: "string",
+			required: true,
+		})
 
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
@@ -27,6 +33,8 @@ export async function handler(args: Args) {
 	}
 
 	const contractPath = path.resolve(location, CONTRACT_FILENAME)
+	const manifestPath = path.resolve(location, MANIFEST_FILENAME)
+
 	if (fs.existsSync(contractPath)) {
 		console.log(chalk.gray(`Found existing contract at ${contractPath}`))
 		return
@@ -59,7 +67,7 @@ export const actions = {
 			if (message.user !== user) {
 				throw new Error("unauthorized")
 			}
-			
+
 			await db.messages.delete(messageId);
 		}
 	},
@@ -67,6 +75,7 @@ export const actions = {
 `.trim()
 
 	fs.writeFileSync(contractPath, contract)
+	fs.writeFileSync(manifestPath, JSON.stringify({ version: 1, topic: args.topic }))
 	console.log(chalk.gray(`Created example contract at ${contractPath}`))
 
 	const relativeContractPath = chalk.bold(path.relative(".", contractPath))

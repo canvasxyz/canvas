@@ -43,7 +43,6 @@ export const builder = (yargs: Argv) =>
 		.option("topic", {
 			desc: "Application topic",
 			type: "string",
-			require: true,
 		})
 		.option("init", {
 			desc: "Path to a contract to copy if the application directory does not exist",
@@ -114,7 +113,7 @@ export const builder = (yargs: Argv) =>
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
-	const { contract, location } = getContractLocation(args)
+	const { topic, contract, location } = getContractLocation(args)
 
 	if (location === null) {
 		console.log(chalk.yellow(`✦ ${chalk.bold("Running app in-memory only.")} No data will be persisted.`))
@@ -164,11 +163,12 @@ export async function handler(args: Args) {
 		}
 	}
 
+	const signers = [new SIWESigner(), new ATPSigner(), new CosmosSigner(), new SubstrateSigner(), new SolanaSigner()]
 	const app = await Canvas.initialize({
 		path: location,
-		topic: args["topic"],
+		topic,
 		contract,
-		signers: [new SIWESigner(), new ATPSigner(), new CosmosSigner(), new SubstrateSigner(), new SolanaSigner()],
+		signers,
 		listen,
 		announce,
 		minConnections: args["min-connections"],

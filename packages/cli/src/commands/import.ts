@@ -22,7 +22,6 @@ export const builder = (yargs: Argv) =>
 		.option("topic", {
 			desc: "Application topic",
 			type: "string",
-			require: true,
 		})
 		.option("chain-rpc", {
 			type: "array",
@@ -36,10 +35,10 @@ export const builder = (yargs: Argv) =>
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
-	const { location, contract } = getContractLocation(args)
+	const { topic, location, contract } = getContractLocation(args)
 	assert(location !== null, "Cannot import to development apps since they do not persist any data")
 
-	const app = await Canvas.initialize({ topic: args["topic"], path: location, contract, start: false })
+	const app = await Canvas.initialize({ topic, path: location, contract, start: false })
 
 	const rl = readline.createInterface({
 		input: process.stdin,
