@@ -42,7 +42,8 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 
 	public async close() {
 		this.log("closing")
-		await this.tree.close?.()
+		await this.service?.stop()
+		await this.tree.close()
 		await this.db.close()
 	}
 

@@ -34,8 +34,8 @@ console.log(`bootstrap list: ${JSON.stringify(bootstrapList)}`)
 const relayServer = params.relayServer ?? defaultRelayServer
 console.log(`relay server: ${relayServer}`)
 
-const libp2p = await getLibp2p({ bootstrapList, relayServer }, messageLog)
-const socket = await Socket.open(libp2p, `ws://localhost:8000`)
+const libp2p = await getLibp2p({ topic, bootstrapList, relayServer })
+const socket = await Socket.open(messageLog, libp2p, `ws://localhost:8000`)
 
 Object.assign(window, { libp2p, ping: (peerId: string) => libp2p.services.ping.ping(peerIdFromString(peerId)) })
 
@@ -113,5 +113,5 @@ await libp2p.start()
 // 	onDisconnect: (peerId) => void topicPeers.delete(peerId.toString()),
 // })
 
-const id = setInterval(() => void libp2p.services.gossiplog.append(bytesToHex(randomBytes(8))), 5000)
+const id = setInterval(() => void messageLog.append(bytesToHex(randomBytes(8))), 5000)
 libp2p.addEventListener("stop", () => clearInterval(id))

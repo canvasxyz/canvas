@@ -15,14 +15,16 @@ import { createEd25519PeerId, exportToProtobuf, createFromProtobuf } from "@libp
 import { fromString, toString } from "uint8arrays"
 import { Multiaddr } from "@multiformats/multiaddr"
 
-import { AbstractGossipLog } from "@canvas-js/gossiplog"
-import { gossiplog } from "@canvas-js/gossiplog/service"
 import { discovery } from "@canvas-js/discovery"
 
 import type { ServiceMap, NetworkConfig } from "../../interface.js"
 import { second } from "../../constants.js"
 
-async function getPeerId(topic: string): Promise<PeerId> {
+export async function getPeerId(topic?: string): Promise<PeerId> {
+	if (topic === undefined) {
+		return await createEd25519PeerId()
+	}
+
 	const peerIdKey = `canvas/v1/${topic}/peer-id`
 	const peerIdRecord = localStorage.getItem(peerIdKey)
 	if (peerIdRecord !== null) {
@@ -38,8 +40,11 @@ async function getPeerId(topic: string): Promise<PeerId> {
 	return peerId
 }
 
-export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: AbstractGossipLog<Payload>) {
-	const peerId = await getPeerId(messageLog.topic)
+export async function getLibp2p(config: NetworkConfig) {
+	let peerId = config.peerId
+	if (peerId === undefined) {
+		peerId = await getPeerId(config.topic)
+	}
 
 	console.log("using PeerId", peerId.toString())
 
@@ -51,7 +56,7 @@ export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: Abst
 	console.log("listening on", listen)
 	console.log("announcing on", announce)
 
-	const libp2p = await createLibp2p<ServiceMap<Payload>>({
+	const libp2p = await createLibp2p<ServiceMap>({
 		peerId: peerId,
 		start: config.start ?? false,
 		addresses: { listen, announce },
@@ -73,8 +78,6 @@ export async function getLibp2p<Payload>(config: NetworkConfig, messageLog: Abst
 			identify: identify({ protocolPrefix: "canvas" }),
 			fetch: fetch({ protocolPrefix: "canvas" }),
 			ping: ping({ protocolPrefix: "canvas" }),
-
-			gossiplog: gossiplog(messageLog, {}),
 			discovery: discovery({}),
 		},
 	})

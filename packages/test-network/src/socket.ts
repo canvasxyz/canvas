@@ -3,7 +3,7 @@ import { nanoid } from "nanoid"
 
 import { peerIdFromString } from "@libp2p/peer-id"
 import type { Libp2p } from "@libp2p/interface"
-import type { ServiceMap } from "@canvas-js/gossiplog"
+import type { AbstractGossipLog, ServiceMap } from "@canvas-js/gossiplog"
 
 import type { Event } from "./types.js"
 
@@ -14,18 +14,22 @@ export type SocketEvent =
 	| { type: "disconnect"; target: string }
 
 export class Socket {
-	public static async open(libp2p: Libp2p<ServiceMap<string>>, url: string) {
+	public static async open(messageLog: AbstractGossipLog<string>, libp2p: Libp2p<ServiceMap>, url: string) {
 		const ws = new WebSocket(url)
 		await new Promise((resolve) => ws.addEventListener("open", resolve, { once: true }))
-		return new Socket(libp2p, ws)
+		return new Socket(messageLog, libp2p, ws)
 	}
 
-	private constructor(readonly libp2p: Libp2p<ServiceMap<string>>, readonly ws: WebSocket) {
+	private constructor(
+		readonly messageLog: AbstractGossipLog<string>,
+		readonly libp2p: Libp2p<ServiceMap>,
+		readonly ws: WebSocket,
+	) {
 		ws.addEventListener("message", (msg) => {
 			const event = JSON.parse(msg.data.toString()) as SocketEvent
 			console.log(`event: ${event.type}`)
 			if (event.type === "boop") {
-				libp2p.services.gossiplog.append(nanoid()).then(
+				messageLog.append(nanoid()).then(
 					({ recipients }) =>
 						recipients.then(
 							(peers) => console.log(`recipients: [ ${peers.join(", ")} ]`),

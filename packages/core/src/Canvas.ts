@@ -21,7 +21,7 @@ export type { Model } from "@canvas-js/modeldb"
 export type { PeerId } from "@libp2p/interface"
 
 export interface CanvasConfig<T extends Contract = Contract> extends NetworkConfig {
-	topic?: string
+	topic: string
 	contract: string | T
 	signers?: SessionSigner[]
 
@@ -96,7 +96,12 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			},
 		)
 
-		const libp2p = await target.createLibp2p(config, messageLog)
+		const libp2p = await target.createLibp2p(config)
+		if (libp2p.status === "started") {
+			await messageLog.listen(libp2p)
+		} else {
+			libp2p.addEventListener("start", () => messageLog.listen(libp2p), { once: true })
+		}
 
 		return new Canvas(signers, messageLog, libp2p, runtime)
 	}
@@ -116,7 +121,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 	private constructor(
 		public readonly signers: SignerCache,
 		public readonly messageLog: AbstractGossipLog<Action | Session>,
-		public readonly libp2p: Libp2p<ServiceMap<Action | Session>>,
+		public readonly libp2p: Libp2p<ServiceMap>,
 		private readonly runtime: Runtime,
 	) {
 		super()
@@ -180,7 +185,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 				if (session === null) {
 					this.log("creating a new session topic %s with signer %s", this.topic, sessionSigner.key)
 					session = await sessionSigner.newSession(this.topic)
-					await this.libp2p.services.gossiplog.append(session.payload, { signer: session.signer })
+					await this.messageLog.append(session.payload, { signer: session.signer })
 				}
 
 				const argsTransformer = runtime.argsTransformers[name]
@@ -189,7 +194,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 				const argsRepresentation = argsTransformer.toRepresentation(args)
 				assert(argsRepresentation !== undefined, "action args did not validate the provided schema type")
 
-				const { id, signature, message, recipients } = await this.libp2p.services.gossiplog.append<Action>(
+				const { id, signature, message, recipients } = await this.messageLog.append<Action>(
 					{
 						type: "action",
 						did: session.payload.did,
@@ -285,8 +290,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		message: Message<Session | Action>,
 	): Promise<{ id: string; recipients: Promise<PeerId[]> }> {
 		assert(message.topic === this.topic, "invalid message topic")
-		const { id, recipients } = await this.libp2p.services.gossiplog.insert(signature, message)
-		return { id, recipients }
+		return await this.messageLog.insert({ signature, message })
 	}
 
 	public async getMessage(

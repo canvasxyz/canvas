@@ -43,6 +43,7 @@ export const builder = (yargs: Argv) =>
 		.option("topic", {
 			desc: "Application topic",
 			type: "string",
+			require: true,
 		})
 		.option("init", {
 			desc: "Path to a contract to copy if the application directory does not exist",

@@ -1,4 +1,3 @@
-import type { GossipLogService } from "@canvas-js/gossiplog/service"
 import type { GossipsubEvents } from "@chainsafe/libp2p-gossipsub"
 import type { Identify } from "@libp2p/identify"
 import type { PeerId, PubSub } from "@libp2p/interface"
@@ -14,18 +13,20 @@ export interface SyncServer extends SyncSource {
 	getValues(keys: Uint8Array[]): Awaitable<Uint8Array[]>
 }
 
-export type ServiceMap<Payload = unknown> = {
+export type ServiceMap = {
 	identify: Identify
 	ping: PingService
 	fetch: Fetch
-	discovery: DiscoveryService
-	gossiplog: GossipLogService<Payload>
+	discovery?: DiscoveryService
 	pubsub?: PubSub<GossipsubEvents>
 	dht?: KadDHT
 }
 
 export interface NetworkConfig {
+	/** used for PeerId caching and DHT peer discovery */
+	topic?: string
 	start?: boolean
+	peerId?: PeerId
 
 	/** array of local WebSocket multiaddrs, e.g. "/ip4/127.0.0.1/tcp/3000/ws" */
 	listen?: string[]
@@ -37,5 +38,4 @@ export interface NetworkConfig {
 	bootstrapList?: string[]
 	minConnections?: number
 	maxConnections?: number
-	peerId?: PeerId
 }
