@@ -186,7 +186,7 @@ and are tested in the browser. The IndexedDB implementation is tested in NodeJS 
 We first need to run a "test server" app to serve the browser test files:
 
 ```sh
-npm run dev --workspace=@canvas-js/modeldb-test-server
+npm run --workspace=@canvas-js/modeldb test-server
 ```
 
 Note the URL that the server is running on (e.g. `http://localhost:5173`).
