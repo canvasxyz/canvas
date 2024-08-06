@@ -19,8 +19,8 @@ process.on("uncaughtException", (error) => {
 nextApp.prepare().then(async () => {
 	const canvasApp = await Canvas.initialize({
 		path: process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/chat_postgres",
+		topic: "chat-example.canvas.xyz",
 		contract: {
-			topic: "chat-example.canvas.xyz",
 			models: {
 				message: {
 					id: "primary",
@@ -56,18 +56,21 @@ nextApp.prepare().then(async () => {
 	expressApp.set("json spaces", 2)
 
 	expressApp.get("/read", (req, res) => {
-		canvasApp.db.query("message", {}).then((results) => {
-			const connections = canvasApp.libp2p.getConnections()
+		canvasApp.db
+			.query("message", {})
+			.then((results) => {
+				const connections = canvasApp.libp2p.getConnections()
 
-			return res.json({
-				messages: results,
-				// status: canvasApp.status,
-				connectionsLength: connections.length,
-				connections,
+				return res.json({
+					messages: results,
+					// status: canvasApp.status,
+					connectionsLength: connections.length,
+					connections,
+				})
 			})
-		}).catch((err) => {
-			return res.status(400).json({ error: "[Canvas] query failed" })
-		})
+			.catch((err) => {
+				return res.status(400).json({ error: "[Canvas] query failed" })
+			})
 	})
 
 	expressApp.all("*", (req, res) => {
