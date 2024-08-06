@@ -16,7 +16,7 @@ const { SERVICE_NAME } = process.env
 async function start() {
 	const messageLog = new GossipLog<string>({ directory: "data", topic, apply: () => {} })
 
-	const libp2p = await getLibp2p({ bootstrapList, listen, announce }, topic)
+	const libp2p = await getLibp2p({ topic, bootstrapList, listen, announce })
 
 	const socket = await Socket.open(messageLog, libp2p, `ws://dashboard:8000`)
 

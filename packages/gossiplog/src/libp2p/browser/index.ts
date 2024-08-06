@@ -36,8 +36,8 @@ async function getPeerId(topic: string): Promise<PeerId> {
 	return peerId
 }
 
-export async function getLibp2p(config: NetworkConfig, topic: string) {
-	const peerId = await getPeerId(topic)
+export async function getLibp2p(config: NetworkConfig) {
+	const peerId = await getPeerId(config.topic)
 
 	console.log("using PeerId", peerId.toString())
 

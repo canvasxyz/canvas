@@ -34,7 +34,7 @@ console.log(`bootstrap list: ${JSON.stringify(bootstrapList)}`)
 const relayServer = params.relayServer ?? defaultRelayServer
 console.log(`relay server: ${relayServer}`)
 
-const libp2p = await getLibp2p({ bootstrapList, relayServer }, topic)
+const libp2p = await getLibp2p({ topic, bootstrapList, relayServer })
 const socket = await Socket.open(messageLog, libp2p, `ws://localhost:8000`)
 
 Object.assign(window, { libp2p, ping: (peerId: string) => libp2p.services.ping.ping(peerIdFromString(peerId)) })

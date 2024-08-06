@@ -48,8 +48,8 @@ async function getPeerId(topic: string): Promise<PeerId> {
 	return peerId
 }
 
-export async function getLibp2p<Payload>(config: NetworkConfig, topic: string) {
-	const peerId = await getPeerId(topic)
+export async function getLibp2p(config: NetworkConfig) {
+	const peerId = await getPeerId(config.topic)
 
 	console.log("using PeerId", peerId.toString())
 
@@ -80,8 +80,8 @@ export async function getLibp2p<Payload>(config: NetworkConfig, topic: string) {
 						{ urls: [defaultStunServer] },
 						{
 							urls: [defaultTurnServer],
-							username: topic,
-							credential: bytesToHex(sha256(topic)),
+							username: config.topic,
+							credential: bytesToHex(sha256(config.topic)),
 						},
 					],
 				},
@@ -123,7 +123,7 @@ export async function getLibp2p<Payload>(config: NetworkConfig, topic: string) {
 		if (relayServerPeerId === remotePeer.toString()) {
 			console.log(`[fetch ${relayServerPeerId}]`)
 
-			libp2p.services.discovery?.fetch(peerIdFromString(relayServerPeerId), topic).then(
+			libp2p.services.discovery?.fetch(peerIdFromString(relayServerPeerId), config.topic).then(
 				(peers) => {},
 				(err) => console.log(`fetch failed: ${err}`),
 			)

@@ -41,10 +41,14 @@ export async function createNetwork<T extends NetworkInit, Payload>(
 
 				const minConnections = peers?.length ?? 0
 
-				const libp2p = await getLibp2p(
-					{ peerId, start: false, listen: [address], bootstrapList, minConnections },
-					messageLog.topic,
-				)
+				const libp2p = await getLibp2p({
+					topic: messageLog.topic,
+					peerId,
+					start: false,
+					listen: [address],
+					bootstrapList,
+					minConnections,
+				})
 
 				libp2p.addEventListener("start", () => log("[%p] started", peerId))
 

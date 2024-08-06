@@ -17,7 +17,7 @@ const target: PlatformTarget = {
 		return IdbGossipLog.open(init)
 	},
 
-	createLibp2p: (config, topic) => getLibp2p(config, topic),
+	createLibp2p: (config) => getLibp2p(config),
 }
 
 export default target

@@ -9,18 +9,25 @@ export const command = "info <path>"
 export const desc = "Show the model schema and action names in a contract"
 
 export const builder = (yargs: Argv) =>
-	yargs.positional("path", {
-		describe: "Path to application directory or *.canvas.js contract",
-		type: "string",
-		demandOption: true,
-	})
+	yargs
+		.positional("path", {
+			describe: "Path to application directory or *.canvas.js contract",
+			type: "string",
+			demandOption: true,
+		})
+		.option("topic", {
+			desc: "Application topic",
+			type: "string",
+			require: true,
+		})
 
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
 	const { contract, location } = getContractLocation(args)
+
 	try {
-		const app = await Canvas.initialize({ path: location, contract, start: false })
+		const app = await Canvas.initialize({ topic: args["topic"], path: location, contract, start: false })
 		const { models } = app.getApplicationData()
 		console.log(`topic: ${app.topic}\n`)
 		console.log(chalk.green("===== models ====="))

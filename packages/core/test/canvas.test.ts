@@ -45,14 +45,27 @@ export const actions = {
 
 const init = async (t: ExecutionContext) => {
 	const signer = new SIWESigner()
-	const app = await Canvas.initialize({ contract, start: false, reset: true, signers: [signer] })
+	const app = await Canvas.initialize({
+		contract,
+		topic: "com.example.app",
+		start: false,
+		reset: true,
+		signers: [signer],
+	})
+
 	t.teardown(() => app.stop())
 	return { app, signer }
 }
 
 const initEIP712 = async (t: ExecutionContext) => {
 	const signer = new Eip712Signer()
-	const app = await Canvas.initialize({ contract, start: false, reset: true, signers: [signer] })
+	const app = await Canvas.initialize({
+		contract,
+		topic: "com.example.app",
+		start: false,
+		reset: true,
+		signers: [signer],
+	})
 	t.teardown(() => app.stop())
 	return { app, signer }
 }
@@ -173,8 +186,8 @@ test("reject an invalid message", async (t) => {
 test("create an app with an inline contract", async (t) => {
 	const wallet = ethers.Wallet.createRandom()
 	const app = await Canvas.initialize({
+		topic: "com.example.app",
 		contract: {
-			topic: "com.example.app",
 			models: {
 				posts: {
 					id: "primary",
@@ -210,9 +223,9 @@ test("get a value set by another action", async (t) => {
 	const wallet = ethers.Wallet.createRandom()
 
 	const app = await Canvas.initialize({
+		topic: "com.example.app",
 		signers: [new SIWESigner({ signer: wallet })],
 		contract: {
-			topic: "com.example.app",
 			models: {
 				user: { id: "primary", name: "string" },
 				post: { id: "primary", from: "@user", content: "string" },
@@ -270,8 +283,8 @@ test("validate action args using IPLD schemas", async (t) => {
 
 	const wallet = ethers.Wallet.createRandom()
 	const app = await Canvas.initialize({
+		topic: "com.example.app",
 		contract: {
-			topic: "com.example.app",
 			models: {
 				posts: {
 					id: "primary",

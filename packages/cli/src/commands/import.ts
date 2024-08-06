@@ -19,6 +19,11 @@ export const builder = (yargs: Argv) =>
 			type: "string",
 			demandOption: true,
 		})
+		.option("topic", {
+			desc: "Application topic",
+			type: "string",
+			require: true,
+		})
 		.option("chain-rpc", {
 			type: "array",
 			desc: "Provide an RPC endpoint for reading on-chain data (format: chain, URL)",
@@ -34,7 +39,7 @@ export async function handler(args: Args) {
 	const { location, contract } = getContractLocation(args)
 	assert(location !== null, "Cannot import to development apps since they do not persist any data")
 
-	const app = await Canvas.initialize({ path: location, contract, start: false })
+	const app = await Canvas.initialize({ topic: args["topic"], path: location, contract, start: false })
 
 	const rl = readline.createInterface({
 		input: process.stdin,

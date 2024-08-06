@@ -23,6 +23,7 @@ export type ServiceMap = {
 }
 
 export interface NetworkConfig {
+	topic: string
 	start?: boolean
 	peerId?: PeerId
 

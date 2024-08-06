@@ -21,7 +21,7 @@ export type { Model } from "@canvas-js/modeldb"
 export type { PeerId } from "@libp2p/interface"
 
 export interface CanvasConfig<T extends Contract = Contract> extends NetworkConfig {
-	topic?: string
+	topic: string
 	contract: string | T
 	signers?: SessionSigner[]
 

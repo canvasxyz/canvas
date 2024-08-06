@@ -29,7 +29,7 @@ async function getPeerId(): Promise<PeerId> {
 	}
 }
 
-export async function getLibp2p(config: NetworkConfig, topic: string): Promise<Libp2p<ServiceMap>> {
+export async function getLibp2p(config: NetworkConfig): Promise<Libp2p<ServiceMap>> {
 	let peerId = config.peerId
 	if (peerId === undefined) {
 		peerId = await getPeerId()
@@ -62,7 +62,7 @@ export async function getLibp2p(config: NetworkConfig, topic: string): Promise<L
 			ping: pingService({ protocolPrefix: "canvas" }),
 			fetch: fetchService({ protocolPrefix: "canvas" }),
 
-			dht: kadDHT({ protocol: getTopicDHTProtocol(topic) }),
+			dht: kadDHT({ protocol: getTopicDHTProtocol(config.topic) }),
 
 			pubsub: gossipsub({
 				emitSelf: false,
