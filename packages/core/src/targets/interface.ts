@@ -17,5 +17,5 @@ export interface PlatformTarget {
 		models: ModelSchema,
 	) => Promise<AbstractModelDB>
 
-	createLibp2p: (config: NetworkConfig, topic: string) => Promise<Libp2p<ServiceMap>>
+	createLibp2p: (config: NetworkConfig) => Promise<Libp2p<ServiceMap>>
 }

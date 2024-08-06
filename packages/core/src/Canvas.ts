@@ -96,7 +96,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			},
 		)
 
-		const libp2p = await target.createLibp2p(config, topic)
+		const libp2p = await target.createLibp2p(config)
 		if (libp2p.status === "started") {
 			await messageLog.listen(libp2p)
 		} else {
