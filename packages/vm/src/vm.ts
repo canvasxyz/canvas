@@ -72,27 +72,9 @@ export class VM {
 		this.unwrapResult(this.context.evalCode(contract, filename, { type: "global", strict: true })).dispose()
 	}
 
-	public async import(contract: string, options: { uri?: string } = {}): Promise<QuickJSHandle> {
+	public import(contract: string, options: { uri?: string } = {}): QuickJSHandle {
 		const filename = options.uri ?? `canvas:${bytesToHex(sha256(contract))}`
-
-		this.runtime.setModuleLoader((moduleName) => {
-			if (moduleName === filename) {
-				return contract
-			} else {
-				return { error: new Error("module not found") }
-			}
-		})
-
-		try {
-			const promiseHandle = this.unwrapResult(
-				this.context.evalCode(`import("${filename}")`, undefined, { type: "global", strict: true }),
-			)
-
-			const exportsHandle = await promiseHandle.consume(this.resolvePromise)
-			return exportsHandle
-		} finally {
-			this.runtime.removeModuleLoader()
-		}
+		return this.unwrapResult(this.context.evalCode(contract, filename, { type: "module" }))
 	}
 
 	public get = (path: string): QuickJSHandle => {

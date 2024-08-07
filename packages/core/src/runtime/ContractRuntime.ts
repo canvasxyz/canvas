@@ -32,7 +32,7 @@ export class ContractRuntime extends AbstractRuntime {
 			models: modelsHandle,
 			actions: actionsHandle,
 			...rest
-		} = await vm.import(contract, { uri }).then((handle) => handle.consume(vm.unwrapObject))
+		} = vm.import(contract, { uri }).consume(vm.unwrapObject)
 
 		for (const [name, handle] of Object.entries(rest)) {
 			console.warn(`extraneous export ${JSON.stringify(name)}`)

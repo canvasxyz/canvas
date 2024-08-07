@@ -35,6 +35,6 @@ test("import a module", async (t) => {
 	const vm = await VM.initialize({ log: (...args) => logs.push(args) })
 	t.teardown(() => vm.dispose())
 
-	const exports = await vm.import(contractModule).then((handle) => handle.consume(vm.context.dump))
+	const exports = vm.import(contractModule).consume(vm.context.dump)
 	t.deepEqual(exports, { x: "hello world", y: { foo: "bar" }, z: 5 })
 })
