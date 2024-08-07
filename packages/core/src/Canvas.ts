@@ -82,7 +82,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			}
 		}
 
-		const runtime = await createRuntime(path, topic, signers, contract, { runtimeMemoryLimit })
+		const runtime = await createRuntime(topic, signers, contract, { runtimeMemoryLimit })
 		const messageLog = await target.openGossipLog(
 			{ topic, path },
 			{
