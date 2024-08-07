@@ -18,7 +18,6 @@
 		"@libp2p/logger": "^4.0.16",
 		"@near-js/crypto": "^0.0.5",
 		"@noble/curves": "^1.4.0",
-		"bs58": "^5.0.0",
 		"multiformats": "^13.1.3",
 		"near-api-js": "^2.1.4"
 	},
