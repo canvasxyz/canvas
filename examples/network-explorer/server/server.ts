@@ -130,7 +130,6 @@ expressApp.get("/index_api/counts/:topic", (req, res) => {
 })
 
 expressApp.get("/index_api/latest_session/:topic", async (req, res) => {
-	// message.signature.publicKey
 	const canvasApp = canvasApps[req.params.topic]
 	if (!canvasApp) {
 		res.status(StatusCodes.NOT_FOUND)
@@ -138,8 +137,8 @@ expressApp.get("/index_api/latest_session/:topic", async (req, res) => {
 		return
 	}
 	if (
-		!req.query.address ||
-		typeof req.query.address !== "string" ||
+		!req.query.did ||
+		typeof req.query.did !== "string" ||
 		!req.query.public_key ||
 		typeof req.query.public_key !== "string"
 	) {
@@ -148,17 +147,9 @@ expressApp.get("/index_api/latest_session/:topic", async (req, res) => {
 		return
 	}
 
-	// timestamp is optional but if given, it must be a string
-	if (req.query.timestamp && typeof req.query.timestamp !== "string") {
-		res.status(StatusCodes.BAD_REQUEST)
-		res.end()
-		return
-	}
-
 	const sessionId = await canvasApp.getSession({
-		address: req.query.address,
+		did: req.query.did,
 		publicKey: req.query.public_key,
-		timestamp: req.query.timestamp ? parseInt(req.query.timestamp) : undefined,
 	})
 
 	if (!sessionId) {

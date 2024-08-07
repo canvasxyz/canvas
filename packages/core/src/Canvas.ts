@@ -323,15 +323,13 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 	/**
 	 * Get an existing session
 	 */
-	public async getSession(query: { address: string; publicKey: string; timestamp?: number }): Promise<string | null> {
-		// TODO: change address to did (note that network explorer uses this)
+	public async getSession(query: { did: string; publicKey: string }): Promise<string | null> {
 		const sessions = await this.db.query<{ message_id: string }>("$sessions", {
 			select: { message_id: true },
 			orderBy: { message_id: "desc" },
 			where: {
 				public_key: query.publicKey,
-				address: query.address,
-				expiration: { gte: query.timestamp ?? 0 },
+				did: query.did,
 			},
 		})
 
