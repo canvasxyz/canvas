@@ -41,6 +41,21 @@ test.after(async (t) => {
 	await browser.close()
 })
 
+function getConnectionConfig() {
+	const { POSTGRES_HOST, POSTGRES_PORT } = process.env
+	if (POSTGRES_HOST && POSTGRES_PORT) {
+		return {
+			user: "postgres",
+			database: "test",
+			password: "postgres",
+			port: parseInt(POSTGRES_PORT),
+			host: POSTGRES_HOST,
+		}
+	} else {
+		return "postgresql://localhost:5432/test"
+	}
+}
+
 export const testOnModelDB = (
 	name: string,
 	run: (
@@ -50,16 +65,7 @@ export const testOnModelDB = (
 ) => {
 	const macro = test.macro(run)
 
-	const connectionConfig =
-		process.env.POSTGRES_HOST && process.env.POSTGRES_PORT
-			? {
-					user: "postgres",
-					database: "test",
-					password: "postgres",
-					port: parseInt(process.env.POSTGRES_PORT, 10),
-					host: process.env.POSTGRES_HOST,
-				}
-			: `postgresql://localhost:5432/test`
+	const connectionConfig = getConnectionConfig()
 
 	test(`Sqlite - ${name}`, macro, async (t, models) => {
 		const mdb = new ModelDBSqlite({ path: null, models })
