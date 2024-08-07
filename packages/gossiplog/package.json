@@ -38,9 +38,6 @@
 		"generate-events": "protons ./src/protocols/events.proto",
 		"test": "ava --serial"
 	},
-	"peerDependencies": {
-		"@chainsafe/libp2p-gossipsub": "^13.1.0"
-	},
 	"dependencies": {
 		"@canvas-js/discovery": "0.10.5",
 		"@canvas-js/interfaces": "0.10.5",
