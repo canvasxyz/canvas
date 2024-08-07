@@ -14,5 +14,8 @@
 	},
 	"main": "./lib/index.js",
 	"types": "./lib/index.d.ts",
-	"sideEffects": false
+	"sideEffects": false,
+	"dependencies": {
+		"@canvas-js/interfaces": "0.10.5"
+	}
 }
