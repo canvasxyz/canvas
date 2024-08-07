@@ -1,7 +1,13 @@
 import "fake-indexeddb/auto"
+import path from "node:path"
 import test, { ExecutionContext } from "ava"
 import puppeteer from "puppeteer"
 import { nanoid } from "nanoid"
+
+import { fileURLToPath } from "node:url"
+import { createServer, ViteDevServer } from "vite"
+
+const __dirname = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "..")
 
 import type { AbstractModelDB, ModelSchema } from "@canvas-js/modeldb"
 import { ModelDB as ModelDBSqlite } from "@canvas-js/modeldb-sqlite"
@@ -10,8 +16,15 @@ import { ModelDB as ModelDBPostgres } from "@canvas-js/modeldb-pg"
 
 let browser: puppeteer.Browser
 let page: puppeteer.Page
+let server: ViteDevServer
 
 test.before(async (t) => {
+	server = await createServer({
+		root: path.resolve(__dirname, "server"),
+	})
+
+	await server.listen()
+
 	browser = await puppeteer.launch({
 		dumpio: true,
 		headless: true,
@@ -24,21 +37,22 @@ test.before(async (t) => {
 	})
 	page = await browser.newPage()
 
-	page.on("workercreated", (worker) => console.log("Worker created: " + worker.url()))
-	page.on("workerdestroyed", (worker) => console.log("Worker destroyed: " + worker.url()))
+	page.on("workercreated", (worker) => t.log("Worker created: " + worker.url()))
+	page.on("workerdestroyed", (worker) => t.log("Worker destroyed: " + worker.url()))
 
 	page.on("console", async (e) => {
 		const args = await Promise.all(e.args().map((a) => a.jsonValue()))
-		console.log(...args)
+		t.log(...args)
 	})
 
-	const origin = process.env.TEST_SERVER_ORIGIN || "http://localhost:5173"
-	await page.goto(origin)
+	const { port } = server.config.server
+	await page.goto(`http://localhost:${port}`)
 })
 
 test.after(async (t) => {
 	await page.close()
 	await browser.close()
+	await server.close()
 })
 
 function getConnectionConfig() {

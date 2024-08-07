@@ -13,7 +13,6 @@
 	"types": "./lib/index.d.ts",
 	"sideEffects": false,
 	"scripts": {
-		"test-server": "cd test/server && vite",
 		"test": "ava --serial"
 	},
 	"devDependencies": {
