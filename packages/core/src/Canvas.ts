@@ -16,7 +16,6 @@ import target from "#target"
 import type { Contract, ActionImplementationFunction, ActionImplementationObject } from "./types.js"
 import { Runtime, createRuntime } from "./runtime/index.js"
 import { validatePayload } from "./schema.js"
-import { AbstractRuntime } from "./runtime/AbstractRuntime.js"
 
 export type { Model } from "@canvas-js/modeldb"
 export type { PeerId } from "@libp2p/interface"

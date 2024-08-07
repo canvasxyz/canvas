@@ -16,7 +16,6 @@ import { bytesToHex } from "@noble/hashes/utils"
 
 export class ContractRuntime extends AbstractRuntime {
 	public static async init(
-		path: string | pg.ConnectionConfig | null,
 		topic: string,
 		signers: SignerCache,
 		contract: string,
@@ -24,15 +23,9 @@ export class ContractRuntime extends AbstractRuntime {
 	): Promise<ContractRuntime> {
 		const { runtimeMemoryLimit } = options
 
-		const uri = `canvas:${bytesToHex(sha256(contract))}`
-
 		const vm = await VM.initialize({ runtimeMemoryLimit })
 
-		const {
-			models: modelsHandle,
-			actions: actionsHandle,
-			...rest
-		} = vm.import(contract, { uri }).consume(vm.unwrapObject)
+		const { models: modelsHandle, actions: actionsHandle, ...rest } = vm.import(contract).consume(vm.unwrapObject)
 
 		for (const [name, handle] of Object.entries(rest)) {
 			console.warn(`extraneous export ${JSON.stringify(name)}`)

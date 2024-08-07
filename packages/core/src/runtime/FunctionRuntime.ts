@@ -14,12 +14,7 @@ import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
 const identity = (x: any) => x
 
 export class FunctionRuntime extends AbstractRuntime {
-	public static async init(
-		path: string | pg.ConnectionConfig | null,
-		topic: string,
-		signers: SignerCache,
-		contract: Contract,
-	): Promise<FunctionRuntime> {
+	public static async init(topic: string, signers: SignerCache, contract: Contract): Promise<FunctionRuntime> {
 		assert(contract.actions !== undefined, "contract initialized without actions")
 		assert(contract.models !== undefined, "contract initialized without models")
 
