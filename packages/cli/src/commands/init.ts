@@ -20,18 +20,12 @@ export const builder = (yargs: Argv) =>
 		.option("topic", {
 			desc: "Application topic",
 			type: "string",
-			required: true,
 		})
 
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
 	const location = path.resolve(args.path)
-	if (!fs.existsSync(location)) {
-		fs.mkdirSync(location, { recursive: true })
-		console.log(chalk.gray(`Created application directory at ${location}`))
-	}
-
 	const contractPath = path.resolve(location, CONTRACT_FILENAME)
 	const manifestPath = path.resolve(location, MANIFEST_FILENAME)
 
@@ -40,10 +34,16 @@ export async function handler(args: Args) {
 		return
 	}
 
+	const topic = args.topic ?? randomUUID()
+	console.log(chalk.gray(`Creating example contract with topic ${chalk.white(topic)}`))
+
+	if (!fs.existsSync(location)) {
+		console.log(chalk.gray(`Creating ${location}/`))
+		fs.mkdirSync(location, { recursive: true })
+	}
+
 	const contract = `
 // A Canvas backend for a simple chat application.
-
-export const topic = "${randomUUID()}"
 
 export const models = {
 	messages: {
@@ -74,9 +74,11 @@ export const actions = {
 };
 `.trim()
 
+	console.log(chalk.gray(`Creating ${contractPath}`))
 	fs.writeFileSync(contractPath, contract)
-	fs.writeFileSync(manifestPath, JSON.stringify({ version: 1, topic: args.topic }))
-	console.log(chalk.gray(`Created example contract at ${contractPath}`))
+
+	console.log(chalk.gray(`Creating ${manifestPath}`))
+	fs.writeFileSync(manifestPath, JSON.stringify({ version: 1, topic }))
 
 	const relativeContractPath = chalk.bold(path.relative(".", contractPath))
 	const relativeLocation = path.relative(".", location)
