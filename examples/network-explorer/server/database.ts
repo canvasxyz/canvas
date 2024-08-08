@@ -22,6 +22,12 @@ export function createDatabase(location: string) {
 			PRIMARY KEY (id)
 		);
 
+		CREATE TABLE IF NOT EXISTS actions (
+			topic TEXT,
+			id TEXT,
+			PRIMARY KEY (id)
+		);
+
 		CREATE INDEX IF NOT EXISTS sessions_topic_index ON sessions (topic);
     `)
 
@@ -71,6 +77,18 @@ export function createDatabase(location: string) {
 		LIMIT ?;
 	`)
 
+	const addAction = db.prepare(`
+		INSERT INTO actions(topic, id)
+		VALUES (?, ?);
+	`)
+
+	const selectActions = db.prepare(`
+		SELECT * FROM actions
+		WHERE topic = ? AND id <= ?
+		ORDER BY id DESC
+		LIMIT ?;
+	`)
+
 	return {
 		db,
 		queries: {
@@ -86,6 +104,8 @@ export function createDatabase(location: string) {
 			selectAddressCountTotal,
 			addSession,
 			selectSessions,
+			addAction,
+			selectActions,
 		},
 	} as any
 }

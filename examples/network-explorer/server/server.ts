@@ -59,6 +59,7 @@ for (const topic of topics) {
 		const message = event.detail
 
 		if (message.message.payload.type == "action") {
+			queries.addAction.run(message.message.topic, message.id)
 			queries.incrementActionCounts.run(message.message.topic)
 		} else if (message.message.payload.type == "session") {
 			queries.addSession.run(message.message.topic, message.id)
@@ -107,8 +108,35 @@ expressApp.get("/index_api/sessions/:topic", ipld(), async (req, res) => {
 		return
 	}
 
-	console.log(`req.params.topic: ${req.params.topic}`)
 	const messageIds = queries.selectSessions.all(req.params.topic, before, numMessagesToReturn)
+
+	const canvasApp = canvasApps[req.params.topic]
+	const result = []
+	for (const messageId of messageIds) {
+		const [signature, message] = await canvasApp.getMessage(messageId.id)
+		result.push([messageId.id, signature, message])
+	}
+
+	res.status(StatusCodes.OK)
+	res.setHeader("content-type", "application/json")
+	res.end(json.encode(result))
+})
+
+expressApp.get("/index_api/actions/:topic", ipld(), async (req, res) => {
+	const numMessagesToReturn = 20
+
+	let before: string
+	if (!req.query.before) {
+		before = MAX_MESSAGE_ID
+	} else if (typeof req.query.before == "string") {
+		before = req.query.before
+	} else {
+		res.status(StatusCodes.BAD_REQUEST)
+		res.end()
+		return
+	}
+
+	const messageIds = queries.selectActions.all(req.params.topic, before, numMessagesToReturn)
 
 	const canvasApp = canvasApps[req.params.topic]
 	const result = []

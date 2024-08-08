@@ -66,11 +66,7 @@ function SessionsTable({ topic }: { topic: string }) {
 			<div className="flex flex-row gap-2">
 				<div className="flex-grow"></div>
 				<PaginationButton text="Previous" enabled={currentCursor !== null} onClick={popCursor} />
-				<PaginationButton
-					text="Next"
-					enabled={hasMore}
-					onClick={() => pushCursor(sessionsToDisplay[sessionsToDisplay.length - 1][0])}
-				/>
+				<PaginationButton text="Next" enabled={hasMore} onClick={() => pushCursor(sessions[entriesPerPage][0])} />
 			</div>
 		</div>
 	)
