@@ -11,17 +11,13 @@ function SessionsTable({ topic }: { topic: string }) {
 
 	// in order to determine if another page exists, we retrieve n + 1 entries
 	// if the length of the result is n + 1, then there is another page
-	const params = new URLSearchParams({
-		type: "session",
-		order: "desc",
-		limit: (entriesPerPage + 1).toString(),
-	})
+	const params = new URLSearchParams({})
 	if (currentCursor) {
-		params.append("lt", currentCursor)
+		params.append("before", currentCursor)
 	}
 
 	const { data: sessions, error } = useSWR(
-		`/canvas_api/${topic}/messages?${params.toString()}`,
+		`/index_api/sessions/${topic}?${params.toString()}`,
 		fetchAndIpldParseJson<Result<Session>[]>,
 		{
 			refreshInterval: 1000,

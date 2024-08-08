@@ -15,6 +15,14 @@ export function createDatabase(location: string) {
       address TEXT,
       PRIMARY KEY (topic, address)
     );
+
+		CREATE TABLE IF NOT EXISTS sessions (
+			topic TEXT,
+			id TEXT,
+			PRIMARY KEY (id)
+		);
+
+		CREATE INDEX IF NOT EXISTS sessions_topic_index ON sessions (topic);
     `)
 
 	const addCountsRow = db.prepare(`
@@ -51,6 +59,18 @@ export function createDatabase(location: string) {
 	const selectAddressCountsAll = db.prepare(`SELECT topic, COUNT(topic) AS count FROM addresses GROUP BY topic`)
 	const selectAddressCountTotal = db.prepare(`SELECT COUNT(DISTINCT address) AS count FROM addresses`)
 
+	const addSession = db.prepare(`
+		INSERT INTO sessions(topic, id)
+		VALUES (?, ?);
+	`)
+
+	const selectSessions = db.prepare(`
+		SELECT * FROM sessions
+		WHERE topic = ? AND id <= ?
+		ORDER BY id DESC
+		LIMIT ?;
+	`)
+
 	return {
 		db,
 		queries: {
@@ -64,6 +84,8 @@ export function createDatabase(location: string) {
 			selectAddressCount,
 			selectAddressCountsAll,
 			selectAddressCountTotal,
+			addSession,
+			selectSessions,
 		},
 	} as any
 }

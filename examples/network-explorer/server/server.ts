@@ -10,6 +10,7 @@ import { SIWESigner } from "@canvas-js/chain-ethereum"
 
 import { createDatabase } from "./database.js"
 import { consumeOrderedIterators } from "./utils.js"
+import { MAX_MESSAGE_ID } from "@canvas-js/gossiplog"
 
 const LIBP2P_PORT = parseInt(process.env.LIBP2P_PORT || "3334", 10)
 const HTTP_PORT = parseInt(process.env.PORT || "3333", 10)
@@ -60,6 +61,7 @@ for (const topic of topics) {
 		if (message.message.payload.type == "action") {
 			queries.incrementActionCounts.run(message.message.topic)
 		} else if (message.message.payload.type == "session") {
+			queries.addSession.run(message.message.topic, message.id)
 			queries.addAddress.run(message.message.topic, message.message.payload.address)
 			queries.incrementSessionCounts.run(message.message.topic)
 		}
@@ -85,6 +87,35 @@ expressApp.get("/index_api/messages", ipld(), async (req, res) => {
 		(a, b) => a[2].payload.context.timestamp > b[2].payload.context.timestamp,
 		numMessagesToReturn,
 	)
+
+	res.status(StatusCodes.OK)
+	res.setHeader("content-type", "application/json")
+	res.end(json.encode(result))
+})
+
+expressApp.get("/index_api/sessions/:topic", ipld(), async (req, res) => {
+	const numMessagesToReturn = 20
+
+	let before: string
+	if (!req.query.before) {
+		before = MAX_MESSAGE_ID
+	} else if (typeof req.query.before == "string") {
+		before = req.query.before
+	} else {
+		res.status(StatusCodes.BAD_REQUEST)
+		res.end()
+		return
+	}
+
+	console.log(`req.params.topic: ${req.params.topic}`)
+	const messageIds = queries.selectSessions.all(req.params.topic, before, numMessagesToReturn)
+
+	const canvasApp = canvasApps[req.params.topic]
+	const result = []
+	for (const messageId of messageIds) {
+		const [signature, message] = await canvasApp.getMessage(messageId.id)
+		result.push([messageId.id, signature, message])
+	}
 
 	res.status(StatusCodes.OK)
 	res.setHeader("content-type", "application/json")
