@@ -16,19 +16,15 @@ export function createDatabase(location: string) {
       PRIMARY KEY (topic, address)
     );
 
-		CREATE TABLE IF NOT EXISTS sessions (
+		CREATE TABLE IF NOT EXISTS messages (
 			topic TEXT,
 			id TEXT,
+			type TEXT,
 			PRIMARY KEY (id)
 		);
 
-		CREATE TABLE IF NOT EXISTS actions (
-			topic TEXT,
-			id TEXT,
-			PRIMARY KEY (id)
-		);
-
-		CREATE INDEX IF NOT EXISTS sessions_topic_index ON sessions (topic);
+		CREATE INDEX IF NOT EXISTS messages_type_index ON messages (type);
+		CREATE INDEX IF NOT EXISTS messages_topic_index ON messages (topic);
     `)
 
 	const addCountsRow = db.prepare(`
@@ -66,29 +62,28 @@ export function createDatabase(location: string) {
 	const selectAddressCountTotal = db.prepare(`SELECT COUNT(DISTINCT address) AS count FROM addresses`)
 
 	const addSession = db.prepare(`
-		INSERT INTO sessions(topic, id)
-		VALUES (?, ?);
-	`)
-
-	const selectSessions = db.prepare(`
-		SELECT * FROM sessions
-		WHERE topic = ? AND id <= ?
-		ORDER BY id DESC
-		LIMIT ?;
+		INSERT INTO messages(topic, type, id)
+		VALUES (?, 'session', ?);
 	`)
 
 	const addAction = db.prepare(`
-		INSERT INTO actions(topic, id)
-		VALUES (?, ?);
+		INSERT INTO messages(topic, type, id)
+		VALUES (?, 'action', ?);
 	`)
 
-	const selectActions = db.prepare(`
-		SELECT * FROM actions
-		WHERE topic = ? AND id <= ?
+	const selectSessions = db.prepare(`
+		SELECT * FROM messages
+		WHERE topic = ? AND id <= ? AND type = 'session'
 		ORDER BY id DESC
 		LIMIT ?;
 	`)
 
+	const selectActions = db.prepare(`
+		SELECT * FROM messages
+		WHERE topic = ? AND id <= ? AND type = 'action'
+		ORDER BY id DESC
+		LIMIT ?;
+	`)
 	return {
 		db,
 		queries: {
@@ -102,9 +97,9 @@ export function createDatabase(location: string) {
 			selectAddressCount,
 			selectAddressCountsAll,
 			selectAddressCountTotal,
+			addAction,
 			addSession,
 			selectSessions,
-			addAction,
 			selectActions,
 		},
 	} as any
