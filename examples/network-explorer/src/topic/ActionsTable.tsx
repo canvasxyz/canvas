@@ -24,13 +24,15 @@ function ActionsTable({ topic }: { topic: string }) {
 
 	// in order to determine if another page exists, we retrieve n + 1 entries
 	// if the length of the result is n + 1, then there is another page
-	const params = new URLSearchParams({})
+	const params = new URLSearchParams({
+		type: "action",
+	})
 	if (currentCursor) {
 		params.append("before", currentCursor)
 	}
 
 	const { data: actions, error } = useSWR(
-		`/index_api/actions/${topic}?${params.toString()}`,
+		`/index_api/messages/${topic}?${params.toString()}`,
 		fetchAndIpldParseJson<Result<Action>[]>,
 		{
 			refreshInterval: 1000,

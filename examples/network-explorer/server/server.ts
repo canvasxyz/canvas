@@ -94,8 +94,16 @@ expressApp.get("/index_api/messages", ipld(), async (req, res) => {
 	res.end(json.encode(result))
 })
 
-expressApp.get("/index_api/sessions/:topic", ipld(), async (req, res) => {
+expressApp.get("/index_api/messages/:topic", ipld(), async (req, res) => {
 	const numMessagesToReturn = 20
+
+	if (req.query.type !== "session" && req.query.type !== "action") {
+		console.log("invalid type", req.query.type)
+		res.status(StatusCodes.BAD_REQUEST)
+		res.end()
+		return
+	}
+	const type = req.query.type
 
 	let before: string
 	if (!req.query.before) {
@@ -108,35 +116,7 @@ expressApp.get("/index_api/sessions/:topic", ipld(), async (req, res) => {
 		return
 	}
 
-	const messageIds = queries.selectSessions.all(req.params.topic, before, numMessagesToReturn)
-
-	const canvasApp = canvasApps[req.params.topic]
-	const result = []
-	for (const messageId of messageIds) {
-		const [signature, message] = await canvasApp.getMessage(messageId.id)
-		result.push([messageId.id, signature, message])
-	}
-
-	res.status(StatusCodes.OK)
-	res.setHeader("content-type", "application/json")
-	res.end(json.encode(result))
-})
-
-expressApp.get("/index_api/actions/:topic", ipld(), async (req, res) => {
-	const numMessagesToReturn = 20
-
-	let before: string
-	if (!req.query.before) {
-		before = MAX_MESSAGE_ID
-	} else if (typeof req.query.before == "string") {
-		before = req.query.before
-	} else {
-		res.status(StatusCodes.BAD_REQUEST)
-		res.end()
-		return
-	}
-
-	const messageIds = queries.selectActions.all(req.params.topic, before, numMessagesToReturn)
+	const messageIds = queries.selectMessages.all(req.params.topic, before, type, numMessagesToReturn)
 
 	const canvasApp = canvasApps[req.params.topic]
 	const result = []

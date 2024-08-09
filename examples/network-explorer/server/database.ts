@@ -71,19 +71,20 @@ export function createDatabase(location: string) {
 		VALUES (?, 'action', ?);
 	`)
 
-	const selectSessions = db.prepare(`
+	const selectMessages = db.prepare(`
 		SELECT * FROM messages
-		WHERE topic = ? AND id <= ? AND type = 'session'
+		WHERE topic = ? AND id <= ? AND type = ?
 		ORDER BY id DESC
 		LIMIT ?;
 	`)
 
-	const selectActions = db.prepare(`
+	const selectAllMessages = db.prepare(`
 		SELECT * FROM messages
-		WHERE topic = ? AND id <= ? AND type = 'action'
+		WHERE id <= ?
 		ORDER BY id DESC
 		LIMIT ?;
 	`)
+
 	return {
 		db,
 		queries: {
@@ -99,8 +100,8 @@ export function createDatabase(location: string) {
 			selectAddressCountTotal,
 			addAction,
 			addSession,
-			selectSessions,
-			selectActions,
+			selectMessages,
+			selectAllMessages,
 		},
 	} as any
 }
