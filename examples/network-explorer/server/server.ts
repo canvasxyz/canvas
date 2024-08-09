@@ -9,7 +9,9 @@ import { Canvas } from "@canvas-js/core"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 
 import { createDatabase } from "./database.js"
-import { MAX_MESSAGE_ID } from "@canvas-js/gossiplog"
+
+// this is copied from @canvas-js/gossiplog - we don't need anything else from that module
+const MAX_MESSAGE_ID = "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
 
 const LIBP2P_PORT = parseInt(process.env.LIBP2P_PORT || "3334", 10)
 const HTTP_PORT = parseInt(process.env.PORT || "3333", 10)
