@@ -9,7 +9,6 @@ import { Canvas } from "@canvas-js/core"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 
 import { createDatabase } from "./database.js"
-import { consumeOrderedIterators } from "./utils.js"
 import { MAX_MESSAGE_ID } from "@canvas-js/gossiplog"
 
 const LIBP2P_PORT = parseInt(process.env.LIBP2P_PORT || "3334", 10)
@@ -80,14 +79,25 @@ for (const topic of topics) {
 expressApp.get("/index_api/messages", ipld(), async (req, res) => {
 	const numMessagesToReturn = 20
 
-	const messageIterators = Object.values(canvasApps).map((app) =>
-		app.getMessages(undefined, undefined, { reverse: true })[Symbol.asyncIterator](),
-	)
-	const result = await consumeOrderedIterators(
-		messageIterators,
-		(a, b) => a[2].payload.context.timestamp > b[2].payload.context.timestamp,
-		numMessagesToReturn,
-	)
+	let before: string
+	if (!req.query.before) {
+		before = MAX_MESSAGE_ID
+	} else if (typeof req.query.before == "string") {
+		before = req.query.before
+	} else {
+		res.status(StatusCodes.BAD_REQUEST)
+		res.end()
+		return
+	}
+
+	const messageIndexEntries = queries.selectAllMessages.all(before, numMessagesToReturn)
+
+	const result = []
+	for (const messageIndexEntry of messageIndexEntries) {
+		const app = canvasApps[messageIndexEntry.topic]
+		const [signature, message] = await app.getMessage(messageIndexEntry.id)
+		result.push([messageIndexEntry.id, signature, message])
+	}
 
 	res.status(StatusCodes.OK)
 	res.setHeader("content-type", "application/json")
