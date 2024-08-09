@@ -26,15 +26,13 @@ function ActionsTable({ topic }: { topic: string }) {
 	// if the length of the result is n + 1, then there is another page
 	const params = new URLSearchParams({
 		type: "action",
-		order: "desc",
-		limit: (entriesPerPage + 1).toString(),
 	})
 	if (currentCursor) {
-		params.append("lt", currentCursor)
+		params.append("before", currentCursor)
 	}
 
 	const { data: actions, error } = useSWR(
-		`/canvas_api/${topic}/messages?${params.toString()}`,
+		`/index_api/messages/${topic}?${params.toString()}`,
 		fetchAndIpldParseJson<Result<Action>[]>,
 		{
 			refreshInterval: 1000,
@@ -86,11 +84,7 @@ function ActionsTable({ topic }: { topic: string }) {
 			<div className="flex flex-row gap-2">
 				<div className="flex-grow"></div>
 				<PaginationButton text="Previous" enabled={currentCursor !== null} onClick={popCursor} />
-				<PaginationButton
-					text="Next"
-					enabled={hasMore}
-					onClick={() => pushCursor(actionsToDisplay[actionsToDisplay.length - 1][0])}
-				/>
+				<PaginationButton text="Next" enabled={hasMore} onClick={() => pushCursor(actions[entriesPerPage][0])} />
 			</div>
 		</div>
 	)

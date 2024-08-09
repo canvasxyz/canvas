@@ -9,7 +9,9 @@ import { Canvas } from "@canvas-js/core"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 
 import { createDatabase } from "./database.js"
-import { consumeOrderedIterators } from "./utils.js"
+
+// this is copied from @canvas-js/gossiplog - we don't need anything else from that module
+const MAX_MESSAGE_ID = "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
 
 const LIBP2P_PORT = parseInt(process.env.LIBP2P_PORT || "3334", 10)
 const HTTP_PORT = parseInt(process.env.PORT || "3333", 10)
@@ -58,8 +60,10 @@ for (const topic of topics) {
 		const message = event.detail
 
 		if (message.message.payload.type == "action") {
+			queries.addAction.run(message.message.topic, message.id)
 			queries.incrementActionCounts.run(message.message.topic)
 		} else if (message.message.payload.type == "session") {
+			queries.addSession.run(message.message.topic, message.id)
 			queries.addAddress.run(message.message.topic, message.message.payload.address)
 			queries.incrementSessionCounts.run(message.message.topic)
 		}
@@ -77,14 +81,61 @@ for (const topic of topics) {
 expressApp.get("/index_api/messages", ipld(), async (req, res) => {
 	const numMessagesToReturn = 20
 
-	const messageIterators = Object.values(canvasApps).map((app) =>
-		app.getMessages(undefined, undefined, { reverse: true })[Symbol.asyncIterator](),
-	)
-	const result = await consumeOrderedIterators(
-		messageIterators,
-		(a, b) => a[2].payload.context.timestamp > b[2].payload.context.timestamp,
-		numMessagesToReturn,
-	)
+	let before: string
+	if (!req.query.before) {
+		before = MAX_MESSAGE_ID
+	} else if (typeof req.query.before == "string") {
+		before = req.query.before
+	} else {
+		res.status(StatusCodes.BAD_REQUEST)
+		res.end()
+		return
+	}
+
+	const messageIndexEntries = queries.selectAllMessages.all(before, numMessagesToReturn)
+
+	const result = []
+	for (const messageIndexEntry of messageIndexEntries) {
+		const app = canvasApps[messageIndexEntry.topic]
+		const [signature, message] = await app.getMessage(messageIndexEntry.id)
+		result.push([messageIndexEntry.id, signature, message])
+	}
+
+	res.status(StatusCodes.OK)
+	res.setHeader("content-type", "application/json")
+	res.end(json.encode(result))
+})
+
+expressApp.get("/index_api/messages/:topic", ipld(), async (req, res) => {
+	const numMessagesToReturn = 20
+
+	if (req.query.type !== "session" && req.query.type !== "action") {
+		console.log("invalid type", req.query.type)
+		res.status(StatusCodes.BAD_REQUEST)
+		res.end()
+		return
+	}
+	const type = req.query.type
+
+	let before: string
+	if (!req.query.before) {
+		before = MAX_MESSAGE_ID
+	} else if (typeof req.query.before == "string") {
+		before = req.query.before
+	} else {
+		res.status(StatusCodes.BAD_REQUEST)
+		res.end()
+		return
+	}
+
+	const messageIds = queries.selectMessages.all(req.params.topic, before, type, numMessagesToReturn)
+
+	const canvasApp = canvasApps[req.params.topic]
+	const result = []
+	for (const messageId of messageIds) {
+		const [signature, message] = await canvasApp.getMessage(messageId.id)
+		result.push([messageId.id, signature, message])
+	}
 
 	res.status(StatusCodes.OK)
 	res.setHeader("content-type", "application/json")
