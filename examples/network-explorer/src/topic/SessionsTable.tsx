@@ -11,17 +11,13 @@ function SessionsTable({ topic }: { topic: string }) {
 
 	// in order to determine if another page exists, we retrieve n + 1 entries
 	// if the length of the result is n + 1, then there is another page
-	const params = new URLSearchParams({
-		type: "session",
-		order: "desc",
-		limit: (entriesPerPage + 1).toString(),
-	})
+	const params = new URLSearchParams({ type: "session" })
 	if (currentCursor) {
-		params.append("lt", currentCursor)
+		params.append("before", currentCursor)
 	}
 
 	const { data: sessions, error } = useSWR(
-		`/canvas_api/${topic}/messages?${params.toString()}`,
+		`/index_api/messages/${topic}?${params.toString()}`,
 		fetchAndIpldParseJson<Result<Session>[]>,
 		{
 			refreshInterval: 1000,
@@ -70,11 +66,7 @@ function SessionsTable({ topic }: { topic: string }) {
 			<div className="flex flex-row gap-2">
 				<div className="flex-grow"></div>
 				<PaginationButton text="Previous" enabled={currentCursor !== null} onClick={popCursor} />
-				<PaginationButton
-					text="Next"
-					enabled={hasMore}
-					onClick={() => pushCursor(sessionsToDisplay[sessionsToDisplay.length - 1][0])}
-				/>
+				<PaginationButton text="Next" enabled={hasMore} onClick={() => pushCursor(sessions[entriesPerPage][0])} />
 			</div>
 		</div>
 	)

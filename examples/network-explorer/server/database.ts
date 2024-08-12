@@ -15,6 +15,16 @@ export function createDatabase(location: string) {
       address TEXT,
       PRIMARY KEY (topic, address)
     );
+
+		CREATE TABLE IF NOT EXISTS messages (
+			topic TEXT,
+			id TEXT,
+			type TEXT,
+			PRIMARY KEY (id)
+		);
+
+		CREATE INDEX IF NOT EXISTS messages_type_index ON messages (type);
+		CREATE INDEX IF NOT EXISTS messages_topic_index ON messages (topic);
     `)
 
 	const addCountsRow = db.prepare(`
@@ -51,6 +61,30 @@ export function createDatabase(location: string) {
 	const selectAddressCountsAll = db.prepare(`SELECT topic, COUNT(topic) AS count FROM addresses GROUP BY topic`)
 	const selectAddressCountTotal = db.prepare(`SELECT COUNT(DISTINCT address) AS count FROM addresses`)
 
+	const addSession = db.prepare(`
+		INSERT INTO messages(topic, type, id)
+		VALUES (?, 'session', ?);
+	`)
+
+	const addAction = db.prepare(`
+		INSERT INTO messages(topic, type, id)
+		VALUES (?, 'action', ?);
+	`)
+
+	const selectMessages = db.prepare(`
+		SELECT * FROM messages
+		WHERE topic = ? AND id <= ? AND type = ?
+		ORDER BY id DESC
+		LIMIT ?;
+	`)
+
+	const selectAllMessages = db.prepare(`
+		SELECT * FROM messages
+		WHERE id <= ?
+		ORDER BY id DESC
+		LIMIT ?;
+	`)
+
 	return {
 		db,
 		queries: {
@@ -64,6 +98,10 @@ export function createDatabase(location: string) {
 			selectAddressCount,
 			selectAddressCountsAll,
 			selectAddressCountTotal,
+			addAction,
+			addSession,
+			selectMessages,
+			selectAllMessages,
 		},
 	} as any
 }
