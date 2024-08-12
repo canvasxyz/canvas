@@ -64,7 +64,7 @@ for (const topic of topics) {
 			queries.incrementActionCounts.run(message.message.topic)
 		} else if (message.message.payload.type == "session") {
 			queries.addSession.run(message.message.topic, message.id)
-			queries.addAddress.run(message.message.topic, message.message.payload.address)
+			queries.addAddress.run(message.message.topic, message.message.payload.did)
 			queries.incrementSessionCounts.run(message.message.topic)
 		}
 	})
