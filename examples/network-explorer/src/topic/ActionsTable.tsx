@@ -72,7 +72,7 @@ function ActionsTable({ topic }: { topic: string }) {
 									<td className="break-all px-3">{args.length > 50 ? <ArgsPopout data={args} /> : args}</td>
 									<td className="break-all px-3">{formatDistanceCustom(message.payload.context.timestamp)} ago</td>
 									<td className="break-all pl-3 pr-6">
-										{signature.signature.slice(0, 25)}...
+										{signature.publicKey}
 										<SessionField message={message} signature={signature} />
 									</td>
 								</tr>
