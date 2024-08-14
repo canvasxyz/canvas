@@ -24,7 +24,7 @@ GossipLog can run in the browser using IndexedDB for persistence, on NodeJS usin
 
 People use apps, apps use databases, and databases use logs. Rather than creating new peer-to-peer protocols from scratch at the application layer, we can consolidate the work by making a generic log that has networking and syncing built-in. This can be used by developers to make automatically-decentralized apps without writing a single line of networking code.
 
-Logs are identified by a global `topic` string. Any number of peers can replicate a log, and any peer can append to their local replica at any time (unlike Hypercore, for example). Peers broadcast messages via pubsub using libp2p, and also sync directly with each other using special merklized indices called [Prolly trees](https://joelgustafson.com/posts/2023-05-04/merklizing-the-key-value-store-for-fun-and-profit).
+Logs are identified by a global `topic` string. Any number of peers can replicate a log, and any peer can append to their local replica at any time. Peers broadcast messages via pubsub using libp2p, and sync directly with each other using special merklized indices called [Prolly trees](https://joelgustafson.com/posts/2023-05-04/merklizing-the-key-value-store-for-fun-and-profit).
 
 GossipLog makes this all possible at the expense of two major tradeoffs:
 
@@ -33,7 +33,7 @@ GossipLog makes this all possible at the expense of two major tradeoffs:
 
 The implications of 1) are that GossipLog is best for applications where eventual consistency is acceptable, and where message delivery is commutative in effect. GossipLog messages carry a built-in logical clock that can be easily used to create last-write-wins registers and other CRDT primitives.
 
-The implications of 2) are that the access control logic - who can append what to the log - must be expressed as a pure function of the payload, message signature / public key, and any state accumulated from the message's transitive dependencies. The simplest case would be a whitelist of known "owner" public keys, although bridging these to on-chain identities like DAO memberships via session keys is also possible. See the notes on [advanced authentication use cases](#advanced-authentication-use-cases) for more detail.
+The implications of 2) are that the access control logic - who can append what to the log - must be expressed as a pure function of the payload, message signature + public key, and any state accumulated from the message's transitive dependencies. The simplest case would be a whitelist of known "owner" public keys, although bridging these to on-chain identities like DAO memberships via session keys is also possible. See the notes on [advanced authentication use cases](#advanced-authentication-use-cases) for more detail.
 
 ## Design
 
@@ -136,47 +136,47 @@ The upshot is that these string message IDs can be sorted directly using the nor
 
 ### Initialization
 
-The browser/IndexedDB, NodeJS/LMDB, and in-memory GossipLog implementations are exported from separate subpaths:
+The browser/IndexedDB and NodeJS/SQLite GossipLog implementations are exported from separate subpaths:
 
 ```ts
-import { GossipLog } from "@canvas-js/gossiplog/browser"
+import { GossipLog } from "@canvas-js/gossiplog/idb"
 
 // opens an IndexedDB database named `canvas/${init.topic}`
 const gossipLog = await GossipLog.open({ ...init })
 ```
 
 ```ts
-import { GossipLog } from "@canvas-js/gossiplog/node"
+import { GossipLog } from "@canvas-js/gossiplog/sqlite"
 
-// opens an LMDB environment at path/to/data/directory
-const gossipLog = await GossipLog.open({ ...init }, "path/to/data/directory")
+// opens a SQLite database at path/to/data/directory/db.sqlite,
+// and an LMDB merkle index at path/to/data/directory/message-index
+const gossipLog = await GossipLog.open({ ...init, path: "path/to/data/directory" })
 ```
 
-```ts
-import { GossipLog } from "@canvas-js/gossiplog/memory"
-
-const gossipLog = await GossipLog.open({ ...init })
-```
-
-All three are configured with the same `init` object:
+All backends are configured with the same `init` object:
 
 ```ts
 import type { Signature, Signer, Message } from "@canvas-js/interfaces"
 
+type GossipLogConsumer<Payload = unknown> = (
+	signedMessage: { id: string; signature: Signature, message: Message<Payload> },
+) => Awaitable<void>
+
 interface GossipLogInit<Payload = unknown> {
   topic: string
-  apply: (id: string, signature: Signature, message: Message<Payload>) => Awaitable<void>
-  validate: (payload: unknown) => payload is Payload
+	apply: GossipLogConsumer<Payload>
+	validatePayload?: (payload: unknown) => payload is Payload
+	verifySignature?: (signature: Signature, message: Message<Payload>) => Awaitable<void>
 
-  signer?: Signer<Payload>
+	signer?: Signer<Payload>
 }
 ```
 
 The `topic` is the global topic string identifying the log - we recommend using NSIDs like `com.example.my-app`. Topics must match `/^[a-zA-Z0-9\.\-]+$/`.
 
-Logs are generic in a `Payload` parameter. You must provide a `validate` method as a TypeScript type predicate that synchronously validates an `unknown` value as a `Payload` (it is only guaranteed to be an IPLD data model value). Only use `validate` for type/schema validation, not for authentication or authorization.
+Logs are generic in a `Payload` parameter. You can provide a `validatePayload` method as a TypeScript type predicate to synchronously validate an `unknown` value as a `Payload` (it is only guaranteed to be an IPLD data model value). Only use `validatePayload` for type/schema validation, not for authentication or authorization.
 
-The `apply` function is the main attraction. It is invoked once\* for every message, both for messages appended locally and for messages received from other peers. It is called with the message ID, the signature, and the message itself. If `apply` throws an error, then the message will be discarded and not persisted.
+The `apply` function is the main attraction. It is invoked once for every message, both for messages appended locally and for messages received from other peers. It is called with the message ID, the signature, and the message itself. If `apply` throws an error, then the message will be discarded and not persisted.
 
 `apply` has three primary responsibilities: authorizing public keys, validating payload semantics, and performing side effects.
 
@@ -186,50 +186,21 @@ The message signature will be verified **before** `apply` is called. This means 
 
 #### Semantic validation
 
-Payloads may require additional application-specific validation beyond what is checked by the `validate` type predicate, like bounds/range checking, or anything requiring async calls.
+Payloads may require additional application-specific validation beyond what is checked by the `validatePayload` type predicate, like bounds/range checking, or anything requiring async calls.
 
 #### Side effects
 
 `apply`'s basic role is to "process" messages. If the log is only used as a data store, and the application just needs to look up payloads by message ID, nothing more needs to happen. But typically, applications will index message payloads in another local database and/or execute some local side effects.
 
-#### Optional configuration values
-
-- `replay` (default `false`): upon initializing, iterate over all existing messages and invoke the `apply` function for them all
-
-\* `apply` is invoked with **at least once** semantics: in rare cases where transactions to the underlying storage layer fail to commit, `apply` might be invoked more than once with the same message. Messages will **never** be persisted without a successful call to `apply`.
-
 ### Appending new messages
 
 Once you have a `GossipLog` instance, you can append a new payload to the log with `gossipLog.append(payload)`.
 
-Calling `append` executes the following steps:
-
-1. Open an exclusive read-write transaction in the underlying database.
-2. Look up the current `parents: string[]` and `clock: number` to create the message object `{ topic, clock, parents, payload }`.
-3. Sign the message using the provided `signer` to get a `signature: Signature`.
-4. Serialize the signed message and compute its message ID.
-5. Call `apply(id, signature, message)`. If if throws, abort the transaction and re-throw the error.
-6. Write the serialized signed message to the database, using the message ID as the key.
-   - If there are messages in the mempool waiting on this message, apply them and save them to the database as well
-7. Commit the transaction.
-8. Return `{ id, signature, message }`.
-
-In a peer-to-peer context, the `signature` and `message` can be sent to other peers, who can insert them directly using `gossipLog.insert`.
+When , the `signature` and `message` will be sent to other peers, who will insert them directly using `gossipLog.insert`.
 
 ### Inserting existing messages
 
-Given an existing `signature: Signature` and `message: Message<Payload>` - such as a signed message received over the network from another peer - we can insert them locally using `gossipLog.insert(signature, message)`. This executes the following steps:
-
-1. Verify the signature.
-2. Open an exclusive read-write transaction in the underlying database.
-3. Serialize the signed message and compute its message ID.
-4. Verify that all of the message's parents already exist in the database.
-   - If not, add the signed message to the mempool, abort the transaction, and return `{ id }`.
-5. Call `apply(id, signature, message)`. If it throws, abort the transaction and re-throw the error.
-6. Write the serialized signed message to the database, using the message ID as the key.
-   - If there are messages in the mempool waiting on this message, apply them and save them to the database as well.
-7. Commit the transaction.
-8. Return `{ id }`.
+Given an existing `signature: Signature` and `message: Message<Payload>` - such as a signed message received over the network from another peer - we can insert them locally using `gossipLog.insert(signature, message)`.
 
 ### Syncing with other peers
 
@@ -237,7 +208,7 @@ TODO
 
 ### Advanced authentication use cases
 
-Expressing an application's access control logic purely in terms of public keys and signatures can be challenging. The simplest case is one where a only a known fixed set of public keys are allowed to write to the log; at the very least, this generalizes all of Hypercore's use cases. Another simple case is for open-ended applications where end users have keypairs, and the application can access the private key and programmatically sign messages directly.
+Expressing an application's access control logic purely in terms of public keys and signatures can be challenging. The simplest case is one where a only a known fixed set of public keys are allowed to write to the log. Another simple case is for open-ended applications where end users have keypairs, and the application can access the private key and programmatically sign messages directly.
 
 A more complex case is one where the application doesn't have programmatic access to a private key, such as web3 apps where wallets require user confirmations for every signature (and only sign messages in particular formats). One approach here is to use sessions, a designated type of message payload that registers a temporary public key and carries an additional signature authorizing the public key to take actions on behalf of some other identity, like an on-chain address. This is implemented for Canvas apps for a variety of chains via the session signer interface.
 
@@ -246,47 +217,52 @@ A more complex case is one where the application doesn't have programmatic acces
 Topics must match `/^[a-zA-Z0-9\.\-]+$/`.
 
 ```ts
-import type { Signature, Signer Message, Awaitable } from "@canvas-js/interfaces"
+import type { Signature, Signer, Message, Awaitable } from "@canvas-js/interfaces"
 
-interface GossipLogInit<Payload = unknown> {
-  topic: string
-  apply: (id: string, signature: Signature, message: Message<Payload>) => Awaitable<void>
-  validate: (payload: unknown) => payload is Payload
+export type GossipLogConsumer<Payload = unknown> = (
+	signedMessage: { id: string; signature: Signature, message: Message<Payload> },
+) => Awaitable<void>
 
-  signer?: Signer<Payload>
-  replay?: boolean
+export type GossipLogInit<Payload = unknown> = {
+	topic: string
+	apply: GossipLogConsumer<Payload>
+	validatePayload?: (payload: unknown) => payload is Payload
+	verifySignature?: (signature: Signature, message: Message<Payload>) => Awaitable<void>
+
+	signer?: Signer<Payload>
+	schema?: ModelSchema
 }
 
-type GossipLogEvents<Payload> = {
-  message: CustomEvent<{ id: string; signature: Signature; message: Message<Payload> }>
-  commit: CustomEvent<{ root: Node }>
-  sync: CustomEvent<{ peerId: PeerId }>
+export type GossipLogEvents<Payload = unknown> = {
+	message: CustomEvent<{ id: string; signature: Signature; message: Message<Payload> }>
+	commit: CustomEvent<{ root: Node; heads: string[] }>
+	sync: CustomEvent<{ duration: number; messageCount: number; peerId?: string }>
+	error: CustomEvent<{ error: Error }>
 }
 
-interface AbstractGossipLog<Payload = unknown>
+export interface GossipLog<Payload = unknown>
   extends EventEmitter<GossipLogEvents<Payload>> {
-  readonly topic: string
+
+  public readonly topic: string
 
   public close(): Promise<void>
 
-  public append(
-    payload: Payload,
-    options?: { signer?: Signer<Payload> }
-  ): Promise<{ id: string; signature: Signature; message: Message<Payload> }>
+  public append<T extends Payload>(
+    payload: T,
+    options?: { publish?: boolean; signer?: Signer<Payload> }
+  ): Promise<{ id: string; signature: Signature; message: Message<T> }>
 
-  public insert(signature: Signature, message: Message<Payload>): Promise<{ id: string }>
+  public insert(
+    signedMessage: { signature: Signature, message: Message<Payload> },
+    options?: { publish?: boolean },
+  ): Promise<{ id: string }>
 
-  public sync(sourcePeerId: PeerId, source: Source): Promise<{ root: Node }>
-
-  public serve(targetPeerId: PeerId, callback: (source: Source) => Promise<void>): Promise<void>
-
+  public has(id: string): Promise<boolean>
   public get(id: string): Promise<[signature: Signature, message: Message<Payload>] | [null, null]>
 
   public iterate(
-    lowerBound?: { id: string; inclusive: boolean } | null,
-    upperBound?: { id: string; inclusive: boolean } | null,
-    options?: { reverse?: boolean }
-  ): AsyncIterable<[id: string, signature: Signature, message: Message<Payload>]>
+    range?: { lt?: string; lte?: string; gt?: string; gte?: string; reverse?: boolean; limit?: number },
+  ): AsyncIterable<{ id: string; signature: Signature; message: Message<Payload> }>
 
   public getClock(): Promise<[clock: number, parents: string[]]>
 
