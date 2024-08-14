@@ -139,3 +139,19 @@ testOnModelDB("query should not be able to query on json fields", async (t, open
 		await db.query("user", { where: { metadata: "something" } })
 	})
 })
+
+testOnModelDB("query should ignore undefined expressions", async (t, openDB) => {
+	const db = await openDB(t, {
+		user: { address: "primary", name: "string?" },
+	})
+
+	await db.set("user", { address: "a", name: "John Doe" })
+	await db.set("user", { address: "b", name: null })
+	await db.set("user", { address: "c", name: "Jane Doe" })
+
+	t.deepEqual(await db.query("user", { where: { name: undefined } }), [
+		{ address: "a", name: "John Doe" },
+		{ address: "b", name: null },
+		{ address: "c", name: "Jane Doe" },
+	])
+})

@@ -80,10 +80,7 @@ export class ModelAPI {
 	readonly #primaryKeyName: string
 	readonly #primaryKeyParam: `p${string}`
 
-	public constructor(
-		readonly db: Database,
-		readonly model: Model,
-	) {
+	public constructor(readonly db: Database, readonly model: Model) {
 		const columns: string[] = []
 		const columnNames: `"${string}"`[] = [] // quoted column names for non-relation properties
 		const columnParams: `:p${string}`[] = [] // query params for non-relation properties
@@ -334,6 +331,10 @@ export class ModelAPI {
 			const property = this.#properties[name]
 			assert(property !== undefined, "property not found")
 
+			if (expression === undefined) {
+				return []
+			}
+
 			if (property.kind === "primary") {
 				if (isLiteralExpression(expression)) {
 					if (typeof expression !== "string") {
@@ -527,10 +528,7 @@ export class RelationAPI {
 	readonly #insert: Method<{ _source: string; _target: string }>
 	readonly #delete: Method<{ _source: string }>
 
-	public constructor(
-		readonly db: Database,
-		readonly relation: Relation,
-	) {
+	public constructor(readonly db: Database, readonly relation: Relation) {
 		const columns = [`_source TEXT NOT NULL`, `_target TEXT NOT NULL`]
 		db.exec(`CREATE TABLE IF NOT EXISTS "${this.table}" (${columns.join(", ")})`)
 

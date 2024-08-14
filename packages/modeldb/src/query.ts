@@ -217,6 +217,10 @@ export function getCompare(
 export function getFilter(model: Model, where: WhereCondition = {}): (value: ModelValue) => boolean {
 	const filters: { property: string; filter: (value: PropertyValue) => boolean }[] = []
 	for (const [property, expression] of Object.entries(where)) {
+		if (expression === undefined) {
+			continue
+		}
+
 		const filter = getPropertyFilter(model, property, expression)
 		filters.push({ property, filter })
 	}

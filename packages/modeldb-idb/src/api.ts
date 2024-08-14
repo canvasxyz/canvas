@@ -95,6 +95,10 @@ export class ModelAPI {
 					throw new Error("json properties are not supported in where clauses")
 				}
 
+				if (expression === undefined) {
+					continue
+				}
+
 				const index = this.getIndex(store, modelProperty)
 				if (index === null) {
 					continue

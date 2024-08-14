@@ -378,6 +378,10 @@ export class ModelAPI {
 			const property = this.#properties[name]
 			assert(property !== undefined, "property not found")
 
+			if (expression === undefined) {
+				return []
+			}
+
 			if (property.kind === "primary") {
 				if (isLiteralExpression(expression)) {
 					if (typeof expression !== "string") {
@@ -587,10 +591,7 @@ export class RelationAPI {
 		return relationApi
 	}
 
-	public constructor(
-		readonly client: pg.Client,
-		readonly relation: Relation,
-	) {
+	public constructor(readonly client: pg.Client, readonly relation: Relation) {
 		this.client = client
 	}
 
