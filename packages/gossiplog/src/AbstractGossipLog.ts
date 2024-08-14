@@ -301,23 +301,6 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		}
 	}
 
-	public getMissingParents(txn: ReadWriteTransaction, parents: string[]): Set<string> {
-		const missingParents = new Set<string>()
-		this.log("looking up %s parents", parents.length)
-		for (const parentId of parents) {
-			// TODO: txn.messages.getMany
-			const leaf = txn.getNode(0, encodeId(parentId))
-			if (leaf !== null) {
-				this.log("found parent %s", parentId)
-			} else {
-				this.log("missing parent %s", parentId)
-				missingParents.add(parentId)
-			}
-		}
-
-		return missingParents
-	}
-
 	private async apply(
 		txn: ReadWriteTransaction,
 		signedMessage: SignedMessage<Payload>,
