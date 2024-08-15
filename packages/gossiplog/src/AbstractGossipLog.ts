@@ -19,6 +19,7 @@ import { getNextClock } from "./schema.js"
 import { MISSING_PARENT, topicPattern } from "./utils.js"
 
 import { GossipLogService } from "./GossipLogService.js"
+import { MeshPeer } from "@chainsafe/libp2p-gossipsub"
 
 export type GossipLogConsumer<Payload = unknown> = (
 	this: AbstractGossipLog<Payload>,
@@ -41,6 +42,9 @@ export type GossipLogEvents<Payload = unknown> = {
 	commit: CustomEvent<{ root: Node; heads: string[] }>
 	sync: CustomEvent<{ duration: number; messageCount: number; peerId?: string }>
 	error: CustomEvent<{ error: Error }>
+
+	graft: CustomEvent<{ peerId: string }>
+	prune: CustomEvent<{ peerId: string }>
 }
 
 export type MessageRecord<Payload> = {
@@ -106,8 +110,18 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 		this.libp2p = libp2p
 		this.service = new GossipLogService(libp2p, this, {})
+
+		this.service.pubsub?.addEventListener("gossipsub:prune", this.handlePruneEvent)
+		this.service.pubsub?.addEventListener("gossipsub:graft", this.handleGraftEvent)
+
 		await this.service.start()
 	}
+
+	private handlePruneEvent = ({ detail: peer }: CustomEvent<MeshPeer>) =>
+		this.dispatchEvent(new CustomEvent("prune", { detail: { peerId: peer.peerId.toString() } }))
+
+	private handleGraftEvent = ({ detail: peer }: CustomEvent<MeshPeer>) =>
+		this.dispatchEvent(new CustomEvent("graft", { detail: { peerId: peer.peerId.toString() } }))
 
 	public async replay() {
 		await this.tree.read(async (txn) => {
