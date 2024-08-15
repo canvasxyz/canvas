@@ -532,6 +532,7 @@ export class GossipLogService<Payload = unknown> {
 				client,
 				async (signedMessage) => {
 					await this.messageLog.insert(signedMessage, { publish: false })
+					timeoutController.delay()
 					messageCount++
 				},
 				{ peerId: peerId.toString() },
