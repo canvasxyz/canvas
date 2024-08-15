@@ -38,7 +38,6 @@
 		"@canvas-js/signatures": "0.10.5",
 		"@canvas-js/utils": "0.10.5",
 		"@canvas-js/vm": "0.10.5",
-		"@chainsafe/libp2p-gossipsub": "^13.1.1",
 		"@ipld/dag-cbor": "^9.2.1",
 		"@ipld/dag-json": "^10.2.2",
 		"@ipld/schema": "^5.0.0",

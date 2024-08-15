@@ -7,7 +7,6 @@ import { anySignal } from "any-signal"
 import { Counter, Gauge, Summary, Registry, register } from "prom-client"
 
 import type { PeerId } from "@libp2p/interface"
-import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 import { peerIdFromString } from "@libp2p/peer-id"
 
 import * as json from "@ipld/dag-json"
@@ -128,6 +127,10 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 	})
 
 	if (options.exposeP2P) {
+		const meshPeers = new Set<string>()
+		app.messageLog.addEventListener("graft", ({ detail: { peerId } }) => meshPeers.add(peerId))
+		app.messageLog.addEventListener("prune", ({ detail: { peerId } }) => meshPeers.delete(peerId))
+
 		api.get("/connections", (req, res) => {
 			const results: {
 				id: string
@@ -149,8 +152,11 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 		})
 
 		api.get("/mesh/:topic", (req, res) => {
-			const gossipsub = app.libp2p.services.pubsub as GossipSub
-			return void res.json(gossipsub.getMeshPeers(req.params.topic))
+			if (req.params.topic === app.topic) {
+				return void res.json(Array.from(meshPeers))
+			} else {
+				return void res.status(StatusCodes.NOT_FOUND).end()
+			}
 		})
 
 		api.post("/ping/:peerId", async (req, res) => {
