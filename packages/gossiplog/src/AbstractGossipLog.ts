@@ -117,11 +117,17 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		await this.service.start()
 	}
 
-	private handlePruneEvent = ({ detail: peer }: CustomEvent<MeshPeer>) =>
-		this.dispatchEvent(new CustomEvent("prune", { detail: { peerId: peer.peerId.toString() } }))
+	private handlePruneEvent = ({ detail: peer }: CustomEvent<MeshPeer>) => {
+		if (peer.topic === this.topic) {
+			this.dispatchEvent(new CustomEvent("prune", { detail: { peerId: peer.peerId.toString() } }))
+		}
+	}
 
-	private handleGraftEvent = ({ detail: peer }: CustomEvent<MeshPeer>) =>
-		this.dispatchEvent(new CustomEvent("graft", { detail: { peerId: peer.peerId.toString() } }))
+	private handleGraftEvent = ({ detail: peer }: CustomEvent<MeshPeer>) => {
+		if (peer.topic === this.topic) {
+			this.dispatchEvent(new CustomEvent("graft", { detail: { peerId: peer.peerId.toString() } }))
+		}
+	}
 
 	public async replay() {
 		await this.tree.read(async (txn) => {

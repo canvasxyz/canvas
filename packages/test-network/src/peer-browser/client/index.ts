@@ -88,12 +88,12 @@ libp2p.addEventListener("connection:close", ({ detail: { id, remotePeer, remoteA
 
 const gossipsub = libp2p.services.pubsub as GossipSub
 
-libp2p.services.pubsub?.addEventListener("gossipsub:graft", ({ detail: { topic } }) => {
+messageLog.addEventListener("graft", ({ detail: { peerId } }) => {
 	const peers = gossipsub.getMeshPeers(topic)
 	socket.post("gossipsub:mesh:update", { topic, peers })
 })
 
-libp2p.services.pubsub?.addEventListener("gossipsub:prune", ({ detail: { topic } }) => {
+messageLog.addEventListener("prune", ({ detail: { peerId } }) => {
 	const peers = gossipsub.getMeshPeers(topic)
 	socket.post("gossipsub:mesh:update", { topic, peers })
 })
@@ -106,6 +106,7 @@ await new Promise((resolve) => setTimeout(resolve, delay))
 
 console.log("starting...")
 await libp2p.start()
+await messageLog.listen(libp2p)
 
 // const topicPeers = new Set<string>()
 // libp2p.register(getTopicDHTProtocol(topic), {j

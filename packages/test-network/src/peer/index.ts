@@ -47,13 +47,14 @@ async function start() {
 	})
 
 	const gossipsub = libp2p.services.pubsub as GossipSub
-	gossipsub.addEventListener("gossipsub:graft", ({ detail: { topic, peerId } }) => {
+
+	messageLog.addEventListener("graft", ({ detail: { peerId } }) => {
 		console.log("gossipsub:graft", topic, peerId)
 		const peers = gossipsub.getMeshPeers(topic)
 		socket.post("gossipsub:mesh:update", { topic, peers })
 	})
 
-	gossipsub.addEventListener("gossipsub:prune", ({ detail: { topic, peerId } }) => {
+	messageLog.addEventListener("prune", ({ detail: { peerId } }) => {
 		console.log("gossipsub:prune", topic, peerId)
 		const peers = gossipsub.getMeshPeers(topic)
 		socket.post("gossipsub:mesh:update", { topic, peers })
@@ -76,6 +77,7 @@ async function start() {
 
 	await setTimeout(delay)
 	await libp2p.start()
+	await messageLog.listen(libp2p)
 
 	const intervalId = setInterval(() => void messageLog.append(nanoid()), 5000)
 	controller.signal.addEventListener("abort", () => clearInterval(intervalId))
