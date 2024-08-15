@@ -1,6 +1,6 @@
 {
 	"name": "@canvas-js/cli",
-	"version": "0.10.5",
+	"version": "0.10.6",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"type": "module",
 	"main": "dist/index.js",
@@ -11,13 +11,13 @@
 		"canvas": "dist/index.js"
 	},
 	"dependencies": {
-		"@canvas-js/chain-atp": "0.10.5",
-		"@canvas-js/chain-cosmos": "0.10.5",
-		"@canvas-js/chain-ethereum": "0.10.5",
-		"@canvas-js/chain-solana": "0.10.5",
-		"@canvas-js/chain-substrate": "0.10.5",
-		"@canvas-js/core": "0.10.5",
-		"@canvas-js/interfaces": "0.10.5",
+		"@canvas-js/chain-atp": "0.10.6",
+		"@canvas-js/chain-cosmos": "0.10.6",
+		"@canvas-js/chain-ethereum": "0.10.6",
+		"@canvas-js/chain-solana": "0.10.6",
+		"@canvas-js/chain-substrate": "0.10.6",
+		"@canvas-js/core": "0.10.6",
+		"@canvas-js/interfaces": "0.10.6",
 		"@ipld/dag-json": "^10.2.2",
 		"@libp2p/peer-id": "^4.2.0",
 		"@multiformats/multiaddr": "^12.3.0",
