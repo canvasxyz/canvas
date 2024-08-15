@@ -212,6 +212,7 @@ export class GossipLogService<Payload = unknown> {
 		if (this.#started === false) return
 		this.#started = false
 
+		this.controller.abort()
 		this.#pubsub?.unsubscribe(this.messageLog.topic)
 
 		for (const [peer, { stream, source }] of this.#pushStreams) {
@@ -422,6 +423,7 @@ export class GossipLogService<Payload = unknown> {
 
 		const timeoutController = new DelayableController(SYNC_TIMEOUT)
 		const signal = anySignal([this.controller.signal, timeoutController.signal])
+
 		signal.addEventListener("abort", (err) => {
 			if (stream.status === "open") {
 				stream.abort(new Error("TIMEOUT"))
