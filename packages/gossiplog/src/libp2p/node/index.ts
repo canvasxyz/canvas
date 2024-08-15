@@ -13,6 +13,9 @@ import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { kadDHT } from "@libp2p/kad-dht"
 import { ping as pingService } from "@libp2p/ping"
 import { fetch as fetchService } from "@libp2p/fetch"
+import { prometheusMetrics } from "@libp2p/prometheus-metrics"
+
+import { Registry } from "prom-client"
 
 import { discovery } from "@canvas-js/discovery"
 
@@ -35,7 +38,10 @@ export async function getPeerId(): Promise<PeerId> {
 	}
 }
 
-export async function getLibp2p(config: NetworkConfig): Promise<Libp2p<ServiceMap>> {
+export async function getLibp2p(
+	config: NetworkConfig,
+	options: { registry?: Registry } = {},
+): Promise<Libp2p<ServiceMap>> {
 	let peerId = config.peerId
 	if (peerId === undefined) {
 		peerId = await getPeerId()
@@ -63,6 +69,9 @@ export async function getLibp2p(config: NetworkConfig): Promise<Libp2p<ServiceMa
 
 		streamMuxers: [yamux()],
 		connectionEncryption: [noise({})],
+
+		metrics: prometheusMetrics(options),
+
 		services: {
 			identify: identify({ protocolPrefix: "canvas" }),
 			ping: pingService({ protocolPrefix: "canvas" }),
