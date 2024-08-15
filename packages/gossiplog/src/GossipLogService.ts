@@ -78,10 +78,10 @@ export class GossipLogService<Payload = unknown> {
 	private readonly pushTopology = new Set<string>()
 	private readonly litePeers = new Set<string>()
 
-	#pushTopologyId: string | null = null
-	#pubsub: GossipSub | null = null
-	#started = false
+	public pubsub: GossipSub | null = null
 
+	#pushTopologyId: string | null = null
+	#started = false
 	#pushStreams = new Map<string, { stream: Stream; source: Pushable<Uint8Array, void, unknown> }>()
 
 	constructor(
@@ -90,7 +90,7 @@ export class GossipLogService<Payload = unknown> {
 		init: GossipLogServiceInit,
 	) {
 		this.log = logger(`canvas:gossiplog:[${this.messageLog.topic}]:service`)
-		this.#pubsub = GossipLogService.extractGossipSub(libp2p)
+		this.pubsub = GossipLogService.extractGossipSub(libp2p)
 
 		this.maxInboundStreams = init.maxInboundStreams ?? MAX_INBOUND_STREAMS
 		this.maxOutboundStreams = init.maxOutboundStreams ?? MAX_OUTBOUND_STREAMS
@@ -104,7 +104,7 @@ export class GossipLogService<Payload = unknown> {
 
 		this.libp2p.addEventListener("connection:open", this.handleConnectionOpen)
 		this.libp2p.addEventListener("connection:close", this.handleConnectionClose)
-		this.#pubsub?.addEventListener("gossipsub:message", this.handleMessage)
+		this.pubsub?.addEventListener("gossipsub:message", this.handleMessage)
 
 		/**
 		 * sync is the protocol for initiating merkle syncs using the Okra index.
@@ -195,7 +195,7 @@ export class GossipLogService<Payload = unknown> {
 			},
 		})
 
-		this.#pubsub?.subscribe(this.messageLog.topic)
+		this.pubsub?.subscribe(this.messageLog.topic)
 	}
 
 	private handleConnectionOpen = ({ detail: connection }: CustomEvent<Connection>) => {
@@ -213,7 +213,7 @@ export class GossipLogService<Payload = unknown> {
 		this.#started = false
 
 		this.controller.abort()
-		this.#pubsub?.unsubscribe(this.messageLog.topic)
+		this.pubsub?.unsubscribe(this.messageLog.topic)
 
 		for (const [peer, { stream, source }] of this.#pushStreams) {
 			stream.close()
@@ -231,7 +231,7 @@ export class GossipLogService<Payload = unknown> {
 
 		this.libp2p.removeEventListener("connection:open", this.handleConnectionOpen)
 		this.libp2p.removeEventListener("connection:close", this.handleConnectionClose)
-		this.#pubsub?.removeEventListener("gossipsub:message", this.handleMessage)
+		this.pubsub?.removeEventListener("gossipsub:message", this.handleMessage)
 	}
 
 	public async publish(signedMessage: SignedMessage<Payload>, options: { sourceId?: string } = {}): Promise<PeerId[]> {
@@ -243,7 +243,7 @@ export class GossipLogService<Payload = unknown> {
 		const event: Partial<Event> = { insert: { key, value } }
 		const data = Event.encode(event)
 
-		if (this.#pubsub === null) {
+		if (this.pubsub === null) {
 			// If we're a lite client, then push directly to all of our topology peers
 
 			const recipients: PeerId[] = []
@@ -267,7 +267,7 @@ export class GossipLogService<Payload = unknown> {
 				recipients.push(peerIdFromString(peer))
 			}
 
-			await this.#pubsub.publish(this.messageLog.topic, data).then(
+			await this.pubsub.publish(this.messageLog.topic, data).then(
 				(result) => {
 					this.log("published %s to %d recipients %O", id, result.recipients.length, result.recipients)
 					recipients.push(...result.recipients)
@@ -293,13 +293,13 @@ export class GossipLogService<Payload = unknown> {
 			event = Event.decode(msg.data)
 		} catch (err) {
 			this.log.error("error decoding gossipsub message: %O", err)
-			this.#pubsub?.reportMessageValidationResult(msgId, sourceId, TopicValidatorResult.Reject)
+			this.pubsub?.reportMessageValidationResult(msgId, sourceId, TopicValidatorResult.Reject)
 			return
 		}
 
 		if (event.insert === undefined) {
 			this.log("ignoring gossipsub message %s", msgId)
-			this.#pubsub?.reportMessageValidationResult(msgId, sourceId, TopicValidatorResult.Ignore)
+			this.pubsub?.reportMessageValidationResult(msgId, sourceId, TopicValidatorResult.Ignore)
 			return
 		}
 
@@ -309,13 +309,13 @@ export class GossipLogService<Payload = unknown> {
 			assert(equals(event.insert.key, signedMessage.key), "invalid key")
 		} catch (err) {
 			this.log.error("invalid message: %O", err)
-			this.#pubsub?.reportMessageValidationResult(msgId, sourceId, TopicValidatorResult.Reject)
+			this.pubsub?.reportMessageValidationResult(msgId, sourceId, TopicValidatorResult.Reject)
 			return
 		}
 
 		this.messageLog.insert(signedMessage, { peerId: sourceId, publish: false }).then(
 			({ id }) => {
-				this.#pubsub?.reportMessageValidationResult(msgId, sourceId, TopicValidatorResult.Accept)
+				this.pubsub?.reportMessageValidationResult(msgId, sourceId, TopicValidatorResult.Accept)
 
 				let count = 0
 				for (const peer of this.litePeers) {
@@ -329,11 +329,11 @@ export class GossipLogService<Payload = unknown> {
 			},
 			(err) => {
 				if (err instanceof CodeError && err.code === MISSING_PARENT) {
-					this.#pubsub?.reportMessageValidationResult(msgId, sourceId, TopicValidatorResult.Ignore)
+					this.pubsub?.reportMessageValidationResult(msgId, sourceId, TopicValidatorResult.Ignore)
 					this.scheduleSync(propagationSource)
 				} else {
 					this.log.error("rejecting gossipsub message %s: %O", msgId, err)
-					this.#pubsub?.reportMessageValidationResult(msgId, sourceId, TopicValidatorResult.Reject)
+					this.pubsub?.reportMessageValidationResult(msgId, sourceId, TopicValidatorResult.Reject)
 				}
 			},
 		)
