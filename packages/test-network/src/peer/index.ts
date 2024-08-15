@@ -1,8 +1,6 @@
 import { setTimeout } from "node:timers/promises"
 
-import { GossipSub } from "@chainsafe/libp2p-gossipsub"
-import { bytesToHex } from "@noble/hashes/utils"
-import { nanoid } from "nanoid"
+import { randomBytes, bytesToHex } from "@noble/hashes/utils"
 
 import { GossipLog } from "@canvas-js/gossiplog/sqlite"
 import { getLibp2p } from "@canvas-js/gossiplog/libp2p/node"
@@ -46,18 +44,18 @@ async function start() {
 		socket.post("connection:close", { id, remotePeer: remotePeer.toString(), remoteAddr: remoteAddr.toString() })
 	})
 
-	const gossipsub = libp2p.services.pubsub as GossipSub
+	const meshPeers = new Set<string>()
 
 	messageLog.addEventListener("graft", ({ detail: { peerId } }) => {
 		console.log("gossipsub:graft", topic, peerId)
-		const peers = gossipsub.getMeshPeers(topic)
-		socket.post("gossipsub:mesh:update", { topic, peers })
+		meshPeers.add(peerId)
+		socket.post("gossipsub:mesh:update", { topic, peers: Array.from(meshPeers) })
 	})
 
 	messageLog.addEventListener("prune", ({ detail: { peerId } }) => {
 		console.log("gossipsub:prune", topic, peerId)
-		const peers = gossipsub.getMeshPeers(topic)
-		socket.post("gossipsub:mesh:update", { topic, peers })
+		meshPeers.delete(peerId)
+		socket.post("gossipsub:mesh:update", { topic, peers: Array.from(meshPeers) })
 	})
 
 	messageLog.addEventListener("sync", (event) => console.log(`completed sync with ${event.detail.peerId}`))
@@ -79,7 +77,7 @@ async function start() {
 	await libp2p.start()
 	await messageLog.listen(libp2p)
 
-	const intervalId = setInterval(() => void messageLog.append(nanoid()), 5000)
+	const intervalId = setInterval(() => void messageLog.append(bytesToHex(randomBytes(8))), 5000)
 	controller.signal.addEventListener("abort", () => clearInterval(intervalId))
 }
 

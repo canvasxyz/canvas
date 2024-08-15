@@ -1,4 +1,3 @@
-import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 import { peerIdFromString } from "@libp2p/peer-id"
 import { multiaddr } from "@multiformats/multiaddr"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
@@ -86,16 +85,16 @@ libp2p.addEventListener("connection:close", ({ detail: { id, remotePeer, remoteA
 // 	console.log(`peer:identify ${peerId} [ ${protocols.join(", ")} ]`),
 // )
 
-const gossipsub = libp2p.services.pubsub as GossipSub
+const meshPeers = new Set<string>()
 
 messageLog.addEventListener("graft", ({ detail: { peerId } }) => {
-	const peers = gossipsub.getMeshPeers(topic)
-	socket.post("gossipsub:mesh:update", { topic, peers })
+	meshPeers.add(peerId)
+	socket.post("gossipsub:mesh:update", { topic, peers: Array.from(meshPeers) })
 })
 
 messageLog.addEventListener("prune", ({ detail: { peerId } }) => {
-	const peers = gossipsub.getMeshPeers(topic)
-	socket.post("gossipsub:mesh:update", { topic, peers })
+	meshPeers.delete(peerId)
+	socket.post("gossipsub:mesh:update", { topic, peers: Array.from(meshPeers) })
 })
 
 // libp2p.start()

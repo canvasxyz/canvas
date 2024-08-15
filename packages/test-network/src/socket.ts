@@ -1,6 +1,5 @@
 import WebSocket from "isomorphic-ws"
-import { nanoid } from "nanoid"
-
+import { randomBytes, bytesToHex } from "@noble/hashes/utils"
 import { peerIdFromString } from "@libp2p/peer-id"
 import type { Libp2p } from "@libp2p/interface"
 import type { AbstractGossipLog, ServiceMap } from "@canvas-js/gossiplog"
@@ -29,7 +28,7 @@ export class Socket {
 			const event = JSON.parse(msg.data.toString()) as SocketEvent
 			console.log(`event: ${event.type}`)
 			if (event.type === "boop") {
-				messageLog.append(nanoid()).then(
+				messageLog.append(bytesToHex(randomBytes(8))).then(
 					({ recipients }) =>
 						recipients.then(
 							(peers) => console.log(`recipients: [ ${peers.join(", ")} ]`),
