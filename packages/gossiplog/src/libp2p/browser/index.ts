@@ -70,6 +70,8 @@ export async function getLibp2p(config: NetworkConfig) {
 			dialTimeout: 20 * second,
 		},
 
+		connectionMonitor: { protocolPrefix: "canvas" },
+
 		peerDiscovery: bootstrapList.length > 0 ? [bootstrap({ list: bootstrapList })] : [],
 
 		streamMuxers: [yamux({})],

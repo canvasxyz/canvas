@@ -65,6 +65,8 @@ export async function getLibp2p(
 			maxConnections: config.maxConnections,
 		},
 
+		connectionMonitor: { protocolPrefix: "canvas" },
+
 		peerDiscovery: bootstrapList.length > 0 ? [bootstrap({ list: bootstrapList })] : [],
 
 		streamMuxers: [yamux()],
