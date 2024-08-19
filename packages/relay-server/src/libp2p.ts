@@ -41,6 +41,7 @@ export async function getLibp2p(config: Partial<Config> = {}) {
 		addresses: { listen, announce },
 		transports: [webSockets({ filter: all })],
 		connectionManager: { minConnections, maxConnections },
+		connectionMonitor: { protocolPrefix: "canvas" },
 
 		streamMuxers: [yamux()],
 		connectionEncryption: [noise({})],
@@ -57,7 +58,6 @@ export async function getLibp2p(config: Partial<Config> = {}) {
 			}),
 			fetch: fetch({ protocolPrefix: "canvas" }),
 			ping: ping({ protocolPrefix: "canvas" }),
-
 			discovery: discovery({}),
 		},
 	})
