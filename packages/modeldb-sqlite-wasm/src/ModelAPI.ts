@@ -400,7 +400,9 @@ export class ModelAPI {
 					}
 				} else if (isNotExpression(expression)) {
 					const { neq: value } = expression
-					if (value === null) {
+					if (value === undefined) {
+						return []
+					} else if (value === null) {
 						return [`"${name}" NOTNULL`]
 					} else if (Array.isArray(value)) {
 						throw new Error("invalid primitive value (expected null | number | string | Uint8Array)")

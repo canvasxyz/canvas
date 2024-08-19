@@ -154,4 +154,14 @@ testOnModelDB("query should ignore undefined expressions", async (t, openDB) => 
 		{ address: "b", name: null },
 		{ address: "c", name: "Jane Doe" },
 	])
+
+	t.deepEqual(await db.query("user", { where: { address: { gt: "a" }, name: undefined } }), [
+		{ address: "b", name: null },
+		{ address: "c", name: "Jane Doe" },
+	])
+
+	t.deepEqual(await db.query("user", { where: { address: { gt: "a" }, name: { neq: undefined } } }), [
+		{ address: "b", name: null },
+		{ address: "c", name: "Jane Doe" },
+	])
 })

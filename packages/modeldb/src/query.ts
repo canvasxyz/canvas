@@ -54,8 +54,7 @@ export function isNotExpression(expr: PropertyValue | NotExpression | RangeExpre
 		return false
 	}
 
-	const { neq } = expr as { neq?: PropertyValue }
-	return neq !== undefined
+	return "neq" in expr
 }
 
 export function isRangeExpression(expr: PropertyValue | NotExpression | RangeExpression): expr is RangeExpression {
@@ -63,8 +62,7 @@ export function isRangeExpression(expr: PropertyValue | NotExpression | RangeExp
 		return false
 	}
 
-	const { neq } = expr as { neq?: PropertyValue }
-	return neq === undefined
+	return "gt" in expr || "gte" in expr || "lt" in expr || "lte" in expr
 }
 
 interface Order {
@@ -313,8 +311,12 @@ function getPrimitiveFilter(
 		return (value) => order.equals(value, reference)
 	} else if (isNotExpression(expression)) {
 		const reference = expression.neq
-		validatePropertyValue(modelName, property, reference)
-		return (value) => !order.equals(value, reference)
+		if (reference === undefined) {
+			return (value) => true
+		} else {
+			validatePropertyValue(modelName, property, reference)
+			return (value) => !order.equals(value, reference)
+		}
 	} else if (isRangeExpression(expression)) {
 		const { gt, gte, lt, lte } = expression
 		for (const value of [gt, gte, lt, lte]) {

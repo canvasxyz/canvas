@@ -226,17 +226,33 @@ export class ModelAPI {
 		} else if (isNotExpression(expression)) {
 			// Here we iterate over the undex using an open `upperBound` key range
 			// followed by an open `lowerBound` key range. Unnecessary if expression.neq === null.
-			if (expression.neq !== null) {
-				const upper = IDBKeyRange.upperBound(encodePropertyValue(property, expression.neq), true)
-				for (let cursor = await storeIndex.openCursor(upper); cursor !== null; cursor = await cursor.continue()) {
-					yield this.decodeObject(cursor.value)
-				}
-			}
 
-			const lower = IDBKeyRange.lowerBound(encodePropertyValue(property, expression.neq), true)
-			for (let cursor = await storeIndex.openCursor(lower); cursor !== null; cursor = await cursor.continue()) {
+			const keyRange =
+				expression.neq === undefined
+					? null
+					: expression.neq === null
+					? IDBKeyRange.lowerBound(encodePropertyValue(property, null), true)
+					: IDBKeyRange.upperBound(encodePropertyValue(property, expression.neq), true)
+
+			for (let cursor = await storeIndex.openCursor(keyRange); cursor !== null; cursor = await cursor.continue()) {
 				yield this.decodeObject(cursor.value)
 			}
+
+			// if (expression.neq === undefined) {
+			// 	for (let cursor = await storeIndex.openCursor(); cursor !== null; cursor = await cursor.continue()) {
+			// 		yield this.decodeObject(cursor.value)
+			// 	}
+			// } else if (expression.neq === null) {
+			// 	const lower = IDBKeyRange.lowerBound(encodePropertyValue(property, null), true)
+			// 	for (let cursor = await storeIndex.openCursor(lower); cursor !== null; cursor = await cursor.continue()) {
+			// 		yield this.decodeObject(cursor.value)
+			// 	}
+			// } else {
+			// 	const upper = IDBKeyRange.upperBound(encodePropertyValue(property, expression.neq), true)
+			// 	for (let cursor = await storeIndex.openCursor(upper); cursor !== null; cursor = await cursor.continue()) {
+			// 		yield this.decodeObject(cursor.value)
+			// 	}
+			// }
 		} else if (isRangeExpression(expression)) {
 			const range = getRange(property, expression)
 			for (let cursor = await storeIndex.openCursor(range); cursor !== null; cursor = await cursor.continue()) {

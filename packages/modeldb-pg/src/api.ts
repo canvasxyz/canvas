@@ -443,18 +443,20 @@ export class ModelAPI {
 					}
 				} else if (isNotExpression(expression)) {
 					const { neq: value } = expression
-					if (value === null) {
+					if (value === undefined) {
+						return []
+					} else if (value === null) {
 						return [`"${name}" NOTNULL`]
 					} else if (Array.isArray(value)) {
 						throw new Error("invalid primitive value (expected null | number | string | boolean | Uint8Array)")
+					}
+
+					const p = ++i
+					params[p - 1] = value instanceof Uint8Array ? Buffer.from(value) : value
+					if (property.optional) {
+						return [`("${name}" ISNULL OR "${name}" != $${p})`]
 					} else {
-						const p = ++i
-						params[p - 1] = value instanceof Uint8Array ? Buffer.from(value) : value
-						if (property.optional) {
-							return [`("${name}" ISNULL OR "${name}" != $${p})`]
-						} else {
-							return [`"${name}" != $${p}`]
-						}
+						return [`"${name}" != $${p}`]
 					}
 				} else if (isRangeExpression(expression)) {
 					const keys = Object.keys(expression) as (keyof RangeExpression)[]
