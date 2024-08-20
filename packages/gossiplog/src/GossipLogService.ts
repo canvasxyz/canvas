@@ -38,10 +38,9 @@ import {
 import { AbstractGossipLog } from "./AbstractGossipLog.js"
 
 import { decodeId, encodeId } from "./ids.js"
-import { Client, decodeRequests, encodeResponses } from "./sync/index.js"
+import { Client, Server, decodeRequests, encodeResponses } from "./sync/index.js"
 
 import { MISSING_PARENT, SyncTimeoutError, wait } from "./utils.js"
-import { Server } from "./sync/server.js"
 
 import { SignedMessage } from "./SignedMessage.js"
 import { ServiceMap } from "./interface.js"
@@ -432,7 +431,7 @@ export class GossipLogService<Payload = unknown> {
 
 		try {
 			await this.messageLog.serve(async (txn) => {
-				const server = new Server(txn)
+				const server = new Server(this.messageLog.topic, txn)
 
 				await pipe(
 					stream.source,

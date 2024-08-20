@@ -4,6 +4,7 @@ import { equals } from "uint8arrays"
 
 import { Node, SyncSource, ReadOnlyTransaction } from "@canvas-js/okra"
 import { assert } from "@canvas-js/utils"
+import { CodeError } from "@libp2p/interface"
 
 /**
  * This differs from the sync function exported from @canvas-js/okra in three ways
@@ -13,11 +14,7 @@ import { assert } from "@canvas-js/utils"
  */
 export class Driver {
 	private readonly log: Logger
-	constructor(
-		topic: string,
-		private readonly source: SyncSource,
-		private readonly target: ReadOnlyTransaction,
-	) {
+	constructor(topic: string, private readonly source: SyncSource, private readonly target: ReadOnlyTransaction) {
 		this.log = logger(`canvas:gossiplog:[${topic}]:driver`)
 	}
 
@@ -70,7 +67,7 @@ export class Driver {
 	}
 
 	private async *syncNode(sourceNode: Node): AsyncGenerator<Uint8Array[]> {
-		const targetNode = await this.target.getNode(sourceNode.level, sourceNode.key)
+		const targetNode = this.target.getNode(sourceNode.level, sourceNode.key)
 		if (targetNode !== null) {
 			if (targetNode.level === sourceNode.level && equals(targetNode.hash, sourceNode.hash)) {
 				return
@@ -91,7 +88,7 @@ export class Driver {
 
 				assert(level === 0, "unexpected leaf level")
 
-				const leaf = await this.target.getNode(0, key)
+				const leaf = this.target.getNode(0, key)
 				if (leaf === null) {
 					keys.push(key)
 				} else if (equals(hash, leaf.hash)) {
@@ -100,6 +97,10 @@ export class Driver {
 					this.log.error("conflict at key %s", hex(key))
 					this.log.error("- target hash: %s", hex(leaf.hash))
 					this.log.error("+ source hash: %s", hex(hash))
+					throw new CodeError("conflicting values for key", "CONFLICT", {
+						source: { level, key, hash },
+						target: leaf,
+					})
 				}
 			}
 
@@ -107,6 +108,7 @@ export class Driver {
 				yield keys
 			} catch (err) {
 				this.log.error("failed to process batch: %O", err)
+				throw err
 			}
 		}
 	}

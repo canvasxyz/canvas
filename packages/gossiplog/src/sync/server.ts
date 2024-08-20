@@ -1,13 +1,13 @@
-import type { Uint8ArrayList } from "uint8arraylist"
+import { Uint8ArrayList } from "uint8arraylist"
 
-import { logger } from "@libp2p/logger"
+import { Logger, logger } from "@libp2p/logger"
 
 import { assert } from "@canvas-js/utils"
 
 import * as Sync from "#protocols/sync"
 
 import { SyncServer } from "../interface.js"
-import { encodeNode } from "./utils.js"
+import { decodeKey, encodeNode } from "./utils.js"
 
 export async function* encodeResponses(responses: AsyncIterable<Sync.Response>): AsyncIterable<Uint8Array> {
 	for await (const res of responses) {
@@ -25,9 +25,11 @@ export async function* decodeRequests(
 }
 
 export class Server {
-	readonly log = logger("canvas:sync:server")
+	private readonly log: Logger
 
-	constructor(readonly source: SyncServer) {}
+	constructor(topic: string, readonly source: SyncServer) {
+		this.log = logger(`canvas:gossiplog:[${topic}]:server`)
+	}
 
 	public async *handle(reqs: AsyncIterable<Sync.Request>): AsyncIterable<Sync.Response> {
 		for await (const req of reqs) {
@@ -37,7 +39,7 @@ export class Server {
 			} else if (req.getNode !== undefined) {
 				const { level, key } = req.getNode
 				assert(level !== null && level !== undefined, "missing level in getNode request")
-				const node = await this.source.getNode(level, key ?? null)
+				const node = await this.source.getNode(level, decodeKey(key))
 				if (node === null) {
 					yield { getNode: {} }
 				} else {
@@ -46,7 +48,7 @@ export class Server {
 			} else if (req.getChildren !== undefined) {
 				const { level, key } = req.getChildren
 				assert(level !== null && level !== undefined, "missing level in getChildren request")
-				const children = await this.source.getChildren(level, key ?? null)
+				const children = await this.source.getChildren(level, decodeKey(key))
 				yield { getChildren: { children: children.map(encodeNode) } }
 			} else if (req.getValues !== undefined) {
 				const { keys } = req.getValues

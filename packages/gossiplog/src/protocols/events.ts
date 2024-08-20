@@ -4,7 +4,7 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-boolean-literal-compare */
 /* eslint-disable @typescript-eslint/no-empty-interface */
 
-import { type Codec, CodeError, decodeMessage, type DecodeOptions, encodeMessage, message } from 'protons-runtime'
+import { type Codec, decodeMessage, type DecodeOptions, encodeMessage, MaxLengthError, message } from 'protons-runtime'
 import { alloc as uint8ArrayAlloc } from 'uint8arrays/alloc'
 import type { Uint8ArrayList } from 'uint8arraylist'
 
@@ -122,7 +122,7 @@ export namespace Event {
             switch (tag >>> 3) {
               case 1: {
                 if (opts.limits?.heads != null && obj.heads.length === opts.limits.heads) {
-                  throw new CodeError('decode error - map field "heads" had too many elements', 'ERR_MAX_LENGTH')
+                  throw new MaxLengthError('Decode error - map field "heads" had too many elements')
                 }
 
                 obj.heads.push(reader.bytes())

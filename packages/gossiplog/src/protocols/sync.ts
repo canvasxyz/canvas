@@ -4,13 +4,13 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-boolean-literal-compare */
 /* eslint-disable @typescript-eslint/no-empty-interface */
 
-import { type Codec, CodeError, decodeMessage, type DecodeOptions, encodeMessage, message } from 'protons-runtime'
+import { type Codec, decodeMessage, type DecodeOptions, encodeMessage, MaxLengthError, message } from 'protons-runtime'
 import { alloc as uint8ArrayAlloc } from 'uint8arrays/alloc'
 import type { Uint8ArrayList } from 'uint8arraylist'
 
 export interface Node {
   level: number
-  key: Uint8Array
+  key?: Uint8Array
   hash: Uint8Array
 }
 
@@ -29,7 +29,7 @@ export namespace Node {
           w.uint32(obj.level)
         }
 
-        if ((obj.key != null && obj.key.byteLength > 0)) {
+        if (obj.key != null) {
           w.uint32(18)
           w.bytes(obj.key)
         }
@@ -45,7 +45,6 @@ export namespace Node {
       }, (reader, length, opts = {}) => {
         const obj: any = {
           level: 0,
-          key: uint8ArrayAlloc(0),
           hash: uint8ArrayAlloc(0)
         }
 
@@ -147,7 +146,7 @@ export namespace Request {
 
   export interface GetNodeRequest {
     level: number
-    key: Uint8Array
+    key?: Uint8Array
   }
 
   export namespace GetNodeRequest {
@@ -165,7 +164,7 @@ export namespace Request {
             w.uint32(obj.level)
           }
 
-          if ((obj.key != null && obj.key.byteLength > 0)) {
+          if (obj.key != null) {
             w.uint32(18)
             w.bytes(obj.key)
           }
@@ -175,8 +174,7 @@ export namespace Request {
           }
         }, (reader, length, opts = {}) => {
           const obj: any = {
-            level: 0,
-            key: uint8ArrayAlloc(0)
+            level: 0
           }
 
           const end = length == null ? reader.len : reader.pos + length
@@ -218,7 +216,7 @@ export namespace Request {
 
   export interface GetChildrenRequest {
     level: number
-    key: Uint8Array
+    key?: Uint8Array
   }
 
   export namespace GetChildrenRequest {
@@ -236,7 +234,7 @@ export namespace Request {
             w.uint32(obj.level)
           }
 
-          if ((obj.key != null && obj.key.byteLength > 0)) {
+          if (obj.key != null) {
             w.uint32(18)
             w.bytes(obj.key)
           }
@@ -246,8 +244,7 @@ export namespace Request {
           }
         }, (reader, length, opts = {}) => {
           const obj: any = {
-            level: 0,
-            key: uint8ArrayAlloc(0)
+            level: 0
           }
 
           const end = length == null ? reader.len : reader.pos + length
@@ -324,7 +321,7 @@ export namespace Request {
             switch (tag >>> 3) {
               case 1: {
                 if (opts.limits?.keys != null && obj.keys.length === opts.limits.keys) {
-                  throw new CodeError('decode error - map field "keys" had too many elements', 'ERR_MAX_LENGTH')
+                  throw new MaxLengthError('Decode error - map field "keys" had too many elements')
                 }
 
                 obj.keys.push(reader.bytes())
@@ -606,7 +603,7 @@ export namespace Response {
             switch (tag >>> 3) {
               case 1: {
                 if (opts.limits?.children != null && obj.children.length === opts.limits.children) {
-                  throw new CodeError('decode error - map field "children" had too many elements', 'ERR_MAX_LENGTH')
+                  throw new MaxLengthError('Decode error - map field "children" had too many elements')
                 }
 
                 obj.children.push(Node.codec().decode(reader, reader.uint32(), {
@@ -674,7 +671,7 @@ export namespace Response {
             switch (tag >>> 3) {
               case 1: {
                 if (opts.limits?.values != null && obj.values.length === opts.limits.values) {
-                  throw new CodeError('decode error - map field "values" had too many elements', 'ERR_MAX_LENGTH')
+                  throw new MaxLengthError('Decode error - map field "values" had too many elements')
                 }
 
                 obj.values.push(reader.bytes())

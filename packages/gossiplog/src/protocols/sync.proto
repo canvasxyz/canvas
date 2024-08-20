@@ -2,7 +2,7 @@ syntax = "proto3";
 
 message Node {
   uint32 level = 1;
-  bytes key = 2;
+  optional bytes key = 2;
   bytes hash = 3;
 }
 
@@ -11,12 +11,12 @@ message Request {
 
   message GetNodeRequest {
     uint32 level = 1;
-    bytes key = 2;
+    optional bytes key = 2;
   }
 
   message GetChildrenRequest {
     uint32 level = 1;
-    bytes key = 2;
+    optional bytes key = 2;
   }
 
   message GetValuesRequest {
