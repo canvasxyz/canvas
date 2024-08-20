@@ -1,7 +1,7 @@
 {
 	"private": true,
 	"name": "@canvas-js/relay-server",
-	"version": "0.10.6",
+	"version": "0.10.7",
 	"type": "module",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"main": "lib/index.js",
@@ -17,7 +17,7 @@
 		"./libp2p": "./lib/libp2p.js"
 	},
 	"dependencies": {
-		"@canvas-js/discovery": "0.10.6",
+		"@canvas-js/discovery": "0.10.7",
 		"@chainsafe/libp2p-noise": "^15.1.1",
 		"@chainsafe/libp2p-yamux": "^6.0.2",
 		"@ipld/dag-cbor": "^9.2.1",

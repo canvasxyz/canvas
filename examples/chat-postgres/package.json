@@ -1,6 +1,6 @@
 {
 	"name": "@canvas-js/chat-postgres",
-	"version": "0.10.6",
+	"version": "0.10.7",
 	"type": "module",
 	"private": true,
 	"scripts": {
@@ -10,10 +10,10 @@
 		"lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
 	},
 	"dependencies": {
-		"@canvas-js/chain-ethereum": "0.10.6",
-		"@canvas-js/client": "0.10.6",
-		"@canvas-js/core": "0.10.6",
-		"@canvas-js/utils": "0.10.6",
+		"@canvas-js/chain-ethereum": "0.10.7",
+		"@canvas-js/client": "0.10.7",
+		"@canvas-js/core": "0.10.7",
+		"@canvas-js/utils": "0.10.7",
 		"@ipld/dag-json": "^10.2.2",
 		"express": "^4.19.2",
 		"next": "14.1.4",
