@@ -1,6 +1,6 @@
 {
 	"name": "@canvas-js/signatures",
-	"version": "0.10.7",
+	"version": "0.10.8",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"type": "module",
 	"engines": {
@@ -23,8 +23,8 @@
 		"test": "ava"
 	},
 	"dependencies": {
-		"@canvas-js/interfaces": "0.10.7",
-		"@canvas-js/utils": "0.10.7",
+		"@canvas-js/interfaces": "0.10.8",
+		"@canvas-js/utils": "0.10.8",
 		"@ipld/dag-cbor": "^9.2.1",
 		"@ipld/dag-json": "^10.2.2",
 		"@libp2p/logger": "^4.0.16",
