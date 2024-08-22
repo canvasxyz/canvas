@@ -60,7 +60,7 @@ jobs:
           POSTGRES_PORT: 5432
 
       - name: Run @canvas-js/gossiplog tests
-        run: npm run test --workspace=@canvas-js/gossiplog --match="\!simulate a randomly partitioned network, logs on postgres"
+        run: npm run test --workspace=@canvas-js/gossiplog
         env:
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
