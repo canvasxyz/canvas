@@ -24,7 +24,7 @@ that calls `node ${PWD}/packages/cli/index.js $@`.
 Note that if you are using system Node, writing to /usr/local/bin/canvas
 will require sudo. In that case, you should install
 [NVM](https://github.com/nvm-sh/nvm#installing-and-updating) and set your
-default Node with `nvm alias default v18`.
+default Node with `nvm alias default v20`.
 
 ### Publishing to NPM
 
