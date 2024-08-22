@@ -60,9 +60,11 @@ export function isNotExpression(expr: PropertyValue | NotExpression | RangeExpre
 export function isRangeExpression(expr: PropertyValue | NotExpression | RangeExpression): expr is RangeExpression {
 	if (isLiteralExpression(expr)) {
 		return false
+	} else if ("neq" in expr) {
+		return false
+	} else {
+		return true
 	}
-
-	return "gt" in expr || "gte" in expr || "lt" in expr || "lte" in expr
 }
 
 interface Order {
