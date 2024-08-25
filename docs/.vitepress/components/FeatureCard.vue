@@ -42,10 +42,10 @@ defineProps<{
         <div v-if="link || soon" class="link-text">
           <p class="link-text-value">
             <a v-if="link" :href="link" target="blank">
-              {{ linkText || 'Link' }} <span class="external-link">↗</span>
+              {{ linkText || 'Link' }}&nbsp;<span class="external-link">↗</span>
             </a>
             <a v-if="secondaryLink" :href="secondaryLink" target="blank">
-              {{ secondaryLinkText || 'Link' }} <span class="external-link">↗</span>
+              {{ secondaryLinkText || 'Link' }}&nbsp;<span class="external-link">↗</span>
             </a>
             <span v-if="soon" class="soon-text">
               {{ soon }}
@@ -68,6 +68,11 @@ defineProps<{
   box-shadow: 0px 1px 4px rgba(0, 0, 0, 0.07)
 }
 
+.FeatureCard p {
+  margin: 0;
+  text-align: left;
+}
+
 .FeatureCard.link:hover {
   border-color: var(--vp-c-brand-1);
 }
@@ -75,6 +80,7 @@ defineProps<{
 .VPContent.is-home .FeatureCard h2 {
   font-family: var(--vp-font-family-base);
   letter-spacing: 0.1px;
+  margin-bottom: 2px;
 }
 
 .box {

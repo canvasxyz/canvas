@@ -20,7 +20,6 @@ defineProps<{
 <style>
 .FeatureRow {
   position: relative;
-  padding: 30px 24px;
 }
 
 .FeatureRow h1 {
@@ -31,7 +30,7 @@ defineProps<{
   text-align: center;
 }
 
-.FeatureRow .detail {
+.FeatureRow .details {
   margin: 0 auto 40px;
   max-width: 640px;
   color: var(--vp-c-text-2);
@@ -40,13 +39,11 @@ defineProps<{
 
 @media (min-width: 640px) {
   .FeatureRow {
-    padding: 30px 48px;
   }
 }
 
 @media (min-width: 960px) {
   .FeatureRow {
-    padding: 30px 64px;
   }
 }
 

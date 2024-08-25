@@ -69,19 +69,23 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 <style scoped>
 .HeroRow {
   margin-top: calc((var(--vp-nav-height) + var(--vp-layout-top-height, 0px)) * -1);
-  padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 48px) 24px 48px;
+  padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 48px) 0 32px;
 }
 
 @media (min-width: 640px) {
   .HeroRow {
-    padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 100px) 48px 64px;
+    padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 100px) 0 32px;
   }
 }
 
 @media (min-width: 960px) {
   .HeroRow {
-    padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 100px) 64px 64px;
+    padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 100px) 0 36px;
   }
+}
+
+.HeroRow p {
+  max-width: none !important;
 }
 
 .HeroRow .actions {
@@ -127,7 +131,7 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
   }
 
   .HeroRow.has-image .main {
-    max-width: 560px;
+    max-width: 660px;
   }
 }
 
@@ -248,7 +252,7 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 
 @media (min-width: 640px) {
   .actions {
-    padding-top: 20px;
+    padding-top: 54px;
   }
 }
 
@@ -345,17 +349,17 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 
 @media (min-width: 640px) {
   :deep(.image-src) {
-    max-width: 256px;
-    max-height: 256px;
+    max-width: 240px;
+    max-height: 240px;
+    padding-bottom: 20px;
   }
 }
 
 @media (min-width: 960px) {
   :deep(.image-src) {
-    max-width: 320px;
-    max-height: 320px;
-    transform: translate(-50%, -50%) scale(1.5);
-    margin-top: 45px;
+    max-width: 240px;
+    max-height: 240px;
+    transform: translate(40px, 160px) translate(-50%, -50%) scale(1.5);
   }
 }
 

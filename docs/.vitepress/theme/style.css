@@ -97,6 +97,43 @@ pre {
   background-color: var(--vp-c-bg-home);
 }
 
+.VPContent.is-home .vp-doc {
+  font-size: 106%;
+  line-height: 1.5;
+}
+
+.VPContent.is-home .vp-doc {
+  margin: 0 auto;
+  max-width: 1020px;
+}
+
+.VPContent.is-home .vp-doc p,
+.VPContent.is-home .vp-doc ul,
+.VPContent.is-home .vp-doc ol {
+  max-width: 560px;
+}
+
+@media (max-width: 959px) {
+  .VPContent.is-home .vp-doc p,
+  .VPContent.is-home .vp-doc ul,
+  .VPContent.is-home .vp-doc ol {
+    margin-right: auto;
+    margin-left: auto;
+  }
+}
+
+.VPContent.is-home .vp-doc code {
+  line-height: 1.48;
+}
+
+.VPContent.is-home .vp-doc div[class*='language-'] {
+  margin: 40px 0;
+}
+
+.VPContent.is-home .vp-doc div[class*='language-'] + div[class*='language-'] {
+  margin-top: -20px;
+}
+
 .VPContent.is-home .named-fence-block {
   position: relative;
   display: block;
