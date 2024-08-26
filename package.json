@@ -57,7 +57,7 @@
 		"typescript": "^5.4.5",
 		"veaury": "^2.4.0",
 		"vite": "^5.3.3",
-		"vitepress": "^1.2.3",
+		"vitepress": "^1.3.4",
 		"vue": "^3.3.7",
 		"vue-markdown-render": "^2.2.1"
 	},

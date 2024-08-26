@@ -46,7 +46,7 @@ with each other, server-to-server or server-to-browser. [^1]
 [^1]: For example, if we both ran the same open-source application
 backed by Canvas on different servers, our applications would sync
 with each other. Applications in the browser can also sync to a server,
-but that's useful for other uses, like realtime chat and games.
+but many other systems already support that.
 
 We also handle reconciliation, to guarantee that actions
 execute exactly the same, whenever or wherever they're received. [^2]
@@ -91,7 +91,7 @@ For document-oriented, directory-like, or social applications,
 writing a Canvas application is mostly like writing a
 regular TypeScript application.
 
-## Reconciling History
+## Merging History
 
 Each Canvas application executes over a distributed log. By default,
 anyone can add branches to any point in the log, and different nodes
