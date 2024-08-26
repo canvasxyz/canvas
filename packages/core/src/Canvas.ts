@@ -2,6 +2,7 @@ import { Libp2p, PeerId, TypedEventEmitter, CustomEvent } from "@libp2p/interfac
 import { logger } from "@libp2p/logger"
 import { sha256 } from "@noble/hashes/sha2"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
+import { multiaddr } from "@multiformats/multiaddr"
 
 import type pg from "pg"
 
@@ -16,6 +17,7 @@ import target from "#target"
 import type { Contract, ActionImplementationFunction, ActionImplementationObject } from "./types.js"
 import { Runtime, createRuntime } from "./runtime/index.js"
 import { validatePayload } from "./schema.js"
+import { peerIdFromString } from "@libp2p/peer-id"
 
 export type { Model } from "@canvas-js/modeldb"
 export type { PeerId } from "@libp2p/interface"
@@ -97,9 +99,25 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 
 		runtime.db = messageLog.db
 
-		const libp2p = await target.createLibp2p(config)
+		const bootstrapURLs: string[] = []
+		const bootstrapMultiaddrs: string[] = []
+		for (const addr of config.bootstrapList ?? []) {
+			if (addr.startsWith("/")) {
+				bootstrapMultiaddrs.push(addr)
+			} else {
+				bootstrapURLs.push(addr)
+			}
+		}
+
+		const libp2p = await target.createLibp2p({ ...config, bootstrapList: bootstrapMultiaddrs })
 		if (libp2p.status === "started") {
 			await messageLog.listen(libp2p)
+
+			bootstrapURLs.forEach(async (url) => {
+				const res = await fetch(`${url}/api`)
+				const data: ApplicationData = await res.json()
+				libp2p.dial(data.addrs.map((addr) => multiaddr(addr)))
+			})
 		} else {
 			libp2p.addEventListener("start", () => messageLog.listen(libp2p), { once: true })
 		}

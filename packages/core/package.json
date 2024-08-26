@@ -44,6 +44,7 @@
 		"@libp2p/interface": "^1.7.0",
 		"@libp2p/logger": "^4.0.16",
 		"@libp2p/peer-id": "^4.2.0",
+		"@multiformats/multiaddr": "^12.3.0",
 		"@noble/hashes": "^1.4.0",
 		"@types/express": "^4.17.21",
 		"@types/ws": "^8.5.10",
