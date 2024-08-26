@@ -179,6 +179,9 @@ export async function handler(args: Args) {
 
 	console.log(`${chalk.gray("[canvas] Starting app on topic")} ${chalk.whiteBright(app.topic)}`)
 	console.log(chalk.gray(`[canvas] Using PeerId ${app.peerId.toString()}`))
+	for (const addr of listen) {
+		console.log(chalk.gray(`[canvas] Listening on ${addr}/p2p/${app.peerId.toString()}`))
+	}
 
 	app.libp2p.addEventListener("connection:open", ({ detail: connection }) => {
 		const peer = connection.remotePeer.toString()
