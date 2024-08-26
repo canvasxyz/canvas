@@ -42,7 +42,9 @@ messageLog.addEventListener("commit", ({ detail: { root } }) => {
 	socket.post("gossiplog:commit", { topic, root: `${root.level}:${bytesToHex(root.hash)}` })
 })
 
-messageLog.addEventListener("sync", (event) => console.log(`completed sync with ${event.detail.peerId}`))
+messageLog.addEventListener("sync", ({ detail: { peerId, duration, messageCount } }) =>
+	console.log(`completed sync with ${peerId} (${messageCount} messages in ${duration}ms)`),
+)
 
 libp2p.addEventListener("start", async () => {
 	console.log("libp2p started")

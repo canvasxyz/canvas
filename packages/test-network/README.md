@@ -1,15 +1,15 @@
 # @canvas-js/test-network
 
-Build the dashboard client bundle
+Build the dashboard client bundles
 
 ```
-$ npm run build
+$ npm run dev
 ```
 
 Then start the simulation
 
 ```
-$ docker-compose up --build
+$ docker compose rm -f && docker compose up --build
 ```
 
 Then open the dashboard at http://localhost:8000
@@ -19,5 +19,5 @@ To open a browser peer manually, open http://localhost:8000/peer-browser/index.h
 To spawn several browser peers, run
 
 ```
-$ ./spawn.sh 3
+$ ./spawn.sh
 ```
