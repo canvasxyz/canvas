@@ -44,8 +44,6 @@ To avoid this, you can use merge functions, which will make it so that edits on 
 
 ## Using merge functions
 
-_We're still implementing this functionality, and it's not available yet._
-
 To resolve conflicts, we allow users to provide a custom conflict-resolution function called a merge function.
 
 Here's an example that implements [Last-Write-Wins](https://en.wikipedia.org/wiki/Eventual_consistency#Conflict_resolution) based on the clock value of the actions, like we do by default:
@@ -89,7 +87,7 @@ You can also implement simple CRDTs, like this set union/grow-only set:
 const models = {
   collections: {
     id: "primary",
-    objects: "string", // TODO: use 'json' type
+    objects: "json",
     $merge: ({ id, objects }, { objects: objects2 }) => {
       const merged = new Set(JSON.parse(objects).concat(JSON.parse(objects2)))
       return { id, objects: JSON.stringify([...merged.values()]) }
@@ -250,48 +248,6 @@ Canvas applications can run over both WebSockets and browser-to-browser WebRTC, 
 WebRTC is currently disabled by default, unless you set `enableWebRTC: true`.
 
 This means that your application will need a WebSocket server, e.g. an instance of your application running in Node.js or the Canvas CLI, or on a server hosted by someone else.
-
-## Configuring universal replication servers
-
-Instead of running your own WebSocket server, you can use a universal replication server.
-
-Universal replication servers are configured to replicate **groups of applications** that connect to them, and will replicate **any action** sent to them. They can be used as a backend for fleets of chat rooms, direct messages, minigames, etc.
-
-Each universal replication server is configured with a specific discovery topic, a meta-topic that coordinates presence and peer discovery across applications.
-
-We provide a set of universal replication servers for the `canvas-discovery` topic, at `canvas-chat-discovery-p0.fly.dev`, `canvas-chat-discovery-p1.fly.dev`, and `canvas-chat-discovery-p2.fly.dev` with fixed peer IDs.
-
-| server                           | multiaddr                                                                                                   |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| canvas-chat-discovery-p0.fly.dev | /dns4/canvas-chat-discovery-p0.fly.dev/tcp/443/wss/p2p/12D3KooWG1zzEepzv5ib5Rz16Z4PXVfNRffXBGwf7wM8xoNAbJW7 |
-| canvas-chat-discovery-p1.fly.dev | /dns4/canvas-chat-discovery-p1.fly.dev/tcp/443/wss/p2p/12D3KooWNfH4Z4ayppVFyTKv8BBYLLvkR1nfWkjcSTqYdS4gTueq |
-| canvas-chat-discovery-p2.fly.dev | /dns4/canvas-chat-discovery-p2.fly.dev/tcp/443/wss/p2p/12D3KooWRBdFp5T1fgjWdPSCf9cDqcCASMBgcLqjzzBvptjAfAxN |
-
-You are free to use them for whatever you wish -- they are labeled as chat discovery servers because we intend for them to be used for short-lived chat rooms.
-
-If we reboot or reset these servers, we will stagger when reboots happen across the servers, so no interruptions occur to active chat sessions.
-
-You can use them by adding them to your bootstrap nodes:
-
-```ts
-import { defaultBootstrapList } from "@canvas-js/core"
-import { useCanvas } from "@canvas-js/hooks"
-
-const { app } = useCanvas({
-  topic: "my-app-room-x",
-  contract: {
-    // models: ...
-    // actions: ...
-  },
-  discoveryTopic: "canvas-discovery",
-  bootstrapList: [
-    "/dns4/canvas-chat-discovery-p0.fly.dev/tcp/443/wss/p2p/12D3KooWG1zzEepzv5ib5Rz16Z4PXVfNRffXBGwf7wM8xoNAbJW7",
-    "/dns4/canvas-chat-discovery-p1.fly.dev/tcp/443/wss/p2p/12D3KooWNfH4Z4ayppVFyTKv8BBYLLvkR1nfWkjcSTqYdS4gTueq",
-    "/dns4/canvas-chat-discovery-p2.fly.dev/tcp/443/wss/p2p/12D3KooWRBdFp5T1fgjWdPSCf9cDqcCASMBgcLqjzzBvptjAfAxN",
-    ...defaultBootstrapList,
-  ],
-})
-```
 
 ## Debugging
 

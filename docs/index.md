@@ -2,7 +2,7 @@
 layout: home
 ---
 
-<HeroRow text="The runtime for distributed TypeScript applications" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }">
+<HeroRow text="Write distributed TypeScript applications" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }">
   <HeroAction theme="brand big" text="Guide" href="/1-introduction" />
   <HeroAction theme="brand big" text="Blog" href="/blog" />
   <HeroAction theme="alt big" text="API Docs" href="/readme-core" />
