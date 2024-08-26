@@ -74,30 +74,23 @@ into your browser.
 Unlike blockchain-based distributed applications, Canvas applications have
 somewhat different properties:
 
-* **TypeScript-based**: Write action calls in TypeScript.
-  Build on millions of packages from NPM & Github.
 * **No crypto required**. For building apps, not launching tokens.
+* **TypeScript-based**: Use millions of packages from NPM & Github.
 * **Realtime multiplayer**: Actions sync in real time. If you're
-  familiar with Figma, Notion, or Google Docs' multiplayer capabilities,
+  familiar with Figma or Google Docs' multiplayer system,
   Canvas gives you similar capabilities.
 * **Unlimited throughput**. Applications run as fast as your server,
   without waiting for consensus.
 * **Define your own conflict resolution**. When multiple users
-  update the database concurrently, you can define custom conflict
-  resolution strategies (e.g. CRDTs, surface conflicts to the user).
-  By default, recent writes overwrite earlier ones.
-* **Consensus not included**. You define how to finalize actions.
+  update the database concurrently, by default, recent writes overwrite
+  earlier ones. You can also define custom conflict resolution
+  strategies (e.g. CRDTs, surface conflicts to the user).
 
 For document-oriented, directory-like, or social applications,
-most of these concerns are easy to work around.
-
-For decentralized financial applications, consider using Canvas in
-conjunction with a blockchain.
+writing a Canvas application is mostly like writing a
+regular TypeScript application.
 
 ## Reconciling History
-
-There are a few unique concerns that appear when you make an application
-a distributed system.
 
 Each Canvas application executes over a distributed log. By default,
 anyone can add branches to any point in the log, and different nodes
@@ -135,8 +128,8 @@ developed peer-to-peer infrastructure at Protocol Labs, and worked at
 companies like AngelList, Notion, and Medium in the early days.
 
 We are building the infrastructure that we wish existed for our previous
-projects, and building a runtime that can make developing decentralized and
-distributed systems accessible to ordinary programmers.
+projects, building a runtime to make decentralized and distributed systems
+accessible to ordinary programmers.
 
 <br/>
 
