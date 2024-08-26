@@ -1,8 +1,15 @@
 # Querying the database
 
-You can only write to the database inside an action handler, but you can query it outside action handlers by using `app.db.get("model")`, `app.db.query("model")`, or `useLiveQuery` for live-updating data.
+The `Canvas` application object exposes its database at `app.db`:
 
-## Getting individual records
+```ts
+const app = await Canvas.initialize(...)
+await app.db.get("posts", postId)
+```
+
+You can query the database outside action handlers by using `app.db.get`, `app.db.query`, or `useLiveQuery` for live-updating data.
+
+## Getting records
 
 All database models have a primary key, defined in the model schema using the `"primary"` type. You can look up individual records by primary key using `app.db.get`.
 
@@ -35,7 +42,7 @@ await app.db.get("posts", idA)
 // }
 ```
 
-## More expressive queries
+## Querying records
 
 The `app.db.query` method supports more expressive queries, including `select`, `where`, `orderBy`, `limit`, and `offset` clauses. `json` fields cannot be referenced in `where` or `orderBy` clauses.
 
@@ -109,7 +116,7 @@ const results = await app.db.query("posts", {
 // ]
 ```
 
-## Subscribing to live queries in React
+## Live queries in React
 
 You can also subscribe to queries in the browser using the `useLiveQuery` hook exported from `@canvas-js/hooks`.
 

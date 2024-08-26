@@ -39,15 +39,15 @@ export default defineConfig({
 			}),
 			"/": [
 				{
-					text: "Tutorial",
+					text: "Guide",
 					items: [
 						{ text: "Introduction", link: "/1-introduction" },
-						{ text: "Contracts", link: "/2-contracts" },
-						{ text: "Actions", link: "/3-actions" },
-						{ text: "Authentication", link: "/4-authentication" },
-						{ text: "Querying", link: "/5-querying" },
+						{ text: "Creating an Application", link: "/2-applications" },
+						{ text: "Querying the Database", link: "/3-querying" },
+						{ text: "Wallet Login", link: "/4-wallet-login" },
+						{ text: "🚧 &nbsp;OAuth Login", link: "/5-oauth-login" },
 						{ text: "🚧 &nbsp;Deployment", link: "/6-deployment" },
-						{ text: "Networking", link: "/7-networking" },
+						{ text: "🚧 &nbsp;Networking", link: "/7-networking" },
 						{
 							text: "Advanced Features",
 							link: "/8-advanced",

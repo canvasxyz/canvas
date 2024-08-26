@@ -1,4 +1,4 @@
-# Authentication
+# Wallet Login
 
 We want end users to authenticate with public-key identities, but it’s not always practical to prompt the user for a signature on every interaction. As a result, Canvas applications are initialized with **session signers**, which define different ways that users can authenticate themselves.
 

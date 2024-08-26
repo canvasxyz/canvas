@@ -50,6 +50,7 @@
   --space-font-family: "Space Mono", "Geist", -apple-system, BlinkMacSystemFont, Inter, sans-serif;
   --vp-font-family-base: "Geist", -apple-system, BlinkMacSystemFont, Inter, sans-serif;
   --vp-font-family-mono: "Geist Mono", ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  --vp-code-line-height: 1.48;
   --vp-c-text-1: rgba(72, 72, 79);
   --vp-c-text-2: #67666a;
   --vp-c-gutter-alt: #5672cd;
@@ -120,6 +121,10 @@ pre {
   max-width: 1020px;
 }
 
+.VPContent .vp-doc p + h1 {
+  margin-top: 48px;
+}
+
 .VPContent.is-home .vp-doc p + h1,
 .VPContent.is-home .vp-doc p + h2 {
   margin-top: 48px;
@@ -150,10 +155,6 @@ pre {
     margin-right: auto;
     margin-left: auto;
   }
-}
-
-.VPContent.is-home .vp-doc code {
-  line-height: 1.48;
 }
 
 .VPContent.is-home .vp-doc div[class*='language-'] {
