@@ -83,6 +83,14 @@ pre {
   tab-size: 2;
 }
 
+.vp-doc .footnote-ref a,
+.vp-doc a.footnote-backref {
+  color: var(--vp-c-text-3);
+}
+.vp-doc .footnote-ref a:hover,
+.vp-doc a.footnote-backref:hover {
+  color: var(--vp-c-text-2);
+}
 .vp-doc p {
   line-height: inherit;
 }
@@ -102,21 +110,43 @@ pre {
   line-height: 1.5;
 }
 
+.VPContent.is-home .vp-doc .footnotes {
+  font-size: 94%;
+  line-height: 1.4;
+}
+
 .VPContent.is-home .vp-doc {
   margin: 0 auto;
   max-width: 1020px;
 }
 
-.VPContent.is-home .vp-doc p,
-.VPContent.is-home .vp-doc ul,
-.VPContent.is-home .vp-doc ol {
+.VPContent.is-home .vp-doc p + h1,
+.VPContent.is-home .vp-doc p + h2 {
+  margin-top: 48px;
+}
+
+.VPContent.is-home .vp-doc > div > div > h1,
+.VPContent.is-home .vp-doc > div > div > h2,
+.VPContent.is-home .vp-doc > div > div > h3,
+.VPContent.is-home .vp-doc > div > div > h4,
+.VPContent.is-home .vp-doc > div > div > h5,
+.VPContent.is-home .vp-doc > div > div > h6,
+.VPContent.is-home .vp-doc > div > div > p,
+.VPContent.is-home .vp-doc > div > div > ul,
+.VPContent.is-home .vp-doc > div > div > ol {
   max-width: 560px;
 }
 
 @media (max-width: 959px) {
-  .VPContent.is-home .vp-doc p,
-  .VPContent.is-home .vp-doc ul,
-  .VPContent.is-home .vp-doc ol {
+  .VPContent.is-home .vp-doc > div > div > h1,
+  .VPContent.is-home .vp-doc > div > div > h2,
+  .VPContent.is-home .vp-doc > div > div > h3,
+  .VPContent.is-home .vp-doc > div > div > h4,
+  .VPContent.is-home .vp-doc > div > div > h5,
+  .VPContent.is-home .vp-doc > div > div > h6,
+  .VPContent.is-home .vp-doc > div > div > p,
+  .VPContent.is-home .vp-doc > div > div > ul,
+  .VPContent.is-home .vp-doc > div > div > ol {
     margin-right: auto;
     margin-left: auto;
   }
@@ -233,6 +263,10 @@ pre {
 
 .VPNavBar {
   background-color: var(--vp-c-bg-home) !important;
+}
+
+.VPNavBar .divider .divider-line {
+  transition: none !important;
 }
 
 .VPNavBar .content-body {

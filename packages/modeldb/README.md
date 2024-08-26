@@ -189,4 +189,4 @@ npm run test --workspace=@canvas-js/modeldb
 
 ## License
 
-MIT © 2023 Canvas Technologies, Inc.
+MIT © Canvas Technologies, Inc.

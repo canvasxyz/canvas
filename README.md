@@ -46,4 +46,4 @@ For information about how to build this repo, see DEVELOPING.md.
 
 ## License
 
-MIT © 2023 Canvas Technologies, Inc.
+MIT © Canvas Technologies, Inc.

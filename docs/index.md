@@ -2,7 +2,7 @@
 layout: home
 ---
 
-<HeroRow text="Distributed execution for TypeScript applications" :image="{ light: '/graphic_jellyfish.png', dark: '/graphic_jellyfish.png' }">
+<HeroRow text="The runtime for distributed TypeScript applications" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }">
   <HeroAction theme="brand big" text="Tutorial" href="/1-introduction" />
   <HeroAction theme="brand big" text="Blog" href="/blog" />
   <HeroAction theme="alt big" text="API Docs" href="/readme-core" />
@@ -12,8 +12,8 @@ Canvas is a runtime for writing distributed TypeScript applications,
 where each application is verifiable, interoperable, and syncs in realtime
 over the open web.
 
-A Canvas application defines a database, and a set of actions
-that work like React state transitions:
+A Canvas application is a state machine that defines a database, and a
+set of actions:
 
 ```ts
 export const models = {
@@ -35,13 +35,25 @@ $ canvas run contract.js
 Running on localhost:8000...
 ```
 
-Every application runs on top of a Git-like distributed log.
-Users' actions are applied wherever the local instance of the
-application is running (in the browser, or on a server).
+The database is translated to SQLite, IndexedDB, or Postgres
+depending on where the application is running.
 
-The framework handles reconciliation, to guarantee that actions
-execute exactly the same, whenever or wherever they're received.
-It also handles sync if you provide a WebSocket or libp2p address:
+Each application and its database timestamps its actions on a
+Git-like distributed log. Users' actions are applied to the
+local copy of the application, and application instances sync
+with each other, server-to-server or server-to-browser. [^1]
+
+[^1]: For example, if we both ran the same open-source application
+backed by Canvas on different servers, our applications would sync
+with each other.
+
+We also handle reconciliation, to guarantee that actions
+execute exactly the same, whenever or wherever they're received. [^2]
+
+[^2]: We do this by time-shifting actions, so they always read
+from the database as if they were running at the time they were created.
+This uses an *eventually-consistent memory* implementation inside
+the database.
 
 ```ts
 import { useCanvas } from "@canvas-js/hooks"
@@ -62,33 +74,41 @@ into your browser.
 Unlike blockchain-based distributed applications, Canvas applications have
 somewhat different properties:
 
-* **Realtime multiplayer**: Actions sync in real time. If you're
-familiar with Figma, Notion, or Google Docs' multiplayer capabilities,
-Canvas gives you similar capabilities.
-* **TypeScript-based**: Build on millions of packages from NPM & Github.
+* **TypeScript-based**: Write action calls in TypeScript.
+  Build on millions of packages from NPM & Github.
 * **No crypto required**. For building apps, not launching tokens.
-* **No consensus algorithm**. Developers define how they want to
-  handle consensus and actions from the past.
-* **Define your own conflict resolution**. When multiple writers
-  edit the database concurrently, you can define custom conflict
-  resolution strategies (e.g. CRDTs, or surface conflicts to the user).
+* **Realtime multiplayer**: Actions sync in real time. If you're
+  familiar with Figma, Notion, or Google Docs' multiplayer capabilities,
+  Canvas gives you similar capabilities.
 * **Unlimited throughput**. Applications run as fast as your server,
   without waiting for consensus.
+* **Define your own conflict resolution**. When multiple users
+  update the database concurrently, you can define custom conflict
+  resolution strategies (e.g. CRDTs, surface conflicts to the user).
+  By default, recent writes overwrite earlier ones.
+* **Consensus not included**. You define how to finalize actions.
 
-In general, it's appropriate for non-financial applications.
+For document-oriented, directory-like, or social applications,
+most of these concerns are easy to work around.
 
-### Reconciling History
+For decentralized financial applications, consider using Canvas in
+conjunction with a blockchain.
+
+## Reconciling History
+
+There are a few unique concerns that appear when you make an application
+a distributed system.
 
 Each Canvas application executes over a distributed log. By default,
 anyone can add branches to any point in the log, and different nodes
-might be appending to different branches of the log at any time:
+could append to different branches of the log at any time:
 
 ```
 ```
 
-When nodes diverge on their interpretation of history, new branches
-may be added anywhere in the history of the application, including in
-the past.
+If nodes diverge on their interpretation of history (e.g. if a node
+goes offline), new branches may be added anywhere in the history of
+the application, including in the past.
 
 To resolve this, we have a few options:
 
@@ -99,15 +119,30 @@ To resolve this, we have a few options:
 * Some applications may wish to run with a coordinator node. This
   means that other nodes will only peer with the coordinator. This
   lets you provide stronger guarantees against backdated actions, while
-  preserving the verifiable, interoperable backend.
+  preserving the open verifiability of the application.
 * Other applications may wish to use a timestamping service or
   data availability network to finalize actions. We're in
   touch with teams about making this possible.
 
+Moving between these levels of finality is technically straightforward,
+and we're building tools and hosted services to make it as easy as
+using tools like Github or Vercel.
+
+## About Canvas
+
+Canvas is built by a team that built Web3 tools used by 100k+ users,
+developed peer-to-peer infrastructure at Protocol Labs, and worked at
+companies like AngelList, Notion, and Medium in the early days.
+
+We are building the infrastructure that we wish existed for our previous
+projects, and building a runtime that can make developing decentralized and
+distributed systems accessible to ordinary programmers.
+
+<br/>
 
 <FeatureRow title="Components" detail="">
-  <FeatureCard title="@canvas-js/okra" details="A p2p-optimized Prolly tree that allows fast sync between ordered actions." link="https://github.com/canvasxyz/okra" linkText="Github" secondaryLink="https://docs.canvas.xyz/blog/2023-05-04-merklizing-the-key-value-store.html" secondaryLinkText="Blog Post"/>
-  <FeatureCard title="@canvas-js/gossiplog" details="A self-authenticating causal log for multi-writer applications." link="https://github.com/canvasxyz/canvas/tree/main/packages/gossiplog" linkText="Github" secondaryLinkText="Presentation" secondaryLink="https://www.youtube.com/watch?v=X8nAdx1G-Cs"/>
+  <FeatureCard title="@canvas-js/okra" details="A Prolly tree written in Zig, that enables fast peer-to-peer sync for action history logs." link="https://github.com/canvasxyz/okra" linkText="Github" secondaryLink="https://docs.canvas.xyz/blog/2023-05-04-merklizing-the-key-value-store.html" secondaryLinkText="Blog Post"/>
+  <FeatureCard title="@canvas-js/gossiplog" details="A self-authenticating distributed log for multi-writer applications." link="https://github.com/canvasxyz/canvas/tree/main/packages/gossiplog" linkText="Github" secondaryLinkText="Presentation" secondaryLink="https://www.youtube.com/watch?v=X8nAdx1G-Cs"/>
   <FeatureCard title="@canvas-js/modeldb" details="A cross-platform relational database wrapper for IndexedDB, SQLite, and Postgres." link="https://github.com/canvasxyz/canvas/tree/main/packages/modeldb" linkText="Github"/>
   <FeatureCard title="Sign in with Ethereum" details="Log in with an Ethereum wallet. Also supports Cosmos, Solana, and Polkadot." linkText="Demo" link="https://canvas-chat.pages.dev/"/>
   <FeatureCard title="Sign in with Bluesky" details="Log in with your decentralized identity from the Bluesky PLC network." linkText="Demo" link="https://canvas-chat.pages.dev/"/>
