@@ -45,7 +45,7 @@ const component = computed(() => {
   white-space: nowrap;
   transition: color 0.25s, border-color 0.25s, background-color 0.25s;
   margin: 0 6px;
-  font-family: --space-font-family;
+  font-family: var(--space-font-family);
 }
 a.HeroAction {
   text-decoration: none !important;
