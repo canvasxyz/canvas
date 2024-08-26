@@ -5,7 +5,7 @@ PROCESS_COUNT="${1:-1}"
 
 # Peers per process
 export PEER_COUNT="${2:-10}"
-export DELAY=100
+export DELAY=10
 
 echo "starting $PROCESS_COUNT processes of $PEER_COUNT peers"
 
