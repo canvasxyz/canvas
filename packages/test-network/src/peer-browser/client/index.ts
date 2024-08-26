@@ -2,15 +2,15 @@ import { peerIdFromString } from "@libp2p/peer-id"
 import { multiaddr } from "@multiformats/multiaddr"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 
-import Debugger from "debug"
+import Debugger from "weald"
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
 ;(Debugger as any).useColors = () => false
 
 import { GossipLog } from "@canvas-js/gossiplog/idb"
-import { getLibp2p, defaultRelayServer } from "@canvas-js/gossiplog/libp2p/browser-webrtc"
-// import { defaultRelayServer } from "@canvas-js/gossiplog/libp2p/browser-webrtc"
-// import { getLibp2p } from "@canvas-js/gossiplog/libp2p/browser"
+// import { getLibp2p, defaultRelayServer } from "@canvas-js/gossiplog/libp2p/browser-webrtc"
+import { defaultRelayServer } from "@canvas-js/gossiplog/libp2p/browser-webrtc"
+import { getLibp2p } from "@canvas-js/gossiplog/libp2p/browser"
 
 import { Socket } from "../../socket.js"
 import { topic } from "../../constants.js"
@@ -97,21 +97,13 @@ messageLog.addEventListener("prune", ({ detail: { peerId } }) => {
 	socket.post("gossipsub:mesh:update", { topic, peers: Array.from(meshPeers) })
 })
 
-// libp2p.start()
-
-const delay = 1000 + Math.random() * 20000
+const delay = parseInt(params.delay ?? "1") * 1000 * Math.random()
 console.log(`waiting ${delay}ms...`)
 await new Promise((resolve) => setTimeout(resolve, delay))
 
 console.log("starting...")
 await libp2p.start()
 await messageLog.listen(libp2p)
-
-// const topicPeers = new Set<string>()
-// libp2p.register(getTopicDHTProtocol(topic), {j
-// 	onConnect: (peerId) => void topicPeers.add(peerId.toString()),
-// 	onDisconnect: (peerId) => void topicPeers.delete(peerId.toString()),
-// })
 
 const id = setInterval(() => void messageLog.append(bytesToHex(randomBytes(8))), 5000)
 libp2p.addEventListener("stop", () => clearInterval(id))
