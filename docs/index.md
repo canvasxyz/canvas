@@ -9,8 +9,8 @@ layout: home
 </HeroRow>
 
 Canvas is a runtime for writing distributed TypeScript applications,
-where each application is verifiable, interoperable, and syncs in realtime
-over the open web.
+where each application is verifiable, interoperable, and syncs
+server-to-server over the open web.
 
 A Canvas application is a state machine that defines a database, and a
 set of actions:
@@ -45,14 +45,15 @@ with each other, server-to-server or server-to-browser. [^1]
 
 [^1]: For example, if we both ran the same open-source application
 backed by Canvas on different servers, our applications would sync
-with each other.
+with each other. Applications in the browser can also sync to a server,
+but that's useful for other uses, like realtime chat and games.
 
 We also handle reconciliation, to guarantee that actions
 execute exactly the same, whenever or wherever they're received. [^2]
 
 [^2]: We do this by time-shifting actions, so they always read
 from the database as if they were running at the time they were created.
-This uses an *eventually-consistent memory* implementation inside
+This uses an "eventually-consistent retrieval" implementation inside
 the database.
 
 ```ts
