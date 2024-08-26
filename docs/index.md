@@ -107,29 +107,28 @@ To resolve this, we have a few options:
 
 * Some applications are fine without strong protections against
   backdated actions. We expose an `indexed_at` field that can be
-  used to detect actions sent from the past. This lets you use Canvas
-  as a replicated database with TypeScript transactions.
-* Some applications may wish to run with a coordinator node. This
-  means that other nodes will only peer with the coordinator. This
-  lets you provide stronger guarantees against backdated actions, while
-  preserving the open verifiability of the application.
+  used to detect actions sent from the past.
+* Some applications may wish to run with a coordinator node, where
+  other nodes only peer with the coordinator. This lets you
+  provide stronger guarantees against backdated actions, while
+  preserving verifiability and permissionless interoperability.
 * Other applications may wish to use a timestamping service or
   data availability network to finalize actions. We're in
   touch with teams about making this possible.
 
-Moving between these levels of finality is technically straightforward,
-and we're building tools and hosted services to make it as easy as
-using tools like Github or Vercel.
+Moving between these levels is technically straightforward, and we're
+building tools and services to make managing finality easy.
 
 ## About Canvas
 
-Canvas is built by a team that built Web3 tools used by 100k+ users,
-developed peer-to-peer infrastructure at Protocol Labs, and worked at
-companies like AngelList, Notion, and Medium in the early days.
+Canvas is built by a team that built Web3 tools used by top protocols
+and 100k+ users, developed peer-to-peer infrastructure at Protocol Labs,
+and worked at companies like AngelList, Notion, and Medium when they
+were just small startups.
 
 We are building the infrastructure that we wish existed for our previous
-projects, building a runtime to make decentralized and distributed systems
-accessible to ordinary programmers.
+projects, to make decentralized and distributed systems accessible to
+ordinary programmers.
 
 <br/>
 
