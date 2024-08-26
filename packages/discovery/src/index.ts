@@ -81,10 +81,12 @@ export class DiscoveryService implements Startable {
 	}
 
 	public beforeStart() {
+		this.log("beforeStart")
 		this.components.events.addEventListener("peer:disconnect", this.handlePeerDisconnect)
 		this.components.events.addEventListener("peer:update", this.handlePeerUpdate)
 
 		this.components.fetch.registerLookupFunction("topic/", async (key) => {
+			this.log("handling request: %s", key)
 			const [_, topic] = key.split("/")
 
 			const records: DiscoveryRecord[] = []
@@ -114,7 +116,7 @@ export class DiscoveryService implements Startable {
 				}
 			}
 
-			this.log("handling fetch: %s (%d results)", key, records.length)
+			this.log("sending response: %s (%d results)", key, records.length)
 			return cbor.encode(records)
 		})
 	}
