@@ -59,6 +59,7 @@ export type ApplicationData = {
 	actions: string[]
 
 	peerId: string
+	addrs: string[]
 }
 
 export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<CanvasEvents> {
@@ -274,6 +275,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		const models = Object.fromEntries(Object.entries(this.db.models).filter(([name]) => !name.startsWith("$")))
 		return {
 			peerId: this.peerId.toString(),
+			addrs: this.libp2p.getMultiaddrs().map((addr) => addr.toString()),
 			topic: this.topic,
 			models: models,
 			actions: Object.keys(this.actions),
