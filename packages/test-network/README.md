@@ -1,12 +1,18 @@
 # @canvas-js/test-network
 
-Build the dashboard client bundles
+First build the dashboard client bundles
 
 ```
 $ npm run dev
 ```
 
-Then start the simulation
+Then generate a docker-compose.yml file for the number of server peers you want to run
+
+```
+$ ./generate.sh 16
+```
+
+Then start the docker contains
 
 ```
 $ docker compose rm -f && docker compose up --build
