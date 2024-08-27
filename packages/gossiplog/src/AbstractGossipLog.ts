@@ -300,6 +300,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 			for (const parentKey of parentKeys) {
 				const leaf = txn.getNode(0, parentKey)
 				if (leaf === null) {
+					const parent = decodeId(parentKey)
 					this.log.error("missing parent %s of message %s: %O", parent, id, message)
 					throw new CodeError(`missing parent ${parent} of message ${id}`, MISSING_PARENT)
 				}

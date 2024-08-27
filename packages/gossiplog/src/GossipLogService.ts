@@ -169,7 +169,6 @@ export class GossipLogService<Payload = unknown> {
 					},
 					(err) => {
 						this.log.error("failed to open outgoing push stream: %O", err)
-						throw err
 					},
 				)
 
