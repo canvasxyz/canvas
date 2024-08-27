@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react"
 
 import type { Event } from "../../types.js"
 import { Graph } from "./Graph.js"
-import { EventLog } from "./EventLog.js"
+// import { EventLog } from "./EventLog.js"
 
 type State = {
 	mesh: Record<string, string[]>
@@ -107,19 +107,13 @@ export const App: React.FC<{}> = ({}) => {
 	}, [])
 
 	return (
-		<>
-			<section>
-				<Graph
-					{...state}
-					bootstrapPeerIds={bootstrapPeerIds}
-					onNodeClick={handleNodeClick}
-					onLinkClick={handleLinkClick}
-				/>
-			</section>
-
-			<hr />
-
-			<EventLog events={events} />
-		</>
+		<section>
+			<Graph
+				{...state}
+				bootstrapPeerIds={bootstrapPeerIds}
+				onNodeClick={handleNodeClick}
+				onLinkClick={handleLinkClick}
+			/>
+		</section>
 	)
 }
