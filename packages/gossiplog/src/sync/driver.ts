@@ -9,7 +9,7 @@ import { CodeError } from "@libp2p/interface"
 /**
  * This differs from the sync function exported from @canvas-js/okra in three ways
  * 1) It only yields keys, not entries
- * 2) It assumes that entries are immutable
+ * 2) It assumes that entries are immutable (and throws an error on conflicts)
  * 3) It only yields keys for entries present in `source` and missing in `target`
  */
 export class Driver {
@@ -19,50 +19,49 @@ export class Driver {
 	}
 
 	public async *sync(): AsyncGenerator<Uint8Array[]> {
-		const [sourceRoot, targetRoot] = await Promise.all([this.source.getRoot(), this.target.getRoot()])
+		const sourceRoot = await this.source.getRoot()
 		assert(sourceRoot.key === null, "invalid source root")
-		assert(targetRoot.key === null, "invalid target root")
-
 		this.log("source root: level %d, hash %s", sourceRoot.level, hex(sourceRoot.hash))
+
+		const targetRoot = this.target.getRoot()
+		assert(targetRoot.key === null, "invalid target root")
 		this.log("target root: level %d, hash %s", targetRoot.level, hex(targetRoot.hash))
 
 		if (sourceRoot.level === 0) {
 			return
-		}
-
-		if (sourceRoot.level === targetRoot.level && equals(sourceRoot.hash, targetRoot.hash)) {
+		} else if (sourceRoot.level === targetRoot.level && equals(sourceRoot.hash, targetRoot.hash)) {
 			return
 		}
 
-		yield* this.syncRoot(targetRoot.level, sourceRoot)
+		yield* this.syncRoot(sourceRoot, targetRoot.level)
 	}
 
-	private async *syncRoot(targetLevel: number, sourceNode: Node): AsyncGenerator<Uint8Array[]> {
-		if (sourceNode.level > targetLevel) {
-			const children = await this.source.getChildren(sourceNode.level, sourceNode.key)
-			if (targetLevel === 0 && sourceNode.level === 1) {
-				const keys: Uint8Array[] = []
-				for (const { level, key } of children) {
-					if (key === null) {
-						continue
-					}
+	private async *syncRoot(sourceNode: Node, targetLevel: number): AsyncGenerator<Uint8Array[]> {
+		if (sourceNode.level <= targetLevel) {
+			return yield* this.syncNode(sourceNode)
+		}
 
-					assert(level === 0, "unexpected leaf level")
-					keys.push(key)
+		const children = await this.source.getChildren(sourceNode.level, sourceNode.key)
+		if (targetLevel === 0 && sourceNode.level === 1) {
+			const keys: Uint8Array[] = []
+			for (const { level, key } of children) {
+				if (key === null) {
+					continue
 				}
 
-				try {
-					yield keys
-				} catch (err) {
-					this.log.error("failed to process batch: %O", err)
-				}
-			} else {
-				for (const sourceChild of children) {
-					yield* this.syncRoot(targetLevel, sourceChild)
-				}
+				assert(level === 0, "unexpected leaf level")
+				keys.push(key)
+			}
+
+			try {
+				yield keys
+			} catch (err) {
+				this.log.error("failed to process batch: %O", err)
 			}
 		} else {
-			yield* this.syncNode(sourceNode)
+			for (const sourceChild of children) {
+				yield* this.syncRoot(sourceChild, targetLevel)
+			}
 		}
 	}
 
