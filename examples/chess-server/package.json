@@ -7,6 +7,7 @@
 		"start": "canvas run /data/app --topic canvas-chess --init contract.ts --verbose --metrics --listen /ip6/::/tcp/8080/ws --announce /dns4/canvas-chess.fly.dev/tcp/443/wss"
 	},
 	"dependencies": {
-		"@canvas-js/cli": "0.10.9"
+		"@canvas-js/cli": "0.10.9",
+		"@canvas-js/core": "0.10.9"
 	}
 }
