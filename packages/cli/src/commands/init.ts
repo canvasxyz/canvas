@@ -8,7 +8,7 @@ import type { Argv } from "yargs"
 import { CONTRACT_FILENAME, MANIFEST_FILENAME } from "../utils.js"
 
 export const command = "init <path>"
-export const desc = "Initialize a new application"
+export const desc = "Initialize a new application. Try `canvas init .` to get started."
 
 export const builder = (yargs: Argv) =>
 	yargs
@@ -48,7 +48,7 @@ export async function handler(args: Args) {
 export const models = {
 	messages: {
 		id: "primary",
-		user: "string",
+		did: "string",
 		content: "string",
 		timestamp: "integer",
 		$indexes: ["timestamp"],
@@ -56,19 +56,17 @@ export const models = {
 };
 
 export const actions = {
-	async createMessage(db, { content }, { id, chain, address, timestamp }) {
-		const user = [chain, address].join(":")
-		await db.messages.set({ id, content, user, timestamp });
+	async createMessage(db, { content }, { id, did, timestamp }) {
+		await db.set("messages", { id, content, did, timestamp });
 	},
-	async deleteMessage(db, { messageId }, { chain, address }) {
-		const message = await db.messages.get(messageId)
+	async deleteMessage(db, { messageId }, { did }) {
+		const message = await db.get("messages", messageId)
 		if (message !== null) {
-			const user = [chain, address].join(":")
-			if (message.user !== user) {
+			if (message.did !== did) {
 				throw new Error("unauthorized")
 			}
 
-			await db.messages.delete(messageId);
+			await db.delete("messages", messageId);
 		}
 	},
 };
@@ -81,7 +79,7 @@ export const actions = {
 	fs.writeFileSync(manifestPath, JSON.stringify({ version: 1, topic }))
 
 	const relativeContractPath = chalk.bold(path.relative(".", contractPath))
-	const relativeLocation = path.relative(".", location)
+	const relativeLocation = path.relative(".", location) || "."
 	const command = chalk.bold(`canvas run ${relativeLocation}`)
 	console.log(`Done! Edit the contract at ${relativeContractPath} or run \`${command}\` to get started.`)
 }
