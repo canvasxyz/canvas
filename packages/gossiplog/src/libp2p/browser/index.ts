@@ -67,7 +67,8 @@ export async function getLibp2p(config: NetworkConfig) {
 		connectionManager: {
 			minConnections: config.minConnections,
 			maxConnections: config.maxConnections,
-			dialTimeout: 20 * second,
+			dialTimeout: 10 * second,
+			autoDialPeerRetryThreshold: 10 * second,
 		},
 
 		connectionMonitor: { protocolPrefix: "canvas" },
