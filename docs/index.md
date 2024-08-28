@@ -69,7 +69,7 @@ const { app } = useCanvas({
 })
 ```
 
-This will sync the application hosted at `canvas-demo-backend.fly.io`
+This will sync the application at `canvas-demo-backend.fly.io`
 into your browser.
 
 Unlike blockchain-based distributed applications, Canvas applications have
