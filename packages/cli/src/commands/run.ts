@@ -27,6 +27,7 @@ import { SubstrateSigner } from "@canvas-js/chain-substrate"
 import { SolanaSigner } from "@canvas-js/chain-solana"
 
 import { getContractLocation } from "../utils.js"
+import { startActionPrompt } from "../prompt.js"
 
 export const command = "run <path>"
 export const desc = "Run a Canvas application"
@@ -248,6 +249,7 @@ export async function handler(args: Args) {
 
 		const server = stoppable(
 			http.createServer(api).listen(args.port, () => {
+				console.log("")
 				if (args.static) {
 					console.log(`Serving static bundle: ${chalk.bold(origin)}`)
 				}
@@ -260,7 +262,7 @@ export async function handler(args: Args) {
 				console.log(`└ GET  ${origin}/api/messages/:id`)
 				console.log(`└ POST ${origin}/api/messages`)
 
-				const { models } = app.getApplicationData()
+				const { models, actions } = app.getApplicationData()
 				for (const name of Object.keys(models)) {
 					console.log(`└ GET  ${origin}/api/models/${name}`)
 					console.log(`└ GET  ${origin}/api/models/${name}/:key`)
@@ -269,6 +271,14 @@ export async function handler(args: Args) {
 				console.log(`└ GET  ${origin}/api/connections`)
 				console.log(`└ GET  ${origin}/api/mesh/:topic`)
 				console.log(`└ POST ${origin}/api/ping/:peerId`)
+
+				console.log("")
+				console.log("Actions:")
+				for (const action of actions) {
+					console.log(`└ ${action}`)
+				}
+				console.log("")
+				startActionPrompt(app)
 			}),
 			0,
 		)
