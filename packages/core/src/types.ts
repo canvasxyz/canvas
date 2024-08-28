@@ -6,6 +6,9 @@ export type Contract = {
 	actions: Record<string, ActionImplementation>
 }
 
+export type Models = Contract["models"]
+export type Actions = Contract["actions"]
+
 export type ActionImplementation<Args = any> = ActionImplementationFunction<Args> | ActionImplementationObject<Args>
 
 export type ActionImplementationObject<Args = any> = {

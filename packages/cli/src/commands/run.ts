@@ -36,7 +36,7 @@ const { ANNOUNCE, LISTEN, BOOTSTRAP_LIST, PORT } = process.env
 export const builder = (yargs: Argv) =>
 	yargs
 		.positional("path", {
-			desc: "Path to application directory or *.canvas.js contract",
+			desc: "Path to application directory or *.js/*.ts contract",
 			type: "string",
 			demandOption: true,
 		})

@@ -1,6 +1,3 @@
-/* eslint-disable */
-
-/* manually bundled from https://www.npmjs.com/package/chess.js/v/0.13.4?activeTab=code */
 const SYMBOLS = "pnbrqkPNBRQK"
 
 const DEFAULT_POSITION = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
@@ -1891,23 +1888,4 @@ export const Chess = function (fen) {
 			})
 		},
 	}
-}
-
-export const models = {
-	boards: {
-		id: "primary",
-		fen: "string",
-	},
-}
-
-export const actions = {
-	move: async (db, { from, to }, { address, timestamp, id }) => {
-		const chess = new Chess((await db.get("boards", "0"))?.fen || new Chess().fen())
-		const move = chess.move({ from, to, promotion: "q" })
-		if (move === null) throw new Error("invalid")
-		await db.set("boards", { id: "0", fen: chess.fen() })
-	},
-	reset: async (db, {}, { address, timestamp, id }) => {
-		await db.set("boards", { id: "0", fen: new Chess().fen() })
-	},
 }
