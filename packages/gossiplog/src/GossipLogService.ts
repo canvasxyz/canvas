@@ -158,9 +158,13 @@ export class GossipLogService<Payload = unknown> {
 						this.#pushStreams.set(peerId.toString(), { stream, source })
 						Promise.all([
 							// outgoing events
-							pipe(source, lp.encode, stream.sink),
+							pipe(source, lp.encode, stream.sink).catch((err) =>
+								this.log.error("error piping outgoing push events: %O", err),
+							),
 							// incoming events
-							pipe(stream.source, lp.decode, this.getPushSink(connection, stream)),
+							pipe(stream.source, lp.decode, this.getPushSink(connection, stream)).catch((err) =>
+								this.log.error("error piping incoming push events: %O", err),
+							),
 						]).finally(() => this.log("closed outgoing push stream %s from peer %p", stream.id, peerId))
 
 						this.messageLog.getClock().then(([_, heads]) => {
