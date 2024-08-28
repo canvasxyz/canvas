@@ -49,12 +49,7 @@ function reduce(state: State, event: Event): State {
 }
 
 export const App: React.FC<{}> = ({}) => {
-	const [events, setEvents] = useState<Event[]>([])
 	const [state, setState] = useState<State>({ nodes: [], links: [], roots: {}, mesh: {} })
-	// const [messages, setMessages] = useState<{ peerId: string; data: string }[]>([])
-
-	// const events = useMemo<Array<Event | null>>(() => [], [])
-	// const [eventCount, setEventCount] = useState(0)
 
 	useEffect(() => {
 		const eventSource = new EventSource("/api/events")
@@ -62,7 +57,6 @@ export const App: React.FC<{}> = ({}) => {
 		eventSource.addEventListener("close", (event) => console.log("closed event source", event))
 		eventSource.addEventListener("message", ({ data }) => {
 			const event = JSON.parse(data) as Event
-			setEvents((events) => [...events, event])
 			setState((state) => reduce(state, event))
 		})
 
