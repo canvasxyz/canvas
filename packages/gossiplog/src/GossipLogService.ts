@@ -241,22 +241,18 @@ export class GossipLogService<Payload = unknown> {
 		const event: Partial<Event> = { insert: { key, value } }
 		const data = Event.encode(event)
 
+		const recipients: PeerId[] = []
+
 		if (this.pubsub === null) {
 			// If we're a lite client, then push directly to all of our topology peers
-
-			const recipients: PeerId[] = []
 
 			for (const peer of this.#pushStreams.keys()) {
 				if (peer === options.sourceId) continue
 				this.#push(peer, data) // TODO: doesn't guarantee we actually pushed to the peer...
 				recipients.push(peerIdFromString(peer))
 			}
-
-			return recipients
 		} else {
 			// If we're a full client, publish to pubsub, and still push directly to all of our lite topology peers
-
-			const recipients: PeerId[] = []
 
 			for (const peer of this.litePeers) {
 				if (peer === options.sourceId) continue
@@ -266,15 +262,13 @@ export class GossipLogService<Payload = unknown> {
 			}
 
 			await this.pubsub.publish(this.messageLog.topic, data).then(
-				(result) => {
-					this.log("published %s to %d recipients %O", id, result.recipients.length, result.recipients)
-					recipients.push(...result.recipients)
-				},
+				(result) => recipients.push(...result.recipients),
 				(err) => this.log.error("failed to publish event: %O", err),
 			)
-
-			return recipients
 		}
+
+		this.log("published %s to %d recipients", id, recipients.length)
+		return recipients
 	}
 
 	private handleMessage = ({ detail: { msgId, propagationSource, msg } }: GossipsubEvents["gossipsub:message"]) => {
