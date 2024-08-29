@@ -1,6 +1,7 @@
 import { TypedEventEmitter, CustomEvent, CodeError, Libp2p, PeerId } from "@libp2p/interface"
 import { Logger, logger } from "@libp2p/logger"
 import { equals, toString } from "uint8arrays"
+import type { MeshPeer } from "@chainsafe/libp2p-gossipsub"
 
 import { Node, Tree, ReadWriteTransaction, hashEntry } from "@canvas-js/okra"
 import type { Signature, Signer, Message, Awaitable } from "@canvas-js/interfaces"
@@ -19,7 +20,6 @@ import { getNextClock } from "./schema.js"
 import { MISSING_PARENT, topicPattern } from "./utils.js"
 
 import { GossipLogService } from "./GossipLogService.js"
-import { MeshPeer } from "@chainsafe/libp2p-gossipsub"
 
 export type GossipLogConsumer<Payload = unknown> = (
 	this: AbstractGossipLog<Payload>,
@@ -467,7 +467,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		return { messageCount }
 	}
 
-	public serve<T>(callback: (txn: SyncServer) => Awaitable<T>): Promise<T> {
+	public serve<T>(callback: (server: SyncServer) => Awaitable<T>): Promise<T> {
 		return this.tree.read((txn) =>
 			callback({
 				getRoot: () => txn.getRoot(),

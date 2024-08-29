@@ -15,6 +15,10 @@ export type MessageTuple = [
 	payload: unknown,
 ]
 
+// export function parseClock(bytes: Uint8Array): number {
+// 	return 0
+// }
+
 function validateSignatureTuple(signatureTuple: unknown): asserts signatureTuple is SignatureTuple {
 	assert(Array.isArray(signatureTuple), "expected Array.isArray(signatureTuple)")
 	assert(signatureTuple.length === 3, "expected signatureTuple.length === 3")

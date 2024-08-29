@@ -1,8 +1,9 @@
-import { Stream } from "@libp2p/interface"
+import { CodeError, Stream, TypedEventEmitter } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
 import * as lp from "it-length-prefixed"
 import { pipe } from "it-pipe"
 import { pushable, Pushable } from "it-pushable"
+import { Duplex, Source } from "it-stream-types"
 import { Uint8ArrayList } from "uint8arraylist"
 
 import type { Key, Node } from "@canvas-js/okra"
@@ -26,21 +27,31 @@ export async function* encodeRequests(source: AsyncIterable<Sync.Request>) {
 	}
 }
 
-export class Client implements SyncServer {
-	private readonly responses: AsyncIterator<Sync.Response, void, undefined>
-	private readonly requests: Pushable<Sync.Request>
+export class Client extends TypedEventEmitter<{ error: CustomEvent<Error> }> implements SyncServer {
+	// private readonly responses: AsyncIterator<Sync.Response, void, undefined>
+	public readonly requests: Pushable<Sync.Request>
 	private readonly log = logger("canvas:sync:client")
 
-	constructor(readonly stream: Stream) {
+	public static codes = {
+		ABORT: "ABORT",
+	}
+
+	constructor(
+		readonly id: string,
+		readonly responses: AsyncIterator<Sync.Response, void, undefined>, // readonly stream: Duplex<AsyncIterable<Uint8ArrayList>, Source<Uint8ArrayList | Uint8Array>, Promise<void>>,
+	) {
+		super()
 		this.requests = pushable({ objectMode: true })
-		this.responses = pipe(stream, lp.decode, decodeResponses)
-		pipe(this.requests, encodeRequests, lp.encode, stream).catch((err) => {
-			if (err instanceof Error) {
-				stream.abort(err)
-			} else {
-				stream.abort(new Error("internal error"))
-			}
-		})
+		// this.responses = pipe(stream.source, lp.decode, decodeResponses)
+
+		// pipe(this.requests, encodeRequests, lp.encode, stream.sink).catch((err) => {
+		// 	if (err instanceof Error) {
+		// 		this.dispatchEvent(new CustomEvent("error", { detail: err }))
+		// 	} else {
+		// 		console.error(err)
+		// 		this.dispatchEvent(new CustomEvent("error", { detail: new Error("internal error") }))
+		// 	}
+		// })
 	}
 
 	public end() {
@@ -48,14 +59,22 @@ export class Client implements SyncServer {
 	}
 
 	public async getRoot(): Promise<Node> {
-		const { getRoot } = await this.get({ getRoot: {} })
+		const { getRoot, abort } = await this.get({ getRoot: {} })
+		if (abort !== undefined) {
+			throw new CodeError("sync aborted by server", Client.codes.ABORT, abort)
+		}
+
 		assert(getRoot, "invalid RPC response type")
 		assert(getRoot.root !== undefined, "missing `root` in getRoot RPC response")
 		return decodeNode(getRoot.root)
 	}
 
 	public async getNode(level: number, key: Key): Promise<Node | null> {
-		const { getNode } = await this.get({ getNode: { level, key: encodeKey(key) } })
+		const { getNode, abort } = await this.get({ getNode: { level, key: encodeKey(key) } })
+		if (abort !== undefined) {
+			throw new CodeError("sync aborted by server", Client.codes.ABORT, abort)
+		}
+
 		assert(getNode, "invalid RPC response type")
 		if (getNode.node) {
 			return decodeNode(getNode.node)
@@ -65,12 +84,21 @@ export class Client implements SyncServer {
 	}
 
 	public async getChildren(level: number, key: Key): Promise<Node[]> {
-		const { getChildren } = await this.get({ getChildren: { level, key: encodeKey(key) } })
+		const { getChildren, abort } = await this.get({ getChildren: { level, key: encodeKey(key) } })
+		if (abort !== undefined) {
+			throw new CodeError("sync aborted by server", Client.codes.ABORT, abort)
+		}
+
 		assert(getChildren, "invalid RPC response type")
 		return getChildren.children.map(decodeNode)
 	}
+
 	public async getValues(keys: Uint8Array[]): Promise<Uint8Array[]> {
-		const { getValues } = await this.get({ getValues: { keys } })
+		const { getValues, abort } = await this.get({ getValues: { keys } })
+		if (abort !== undefined) {
+			throw new CodeError("sync aborted by server", Client.codes.ABORT, abort)
+		}
+
 		assert(getValues, "invalid RPC response type")
 		return getValues.values
 	}
@@ -79,7 +107,7 @@ export class Client implements SyncServer {
 		this.requests.push(req)
 		const { done, value: res } = await this.responses.next()
 		if (done) {
-			this.log.error("stream %s ended prematurely: %O", this.stream.id, res)
+			this.log.error("stream %s ended prematurely: %O", this.id, res)
 			throw new Error("stream ended prematurely")
 		} else {
 			return res

@@ -38,7 +38,7 @@ import {
 import { AbstractGossipLog } from "./AbstractGossipLog.js"
 
 import { decodeId, encodeId } from "./ids.js"
-import { Client, Server, decodeRequests, encodeResponses } from "./sync/index.js"
+import { Client, Server, decodeRequests, decodeResponses, encodeRequests, encodeResponses } from "./sync/index.js"
 
 import { MISSING_PARENT, SyncTimeoutError, wait } from "./utils.js"
 
@@ -430,21 +430,10 @@ export class GossipLogService<Payload = unknown> {
 			await this.messageLog.serve(async (txn) => {
 				const server = new Server(this.messageLog.topic, txn)
 
-				await pipe(
-					stream.source,
-					lp.decode,
-					decodeRequests,
-					async function* (reqs) {
-						for await (const req of reqs) {
-							timeoutController.delay()
-							yield req
-						}
-					},
-					(reqs) => server.handle(reqs),
-					encodeResponses,
-					lp.encode,
-					stream.sink,
-				)
+				await Promise.all([
+					pipe(stream.source, lp.decode, decodeRequests, (reqs) => server.handle(reqs)),
+					pipe(server.responses, encodeResponses, lp.encode, stream.sink),
+				])
 			})
 
 			this.log("closed incoming stream %s from peer %p", stream.id, peerId)
@@ -500,6 +489,11 @@ export class GossipLogService<Payload = unknown> {
 			throw new Error("connection closed")
 		}
 
+		// let retry = false
+		// do {
+		// 	// ...
+		// } while (retry)
+
 		const peerId = connection.remotePeer
 
 		const protocolSelectSignal = AbortSignal.timeout(DEFAULT_PROTOCOL_SELECT_TIMEOUT)
@@ -522,7 +516,15 @@ export class GossipLogService<Payload = unknown> {
 
 		this.log("starting sync with peer %p", peerId)
 
-		const client = new Client(stream)
+		const client = new Client(stream.id, pipe(stream.source, lp.decode, decodeResponses))
+		pipe(client.requests, encodeRequests, lp.encode, stream.sink).catch((err) => {
+			if (err instanceof Error) {
+				stream.abort(err)
+			} else {
+				console.error(err)
+				stream.abort(new Error("internal error"))
+			}
+		})
 
 		let messageCount = 0
 		try {

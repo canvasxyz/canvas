@@ -48,10 +48,15 @@ message Response {
     repeated bytes values = 1;
   }
 
+  message AbortSignal {
+    uint32 cooldown = 1;
+  }
+
   oneof response {
     GetRootResponse get_root = 1;
     GetNodeResponse get_node = 2;
     GetChildrenResponse get_children = 3;
     GetValuesResponse get_values = 4;
+    AbortSignal abort = 5;
   }
 }

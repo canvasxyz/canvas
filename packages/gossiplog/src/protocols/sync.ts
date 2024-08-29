@@ -443,6 +443,7 @@ export interface Response {
   getNode?: Response.GetNodeResponse
   getChildren?: Response.GetChildrenResponse
   getValues?: Response.GetValuesResponse
+  abort?: Response.AbortSignal
 }
 
 export namespace Response {
@@ -700,6 +701,66 @@ export namespace Response {
     }
   }
 
+  export interface AbortSignal {
+    cooldown: number
+  }
+
+  export namespace AbortSignal {
+    let _codec: Codec<AbortSignal>
+
+    export const codec = (): Codec<AbortSignal> => {
+      if (_codec == null) {
+        _codec = message<AbortSignal>((obj, w, opts = {}) => {
+          if (opts.lengthDelimited !== false) {
+            w.fork()
+          }
+
+          if ((obj.cooldown != null && obj.cooldown !== 0)) {
+            w.uint32(8)
+            w.uint32(obj.cooldown)
+          }
+
+          if (opts.lengthDelimited !== false) {
+            w.ldelim()
+          }
+        }, (reader, length, opts = {}) => {
+          const obj: any = {
+            cooldown: 0
+          }
+
+          const end = length == null ? reader.len : reader.pos + length
+
+          while (reader.pos < end) {
+            const tag = reader.uint32()
+
+            switch (tag >>> 3) {
+              case 1: {
+                obj.cooldown = reader.uint32()
+                break
+              }
+              default: {
+                reader.skipType(tag & 7)
+                break
+              }
+            }
+          }
+
+          return obj
+        })
+      }
+
+      return _codec
+    }
+
+    export const encode = (obj: Partial<AbortSignal>): Uint8Array => {
+      return encodeMessage(obj, AbortSignal.codec())
+    }
+
+    export const decode = (buf: Uint8Array | Uint8ArrayList, opts?: DecodeOptions<AbortSignal>): AbortSignal => {
+      return decodeMessage(buf, AbortSignal.codec(), opts)
+    }
+  }
+
   let _codec: Codec<Response>
 
   export const codec = (): Codec<Response> => {
@@ -727,6 +788,11 @@ export namespace Response {
         if (obj.getValues != null) {
           w.uint32(34)
           Response.GetValuesResponse.codec().encode(obj.getValues, w)
+        }
+
+        if (obj.abort != null) {
+          w.uint32(42)
+          Response.AbortSignal.codec().encode(obj.abort, w)
         }
 
         if (opts.lengthDelimited !== false) {
@@ -762,6 +828,12 @@ export namespace Response {
             case 4: {
               obj.getValues = Response.GetValuesResponse.codec().decode(reader, reader.uint32(), {
                 limits: opts.limits?.getValues
+              })
+              break
+            }
+            case 5: {
+              obj.abort = Response.AbortSignal.codec().decode(reader, reader.uint32(), {
+                limits: opts.limits?.abort
               })
               break
             }

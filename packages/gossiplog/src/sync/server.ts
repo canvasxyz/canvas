@@ -2,12 +2,13 @@ import { Uint8ArrayList } from "uint8arraylist"
 
 import { Logger, logger } from "@libp2p/logger"
 
-import { assert } from "@canvas-js/utils"
+import { assert, SECONDS } from "@canvas-js/utils"
 
 import * as Sync from "#protocols/sync"
 
 import { SyncServer } from "../interface.js"
 import { decodeKey, encodeNode } from "./utils.js"
+import { pushable } from "it-pushable"
 
 export async function* encodeResponses(responses: AsyncIterable<Sync.Response>): AsyncIterable<Uint8Array> {
 	for await (const res of responses) {
@@ -25,38 +26,49 @@ export async function* decodeRequests(
 }
 
 export class Server {
+	public static timeout = 10 * SECONDS
+
+	public readonly responses = pushable<Sync.Response>({ objectMode: true })
+
+	private readonly signal = AbortSignal.timeout(Server.timeout)
 	private readonly log: Logger
 
 	constructor(topic: string, readonly source: SyncServer) {
 		this.log = logger(`canvas:gossiplog:[${topic}]:server`)
+		this.signal.addEventListener("abort", () => {
+			this.responses.push({ abort: { cooldown: 0 } })
+			this.responses.end()
+		})
 	}
 
-	public async *handle(reqs: AsyncIterable<Sync.Request>): AsyncIterable<Sync.Response> {
+	public async handle(reqs: AsyncIterable<Sync.Request>): Promise<void> {
 		for await (const req of reqs) {
 			if (req.getRoot !== undefined) {
 				const root = await this.source.getRoot()
-				yield { getRoot: { root: encodeNode(root) } }
+				this.responses.push({ getRoot: { root: encodeNode(root) } })
 			} else if (req.getNode !== undefined) {
 				const { level, key } = req.getNode
 				assert(level !== null && level !== undefined, "missing level in getNode request")
 				const node = await this.source.getNode(level, decodeKey(key))
 				if (node === null) {
-					yield { getNode: {} }
+					this.responses.push({ getNode: {} })
 				} else {
-					yield { getNode: { node: encodeNode(node) } }
+					this.responses.push({ getNode: { node: encodeNode(node) } })
 				}
 			} else if (req.getChildren !== undefined) {
 				const { level, key } = req.getChildren
 				assert(level !== null && level !== undefined, "missing level in getChildren request")
 				const children = await this.source.getChildren(level, decodeKey(key))
-				yield { getChildren: { children: children.map(encodeNode) } }
+				this.responses.push({ getChildren: { children: children.map(encodeNode) } })
 			} else if (req.getValues !== undefined) {
 				const { keys } = req.getValues
 				const values = await this.source.getValues(keys)
-				yield { getValues: { values } }
+				this.responses.push({ getValues: { values } })
 			} else {
 				throw new Error("invalid request type")
 			}
 		}
+
+		this.responses.end()
 	}
 }

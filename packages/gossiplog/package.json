@@ -19,6 +19,9 @@
 		"./sqlite-wasm": "./lib/sqlite-wasm/index.js",
 		"./sqlite": "./lib/sqlite/index.js",
 		"./service": "./lib/service/index.js",
+		"./sync": "./lib/sync/index.js",
+		"./protocols/sync": "./lib/protocols/sync.js",
+		"./protocols/events": "./lib/protocols/events.js",
 		"./libp2p/browser-webrtc": "./lib/libp2p/browser-webrtc/index.js",
 		"./libp2p/browser": "./lib/libp2p/browser/index.js",
 		"./libp2p/node": "./lib/libp2p/node/index.js"
@@ -86,7 +89,8 @@
 		"prom-client": "^15.1.3",
 		"protons-runtime": "^5.5.0",
 		"uint8arraylist": "^2.4.8",
-		"uint8arrays": "^5.1.0"
+		"uint8arrays": "^5.1.0",
+		"ws": "^8.18.0"
 	},
 	"devDependencies": {
 		"@types/pg": "^8.11.6",
