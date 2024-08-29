@@ -52,7 +52,7 @@ jobs:
 
       - name: Copy Gossiplog Docs
         run: |
-          cp docs-gossiplog/.vitepress/dist docs/.vitepress/dist/gossiplog
+          cp -r docs-gossiplog/.vitepress/dist docs/.vitepress/dist/gossiplog
 
       - name: Upload
         uses: actions/upload-pages-artifact@v2
