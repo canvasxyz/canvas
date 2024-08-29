@@ -97,7 +97,7 @@ Each Canvas application executes over a distributed log. By default,
 anyone can add branches to any point in the log, and different nodes
 could append to different branches of the log at any time:
 
-![Replicated log](gossiplog.png)
+![Replicated log](./public/gossiplog.png)
 
 If application operators go out of sync (e.g. someone starts a new node
 that only syncs part of the history), new interactions could be added on
