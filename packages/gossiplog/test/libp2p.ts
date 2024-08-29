@@ -46,6 +46,7 @@ export async function createNetwork<T extends NetworkInit, Payload>(
 					peerId,
 					start: false,
 					listen: [address],
+					announce: [],
 					bootstrapList,
 					minConnections,
 				})
@@ -66,7 +67,14 @@ export async function createNetwork<T extends NetworkInit, Payload>(
 		).then((entries) => Object.fromEntries(entries))
 
 	if (options.start ?? true) {
-		t.teardown(() => Promise.all(Object.entries(network).map(([name, { libp2p }]) => libp2p.stop())))
+		t.teardown(async () => {
+			await Promise.all(
+				Object.values(network).map(async ({ messageLog, libp2p }) => {
+					await messageLog.close()
+					await libp2p.stop()
+				}),
+			)
+		})
 
 		await Promise.all(
 			Object.values(network).map(async ({ messageLog, libp2p }) => {

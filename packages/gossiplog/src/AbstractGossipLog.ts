@@ -327,7 +327,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		signedMessage: SignedMessage<Payload>,
 	): Promise<{ root: Node; heads: string[] }> {
 		const { id, signature, message, key, value } = signedMessage
-		this.log("applying %s %O", id, message)
+		this.log.trace("applying %s %O", id, message)
 
 		const parentMessageRecords: MessageRecord<Payload>[] = []
 		for (const parentId of message.parents) {

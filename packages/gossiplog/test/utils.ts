@@ -4,7 +4,7 @@ import path from "node:path"
 
 import test, { ExecutionContext } from "ava"
 import "fake-indexeddb/auto"
-import { locks, AbortController } from "web-locks"
+import { locks } from "web-locks"
 
 import { nanoid } from "nanoid"
 import { toString } from "uint8arrays"
@@ -20,9 +20,6 @@ import { AbstractGossipLog, GossipLogInit, encodeId, decodeClock } from "@canvas
 import { GossipLog as GossipLogSqlite } from "@canvas-js/gossiplog/sqlite"
 import { GossipLog as GossipLogIdb } from "@canvas-js/gossiplog/idb"
 import { GossipLog as GossipLogPostgres } from "@canvas-js/gossiplog/pg"
-
-// @ts-expect-error TS2322
-globalThis.AbortController = AbortController
 
 if (globalThis.navigator === undefined) {
 	// @ts-expect-error

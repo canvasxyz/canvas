@@ -21,7 +21,7 @@ import { Uint8ArrayList } from "uint8arraylist"
 import { anySignal } from "any-signal"
 import PQueue from "p-queue"
 
-import { assert, DelayableController } from "@canvas-js/utils"
+import { assert, DelayableController, SECONDS } from "@canvas-js/utils"
 
 import { Event } from "#protocols/events"
 
@@ -478,21 +478,34 @@ export class GossipLogService<Payload = unknown> {
 			return
 		}
 
-		await this.retry("sync", () => this.#sync(connection), {
-			interval: SYNC_RETRY_INTERVAL,
-			limit: SYNC_RETRY_LIMIT,
-		})
+		let n = 0
+		while (n < SYNC_RETRY_LIMIT) {
+			try {
+				return await this.#sync(connection)
+			} catch (err) {
+				if (err instanceof CodeError && err.code === Client.codes.ABORT) {
+					this.log("received abort from server with cooldown %d", err.props.cooldown)
+					continue
+				}
+
+				this.log.error("sync failed: %O", err)
+				if (this.controller.signal.aborted || connection.status !== "open") {
+					break
+				}
+
+				n++
+				const interval = Math.floor(Math.random() * SYNC_RETRY_INTERVAL)
+				this.log("waiting %dms before syncing again (%d/%d)", interval, n, SYNC_RETRY_LIMIT)
+				await this.wait(interval)
+				continue
+			}
+		}
+
+		throw new Error("exceeded sync retry limit")
 	}
 
 	async #sync(connection: Connection): Promise<void> {
-		if (connection.status !== "open") {
-			throw new Error("connection closed")
-		}
-
-		// let retry = false
-		// do {
-		// 	// ...
-		// } while (retry)
+		assert(connection.status === "open", "connection closed")
 
 		const peerId = connection.remotePeer
 
@@ -506,8 +519,7 @@ export class GossipLogService<Payload = unknown> {
 
 		this.log("opened outgoing sync stream %s to peer %p", stream.id, peerId)
 
-		const timeoutController = new DelayableController(SYNC_TIMEOUT)
-		const signal = anySignal([this.controller.signal, timeoutController.signal])
+		const signal = anySignal([this.controller.signal, AbortSignal.timeout(Server.timeout + 5 * SECONDS)])
 		signal.addEventListener("abort", (err) => {
 			if (stream.status === "open") {
 				stream.abort(new SyncTimeoutError())
@@ -532,24 +544,23 @@ export class GossipLogService<Payload = unknown> {
 				client,
 				async (signedMessage) => {
 					await this.messageLog.insert(signedMessage, { publish: false })
-					timeoutController.delay()
 					messageCount++
 				},
 				{ peerId: peerId.toString() },
 			)
 		} finally {
-			timeoutController.clear()
 			signal.clear()
 			client.end()
 			this.log("closed outgoing sync stream %s to peer %p", stream.id, peerId)
-		}
 
-		if (messageCount !== 0) {
-			const [_, heads] = await this.messageLog.getClock()
-			const data = Event.encode({ update: { heads: heads.map(encodeId) } })
-			for (const peer of this.#pushStreams.keys()) {
-				if (peer === peerId.toString()) continue
-				this.#push(peer, data)
+			if (messageCount !== 0) {
+				this.messageLog.getClock().then(([_, heads]) => {
+					const data = Event.encode({ update: { heads: heads.map(encodeId) } })
+					for (const peer of this.#pushStreams.keys()) {
+						if (peer === peerId.toString()) continue
+						this.#push(peer, data)
+					}
+				})
 			}
 		}
 	}
