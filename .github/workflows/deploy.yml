@@ -45,6 +45,15 @@ jobs:
           npm run docs:build
           touch docs/.vitepress/dist/.nojekyll
 
+      - name: Build with VitePress
+        run: |
+          npm run docs-gossiplog:build
+          touch docs-gossiplog/.vitepress/dist/.nojekyll
+
+      - name: Copy Gossiplog Docs
+        run: |
+          cp docs-gossiplog/.vitepress/dist docs/.vitepress/dist/gossiplog
+
       - name: Upload
         uses: actions/upload-pages-artifact@v2
         with:

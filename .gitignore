@@ -21,4 +21,8 @@ examples/**/.cache/
 docs/.vitepress/dist
 docs/.vitepress/cache
 docs/.vitepress/.temp
+docs-gossiplog/.vitepress/dist
+docs-gossiplog/.vitepress/cache
+docs-gossiplog/.vitepress/.temp
+
 .vercel
