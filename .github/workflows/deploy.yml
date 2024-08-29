@@ -28,7 +28,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
-          node-version: 18.x
+          node-version: 20.x
           cache: npm
 
       - name: Setup Pages
@@ -40,12 +40,12 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Build with VitePress
+      - name: Build Docs with VitePress
         run: |
           npm run docs:build
           touch docs/.vitepress/dist/.nojekyll
 
-      - name: Build with VitePress
+      - name: Build GossipLog Docs with VitePress
         run: |
           npm run docs-gossiplog:build
           touch docs-gossiplog/.vitepress/dist/.nojekyll
