@@ -5,6 +5,7 @@ on:
     paths:
       - package.json
       - docs/**
+      - docs-gossiplog/**
       - packages/*/README.md
       - examples/*/README.md
   workflow_dispatch:
