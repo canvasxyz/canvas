@@ -3,7 +3,7 @@ layout: home
 ---
 
 <HeroRow text="A replicated log for decentralized applications" :image="{ light: '/graphic_mainframe_1.png', dark: '/graphic_mainframe_2.png' }">
-  <HeroAction theme="brand big" text="Docs" href="/intro" />
+  <HeroAction theme="brand big" text="Docs" href="./intro" />
   <HeroAction theme="alt big" text="Code" href="https://github.com/canvasxyz/canvas/tree/main/packages/gossiplog" target="_blank" noreferrer noopener/>
 </HeroRow>
 
