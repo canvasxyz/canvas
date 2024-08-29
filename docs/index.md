@@ -121,7 +121,7 @@ To resolve this, we have a few options:
 Canvas is built by a team that built Web3 tools used by top protocols
 and 100k+ users, developed peer-to-peer infrastructure at Protocol
 Labs, and worked at companies like AngelList, Notion, and Medium in
-the early days. We've contributed to libp2p, IPFS, and
+the early days.
 
 We've been working on Canvas since mid-2022, and deployed early
 versions of the system in production environments.
