@@ -52,6 +52,8 @@ jobs:
 
       - name: Build Prisma client for network-explorer
         run: npm run build:prisma --workspace=@canvas-js/network-explorer
+        env:
+          INDEX_DATABASE_URL: file:./index.sqlite
 
       - name: Build
         run: npm run build
@@ -121,6 +123,8 @@ jobs:
 
       - name: Build Prisma client for network-explorer
         run: npm run build:prisma --workspace=@canvas-js/network-explorer
+        env:
+          INDEX_DATABASE_URL: file:./index.sqlite
 
       - name: Build
         run: pnpm run build
