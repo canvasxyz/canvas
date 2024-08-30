@@ -68,7 +68,6 @@ for (const topic of topics) {
 				update: {},
 			})
 		} else if (message.message.payload.type == "session") {
-			console.log("session message", message)
 			await prisma.message.upsert({
 				create: {
 					topic: message.message.topic,
