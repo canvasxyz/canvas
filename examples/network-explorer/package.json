@@ -6,6 +6,7 @@
 	"scripts": {
 		"dev:server": "tsx --tsconfig server/tsconfig.json server/server.ts",
 		"dev:client": "vite",
+		"build:prisma": "prisma generate --sql",
 		"lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
 		"start:server": "cross-env NODE_ENV=production node dist/server.js"
 	},

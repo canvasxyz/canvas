@@ -50,6 +50,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build Prisma client for network-explorer
+        run: npm run build:prisma --workspace=@canvas-js/network-explorer
+
       - name: Build
         run: npm run build
 
@@ -115,6 +118,9 @@ jobs:
 
       - name: Install modules
         run: pnpm i
+
+      - name: Build Prisma client for network-explorer
+        run: npm run build:prisma --workspace=@canvas-js/network-explorer
 
       - name: Build
         run: pnpm run build
