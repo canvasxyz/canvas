@@ -28,47 +28,52 @@ export async function* decodeRequests(
 export class Server {
 	public static timeout = 10 * SECONDS
 
-	public readonly responses = pushable<Sync.Response>({ objectMode: true })
+	public readonly source = pushable<Sync.Response>({ objectMode: true })
 
 	private readonly signal = AbortSignal.timeout(Server.timeout)
 	private readonly log: Logger
 
-	constructor(topic: string, readonly source: SyncServer) {
+	constructor(topic: string, readonly txn: SyncServer) {
 		this.log = logger(`canvas:gossiplog:[${topic}]:server`)
 		this.signal.addEventListener("abort", () => {
-			this.responses.push({ abort: { cooldown: 0 } })
-			this.responses.end()
+			this.source.push({ abort: { cooldown: 0 } })
+			this.source.end()
 		})
 	}
 
-	public async handle(reqs: AsyncIterable<Sync.Request>): Promise<void> {
+	public sink = async (reqs: AsyncIterable<Sync.Request>): Promise<void> => {
 		for await (const req of reqs) {
-			if (req.getRoot !== undefined) {
-				const root = await this.source.getRoot()
-				this.responses.push({ getRoot: { root: encodeNode(root) } })
-			} else if (req.getNode !== undefined) {
-				const { level, key } = req.getNode
-				assert(level !== null && level !== undefined, "missing level in getNode request")
-				const node = await this.source.getNode(level, decodeKey(key))
-				if (node === null) {
-					this.responses.push({ getNode: {} })
-				} else {
-					this.responses.push({ getNode: { node: encodeNode(node) } })
-				}
-			} else if (req.getChildren !== undefined) {
-				const { level, key } = req.getChildren
-				assert(level !== null && level !== undefined, "missing level in getChildren request")
-				const children = await this.source.getChildren(level, decodeKey(key))
-				this.responses.push({ getChildren: { children: children.map(encodeNode) } })
-			} else if (req.getValues !== undefined) {
-				const { keys } = req.getValues
-				const values = await this.source.getValues(keys)
-				this.responses.push({ getValues: { values } })
-			} else {
-				throw new Error("invalid request type")
-			}
+			const res = await this.handleRequest(req)
+			this.source.push(res)
 		}
 
-		this.responses.end()
+		this.source.end()
+	}
+
+	public async handleRequest(req: Sync.Request): Promise<Sync.Response> {
+		if (req.getRoot !== undefined) {
+			const root = await this.txn.getRoot()
+			return { getRoot: { root: encodeNode(root) } }
+		} else if (req.getNode !== undefined) {
+			const { level, key } = req.getNode
+			assert(level !== null && level !== undefined, "missing level in getNode request")
+			const node = await this.txn.getNode(level, decodeKey(key))
+			if (node === null) {
+				return { getNode: {} }
+			} else {
+				return { getNode: { node: encodeNode(node) } }
+			}
+		} else if (req.getChildren !== undefined) {
+			const { level, key } = req.getChildren
+			assert(level !== null && level !== undefined, "missing level in getChildren request")
+			const children = await this.txn.getChildren(level, decodeKey(key))
+			return { getChildren: { children: children.map(encodeNode) } }
+		} else if (req.getValues !== undefined) {
+			const { keys } = req.getValues
+			const values = await this.txn.getValues(keys)
+			return { getValues: { values } }
+		} else {
+			throw new Error("invalid request type")
+		}
 	}
 }

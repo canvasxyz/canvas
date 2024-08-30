@@ -1,9 +1,6 @@
 import { CodeError, Stream, TypedEventEmitter } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
-import * as lp from "it-length-prefixed"
-import { pipe } from "it-pipe"
 import { pushable, Pushable } from "it-pushable"
-import { Duplex, Source } from "it-stream-types"
 import { Uint8ArrayList } from "uint8arraylist"
 
 import type { Key, Node } from "@canvas-js/okra"
@@ -14,7 +11,7 @@ import * as Sync from "#protocols/sync"
 import { encodeKey, decodeNode } from "./utils.js"
 import { SyncServer } from "../interface.js"
 
-export async function* decodeResponses(source: AsyncIterable<Uint8ArrayList>) {
+export async function* decodeResponses(source: AsyncIterable<Uint8Array | Uint8ArrayList>) {
 	for await (const msg of source) {
 		const res = Sync.Response.decode(msg.subarray())
 		yield res
@@ -38,7 +35,8 @@ export class Client extends TypedEventEmitter<{ error: CustomEvent<Error> }> imp
 
 	constructor(
 		readonly id: string,
-		readonly responses: AsyncIterator<Sync.Response, void, undefined>, // readonly stream: Duplex<AsyncIterable<Uint8ArrayList>, Source<Uint8ArrayList | Uint8Array>, Promise<void>>,
+		// readonly stream: Duplex<AsyncIterable<Uint8ArrayList>, Source<Uint8ArrayList | Uint8Array>, Promise<void>>,
+		readonly responses: AsyncIterator<Sync.Response, void, undefined>,
 	) {
 		super()
 		this.requests = pushable({ objectMode: true })
@@ -59,22 +57,14 @@ export class Client extends TypedEventEmitter<{ error: CustomEvent<Error> }> imp
 	}
 
 	public async getRoot(): Promise<Node> {
-		const { getRoot, abort } = await this.get({ getRoot: {} })
-		if (abort !== undefined) {
-			throw new CodeError("sync aborted by server", Client.codes.ABORT, abort)
-		}
-
+		const { getRoot } = await this.get({ getRoot: {} })
 		assert(getRoot, "invalid RPC response type")
 		assert(getRoot.root !== undefined, "missing `root` in getRoot RPC response")
 		return decodeNode(getRoot.root)
 	}
 
 	public async getNode(level: number, key: Key): Promise<Node | null> {
-		const { getNode, abort } = await this.get({ getNode: { level, key: encodeKey(key) } })
-		if (abort !== undefined) {
-			throw new CodeError("sync aborted by server", Client.codes.ABORT, abort)
-		}
-
+		const { getNode } = await this.get({ getNode: { level, key: encodeKey(key) } })
 		assert(getNode, "invalid RPC response type")
 		if (getNode.node) {
 			return decodeNode(getNode.node)
@@ -84,33 +74,33 @@ export class Client extends TypedEventEmitter<{ error: CustomEvent<Error> }> imp
 	}
 
 	public async getChildren(level: number, key: Key): Promise<Node[]> {
-		const { getChildren, abort } = await this.get({ getChildren: { level, key: encodeKey(key) } })
-		if (abort !== undefined) {
-			throw new CodeError("sync aborted by server", Client.codes.ABORT, abort)
-		}
-
+		const { getChildren } = await this.get({ getChildren: { level, key: encodeKey(key) } })
 		assert(getChildren, "invalid RPC response type")
 		return getChildren.children.map(decodeNode)
 	}
 
 	public async getValues(keys: Uint8Array[]): Promise<Uint8Array[]> {
-		const { getValues, abort } = await this.get({ getValues: { keys } })
-		if (abort !== undefined) {
-			throw new CodeError("sync aborted by server", Client.codes.ABORT, abort)
-		}
-
+		const { getValues } = await this.get({ getValues: { keys } })
 		assert(getValues, "invalid RPC response type")
 		return getValues.values
 	}
 
 	private async get(req: Sync.Request): Promise<Sync.Response> {
+		this.log.trace("req: %O", req)
 		this.requests.push(req)
+
 		const { done, value: res } = await this.responses.next()
+		this.log.trace("res: %O", res)
+
 		if (done) {
 			this.log.error("stream %s ended prematurely: %O", this.id, res)
 			throw new Error("stream ended prematurely")
-		} else {
-			return res
 		}
+
+		if (res.abort !== undefined) {
+			throw new CodeError("sync aborted by server", Client.codes.ABORT, res.abort)
+		}
+
+		return res
 	}
 }

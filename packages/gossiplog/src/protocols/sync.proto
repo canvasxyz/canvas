@@ -48,7 +48,7 @@ message Response {
     repeated bytes values = 1;
   }
 
-  message AbortSignal {
+  message Abort {
     uint32 cooldown = 1;
   }
 
@@ -57,6 +57,6 @@ message Response {
     GetNodeResponse get_node = 2;
     GetChildrenResponse get_children = 3;
     GetValuesResponse get_values = 4;
-    AbortSignal abort = 5;
+    Abort abort = 5;
   }
 }

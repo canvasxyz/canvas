@@ -443,7 +443,7 @@ export interface Response {
   getNode?: Response.GetNodeResponse
   getChildren?: Response.GetChildrenResponse
   getValues?: Response.GetValuesResponse
-  abort?: Response.AbortSignal
+  abort?: Response.Abort
 }
 
 export namespace Response {
@@ -701,16 +701,16 @@ export namespace Response {
     }
   }
 
-  export interface AbortSignal {
+  export interface Abort {
     cooldown: number
   }
 
-  export namespace AbortSignal {
-    let _codec: Codec<AbortSignal>
+  export namespace Abort {
+    let _codec: Codec<Abort>
 
-    export const codec = (): Codec<AbortSignal> => {
+    export const codec = (): Codec<Abort> => {
       if (_codec == null) {
-        _codec = message<AbortSignal>((obj, w, opts = {}) => {
+        _codec = message<Abort>((obj, w, opts = {}) => {
           if (opts.lengthDelimited !== false) {
             w.fork()
           }
@@ -752,12 +752,12 @@ export namespace Response {
       return _codec
     }
 
-    export const encode = (obj: Partial<AbortSignal>): Uint8Array => {
-      return encodeMessage(obj, AbortSignal.codec())
+    export const encode = (obj: Partial<Abort>): Uint8Array => {
+      return encodeMessage(obj, Abort.codec())
     }
 
-    export const decode = (buf: Uint8Array | Uint8ArrayList, opts?: DecodeOptions<AbortSignal>): AbortSignal => {
-      return decodeMessage(buf, AbortSignal.codec(), opts)
+    export const decode = (buf: Uint8Array | Uint8ArrayList, opts?: DecodeOptions<Abort>): Abort => {
+      return decodeMessage(buf, Abort.codec(), opts)
     }
   }
 
@@ -792,7 +792,7 @@ export namespace Response {
 
         if (obj.abort != null) {
           w.uint32(42)
-          Response.AbortSignal.codec().encode(obj.abort, w)
+          Response.Abort.codec().encode(obj.abort, w)
         }
 
         if (opts.lengthDelimited !== false) {
@@ -832,7 +832,7 @@ export namespace Response {
               break
             }
             case 5: {
-              obj.abort = Response.AbortSignal.codec().decode(reader, reader.uint32(), {
+              obj.abort = Response.Abort.codec().decode(reader, reader.uint32(), {
                 limits: opts.limits?.abort
               })
               break

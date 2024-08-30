@@ -429,11 +429,7 @@ export class GossipLogService<Payload = unknown> {
 		try {
 			await this.messageLog.serve(async (txn) => {
 				const server = new Server(this.messageLog.topic, txn)
-
-				await Promise.all([
-					pipe(stream.source, lp.decode, decodeRequests, (reqs) => server.handle(reqs)),
-					pipe(server.responses, encodeResponses, lp.encode, stream.sink),
-				])
+				await pipe(stream, lp.decode, decodeRequests, server, encodeResponses, lp.encode, stream)
 			})
 
 			this.log("closed incoming stream %s from peer %p", stream.id, peerId)
