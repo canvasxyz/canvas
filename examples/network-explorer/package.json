@@ -6,6 +6,8 @@
 	"scripts": {
 		"dev:server": "tsx --tsconfig server/tsconfig.json server/server.ts",
 		"dev:client": "vite",
+		"build:prisma": "prisma generate --sql",
+		"migrate:prisma": "prisma migrate dev",
 		"lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
 		"start:server": "cross-env NODE_ENV=production node dist/server.js"
 	},
@@ -14,6 +16,7 @@
 		"@canvas-js/core": "0.10.10",
 		"@canvas-js/interfaces": "0.10.10",
 		"@ipld/dag-json": "^10.2.2",
+		"@prisma/client": "^5.19.0",
 		"better-sqlite3": "^11.1.2",
 		"cors": "^2.8.5",
 		"cross-env": "^7.0.3",
@@ -33,6 +36,7 @@
 		"@types/express": "^4.17.21",
 		"@types/node": "^18.11.5",
 		"@types/react": "^18.3.3",
-		"@types/react-dom": "^18.3.0"
+		"@types/react-dom": "^18.3.0",
+		"prisma": "^5.19.0"
 	}
 }
