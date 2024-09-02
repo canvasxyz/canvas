@@ -51,13 +51,13 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 
 	api.get("/messages/:id", async (req, res) => {
 		const { id } = req.params
-		const [signature, message] = await app.getMessage(id)
-		if (signature === null || message === null) {
+		const messageRecord = await app.getMessage(id)
+		if (messageRecord === null) {
 			return void res.status(StatusCodes.NOT_FOUND).end()
 		}
 
 		res.writeHead(StatusCodes.OK, { "content-type": "application/json" })
-		return void res.end(json.encode({ id, signature, message }))
+		return void res.end(json.encode({ id, signature: messageRecord.signature, message: messageRecord.message }))
 	})
 
 	api.get("/messages", async (req, res) => {

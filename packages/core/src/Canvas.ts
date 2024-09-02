@@ -313,9 +313,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		return await this.messageLog.insert({ signature, message })
 	}
 
-	public async getMessage(
-		id: string,
-	): Promise<[signature: Signature, message: Message<Action | Session>] | [null, null]> {
+	public async getMessage(id: string) {
 		return await this.messageLog.get(id)
 	}
 

@@ -317,7 +317,9 @@ test("validate action args using IPLD schemas", async (t) => {
 	const { id } = await app.actions.createPost({ content: "hello world!", inReplyTo: null })
 
 	// validate that the args are represented as tuples inside the action
-	const [_, message] = await app.getMessage(id)
+	const messageRecord = await app.getMessage(id)
+	assert(messageRecord !== null)
+	const message = messageRecord.message
 	assert(message !== null && message.payload.type === "action")
 	t.deepEqual(message.payload.args, ["hello world!", null])
 

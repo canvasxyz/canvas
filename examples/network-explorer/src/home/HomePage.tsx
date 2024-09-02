@@ -23,7 +23,7 @@ function HomePage() {
 	if (error || countsError) return <div>failed to load</div>
 	if (!data || !countsData) return <div>loading...</div>
 
-	const actions = data.filter((item) => item[2].payload.type === "action") as Result<Action>[]
+	const actions = data.filter((item) => item.message.payload.type === "action") as Result<Action>[]
 
 	return (
 		<>
@@ -78,12 +78,9 @@ function HomePage() {
 								</tr>
 							</thead>
 							<tbody>
-								{actions.map((item) => {
-									const cid = item[0]
-									const message = item[2]
-
+								{actions.map(({ id, message }) => {
 									return (
-										<tr key={cid}>
+										<tr key={id}>
 											<td className="break-all px-3 py-2">{message.payload.did.slice(0, 20)}...</td>
 											<td className="break-all px-3">{message.payload.name}</td>
 											<td className="break-all px-1">

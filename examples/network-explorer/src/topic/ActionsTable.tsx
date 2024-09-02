@@ -63,10 +63,10 @@ function ActionsTable({ topic }: { topic: string }) {
 						</tr>
 					</thead>
 					<tbody>
-						{actionsToDisplay.map(([cid, signature, message]: [string, Signature, Message<Action>]) => {
+						{actionsToDisplay.map(({ id, signature, message }) => {
 							const args = JSON.stringify(message.payload.args)
 							return (
-								<tr key={cid}>
+								<tr key={id}>
 									<td className="break-all pl-6 pr-3 py-2">{message.payload.did.slice(0, 15)}...</td>
 									<td className="break-all px-3">{message.payload.name}</td>
 									<td className="break-all px-3">{args.length > 50 ? <ArgsPopout data={args} /> : args}</td>
@@ -84,7 +84,7 @@ function ActionsTable({ topic }: { topic: string }) {
 			<div className="flex flex-row gap-2">
 				<div className="flex-grow"></div>
 				<PaginationButton text="Previous" enabled={currentCursor !== null} onClick={popCursor} />
-				<PaginationButton text="Next" enabled={hasMore} onClick={() => pushCursor(actions[entriesPerPage][0])} />
+				<PaginationButton text="Next" enabled={hasMore} onClick={() => pushCursor(actions[entriesPerPage].id)} />
 			</div>
 		</div>
 	)

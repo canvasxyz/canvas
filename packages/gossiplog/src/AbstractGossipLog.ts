@@ -174,12 +174,12 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		return records.length > 0
 	}
 
-	public async get(id: string): Promise<[signature: Signature, message: Message<Payload>] | [null, null]> {
+	public async get(id: string) {
 		const record = await this.db.get<MessageRecord<Payload>>("$messages", id)
 		if (record === null) {
-			return [null, null]
+			return null
 		} else {
-			return [record.signature, record.message]
+			return { signature: record.signature, message: record.message, branch: record.branch }
 		}
 	}
 
@@ -189,7 +189,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		const { reverse = false, limit, ...where } = range
 		return this.db.query<{ id: string; signature: Signature; message: Message<Payload> }>("$messages", {
 			where: { id: where },
-			select: { id: true, signature: true, message: true },
+			select: { id: true, signature: true, message: true, branch: true },
 			orderBy: { id: reverse ? "desc" : "asc" },
 			limit,
 		})
@@ -479,12 +479,12 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 					// TODO: txn.getMany
 					for (const key of keys) {
 						const id = decodeId(key)
-						const [signature, message] = await this.get(id)
-						if (signature === null || message === null) {
+						const messageRecord = await this.get(id)
+						if (messageRecord === null) {
 							throw new CodeError("message not found", "NOT_FOUND", { id })
 						}
 
-						const signedMessage = SignedMessage.encode(signature, message)
+						const signedMessage = SignedMessage.encode(messageRecord.signature, messageRecord.message)
 						assert(equals(signedMessage.key, key), "invalid message key")
 						values.push(signedMessage.value)
 					}

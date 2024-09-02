@@ -118,8 +118,12 @@ expressApp.get("/index_api/messages", ipld(), async (req, res) => {
 	const result = []
 	for (const messageIndexEntry of messageIndexEntries) {
 		const app = canvasApps[messageIndexEntry.topic]
-		const [signature, message] = await app.getMessage(messageIndexEntry.message_id)
-		result.push([messageIndexEntry.message_id, signature, message])
+		const messageRecord = await app.getMessage(messageIndexEntry.message_id)
+		if (messageRecord == null) {
+			console.error(`Could not find message with id ${messageIndexEntry.message_id}`)
+		}
+
+		result.push({ id: messageIndexEntry.message_id, ...messageRecord })
 	}
 
 	res.status(StatusCodes.OK)
@@ -158,8 +162,12 @@ expressApp.get("/index_api/messages/:topic", ipld(), async (req, res) => {
 	const canvasApp = canvasApps[req.params.topic]
 	const result = []
 	for (const messageId of messageIds) {
-		const [signature, message] = await canvasApp.getMessage(messageId.message_id)
-		result.push([messageId.message_id, signature, message])
+		const messageRecord = await canvasApp.getMessage(messageId.message_id)
+		if (messageRecord == null) {
+			console.error(`Could not find message with id ${messageId.message_id}`)
+			return res.status(StatusCodes.NOT_FOUND).end()
+		}
+		result.push(messageRecord)
 	}
 
 	res.status(StatusCodes.OK)
@@ -276,8 +284,8 @@ expressApp.get("/index_api/latest_session/:topic", async (req, res) => {
 		return
 	}
 
-	const [_signature, message] = await canvasApp.getMessage(sessionId)
-	if (!message || message.payload.type !== "session") {
+	const messageRecord = await canvasApp.getMessage(sessionId)
+	if (!messageRecord || !messageRecord.message || messageRecord.message.payload.type !== "session") {
 		res.status(StatusCodes.NOT_FOUND)
 		res.end()
 		return
@@ -286,7 +294,7 @@ expressApp.get("/index_api/latest_session/:topic", async (req, res) => {
 	// return using ipld json stringify
 	res.status(StatusCodes.OK)
 	res.setHeader("content-type", "application/json")
-	res.end(json.encode(message.payload))
+	res.end(json.encode(messageRecord.message.payload))
 })
 
 expressApp.listen(HTTP_PORT, HTTP_ADDR, () => {

@@ -46,12 +46,9 @@ function SessionsTable({ topic }: { topic: string }) {
 						</tr>
 					</thead>
 					<tbody>
-						{sessionsToDisplay.map((item) => {
-							const cid = item[0]
-							const message = item[2]
-
+						{sessionsToDisplay.map(({ id, message }) => {
 							return (
-								<tr key={cid}>
+								<tr key={id}>
 									<td className="break-all px-6 py-2">{message.payload.publicKey}</td>
 									<td className="break-all px-6 py-2">{message.payload.did}</td>
 									<td className="break-all px-6">
@@ -66,7 +63,7 @@ function SessionsTable({ topic }: { topic: string }) {
 			<div className="flex flex-row gap-2">
 				<div className="flex-grow"></div>
 				<PaginationButton text="Previous" enabled={currentCursor !== null} onClick={popCursor} />
-				<PaginationButton text="Next" enabled={hasMore} onClick={() => pushCursor(sessions[entriesPerPage][0])} />
+				<PaginationButton text="Next" enabled={hasMore} onClick={() => pushCursor(sessions[entriesPerPage].id)} />
 			</div>
 		</div>
 	)

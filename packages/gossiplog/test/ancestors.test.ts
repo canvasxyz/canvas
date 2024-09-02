@@ -133,13 +133,13 @@ export const simulateRandomNetwork = async (
 		for (let j = 0; j < maxMessageCount; j++) {
 			const id = messageIDs[j]
 
-			const [signature, message] = await log.get(id)
+			const messageRecord = await log.get(id)
 			if (getBit(map, j)) {
-				t.assert(signature !== null)
-				t.assert(message !== null)
+				t.assert(messageRecord !== null)
+				t.assert(messageRecord?.signature !== null)
+				t.assert(messageRecord?.message !== null)
 			} else {
-				t.is(signature, null)
-				t.is(message, null)
+				t.is(messageRecord, null)
 			}
 		}
 	}
