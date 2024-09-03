@@ -89,7 +89,7 @@ for (const topic of topics) {
 }
 
 expressApp.get("/index_api/messages", ipld(), async (req, res) => {
-	const numMessagesToReturn = 20
+	const numMessagesToReturn = 10
 
 	let before: string
 	if (!req.query.before) {
@@ -117,7 +117,7 @@ expressApp.get("/index_api/messages", ipld(), async (req, res) => {
 })
 
 expressApp.get("/index_api/messages/:topic", ipld(), async (req, res) => {
-	const numMessagesToReturn = 20
+	const numMessagesToReturn = 10
 
 	if (req.query.type !== "session" && req.query.type !== "action") {
 		console.log("invalid type", req.query.type)

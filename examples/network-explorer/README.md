@@ -21,7 +21,7 @@ npm run dev:server
 npm run dev:client
 ```
 
-## Deploying on Railway
+## Deploying the server on Railway
 
 Create a Railway space, and add the `canvasxyz/canvas` Github repo as a service.
 Also create a Postgres database.
@@ -33,10 +33,26 @@ For the main service:
 - Add the DATABASE_URL as a environment variable, pointed to the Postgres database.
 - Add Public Networking to port 8080.
 
-- Peering?
-- Topics list?
-- Testing with a CLI?
-  - Is it easy to see what the Peer ID is? Where it's bound?
+## Deploying the client on Vercel
+
+Create a Vercel app from this directory.
+
+Configure the build command to `cp tsconfig.vercel.json tsconfig.json && vite build`. Then run:
+
+```
+vercel --prod
+```
+
+To configure what backend the client connects to, copy .env.example to .env and set the environment variable accordingly.
+
+## Connecting to the client via CLI
+
+Use the lib2p address of the network explorer:
+
+```
+npm install -g @canvas-js/cli
+canvas run example.contract.js --bootstrap="/dns4/network-explorer.up.railway.app/tcp/3334/ws/p2p/12D3KooWKPsckeYRQfbnm5M3e8UqryhrAAog5MnWyaKesFXQNGAv"
+```
 
 ## Configuration
 
