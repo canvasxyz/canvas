@@ -8,7 +8,8 @@ import * as Sync from "#protocols/sync"
 
 import { SyncServer } from "../interface.js"
 import { decodeKey, encodeNode } from "./utils.js"
-import { pushable } from "it-pushable"
+import { Pushable, pushable } from "it-pushable"
+import { Duplex } from "it-stream-types"
 
 export async function* encodeResponses(responses: AsyncIterable<Sync.Response>): AsyncIterable<Uint8Array> {
 	for await (const res of responses) {
@@ -25,29 +26,51 @@ export async function* decodeRequests(
 	}
 }
 
-export class Server {
+export class Server implements Duplex<Pushable<Sync.Response>, AsyncIterable<Sync.Request>> {
 	public static timeout = 10 * SECONDS
 
 	public readonly source = pushable<Sync.Response>({ objectMode: true })
 
-	private readonly signal = AbortSignal.timeout(Server.timeout)
 	private readonly log: Logger
-
-	constructor(topic: string, readonly txn: SyncServer) {
-		this.log = logger(`canvas:gossiplog:[${topic}]:server`)
-		this.signal.addEventListener("abort", () => {
+	private readonly signal = AbortSignal.timeout(Server.timeout)
+	private readonly abort = () => {
+		if (this.#ended === false) {
 			this.source.push({ abort: { cooldown: 0 } })
 			this.source.end()
-		})
+			this.#ended = true
+		}
+	}
+
+	#ended = false
+
+	constructor(topic: string, readonly txn: SyncServer) {
+		this.log = logger(`canvas:sync:server`)
+		this.signal.addEventListener("abort", this.abort)
+	}
+
+	public end() {
+		this.signal.removeEventListener("abort", this.abort)
+		if (this.#ended === false) {
+			this.source.end()
+			this.#ended = true
+		}
 	}
 
 	public sink = async (reqs: AsyncIterable<Sync.Request>): Promise<void> => {
 		for await (const req of reqs) {
+			if (this.#ended) {
+				return
+			}
+
 			const res = await this.handleRequest(req)
+			if (this.#ended) {
+				return
+			}
+
 			this.source.push(res)
 		}
 
-		this.source.end()
+		this.end()
 	}
 
 	public async handleRequest(req: Sync.Request): Promise<Sync.Response> {

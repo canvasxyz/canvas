@@ -160,14 +160,38 @@ const apply: GossipLogConsumer<string> = ({}) => {}
 // 	{ sqlite: true },
 // )
 
+// testPlatforms(
+// 	"ws sync",
+// 	async (t, openGossipLog) => {
+// 		const topic = randomUUID()
+// 		const a = await openGossipLog(t, { topic, apply })
+// 		const b = await openGossipLog(t, { topic, apply })
+
+// 		const messageCount = 10
+// 		for (let i = 0; i < messageCount; i++) {
+// 			await a.append(nanoid(8))
+// 		}
+
+// 		const server = createWebSocketAPI(a)
+// 		await server.listen(5555)
+// 		t.teardown(() => server.close())
+
+// 		await sync(b, "ws://127.0.0.1:5555")
+// 		t.pass()
+// 	},
+// 	{ sqlite: true },
+// )
+//
 testPlatforms(
 	"ws sync",
 	async (t, openGossipLog) => {
+		t.timeout(120 * SECONDS)
+
 		const topic = randomUUID()
 		const a = await openGossipLog(t, { topic, apply })
 		const b = await openGossipLog(t, { topic, apply })
 
-		const messageCount = 10
+		const messageCount = 10000
 		for (let i = 0; i < messageCount; i++) {
 			await a.append(nanoid(8))
 		}

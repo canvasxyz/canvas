@@ -1,5 +1,5 @@
 import { CodeError, Stream, TypedEventEmitter } from "@libp2p/interface"
-import { logger } from "@libp2p/logger"
+import { Logger, logger } from "@libp2p/logger"
 import { pushable, Pushable } from "it-pushable"
 import { Uint8ArrayList } from "uint8arraylist"
 
@@ -27,7 +27,7 @@ export async function* encodeRequests(source: AsyncIterable<Sync.Request>) {
 export class Client extends TypedEventEmitter<{ error: CustomEvent<Error> }> implements SyncServer {
 	// private readonly responses: AsyncIterator<Sync.Response, void, undefined>
 	public readonly requests: Pushable<Sync.Request>
-	private readonly log = logger("canvas:sync:client")
+	private readonly log: Logger
 
 	public static codes = {
 		ABORT: "ABORT",
@@ -39,6 +39,7 @@ export class Client extends TypedEventEmitter<{ error: CustomEvent<Error> }> imp
 		readonly responses: AsyncIterator<Sync.Response, void, undefined>,
 	) {
 		super()
+		this.log = logger(`canvas:sync:client:[${this.id}]`)
 		this.requests = pushable({ objectMode: true })
 		// this.responses = pipe(stream.source, lp.decode, decodeResponses)
 
@@ -53,6 +54,7 @@ export class Client extends TypedEventEmitter<{ error: CustomEvent<Error> }> imp
 	}
 
 	public end() {
+		this.log("closing")
 		this.requests.end()
 	}
 
@@ -90,13 +92,13 @@ export class Client extends TypedEventEmitter<{ error: CustomEvent<Error> }> imp
 		this.requests.push(req)
 
 		const { done, value: res } = await this.responses.next()
-		this.log.trace("res: %O", res)
 
 		if (done) {
 			this.log.error("stream %s ended prematurely: %O", this.id, res)
 			throw new Error("stream ended prematurely")
 		}
 
+		this.log.trace("res: %O", res)
 		if (res.abort !== undefined) {
 			throw new CodeError("sync aborted by server", Client.codes.ABORT, res.abort)
 		}

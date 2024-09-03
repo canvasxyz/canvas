@@ -429,6 +429,12 @@ export class GossipLogService<Payload = unknown> {
 		try {
 			await this.messageLog.serve(async (txn) => {
 				const server = new Server(this.messageLog.topic, txn)
+				const signal = AbortSignal.timeout(Server.timeout)
+				signal.addEventListener("abort", () => {
+					server.source.push({ abort: { cooldown: 0 } })
+					server.source.end()
+				})
+
 				await pipe(stream, lp.decode, decodeRequests, server, encodeResponses, lp.encode, stream)
 			})
 
