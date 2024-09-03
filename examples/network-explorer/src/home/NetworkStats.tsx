@@ -19,15 +19,11 @@ export function NetworkStats() {
 		<div className="flex flex-row bg-white rounded-lg drop-shadow p-4 px-5 gap-3">
 			<div className="w-1/2">
 				<div className="font-bold">Status</div>
-				<div className="font-medium">Online, v{version}</div>
+				<div className="font-medium">Online, running Canvas {version}</div>
 			</div>
 			<div>
-				<div className="w-24 font-bold">Actions</div>
-				<div className="font-medium">{data ? data.action_count : "..."}</div>
-			</div>
-			<div>
-				<div className="w-24 font-bold">Sessions</div>
-				<div className="font-medium">{data ? data.session_count : "..."}</div>
+				<div className="w-24 font-bold">Messages</div>
+				<div className="font-medium">{data ? data.action_count + data.session_count : "..."}</div>
 			</div>
 			<div>
 				<div className="w-24 font-bold">Addresses</div>

@@ -38,8 +38,7 @@ function HomePage() {
 							<thead>
 								<tr className="border-b">
 									<th className="px-3 font-normal">Topic</th>
-									<th className="px-3 font-normal">Actions</th>
-									<th className="px-3 font-normal">Sessions</th>
+									<th className="px-3 font-normal">Messages</th>
 									<th className="px-3 font-normal">Addresses</th>
 								</tr>
 							</thead>
@@ -49,8 +48,7 @@ function HomePage() {
 										<td className="break-all px-3 py-2">
 											<Link to={`topic/${row.topic}`}>{row.topic}</Link>
 										</td>
-										<td className="break-all px-3">{row.action_count}</td>
-										<td className="break-all px-3">{row.session_count}</td>
+										<td className="break-all px-3">{row.action_count + row.session_count}</td>
 										<td className="break-all px-3">{row.address_count}</td>
 									</tr>
 								))}

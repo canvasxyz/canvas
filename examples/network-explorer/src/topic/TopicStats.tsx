@@ -16,15 +16,11 @@ export function TopicStats({ topic }: { topic: string }) {
 				<div className="font-bold">{topic}</div>
 			</div>
 			<div>
-				<div>Actions</div>
-				<div className="font-bold">{countsData ? countsData.action_count : "..."}</div>
+				<div>Messages</div>
+				<div className="font-bold">{countsData ? countsData.action_count + countsData.session_count : "..."}</div>
 			</div>
 			<div>
-				<div>Sessions</div>
-				<div className="font-bold">{countsData ? countsData.session_count : "..."}</div>
-			</div>
-			<div>
-				<div>Unique Addresses</div>
+				<div>Addresses</div>
 				<div className="font-bold">{countsData ? countsData.address_count : "..."}</div>
 			</div>
 		</div>
