@@ -1,6 +1,6 @@
 {
 	"name": "@canvas-js/discovery",
-	"version": "0.10.9",
+	"version": "0.10.10",
 	"type": "module",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"main": "lib/index.js",

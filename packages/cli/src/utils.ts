@@ -2,6 +2,9 @@ import fs from "node:fs"
 import path from "node:path"
 import process from "node:process"
 
+import { bytesToHex } from "@noble/hashes/utils"
+import { sha256 } from "@noble/hashes/sha256"
+import esbuild from "esbuild"
 import chalk from "chalk"
 import prompts from "prompts"
 
@@ -18,7 +21,7 @@ export function getContractLocation(args: { path: string; topic?: string; init?:
 	const manifestPath = path.resolve(location, MANIFEST_FILENAME)
 
 	if (!fs.existsSync(location)) {
-		if (!location.endsWith(".canvas.js") && args.init) {
+		if (!location.endsWith(".js") && !location.endsWith(".ts") && args.init) {
 			if (args.topic === undefined) {
 				console.error(chalk.yellow(`--topic is required upon initialization`))
 				process.exit(1)
@@ -59,16 +62,40 @@ export function getContractLocation(args: { path: string; topic?: string; init?:
 		const manifest = fs.readFileSync(manifestPath, "utf-8")
 		const { topic } = JSON.parse(manifest) as { topic: string }
 		return { topic, contract, location: args.memory ? null : location }
-	} else if (location.endsWith(".canvas.js")) {
-		if (args.topic === undefined) {
-			console.error(chalk.yellow(`--topic is required for in-memory apps`))
-			process.exit(1)
+	} else if (location.endsWith(".js") || location.endsWith(".ts")) {
+		let contract = fs.readFileSync(location, "utf-8")
+
+		if (location.endsWith(".ts")) {
+			const bundle = esbuild.buildSync({
+				bundle: true,
+				platform: "node",
+				format: "esm",
+				write: false,
+				entryPoints: [location],
+			})
+			if (!bundle.outputFiles || bundle.outputFiles.length === 0) {
+				console.error(chalk.yellow("[canvas] Building .ts contract produced no files"))
+				process.exit(1)
+			} else if (bundle.outputFiles && bundle.outputFiles.length > 1) {
+				console.warn(chalk.yellow("[canvas] Building .ts contract produced more than one file, likely will not run"))
+				contract = bundle.outputFiles[0].text
+			} else {
+				console.log(
+					chalk.yellow("[canvas] Bundled .ts contract:"),
+					`${bundle.outputFiles[0].contents.byteLength} bytes`,
+				)
+				contract = bundle.outputFiles[0].text
+			}
 		}
 
-		const contract = fs.readFileSync(location, "utf-8")
-		return { topic: args.topic, contract, location: null }
+		const topic = args.topic ?? `${bytesToHex(sha256(contract)).slice(0, 16)}.p2p.app`
+		if (args.topic === undefined) {
+			console.error(chalk.yellow(`[canvas] No --topic provided, using:`), topic)
+		}
+
+		return { topic, contract, location: null }
 	} else {
-		console.error(chalk.yellow(`Contract files must match *.canvas.js`))
+		console.error(chalk.yellow(`Contract files must match *.js or *.ts`))
 		process.exit(1)
 	}
 }

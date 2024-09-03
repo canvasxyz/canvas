@@ -1,0 +1,3 @@
+# GossipLog
+
+TODO

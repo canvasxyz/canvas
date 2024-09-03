@@ -16,7 +16,8 @@ import { Connect } from "./connect/index.js"
 import { LogStatus } from "./LogStatus.js"
 
 const topic = "chat-example.canvas.xyz"
-const bootstrapList = import.meta.env.VITE_BOOTSTRAP_LIST && import.meta.env.VITE_BOOTSTRAP_LIST.split(",")
+const bootstrapList: string[] | undefined =
+	import.meta.env.VITE_BOOTSTRAP_LIST && import.meta.env.VITE_BOOTSTRAP_LIST.split(",")
 
 export const contract = {
 	models: {
@@ -48,7 +49,9 @@ export const App: React.FC<{}> = ({}) => {
 		topic,
 		contract: { ...contract, topic: topicRef.current },
 		signers: sessionSigner ? [sessionSigner] : undefined,
-		bootstrapList,
+		bootstrapList: bootstrapList ?? [
+			`/dns4/canvas-chat.fly.dev/tcp/443/wss/p2p/12D3KooWRrJCTFxZZPWDkZJboAHBCmhZ5MK1fcixDybM8GAjJM2Q`,
+		],
 	})
 
 	return (

@@ -1,7 +1,7 @@
 {
 	"private": true,
 	"name": "@canvas-js/chain-near",
-	"version": "0.10.9",
+	"version": "0.10.10",
 	"type": "module",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"main": "lib/index.js",
@@ -10,9 +10,9 @@
 		"lib"
 	],
 	"dependencies": {
-		"@canvas-js/interfaces": "0.10.9",
-		"@canvas-js/signatures": "0.10.9",
-		"@canvas-js/utils": "0.10.9",
+		"@canvas-js/interfaces": "0.10.10",
+		"@canvas-js/signatures": "0.10.10",
+		"@canvas-js/utils": "0.10.10",
 		"@ipld/dag-cbor": "^9.2.1",
 		"@ipld/dag-json": "^10.2.2",
 		"@libp2p/logger": "^4.0.16",

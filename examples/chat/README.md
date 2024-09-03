@@ -31,14 +31,14 @@ Run `npm run server:dev` to start a temporary in-memory server, or
 To deploy the replication server:
 
 ```
-./deploy-chat-server.sh
+$ cd server
+$ fly deploy
 ```
 
 If you are forking this example, you should change:
 
 - the Fly app name
 - the `ANNOUNCE` environment variable to match your Fly app name
-- the data source name (from `canvas_chat_data`) to your own Fly volume
 
 ## Running the Docker container locally
 

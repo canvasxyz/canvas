@@ -1,9 +1,8 @@
 #!/usr/bin/env sh
 
-# Install the local development build of the Canvas CLI
-# to /usr/bin/dev.
-
 INSTALL_PATH=$(npm config get prefix)/bin/canvas
+
+echo "Installing the local development build of the Canvas CLI to /usr/bin/dev."
 
 if test -f "$INSTALL_PATH"; then
     read -p "Already installed. Overwrite any past install? [y/N] " -n 1 -r

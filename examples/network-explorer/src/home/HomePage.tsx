@@ -27,23 +27,18 @@ function HomePage() {
 
 	return (
 		<>
-			<div className="text-white pt-6">
-				This explorer provides information about signed interactions on Canvas topics.
-			</div>
 			<NetworkStats />
 			<div className="grid grid-cols-2 gap-4">
 				<div className="flex flex-col gap-2">
 					<div>
 						<div className="font-bold">Topics</div>
-						<div>Each topic must be configured manually at this time</div>
 					</div>
 					<div className="border rounded-lg py-1">
 						<table className="table-auto w-full rounded text-left rtl:text-right">
 							<thead>
 								<tr className="border-b">
 									<th className="px-3 font-normal">Topic</th>
-									<th className="px-3 font-normal">Actions</th>
-									<th className="px-3 font-normal">Sessions</th>
+									<th className="px-3 font-normal">Messages</th>
 									<th className="px-3 font-normal">Addresses</th>
 								</tr>
 							</thead>
@@ -53,8 +48,7 @@ function HomePage() {
 										<td className="break-all px-3 py-2">
 											<Link to={`topic/${row.topic}`}>{row.topic}</Link>
 										</td>
-										<td className="break-all px-3">{row.action_count}</td>
-										<td className="break-all px-3">{row.session_count}</td>
+										<td className="break-all px-3">{row.action_count + row.session_count}</td>
 										<td className="break-all px-3">{row.address_count}</td>
 									</tr>
 								))}
@@ -65,7 +59,6 @@ function HomePage() {
 				<div className="flex flex-col gap-2">
 					<div>
 						<div className="font-bold">Latest Actions</div>
-						<div>Live feed of recent actions, for all topics</div>
 					</div>
 					<div className="border rounded-lg py-1">
 						<table className="table-auto w-full rounded text-left rtl:text-right">

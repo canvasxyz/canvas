@@ -130,6 +130,13 @@ pre {
   margin-top: 48px;
 }
 
+.VPContent.is-home .vp-doc > div > div > p img {
+  background-color: #fff;
+  border-radius: 4px;
+  box-shadow: 1px 1px 6px rgba(0,0,0,0.2);
+  margin: 30px 0;
+}
+
 .VPContent.is-home .vp-doc > div > div > h1,
 .VPContent.is-home .vp-doc > div > div > h2,
 .VPContent.is-home .vp-doc > div > div > h3,

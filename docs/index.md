@@ -59,17 +59,17 @@ the database.
 ```ts
 import { useCanvas } from "@canvas-js/hooks"
 
-const models = {} // ...
+const models = {} // same as above...
 const actions = {} // ...
 
 const { app } = useCanvas({
 	topic: "demo.canvas.xyz",
 	contract: { models, actions },
-	peers: ["ws://canvas-demo-backend.fly.io:8000"],
+	bootstrapList: ["https://canvas-demo-node.fly.io"],
 })
 ```
 
-This will sync the application hosted at `canvas-demo-backend.fly.io`
+This will sync the application at `canvas-demo-node.fly.io`
 into your browser.
 
 Unlike blockchain-based distributed applications, Canvas applications have
@@ -87,9 +87,9 @@ somewhat different properties:
   earlier ones. You can also define custom conflict resolution
   strategies (e.g. CRDTs, surface conflicts to the user).
 
-For document-oriented, directory-like, or social applications,
-writing a Canvas application is mostly like writing a
-regular TypeScript application.
+If you are writing a document-oriented, directory-like, or social
+application, Canvas basically allows you to write a distributed
+application in the same way that you'd write a traditional one.
 
 ## Merging History
 
@@ -97,38 +97,37 @@ Each Canvas application executes over a distributed log. By default,
 anyone can add branches to any point in the log, and different nodes
 could append to different branches of the log at any time:
 
-```
-```
+![Replicated log](./public/gossiplog.png)
 
-If nodes diverge on their interpretation of history (e.g. if a node
-goes offline), new branches may be added anywhere in the history of
-the application, including in the past.
+If application operators go out of sync (e.g. someone starts a new node
+that only syncs part of the history), new interactions could be added on
+top of an earlier state of the application.
 
 To resolve this, we have a few options:
 
 * Some applications are fine without strong protections against
   backdated actions. We expose an `indexed_at` field that can be
-  used to detect actions sent from the past.
+  used to detect actions sent with out-of-sync timestamps.
 * Some applications may wish to run with a coordinator node, where
   other nodes only peer with the coordinator. This lets you
   provide stronger guarantees against backdated actions, while
   preserving verifiability and permissionless interoperability.
 * Other applications may wish to use a timestamping service or
   data availability network to finalize actions. We're in
-  touch with teams about making this possible.
-
-Moving between these levels is technically straightforward, and we're
-building tools and services to make managing finality easy.
+  touch with teams to make this possible.
 
 ## About Canvas
 
 Canvas is built by a team that built Web3 tools used by top protocols
-and 100k+ users, developed peer-to-peer infrastructure at Protocol Labs,
-and worked at companies like AngelList, Notion, and Medium when they
-were just small startups.
+and 100k+ users, developed peer-to-peer infrastructure at Protocol
+Labs, and worked at companies like AngelList, Notion, and Medium in
+the early days.
 
-We are building the infrastructure that we wish existed for our previous
-projects, to make decentralized and distributed systems accessible to
+We've been working on Canvas since mid-2022, and deployed early
+versions of the system in production environments.
+
+We are building the infrastructure that we wish existed, to make
+distributed programming and peer-to-peer systems accessible to
 ordinary programmers.
 
 <br/>
