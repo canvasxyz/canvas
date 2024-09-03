@@ -1,0 +1,20 @@
+{
+	"include": ["src"],
+	"compilerOptions": {
+		"module": "Node16",
+		"moduleResolution": "Node16",
+		"target": "es2020",
+		"rootDir": "src",
+		"outDir": "lib",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noFallthroughCasesInSwitch": true,
+    "resolveJsonModule": true,
+		"composite": true,
+		"declaration": true,
+		"allowSyntheticDefaultImports": true,
+		"skipLibCheck": true
+	}
+}
