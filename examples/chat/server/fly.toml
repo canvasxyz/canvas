@@ -1,0 +1,31 @@
+app = "canvas-chat"
+kill_signal = "SIGINT"
+kill_timeout = 30
+processes = []
+
+[env]
+LISTEN = "/ip4/0.0.0.0/tcp/4444/ws"
+ANNOUNCE = "/dns4/canvas-chat.fly.dev/tcp/443/wss"
+DEBUG = "canvas:*:error,canvas:gossiplog:*"
+
+[mounts]
+destination = "/data"
+source = "canvas_chat_data"
+
+[[services]]
+processes = ["app"]
+protocol = "tcp"
+internal_port = 4444
+
+[services.concurrency]
+hard_limit = 1000
+soft_limit = 1000
+type = "connections"
+
+[[services.ports]]
+handlers = ["tls", "http"]
+port = 443
+
+[metrics]
+port = 8000
+path = "/metrics"
