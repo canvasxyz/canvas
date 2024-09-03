@@ -1,29 +1,48 @@
 # Network Explorer Example
 
-## Running locally (for development)
+## Setup
 
-To run the network explorer locally, you need to deploy three apps:
-- The network-explorer server, which consists of a Canvas node plus a database index and some endpoints for exposing information about the network.
-- The network-explorer client, which will query the server API and display the information.
-- A Canvas app that produces events. In this example we will use the chat application in `examples/chat`. This will connect to the server over libp2p.
+For development, the network explorer connects to `postgres://test@localhost/network-explorer`.
+To set up a development database, use:
 
-1. Start the server. In this directory run `npm run dev:server`. This will start a Canvas node and an API. By default the Canvas node listens on port 3334 and the API on port 3333.
-2. Record the server's peer id. This is randomly assigned.
-3. Start the network-explorer client. This is a frontend React/Vite app that queries. This accesses the API on port 3333 by default.
-4. Start the chat app. In the `examples/chat` directory, run `VITE_BOOTSTRAP_LIST=/ip4/127.0.0.1/tcp/3334/ws/p2p/<server peer id> npm run dev`. This will host a chat app that is configured to connect to the server via libp2p on port 3334.
+```
+createuser test
+createdb network-explorer -O test
+```
 
+Then run these commands in separate terminals. (You may also want to
+be running `npm dev` from the workspace root directory, in a third terminal.)
+
+```
+npm run dev:server
+```
+
+```
+npm run dev:client
+```
+
+## Deploying on Railway
+
+Create a Railway space, and add the `canvasxyz/canvas` Github repo as a service.
+Also create a Postgres database.
+
+For the main service:
+
+- Configure the build command to `npm run build`.
+- Configure the start command to `npm start:server --workspace=@canvas-js/network-explorer`.
+- Add the DATABASE_URL as a environment variable, pointed to the Postgres database.
+
+- Peering?
+- Exposing a port to the web?
+- Topics list?
+- Testing with a CLI?
+  - Is it easy to see what the Peer ID is? Where it's bound?
 
 ## Configuration
 
-env vars:
-
-- PORT (default 3333)
-- LIBP2P_PORT
-- DATABASE_URL
+- BOOTSTRAP_LIST: list of libp2p peers to dial (defaults to a canvas-chat.fly.dev node)
+- PORT: port to serve the network API on (default 3333)
+- LIBP2P_PORT: port to bind libp2p on (default 3334)
+- DATABASE_URL: a postgres database to connect to (default postgres://test@localhost/network-explorer)
 - NODE_ENV
-
-server.ts:
-
 - TOPICS
-
-(todo: move to config.ts)
