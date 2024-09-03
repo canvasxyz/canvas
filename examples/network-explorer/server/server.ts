@@ -13,12 +13,16 @@ import { createDatabase } from "./database.js"
 // this is copied from @canvas-js/gossiplog - we don't need anything else from that module
 const MAX_MESSAGE_ID = "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
 
+const BOOTSTRAP_LIST =
+	process.env.BOOTSTRAP_LIST ||
+	"/dns4/canvas-chat.fly.dev/tcp/443/wss/p2p/12D3KooWRrJCTFxZZPWDkZJboAHBCmhZ5MK1fcixDybM8GAjJM2Q"
 const LIBP2P_PORT = parseInt(process.env.LIBP2P_PORT || "3334", 10)
 const HTTP_PORT = parseInt(process.env.PORT || "3333", 10)
 const HTTP_ADDR = "0.0.0.0"
 const dev = process.env.NODE_ENV !== "production"
 const topics = ["chat-example.canvas.xyz"]
 
+console.log(`BOOTSTRAP_LIST: ${BOOTSTRAP_LIST}`)
 console.log(`LIBP2P_PORT: ${LIBP2P_PORT}`)
 console.log(`HTTP_PORT: ${HTTP_PORT}`)
 console.log(`HTTP_ADDR: ${HTTP_ADDR}`)
@@ -48,7 +52,7 @@ for (const topic of topics) {
 			},
 		},
 		signers: [new SIWESigner()],
-		bootstrapList: [],
+		bootstrapList: [BOOTSTRAP_LIST],
 		listen: [`/ip4/0.0.0.0/tcp/${LIBP2P_PORT}/ws`],
 		topic,
 	})
@@ -146,12 +150,21 @@ expressApp.get("/index_api/counts", (req, res) => {
 	const queryResult = queries.selectCountsAll.all() as any
 	const addressCountResult = queries.selectAddressCountsAll.all() as any
 	const addressCountsMap: Record<string, number> = {}
+	const connectionCountsMap: Record<string, number> = {}
+	const connectionsMap: Record<string, string> = {}
 	for (const row of addressCountResult) {
 		addressCountsMap[row.topic] = row.count
+		connectionCountsMap[row.topic] = canvasApps[row.topic]?.libp2p.getConnections().length
+		connectionsMap[row.topic] = canvasApps[row.topic]?.libp2p
+			.getConnections()
+			.map((c) => c.remoteAddr.toString())
+			.join(", ")
 	}
 
 	for (const row of queryResult) {
 		row.address_count = addressCountsMap[row.topic] || 0
+		row.connection_count = connectionCountsMap[row.topic] || 0
+		row.connections = connectionsMap[row.topic] || "-"
 	}
 
 	res.json(queryResult)
@@ -176,6 +189,7 @@ expressApp.get("/index_api/counts/:topic", (req, res) => {
 		action_count: queryResult.action_count || 0,
 		session_count: queryResult.session_count || 0,
 		address_count: addressCountResult.count || 0,
+		connection_count: canvasApps[req.params.topic]?.libp2p.getConnections().length || 0,
 	}
 	res.json(result)
 })

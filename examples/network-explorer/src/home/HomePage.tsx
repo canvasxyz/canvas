@@ -2,15 +2,24 @@ import useSWR from "swr"
 import { Action, Session } from "@canvas-js/interfaces"
 import { Link } from "react-router-dom"
 
+import { version } from "../../package.json"
 import ArgsPopout from "../components/ArgsPopout.js"
-import { NetworkStats } from "./NetworkStats.js"
 import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "../utils.js"
 
 function HomePage() {
 	//
 	const { data: countsData, error: countsError } = useSWR(
 		"/index_api/counts",
-		fetchAndIpldParseJson<{ topic: string; address_count: number; session_count: number; action_count: number }[]>,
+		fetchAndIpldParseJson<
+			{
+				topic: string
+				address_count: number
+				session_count: number
+				action_count: number
+				connection_count: number
+				connections: string[]
+			}[]
+		>,
 		{
 			refreshInterval: 1000,
 		},
@@ -27,19 +36,22 @@ function HomePage() {
 
 	return (
 		<>
-			<NetworkStats />
+			<div className="flex flex-row bg-white rounded-lg drop-shadow p-4 px-5 gap-3">
+				<div className="w-1/2">
+					<div className="font-bold">Status</div>
+					<div className="font-medium">Online, running v{version}</div>
+				</div>
+			</div>
 			<div className="grid grid-cols-2 gap-4">
 				<div className="flex flex-col gap-2">
-					<div>
-						<div className="font-bold">Topics</div>
-					</div>
+					<div>Topics</div>
 					<div className="border rounded-lg py-1">
 						<table className="table-auto w-full rounded text-left rtl:text-right">
 							<thead>
 								<tr className="border-b">
 									<th className="px-3 font-normal">Topic</th>
 									<th className="px-3 font-normal">Messages</th>
-									<th className="px-3 font-normal">Addresses</th>
+									<th className="px-3 font-normal">Connections</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -49,7 +61,9 @@ function HomePage() {
 											<Link to={`topic/${row.topic}`}>{row.topic}</Link>
 										</td>
 										<td className="break-all px-3">{row.action_count + row.session_count}</td>
-										<td className="break-all px-3">{row.address_count}</td>
+										<td className="break-all px-3">
+											{row.connection_count} <ArgsPopout data={JSON.stringify(row.connections)} />
+										</td>
 									</tr>
 								))}
 							</tbody>
@@ -57,9 +71,7 @@ function HomePage() {
 					</div>
 				</div>
 				<div className="flex flex-col gap-2">
-					<div>
-						<div className="font-bold">Latest Actions</div>
-					</div>
+					<div>Latest Actions</div>
 					<div className="border rounded-lg py-1">
 						<table className="table-auto w-full rounded text-left rtl:text-right">
 							<thead>
