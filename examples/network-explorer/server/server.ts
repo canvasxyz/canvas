@@ -168,9 +168,10 @@ expressApp.get("/index_api/counts", async (req, res) => {
 	}
 
 	for (const row of queryResult) {
-		;(row as any).address_count = addressCountsMap[row.topic] || 0
-		;(row as any).connection_count = connectionCountsMap[row.topic] || 0
-		;(row as any).connections = connectionsMap[row.topic] || "-"
+		const r = row as any
+		r.address_count = addressCountsMap[row.topic] || 0
+		r.connection_count = connectionCountsMap[row.topic] || 0
+		r.connections = connectionsMap[row.topic] || "-"
 	}
 
 	res.json(queryResult)

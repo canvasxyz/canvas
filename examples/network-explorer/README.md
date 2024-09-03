@@ -31,9 +31,9 @@ For the main service:
 - Configure the build command to `npm run build`.
 - Configure the start command to `npm start:server --workspace=@canvas-js/network-explorer`.
 - Add the DATABASE_URL as a environment variable, pointed to the Postgres database.
+- Add Public Networking to port 8080.
 
 - Peering?
-- Exposing a port to the web?
 - Topics list?
 - Testing with a CLI?
   - Is it easy to see what the Peer ID is? Where it's bound?
