@@ -8,6 +8,7 @@
 	},
 	"scripts": {
 		"dev": "tsc --build --watch",
+		"generate": "npm run generate -w examples/network-explorer",
 		"build": "tsc --build",
 		"clean": "tsc --build --clean",
 		"clean-all": "rm -rf packages/*/lib/* packages/*/test/lib/* packages/*/tsconfig.tsbuildinfo packages/ethereum-contracts/artifacts/* packages/ethereum-contracts/typechain-types/* examples/*/lib/* examples/*/tsconfig.tsbuildinfo examples/*/tsconfig.node.tsbuildinfo",
