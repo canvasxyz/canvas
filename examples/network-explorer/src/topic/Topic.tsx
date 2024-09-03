@@ -14,7 +14,7 @@ function Topic() {
 
 	return (
 		<>
-			<div className="text-white pt-5 text-lg font-bold">Topic Information</div>
+			<div className="pt-5 text-lg font-bold">Topic Information</div>
 			<TopicStats topic={topic} />
 			<ActionsTable topic={topic} />
 			<SessionsTable topic={topic} />

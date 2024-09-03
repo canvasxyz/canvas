@@ -27,15 +27,11 @@ function HomePage() {
 
 	return (
 		<>
-			<div className="text-white pt-6">
-				This explorer provides information about signed interactions on Canvas topics.
-			</div>
 			<NetworkStats />
 			<div className="grid grid-cols-2 gap-4">
 				<div className="flex flex-col gap-2">
 					<div>
 						<div className="font-bold">Topics</div>
-						<div>Each topic must be configured manually at this time</div>
 					</div>
 					<div className="border rounded-lg py-1">
 						<table className="table-auto w-full rounded text-left rtl:text-right">
@@ -64,8 +60,7 @@ function HomePage() {
 				</div>
 				<div className="flex flex-col gap-2">
 					<div>
-						<div className="font-bold">Latest Actions</div>
-						<div>Live feed of recent actions, for all topics</div>
+						<div className="font-bold">Latest actions (all topics)</div>
 					</div>
 					<div className="border rounded-lg py-1">
 						<table className="table-auto w-full rounded text-left rtl:text-right">
