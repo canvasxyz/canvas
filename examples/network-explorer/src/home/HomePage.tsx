@@ -58,7 +58,7 @@ function HomePage() {
 				</div>
 				<div className="flex flex-col gap-2">
 					<div>
-						<div className="font-bold">Latest actions (all topics)</div>
+						<div className="font-bold">Latest Actions</div>
 					</div>
 					<div className="border rounded-lg py-1">
 						<table className="table-auto w-full rounded text-left rtl:text-right">
