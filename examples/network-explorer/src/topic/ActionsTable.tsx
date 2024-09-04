@@ -48,8 +48,7 @@ function ActionsTable({ topic }: { topic: string }) {
 	return (
 		<div className="flex flex-col gap-2">
 			<div className="flex flex-col gap-1">
-				<div className="text-sm">Latest Actions</div>
-				<div>Action history for this topic, sorted by timestamp</div>
+				<div>Latest Actions</div>
 			</div>
 			<div className="border rounded-lg py-1">
 				<table className="table-auto w-full rounded text-left rtl:text-right">

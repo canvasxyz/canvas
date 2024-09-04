@@ -50,16 +50,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Migrate Prisma client for network-explorer
-        run: npm run migrate:prisma --workspace=@canvas-js/network-explorer
-        env:
-          INDEX_DATABASE_URL: file:./index.sqlite
-
-      - name: Build Prisma client for network-explorer
-        run: npm run build:prisma --workspace=@canvas-js/network-explorer
-        env:
-          INDEX_DATABASE_URL: file:./index.sqlite
-
       - name: Build
         run: npm run build
 
@@ -125,16 +115,6 @@ jobs:
 
       - name: Install modules
         run: pnpm i
-
-      - name: Migrate Prisma client for network-explorer
-        run: npm run migrate:prisma --workspace=@canvas-js/network-explorer
-        env:
-          INDEX_DATABASE_URL: file:./index.sqlite
-
-      - name: Build Prisma client for network-explorer
-        run: npm run build:prisma --workspace=@canvas-js/network-explorer
-        env:
-          INDEX_DATABASE_URL: file:./index.sqlite
 
       - name: Build
         run: pnpm run build

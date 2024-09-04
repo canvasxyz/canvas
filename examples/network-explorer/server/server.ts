@@ -1,6 +1,7 @@
 import cors from "cors"
 import express from "express"
 import ipld from "express-ipld"
+import pg from "pg"
 import { StatusCodes } from "http-status-codes"
 import * as json from "@ipld/dag-json"
 
@@ -8,22 +9,32 @@ import { createAPI } from "@canvas-js/core/api"
 import { Canvas } from "@canvas-js/core"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 
-import { PrismaClient } from "@prisma/client"
-import { getDistinctAddressCount } from "@prisma/client/sql"
+import { createDatabase } from "./database.js"
 
 // this is copied from @canvas-js/gossiplog - we don't need anything else from that module
 const MAX_MESSAGE_ID = "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
 
+const BOOTSTRAP_LIST =
+	process.env.BOOTSTRAP_LIST ||
+	"/dns4/canvas-chat.fly.dev/tcp/443/wss/p2p/12D3KooWRrJCTFxZZPWDkZJboAHBCmhZ5MK1fcixDybM8GAjJM2Q"
 const LIBP2P_PORT = parseInt(process.env.LIBP2P_PORT || "3334", 10)
 const HTTP_PORT = parseInt(process.env.PORT || "3333", 10)
 const HTTP_ADDR = "0.0.0.0"
 const dev = process.env.NODE_ENV !== "production"
 const topics = ["chat-example.canvas.xyz"]
 
+console.log(`BOOTSTRAP_LIST: ${BOOTSTRAP_LIST}`)
 console.log(`LIBP2P_PORT: ${LIBP2P_PORT}`)
 console.log(`HTTP_PORT: ${HTTP_PORT}`)
 console.log(`HTTP_ADDR: ${HTTP_ADDR}`)
 console.log(`dev: ${dev}`)
+
+const client = new pg.Client({
+	connectionString: process.env.DATABASE_URL || "postgresql://test@localhost:5432/network-explorer",
+})
+await client.connect()
+
+const queries = await createDatabase(client)
 
 const expressApp = express()
 expressApp.use(
@@ -32,8 +43,6 @@ expressApp.use(
 	}),
 )
 
-const prisma = new PrismaClient()
-
 const canvasApps: Record<string, Canvas> = {}
 
 for (const topic of topics) {
@@ -41,7 +50,7 @@ for (const topic of topics) {
 
 	const canvasApp = await Canvas.initialize({
 		// do we need a separate database url for each topic?
-		path: process.env.DATABASE_URL,
+		// path: process.env.DATABASE_URL,
 		contract: {
 			models: {},
 			actions: {
@@ -49,40 +58,24 @@ for (const topic of topics) {
 			},
 		},
 		signers: [new SIWESigner()],
-		bootstrapList: [],
+		bootstrapList: [BOOTSTRAP_LIST],
 		listen: [`/ip4/0.0.0.0/tcp/${LIBP2P_PORT}/ws`],
 		topic,
 	})
+
+	// create empty counts row for this topic in the index table
+	await queries.addCountsRow(topic)
 
 	canvasApp.addEventListener("message", async (event) => {
 		const message = event.detail
 
 		if (message.message.payload.type == "action") {
-			await prisma.message.upsert({
-				create: {
-					topic: message.message.topic,
-					message_id: message.id,
-					type: "action",
-				},
-				where: { message_id: message.id },
-				update: {},
-			})
+			await queries.addAction(message.message.topic, message.id)
+			await queries.incrementActionCounts(message.message.topic)
 		} else if (message.message.payload.type == "session") {
-			await prisma.message.upsert({
-				create: {
-					topic: message.message.topic,
-					message_id: message.id,
-					type: "session",
-				},
-				where: { message_id: message.id },
-				update: {},
-			})
-
-			await prisma.address.upsert({
-				where: { topic_address: { topic: message.message.topic, address: message.message.payload.did } },
-				create: { topic: message.message.topic, address: message.message.payload.did },
-				update: {},
-			})
+			await queries.addSession(message.message.topic, message.id)
+			await queries.addAddress(message.message.topic, message.message.payload.did)
+			await queries.incrementSessionCounts(message.message.topic)
 		}
 	})
 
@@ -96,7 +89,7 @@ for (const topic of topics) {
 }
 
 expressApp.get("/index_api/messages", ipld(), async (req, res) => {
-	const numMessagesToReturn = 20
+	const numMessagesToReturn = 10
 
 	let before: string
 	if (!req.query.before) {
@@ -109,21 +102,21 @@ expressApp.get("/index_api/messages", ipld(), async (req, res) => {
 		return
 	}
 
-	const messageIndexEntries = await prisma.message.findMany({
-		where: { message_id: { lt: before } },
-		orderBy: { message_id: "desc" },
-		take: numMessagesToReturn,
-	})
+	const messageIndexEntries = await queries.selectAllMessages(before, numMessagesToReturn)
 
 	const result = []
-	for (const messageIndexEntry of messageIndexEntries) {
+	for (const messageIndexEntry of messageIndexEntries.rows) {
 		const app = canvasApps[messageIndexEntry.topic]
-		const messageRecord = await app.getMessage(messageIndexEntry.message_id)
+		const messageRecord = await app.getMessage(messageIndexEntry.id)
 		if (messageRecord == null) {
-			console.error(`Could not find message with id ${messageIndexEntry.message_id}`)
+			console.error(`Could not find message with id ${messageIndexEntry.id}`)
 		}
 
-		result.push({ id: messageIndexEntry.message_id, ...messageRecord })
+		// during initialization, the app may be missing messages, and
+		// we shouldn't send null signature/message values to the client
+		if (messageRecord) {
+			result.push({ id: messageIndexEntry.id, ...messageRecord })
+		}
 	}
 
 	res.status(StatusCodes.OK)
@@ -132,14 +125,15 @@ expressApp.get("/index_api/messages", ipld(), async (req, res) => {
 })
 
 expressApp.get("/index_api/messages/:topic", ipld(), async (req, res) => {
-	const numMessagesToReturn = 20
+	const numMessagesToReturn = 10
 
 	if (req.query.type && req.query.type !== "session" && req.query.type !== "action") {
+		console.log("invalid type", req.query.type)
 		res.status(StatusCodes.BAD_REQUEST)
 		res.end()
 		return
 	}
-	const type = req.query.type
+	const type = req.query.type || null
 
 	let before: string
 	if (!req.query.before) {
@@ -152,22 +146,17 @@ expressApp.get("/index_api/messages/:topic", ipld(), async (req, res) => {
 		return
 	}
 
-	const messageIds = await prisma.message.findMany({
-		select: { message_id: true },
-		where: { topic: req.params.topic, message_id: { lt: before }, type },
-		orderBy: { message_id: "desc" },
-		take: numMessagesToReturn,
-	})
+	const messageIds = await queries.selectMessages(req.params.topic, before, type, numMessagesToReturn)
 
 	const canvasApp = canvasApps[req.params.topic]
 	const result = []
-	for (const messageId of messageIds) {
-		const messageRecord = await canvasApp.getMessage(messageId.message_id)
-		if (messageRecord == null) {
-			console.error(`Could not find message with id ${messageId.message_id}`)
-			return res.status(StatusCodes.NOT_FOUND).end()
+	for (const messageId of messageIds.rows) {
+		const messageRecord = await canvasApp.getMessage(messageId.id)
+		// during initialization, the app may be missing messages, and
+		// we shouldn't send null signature/message values to the client
+		if (messageRecord) {
+			result.push({ id: messageId.id, ...messageRecord })
 		}
-		result.push({ id: messageId.message_id, ...messageRecord })
 	}
 
 	res.status(StatusCodes.OK)
@@ -176,81 +165,50 @@ expressApp.get("/index_api/messages/:topic", ipld(), async (req, res) => {
 })
 
 expressApp.get("/index_api/counts", async (req, res) => {
-	const actionCountResult = await prisma.message.groupBy({
-		by: ["topic"],
-		where: { type: "action" },
-		_count: true,
-	})
-	const actionCountsMap: Record<string, number> = {}
-	for (const row of actionCountResult) {
-		row.topic
-		actionCountsMap[row.topic] = row._count
-	}
-
-	const sessionCountResult = await prisma.message.groupBy({
-		by: ["topic"],
-		where: { type: "session" },
-		_count: true,
-	})
-	const sessionCountsMap: Record<string, number> = {}
-	for (const row of sessionCountResult) {
-		sessionCountsMap[row.topic] = row._count
-	}
-
-	const addressCountResult = await prisma.address.groupBy({
-		by: ["topic"],
-		_count: true,
-	})
+	const queryResult = (await queries.selectCountsAll()).rows
+	const addressCountResult = (await queries.selectAddressCountsAll()).rows
 	const addressCountsMap: Record<string, number> = {}
+	const connectionCountsMap: Record<string, number> = {}
+	const connectionsMap: Record<string, string> = {}
 	for (const row of addressCountResult) {
-		addressCountsMap[row.topic] = row._count
+		addressCountsMap[row.topic] = parseInt(row.count, 10)
+		connectionCountsMap[row.topic] = canvasApps[row.topic]?.libp2p.getConnections().length
+		connectionsMap[row.topic] = canvasApps[row.topic]?.libp2p
+			.getConnections()
+			.map((c) => c.remoteAddr.toString())
+			.join(", ")
 	}
 
-	const result: { topic: string; action_count: number; session_count: number; address_count: number }[] = []
-	const allTopics = new Set([
-		...Object.keys(actionCountsMap),
-		...Object.keys(sessionCountsMap),
-		...Object.keys(addressCountsMap),
-	])
-	for (const topic of allTopics) {
-		result.push({
-			topic,
-			action_count: actionCountsMap[topic] || 0,
-			session_count: sessionCountsMap[topic] || 0,
-			address_count: addressCountsMap[topic] || 0,
-		})
+	for (const row of queryResult) {
+		const r = row as any
+		r.address_count = addressCountsMap[row.topic] || 0
+		r.connection_count = connectionCountsMap[row.topic] || 0
+		r.connections = connectionsMap[row.topic] || "-"
 	}
 
-	res.json(result)
+	res.json(queryResult)
 })
 
 expressApp.get("/index_api/counts/total", async (req, res) => {
-	const actionCount = await prisma.message.aggregate({ _count: { message_id: true }, where: { type: "action" } })
-	const sessionCount = await prisma.message.aggregate({ _count: { message_id: true }, where: { type: "session" } })
-
-	const addressCountDistinctResult = await prisma.$queryRawTyped(getDistinctAddressCount())
-
+	const queryResult = (await queries.selectCountsTotal()).rows[0]
+	const addressCountResult = (await queries.selectAddressCountTotal()).rows[0]
 	const result = {
-		action_count: actionCount._count.message_id || 0,
-		session_count: sessionCount._count.message_id || 0,
-		address_count: Number(addressCountDistinctResult[0].count) || 0,
+		action_count: queryResult.action_count || 0,
+		session_count: queryResult.session_count || 0,
+		address_count: addressCountResult.count || 0,
 	}
 	res.json(result)
 })
 
 expressApp.get("/index_api/counts/:topic", async (req, res) => {
-	const actionCountResult = await prisma.message.count({ where: { topic: req.params.topic, type: "action" } })
-	const sessionCountResult = await prisma.message.count({ where: { topic: req.params.topic, type: "session" } })
-
-	const addressCountResult = await prisma.address.aggregate({
-		_count: true,
-		where: { topic: req.params.topic },
-	})
+	const queryResult = (await queries.selectCounts(req.params.topic)).rows[0]
+	const addressCountResult = (await queries.selectAddressCount(req.params.topic)).rows[0]
 	const result = {
 		topic: req.params.topic,
-		action_count: actionCountResult,
-		session_count: sessionCountResult,
-		address_count: addressCountResult._count || 0,
+		action_count: queryResult.action_count || 0,
+		session_count: queryResult.session_count || 0,
+		address_count: addressCountResult.count || 0,
+		connection_count: canvasApps[req.params.topic]?.libp2p.getConnections().length || 0,
 	}
 	res.json(result)
 })
