@@ -1,6 +1,12 @@
 import React, { useRef, useState } from "react"
 
 import type { SessionSigner } from "@canvas-js/interfaces"
+import { SIWESigner } from "@canvas-js/chain-ethereum"
+import { ATPSigner } from "@canvas-js/chain-atp"
+import { CosmosSigner } from "@canvas-js/chain-cosmos"
+import { SubstrateSigner } from "@canvas-js/chain-substrate"
+import { SolanaSigner } from "@canvas-js/chain-solana"
+import { NEARSigner } from "@canvas-js/chain-near"
 
 import type { Contract } from "@canvas-js/core"
 
@@ -48,7 +54,14 @@ export const App: React.FC<{}> = ({}) => {
 		start: false,
 		topic,
 		contract: { ...contract, topic: topicRef.current },
-		signers: sessionSigner ? [sessionSigner] : undefined,
+		signers: [
+			new SIWESigner(),
+			new ATPSigner(),
+			new CosmosSigner(),
+			new SubstrateSigner({}),
+			new SolanaSigner(),
+			new NEARSigner({}),
+		],
 		bootstrapList: bootstrapList ?? [
 			`/dns4/canvas-chat.fly.dev/tcp/443/wss/p2p/12D3KooWRrJCTFxZZPWDkZJboAHBCmhZ5MK1fcixDybM8GAjJM2Q`,
 		],
