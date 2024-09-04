@@ -271,10 +271,7 @@ export const NetworkChart = ({
 
 				const result = []
 
-				const linksByBranchEntries = Object.entries(linksByBranch)
-				// linksByBranchEntries.sort((entry1, entry2) => (entry2[0] > entry1[0] ? 1 : -1))
-
-				for (const row of linksByBranchEntries) {
+				for (const row of Object.entries(linksByBranch)) {
 					const group = row[1]
 					const groupResult = []
 					for (const l_ of group) {
@@ -310,22 +307,22 @@ export const NetworkChart = ({
 
 					result.push(
 						<path
-							key={`bundle-${b.id}-branch-${row[0]}`}
-							className="link"
-							d={groupResult.join("")}
-							fill="none"
-							stroke={color(row[0])}
-							strokeWidth="2"
-						/>,
-					)
-					result.push(
-						<path
 							key={`bundle-${b.id}-branch-${row[0]}-background`}
 							className="link"
 							d={groupResult.join("")}
 							fill="none"
 							stroke={background_color}
 							strokeWidth="5"
+						/>,
+					)
+					result.push(
+						<path
+							key={`bundle-${b.id}-branch-${row[0]}`}
+							className="link"
+							d={groupResult.join("")}
+							fill="none"
+							stroke={color(row[0])}
+							strokeWidth="2"
 						/>,
 					)
 				}
