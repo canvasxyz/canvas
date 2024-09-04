@@ -1,31 +1,20 @@
+import { Action, Message, Session } from "@canvas-js/interfaces"
 import * as d3 from "d3"
-
-type Effect = {
-	key: string
-	value: string
-}
-
-type Message = {
-	id: string
-	clock: number
-	branch: number
-	parents: string[]
-	effects: Effect[]
-}
 
 type DisplayNode = {
 	id: string
 	x: number
 	y: number
-	label: string
+	label_upper: string
+	label_lower: string
 	clock: number
 	branch: number
 }
 
 type Link = {
 	i: number
-	source: Message
-	target: Message
+	source: Message<Action | Session> & { branch: number; id: string }
+	target: Message<Action | Session> & { branch: number; id: string }
 	bundle: Bundle
 }
 
@@ -43,7 +32,7 @@ type Bundle = {
 	id: string
 	branch: number
 	clock: number
-	parents: Message[]
+	parents: (Message<Action | Session> & { branch: number; id: string })[]
 	level: number
 	span: number
 	links: Link[]
@@ -52,7 +41,10 @@ type Bundle = {
 	i?: number
 }
 
-const constructTangleLayout = (messageList: Message[], options?: { c?: number; bigc?: number }) => {
+const constructTangleLayout = (
+	messageList: (Message<Action | Session> & { branch: number; id: string })[],
+	options?: { c?: number; bigc?: number },
+) => {
 	// sort messages by clock and then branch, ascending
 	messageList.sort((a, b) => a.clock - b.clock || a.branch - b.branch)
 
@@ -184,7 +176,8 @@ const constructTangleLayout = (messageList: Message[], options?: { c?: number; b
 			const node = messagesById[messageId]
 			const displayNode = {
 				id: node.id,
-				label: "",
+				label_upper: node.payload.type,
+				label_lower: node.payload.type == "action" ? node.payload.name : node.payload.did.split(":")[4],
 				clock: node.clock,
 				branch: node.branch,
 				x: (node.clock - 1) * node_width + x_offset,
@@ -238,7 +231,7 @@ export const NetworkChart = ({
 	data,
 	...options
 }: {
-	data: Message[]
+	data: (Message<Action | Session> & { branch: number; id: string })[]
 	c?: number
 	bigc?: number
 	keysToHighlight?: string[] | Set<string>
@@ -350,16 +343,13 @@ export const NetworkChart = ({
 						strokeWidth="4"
 						style={{ fontFamily: "sans-serif", fontSize: "10px" }}
 					>
-						{n.id}
+						{n.label_upper}
 					</text>
 					<text x={n.x + 4} y={n.y - 4} style={{ pointerEvents: "none", fontFamily: "sans-serif", fontSize: "10px" }}>
-						{n.id}
+						{n.label_upper}
 					</text>
 					<text x={n.x + 4} y={n.y + 12} style={{ pointerEvents: "none", fontFamily: "sans-serif", fontSize: "10px" }}>
-						({n.clock}, {n.branch})
-					</text>
-					<text x={n.x + 4} y={n.y - 14} style={{ pointerEvents: "none", fontFamily: "sans-serif", fontSize: "10px" }}>
-						{n.label}
+						{n.label_lower}
 					</text>
 				</>
 			))}

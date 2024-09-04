@@ -14,11 +14,9 @@ export default function NetworkPlot({ topic }: { topic: string }) {
 
 	const visualisationData = messages
 		? messages.map((result) => ({
+				...result.message,
 				branch: result.branch,
 				id: result.id,
-				clock: result.message.clock,
-				parents: result.message.parents,
-				effects: [],
 		  }))
 		: []
 
