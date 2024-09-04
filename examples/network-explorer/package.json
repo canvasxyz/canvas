@@ -20,6 +20,7 @@
 		"better-sqlite3": "^11.1.2",
 		"cors": "^2.8.5",
 		"cross-env": "^7.0.3",
+		"d3": "^7.9.0",
 		"date-fns": "^3.6.0",
 		"express": "^4.19.2",
 		"express-ipld": "^0.0.1",
