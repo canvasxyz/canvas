@@ -15,7 +15,6 @@
 		"@canvas-js/chain-ethereum": "0.10.10",
 		"@canvas-js/chain-solana": "0.10.10",
 		"@canvas-js/chain-substrate": "0.10.10",
-		"@canvas-js/chain-near": "0.10.10",
 		"@canvas-js/core": "0.10.10",
 		"@canvas-js/interfaces": "0.10.10",
 		"@ipld/dag-json": "^10.2.2",

@@ -12,7 +12,6 @@ import { ATPSigner } from "@canvas-js/chain-atp"
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
 import { SubstrateSigner } from "@canvas-js/chain-substrate"
 import { SolanaSigner } from "@canvas-js/chain-solana"
-import { NEARSigner } from "@canvas-js/chain-near"
 
 import { createDatabase } from "./database.js"
 
@@ -62,14 +61,7 @@ for (const topic of topics) {
 				createMessage() {},
 			},
 		},
-		signers: [
-			new SIWESigner(),
-			new ATPSigner(),
-			new CosmosSigner(),
-			new SubstrateSigner({}),
-			new SolanaSigner(),
-			new NEARSigner({}),
-		],
+		signers: [new SIWESigner(), new ATPSigner(), new CosmosSigner(), new SubstrateSigner({}), new SolanaSigner()],
 		bootstrapList: [BOOTSTRAP_LIST],
 		listen: [`/ip4/0.0.0.0/tcp/${LIBP2P_PORT}/ws`],
 		topic,

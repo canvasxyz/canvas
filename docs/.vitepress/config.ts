@@ -87,7 +87,6 @@ export default defineConfig({
 								{ text: "Solana", link: "/readme-chain-solana.md" },
 								{ text: "Cosmos", link: "/readme-chain-cosmos.md" },
 								{ text: "Substrate", link: "/readme-chain-substrate.md" },
-								{ text: "Near", link: "/readme-chain-near.md" },
 							],
 						},
 						{
