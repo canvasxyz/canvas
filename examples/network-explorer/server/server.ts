@@ -125,8 +125,6 @@ expressApp.get("/index_api/messages", ipld(), async (req, res) => {
 })
 
 expressApp.get("/index_api/messages/:topic", ipld(), async (req, res) => {
-	const numMessagesToReturn = 10
-
 	if (req.query.type && req.query.type !== "session" && req.query.type !== "action") {
 		console.log("invalid type", req.query.type)
 		res.status(StatusCodes.BAD_REQUEST)
@@ -146,7 +144,22 @@ expressApp.get("/index_api/messages/:topic", ipld(), async (req, res) => {
 		return
 	}
 
-	const messageIds = await queries.selectMessages(req.params.topic, before, type, numMessagesToReturn)
+	let numMessagesToReturn
+	if (req.query.limit && typeof req.query.limit == "string") {
+		if (req.query.limit === "all") {
+			// return all
+			numMessagesToReturn = -1
+		} else {
+			numMessagesToReturn = parseInt(req.query.limit, 10)
+		}
+	} else {
+		numMessagesToReturn = 10
+	}
+
+	const messageIds =
+		numMessagesToReturn == -1
+			? await queries.selectMessagesNoLimit(req.params.topic, before, type)
+			: await queries.selectMessages(req.params.topic, before, type, numMessagesToReturn)
 
 	const canvasApp = canvasApps[req.params.topic]
 	const result = []

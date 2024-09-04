@@ -160,6 +160,17 @@ export async function createDatabase(client: Client) {
 			)
 		},
 
+		selectMessagesNoLimit: async (topic: string, id: string, type: string | null): Promise<QueryResult<Message>> => {
+			return await client.query<Message>(
+				`
+				SELECT * FROM messages
+				WHERE topic = $1 AND id <= $2 AND ($3::text IS NULL OR type = $3)
+				ORDER BY id DESC;
+			`,
+				[topic, id, type],
+			)
+		},
+
 		selectAllMessages: async (id: string, limit: number): Promise<QueryResult<Message>> => {
 			return await client.query<Message>(
 				`
