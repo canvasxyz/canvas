@@ -163,9 +163,9 @@ const constructTangleLayout = (messageList: Message[], options?: { c?: number; b
 	})
 
 	// layout
-	const padding = 128 //64
+	const padding = 32
 	const node_height = 64
-	const node_width = 140 //70
+	const node_width = 200
 	const bundle_width = 14
 	const metro_d = 4
 
@@ -177,10 +177,9 @@ const constructTangleLayout = (messageList: Message[], options?: { c?: number; b
 	const displayNodes: DisplayNode[] = []
 	const displayNodesById: Record<string, DisplayNode> = {}
 
-	let x_offset = padding
+	const x_offset = padding
 	const y_offset = padding
 	levels.forEach((l, level_idx) => {
-		x_offset += levelBundles[level_idx].length * bundle_width
 		l.nodes.forEach((messageId, i) => {
 			const node = messagesById[messageId]
 			const displayNode = {
@@ -188,7 +187,7 @@ const constructTangleLayout = (messageList: Message[], options?: { c?: number; b
 				label: "",
 				clock: node.clock,
 				branch: node.branch,
-				x: node.clock * node_width + x_offset,
+				x: (node.clock - 1) * node_width + x_offset,
 				y: node.branch * node_height + y_offset,
 			}
 			displayNodes.push(displayNode)
