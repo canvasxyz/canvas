@@ -4,10 +4,9 @@ import { Link } from "react-router-dom"
 
 import { version } from "../../package.json"
 import ArgsPopout from "../components/ArgsPopout.js"
-import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "../utils.js"
+import { BASE_URL, Result, fetchAndIpldParseJson, formatDistanceCustom } from "../utils.js"
 
 function HomePage() {
-	//
 	const { data: countsData, error: countsError } = useSWR(
 		"/index_api/counts",
 		fetchAndIpldParseJson<
@@ -32,7 +31,7 @@ function HomePage() {
 	if (error || countsError) return <div>failed to load</div>
 	if (!data || !countsData) return <div>loading...</div>
 
-	const actions = data.filter((item) => item[2].payload.type === "action") as Result<Action>[]
+	const actions = (data?.filter((item) => item[2].payload.type === "action") || []) as Result<Action>[]
 
 	return (
 		<>
@@ -40,6 +39,7 @@ function HomePage() {
 				<div className="w-1/2">
 					<div className="font-bold">Status</div>
 					<div className="font-medium">Online, running v{version}</div>
+					<div className="font-medium">{BASE_URL}</div>
 				</div>
 			</div>
 			<div className="grid grid-cols-2 gap-4">

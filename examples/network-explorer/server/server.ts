@@ -108,7 +108,11 @@ expressApp.get("/index_api/messages", ipld(), async (req, res) => {
 	for (const messageIndexEntry of messageIndexEntries.rows) {
 		const app = canvasApps[messageIndexEntry.topic]
 		const [signature, message] = await app.getMessage(messageIndexEntry.id)
-		result.push([messageIndexEntry.id, signature, message])
+		// during initialization, the app may be missing messages, and
+		// we shouldn't send null signature/message values to the client
+		if (signature && message) {
+			result.push([messageIndexEntry.id, signature, message])
+		}
 	}
 
 	res.status(StatusCodes.OK)
@@ -144,7 +148,11 @@ expressApp.get("/index_api/messages/:topic", ipld(), async (req, res) => {
 	const result = []
 	for (const messageId of messageIds.rows) {
 		const [signature, message] = await canvasApp.getMessage(messageId.id)
-		result.push([messageId.id, signature, message])
+		// during initialization, the app may be missing messages, and
+		// we shouldn't send null signature/message values to the client
+		if (signature && message) {
+			result.push([messageId.id, signature, message])
+		}
 	}
 
 	res.status(StatusCodes.OK)
