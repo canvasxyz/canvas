@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom"
 import { TopicStats } from "./TopicStats.js"
 import ActionsTable from "./ActionsTable.js"
 import SessionsTable from "./SessionsTable.js"
+import NetworkPlot from "./NetworkPlot.js"
 
 function Topic() {
 	const { topic } = useParams()
@@ -16,6 +17,7 @@ function Topic() {
 		<>
 			<div className="text-white pt-5 text-lg font-bold">Topic Information</div>
 			<TopicStats topic={topic} />
+			<NetworkPlot topic={topic} />
 			<ActionsTable topic={topic} />
 			<SessionsTable topic={topic} />
 		</>
