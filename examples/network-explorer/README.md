@@ -31,34 +31,46 @@ For the main service:
 - Configure the build command to `npm run build`.
 - Configure the start command to `npm start:server --workspace=@canvas-js/network-explorer`.
 - Add the DATABASE_URL as a environment variable, pointed to the Postgres database.
-- Add Public Networking to port 8080.
+- To check the app is working, add Public Networking using a Railway provided domain to port 8080.
+- To use the network explorer, add two custom domains:
+  - One should be connected to port 8080, for the network explorer API.
+  - One should be connected to port 3334, for the libp2p service.
+- If you want the network explorer to connect to another server, set a BOOTSTRAP_LIST as the environment variable.
+- If you want other services to connect to the network explorer, look up the Peer ID by running `railway logs`,
+  and then provide the other services with a multiaddr of the form:
 
-## Deploying the client on Vercel
+```
+/dns4/network-explorer-libp2p.mydomain.org/tcp/443/wss/p2p/12D3...
+```
+
+## Deploying the frontend on Vercel
 
 Create a Vercel app from this directory.
 
-Configure the build command to `cp tsconfig.vercel.json tsconfig.json && vite build`. Then run:
+Configure the build command to `cp tsconfig.vercel.json tsconfig.json && vite build`.
+
+Copy .env.example to .env and set the API base URL to the backend that you've set up above.
+
+Then deploy the frontend:
 
 ```
 vercel --prod
 ```
 
-To configure what backend the client connects to, copy .env.example to .env and set the environment variable accordingly.
-
-## Connecting to the client via CLI
+## Connecting to the service via CLI
 
 Use the lib2p address of the network explorer:
 
 ```
 npm install -g @canvas-js/cli
-canvas run example.contract.js --bootstrap="/dns4/network-explorer.up.railway.app/tcp/3334/ws/p2p/12D3KooWKPsckeYRQfbnm5M3e8UqryhrAAog5MnWyaKesFXQNGAv"
+canvas run example.contract.js --bootstrap="/dns4/network-explorer-libp2p.mydomain.org/tcp/443/wss/p2p/12D3..."
 ```
 
-## Configuration
+## Configuration Options
 
 - BOOTSTRAP_LIST: list of libp2p peers to dial (defaults to a canvas-chat.fly.dev node)
+- DATABASE_URL: a postgres database to connect to (default postgres://test@localhost/network-explorer)
 - PORT: port to serve the network API on (default 3333)
 - LIBP2P_PORT: port to bind libp2p on (default 3334)
-- DATABASE_URL: a postgres database to connect to (default postgres://test@localhost/network-explorer)
-- NODE_ENV
-- TOPICS
+- NODE_ENV: development or production
+- TOPICS: unused
