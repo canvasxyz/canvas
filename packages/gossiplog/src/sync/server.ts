@@ -1,15 +1,16 @@
-import { Uint8ArrayList } from "uint8arraylist"
-
+import { Stream } from "@libp2p/interface"
 import { Logger, logger } from "@libp2p/logger"
-
-import { assert, SECONDS } from "@canvas-js/utils"
-
-import * as Sync from "#protocols/sync"
-
-import { SyncServer } from "../interface.js"
-import { decodeKey, encodeNode } from "./utils.js"
 import { Pushable, pushable } from "it-pushable"
 import { Duplex } from "it-stream-types"
+import * as lp from "it-length-prefixed"
+import { pipe } from "it-pipe"
+import { Uint8ArrayList } from "uint8arraylist"
+
+import { assert, SECONDS } from "@canvas-js/utils"
+import * as Sync from "#protocols/sync"
+
+import { Snapshot } from "../interface.js"
+import { decodeKey, encodeNode } from "./utils.js"
 
 export async function* encodeResponses(responses: AsyncIterable<Sync.Response>): AsyncIterable<Uint8Array> {
 	for await (const res of responses) {
@@ -27,33 +28,38 @@ export async function* decodeRequests(
 }
 
 export class Server implements Duplex<Pushable<Sync.Response>, AsyncIterable<Sync.Request>> {
-	public static timeout = 10 * SECONDS
+	public static timeout = 2 * SECONDS
+
+	public static async handleStream(txn: Snapshot, stream: Stream) {
+		const server = new Server(txn, stream)
+
+		const signal = AbortSignal.timeout(Server.timeout)
+
+		const onAbort = () => server.abort()
+		signal.addEventListener("abort", onAbort)
+
+		try {
+			await pipe(stream, lp.decode, decodeRequests, server, encodeResponses, lp.encode, stream)
+		} catch (err) {
+			server.log.error(err)
+		} finally {
+			signal.removeEventListener("abort", onAbort)
+		}
+	}
 
 	public readonly source = pushable<Sync.Response>({ objectMode: true })
 
-	private readonly log: Logger
-	private readonly signal = AbortSignal.timeout(Server.timeout)
-	private readonly abort = () => {
-		if (this.#ended === false) {
-			this.source.push({ abort: { cooldown: 0 } })
-			this.source.end()
-			this.#ended = true
-		}
-	}
+	public readonly log: Logger
 
 	#ended = false
 
-	constructor(topic: string, readonly txn: SyncServer) {
-		this.log = logger(`canvas:sync:server`)
-		this.signal.addEventListener("abort", this.abort)
+	private constructor(private readonly txn: Snapshot, stream: Stream) {
+		this.log = logger(`canvas:sync:server:${stream.id}`)
 	}
 
-	public end() {
-		this.signal.removeEventListener("abort", this.abort)
-		if (this.#ended === false) {
-			this.source.end()
-			this.#ended = true
-		}
+	public abort() {
+		this.source.push({ abort: { cooldown: 0 } })
+		this.source.end()
 	}
 
 	public sink = async (reqs: AsyncIterable<Sync.Request>): Promise<void> => {
@@ -70,10 +76,11 @@ export class Server implements Duplex<Pushable<Sync.Response>, AsyncIterable<Syn
 			this.source.push(res)
 		}
 
-		this.end()
+		this.source.end()
 	}
 
-	public async handleRequest(req: Sync.Request): Promise<Sync.Response> {
+	private async handleRequest(req: Sync.Request): Promise<Sync.Response> {
+		this.log.trace("handling", req)
 		if (req.getRoot !== undefined) {
 			const root = await this.txn.getRoot()
 			return { getRoot: { root: encodeNode(root) } }

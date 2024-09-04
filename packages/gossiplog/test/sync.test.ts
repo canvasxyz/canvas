@@ -7,17 +7,18 @@ import { pushable } from "it-pushable"
 import { pipe } from "it-pipe"
 
 import type { GossipLogConsumer, GossipLogEvents } from "@canvas-js/gossiplog"
-import {
-	Server,
-	Client,
-	decodeResponses,
-	encodeRequests,
-	decodeRequests,
-	encodeResponses,
-} from "@canvas-js/gossiplog/sync"
+// import {
+// 	Server,
+// 	Client,
+// 	decodeResponses,
+// 	encodeRequests,
+// 	decodeRequests,
+// 	encodeResponses,
+// } from "@canvas-js/gossiplog/sync"
 import { Request, Response } from "@canvas-js/gossiplog/protocols/sync"
 import { getLibp2p } from "@canvas-js/gossiplog/libp2p/node"
-import { createWebSocketAPI, sync } from "@canvas-js/gossiplog/api"
+import { Client } from "@canvas-js/gossiplog/api/client"
+import { createAPI } from "@canvas-js/gossiplog/api/server"
 
 import { testPlatforms, expectLogEntries, getDirectory } from "./utils.js"
 import { Uint8ArrayList } from "uint8arraylist"
@@ -181,7 +182,7 @@ const apply: GossipLogConsumer<string> = ({}) => {}
 // 	},
 // 	{ sqlite: true },
 // )
-//
+
 testPlatforms(
 	"ws sync",
 	async (t, openGossipLog) => {
@@ -196,11 +197,15 @@ testPlatforms(
 			await a.append(nanoid(8))
 		}
 
-		const server = createWebSocketAPI(a)
-		await server.listen(5555)
-		t.teardown(() => server.close())
+		const controller = new AbortController()
+		const server = createAPI(a, { signal: controller.signal })
+		server.listen(5555)
+		t.teardown(() => controller.abort())
 
-		await sync(b, "ws://127.0.0.1:5555")
+		const client = new Client(b, "ws://127.0.0.1:5555")
+		await client.sync()
+		await client.close()
+
 		t.pass()
 	},
 	{ sqlite: true },

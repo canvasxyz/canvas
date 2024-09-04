@@ -1,7 +1,9 @@
-import { CodeError, Stream, TypedEventEmitter } from "@libp2p/interface"
+import { Stream, CodeError } from "@libp2p/interface"
 import { Logger, logger } from "@libp2p/logger"
-import { pushable, Pushable } from "it-pushable"
+import { Pushable, pushable } from "it-pushable"
 import { Uint8ArrayList } from "uint8arraylist"
+import * as lp from "it-length-prefixed"
+import { pipe } from "it-pipe"
 
 import type { Key, Node } from "@canvas-js/okra"
 import { assert } from "@canvas-js/utils"
@@ -9,7 +11,7 @@ import { assert } from "@canvas-js/utils"
 import * as Sync from "#protocols/sync"
 
 import { encodeKey, decodeNode } from "./utils.js"
-import { SyncServer } from "../interface.js"
+import { Snapshot } from "../interface.js"
 
 export async function* decodeResponses(source: AsyncIterable<Uint8Array | Uint8ArrayList>) {
 	for await (const msg of source) {
@@ -24,33 +26,26 @@ export async function* encodeRequests(source: AsyncIterable<Sync.Request>) {
 	}
 }
 
-export class Client extends TypedEventEmitter<{ error: CustomEvent<Error> }> implements SyncServer {
-	// private readonly responses: AsyncIterator<Sync.Response, void, undefined>
-	public readonly requests: Pushable<Sync.Request>
+export class Client implements Snapshot {
+	private readonly responses: AsyncIterator<Sync.Response, void, undefined>
+	private readonly requests: Pushable<Sync.Request>
 	private readonly log: Logger
 
-	public static codes = {
-		ABORT: "ABORT",
-	}
+	public static codes = { ABORT: "ABORT" }
 
-	constructor(
-		readonly id: string,
-		// readonly stream: Duplex<AsyncIterable<Uint8ArrayList>, Source<Uint8ArrayList | Uint8Array>, Promise<void>>,
-		readonly responses: AsyncIterator<Sync.Response, void, undefined>,
-	) {
-		super()
-		this.log = logger(`canvas:sync:client:[${this.id}]`)
+	constructor(private readonly stream: Stream) {
+		this.log = logger(`canvas:sync:client:[${stream.id}]`)
+		this.responses = pipe(stream, lp.decode, decodeResponses)
 		this.requests = pushable({ objectMode: true })
-		// this.responses = pipe(stream.source, lp.decode, decodeResponses)
 
-		// pipe(this.requests, encodeRequests, lp.encode, stream.sink).catch((err) => {
-		// 	if (err instanceof Error) {
-		// 		this.dispatchEvent(new CustomEvent("error", { detail: err }))
-		// 	} else {
-		// 		console.error(err)
-		// 		this.dispatchEvent(new CustomEvent("error", { detail: new Error("internal error") }))
-		// 	}
-		// })
+		pipe(this.requests, encodeRequests, lp.encode, stream).catch((err) => {
+			this.log.error("error piping requests to stream: %O", err)
+			if (err instanceof Error) {
+				stream.abort(err)
+			} else {
+				stream.abort(new Error("internal error"))
+			}
+		})
 	}
 
 	public end() {
@@ -94,7 +89,8 @@ export class Client extends TypedEventEmitter<{ error: CustomEvent<Error> }> imp
 		const { done, value: res } = await this.responses.next()
 
 		if (done) {
-			this.log.error("stream %s ended prematurely: %O", this.id, res)
+			this.log.error("stream %s ended prematurely: %O", this.stream.id, res)
+			console.trace("stream ended prematurely")
 			throw new Error("stream ended prematurely")
 		}
 

@@ -161,6 +161,7 @@ export class GossipLogService<Payload = unknown> {
 							pipe(source, lp.encode, stream.sink).catch((err) =>
 								this.log.error("error piping outgoing push events: %O", err),
 							),
+
 							// incoming events
 							pipe(stream.source, lp.decode, this.getPushSink(connection, stream)).catch((err) =>
 								this.log.error("error piping incoming push events: %O", err),
@@ -427,18 +428,7 @@ export class GossipLogService<Payload = unknown> {
 		})
 
 		try {
-			await this.messageLog.serve(async (txn) => {
-				const server = new Server(this.messageLog.topic, txn)
-				const signal = AbortSignal.timeout(Server.timeout)
-				signal.addEventListener("abort", () => {
-					server.source.push({ abort: { cooldown: 0 } })
-					server.source.end()
-				})
-
-				await pipe(stream, lp.decode, decodeRequests, server, encodeResponses, lp.encode, stream)
-			})
-
-			this.log("closed incoming stream %s from peer %p", stream.id, peerId)
+			await this.messageLog.serve((txn) => Server.handleStream(txn, stream))
 		} catch (err) {
 			if (err instanceof Error && err.message === "TIMEOUT") {
 				this.log.error("timed out incoming stream %s from peer %p", stream.id, peerId)
@@ -451,6 +441,7 @@ export class GossipLogService<Payload = unknown> {
 				stream.abort(new Error("internal error"))
 			}
 		} finally {
+			this.log("closed incoming stream %s from peer %p", stream.id, peerId)
 			timeoutController.clear()
 			signal.clear()
 		}
@@ -530,15 +521,7 @@ export class GossipLogService<Payload = unknown> {
 
 		this.log("starting sync with peer %p", peerId)
 
-		const client = new Client(stream.id, pipe(stream.source, lp.decode, decodeResponses))
-		pipe(client.requests, encodeRequests, lp.encode, stream.sink).catch((err) => {
-			if (err instanceof Error) {
-				stream.abort(err)
-			} else {
-				console.error(err)
-				stream.abort(new Error("internal error"))
-			}
-		})
+		const client = new Client(stream)
 
 		let messageCount = 0
 		try {

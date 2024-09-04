@@ -11,7 +11,7 @@ import { assert, zip, prepare, prepareMessage } from "@canvas-js/utils"
 
 import { Driver } from "./sync/driver.js"
 
-import type { ServiceMap, SyncServer } from "./interface.js"
+import type { ServiceMap, Snapshot } from "./interface.js"
 import { AncestorIndex } from "./AncestorIndex.js"
 import { BranchMergeIndex } from "./BranchMergeIndex.js"
 import { SignedMessage } from "./SignedMessage.js"
@@ -438,7 +438,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 	 * Sync with a remote source, applying and inserting all missing messages into the local log
 	 */
 	public async sync(
-		server: SyncServer,
+		server: Snapshot,
 		callback: (signedMessage: SignedMessage<Payload>) => Awaitable<void> = async (signedMessage) => {
 			await this.insert(signedMessage)
 		},
@@ -447,27 +447,33 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		const start = performance.now()
 		let messageCount = 0
 
-		await this.tree.read(async (txn) => {
-			const driver = new Driver(this.topic, server, txn)
-			for await (const keys of driver.sync()) {
-				const values = await server.getValues(keys)
+		await this.tree
+			.read(async (txn) => {
+				const driver = new Driver(this.topic, server, txn)
+				for await (const keys of driver.sync()) {
+					const values = await server.getValues(keys)
 
-				for (const [key, value] of zip(keys, values)) {
-					const signedMessage = this.decode(value)
-					assert(equals(key, signedMessage.key), "invalid message key")
-					await callback(signedMessage)
-					messageCount++
+					for (const [key, value] of zip(keys, values)) {
+						const signedMessage = this.decode(value)
+						assert(equals(key, signedMessage.key), "invalid message key")
+						await callback(signedMessage)
+						messageCount++
+					}
 				}
-			}
-		})
+			})
+			.finally(() => {
+				const duration = Math.ceil(performance.now() - start)
+				this.log("finished sync with peer %s (%d messages in %dms)", options.peerId, messageCount, duration)
+				this.dispatchEvent(new CustomEvent("sync", { detail: { peerId: options.peerId, messageCount, duration } }))
+			})
 
-		const duration = Math.ceil(performance.now() - start)
-		this.log("finished sync with peer %s (%d messages in %dms)", options.peerId, messageCount, duration)
-		this.dispatchEvent(new CustomEvent("sync", { detail: { peerId: options.peerId, messageCount, duration } }))
+		// const duration = Math.ceil(performance.now() - start)
+		// this.log("finished sync with peer %s (%d messages in %dms)", options.peerId, messageCount, duration)
+		// this.dispatchEvent(new CustomEvent("sync", { detail: { peerId: options.peerId, messageCount, duration } }))
 		return { messageCount }
 	}
 
-	public serve<T>(callback: (server: SyncServer) => Awaitable<T>): Promise<T> {
+	public serve<T>(callback: (server: Snapshot) => Awaitable<T>): Promise<T> {
 		return this.tree.read((txn) =>
 			callback({
 				getRoot: () => txn.getRoot(),

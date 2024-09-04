@@ -63,11 +63,13 @@ export const testPlatforms = (
 		})
 	}
 
-	// test(`Sqlite (in-memory) - ${name}`, macro, async (t, init) => {
-	// 	const log = new GossipLogSqlite(init)
-	// 	t.teardown(() => log.close())
-	// 	return log
-	// })
+	// if (platforms.sqlite) {
+	// 	test(`Sqlite (in-memory) - ${name}`, macro, async (t, init) => {
+	// 		const log = new GossipLogSqlite(init)
+	// 		t.teardown(() => log.close())
+	// 		return log
+	// 	})
+	// }
 
 	if (platforms.idb) {
 		test(`IndexedDB - ${name}`, macro, async (t, init) => {
