@@ -1,30 +1,44 @@
 import cors from "cors"
 import express from "express"
 import ipld from "express-ipld"
+import pg from "pg"
 import { StatusCodes } from "http-status-codes"
 import * as json from "@ipld/dag-json"
 
 import { createAPI } from "@canvas-js/core/api"
 import { Canvas } from "@canvas-js/core"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
+import { ATPSigner } from "@canvas-js/chain-atp"
+import { CosmosSigner } from "@canvas-js/chain-cosmos"
+import { SubstrateSigner } from "@canvas-js/chain-substrate"
+import { SolanaSigner } from "@canvas-js/chain-solana"
 
 import { createDatabase } from "./database.js"
 
 // this is copied from @canvas-js/gossiplog - we don't need anything else from that module
 const MAX_MESSAGE_ID = "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
 
+const BOOTSTRAP_LIST =
+	process.env.BOOTSTRAP_LIST ||
+	"/dns4/canvas-chat.fly.dev/tcp/443/wss/p2p/12D3KooWRrJCTFxZZPWDkZJboAHBCmhZ5MK1fcixDybM8GAjJM2Q"
 const LIBP2P_PORT = parseInt(process.env.LIBP2P_PORT || "3334", 10)
 const HTTP_PORT = parseInt(process.env.PORT || "3333", 10)
 const HTTP_ADDR = "0.0.0.0"
 const dev = process.env.NODE_ENV !== "production"
 const topics = ["chat-example.canvas.xyz"]
 
+console.log(`BOOTSTRAP_LIST: ${BOOTSTRAP_LIST}`)
 console.log(`LIBP2P_PORT: ${LIBP2P_PORT}`)
 console.log(`HTTP_PORT: ${HTTP_PORT}`)
 console.log(`HTTP_ADDR: ${HTTP_ADDR}`)
 console.log(`dev: ${dev}`)
 
-const { queries } = createDatabase(":memory:")
+const client = new pg.Client({
+	connectionString: process.env.DATABASE_URL || "postgresql://test@localhost:5432/network-explorer",
+})
+await client.connect()
+
+const queries = await createDatabase(client)
 
 const expressApp = express()
 expressApp.use(
@@ -40,32 +54,32 @@ for (const topic of topics) {
 
 	const canvasApp = await Canvas.initialize({
 		// do we need a separate database url for each topic?
-		path: process.env.DATABASE_URL,
+		// path: process.env.DATABASE_URL,
 		contract: {
 			models: {},
 			actions: {
 				createMessage() {},
 			},
 		},
-		signers: [new SIWESigner()],
-		bootstrapList: [],
+		signers: [new SIWESigner(), new ATPSigner(), new CosmosSigner(), new SubstrateSigner({}), new SolanaSigner()],
+		bootstrapList: [BOOTSTRAP_LIST],
 		listen: [`/ip4/0.0.0.0/tcp/${LIBP2P_PORT}/ws`],
 		topic,
 	})
 
 	// create empty counts row for this topic in the index table
-	queries.addCountsRow.run(topic)
+	await queries.addCountsRow(topic)
 
 	canvasApp.addEventListener("message", async (event) => {
 		const message = event.detail
 
 		if (message.message.payload.type == "action") {
-			queries.addAction.run(message.message.topic, message.id)
-			queries.incrementActionCounts.run(message.message.topic)
+			await queries.addAction(message.message.topic, message.id)
+			await queries.incrementActionCounts(message.message.topic)
 		} else if (message.message.payload.type == "session") {
-			queries.addSession.run(message.message.topic, message.id)
-			queries.addAddress.run(message.message.topic, message.message.payload.did)
-			queries.incrementSessionCounts.run(message.message.topic)
+			await queries.addSession(message.message.topic, message.id)
+			await queries.addAddress(message.message.topic, message.message.payload.did)
+			await queries.incrementSessionCounts(message.message.topic)
 		}
 	})
 
@@ -79,7 +93,7 @@ for (const topic of topics) {
 }
 
 expressApp.get("/index_api/messages", ipld(), async (req, res) => {
-	const numMessagesToReturn = 20
+	const numMessagesToReturn = 10
 
 	let before: string
 	if (!req.query.before) {
@@ -92,13 +106,17 @@ expressApp.get("/index_api/messages", ipld(), async (req, res) => {
 		return
 	}
 
-	const messageIndexEntries = queries.selectAllMessages.all(before, numMessagesToReturn)
+	const messageIndexEntries = await queries.selectAllMessages(before, numMessagesToReturn)
 
 	const result = []
-	for (const messageIndexEntry of messageIndexEntries) {
+	for (const messageIndexEntry of messageIndexEntries.rows) {
 		const app = canvasApps[messageIndexEntry.topic]
 		const [signature, message] = await app.getMessage(messageIndexEntry.id)
-		result.push([messageIndexEntry.id, signature, message])
+		// during initialization, the app may be missing messages, and
+		// we shouldn't send null signature/message values to the client
+		if (signature && message) {
+			result.push([messageIndexEntry.id, signature, message])
+		}
 	}
 
 	res.status(StatusCodes.OK)
@@ -107,7 +125,7 @@ expressApp.get("/index_api/messages", ipld(), async (req, res) => {
 })
 
 expressApp.get("/index_api/messages/:topic", ipld(), async (req, res) => {
-	const numMessagesToReturn = 20
+	const numMessagesToReturn = 10
 
 	if (req.query.type !== "session" && req.query.type !== "action") {
 		console.log("invalid type", req.query.type)
@@ -128,13 +146,17 @@ expressApp.get("/index_api/messages/:topic", ipld(), async (req, res) => {
 		return
 	}
 
-	const messageIds = queries.selectMessages.all(req.params.topic, before, type, numMessagesToReturn)
+	const messageIds = await queries.selectMessages(req.params.topic, before, type, numMessagesToReturn)
 
 	const canvasApp = canvasApps[req.params.topic]
 	const result = []
-	for (const messageId of messageIds) {
+	for (const messageId of messageIds.rows) {
 		const [signature, message] = await canvasApp.getMessage(messageId.id)
-		result.push([messageId.id, signature, message])
+		// during initialization, the app may be missing messages, and
+		// we shouldn't send null signature/message values to the client
+		if (signature && message) {
+			result.push([messageId.id, signature, message])
+		}
 	}
 
 	res.status(StatusCodes.OK)
@@ -142,24 +164,34 @@ expressApp.get("/index_api/messages/:topic", ipld(), async (req, res) => {
 	res.end(json.encode(result))
 })
 
-expressApp.get("/index_api/counts", (req, res) => {
-	const queryResult = queries.selectCountsAll.all() as any
-	const addressCountResult = queries.selectAddressCountsAll.all() as any
+expressApp.get("/index_api/counts", async (req, res) => {
+	const queryResult = (await queries.selectCountsAll()).rows
+	const addressCountResult = (await queries.selectAddressCountsAll()).rows
 	const addressCountsMap: Record<string, number> = {}
+	const connectionCountsMap: Record<string, number> = {}
+	const connectionsMap: Record<string, string> = {}
 	for (const row of addressCountResult) {
-		addressCountsMap[row.topic] = row.count
+		addressCountsMap[row.topic] = parseInt(row.count, 10)
+		connectionCountsMap[row.topic] = canvasApps[row.topic]?.libp2p.getConnections().length
+		connectionsMap[row.topic] = canvasApps[row.topic]?.libp2p
+			.getConnections()
+			.map((c) => c.remoteAddr.toString())
+			.join(", ")
 	}
 
 	for (const row of queryResult) {
-		row.address_count = addressCountsMap[row.topic] || 0
+		const r = row as any
+		r.address_count = addressCountsMap[row.topic] || 0
+		r.connection_count = connectionCountsMap[row.topic] || 0
+		r.connections = connectionsMap[row.topic] || "-"
 	}
 
 	res.json(queryResult)
 })
 
-expressApp.get("/index_api/counts/total", (req, res) => {
-	const queryResult = queries.selectCountsTotal.get() || ({} as any)
-	const addressCountResult = queries.selectAddressCountTotal.get() as any
+expressApp.get("/index_api/counts/total", async (req, res) => {
+	const queryResult = (await queries.selectCountsTotal()).rows[0]
+	const addressCountResult = (await queries.selectAddressCountTotal()).rows[0]
 	const result = {
 		action_count: queryResult.action_count || 0,
 		session_count: queryResult.session_count || 0,
@@ -168,14 +200,15 @@ expressApp.get("/index_api/counts/total", (req, res) => {
 	res.json(result)
 })
 
-expressApp.get("/index_api/counts/:topic", (req, res) => {
-	const queryResult = queries.selectCounts.get(req.params.topic) || ({} as any)
-	const addressCountResult = queries.selectAddressCount.get(req.params.topic) as any
+expressApp.get("/index_api/counts/:topic", async (req, res) => {
+	const queryResult = (await queries.selectCounts(req.params.topic)).rows[0]
+	const addressCountResult = (await queries.selectAddressCount(req.params.topic)).rows[0]
 	const result = {
 		topic: req.params.topic,
 		action_count: queryResult.action_count || 0,
 		session_count: queryResult.session_count || 0,
 		address_count: addressCountResult.count || 0,
+		connection_count: canvasApps[req.params.topic]?.libp2p.getConnections().length || 0,
 	}
 	res.json(result)
 })

@@ -1,29 +1,76 @@
 # Network Explorer Example
 
-## Running locally (for development)
+## Setup
 
-To run the network explorer locally, you need to deploy three apps:
-- The network-explorer server, which consists of a Canvas node plus a database index and some endpoints for exposing information about the network.
-- The network-explorer client, which will query the server API and display the information.
-- A Canvas app that produces events. In this example we will use the chat application in `examples/chat`. This will connect to the server over libp2p.
+For development, the network explorer connects to `postgres://test@localhost/network-explorer`.
+To set up a development database, use:
 
-1. Start the server. In this directory run `npm run dev:server`. This will start a Canvas node and an API. By default the Canvas node listens on port 3334 and the API on port 3333.
-2. Record the server's peer id. This is randomly assigned.
-3. Start the network-explorer client. This is a frontend React/Vite app that queries. This accesses the API on port 3333 by default.
-4. Start the chat app. In the `examples/chat` directory, run `VITE_BOOTSTRAP_LIST=/ip4/127.0.0.1/tcp/3334/ws/p2p/<server peer id> npm run dev`. This will host a chat app that is configured to connect to the server via libp2p on port 3334.
+```
+createuser test
+createdb network-explorer -O test
+```
 
+Then run these commands in separate terminals. (You may also want to
+be running `npm dev` from the workspace root directory, in a third terminal.)
 
-## Configuration
+```
+npm run dev:server
+```
 
-env vars:
+```
+npm run dev:client
+```
 
-- PORT (default 3333)
-- LIBP2P_PORT
-- DATABASE_URL
-- NODE_ENV
+## Deploying the server on Railway
 
-server.ts:
+Create a Railway space, and add the `canvasxyz/canvas` Github repo as a service.
+Also create a Postgres database.
 
-- TOPICS
+For the main service:
 
-(todo: move to config.ts)
+- Configure the build command to `npm run build`.
+- Configure the start command to `npm start:server --workspace=@canvas-js/network-explorer`.
+- Add the DATABASE_URL as a environment variable, pointed to the Postgres database.
+- To check the app is working, add Public Networking using a Railway provided domain to port 8080.
+- To use the network explorer, add two custom domains:
+  - One should be connected to port 8080, for the network explorer API.
+  - One should be connected to port 3334, for the libp2p service.
+- If you want the network explorer to connect to another server, set a BOOTSTRAP_LIST as the environment variable.
+- If you want other services to connect to the network explorer, look up the Peer ID by running `railway logs`,
+  and then provide the other services with a multiaddr of the form:
+
+```
+/dns4/network-explorer-libp2p.mydomain.org/tcp/443/wss/p2p/12D3...
+```
+
+## Deploying the frontend on Vercel
+
+Create a Vercel app from this directory.
+
+Configure the build command to `cp tsconfig.vercel.json tsconfig.json && vite build`.
+
+Copy .env.example to .env and set the API base URL to the backend that you've set up above.
+
+Then deploy the frontend:
+
+```
+vercel --prod
+```
+
+## Connecting to the service via CLI
+
+Use the lib2p address of the network explorer:
+
+```
+npm install -g @canvas-js/cli
+canvas run example.contract.js --bootstrap="/dns4/network-explorer-libp2p.mydomain.org/tcp/443/wss/p2p/12D3..."
+```
+
+## Configuration Options
+
+- BOOTSTRAP_LIST: list of libp2p peers to dial (defaults to a canvas-chat.fly.dev node)
+- DATABASE_URL: a postgres database to connect to (default postgres://test@localhost/network-explorer)
+- PORT: port to serve the network API on (default 3333)
+- LIBP2P_PORT: port to bind libp2p on (default 3334)
+- NODE_ENV: development or production
+- TOPICS: unused

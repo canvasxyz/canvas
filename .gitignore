@@ -1,5 +1,4 @@
 .env
-.env.*
 .DS_Store
 .next/
 .vscode/
