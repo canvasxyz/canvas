@@ -152,7 +152,7 @@ export async function createDatabase(client: Client) {
 			return await client.query<Message>(
 				`
 				SELECT * FROM messages
-				WHERE topic = $1 AND id <= $2 AND ($3 IS NULL OR type = $3)
+				WHERE topic = $1 AND id <= $2 AND ($3::text IS NULL OR type = $3)
 				ORDER BY id DESC
 				LIMIT $4;
 			`,
