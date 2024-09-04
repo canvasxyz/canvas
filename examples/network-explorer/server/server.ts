@@ -134,7 +134,7 @@ expressApp.get("/index_api/messages", ipld(), async (req, res) => {
 expressApp.get("/index_api/messages/:topic", ipld(), async (req, res) => {
 	const numMessagesToReturn = 20
 
-	if (req.query.type !== "session" && req.query.type !== "action") {
+	if (req.query.type && req.query.type !== "session" && req.query.type !== "action") {
 		res.status(StatusCodes.BAD_REQUEST)
 		res.end()
 		return
@@ -167,7 +167,7 @@ expressApp.get("/index_api/messages/:topic", ipld(), async (req, res) => {
 			console.error(`Could not find message with id ${messageId.message_id}`)
 			return res.status(StatusCodes.NOT_FOUND).end()
 		}
-		result.push(messageRecord)
+		result.push({ id: messageId.message_id, ...messageRecord })
 	}
 
 	res.status(StatusCodes.OK)
