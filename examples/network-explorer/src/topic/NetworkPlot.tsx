@@ -1,7 +1,44 @@
 import { Action, Session } from "@canvas-js/interfaces"
-import { fetchAndIpldParseJson, Result } from "../utils.js"
+import { fetchAndIpldParseJson, formatDid, Result } from "../utils.js"
 import useSWR from "swr"
-import { NetworkChart } from "./computeNetworkPlot.js"
+import * as d3 from "d3"
+import { PropsWithChildren, useLayoutEffect, useRef, useState } from "react"
+
+function DivWithRectUpdate(
+	props: PropsWithChildren & {
+		onRectUpdate: (rect: DOMRect) => void
+		style?: React.CSSProperties
+	},
+) {
+	const ref = useRef<HTMLDivElement>(null)
+	const currentRect = useRef<DOMRect | null>(null)
+
+	useLayoutEffect(() => {
+		if (ref.current) {
+			const newRect = ref.current.getBoundingClientRect()
+
+			const oldRect = currentRect.current
+			currentRect.current = newRect
+
+			if (
+				// only call the callback if the rect is being set for the first time
+				// or if the y or height values have changed
+				// should use a deeper comparison here
+				oldRect == null ||
+				oldRect.y !== newRect.y ||
+				oldRect.height !== newRect.height
+			) {
+				props.onRectUpdate(newRect)
+			}
+		}
+	})
+
+	return (
+		<div ref={ref} style={props.style}>
+			{props.children}
+		</div>
+	)
+}
 
 export default function NetworkPlot({ topic }: { topic: string }) {
 	const { data: messages } = useSWR(
@@ -12,13 +49,175 @@ export default function NetworkPlot({ topic }: { topic: string }) {
 		},
 	)
 
-	const visualisationData = messages
-		? messages.map((result) => ({
-				...result.message,
-				branch: result.branch,
-				id: result.id,
-		  }))
-		: []
+	const [divHeight, setDivHeight] = useState(0)
+	const [divTop, setDivTop] = useState(0)
+	const [itemYOffsets, setItemYOffsets] = useState<Record<string, number>>({})
 
-	return <NetworkChart data={visualisationData} />
+	const color = d3.scaleOrdinal(d3.schemeDark2)
+
+	const items = (messages || []).slice()
+	items.reverse()
+
+	const links: [from: string, to: string][] = []
+
+	for (const item of items) {
+		for (const parentId of item.message.parents) {
+			links.push([item.id, parentId])
+		}
+	}
+
+	const nodes: { id: string; branch: number; x: number; y: number }[] = items.map((item) => ({
+		id: item.id,
+		branch: item.branch,
+		x: 20 + item.branch * 20,
+		// the +2 here is a bit magic, it's just that if we take the
+		// exact centre of the div then the dot will be slightly high
+		y: itemYOffsets[item.id] + 2 - divTop || 0,
+	}))
+	const nodesById = Object.fromEntries(nodes.map((node) => [node.id, node]))
+
+	const graphWidth = 140
+
+	return (
+		<>
+			<div style={{ display: "flex", flexDirection: "row" }}>
+				<div>
+					<svg width={graphWidth} height={divHeight}>
+						{links.map(([from, to], index) => {
+							const f = nodesById[from]
+							const t = nodesById[to]
+
+							let path: string
+							if (f.y == t.y) {
+								path = `
+            M${f.x} ${f.y}
+            L${t.x} ${t.y}
+            `
+							} else if (f.y > t.y) {
+								path = `
+            M${f.x} ${f.y}
+            L${f.x} ${f.y - 20}
+            L${t.x} ${f.y - 20}
+            L${t.x} ${t.y}
+            `
+							} else if (f.y < t.y) {
+								path = `
+            M${f.x} ${f.y}
+            L${f.x} ${f.y + 20}
+            L${t.x} ${f.y + 20}
+            L${t.x} ${t.y}
+            `
+							} else {
+								throw new Error("unreachable")
+							}
+
+							return (
+								<path
+									key={`link-${index}`}
+									className="link"
+									d={path}
+									fill="none"
+									stroke={color(f.branch.toString())}
+									strokeWidth="2"
+								/>
+							)
+						})}
+						{nodes.map(({ x, y }, index) => {
+							return (
+								<>
+									<path
+										key={`node-trace-${index}`}
+										stroke="lightgray"
+										strokeWidth="1px"
+										d={`M${x} ${y} L${graphWidth} ${y}`}
+									/>
+									<path
+										key={`node-${index}`}
+										className="selectable node"
+										data-id={index}
+										stroke="black"
+										strokeLinecap="round"
+										strokeWidth="16"
+										d={`M${x} ${y} L${x} ${y}`}
+									/>
+									<path
+										key={`node-border-${index}`}
+										className="node"
+										stroke="white"
+										strokeLinecap="round"
+										strokeWidth="10"
+										d={`M${x} ${y} L${x} ${y}`}
+									/>
+								</>
+							)
+						})}
+					</svg>
+				</div>
+				<div
+					style={{
+						display: "flex",
+						flexDirection: "column",
+						flexGrow: "1",
+					}}
+				>
+					<DivWithRectUpdate
+						onRectUpdate={(rect) => {
+							setDivHeight(rect.height)
+							setDivTop(window.scrollY + rect.top)
+						}}
+						style={{
+							display: "flex",
+							flexDirection: "column",
+							gap: "20px",
+							flexGrow: "0",
+							paddingTop: "20px",
+							width: "100%",
+						}}
+					>
+						{items.map((item, index) => (
+							<DivWithRectUpdate
+								key={index}
+								onRectUpdate={(rect) => {
+									setItemYOffsets((prev) => ({
+										...prev,
+										[item.id]: window.scrollY + rect.top + rect.height / 2,
+									}))
+								}}
+								style={{
+									border: "solid lightgray 1px",
+									borderRadius: "8px",
+									padding: "5px",
+									display: "flex",
+									flexDirection: "column",
+								}}
+							>
+								<div style={{ display: "flex", flexDirection: "row" }}>
+									<span style={{ color: "darkgray", fontStyle: "italic" }}>{item.message.payload.type}</span>
+									<div style={{ flexGrow: 1 }}></div>
+									<span style={{ color: "darkgray", fontStyle: "italic" }}>
+										clock: {item.message.clock}, branch: {item.branch}
+									</span>
+								</div>
+								<div>
+									<div style={{ display: "flex", flexDirection: "row" }}>
+										<span>Timestamp: {new Date(item.message.payload.context.timestamp).toLocaleString()} </span>
+										<div style={{ flexGrow: 1 }}></div>
+										<span>Address: {formatDid(item.message.payload.did)}</span>
+									</div>
+									{item.message.payload.type == "session" ? (
+										<>Public key: {item.message.payload.publicKey}</>
+									) : (
+										<>
+											Name: {item.message.payload.name} <br />
+											Args: {JSON.stringify(item.message.payload.args)}
+										</>
+									)}
+								</div>
+							</DivWithRectUpdate>
+						))}
+					</DivWithRectUpdate>
+				</div>
+			</div>
+		</>
+	)
 }

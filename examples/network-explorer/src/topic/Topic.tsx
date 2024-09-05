@@ -2,8 +2,6 @@ import { useParams } from "react-router-dom"
 import useSWR from "swr"
 
 import { fetchAndIpldParseJson } from "../utils.js"
-import ActionsTable from "./ActionsTable.js"
-import SessionsTable from "./SessionsTable.js"
 import NetworkPlot from "./NetworkPlot.js"
 
 function Topic() {
@@ -39,8 +37,6 @@ function Topic() {
 				</div>
 			</div>
 			<NetworkPlot topic={topic} />
-			<ActionsTable topic={topic} />
-			<SessionsTable topic={topic} />
 		</>
 	)
 }
