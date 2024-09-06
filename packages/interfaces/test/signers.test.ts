@@ -5,14 +5,12 @@ import { secp256k1 } from "@noble/curves/secp256k1"
 
 import { Action, DidIdentifier, Message, Session, SessionSigner, Signer } from "@canvas-js/interfaces"
 
+// import { ATPSigner } from "@canvas-js/chain-atp"
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
-// import { NEARSigner } from "@canvas-js/chain-near"
 import { SIWESigner, Eip712Signer } from "@canvas-js/chain-ethereum"
 import { SIWESignerViem } from "@canvas-js/chain-ethereum-viem"
 import { SolanaSigner } from "@canvas-js/chain-solana"
 import { SubstrateSigner } from "@canvas-js/chain-substrate"
-// import { AbstractSessionSignerOptions } from "@canvas-js/signatures"
-// import { ATPSigner } from "@canvas-js/chain-atp"
 
 type AdditionalSignerArgs = {
 	sessionDuration?: number
@@ -46,10 +44,6 @@ const SIGNER_IMPLEMENTATIONS: SessionSignerImplementation[] = [
 			})
 		},
 	},
-	// {
-	// 	name: "chain-near",
-	// 	createSigner: async () => new NEARSigner(),
-	// },
 	{
 		name: "chain-ethereum",
 		createSessionSigner: async (args) => new SIWESigner(args),
