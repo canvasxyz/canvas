@@ -40,6 +40,58 @@ function DivWithRectUpdate(
 	)
 }
 
+function MessageEntry({ item }: { item: Result<Action | Session> }) {
+	return (
+		<div
+			style={{
+				display: "flex",
+				flexDirection: "row",
+				border: "solid lightgray 1px",
+				borderRadius: "8px",
+				padding: "5px",
+			}}
+		>
+			<span
+				style={
+					{
+						/*color: "darkgray", fontStyle: "italic" */
+					}
+				}
+			>
+				{item.message.payload.type}
+			</span>
+			<div style={{ flexGrow: 1 }}></div>
+			<span></span>
+			<span
+				style={
+					{
+						/*color: "darkgray", fontStyle: "italic"*/
+					}
+				}
+			>
+				address: {formatDid(item.message.payload.did)}, clock: {item.message.clock}, branch: {item.branch}
+			</span>
+		</div>
+	)
+	{
+		/* <div>
+	<div style={{ display: "flex", flexDirection: "row" }}>
+		<span>Timestamp: {new Date(item.message.payload.context.timestamp).toLocaleString()} </span>
+		<div style={{ flexGrow: 1 }}></div>
+		<span>Address: {formatDid(item.message.payload.did)}</span>
+	</div>
+	{item.message.payload.type == "session" ? (
+		<>Public key: {item.message.payload.publicKey}</>
+	) : (
+		<>
+			Name: {item.message.payload.name} <br />
+			Args: {JSON.stringify(item.message.payload.args)}
+		</>
+	)}
+</div> */
+	}
+}
+
 export default function NetworkPlot({ topic }: { topic: string }) {
 	const { data: messages } = useSWR(
 		`/index_api/messages/${topic}?limit=all`,
@@ -80,7 +132,7 @@ export default function NetworkPlot({ topic }: { topic: string }) {
 
 	return (
 		<>
-			<div style={{ display: "flex", flexDirection: "row" }}>
+			<div style={{ display: "flex", flexDirection: "row", paddingBottom: "10px" }}>
 				<div>
 					<svg width={graphWidth} height={divHeight}>
 						{links.map(([from, to], index) => {
@@ -117,17 +169,23 @@ export default function NetworkPlot({ topic }: { topic: string }) {
 									className="link"
 									d={path}
 									fill="none"
-									stroke={color(f.branch.toString())}
+									stroke={color(t.branch.toString())}
 									strokeWidth="2"
 								/>
 							)
 						})}
-						{nodes.map(({ x, y }, index) => {
+						{nodes.map(({ x, y, branch }, index) => {
 							return (
 								<>
 									<path
+										key={`node-trace-${index}-shadow`}
+										stroke="white"
+										strokeWidth="2px"
+										d={`M${x} ${y} L${graphWidth} ${y}`}
+									/>
+									<path
 										key={`node-trace-${index}`}
-										stroke="lightgray"
+										stroke="black"
 										strokeWidth="1px"
 										d={`M${x} ${y} L${graphWidth} ${y}`}
 									/>
@@ -168,7 +226,7 @@ export default function NetworkPlot({ topic }: { topic: string }) {
 						style={{
 							display: "flex",
 							flexDirection: "column",
-							gap: "20px",
+							gap: "5px",
 							flexGrow: "0",
 							paddingTop: "20px",
 							width: "100%",
@@ -183,36 +241,8 @@ export default function NetworkPlot({ topic }: { topic: string }) {
 										[item.id]: window.scrollY + rect.top + rect.height / 2,
 									}))
 								}}
-								style={{
-									border: "solid lightgray 1px",
-									borderRadius: "8px",
-									padding: "5px",
-									display: "flex",
-									flexDirection: "column",
-								}}
 							>
-								<div style={{ display: "flex", flexDirection: "row" }}>
-									<span style={{ color: "darkgray", fontStyle: "italic" }}>{item.message.payload.type}</span>
-									<div style={{ flexGrow: 1 }}></div>
-									<span style={{ color: "darkgray", fontStyle: "italic" }}>
-										clock: {item.message.clock}, branch: {item.branch}
-									</span>
-								</div>
-								<div>
-									<div style={{ display: "flex", flexDirection: "row" }}>
-										<span>Timestamp: {new Date(item.message.payload.context.timestamp).toLocaleString()} </span>
-										<div style={{ flexGrow: 1 }}></div>
-										<span>Address: {formatDid(item.message.payload.did)}</span>
-									</div>
-									{item.message.payload.type == "session" ? (
-										<>Public key: {item.message.payload.publicKey}</>
-									) : (
-										<>
-											Name: {item.message.payload.name} <br />
-											Args: {JSON.stringify(item.message.payload.args)}
-										</>
-									)}
-								</div>
+								<MessageEntry item={item} />
 							</DivWithRectUpdate>
 						))}
 					</DivWithRectUpdate>
