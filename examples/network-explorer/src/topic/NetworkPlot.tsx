@@ -118,10 +118,16 @@ export default function NetworkPlot({ topic }: { topic: string }) {
 		}
 	}
 
+	const branchesPaddingLeft = 10
+	const branchSpacing = 20
+
+	const arcMarginBottom = 5
+	const arcRadius = 10
+
 	const nodes: { id: string; branch: number; x: number; y: number }[] = items.map((item) => ({
 		id: item.id,
 		branch: item.branch,
-		x: 20 + item.branch * 20,
+		x: branchesPaddingLeft + item.branch * branchSpacing,
 		// the +2 here is a bit magic, it's just that if we take the
 		// exact centre of the div then the dot will be slightly high
 		y: itemYOffsets[item.id] + 2 - divTop || 0,
@@ -138,8 +144,6 @@ export default function NetworkPlot({ topic }: { topic: string }) {
 						{links.map(([from, to], index) => {
 							let f = nodesById[from]
 							let t = nodesById[to]
-							const c = 5
-							const r = 10
 
 							if (f.y > t.y) {
 								const temp = f
@@ -156,19 +160,19 @@ export default function NetworkPlot({ topic }: { topic: string }) {
 							} else if (t.x > f.x) {
 								path = `
 								M${f.x} ${f.y}
-								L${f.x} ${t.y - c - r - r}
-								A ${r} ${r} 90 0 0 ${f.x + r} ${t.y - c - r}
-								L${t.x - r} ${t.y - c - r}
-								A ${r} ${r} 90 0 1 ${t.x} ${t.y - c}
+								L${f.x} ${t.y - arcMarginBottom - arcRadius * 2}
+								A ${arcRadius} ${arcRadius} 90 0 0 ${f.x + arcRadius} ${t.y - arcMarginBottom - arcRadius}
+								L${t.x - arcRadius} ${t.y - arcMarginBottom - arcRadius}
+								A ${arcRadius} ${arcRadius} 90 0 1 ${t.x} ${t.y - arcMarginBottom}
             		L${t.x} ${t.y}
             `
 							} else {
 								path = `
 								M${f.x} ${f.y}
-								L${f.x} ${t.y - c - r - r}
-								A ${r} ${r} 90 0 1 ${f.x - r} ${t.y - c - r}
-								L${t.x + r} ${t.y - c - r}
-								A ${r} ${r} 90 0 0 ${t.x} ${t.y - c}
+								L${f.x} ${t.y - arcMarginBottom - arcRadius * 2}
+								A ${arcRadius} ${arcRadius} 90 0 1 ${f.x - arcRadius} ${t.y - arcMarginBottom - arcRadius}
+								L${t.x + arcRadius} ${t.y - arcMarginBottom - arcRadius}
+								A ${arcRadius} ${arcRadius} 90 0 0 ${t.x} ${t.y - arcMarginBottom}
 								L${t.x} ${t.y}
             `
 								// throw new Error("unreachable")
@@ -180,7 +184,7 @@ export default function NetworkPlot({ topic }: { topic: string }) {
 									className="link"
 									d={path}
 									fill="none"
-									stroke={color(t.branch.toString())}
+									stroke={color(f.branch.toString())}
 									strokeWidth="2"
 								/>
 							)
