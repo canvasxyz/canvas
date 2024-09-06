@@ -136,31 +136,42 @@ export default function NetworkPlot({ topic }: { topic: string }) {
 				<div>
 					<svg width={graphWidth} height={divHeight}>
 						{links.map(([from, to], index) => {
-							const f = nodesById[from]
-							const t = nodesById[to]
+							let f = nodesById[from]
+							let t = nodesById[to]
+							const c = 5
+							const r = 10
+
+							if (f.y > t.y) {
+								const temp = f
+								f = t
+								t = temp
+							}
 
 							let path: string
-							if (f.y == t.y) {
+							if (f.x == t.x) {
 								path = `
             M${f.x} ${f.y}
             L${t.x} ${t.y}
             `
-							} else if (f.y > t.y) {
+							} else if (t.x > f.x) {
 								path = `
-            M${f.x} ${f.y}
-            L${f.x} ${f.y - 20}
-            L${t.x} ${f.y - 20}
-            L${t.x} ${t.y}
-            `
-							} else if (f.y < t.y) {
-								path = `
-            M${f.x} ${f.y}
-            L${f.x} ${f.y + 20}
-            L${t.x} ${f.y + 20}
-            L${t.x} ${t.y}
+								M${f.x} ${f.y}
+								L${f.x} ${t.y - c - r - r}
+								A ${r} ${r} 90 0 0 ${f.x + r} ${t.y - c - r}
+								L${t.x - r} ${t.y - c - r}
+								A ${r} ${r} 90 0 1 ${t.x} ${t.y - c}
+            		L${t.x} ${t.y}
             `
 							} else {
-								throw new Error("unreachable")
+								path = `
+								M${f.x} ${f.y}
+								L${f.x} ${t.y - c - r - r}
+								A ${r} ${r} 90 0 1 ${f.x - r} ${t.y - c - r}
+								L${t.x + r} ${t.y - c - r}
+								A ${r} ${r} 90 0 0 ${t.x} ${t.y - c}
+								L${t.x} ${t.y}
+            `
+								// throw new Error("unreachable")
 							}
 
 							return (
