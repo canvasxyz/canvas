@@ -12,6 +12,7 @@ import * as Sync from "#protocols/sync"
 
 import { encodeKey, decodeNode } from "./utils.js"
 import { Snapshot } from "../interface.js"
+import { codes } from "../utils.js"
 
 export async function* decodeResponses(source: AsyncIterable<Uint8Array | Uint8ArrayList>) {
 	for await (const msg of source) {
@@ -30,8 +31,6 @@ export class Client implements Snapshot {
 	private readonly responses: AsyncIterator<Sync.Response, void, undefined>
 	private readonly requests: Pushable<Sync.Request>
 	private readonly log: Logger
-
-	public static codes = { ABORT: "ABORT" }
 
 	constructor(private readonly stream: Stream) {
 		this.log = logger(`canvas:sync:client:[${stream.id}]`)
@@ -96,7 +95,7 @@ export class Client implements Snapshot {
 
 		this.log.trace("res: %O", res)
 		if (res.abort !== undefined) {
-			throw new CodeError("sync aborted by server", Client.codes.ABORT, res.abort)
+			throw new CodeError("sync aborted by server", codes.ABORT, res.abort)
 		}
 
 		return res

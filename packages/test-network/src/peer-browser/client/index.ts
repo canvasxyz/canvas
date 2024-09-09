@@ -11,6 +11,7 @@ import { GossipLog } from "@canvas-js/gossiplog/idb"
 // import { getLibp2p, defaultRelayServer } from "@canvas-js/gossiplog/libp2p/browser-webrtc"
 import { defaultRelayServer } from "@canvas-js/gossiplog/libp2p/browser-webrtc"
 import { getLibp2p } from "@canvas-js/gossiplog/libp2p/browser"
+import { Client } from "@canvas-js/gossiplog/api/client"
 
 import { Socket } from "../../socket.js"
 import { topic } from "../../constants.js"
@@ -33,51 +34,52 @@ console.log(`bootstrap list: ${JSON.stringify(bootstrapList)}`)
 const relayServer = params.relayServer ?? defaultRelayServer
 console.log(`relay server: ${relayServer}`)
 
-const libp2p = await getLibp2p({ topic, bootstrapList, relayServer })
-const socket = await Socket.open(messageLog, libp2p, `ws://localhost:8000`)
+// const libp2p = await getLibp2p({ topic, bootstrapList, relayServer })
+// const socket = await Socket.open(`ws://localhost:8000`, messageLog, libp2p)
+const socket = await Socket.open(`ws://localhost:8000`, messageLog, null)
 
-Object.assign(window, { libp2p, ping: (peerId: string) => libp2p.services.ping.ping(peerIdFromString(peerId)) })
+// Object.assign(window, { libp2p, ping: (peerId: string) => libp2p.services.ping.ping(peerIdFromString(peerId)) })
 
 messageLog.addEventListener("commit", ({ detail: { root } }) => {
 	socket.post("gossiplog:commit", { topic, root: `${root.level}:${bytesToHex(root.hash)}` })
 })
 
-messageLog.addEventListener("sync", ({ detail: { peerId, duration, messageCount } }) =>
-	console.log(`completed sync with ${peerId} (${messageCount} messages in ${duration}ms)`),
+messageLog.addEventListener("sync", ({ detail: { peer, duration, messageCount } }) =>
+	console.log(`completed sync with ${peer} (${messageCount} messages in ${duration}ms)`),
 )
 
-libp2p.addEventListener("start", async () => {
-	console.log("libp2p started")
+// libp2p.addEventListener("start", async () => {
+// 	console.log("libp2p started")
 
-	const root = await messageLog.tree.read((txn) => txn.getRoot())
+// 	const root = await messageLog.tree.read((txn) => txn.getRoot())
 
-	socket.post("start", { root: `0:${bytesToHex(root.hash)}` })
-})
+// 	socket.post("start", { root: `0:${bytesToHex(root.hash)}` })
+// })
 
-libp2p.addEventListener("stop", () => {
-	console.log("libp2p stopped")
-	socket.post("stop", {})
-})
+// libp2p.addEventListener("stop", () => {
+// 	console.log("libp2p stopped")
+// 	socket.post("stop", {})
+// })
 
-const relayServerPeerId = multiaddr(relayServer).getPeerId()
+// const relayServerPeerId = multiaddr(relayServer).getPeerId()
 
-libp2p.addEventListener("connection:open", ({ detail: { id, remotePeer, remoteAddr } }) => {
-	console.log(`connection:open ${remotePeer} ${remoteAddr}`)
-	if (relayServerPeerId === remotePeer.toString()) {
-		return
-	}
+// libp2p.addEventListener("connection:open", ({ detail: { id, remotePeer, remoteAddr } }) => {
+// 	console.log(`connection:open ${remotePeer} ${remoteAddr}`)
+// 	if (relayServerPeerId === remotePeer.toString()) {
+// 		return
+// 	}
 
-	socket.post("connection:open", { id, remotePeer: remotePeer.toString(), remoteAddr: remoteAddr.toString() })
-})
+// 	socket.post("connection:open", { id, remotePeer: remotePeer.toString(), remoteAddr: remoteAddr.toString() })
+// })
 
-libp2p.addEventListener("connection:close", ({ detail: { id, remotePeer, remoteAddr } }) => {
-	console.log(`connection:close ${remotePeer} ${remoteAddr}`)
-	if (relayServerPeerId === remotePeer.toString()) {
-		return
-	}
+// libp2p.addEventListener("connection:close", ({ detail: { id, remotePeer, remoteAddr } }) => {
+// 	console.log(`connection:close ${remotePeer} ${remoteAddr}`)
+// 	if (relayServerPeerId === remotePeer.toString()) {
+// 		return
+// 	}
 
-	socket.post("connection:close", { id, remotePeer: remotePeer.toString(), remoteAddr: remoteAddr.toString() })
-})
+// 	socket.post("connection:close", { id, remotePeer: remotePeer.toString(), remoteAddr: remoteAddr.toString() })
+// })
 
 // libp2p.addEventListener("peer:discovery", ({ detail: { id, multiaddrs } }) =>
 // 	console.log(`peer:discovery ${id} [ ${multiaddrs.join(", ")} ]`),
@@ -103,9 +105,23 @@ const delay = parseInt(params.delay ?? "1") * 1000 * Math.random()
 console.log(`waiting ${delay}ms...`)
 await new Promise((resolve) => setTimeout(resolve, delay))
 
-console.log("starting...")
-await libp2p.start()
-await messageLog.listen(libp2p)
+// console.log("starting...")
+// await libp2p.start()
+// await messageLog.listen(libp2p)
 
-const id = setInterval(() => void messageLog.append(bytesToHex(randomBytes(8))), 5000)
-libp2p.addEventListener("stop", () => clearInterval(id))
+const client = new Client(messageLog, `ws://localhost:8080`)
+
+{
+	const root = await messageLog.tree.read((txn) => txn.getRoot())
+	socket.post("start", { root: `0:${bytesToHex(root.hash)}` })
+
+	socket.post("connection:open", {
+		id: bytesToHex(randomBytes(8)),
+		remotePeer: "12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn",
+		remoteAddr: client.socket.remoteAddress,
+	})
+}
+
+// const id = setInterval(() => messageLog.append(bytesToHex(randomBytes(8))), 20000)
+
+// libp2p.addEventListener("stop", () => clearInterval(id))

@@ -15,6 +15,7 @@ const topic = "test-network-example"
 const bootstrapPeerIds = ["12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn"]
 
 function reduce(state: State, event: Event): State {
+	console.log(event)
 	if (event.type === "start") {
 		if (state.nodes.every((node) => node.id !== event.peerId)) {
 			return {
@@ -108,6 +109,7 @@ export const App: React.FC<{}> = ({}) => {
 				onNodeClick={handleNodeClick}
 				onLinkClick={handleLinkClick}
 			/>
+			<hr />
 		</section>
 	)
 }

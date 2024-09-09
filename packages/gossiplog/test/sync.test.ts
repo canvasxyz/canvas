@@ -1,11 +1,17 @@
 import assert from "node:assert"
-import test from "ava"
 import { randomBytes, randomUUID } from "node:crypto"
+
+import test from "ava"
 import { nanoid } from "nanoid"
 import * as lp from "it-length-prefixed"
 import { pushable } from "it-pushable"
 import { pipe } from "it-pipe"
+import { Uint8ArrayList } from "uint8arraylist"
+import { CodeError } from "@libp2p/interface"
+import { createEd25519PeerId } from "@libp2p/peer-id-factory"
+import { multiaddr } from "@multiformats/multiaddr"
 
+import { SECONDS } from "@canvas-js/utils"
 import type { GossipLogConsumer, GossipLogEvents } from "@canvas-js/gossiplog"
 // import {
 // 	Server,
@@ -21,12 +27,9 @@ import { Client } from "@canvas-js/gossiplog/api/client"
 import { createAPI } from "@canvas-js/gossiplog/api/server"
 
 import { testPlatforms, expectLogEntries, getDirectory } from "./utils.js"
-import { Uint8ArrayList } from "uint8arraylist"
-import { CodeError } from "@libp2p/interface"
-import { SECONDS } from "@canvas-js/utils"
-import { createEd25519PeerId } from "@libp2p/peer-id-factory"
-import { multiaddr } from "@multiformats/multiaddr"
+
 import { createNetwork } from "./libp2p.js"
+import { setTimeout } from "node:timers/promises"
 
 const apply: GossipLogConsumer<string> = ({}) => {}
 
@@ -183,28 +186,60 @@ const apply: GossipLogConsumer<string> = ({}) => {}
 // 	{ sqlite: true },
 // )
 
+// testPlatforms(
+// 	"ws sync",
+// 	async (t, openGossipLog) => {
+// 		t.timeout(120 * SECONDS)
+
+// 		const topic = randomUUID()
+// 		const a = await openGossipLog(t, { topic, apply })
+// 		const b = await openGossipLog(t, { topic, apply })
+
+// 		const messageCount = 10
+// 		for (let i = 0; i < messageCount; i++) {
+// 			await a.append(nanoid(8))
+// 		}
+
+// 		const server = createAPI(a)
+// 		server.listen(5555)
+// 		t.teardown(() => server.close())
+
+// 		const client = new Client(b, "ws://127.0.0.1:5555")
+// 		await client.sync()
+// 		await client.close()
+
+// 		t.pass()
+// 	},
+// 	{ sqlite: true },
+// )
+
 testPlatforms(
-	"ws sync",
+	"ws publish",
 	async (t, openGossipLog) => {
 		t.timeout(120 * SECONDS)
 
 		const topic = randomUUID()
 		const a = await openGossipLog(t, { topic, apply })
 		const b = await openGossipLog(t, { topic, apply })
+		const c = await openGossipLog(t, { topic, apply })
 
-		const messageCount = 10000
-		for (let i = 0; i < messageCount; i++) {
-			await a.append(nanoid(8))
-		}
-
-		const controller = new AbortController()
-		const server = createAPI(a, { signal: controller.signal })
+		const server = createAPI(a)
 		server.listen(5555)
-		t.teardown(() => controller.abort())
+		t.teardown(() => server.close())
 
-		const client = new Client(b, "ws://127.0.0.1:5555")
-		await client.sync()
-		await client.close()
+		const clientB = new Client(b, "ws://127.0.0.1:5555")
+		const clientC = new Client(c, "ws://127.0.0.1:5555")
+
+		await setTimeout(1000)
+
+		const { id, signature, message } = await b.append(nanoid())
+
+		await setTimeout(1000)
+
+		t.deepEqual(await c.get(id), [signature, message])
+
+		await clientB.close()
+		await clientC.close()
 
 		t.pass()
 	},

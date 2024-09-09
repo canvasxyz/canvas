@@ -11,7 +11,6 @@ import {
 
 import { GossipSub, GossipsubEvents, multicodec as GossipsubIDv11 } from "@chainsafe/libp2p-gossipsub"
 import { logger } from "@libp2p/logger"
-import { peerIdFromString } from "@libp2p/peer-id"
 
 import * as lp from "it-length-prefixed"
 import { pipe } from "it-pipe"
@@ -38,9 +37,9 @@ import {
 import { AbstractGossipLog } from "./AbstractGossipLog.js"
 
 import { decodeId, encodeId } from "./ids.js"
-import { Client, Server, decodeRequests, decodeResponses, encodeRequests, encodeResponses } from "./sync/index.js"
+import { Client, Server } from "./sync/index.js"
 
-import { MISSING_PARENT, SyncTimeoutError, wait } from "./utils.js"
+import { codes, wait } from "./utils.js"
 
 import { SignedMessage } from "./SignedMessage.js"
 import { ServiceMap } from "./interface.js"
@@ -81,7 +80,7 @@ export class GossipLogService<Payload = unknown> {
 
 	#pushTopologyId: string | null = null
 	#started = false
-	#pushStreams = new Map<string, { stream: Stream; source: Pushable<Uint8Array, void, unknown> }>()
+	#pushStreams = new Map<string, { source: Pushable<Uint8Array, void, unknown> }>()
 
 	constructor(
 		public readonly libp2p: Libp2p<ServiceMap>,
@@ -155,15 +154,15 @@ export class GossipLogService<Payload = unknown> {
 						this.log("opened outgoing push stream %s to peer %p", stream.id, peerId)
 
 						const source = pushable()
-						this.#pushStreams.set(peerId.toString(), { stream, source })
+						this.#pushStreams.set(peerId.toString(), { source })
 						Promise.all([
 							// outgoing events
-							pipe(source, lp.encode, stream.sink).catch((err) =>
+							pipe(source, lp.encode, stream).catch((err) =>
 								this.log.error("error piping outgoing push events: %O", err),
 							),
 
 							// incoming events
-							pipe(stream.source, lp.decode, this.getPushSink(connection, stream)).catch((err) =>
+							pipe(stream, lp.decode, this.getPushSink(connection, stream)).catch((err) =>
 								this.log.error("error piping incoming push events: %O", err),
 							),
 						]).finally(() => this.log("closed outgoing push stream %s from peer %p", stream.id, peerId))
@@ -189,11 +188,10 @@ export class GossipLogService<Payload = unknown> {
 				this.pushTopology.delete(peerId.toString())
 				this.litePeers.delete(peerId.toString())
 
-				const { source, stream } = this.#pushStreams.get(peerId.toString()) ?? {}
-				if (source !== undefined && stream !== undefined) {
+				const { source } = this.#pushStreams.get(peerId.toString()) ?? {}
+				if (source !== undefined) {
 					this.#pushStreams.delete(peerId.toString())
 					source.end()
-					stream.close()
 				}
 			},
 		})
@@ -218,8 +216,7 @@ export class GossipLogService<Payload = unknown> {
 		this.controller.abort()
 		this.pubsub?.unsubscribe(this.messageLog.topic)
 
-		for (const [peer, { stream, source }] of this.#pushStreams) {
-			stream.close()
+		for (const [peer, { source }] of this.#pushStreams) {
 			source.end()
 			this.#pushStreams.delete(peer)
 		}
@@ -237,16 +234,14 @@ export class GossipLogService<Payload = unknown> {
 		this.pubsub?.removeEventListener("gossipsub:message", this.handleMessage)
 	}
 
-	public async publish(signedMessage: SignedMessage<Payload>, options: { sourceId?: string } = {}): Promise<PeerId[]> {
+	public async publish(signedMessage: SignedMessage<Payload>, options: { sourceId?: string } = {}): Promise<void> {
 		if (!this.#started) {
-			return []
+			return
 		}
 
 		const { id, key, value } = signedMessage
 		const event: Partial<Event> = { insert: { key, value } }
 		const data = Event.encode(event)
-
-		const recipients: PeerId[] = []
 
 		if (this.pubsub === null) {
 			// If we're a lite client, then push directly to all of our topology peers
@@ -254,7 +249,6 @@ export class GossipLogService<Payload = unknown> {
 			for (const peer of this.#pushStreams.keys()) {
 				if (peer === options.sourceId) continue
 				this.#push(peer, data) // TODO: doesn't guarantee we actually pushed to the peer...
-				recipients.push(peerIdFromString(peer))
 			}
 		} else {
 			// If we're a full client, publish to pubsub, and still push directly to all of our lite topology peers
@@ -262,18 +256,14 @@ export class GossipLogService<Payload = unknown> {
 			for (const peer of this.litePeers) {
 				if (peer === options.sourceId) continue
 				this.#push(peer, data)
-				// TODO: doesn't guarantee we actually pushed to the peer
-				recipients.push(peerIdFromString(peer))
 			}
 
-			await this.pubsub.publish(this.messageLog.topic, data).then(
-				(result) => recipients.push(...result.recipients),
-				(err) => this.log.error("failed to publish event: %O", err),
-			)
+			await this.pubsub
+				.publish(this.messageLog.topic, data)
+				.catch((err) => this.log.error("failed to publish event: %O", err))
 		}
 
-		this.log("published %s to %d recipients", id, recipients.length)
-		return recipients
+		this.log("published %s", id)
 	}
 
 	private handleMessage = ({ detail: { msgId, propagationSource, msg } }: GossipsubEvents["gossipsub:message"]) => {
@@ -302,7 +292,10 @@ export class GossipLogService<Payload = unknown> {
 
 		let signedMessage: SignedMessage<Payload>
 		try {
-			signedMessage = this.messageLog.decode(event.insert.value)
+			signedMessage = this.messageLog.decode(event.insert.value, {
+				source: { type: "pubsub", peer: sourceId },
+			})
+
 			assert(equals(event.insert.key, signedMessage.key), "invalid key")
 		} catch (err) {
 			this.log.error("invalid message: %O", err)
@@ -310,7 +303,7 @@ export class GossipLogService<Payload = unknown> {
 			return
 		}
 
-		this.messageLog.insert(signedMessage, { peerId: sourceId, publish: false }).then(
+		this.messageLog.insert(signedMessage).then(
 			({ id }) => {
 				this.pubsub?.reportMessageValidationResult(msgId, sourceId, TopicValidatorResult.Accept)
 
@@ -325,7 +318,7 @@ export class GossipLogService<Payload = unknown> {
 				}
 			},
 			(err) => {
-				if (err instanceof CodeError && err.code === MISSING_PARENT) {
+				if (err instanceof CodeError && err.code === codes.MISSING_PARENT) {
 					this.pubsub?.reportMessageValidationResult(msgId, sourceId, TopicValidatorResult.Ignore)
 					this.scheduleSync(propagationSource)
 				} else {
@@ -369,13 +362,16 @@ export class GossipLogService<Payload = unknown> {
 			for await (const msg of msgs) {
 				const event = Event.decode(msg.subarray())
 				if (event.insert !== undefined) {
-					const signedMessage = this.messageLog.decode(event.insert.value)
+					const signedMessage = this.messageLog.decode(event.insert.value, {
+						source: { type: "push", peer: sourceId },
+					})
+
 					assert(equals(event.insert.key, signedMessage.key), "invalid key")
 
 					try {
-						await this.messageLog.insert(signedMessage, { publish: false, peerId: sourceId })
+						await this.messageLog.insert(signedMessage)
 					} catch (err) {
-						if (err instanceof CodeError && err.code === MISSING_PARENT) {
+						if (err instanceof CodeError && err.code === codes.MISSING_PARENT) {
 							this.scheduleSync(connection.remotePeer)
 							continue
 						} else {
@@ -398,7 +394,7 @@ export class GossipLogService<Payload = unknown> {
 		this.log("opened incoming push stream %s from peer %p", stream.id, peerId)
 
 		const source = pushable()
-		this.#pushStreams.set(peerId.toString(), { stream, source })
+		this.#pushStreams.set(peerId.toString(), { source })
 		Promise.all([
 			// outgoing events
 			pipe(source, lp.encode, stream.sink),
@@ -476,7 +472,7 @@ export class GossipLogService<Payload = unknown> {
 			try {
 				return await this.#sync(connection)
 			} catch (err) {
-				if (err instanceof CodeError && err.code === Client.codes.ABORT) {
+				if (err instanceof CodeError && err.code === codes.ABORT) {
 					this.log("received abort from server with cooldown %d", err.props.cooldown)
 					continue
 				}
@@ -497,68 +493,70 @@ export class GossipLogService<Payload = unknown> {
 		throw new Error("exceeded sync retry limit")
 	}
 
-	async #sync(connection: Connection): Promise<void> {
+	private async newStream(connection: Connection, protocol: string): Promise<Stream> {
 		assert(connection.status === "open", "connection closed")
 
-		const peerId = connection.remotePeer
-
 		const protocolSelectSignal = AbortSignal.timeout(DEFAULT_PROTOCOL_SELECT_TIMEOUT)
-		const stream = await connection
-			.newStream(this.syncProtocol, { negotiateFully: NEGOTIATE_FULLY, signal: protocolSelectSignal })
-			.catch((err) => {
+		const stream = await connection.newStream(protocol, {
+			negotiateFully: NEGOTIATE_FULLY,
+			signal: protocolSelectSignal,
+		})
+
+		return stream
+	}
+
+	async #sync(connection: Connection): Promise<void> {
+		const peerId = connection.remotePeer
+		this.log("starting sync with peer %p", peerId)
+
+		do {
+			const stream = await this.newStream(connection, this.syncProtocol).catch((err) => {
 				this.log.error("failed to open outgoing sync stream: %O", err)
 				throw err
 			})
 
-		this.log("opened outgoing sync stream %s to peer %p", stream.id, peerId)
+			this.log("opened outgoing sync stream %s to peer %p", stream.id, peerId)
 
-		const signal = anySignal([this.controller.signal, AbortSignal.timeout(Server.timeout + 5 * SECONDS)])
-		signal.addEventListener("abort", (err) => {
-			if (stream.status === "open") {
-				stream.abort(new SyncTimeoutError())
+			const client = new Client(stream)
+
+			try {
+				const result = await this.messageLog.sync(client)
+				if (result.complete) {
+					break
+				} else {
+					continue
+				}
+			} finally {
+				client.end()
+				stream.close().then(
+					() => this.log("closed outgoing sync stream %s", stream.id),
+					(err) => this.log.error("error closing sync stream %s: %O", stream.id, err),
+				)
 			}
-		})
+		} while (connection.status === "open")
 
-		this.log("starting sync with peer %p", peerId)
+		// try {
+		// 	await this.messageLog.sync(client, { peer: peerId.toString() })
+		// } finally {
+		// 	client.end()
+		// 	this.log("closed outgoing sync stream %s to peer %p", stream.id, peerId)
 
-		const client = new Client(stream)
-
-		let messageCount = 0
-		try {
-			await this.messageLog.sync(
-				client,
-				async (signedMessage) => {
-					await this.messageLog.insert(signedMessage, { publish: false })
-					messageCount++
-				},
-				{ peerId: peerId.toString() },
-			)
-		} finally {
-			signal.clear()
-			client.end()
-			this.log("closed outgoing sync stream %s to peer %p", stream.id, peerId)
-
-			if (messageCount !== 0) {
-				this.messageLog.getClock().then(([_, heads]) => {
-					const data = Event.encode({ update: { heads: heads.map(encodeId) } })
-					for (const peer of this.#pushStreams.keys()) {
-						if (peer === peerId.toString()) continue
-						this.#push(peer, data)
-					}
-				})
-			}
-		}
+		// 	if (messageCount !== 0) {
+		// 		this.messageLog.getClock().then(([_, heads]) => {
+		// 			const data = Event.encode({ update: { heads: heads.map(encodeId) } })
+		// 			for (const peer of this.#pushStreams.keys()) {
+		// 				if (peer === peerId.toString()) continue
+		// 				this.#push(peer, data)
+		// 			}
+		// 		})
+		// 	}
+		// }
 	}
 
 	#push(peer: string, data: Uint8Array): void {
 		this.log("pushing data to %s", peer)
-		const { stream, source } = this.#pushStreams.get(peer) ?? {}
-		if (stream === undefined || source === undefined) {
-			return
-		}
-
-		if (stream.status !== "open") {
-			this.#pushStreams.delete(peer)
+		const { source } = this.#pushStreams.get(peer) ?? {}
+		if (source === undefined) {
 			return
 		}
 

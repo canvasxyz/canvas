@@ -1,20 +1,27 @@
-import { sha256 } from "@noble/hashes/sha256"
-
+import type { PeerId } from "@libp2p/interface"
 import type { Signature, Message } from "@canvas-js/interfaces"
 
-import { encodeClock } from "./clock.js"
 import { encodeSignedMessage, decodeSignedMessage } from "./schema.js"
-import { KEY_LENGTH, decodeId, getKey } from "./ids.js"
+import { decodeId, getKey } from "./ids.js"
+
+export type MessageSource = { type: "pubsub" | "push" | "sync"; peer: string }
 
 export class SignedMessage<Payload = unknown> {
-	public static decode<Payload = unknown>(value: Uint8Array): SignedMessage<Payload> {
+	public static decode<Payload = unknown>(
+		value: Uint8Array,
+		options: { source?: MessageSource } = {},
+	): SignedMessage<Payload> {
 		const { signature, message } = decodeSignedMessage(value)
-		return new SignedMessage<Payload>(signature, message as Message<Payload>, value)
+		return new SignedMessage<Payload>(signature, message as Message<Payload>, value, options.source)
 	}
 
-	public static encode<Payload>(signature: Signature, message: Message<Payload>): SignedMessage<Payload> {
+	public static encode<Payload>(
+		signature: Signature,
+		message: Message<Payload>,
+		options: { source?: MessageSource } = {},
+	): SignedMessage<Payload> {
 		const value = encodeSignedMessage(signature, message)
-		return new SignedMessage(signature, message, value)
+		return new SignedMessage(signature, message, value, options.source)
 	}
 
 	public readonly id: string
@@ -24,6 +31,7 @@ export class SignedMessage<Payload = unknown> {
 		public readonly signature: Signature,
 		public readonly message: Message<Payload>,
 		public readonly value: Uint8Array,
+		public readonly source?: MessageSource,
 	) {
 		this.key = getKey(message.clock, value)
 		this.id = decodeId(this.key)

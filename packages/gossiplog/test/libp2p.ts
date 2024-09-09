@@ -146,8 +146,8 @@ export async function waitForInitialSync<Payload>(
 		new Promise<void>((resolve) => {
 			network[source].messageLog.addEventListener(
 				"sync",
-				({ detail: { peerId } }) => {
-					if (peerId === network[target].libp2p.peerId.toString()) {
+				({ detail: { peer } }) => {
+					if (peer === network[target].libp2p.peerId.toString()) {
 						resolve()
 					}
 				},

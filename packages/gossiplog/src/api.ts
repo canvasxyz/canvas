@@ -12,6 +12,7 @@ import { Uint8ArrayList } from "uint8arraylist"
 import { AbstractGossipLog } from "./AbstractGossipLog.js"
 import { Server } from "./sync/server.js"
 import { Client } from "./sync/client.js"
+import { codes } from "./utils.js"
 
 const factory = yamux({})({ logger: { forComponent: logger } })
 
@@ -51,7 +52,7 @@ export async function sync<Payload>(gossipLog: AbstractGossipLog<Payload>, addr:
 			await gossipLog.sync(client)
 			break
 		} catch (err) {
-			if (err instanceof CodeError && err.code === Client.codes.ABORT) {
+			if (err instanceof CodeError && err.code === codes.ABORT) {
 				continue
 			} else {
 				throw err

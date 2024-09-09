@@ -41,7 +41,7 @@ export type ActionOptions = { signer?: SessionSigner }
 export type ActionAPI<Args = any> = (
 	args: Args,
 	options?: ActionOptions,
-) => Promise<{ id: string; signature: Signature; message: Message<Action>; recipients: Promise<PeerId[]> }>
+) => Promise<{ id: string; signature: Signature; message: Message<Action> }>
 
 export interface CanvasEvents extends GossipLogEvents<Action | Session> {
 	stop: Event
@@ -213,7 +213,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 				const argsRepresentation = argsTransformer.toRepresentation(args)
 				assert(argsRepresentation !== undefined, "action args did not validate the provided schema type")
 
-				const { id, signature, message, recipients } = await this.messageLog.append<Action>(
+				const { id, signature, message } = await this.messageLog.append<Action>(
 					{
 						type: "action",
 						did: session.payload.did,
@@ -226,7 +226,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 
 				this.log("applied action %s", id)
 
-				return { id, signature, message, recipients }
+				return { id, signature, message }
 			}
 
 			Object.assign(this.actions, { [name]: action })
@@ -305,12 +305,10 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 	 * Low-level utility method for internal and debugging use.
 	 * The normal way to apply actions is to use the `Canvas.actions[name](...)` functions.
 	 */
-	public async insert(
-		signature: Signature,
-		message: Message<Session | Action>,
-	): Promise<{ id: string; recipients: Promise<PeerId[]> }> {
+	public async insert(signature: Signature, message: Message<Session | Action>): Promise<{ id: string }> {
 		assert(message.topic === this.topic, "invalid message topic")
-		return await this.messageLog.insert({ signature, message })
+
+		return await this.messageLog.insert(this.messageLog.encode(signature, message))
 	}
 
 	public async getMessage(
