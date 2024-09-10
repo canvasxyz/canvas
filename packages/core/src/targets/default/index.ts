@@ -5,7 +5,7 @@ const target: PlatformTarget = {
 		throw new Error("Unsupported platform")
 	},
 
-	async createLibp2p(config) {
+	async attachNetwork(gossipLog, config) {
 		throw new Error("Unsupported platform")
 	},
 }

@@ -1,8 +1,7 @@
-import { Libp2p, PeerId, TypedEventEmitter, CustomEvent } from "@libp2p/interface"
+import { TypedEventEmitter } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
 import { sha256 } from "@noble/hashes/sha2"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
-import { multiaddr } from "@multiformats/multiaddr"
 
 import type pg from "pg"
 
@@ -17,7 +16,6 @@ import target from "#target"
 import type { Contract, ActionImplementationFunction, ActionImplementationObject } from "./types.js"
 import { Runtime, createRuntime } from "./runtime/index.js"
 import { validatePayload } from "./schema.js"
-import { peerIdFromString } from "@libp2p/peer-id"
 
 export type { Model } from "@canvas-js/modeldb"
 export type { PeerId } from "@libp2p/interface"
@@ -59,9 +57,6 @@ export type ApplicationData = {
 	topic: string
 	models: Record<string, Model>
 	actions: string[]
-
-	peerId: string
-	addrs: string[]
 }
 
 export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<CanvasEvents> {
@@ -109,20 +104,21 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			}
 		}
 
-		const libp2p = await target.createLibp2p({ ...config, bootstrapList: bootstrapMultiaddrs })
-		if (libp2p.status === "started") {
-			await messageLog.listen(libp2p)
+		// const libp2p = await target.createLibp2p({ ...config, bootstrapList: bootstrapMultiaddrs })
+		// if (libp2p.status === "started") {
+		// 	await messageLog.listen(libp2p)
 
-			bootstrapURLs.forEach(async (url) => {
-				const res = await fetch(`${url}/api`)
-				const data: ApplicationData = await res.json()
-				libp2p.dial(data.addrs.map((addr) => multiaddr(addr)))
-			})
-		} else {
-			libp2p.addEventListener("start", () => messageLog.listen(libp2p), { once: true })
-		}
+		// 	bootstrapURLs.forEach(async (url) => {
+		// 		const res = await fetch(`${url}/api`)
+		// 		const data: ApplicationData = await res.json()
+		// 		libp2p.dial(data.addrs.map((addr) => multiaddr(addr)))
+		// 	})
+		// } else {
+		// 	libp2p.addEventListener("start", () => messageLog.listen(libp2p), { once: true })
+		// }
 
-		return new Canvas(signers, messageLog, libp2p, runtime)
+		// return new Canvas(signers, messageLog, libp2p, runtime)
+		return new Canvas(signers, messageLog, runtime)
 	}
 
 	public readonly db: AbstractModelDB
@@ -140,31 +136,31 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 	private constructor(
 		public readonly signers: SignerCache,
 		public readonly messageLog: AbstractGossipLog<Action | Session>,
-		public readonly libp2p: Libp2p<ServiceMap>,
+		// public readonly libp2p: Libp2p<ServiceMap>,
 		private readonly runtime: Runtime,
 	) {
 		super()
 		this.db = runtime.db
 
-		this.log("initialized with peerId %p", libp2p.peerId)
+		// this.log("initialized with peerId %p", libp2p.peerId)
 
-		this.libp2p.addEventListener("peer:discovery", ({ detail: { id, multiaddrs } }) => {
-			this.log(
-				"discovered peer %p with addresses %o",
-				id,
-				multiaddrs.map((addr) => addr.toString()),
-			)
-		})
+		// this.libp2p.addEventListener("peer:discovery", ({ detail: { id, multiaddrs } }) => {
+		// 	this.log(
+		// 		"discovered peer %p with addresses %o",
+		// 		id,
+		// 		multiaddrs.map((addr) => addr.toString()),
+		// 	)
+		// })
 
-		this.libp2p.addEventListener("peer:connect", ({ detail: peerId }) => {
-			this.log("connected to %p", peerId)
-			this.dispatchEvent(new CustomEvent("connect", { detail: { peer: peerId.toString() } }))
-		})
+		// this.libp2p.addEventListener("peer:connect", ({ detail: peerId }) => {
+		// 	this.log("connected to %p", peerId)
+		// 	this.dispatchEvent(new CustomEvent("connect", { detail: { peer: peerId.toString() } }))
+		// })
 
-		this.libp2p.addEventListener("peer:disconnect", ({ detail: peerId }) => {
-			this.log("disconnected %p", peerId)
-			this.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: peerId.toString() } }))
-		})
+		// this.libp2p.addEventListener("peer:disconnect", ({ detail: peerId }) => {
+		// 	this.log("disconnected %p", peerId)
+		// 	this.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: peerId.toString() } }))
+		// })
 
 		this.messageLog.addEventListener("message", (event) => this.safeDispatchEvent("message", event))
 		this.messageLog.addEventListener("commit", (event) => this.safeDispatchEvent("commit", event))
@@ -272,17 +268,12 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		this.signers.updateSigners(signers)
 	}
 
-	public get peerId(): PeerId {
-		return this.libp2p.peerId
-	}
-
 	public get topic(): string {
 		return this.messageLog.topic
 	}
 
 	public async stop() {
 		this.controller.abort()
-		await this.libp2p.stop()
 		await this.messageLog.close()
 		await this.runtime.close()
 		this.log("stopped")
@@ -292,8 +283,6 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 	public getApplicationData(): ApplicationData {
 		const models = Object.fromEntries(Object.entries(this.db.models).filter(([name]) => !name.startsWith("$")))
 		return {
-			peerId: this.peerId.toString(),
-			addrs: this.libp2p.getMultiaddrs().map((addr) => addr.toString()),
 			topic: this.topic,
 			models: models,
 			actions: Object.keys(this.actions),

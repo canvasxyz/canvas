@@ -1,4 +1,4 @@
-import { getLibp2p } from "@canvas-js/gossiplog/libp2p/browser"
+import { NetworkClient } from "@canvas-js/gossiplog/network/client"
 import { GossipLog as IdbGossipLog } from "@canvas-js/gossiplog/idb"
 
 import type { PlatformTarget } from "../interface.js"
@@ -8,7 +8,9 @@ const target: PlatformTarget = {
 		return IdbGossipLog.open(init)
 	},
 
-	createLibp2p: (config) => getLibp2p(config),
+	attachNetwork: (gossipLog, config) => {
+		const client = new NetworkClient(gossipLog, "")
+	},
 }
 
 export default target

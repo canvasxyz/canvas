@@ -5,7 +5,8 @@ import type pg from "pg"
 
 import { GossipLog as SqliteGossipLog } from "@canvas-js/gossiplog/sqlite"
 import { GossipLog as PostgresGossipLog } from "@canvas-js/gossiplog/pg"
-import { getLibp2p } from "@canvas-js/gossiplog/libp2p/node"
+import { NetworkServer } from "@canvas-js/gossiplog/network/server"
+import { NetworkPeer } from "@canvas-js/gossiplog/network/peer"
 import { assert } from "@canvas-js/utils"
 
 import type { PlatformTarget } from "../interface.js"
@@ -42,7 +43,11 @@ const target: PlatformTarget = {
 		}
 	},
 
-	createLibp2p: (config) => getLibp2p(config),
+	attachNetwork: async (gossipLog, config) => {
+		//
+	},
+
+	// createLibp2p: (config) => getLibp2p(config),
 }
 
 export default target

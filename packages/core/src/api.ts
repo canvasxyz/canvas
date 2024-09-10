@@ -126,70 +126,70 @@ export function createAPI(app: Canvas, options: APIOptions = {}): express.Expres
 		return void res.json({ clock, parents })
 	})
 
-	if (options.exposeP2P) {
-		const meshPeers = new Set<string>()
-		app.messageLog.addEventListener("graft", ({ detail: { peerId } }) => meshPeers.add(peerId))
-		app.messageLog.addEventListener("prune", ({ detail: { peerId } }) => meshPeers.delete(peerId))
+	// if (options.exposeP2P) {
+	// 	const meshPeers = new Set<string>()
+	// 	app.messageLog.addEventListener("graft", ({ detail: { peer: peerId } }) => meshPeers.add(peerId))
+	// 	app.messageLog.addEventListener("prune", ({ detail: { peer: peerId } }) => meshPeers.delete(peerId))
 
-		api.get("/connections", (req, res) => {
-			const results: {
-				id: string
-				remotePeer: string
-				remoteAddr: string
-				streams: { id: string; protocol: string | null }[]
-			}[] = []
+	// 	api.get("/connections", (req, res) => {
+	// 		const results: {
+	// 			id: string
+	// 			remotePeer: string
+	// 			remoteAddr: string
+	// 			streams: { id: string; protocol: string | null }[]
+	// 		}[] = []
 
-			for (const { id, remotePeer, remoteAddr, streams } of app.libp2p.getConnections()) {
-				results.push({
-					id,
-					remotePeer: remotePeer.toString(),
-					remoteAddr: remoteAddr.toString(),
-					streams: streams.map(({ id, protocol }) => ({ id, protocol: protocol ?? null })),
-				})
-			}
+	// 		for (const { id, remotePeer, remoteAddr, streams } of app.libp2p.getConnections()) {
+	// 			results.push({
+	// 				id,
+	// 				remotePeer: remotePeer.toString(),
+	// 				remoteAddr: remoteAddr.toString(),
+	// 				streams: streams.map(({ id, protocol }) => ({ id, protocol: protocol ?? null })),
+	// 			})
+	// 		}
 
-			return void res.json(results)
-		})
+	// 		return void res.json(results)
+	// 	})
 
-		api.get("/mesh/:topic", (req, res) => {
-			if (req.params.topic === app.topic) {
-				return void res.json(Array.from(meshPeers))
-			} else {
-				return void res.status(StatusCodes.NOT_FOUND).end()
-			}
-		})
+	// 	api.get("/mesh/:topic", (req, res) => {
+	// 		if (req.params.topic === app.topic) {
+	// 			return void res.json(Array.from(meshPeers))
+	// 		} else {
+	// 			return void res.status(StatusCodes.NOT_FOUND).end()
+	// 		}
+	// 	})
 
-		api.post("/ping/:peerId", async (req, res) => {
-			if (app.libp2p === null) {
-				return void res.status(StatusCodes.INTERNAL_SERVER_ERROR).end("Offline")
-			}
+	// 	api.post("/ping/:peerId", async (req, res) => {
+	// 		if (app.libp2p === null) {
+	// 			return void res.status(StatusCodes.INTERNAL_SERVER_ERROR).end("Offline")
+	// 		}
 
-			const requestController = new AbortController()
-			req.on("close", () => requestController.abort())
+	// 		const requestController = new AbortController()
+	// 		req.on("close", () => requestController.abort())
 
-			const signal = anySignal([AbortSignal.timeout(PING_TIMEOUT), requestController.signal])
+	// 		const signal = anySignal([AbortSignal.timeout(PING_TIMEOUT), requestController.signal])
 
-			let peerId: PeerId
-			try {
-				peerId = peerIdFromString(req.params.peerId)
-			} catch (err) {
-				return void res.status(StatusCodes.BAD_REQUEST).end(`${err}`)
-			}
+	// 		let peerId: PeerId
+	// 		try {
+	// 			peerId = peerIdFromString(req.params.peerId)
+	// 		} catch (err) {
+	// 			return void res.status(StatusCodes.BAD_REQUEST).end(`${err}`)
+	// 		}
 
-			try {
-				const latency = await app.libp2p.services.ping.ping(peerId, { signal })
-				return void res.status(StatusCodes.OK).end(`Got response from ${peerId} in ${latency}ms\n`)
-			} catch (err) {
-				if (err instanceof AbortError) {
-					return void res.status(StatusCodes.GATEWAY_TIMEOUT).end(err.toString())
-				} else {
-					return void res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(`${err}`)
-				}
-			} finally {
-				signal.clear()
-			}
-		})
-	}
+	// 		try {
+	// 			const latency = await app.libp2p.services.ping.ping(peerId, { signal })
+	// 			return void res.status(StatusCodes.OK).end(`Got response from ${peerId} in ${latency}ms\n`)
+	// 		} catch (err) {
+	// 			if (err instanceof AbortError) {
+	// 				return void res.status(StatusCodes.GATEWAY_TIMEOUT).end(err.toString())
+	// 			} else {
+	// 				return void res.status(StatusCodes.INTERNAL_SERVER_ERROR).end(`${err}`)
+	// 			}
+	// 		} finally {
+	// 			signal.clear()
+	// 		}
+	// 	})
+	// }
 
 	return api
 }
@@ -214,21 +214,21 @@ export function createMetricsAPI(app: Canvas): express.Express {
 			ageBuckets: 24,
 		}),
 
-		canvas_gossipsub_subscribers: new Gauge({
-			registers: [canvasRegister],
-			name: "canvas_gossipsub_subscribers",
-			help: "GossipSub topic subscribers",
-			labelNames: ["topic"],
-			async collect() {
-				if (app.libp2p !== null) {
-					const { pubsub } = app.libp2p.services
-					for (const topic of pubsub?.getTopics() ?? []) {
-						const subscribers = pubsub?.getSubscribers(topic) ?? []
-						this.set({ topic }, subscribers.length)
-					}
-				}
-			},
-		}),
+		// canvas_gossipsub_subscribers: new Gauge({
+		// 	registers: [canvasRegister],
+		// 	name: "canvas_gossipsub_subscribers",
+		// 	help: "GossipSub topic subscribers",
+		// 	labelNames: ["topic"],
+		// 	async collect() {
+		// 		if (app.libp2p !== null) {
+		// 			const { pubsub } = app.libp2p.services
+		// 			for (const topic of pubsub?.getTopics() ?? []) {
+		// 				const subscribers = pubsub?.getSubscribers(topic) ?? []
+		// 				this.set({ topic }, subscribers.length)
+		// 			}
+		// 		}
+		// 	},
+		// }),
 	}
 
 	app.messageLog.addEventListener("message", ({ detail: { message } }) => {
