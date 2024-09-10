@@ -17,7 +17,7 @@ const router = createBrowserRouter([
 		),
 	},
 	{
-		path: "/topic/:topic",
+		path: "/topic/:topic/*",
 		element: (
 			<Container>
 				<Topic />

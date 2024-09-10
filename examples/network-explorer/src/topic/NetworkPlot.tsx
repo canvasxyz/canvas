@@ -73,23 +73,6 @@ function MessageEntry({ item }: { item: Result<Action | Session> }) {
 			</span>
 		</div>
 	)
-	{
-		/* <div>
-	<div style={{ display: "flex", flexDirection: "row" }}>
-		<span>Timestamp: {new Date(item.message.payload.context.timestamp).toLocaleString()} </span>
-		<div style={{ flexGrow: 1 }}></div>
-		<span>Address: {formatDid(item.message.payload.did)}</span>
-	</div>
-	{item.message.payload.type == "session" ? (
-		<>Public key: {item.message.payload.publicKey}</>
-	) : (
-		<>
-			Name: {item.message.payload.name} <br />
-			Args: {JSON.stringify(item.message.payload.args)}
-		</>
-	)}
-</div> */
-	}
 }
 
 export default function NetworkPlot({ topic }: { topic: string }) {
@@ -140,7 +123,7 @@ export default function NetworkPlot({ topic }: { topic: string }) {
 		}
 	}
 
-	const graphWidth = 400
+	const graphWidth = 200
 
 	const nodesByClock: Record<number, Record<string, number>> = {}
 	let maxBranch = 0
