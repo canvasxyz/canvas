@@ -12,26 +12,29 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({}) => {
 	const [isStarted, setIsStarted] = useState(false)
 
 	const start = useCallback(async () => {
-		if (app !== null) {
-			try {
-				await app.libp2p.start()
-				setIsStarted(true)
-			} catch (err) {
-				console.error(err)
-			}
+		if (app === null) {
+			return
 		}
+
+		// try {
+		// 	await app.libp2p.start()
+		// 	setIsStarted(true)
+		// } catch (err) {
+		// 	console.error(err)
+		// }
 	}, [app])
 
 	const stop = useCallback(async () => {
 		if (app === null) {
 			return
 		}
-		try {
-			await app.libp2p.stop()
-			setIsStarted(false)
-		} catch (err) {
-			console.error(err)
-		}
+
+		// try {
+		// 	await app.libp2p.stop()
+		// 	setIsStarted(false)
+		// } catch (err) {
+		// 	console.error(err)
+		// }
 	}, [app])
 
 	const clear = useCallback(async () => {
