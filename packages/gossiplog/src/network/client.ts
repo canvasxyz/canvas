@@ -13,16 +13,15 @@ import { assert } from "@canvas-js/utils"
 
 import { Event } from "#protocols/events"
 
-import { AbstractGossipLog } from "../AbstractGossipLog.js"
+import { AbstractGossipLog, GossipLogEvents } from "../AbstractGossipLog.js"
 import * as sync from "../sync/index.js"
 import { decodeId, encodeId } from "../ids.js"
 import { codes } from "../utils.js"
 
 import { factory, getPushProtocol, getSyncProtocol, chunk, encodeEvents, decodeEvents } from "./utils.js"
-import { SignedMessage } from "../SignedMessage.js"
 
-export class Client<Payload> {
-	log = logger("canvas:sync:api:client")
+export class NetworkClient<Payload> {
+	log = logger("canvas:network:client")
 
 	pushProtocol = getPushProtocol(this.gossipLog.topic)
 	syncProtocol = getSyncProtocol(this.gossipLog.topic)
@@ -39,16 +38,26 @@ export class Client<Payload> {
 		onStreamEnd: (stream) => this.log("stream %s closed (%s)", stream.id, stream.protocol),
 	})
 
-	socket = connect(this.addr)
+	duplex = connect(this.addr)
 	sourceURL = this.addr
 	eventSource = pushable<Event>({ objectMode: true })
 
 	public constructor(readonly gossipLog: AbstractGossipLog<Payload>, readonly addr: string) {
 		this.gossipLog.addEventListener("message", this.handleMessage)
 
-		pipe(this.socket, this.muxer, chunk, this.socket).catch((err) => this.log.error(err))
+		pipe(this.duplex, this.muxer, chunk, this.duplex).catch((err) => this.log.error(err))
 
-		this.socket.connected().then(async () => {
+		const ws = this.duplex.socket
+
+		ws.addEventListener("open", () => {
+			gossipLog.dispatchEvent(new CustomEvent("connect", { detail: { peer: this.sourceURL } }))
+		})
+
+		ws.addEventListener("close", () => {
+			gossipLog.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: this.sourceURL } }))
+		})
+
+		this.duplex.connected().then(async () => {
 			const eventStream = await this.newStream(this.pushProtocol)
 
 			pipe(this.eventSource, encodeEvents, lp.encode, eventStream.sink).catch((err) => {
@@ -76,18 +85,18 @@ export class Client<Payload> {
 	public async close() {
 		this.gossipLog.removeEventListener("message", this.handleMessage)
 		await this.muxer.close()
-		await this.socket.close()
+		await this.duplex.close()
 	}
 
 	public isConnected(): boolean {
-		return this.socket.socket.readyState == WebSocket.OPEN
+		return this.duplex.socket.readyState == WebSocket.OPEN
 	}
 
 	private push(event: Event) {
 		this.eventSource.push(event)
 	}
 
-	private readonly handleMessage = ({ detail: { id, source, key, value } }: CustomEvent<SignedMessage>) => {
+	private readonly handleMessage = ({ detail: { id, key, value, source } }: GossipLogEvents["message"]) => {
 		this.log("handling message %s from source %o", id, source)
 		if (source === undefined) {
 			this.log("pushing %s to %s", id, this.sourceURL)
@@ -159,11 +168,17 @@ export class Client<Payload> {
 
 	private async sync() {
 		do {
-			const stream = await this.newStream(this.syncProtocol)
+			let stream: Stream
+			try {
+				stream = await this.newStream(this.syncProtocol)
+			} catch (err) {
+				this.log.error("failed to open outgoing sync stream: %O", err)
+				return
+			}
+
 			this.log("opened outgoing sync stream %s", stream.id)
 
 			const client = new sync.Client(stream)
-
 			try {
 				const result = await this.gossipLog.sync(client, { peer: this.sourceURL })
 				if (result.complete) {
@@ -171,6 +186,9 @@ export class Client<Payload> {
 				} else {
 					continue
 				}
+			} catch (err) {
+				this.log.error("sync failed: %O", err)
+				return
 			} finally {
 				client.end()
 				stream.close().then(

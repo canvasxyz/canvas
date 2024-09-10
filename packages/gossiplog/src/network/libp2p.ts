@@ -1,8 +1,7 @@
-import { createLibp2p } from "libp2p"
-import type { Libp2p, PeerId } from "@libp2p/interface"
-import type { Multiaddr } from "@multiformats/multiaddr"
-import { createFromProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
+import process from "node:process"
 
+import { createLibp2p } from "libp2p"
+import { Libp2p } from "@libp2p/interface"
 import { identify } from "@libp2p/identify"
 import { webSockets } from "@libp2p/websockets"
 import { all } from "@libp2p/websockets/filters"
@@ -12,24 +11,17 @@ import { bootstrap } from "@libp2p/bootstrap"
 import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { kadDHT } from "@libp2p/kad-dht"
 import { ping as pingService } from "@libp2p/ping"
-import { fetch as fetchService } from "@libp2p/fetch"
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
+
+import { createFromProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
+import { Multiaddr } from "@multiformats/multiaddr"
 
 import { Registry } from "prom-client"
 
-import { discovery } from "@canvas-js/discovery"
+import type { ServiceMap, NetworkConfig } from "../interface.js"
 
-import type { ServiceMap, NetworkConfig } from "../../interface.js"
-
-export function getTopicDHTProtocol(topic?: string) {
-	if (topic !== undefined) {
-		return `/canvas/kad/1.0.0/${topic}`
-	} else {
-		return `/canvas/kad/1.0.0`
-	}
-}
-
-export async function getPeerId(): Promise<PeerId> {
+const getTopicDHTProtocol = (topic: string) => `/canvas/kad/1.0.0/${topic}`
+const getPeerId = async () => {
 	const { PEER_ID } = process.env
 	if (typeof PEER_ID === "string") {
 		return await createFromProtobuf(Buffer.from(PEER_ID, "base64"))
@@ -39,6 +31,7 @@ export async function getPeerId(): Promise<PeerId> {
 }
 
 export async function getLibp2p(
+	topic: string,
 	config: NetworkConfig,
 	options: { registry?: Registry } = {},
 ): Promise<Libp2p<ServiceMap>> {
@@ -79,9 +72,8 @@ export async function getLibp2p(
 		services: {
 			identify: identify({ protocolPrefix: "canvas" }),
 			ping: pingService({ protocolPrefix: "canvas" }),
-			fetch: fetchService({ protocolPrefix: "canvas" }),
 
-			dht: kadDHT({ protocol: getTopicDHTProtocol(config.topic) }),
+			dht: kadDHT({ protocol: getTopicDHTProtocol(topic) }),
 
 			pubsub: gossipsub({
 				emitSelf: false,
@@ -91,8 +83,6 @@ export async function getLibp2p(
 				asyncValidation: true,
 				scoreParams: { IPColocationFactorWeight: 0 },
 			}),
-
-			discovery: discovery({}),
 		},
 	})
 }

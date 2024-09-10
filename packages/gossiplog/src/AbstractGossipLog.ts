@@ -1,7 +1,6 @@
-import { TypedEventEmitter, CustomEvent, CodeError, Libp2p, PeerId } from "@libp2p/interface"
+import { TypedEventEmitter, CustomEvent, CodeError } from "@libp2p/interface"
 import { Logger, logger } from "@libp2p/logger"
 import { equals, toString } from "uint8arrays"
-import type { MeshPeer } from "@chainsafe/libp2p-gossipsub"
 
 import { Node, Tree, ReadWriteTransaction, hashEntry } from "@canvas-js/okra"
 import type { Signature, Signer, Message, Awaitable } from "@canvas-js/interfaces"
@@ -39,10 +38,11 @@ export type GossipLogEvents<Payload = unknown> = {
 	message: CustomEvent<SignedMessage<Payload>>
 	commit: CustomEvent<{ root: Node; heads: string[] }>
 	sync: CustomEvent<{ duration: number; messageCount: number; peer?: string }>
-	error: CustomEvent<{ error: Error }>
 
-	graft: CustomEvent<{ peerId: string }>
-	prune: CustomEvent<{ peerId: string }>
+	graft: CustomEvent<{ peer: string }>
+	prune: CustomEvent<{ peer: string }>
+	connect: CustomEvent<{ peer: string }>
+	disconnect: CustomEvent<{ peer: string }>
 }
 
 export type MessageRecord<Payload> = {
@@ -77,8 +77,6 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 	public abstract tree: Tree
 	public abstract close(): Promise<void>
 
-	public libp2p: Libp2p<ServiceMap> | null = null
-
 	protected readonly log: Logger
 
 	public readonly validatePayload: (payload: unknown) => payload is Payload
@@ -98,31 +96,6 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		this.verifySignature = init.verifySignature ?? this.signer.scheme.verify
 
 		this.log = logger(`canvas:gossiplog:[${this.topic}]`)
-	}
-
-	public async listen(libp2p: Libp2p<ServiceMap>) {
-		assert(libp2p.status === "started")
-		assert(this.libp2p === null)
-
-		this.libp2p = libp2p
-		// this.service = new GossipLogService(libp2p, this, {})
-
-		// this.service.pubsub?.addEventListener("gossipsub:prune", this.handlePruneEvent)
-		// this.service.pubsub?.addEventListener("gossipsub:graft", this.handleGraftEvent)
-
-		// await this.service.start()
-	}
-
-	private handlePruneEvent = ({ detail: peer }: CustomEvent<MeshPeer>) => {
-		if (peer.topic === this.topic) {
-			this.dispatchEvent(new CustomEvent("prune", { detail: { peerId: peer.peerId.toString() } }))
-		}
-	}
-
-	private handleGraftEvent = ({ detail: peer }: CustomEvent<MeshPeer>) => {
-		if (peer.topic === this.topic) {
-			this.dispatchEvent(new CustomEvent("graft", { detail: { peerId: peer.peerId.toString() } }))
-		}
 	}
 
 	public async replay() {
@@ -314,12 +287,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 		const branch = await this.getBranch(id, parentMessageRecords)
 
-		try {
-			await this.#apply.apply(this, [signedMessage, branch])
-		} catch (error) {
-			this.dispatchEvent(new CustomEvent("error", { detail: { error } }))
-			throw error
-		}
+		await this.#apply.apply(this, [signedMessage, branch])
 
 		const hash = toString(hashEntry(key, value), "hex")
 

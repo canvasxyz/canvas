@@ -1,10 +1,10 @@
 import http from "node:http"
 
-import { Logger, logger } from "@libp2p/logger"
-import { CodeError, Stream, StreamMuxer, TypedEventEmitter } from "@libp2p/interface"
+import { logger } from "@libp2p/logger"
+import { CodeError, Stream, StreamMuxer } from "@libp2p/interface"
 import { ProtocolStream, handle, select } from "@libp2p/multistream-select"
 
-import { createServer } from "it-ws/server"
+import { createServer, WebSocketServer } from "it-ws/server"
 import { DuplexWebSocket } from "it-ws/duplex"
 import WebSocket from "it-ws/web-socket"
 import { pipe } from "it-pipe"
@@ -29,15 +29,15 @@ const isIPv4 = (address: string) => ipv4Pattern.test(address)
 
 class Connection<Payload> {
 	readonly id = bytesToHex(randomBytes(8))
-	readonly log = logger(`canvas:sync:api:server:${this.id}`)
+	readonly log = logger(`canvas:network:server:${this.id}`)
 	readonly muxer: StreamMuxer
 	readonly eventSource = pushable<Event>({ objectMode: true })
 	readonly pushProtocol = getPushProtocol(this.gossipLog.topic)
 	readonly syncProtocol = getSyncProtocol(this.gossipLog.topic)
 	readonly sourceURL: string
 
-	constructor(readonly gossipLog: AbstractGossipLog<Payload>, readonly socket: DuplexWebSocket) {
-		const { remoteAddress, remotePort } = socket
+	constructor(readonly gossipLog: AbstractGossipLog<Payload>, readonly duplex: DuplexWebSocket) {
+		const { remoteAddress, remotePort } = duplex
 		this.log("new connection from %s:%d", remoteAddress, remotePort)
 		gossipLog.addEventListener("message", this.handleMessage)
 		gossipLog.addEventListener("sync", this.handleSync)
@@ -62,7 +62,7 @@ class Connection<Payload> {
 			},
 		})
 
-		pipe(socket, this.muxer, chunk, socket)
+		pipe(duplex, this.muxer, chunk, duplex)
 			.then(() => this.muxer.close())
 			.catch((err) => this.log.error(err))
 	}
@@ -74,7 +74,7 @@ class Connection<Payload> {
 	}
 
 	public isConnected(): boolean {
-		return this.socket.socket.readyState === WebSocket.OPEN
+		return this.duplex.socket.readyState === WebSocket.OPEN
 	}
 
 	private async newStream(protocol: string): Promise<Stream> {
@@ -95,13 +95,16 @@ class Connection<Payload> {
 		}
 	}
 
-	private readonly handleMessage = ({ detail: { key, value, source } }: GossipLogEvents["message"]) => {
+	private readonly handleMessage = ({ detail: { id, key, value, source } }: GossipLogEvents["message"]) => {
+		this.log.trace("handling message %s from source %o", id, source)
 		if (source == undefined || source.type === "pubsub") {
+			this.log.trace("pushing message %s to %s", id, this.sourceURL)
 			this.push({ insert: { key, value } })
 		} else if (source.type === "push") {
 			if (source.peer === this.sourceURL) {
 				return
 			} else if (source.peer.startsWith("ws://")) {
+				this.log.trace("pushing message %s to %s", id, this.sourceURL)
 				this.push({ insert: { key, value } })
 			}
 		}
@@ -176,18 +179,25 @@ class Connection<Payload> {
 
 	private async sync(): Promise<void> {
 		do {
-			const stream = await this.newStream(this.syncProtocol)
-			this.log("opened outgoing sync stream %s", stream.id)
+			let stream: Stream
+			try {
+				stream = await this.newStream(this.syncProtocol)
+			} catch (err) {
+				this.log.error("failed to open outgoing sync stream: %O", err)
+				return
+			}
 
 			const client = new sync.Client(stream)
-
 			try {
-				const result = await this.gossipLog.sync(client)
+				const result = await this.gossipLog.sync(client, { peer: this.sourceURL })
 				if (result.complete) {
 					break
 				} else {
 					continue
 				}
+			} catch (err) {
+				this.log.error("sync failed: %O", err)
+				return
 			} finally {
 				client.end()
 				stream.close().then(
@@ -199,18 +209,33 @@ class Connection<Payload> {
 	}
 }
 
-export function createAPI<Payload>(gossipLog: AbstractGossipLog<Payload>, server?: http.Server) {
-	const connections = new Map<string, Connection<Payload>>()
-	return createServer({
-		server,
-		onConnection: (socket) => {
-			const connection = new Connection(gossipLog, socket)
+export class NetworkServer<Payload> {
+	public readonly wss: WebSocketServer
+	public readonly connections = new Map<string, Connection<Payload>>()
 
-			connections.set(connection.id, connection)
-			socket.socket.addEventListener("close", () => {
-				connection.close()
-				connections.delete(connection.id)
-			})
-		},
-	})
+	constructor(readonly gossipLog: AbstractGossipLog<Payload>, server?: http.Server) {
+		this.wss = createServer({
+			server,
+			onConnection: (duplex) => {
+				const connection = new Connection(gossipLog, duplex)
+				this.connections.set(connection.id, connection)
+				gossipLog.dispatchEvent(new CustomEvent("connect", { detail: { peer: connection.sourceURL } }))
+
+				duplex.socket.addListener("open", () => console.log("I OPENED THE THINGJFKLDSJFKSLDFJKLSDJF"))
+				duplex.socket.addEventListener("close", () => {
+					connection.close()
+					this.connections.delete(connection.id)
+					gossipLog.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: connection.sourceURL } }))
+				})
+			},
+		})
+	}
+
+	public listen(port: number) {
+		this.wss.listen(port)
+	}
+
+	public close() {
+		this.wss.close()
+	}
 }

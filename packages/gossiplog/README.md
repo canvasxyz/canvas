@@ -31,9 +31,9 @@ GossipLog makes this all possible at the expense of two major tradeoffs:
 1. Logs are only **partially ordered**. The messages in the log are structured in a causal dependency graph; GossipLog guarantees that each message will only be delivered after all of its transitive dependencies are delivered, but doesn't guarantee delivery order within that.
 2. Logs must be deterministically **self-authenticating**.
 
-The implications of 1) are that GossipLog is best for applications where eventual consistency is acceptable, and where message delivery is commutative in effect. GossipLog messages carry a built-in logical clock that can be easily used to create last-write-wins registers and other CRDT primitives.
+The implications of 1) are that GossipLog is best for applications where eventual consistency is acceptable, and where message delivery is commutative (and idempotent) in effect. GossipLog messages carry a built-in logical clock that can be easily used to create last-write-wins registers and other CRDT primitives.
 
-The implications of 2) are that the access control logic - who can append what to the log - must be expressed as a pure function of the payload, message signature + public key, and any state accumulated from the message's transitive dependencies. The simplest case would be a whitelist of known "owner" public keys, although bridging these to on-chain identities like DAO memberships via session keys is also possible. See the notes on [advanced authentication use cases](#advanced-authentication-use-cases) for more detail.
+The implications of 2) are that the access control logic - who can append what to the log - must be expressed as a pure function of the payload, message signature + public key, and any state accumulated from the message's transitive dependencies. The simplest case would be a whitelist of known "owner" public keys, but bridging these to on-chain identities like DAO memberships via session keys is also possible. See the notes on [advanced authentication use cases](#advanced-authentication-use-cases) for more detail.
 
 ## Design
 
@@ -68,7 +68,7 @@ type Signature = {
 }
 ```
 
-The `codec` identifies how the message was serialized to bytes for signing. `dag-cbor` and `dag-json` are the two codecs supported by default. Only Ed25519 did:key URIs are supported by default. These can be extended by providing a custom signer implementation and providing a custom `verifySignature` method to the init object.
+The `codec` identifies how the message was serialized to bytes for signing. `dag-cbor` and `dag-json` are the two codecs supported by default. Only Ed25519 [did:key](https://w3c-ccg.github.io/did-method-key/) URIs are supported by default. These can be extended by providing a custom signer implementation and providing a custom `verifySignature` method to the init object.
 
 ### Message signers
 
@@ -78,7 +78,7 @@ Although it's possible to create and sign messages manually, the simplest way to
 import { ed25519 } from "@canvas-js/signatures"
 
 const signer = ed25519.create()
-// or ed25519.create({ type: "ed25519", privateKey: Uint8Array([ ... ]) })
+// or ed25519.create({ type: "ed25519", privateKey: new Uint8Array([ ... ]) })
 ```
 
 Once you have a signer, you can add it to `GossipLogInit` to use it by default for all appends, or pass a specific signer into each call to `append` individually.
@@ -130,7 +130,7 @@ For example, consider the clock value 87381. The encoded output begins with `110
 
 The rationale here is that prefixing message IDs with a _lexicographically sortable_ logical clock has many useful consquences. Regular Protobuf-style unsigned varints don't sort the same as their decoded values.
 
-The upshot is that these string message IDs can be sorted directly using the normal JavaScript string comparison to get a total order over messages that respects both logical clock order and transitive dependency order. For example, implementing a last-write-wins register for message effects is as simple as caching and comparing message ID strings.
+These string message IDs can be sorted directly using the normal JavaScript string comparison to get a total order over messages that respects both logical clock order and transitive dependency order. For example, implementing a last-write-wins register for message effects is as simple as caching and comparing message ID strings.
 
 ## Usage
 
@@ -204,7 +204,41 @@ Given an existing `signature: Signature` and `message: Message<Payload>` - such 
 
 ### Syncing with other peers
 
-TODO
+GossipLog supports two network topologies: client/server and peer-to-peer.
+
+Client/server means one server imports and runs a `NetworkServer` class, and accepts WebSocket connections on a dedicated port. Clients (which can run in the browser or NodeJS) import `NetworkClient` and connect to the server via `ws://` URL.
+
+```ts
+// Server
+import { GossipLog } from "@canvas-js/gossiplog/sqlite"
+import { NetworkServer } from "@canvas-js/gossiplog/network/server"
+
+const log = new GossipLog({ ... })
+const server = new NetworkServer(log)
+server.listen(8080)
+```
+
+```ts
+// Client
+import { GossipLog } from "@canvas-js/gossiplog/idb"
+import { NetworkClient } from "@canvas-js/gossiplog/network/client"
+
+const log = await GossipLog.open({ ... })
+const client = new NetworkClient(log, "ws://localhost:8080")
+```
+
+The peer-to-peer topology uses libp2p, and can only run in NodeJS since it requires all peers to be dialable. Peers can import and start a `NetworkPeer`, passing in one or more WebSocket [multiaddr](https://github.com/multiformats/multiaddr) addresses for listening and announcing. For example, to advertise on DNS name `my.app.com` while binding to the local port 80, a peer would use:
+
+```ts
+import { GossipLog } from "@canvas-js/gossiplog/sqlite"
+import { NetworkPeer } from "@canvas-js/gossiplog/network/peer"
+
+const log = new GossipLog({ ... })
+const peer = await NetworkPeer.create(log, {
+  listen: ["/ip4/127.0.0.1/tcp/80/ws"],
+  announce: ["/dns4/my.app.com/tcp/443/wss"],
+})
+```
 
 ### Advanced authentication use cases
 
@@ -219,8 +253,21 @@ Topics must match `/^[a-zA-Z0-9\.\-]+$/`.
 ```ts
 import type { Signature, Signer, Message, Awaitable } from "@canvas-js/interfaces"
 
+export class SignedMessage<Payload> {
+  /** use gossipLog.encode() and gossipLog.decode() to get SignedMessage instances */
+  private constructor() {}
+
+  readonly id: string
+  readonly signature: Signature
+  readonly message: Message<Payload>
+
+  /** serialized bytes for storage/transport */
+  readonly key: Uint8Array
+  readonly value: Uint8Array
+}
+
 export type GossipLogConsumer<Payload = unknown> = (
-	signedMessage: { id: string; signature: Signature, message: Message<Payload> },
+	signedMessage: SignedMessage<Payload>,
 ) => Awaitable<void>
 
 export type GossipLogInit<Payload = unknown> = {
@@ -234,10 +281,9 @@ export type GossipLogInit<Payload = unknown> = {
 }
 
 export type GossipLogEvents<Payload = unknown> = {
-	message: CustomEvent<{ id: string; signature: Signature; message: Message<Payload> }>
+	message: CustomEvent<SignedMessage<Payload>>
 	commit: CustomEvent<{ root: Node; heads: string[] }>
-	sync: CustomEvent<{ duration: number; messageCount: number; peerId?: string }>
-	error: CustomEvent<{ error: Error }>
+	sync: CustomEvent<{ duration: number; messageCount: number; peer?: string }>
 }
 
 export interface GossipLog<Payload = unknown>
@@ -249,13 +295,10 @@ export interface GossipLog<Payload = unknown>
 
   public append<T extends Payload>(
     payload: T,
-    options?: { publish?: boolean; signer?: Signer<Payload> }
-  ): Promise<{ id: string; signature: Signature; message: Message<T> }>
+    options?: { signer?: Signer<Payload> },
+  ): Promise<SignedMessage<T>>
 
-  public insert(
-    signedMessage: { signature: Signature, message: Message<Payload> },
-    options?: { publish?: boolean },
-  ): Promise<{ id: string }>
+  public insert(signedMessage: SignedMessage<Payload>): Promise<void>
 
   public has(id: string): Promise<boolean>
   public get(id: string): Promise<[signature: Signature, message: Message<Payload>] | [null, null]>
@@ -264,8 +307,10 @@ export interface GossipLog<Payload = unknown>
     range?: { lt?: string; lte?: string; gt?: string; gte?: string; reverse?: boolean; limit?: number },
   ): AsyncIterable<{ id: string; signature: Signature; message: Message<Payload> }>
 
+  public replay(): Promise<void>
   public getClock(): Promise<[clock: number, parents: string[]]>
 
-  public replay(): Promise<void>
+  public encode(signature: Signature, message: Message<T>): SignedMessage<Payload>
+  public decode(value: Uint8Array): SignedMessage<Payload>
 }
 ```

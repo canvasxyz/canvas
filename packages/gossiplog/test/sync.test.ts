@@ -22,9 +22,9 @@ import type { GossipLogConsumer, GossipLogEvents } from "@canvas-js/gossiplog"
 // 	encodeResponses,
 // } from "@canvas-js/gossiplog/sync"
 import { Request, Response } from "@canvas-js/gossiplog/protocols/sync"
-import { getLibp2p } from "@canvas-js/gossiplog/libp2p/node"
-import { Client } from "@canvas-js/gossiplog/api/client"
-import { createAPI } from "@canvas-js/gossiplog/api/server"
+// import { getLibp2p } from "@canvas-js/gossiplog/libp2p/node"
+import { NetworkClient } from "@canvas-js/gossiplog/network/client"
+import { NetworkServer } from "@canvas-js/gossiplog/network/server"
 
 import { testPlatforms, expectLogEntries, getDirectory } from "./utils.js"
 
@@ -223,12 +223,13 @@ testPlatforms(
 		const b = await openGossipLog(t, { topic, apply })
 		const c = await openGossipLog(t, { topic, apply })
 
-		const server = createAPI(a)
-		server.listen(5555)
+		const server = new NetworkServer(a)
+		server.wss.listen(5555)
+
 		t.teardown(() => server.close())
 
-		const clientB = new Client(b, "ws://127.0.0.1:5555")
-		const clientC = new Client(c, "ws://127.0.0.1:5555")
+		const clientB = new NetworkClient(b, "ws://127.0.0.1:5555")
+		const clientC = new NetworkClient(c, "ws://127.0.0.1:5555")
 
 		await setTimeout(1000)
 

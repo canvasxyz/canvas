@@ -17,10 +17,7 @@ test("wait for initial connection events", async (t) => {
 		b: { port: 9991, peers: ["a"] },
 	})
 
-	await setTimeout(5000)
-	t.pass()
-
-	// await t.notThrowsAsync(() => waitForInitialConnections(network))
+	await t.notThrowsAsync(() => waitForInitialConnections(network))
 })
 
 // test("wait for initial graft events", async (t) => {

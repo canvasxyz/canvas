@@ -14,8 +14,9 @@
 	"sideEffects": false,
 	"exports": {
 		".": "./lib/index.js",
-		"./api/client": "./lib/api/client.js",
-		"./api/server": "./lib/api/server.js",
+		"./network/client": "./lib/network/client.js",
+		"./network/server": "./lib/network/server.js",
+		"./network/peer": "./lib/network/peer.js",
 		"./idb": "./lib/idb/index.js",
 		"./pg": "./lib/pg/index.js",
 		"./sqlite-wasm": "./lib/sqlite-wasm/index.js",
@@ -23,10 +24,7 @@
 		"./service": "./lib/service/index.js",
 		"./sync": "./lib/sync/index.js",
 		"./protocols/sync": "./lib/protocols/sync.js",
-		"./protocols/events": "./lib/protocols/events.js",
-		"./libp2p/browser-webrtc": "./lib/libp2p/browser-webrtc/index.js",
-		"./libp2p/browser": "./lib/libp2p/browser/index.js",
-		"./libp2p/node": "./lib/libp2p/node/index.js"
+		"./protocols/events": "./lib/protocols/events.js"
 	},
 	"imports": {
 		"#protocols/sync": "./lib/protocols/sync.js",
