@@ -5,8 +5,7 @@ import { randomBytes, bytesToHex } from "@noble/hashes/utils"
 import { DuplexWebSocket } from "it-ws/duplex"
 
 import { GossipLog } from "@canvas-js/gossiplog/sqlite"
-// import { getLibp2p } from "@canvas-js/gossiplog/libp2p/node"
-import { createAPI } from "@canvas-js/gossiplog/api/server"
+import { NetworkServer } from "@canvas-js/gossiplog/network/server"
 
 import { Socket } from "../socket.js"
 import { topic } from "../constants.js"
@@ -24,8 +23,8 @@ async function start() {
 	const peerId = peerIdFromString("12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn")
 	const socket = await Socket.open(`ws://dashboard:8000`, messageLog, null, peerId)
 
-	const api = createAPI(messageLog)
-	api.listen(8080)
+	const server = new NetworkServer(messageLog)
+	server.wss.listen(8080)
 	// api.addListener("connection", (connection: DuplexWebSocket) => {
 	// 	const remoteAddr = connection.remoteAddress
 	// 	const id = nanoid()
@@ -71,13 +70,13 @@ async function start() {
 
 	const meshPeers = new Set<string>()
 
-	messageLog.addEventListener("graft", ({ detail: { peerId } }) => {
+	messageLog.addEventListener("graft", ({ detail: { peer: peerId } }) => {
 		console.log("gossipsub:graft", topic, peerId)
 		meshPeers.add(peerId)
 		socket.post("gossipsub:mesh:update", { topic, peers: Array.from(meshPeers) })
 	})
 
-	messageLog.addEventListener("prune", ({ detail: { peerId } }) => {
+	messageLog.addEventListener("prune", ({ detail: { peer: peerId } }) => {
 		console.log("gossipsub:prune", topic, peerId)
 		meshPeers.delete(peerId)
 		socket.post("gossipsub:mesh:update", { topic, peers: Array.from(meshPeers) })
@@ -90,7 +89,7 @@ async function start() {
 	process.addListener("SIGINT", () => {
 		process.stdout.write("\nReceived SIGINT\n")
 		controller.abort()
-		api.close()
+		server.close()
 		// libp2p.stop()
 	})
 

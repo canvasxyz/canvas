@@ -9,9 +9,9 @@ import Debugger from "weald"
 
 import { GossipLog } from "@canvas-js/gossiplog/idb"
 // import { getLibp2p, defaultRelayServer } from "@canvas-js/gossiplog/libp2p/browser-webrtc"
-import { defaultRelayServer } from "@canvas-js/gossiplog/libp2p/browser-webrtc"
-import { getLibp2p } from "@canvas-js/gossiplog/libp2p/browser"
-import { Client } from "@canvas-js/gossiplog/api/client"
+// import { defaultRelayServer } from "@canvas-js/gossiplog/libp2p/browser-webrtc"
+// import { getLibp2p } from "@canvas-js/gossiplog/libp2p/browser"
+import { NetworkClient } from "@canvas-js/gossiplog/network/client"
 
 import { Socket } from "../../socket.js"
 import { topic } from "../../constants.js"
@@ -31,8 +31,8 @@ if (window.location.search.length > 1) {
 const bootstrapList = params.bootstrapList?.split(",") ?? []
 console.log(`bootstrap list: ${JSON.stringify(bootstrapList)}`)
 
-const relayServer = params.relayServer ?? defaultRelayServer
-console.log(`relay server: ${relayServer}`)
+// const relayServer = params.relayServer ?? defaultRelayServer
+// console.log(`relay server: ${relayServer}`)
 
 // const libp2p = await getLibp2p({ topic, bootstrapList, relayServer })
 // const socket = await Socket.open(`ws://localhost:8000`, messageLog, libp2p)
@@ -91,13 +91,13 @@ messageLog.addEventListener("sync", ({ detail: { peer, duration, messageCount } 
 
 const meshPeers = new Set<string>()
 
-messageLog.addEventListener("graft", ({ detail: { peerId } }) => {
-	meshPeers.add(peerId)
+messageLog.addEventListener("graft", ({ detail: { peer } }) => {
+	meshPeers.add(peer)
 	socket.post("gossipsub:mesh:update", { topic, peers: Array.from(meshPeers) })
 })
 
-messageLog.addEventListener("prune", ({ detail: { peerId } }) => {
-	meshPeers.delete(peerId)
+messageLog.addEventListener("prune", ({ detail: { peer } }) => {
+	meshPeers.delete(peer)
 	socket.post("gossipsub:mesh:update", { topic, peers: Array.from(meshPeers) })
 })
 
@@ -109,7 +109,7 @@ await new Promise((resolve) => setTimeout(resolve, delay))
 // await libp2p.start()
 // await messageLog.listen(libp2p)
 
-const client = new Client(messageLog, `ws://localhost:8080`)
+const client = new NetworkClient(messageLog, `ws://localhost:8080`)
 
 {
 	const root = await messageLog.tree.read((txn) => txn.getRoot())
@@ -118,10 +118,10 @@ const client = new Client(messageLog, `ws://localhost:8080`)
 	socket.post("connection:open", {
 		id: bytesToHex(randomBytes(8)),
 		remotePeer: "12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn",
-		remoteAddr: client.socket.remoteAddress,
+		remoteAddr: client.duplex.remoteAddress,
 	})
 }
 
-// const id = setInterval(() => messageLog.append(bytesToHex(randomBytes(8))), 20000)
+const id = setInterval(() => messageLog.append(bytesToHex(randomBytes(8))), 20000)
 
 // libp2p.addEventListener("stop", () => clearInterval(id))
