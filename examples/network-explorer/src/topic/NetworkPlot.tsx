@@ -108,7 +108,13 @@ export default function NetworkPlot({ topic }: { topic: string }) {
 	const color = d3.scaleOrdinal(d3.schemeDark2)
 
 	const items = (messages || []).slice()
-	items.reverse()
+	items.sort((a, b) => {
+		if (a.message.clock == b.message.clock) {
+			return a.branch - b.branch
+		} else {
+			return a.message.clock - b.message.clock
+		}
+	})
 
 	const links: [from: string, to: string][] = []
 
@@ -118,23 +124,54 @@ export default function NetworkPlot({ topic }: { topic: string }) {
 		}
 	}
 
-	const branchesPaddingLeft = 10
-	const branchSpacing = 20
+	const nodeRadius = 8
+	const nodeBorderRadius = 4
 
-	const arcMarginBottom = 5
-	const arcRadius = 10
+	const lineStrokeWidth = 2
 
-	const nodes: { id: string; branch: number; x: number; y: number }[] = items.map((item) => ({
-		id: item.id,
-		branch: item.branch,
-		x: branchesPaddingLeft + item.branch * branchSpacing,
-		// the +2 here is a bit magic, it's just that if we take the
-		// exact centre of the div then the dot will be slightly high
-		y: itemYOffsets[item.id] + 2 - divTop || 0,
-	}))
+	const branches: Record<number, { start: string; end: string }> = {}
+	for (const item of items) {
+		branches[item.branch] ||= { start: item.id, end: item.id }
+		if (item.id < branches[item.branch].start) {
+			branches[item.branch].start = item.id
+		}
+		if (item.id > branches[item.branch].end) {
+			branches[item.branch].end = item.id
+		}
+	}
+
+	const graphWidth = 400
+
+	const nodesByClock: Record<number, Record<string, number>> = {}
+	let maxBranch = 0
+	for (const item of items) {
+		nodesByClock[item.message.clock] ||= {}
+		nodesByClock[item.message.clock][item.id] = Object.keys(nodesByClock[item.message.clock]).length
+
+		if (item.branch > maxBranch) {
+			maxBranch = item.branch
+		}
+
+		for (const parentId of item.message.parents) {
+			links.push([item.id, parentId])
+		}
+	}
+
+	const nodes: { id: string; branch: number; x: number; y: number }[] = items.map((item) => {
+		const abc = nodesByClock[item.message.clock]
+		const itemsWithThisClock = Object.keys(abc).length
+		const i = nodesByClock[item.message.clock][item.id]
+
+		return {
+			id: item.id,
+			branch: item.branch,
+			x: (graphWidth / (itemsWithThisClock + 1)) * (i + 1),
+			// the +2 here is a bit magic, it's just that if we take the
+			// exact centre of the div then the dot will be slightly high
+			y: itemYOffsets[item.id] + 2 - divTop || 0,
+		}
+	})
 	const nodesById = Object.fromEntries(nodes.map((node) => [node.id, node]))
-
-	const graphWidth = 140
 
 	return (
 		<>
@@ -150,43 +187,30 @@ export default function NetworkPlot({ topic }: { topic: string }) {
 								f = t
 								t = temp
 							}
-
-							let path: string
-							if (f.x == t.x) {
-								path = `
-            M${f.x} ${f.y}
-            L${t.x} ${t.y}
-            `
-							} else if (t.x > f.x) {
-								path = `
-								M${f.x} ${f.y}
-								L${f.x} ${t.y - arcMarginBottom - arcRadius * 2}
-								A ${arcRadius} ${arcRadius} 90 0 0 ${f.x + arcRadius} ${t.y - arcMarginBottom - arcRadius}
-								L${t.x - arcRadius} ${t.y - arcMarginBottom - arcRadius}
-								A ${arcRadius} ${arcRadius} 90 0 1 ${t.x} ${t.y - arcMarginBottom}
-            		L${t.x} ${t.y}
-            `
-							} else {
-								path = `
-								M${f.x} ${f.y}
-								L${f.x} ${t.y - arcMarginBottom - arcRadius * 2}
-								A ${arcRadius} ${arcRadius} 90 0 1 ${f.x - arcRadius} ${t.y - arcMarginBottom - arcRadius}
-								L${t.x + arcRadius} ${t.y - arcMarginBottom - arcRadius}
-								A ${arcRadius} ${arcRadius} 90 0 0 ${t.x} ${t.y - arcMarginBottom}
-								L${t.x} ${t.y}
-            `
-								// throw new Error("unreachable")
-							}
+							const path = `
+							M${f.x} ${f.y}
+							L ${t.x} ${t.y}
+							`
 
 							return (
-								<path
-									key={`link-${index}`}
-									className="link"
-									d={path}
-									fill="none"
-									stroke={color(f.branch.toString())}
-									strokeWidth="2"
-								/>
+								<>
+									<path
+										key={`link-${index}-shadow`}
+										className="link"
+										d={path}
+										fill="none"
+										stroke={"white"}
+										strokeWidth={lineStrokeWidth + 2}
+									/>
+									<path
+										key={`link-${index}`}
+										className="link"
+										d={path}
+										fill="none"
+										stroke={color(f.branch.toString())}
+										strokeWidth={lineStrokeWidth}
+									/>
+								</>
 							)
 						})}
 						{nodes.map(({ x, y, branch }, index) => {
@@ -200,7 +224,7 @@ export default function NetworkPlot({ topic }: { topic: string }) {
 									/>
 									<path
 										key={`node-trace-${index}`}
-										stroke="black"
+										stroke="lightgray"
 										strokeWidth="1px"
 										d={`M${x} ${y} L${graphWidth} ${y}`}
 									/>
@@ -210,7 +234,7 @@ export default function NetworkPlot({ topic }: { topic: string }) {
 										data-id={index}
 										stroke="black"
 										strokeLinecap="round"
-										strokeWidth="16"
+										strokeWidth={nodeRadius + nodeBorderRadius}
 										d={`M${x} ${y} L${x} ${y}`}
 									/>
 									<path
@@ -218,7 +242,7 @@ export default function NetworkPlot({ topic }: { topic: string }) {
 										className="node"
 										stroke="white"
 										strokeLinecap="round"
-										strokeWidth="10"
+										strokeWidth={nodeRadius}
 										d={`M${x} ${y} L${x} ${y}`}
 									/>
 								</>
