@@ -179,22 +179,22 @@ export async function handler(args: Args) {
 	})
 
 	console.log(`${chalk.gray("[canvas] Starting app on topic")} ${chalk.whiteBright(app.topic)}`)
-	console.log(chalk.gray(`[canvas] Using PeerId ${app.peerId.toString()}`))
-	for (const addr of listen) {
-		console.log(chalk.gray(`[canvas] Listening on ${addr}/p2p/${app.peerId.toString()}`))
-	}
+	// console.log(chalk.gray(`[canvas] Using PeerId ${app.peerId.toString()}`))
+	// for (const addr of listen) {
+	// 	console.log(chalk.gray(`[canvas] Listening on ${addr}/p2p/${app.peerId.toString()}`))
+	// }
 
-	app.libp2p.addEventListener("connection:open", ({ detail: connection }) => {
-		const peer = connection.remotePeer.toString()
-		const addr = connection.remoteAddr.decapsulateCode(421).toString()
-		console.log(chalk.gray(`[canvas] Opened connection to ${peer} at ${addr}`))
-	})
+	// app.libp2p.addEventListener("connection:open", ({ detail: connection }) => {
+	// 	const peer = connection.remotePeer.toString()
+	// 	const addr = connection.remoteAddr.decapsulateCode(421).toString()
+	// 	console.log(chalk.gray(`[canvas] Opened connection to ${peer} at ${addr}`))
+	// })
 
-	app.libp2p.addEventListener("connection:close", ({ detail: connection }) => {
-		const peer = connection.remotePeer.toString()
-		const addr = connection.remoteAddr.decapsulateCode(421).toString()
-		console.log(chalk.gray(`[canvas] Closed connection to ${peer} at ${addr}`))
-	})
+	// app.libp2p.addEventListener("connection:close", ({ detail: connection }) => {
+	// 	const peer = connection.remotePeer.toString()
+	// 	const addr = connection.remoteAddr.decapsulateCode(421).toString()
+	// 	console.log(chalk.gray(`[canvas] Closed connection to ${peer} at ${addr}`))
+	// })
 
 	app.addEventListener("message", ({ detail: { id, message } }) => {
 		if (args["verbose"]) {
@@ -204,18 +204,18 @@ export async function handler(args: Args) {
 		}
 	})
 
-	app.messageLog.addEventListener("error", ({ detail: { error } }) => {
-		if (args["verbose"]) {
-			console.log(`[canvas] ${error.name}:`, error.stack)
-		} else {
-			console.log(`[canvas] ${error.name}: ${error.message}`)
-		}
-	})
+	// app.messageLog.addEventListener("error", ({ detail: { error } }) => {
+	// 	if (args["verbose"]) {
+	// 		console.log(`[canvas] ${error.name}:`, error.stack)
+	// 	} else {
+	// 		console.log(`[canvas] ${error.name}: ${error.message}`)
+	// 	}
+	// })
 
-	app.addEventListener("sync", ({ detail: { peerId, duration, messageCount } }) => {
+	app.addEventListener("sync", ({ detail: { peer, duration, messageCount } }) => {
 		console.log(
 			chalk.magenta(
-				`[canvas] Completed merkle sync with peer ${peerId}: applied ${messageCount} messages in ${duration}ms`,
+				`[canvas] Completed merkle sync with peer ${peer}: applied ${messageCount} messages in ${duration}ms`,
 			),
 		)
 	})
