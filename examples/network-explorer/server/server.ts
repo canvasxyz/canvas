@@ -83,8 +83,8 @@ for (const topic of topics) {
 		}
 	})
 
-	await canvasApp.libp2p.start()
-	console.log(`peer id: ${canvasApp.libp2p.peerId}`)
+	// await canvasApp.libp2p.start()
+	// console.log(`peer id: ${canvasApp.libp2p.peerId}`)
 
 	const canvasApiApp = createAPI(canvasApp, { exposeMessages: true, exposeModels: true, exposeP2P: true })
 	expressApp.use(`/canvas_api/${topic}`, canvasApiApp)
@@ -172,11 +172,11 @@ expressApp.get("/index_api/counts", async (req, res) => {
 	const connectionsMap: Record<string, string> = {}
 	for (const row of addressCountResult) {
 		addressCountsMap[row.topic] = parseInt(row.count, 10)
-		connectionCountsMap[row.topic] = canvasApps[row.topic]?.libp2p.getConnections().length
-		connectionsMap[row.topic] = canvasApps[row.topic]?.libp2p
-			.getConnections()
-			.map((c) => c.remoteAddr.toString())
-			.join(", ")
+		// connectionCountsMap[row.topic] = canvasApps[row.topic]?.libp2p.getConnections().length
+		// connectionsMap[row.topic] = canvasApps[row.topic]?.libp2p
+		// 	.getConnections()
+		// 	.map((c) => c.remoteAddr.toString())
+		// 	.join(", ")
 	}
 
 	for (const row of queryResult) {
@@ -208,7 +208,7 @@ expressApp.get("/index_api/counts/:topic", async (req, res) => {
 		action_count: queryResult.action_count || 0,
 		session_count: queryResult.session_count || 0,
 		address_count: addressCountResult.count || 0,
-		connection_count: canvasApps[req.params.topic]?.libp2p.getConnections().length || 0,
+		// connection_count: canvasApps[req.params.topic]?.libp2p.getConnections().length || 0,
 	}
 	res.json(result)
 })

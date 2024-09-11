@@ -47,8 +47,6 @@ nextApp.prepare().then(async () => {
 		],
 	})
 
-	canvasApp.libp2p.start()
-
 	const expressApp = express()
 	expressApp.use("/api", createAPI(canvasApp, {}))
 
@@ -59,13 +57,13 @@ nextApp.prepare().then(async () => {
 		canvasApp.db
 			.query("message", {})
 			.then((results) => {
-				const connections = canvasApp.libp2p.getConnections()
+				// const connections = canvasApp.libp2p.getConnections()
 
 				return res.json({
 					messages: results,
 					// status: canvasApp.status,
-					connectionsLength: connections.length,
-					connections,
+					// connectionsLength: connections.length,
+					// connections,
 				})
 			})
 			.catch((err) => {
