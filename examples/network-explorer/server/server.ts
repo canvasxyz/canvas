@@ -88,7 +88,16 @@ for (const topic of topics) {
 }
 
 expressApp.get("/index_api/messages", ipld(), async (req, res) => {
-	const numMessagesToReturn = 10
+	let numMessagesToReturn: number
+	if (!req.query.limit) {
+		numMessagesToReturn = 10
+	} else if (typeof req.query.limit == "string") {
+		numMessagesToReturn = parseInt(req.query.limit)
+	} else {
+		res.status(StatusCodes.BAD_REQUEST)
+		res.end()
+		return
+	}
 
 	let before: string
 	if (!req.query.before) {
@@ -120,7 +129,16 @@ expressApp.get("/index_api/messages", ipld(), async (req, res) => {
 })
 
 expressApp.get("/index_api/messages/:topic", ipld(), async (req, res) => {
-	const numMessagesToReturn = 10
+	let numMessagesToReturn: number
+	if (!req.query.limit) {
+		numMessagesToReturn = 10
+	} else if (typeof req.query.limit == "string") {
+		numMessagesToReturn = parseInt(req.query.limit)
+	} else {
+		res.status(StatusCodes.BAD_REQUEST)
+		res.end()
+		return
+	}
 
 	if (req.query.type !== "session" && req.query.type !== "action") {
 		console.log("invalid type", req.query.type)

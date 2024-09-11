@@ -26,6 +26,7 @@ function ActionsTable({ topic }: { topic: string }) {
 	// if the length of the result is n + 1, then there is another page
 	const params = new URLSearchParams({
 		type: "action",
+		limit: (entriesPerPage + 1).toString(),
 	})
 	if (currentCursor) {
 		params.append("before", currentCursor)
