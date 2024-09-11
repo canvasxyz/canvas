@@ -1,4 +1,4 @@
-import { Container, Theme } from "@radix-ui/themes"
+import { Container, Separator, Theme } from "@radix-ui/themes"
 import "@radix-ui/themes/styles.css"
 import React from "react"
 import ReactDOM from "react-dom/client"
@@ -16,6 +16,7 @@ const router = createBrowserRouter([
 			<Theme>
 				<Container>
 					<Navbar />
+					<Separator size="4" />
 					<Routes>
 						<Route path="/" element={<HomePage />} />
 						<Route path="/topic/:topic" element={<Topic />} />

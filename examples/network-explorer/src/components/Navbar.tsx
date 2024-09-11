@@ -1,14 +1,20 @@
-import { Card } from "@radix-ui/themes"
+import { Box } from "@radix-ui/themes"
 import { Link as ReactRouterLink } from "react-router-dom"
 
 function Navbar() {
 	return (
-		<Card className="flex flex-col gap-5">
-			{/* --accent-a11 is set by radix-ui, this reflects whatever the accent color has been set to */}
-			<ReactRouterLink to="/" style={{ textDecoration: "unset", color: "var(--accent-a11)" }}>
+		<Box pt="2" pb="4">
+			<ReactRouterLink
+				to="/"
+				style={{
+					textDecoration: "unset",
+					fontWeight: "var(--font-weight-bold)",
+					color: "black",
+				}}
+			>
 				🌐 &nbsp;Explorer
 			</ReactRouterLink>
-		</Card>
+		</Box>
 	)
 }
 

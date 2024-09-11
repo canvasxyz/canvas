@@ -37,15 +37,13 @@ function HomePage() {
 
 	return (
 		<Flex direction="column" gap="4" pt="4">
-			<Flex direction="row">
-				<Card>
-					<Flex direction="row" gap={"4"}>
-						<Text weight="bold">Status:</Text>
-						<Text weight="medium">Online, running v{version}</Text>
-						<Text weight="medium">{BASE_URL}</Text>
-					</Flex>
-				</Card>
-			</Flex>
+			<Card>
+				<Flex direction="column">
+					<Text weight="bold">Status:</Text>
+					<Text weight="medium">Online, running v{version}</Text>
+					<Text weight="medium">{BASE_URL}</Text>
+				</Flex>
+			</Card>
 
 			<Grid columns="2" gap="4">
 				<Flex direction="column" gap="2">
