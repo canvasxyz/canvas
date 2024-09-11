@@ -38,8 +38,8 @@ function HomePage() {
 		<Flex direction="column" gap="4" pt="4">
 			<Flex direction="row">
 				<Card>
-					<Flex direction="row" gap={"10px"}>
-						<Text weight="bold">Status</Text>
+					<Flex direction="row" gap={"4"}>
+						<Text weight="bold">Status:</Text>
 						<Text weight="medium">Online, running v{version}</Text>
 						<Text weight="medium">{BASE_URL}</Text>
 					</Flex>
@@ -66,7 +66,9 @@ function HomePage() {
 										</Table.Cell>
 										<Table.Cell>{row.action_count + row.session_count}</Table.Cell>
 										<Table.Cell>
-											{row.connection_count} <ArgsPopout data={JSON.stringify(row.connections)} />
+											<Flex direction="row" gap="2">
+												{row.connection_count} <ArgsPopout data={JSON.stringify(row.connections)} />
+											</Flex>
 										</Table.Cell>
 									</Table.Row>
 								))}

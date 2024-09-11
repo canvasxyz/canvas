@@ -25,7 +25,7 @@ function Topic() {
 	return (
 		<Flex direction="column" gap="4" pt="4">
 			<Card>
-				<Flex direction="row" gap={"10px"}>
+				<Flex direction="row" gap={"4"}>
 					<Flex direction="column">
 						<Text weight="bold">Topic</Text>
 						<Text weight="medium">{topic}</Text>
