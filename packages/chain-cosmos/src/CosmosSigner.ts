@@ -36,17 +36,17 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 	public constructor({ signer, sessionDuration, bech32Prefix }: CosmosSignerInit = { sessionDuration: 14 * DAYS }) {
 		super("chain-cosmos", ed25519, { sessionDuration })
 
-		this.bech32Prefix = bech32Prefix == undefined ? "cosmos" : bech32Prefix
+		this.bech32Prefix = bech32Prefix === undefined ? "cosmos" : bech32Prefix
 
-		if (signer == undefined) {
+		if (signer === undefined) {
 			this._signer = createDefaultSigner(this.bech32Prefix)
-		} else if (signer.type == "ethereum") {
+		} else if (signer.type === "ethereum") {
 			this._signer = createEthereumSigner(signer, this.bech32Prefix)
-		} else if (signer.type == "amino") {
+		} else if (signer.type === "amino") {
 			this._signer = createAminoSigner(signer)
-		} else if (signer.type == "bytes") {
+		} else if (signer.type === "bytes") {
 			this._signer = createBytesSigner(signer)
-		} else if (signer.type == "arbitrary") {
+		} else if (signer.type === "arbitrary") {
 			this._signer = createArbitrarySigner(signer)
 		} else {
 			throw new Error("invalid signer")
@@ -73,22 +73,22 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 		}
 
 		// select verification method based on the signing method
-		if (data.signatureType == "ethereum") {
+		if (data.signatureType === "ethereum") {
 			if (!validateEthereumSignedSessionData(data)) {
 				throw new Error("invalid ethereum session data")
 			}
 			verifyEthereum(message, data)
-		} else if (data.signatureType == "amino") {
+		} else if (data.signatureType === "amino") {
 			if (!validateAminoSignedSessionData(data)) {
 				throw new Error("invalid amino session data")
 			}
 			await verifyAmino(message, data)
-		} else if (data.signatureType == "bytes") {
+		} else if (data.signatureType === "bytes") {
 			if (!validateBytesSignedSessionData(data)) {
 				throw new Error("invalid bytes session data")
 			}
 			verifyBytes(message, data)
-		} else if (data.signatureType == "arbitrary") {
+		} else if (data.signatureType === "arbitrary") {
 			if (!validateArbitrarySignedSessionData(data)) {
 				throw new Error("invalid arbitrary session data")
 			}

@@ -54,7 +54,7 @@ export async function verifyLog(did: string, plcOperationLog: Operation[]): Prom
 
 		let keysToCheck: string[]
 		if (operation.type === "create") {
-			verificationMethod == operation.signingKey
+			verificationMethod = operation.signingKey
 			keysToCheck = [operation.signingKey]
 		} else if (operation.type === "plc_operation") {
 			verificationMethod = operation.verificationMethods.atproto

@@ -46,7 +46,7 @@ export const contract = {
 				throw new Error()
 			}
 			const state = (await db.get("state", "0")) as State | null
-			if (state == null) {
+			if (state === null) {
 				return
 			}
 			const { direction: currentDirection, tickCount, tiles, gameOver } = state
@@ -63,7 +63,7 @@ export const contract = {
 		},
 		tick: async (db) => {
 			const state = (await db.get("state", "0")) as State | null
-			if (state == null) {
+			if (state === null) {
 				return
 			}
 			const { direction, tickCount, tiles, gameOver } = state

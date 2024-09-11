@@ -49,7 +49,7 @@ export const verifyAmino = async (message: CosmosMessage, { signature }: AminoSi
 		const pub_key = signatureWithRecoveryBit.recoverPublicKey(signDocDigest).toRawBytes()
 		// get the address from the public key
 		const address = toBech32(prefix, rawSecp256k1PubkeyToRawAddress(pub_key))
-		if (address == walletAddress) return
+		if (address === walletAddress) return
 	}
 
 	throw Error("invalid signature")
@@ -58,5 +58,5 @@ export const verifyAmino = async (message: CosmosMessage, { signature }: AminoSi
 export type AminoSignedSessionData = Awaited<ReturnType<ReturnType<typeof createAminoSigner>["sign"]>>
 
 export function validateAminoSignedSessionData(data: any): data is AminoSignedSessionData {
-	return data.signatureType == "amino" && data.signature instanceof Uint8Array
+	return data.signatureType === "amino" && data.signature instanceof Uint8Array
 }

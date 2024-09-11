@@ -70,9 +70,9 @@ for (const topic of topics) {
 	canvasApp.addEventListener("message", async (event) => {
 		const message = event.detail
 
-		if (message.message.payload.type == "action") {
+		if (message.message.payload.type === "action") {
 			await queries.addAction(message.message.topic, message.id)
-		} else if (message.message.payload.type == "session") {
+		} else if (message.message.payload.type === "session") {
 			await queries.addSession(message.message.topic, message.id)
 			await queries.addAddress(message.message.topic, message.message.payload.did)
 		}
@@ -91,7 +91,7 @@ expressApp.get("/index_api/messages", ipld(), async (req, res) => {
 	let numMessagesToReturn: number
 	if (!req.query.limit) {
 		numMessagesToReturn = 10
-	} else if (typeof req.query.limit == "string") {
+	} else if (typeof req.query.limit === "string") {
 		numMessagesToReturn = parseInt(req.query.limit)
 	} else {
 		res.status(StatusCodes.BAD_REQUEST)
@@ -102,7 +102,7 @@ expressApp.get("/index_api/messages", ipld(), async (req, res) => {
 	let before: string
 	if (!req.query.before) {
 		before = MAX_MESSAGE_ID
-	} else if (typeof req.query.before == "string") {
+	} else if (typeof req.query.before === "string") {
 		before = req.query.before
 	} else {
 		res.status(StatusCodes.BAD_REQUEST)
@@ -132,7 +132,7 @@ expressApp.get("/index_api/messages/:topic", ipld(), async (req, res) => {
 	let numMessagesToReturn: number
 	if (!req.query.limit) {
 		numMessagesToReturn = 10
-	} else if (typeof req.query.limit == "string") {
+	} else if (typeof req.query.limit === "string") {
 		numMessagesToReturn = parseInt(req.query.limit)
 	} else {
 		res.status(StatusCodes.BAD_REQUEST)
@@ -151,7 +151,7 @@ expressApp.get("/index_api/messages/:topic", ipld(), async (req, res) => {
 	let before: string
 	if (!req.query.before) {
 		before = MAX_MESSAGE_ID
-	} else if (typeof req.query.before == "string") {
+	} else if (typeof req.query.before === "string") {
 		before = req.query.before
 	} else {
 		res.status(StatusCodes.BAD_REQUEST)
@@ -184,8 +184,8 @@ expressApp.get("/index_api/counts", async (req, res) => {
 	const sessionCountsMap: Record<string, number> = {}
 
 	for (const row of countsQueryResult) {
-		if (row.type == "action") actionCountsMap[row.topic] = row.count
-		if (row.type == "session") sessionCountsMap[row.topic] = row.count
+		if (row.type === "action") actionCountsMap[row.topic] = row.count
+		if (row.type === "session") sessionCountsMap[row.topic] = row.count
 	}
 
 	const addressCountResult = (await queries.selectAddressCountsAll()).rows
