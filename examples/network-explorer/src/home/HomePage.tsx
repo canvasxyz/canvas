@@ -6,6 +6,7 @@ import { version } from "../../package.json"
 import ArgsPopout from "../components/ArgsPopout.js"
 import { BASE_URL, Result, fetchAndIpldParseJson, formatDistanceCustom } from "../utils.js"
 import { Card, Flex, Grid, Table, Text } from "@radix-ui/themes"
+import { DidTooltip } from "../components/DidTooltip.js"
 
 function HomePage() {
 	const { data: countsData, error: countsError } = useSWR(
@@ -67,7 +68,10 @@ function HomePage() {
 										<Table.Cell>{row.action_count + row.session_count}</Table.Cell>
 										<Table.Cell>
 											<Flex direction="row" gap="2">
-												{row.connection_count} <ArgsPopout data={JSON.stringify(row.connections)} />
+												<ArgsPopout
+													data={JSON.stringify(row.connections)}
+													placeholder={row.connection_count.toString()}
+												/>
 											</Flex>
 										</Table.Cell>
 									</Table.Row>
@@ -95,7 +99,9 @@ function HomePage() {
 
 									return (
 										<Table.Row key={cid}>
-											<Table.Cell>{message.payload.did.slice(0, 20)}...</Table.Cell>
+											<Table.Cell>
+												<DidTooltip did={message.payload.did || ""} />
+											</Table.Cell>
 											<Table.Cell>{message.payload.name}</Table.Cell>
 											<Table.Cell>
 												<ArgsPopout data={JSON.stringify(message.payload.args)} />

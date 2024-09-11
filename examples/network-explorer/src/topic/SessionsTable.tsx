@@ -5,6 +5,7 @@ import { Box, Flex, Table, Text } from "@radix-ui/themes"
 import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "../utils.js"
 import PaginationButton from "../components/PaginationButton.js"
 import useCursorStack from "../useCursorStack.js"
+import { DidTooltip } from "../components/DidTooltip.js"
 
 const entriesPerPage = 10
 
@@ -52,8 +53,12 @@ function SessionsTable({ topic }: { topic: string }) {
 
 						return (
 							<Table.Row key={cid}>
-								<Table.Cell>{message.payload.did}</Table.Cell>
-								<Table.Cell>{message.payload.publicKey}</Table.Cell>
+								<Table.Cell>
+									<DidTooltip did={message.payload.did || ""} />
+								</Table.Cell>
+								<Table.Cell>
+									<DidTooltip did={message.payload.publicKey || ""} />
+								</Table.Cell>
 								<Table.Cell>
 									<span className="text-gray-400">{formatDistanceCustom(message.payload.context.timestamp)} ago</span>
 								</Table.Cell>

@@ -6,6 +6,7 @@ import ArgsPopout from "../components/ArgsPopout.js"
 import PaginationButton from "../components/PaginationButton.js"
 import useCursorStack from "../useCursorStack.js"
 import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "../utils.js"
+import { DidTooltip } from "../components/DidTooltip.js"
 
 function SessionField({ signature, message }: { signature: Signature; message: Message<Action> }) {
 	const { data: session, error } = useSWR(
@@ -66,12 +67,14 @@ function ActionsTable({ topic }: { topic: string }) {
 						const args = JSON.stringify(message.payload.args)
 						return (
 							<Table.Row key={cid}>
-								<Table.Cell>{message.payload.did.slice(0, 15)}...</Table.Cell>
+								<Table.Cell>
+									<DidTooltip did={message.payload.did || ""} />
+								</Table.Cell>
 								<Table.Cell>{message.payload.name}</Table.Cell>
 								<Table.Cell>{args.length > 50 ? <ArgsPopout data={args} /> : args}</Table.Cell>
 								<Table.Cell>{formatDistanceCustom(message.payload.context.timestamp)} ago</Table.Cell>
 								<Table.Cell>
-									{signature.publicKey}
+									<DidTooltip did={signature.publicKey || ""} />
 									<SessionField message={message} signature={signature} />
 								</Table.Cell>
 							</Table.Row>
