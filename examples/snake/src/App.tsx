@@ -1,11 +1,13 @@
 import "./App.css"
 
 import { TickingContract, useCanvas, useLiveQuery, useTick } from "@canvas-js/hooks"
-import { MouseEventHandler } from "react"
+import { MouseEventHandler, useState } from "react"
 
 import { contract, Direction, maxX, maxY, TilesList } from "./contract.js"
 
 function App() {
+	const [ticking, setTicking] = useState(() => localStorage.getItem("ticking") === "true")
+
 	const { app } = useCanvas<TickingContract>(null, {
 		topic: "canvas-example-chat-global",
 		contract,
@@ -20,7 +22,7 @@ function App() {
 	}>(app, "state")
 	const state = stateQuery && stateQuery[0]
 	const tiles = state?.tiles && (JSON.parse(state.tiles) as TilesList)
-	useTick(app, "!state.0.gameOver", 200)
+	useTick(app, ticking, 400)
 
 	const send: MouseEventHandler = (e) => {
 		e.preventDefault()
@@ -41,6 +43,17 @@ function App() {
 			<button onClick={() => turn("e")}>{">"}</button>
 			<button onClick={() => turn("s")}>{"v"}</button>
 			<button onClick={send}>Reset</button>
+			<label>
+				<input
+					type="checkbox"
+					defaultChecked={ticking}
+					onChange={(e) => {
+						setTicking(e.target.checked)
+						localStorage.setItem("ticking", e.target.checked.toString())
+					}}
+				/>
+				Tick
+			</label>
 			<div>
 				{state && <span>Score: {Math.floor(state.tickCount / 5)}</span>} <span>{state?.gameOver && "Game Over"}</span>
 			</div>

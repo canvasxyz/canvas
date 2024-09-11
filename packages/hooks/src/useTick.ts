@@ -10,11 +10,15 @@ export type TickingContract = Contract & {
 
 const tickState = { last: 0 }
 
-export const useTick = (app: Canvas<TickingContract> | undefined, condition: string | null, interval: number) => {
+export const useTick = (
+	app: Canvas<TickingContract> | undefined,
+	condition: string | boolean | null,
+	interval: number,
+) => {
 	useEffect(() => {
 		if (!app) return
 
-		if (condition !== null && typeof condition !== "string") {
+		if (condition !== null && typeof condition !== "string" && typeof condition !== "boolean") {
 			throw new Error("useTick: invalid condition")
 		}
 		if (typeof interval !== "number") {
@@ -26,7 +30,7 @@ export const useTick = (app: Canvas<TickingContract> | undefined, condition: str
 		let queryRow: string
 		let queryPath: string
 
-		if (condition) {
+		if (typeof condition === "string") {
 			const matches = condition.match(/^(!)?(\w+)\.(\w+).(\w+)$/)
 
 			if (!matches) {
@@ -66,16 +70,19 @@ export const useTick = (app: Canvas<TickingContract> | undefined, condition: str
 			}
 
 			// don't tick if the condition isn't satisfied
-			if (condition) {
+			if (typeof condition === "string") {
 				const result = await app.db.get(queryTable, queryRow)
 				if (!result) {
-					throw new Error(`No model found at ${queryTable}.${queryRow}`)
+					console.warn(`No model found at ${queryTable}.${queryRow}`)
+					return
 				}
 				if (queryNot ? !result[queryPath] : result[queryPath]) {
-					app.actions.tick({})
+					app.actions.tick({}).catch((err) => console.error(err.message || "tick handler rejected"))
 				}
+			} else if (typeof condition === "boolean" && !condition) {
+				// do nothing
 			} else {
-				app.actions.tick({}).catch((err) => console.error(err))
+				app.actions.tick({}).catch((err) => console.error(err.message || "tick handler rejected"))
 			}
 		}, interval)
 

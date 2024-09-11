@@ -9,4 +9,4 @@ export * from "./SignedMessage.js"
 export type { BranchMergeRecord } from "./BranchMergeIndex.js"
 export type { AncestorRecord } from "./AncestorIndex.js"
 
-export { topicPattern } from "./utils.js"
+export { gossiplogTopicPattern } from "./utils.js"

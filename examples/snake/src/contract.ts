@@ -26,6 +26,8 @@ export const contract = {
 	},
 	actions: {
 		newGame: (db) => {
+			const maxX = 30
+			const maxY = 30
 			const centerX = Math.floor(maxX / 2)
 			const centerY = Math.floor(maxY / 2)
 			const tiles = JSON.stringify([
@@ -62,9 +64,12 @@ export const contract = {
 			await db.set("state", { key: "0", direction, tickCount, tiles, gameOver })
 		},
 		tick: async (db) => {
+			const maxX = 30
+			const maxY = 30
+
 			const state = (await db.get("state", "0")) as State | null
 			if (state === null) {
-				return
+				throw new Error("uninitialized")
 			}
 			const { direction, tickCount, tiles, gameOver } = state
 			if (gameOver) throw new Error()

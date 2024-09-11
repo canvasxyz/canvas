@@ -11,7 +11,7 @@ export const codes = {
 export const cborNull: Uint8Array = cbor.encode(null)
 
 // eslint-disable-next-line no-useless-escape
-export const topicPattern = /^[a-zA-Z0-9\.\-]+$/
+export const gossiplogTopicPattern = /^[a-zA-Z0-9\.\-]+(\#[a-zA-Z0-9]+)?$/
 
 /** Logarithmic clock decay */
 export function* getAncestorClocks(clock: number): Iterable<number> {
@@ -25,6 +25,8 @@ export function* getAncestorClocks(clock: number): Iterable<number> {
 		}
 	}
 }
+
+export const formatTopic = (topic: string) => topic.replace("#", "_")
 
 export const getSyncProtocol = (topic: string) => `/canvas/v1/${topic}/sync`
 export const getPushProtocol = (topic: string) => `/canvas/v1/${topic}/push`

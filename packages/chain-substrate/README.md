@@ -40,7 +40,7 @@ export declare class SubstrateSigner implements SessionSigner {
       fromCache?: boolean
     },
   ): Promise<Session<SubstrateSessionData>>
-  sign(message: Message<Action | Session>): Signature
+  sign(message: Message<Action | Session | Snapshot>): Signature
   clear(topic: string): Promise<void>
 }
 ```
