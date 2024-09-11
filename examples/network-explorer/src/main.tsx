@@ -1,6 +1,9 @@
+import { Theme } from "@radix-ui/themes"
 import React from "react"
 import ReactDOM from "react-dom/client"
 import { createBrowserRouter, RouterProvider } from "react-router-dom"
+
+import "@radix-ui/themes/styles.css"
 
 import "./index.css"
 import HomePage from "./home/HomePage.js"
@@ -28,6 +31,8 @@ const router = createBrowserRouter([
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
 	<React.StrictMode>
-		<RouterProvider router={router} />
+		<Theme>
+			<RouterProvider router={router} />
+		</Theme>
 	</React.StrictMode>,
 )
