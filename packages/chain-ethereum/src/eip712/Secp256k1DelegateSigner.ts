@@ -11,7 +11,7 @@ import {
 
 import { AbiCoder } from "ethers/abi"
 
-import type { Action, Message, Session, Signature, SignatureScheme, Signer } from "@canvas-js/interfaces"
+import type { Action, Message, Session, Snapshot, Signature, SignatureScheme, Signer } from "@canvas-js/interfaces"
 import { decodeURI, encodeURI } from "@canvas-js/signatures"
 import { assert, prepareMessage, signalInvalidType } from "@canvas-js/utils"
 
@@ -28,7 +28,7 @@ export const codecs = {
  * - canvas-action-eip712
  * - canvas-session-eip712
  */
-export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712SessionData>> {
+export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712SessionData> | Snapshot> {
 	public static eip712ActionTypes = {
 		Message: [
 			{ name: "topic", type: "string" },
@@ -63,7 +63,7 @@ export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712Se
 		AuthorizationData: [{ name: "signature", type: "bytes" }],
 	} satisfies Record<string, TypedDataField[]>
 
-	public readonly scheme: SignatureScheme<Action | Session<Eip712SessionData>> = Secp256k1SignatureScheme
+	public readonly scheme: SignatureScheme<Action | Session<Eip712SessionData> | Snapshot> = Secp256k1SignatureScheme
 	public readonly publicKey: string
 
 	readonly #wallet: BaseWallet
@@ -80,7 +80,7 @@ export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712Se
 		this.publicKey = encodeURI(Secp256k1SignatureScheme.type, publicKey)
 	}
 
-	public async sign(message: Message<Action | Session<Eip712SessionData>>): Promise<Signature> {
+	public async sign(message: Message<Action | Session<Eip712SessionData> | Snapshot>): Promise<Signature> {
 		const { topic, clock, parents, payload } = prepareMessage(message)
 
 		if (payload.type === "action") {
@@ -125,6 +125,8 @@ export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712Se
 				},
 			})
 			return { codec: codecs.session, publicKey: this.publicKey, signature: getBytes(signature) }
+		} else if (payload.type === "snapshot") {
+			throw new Error("TODO: unimplemented")
 		} else {
 			signalInvalidType(payload)
 		}
@@ -184,10 +186,10 @@ function getAbiTypeForValue(value: any) {
 	throw new TypeError(`invalid type ${typeof value}: ${JSON.stringify(value)}`)
 }
 
-export const Secp256k1SignatureScheme: SignatureScheme<Action | Session<Eip712SessionData>> = {
+export const Secp256k1SignatureScheme: SignatureScheme<Action | Session<Eip712SessionData> | Snapshot> = {
 	type: "secp256k1",
 	codecs: [codecs.action, codecs.session],
-	verify(signature: Signature, message: Message<Action | Session<Eip712SessionData>>) {
+	verify(signature: Signature, message: Message<Action | Session<Eip712SessionData> | Snapshot>) {
 		const { type, publicKey } = decodeURI(signature.publicKey)
 		assert(type === Secp256k1SignatureScheme.type)
 
@@ -244,6 +246,8 @@ export const Secp256k1SignatureScheme: SignatureScheme<Action | Session<Eip712Se
 			)
 
 			assert(recoveredAddress === sessionAddress, "invalid EIP-712 session signature")
+		} else if (payload.type === "snapshot") {
+			throw new Error("TODO: unimplemented")
 		} else {
 			signalInvalidType(payload)
 		}

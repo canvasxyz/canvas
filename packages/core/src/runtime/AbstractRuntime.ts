@@ -4,7 +4,7 @@ import { bytesToHex } from "@noble/hashes/utils"
 import { logger } from "@libp2p/logger"
 import { TypeTransformerFunction } from "@ipld/schema/typed.js"
 
-import type { Signature, Action, Message, Session, SignerCache } from "@canvas-js/interfaces"
+import type { Signature, Action, Message, Session, Snapshot, SignerCache } from "@canvas-js/interfaces"
 
 import { AbstractModelDB, Effect, ModelValue, ModelSchema } from "@canvas-js/modeldb"
 import {
@@ -17,7 +17,7 @@ import {
 import { assert, mapValues } from "@canvas-js/utils"
 
 export type ExecutionContext = {
-	messageLog: AbstractGossipLog<Action | Session>
+	messageLog: AbstractGossipLog<Action | Session | Snapshot>
 	id: string
 	signature: Signature
 	message: Message<Action>
@@ -93,17 +93,20 @@ export abstract class AbstractRuntime {
 		await this.db.close()
 	}
 
-	private static isAction = (message: Message<Action | Session>): message is Message<Action> =>
+	private static isAction = (message: Message<Action | Session | Snapshot>): message is Message<Action> =>
 		message.payload.type === "action"
 
-	private static isSession = (message: Message<Action | Session>): message is Message<Session> =>
+	private static isSession = (message: Message<Action | Session | Snapshot>): message is Message<Session> =>
 		message.payload.type === "session"
 
-	public getConsumer(): GossipLogConsumer<Action | Session> {
+	private static isSnapshot = (message: Message<Action | Session | Snapshot>): message is Message<Snapshot> =>
+		message.payload.type === "snapshot"
+
+	public getConsumer(): GossipLogConsumer<Action | Session | Snapshot> {
 		const handleSession = this.handleSession.bind(this)
 		const handleAction = this.handleAction.bind(this)
 
-		return async function (this: AbstractGossipLog<Action | Session>, signedMessage) {
+		return async function (this: AbstractGossipLog<Action | Session | Snapshot>, signedMessage) {
 			const { id, signature, message, branch } = signedMessage
 			assert(branch !== undefined, "internal error - expected branch !== undefined")
 
@@ -148,7 +151,7 @@ export abstract class AbstractRuntime {
 		id: string,
 		signature: Signature,
 		message: Message<Action>,
-		messageLog: AbstractGossipLog<Action | Session>,
+		messageLog: AbstractGossipLog<Action | Session | Snapshot>,
 		{ branch }: { branch: number },
 	) {
 		const { did, context } = message.payload

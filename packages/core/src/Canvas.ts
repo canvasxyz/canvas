@@ -3,7 +3,7 @@ import { logger } from "@libp2p/logger"
 
 import type pg from "pg"
 
-import { Signature, Action, Session, Message, SessionSigner, SignerCache } from "@canvas-js/interfaces"
+import { Signature, Action, Session, Message, Snapshot, SessionSigner, SignerCache } from "@canvas-js/interfaces"
 import { AbstractModelDB, Model, ModelSchema } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { AbstractGossipLog, GossipLogEvents, SignedMessage } from "@canvas-js/gossiplog"
@@ -42,14 +42,14 @@ export type ActionAPI<Args = any> = (
 	options?: ActionOptions,
 ) => Promise<{ id: string; signature: Signature; message: Message<Action> }>
 
-export interface CanvasEvents extends GossipLogEvents<Action | Session> {
+export interface CanvasEvents extends GossipLogEvents<Action | Session | Snapshot> {
 	stop: Event
 }
 
 export type CanvasLogEvent = CustomEvent<{
 	id: string
 	signature: unknown
-	message: Message<Action | Session>
+	message: Message<Action | Session | Snapshot>
 }>
 
 export type ApplicationData = {
@@ -64,7 +64,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 
 		const signers = new SignerCache(initSigners.length === 0 ? [new SIWESigner()] : initSigners)
 
-		const verifySignature = (signature: Signature, message: Message<Action | Session>) => {
+		const verifySignature = (signature: Signature, message: Message<Action | Session | Snapshot>) => {
 			const signer = signers.getAll().find((signer) => signer.scheme.codecs.includes(signature.codec))
 			assert(signer !== undefined, "no matching signer found")
 			return signer.scheme.verify(signature, message)
@@ -92,8 +92,8 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		[K in keyof T["actions"]]: T["actions"][K] extends ActionImplementationFunction<infer Args>
 			? ActionAPI<Args>
 			: T["actions"][K] extends ActionImplementationObject<infer Args>
-			? ActionAPI<Args>
-			: never
+				? ActionAPI<Args>
+				: never
 	}
 
 	private readonly controller = new AbortController()
@@ -101,7 +101,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 
 	private constructor(
 		public readonly signers: SignerCache,
-		public readonly messageLog: AbstractGossipLog<Action | Session>,
+		public readonly messageLog: AbstractGossipLog<Action | Session | Snapshot>,
 		private readonly runtime: Runtime,
 	) {
 		super()
@@ -184,7 +184,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		await target.listen(this, port, options)
 	}
 
-	public async startLibp2p(config: NetworkConfig): Promise<Libp2p<ServiceMap<Action | Session>>> {
+	public async startLibp2p(config: NetworkConfig): Promise<Libp2p<ServiceMap<Action | Session | Snapshot>>> {
 		return await this.messageLog.startLibp2p(config)
 	}
 
@@ -253,7 +253,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 	 * Low-level utility method for internal and debugging use.
 	 * The normal way to apply actions is to use the `Canvas.actions[name](...)` functions.
 	 */
-	public async insert(signature: Signature, message: Message<Session | Action>): Promise<{ id: string }> {
+	public async insert(signature: Signature, message: Message<Session | Action | Snapshot>): Promise<{ id: string }> {
 		assert(message.topic === this.topic, "invalid message topic")
 
 		const signedMessage = this.messageLog.encode(signature, message)
@@ -261,7 +261,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		return { id: signedMessage.id }
 	}
 
-	public async getMessage(id: string): Promise<SignedMessage<Action | Session> | null> {
+	public async getMessage(id: string): Promise<SignedMessage<Action | Session | Snapshot> | null> {
 		return await this.messageLog.get(id)
 	}
 
@@ -269,7 +269,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		lowerBound: { id: string; inclusive: boolean } | null = null,
 		upperBound: { id: string; inclusive: boolean } | null = null,
 		options: { reverse?: boolean } = {},
-	): AsyncIterable<SignedMessage<Action | Session>> {
+	): AsyncIterable<SignedMessage<Action | Session | Snapshot>> {
 		const range: { lt?: string; lte?: string; gt?: string; gte?: string; reverse?: boolean; limit?: number } = {}
 		if (lowerBound) {
 			if (lowerBound.inclusive) range.gte = lowerBound.id

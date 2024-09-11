@@ -1,5 +1,5 @@
 import useSWR from "swr"
-import { Action, Session } from "@canvas-js/interfaces"
+import { Action, Session, Snapshot } from "@canvas-js/interfaces"
 import { Link } from "react-router-dom"
 
 import { version } from "../../package.json"
@@ -26,7 +26,7 @@ function HomePage() {
 		},
 	)
 
-	const { data, error } = useSWR("/index_api/messages", fetchAndIpldParseJson<Result<Action | Session>[]>, {
+	const { data, error } = useSWR("/index_api/messages", fetchAndIpldParseJson<Result<Action | Session | Snapshot>[]>, {
 		refreshInterval: 1000,
 	})
 

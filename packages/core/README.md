@@ -141,7 +141,7 @@ export interface CanvasConfig<T extends Contract = Contract> extends NetworkConf
   runtimeMemoryLimit?: number
 }
 
-export interface CanvasEvents extends GossipLogEvents<Action | Session, unknown> {
+export interface CanvasEvents extends GossipLogEvents<Action | Session | Snapshot, unknown> {
   close: Event
   connect: CustomEvent<{
     peer: PeerId
@@ -175,11 +175,11 @@ export declare class Canvas extends EventEmitter<CanvasEvents> {
   public start(): Promise<void>
   public stop(): Promise<void>
 
-  public getMessage(id: string): Promise<[signature: Signature, message: Message<Action | Session>] | [null, null]>
+  public getMessage(id: string): Promise<[signature: Signature, message: Message<Action | Session | Snapshot>] | [null, null]>
   public getMessageStream(
     lowerBound?: { id: string; inclusive: boolean } | null,
     upperBound?: { id: string; inclusive: boolean } | null,
     options?: { reverse?: boolean },
-  ): AsyncIterable<[id: string, signature: Signature, message: Message<Action | Session>]>
+  ): AsyncIterable<[id: string, signature: Signature, message: Message<Action | Session | Snapshot>]>
 }
 ```
