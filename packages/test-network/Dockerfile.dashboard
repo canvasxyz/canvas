@@ -8,8 +8,11 @@ WORKDIR /app
 COPY dist/dashboard/server/index.js lib/index.mjs
 
 COPY dist/dashboard/client dist/
-COPY src/peer-browser/client/index.html dist/peer-browser/index.html
-COPY dist/peer-browser/client/index.js dist/peer-browser/index.js
+COPY dist/client/index.js dist/client/index.js
+COPY src/client/src/index.html dist/client/index.html
+
+RUN ls -la dist
+RUN ls -la dist/client
 
 ENTRYPOINT ["node"]
 CMD ["lib/index.mjs"]

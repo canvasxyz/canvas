@@ -29,7 +29,7 @@ const q = Object.entries(query)
 	.map(([name, value]) => `${name}=${encodeURIComponent(value)}`)
 	.join("&")
 
-const url = `http://localhost:8000/peer-browser/index.html?${q}`
+const url = `http://localhost:8000/client/index.html?${q}`
 
 const browser = await puppeteer.launch({
 	userDataDir: `data/${bytesToHex(randomBytes(8))}`,

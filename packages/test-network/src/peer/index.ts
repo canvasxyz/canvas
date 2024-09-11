@@ -24,7 +24,7 @@ async function start() {
 	const socket = await Socket.open(`ws://dashboard:8000`, messageLog, null, peerId)
 
 	const server = new NetworkServer(messageLog)
-	server.wss.listen(8080)
+	server.listen(8080)
 	// api.addListener("connection", (connection: DuplexWebSocket) => {
 	// 	const remoteAddr = connection.remoteAddress
 	// 	const id = nanoid()
