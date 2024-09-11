@@ -1,15 +1,18 @@
+import { Button } from "@radix-ui/themes"
 import { useState } from "react"
 
 type ArgsPopoutProps = {
 	data: string
+	placeholder?: string
 }
 
-function ArgsPopout({ data }: ArgsPopoutProps) {
+function ArgsPopout({ data, placeholder }: ArgsPopoutProps) {
 	const [isOpen, setIsOpen] = useState(false)
 
 	return (
-		<div
-			className="inline-block cursor-pointer bg-[#d8d8d8] hover:bg-[#eeeeee] rounded-lg h-5 p-1 w-5"
+		<Button
+			color="gray"
+			size="1"
 			onClick={() => {
 				setIsOpen(!isOpen)
 			}}
@@ -17,9 +20,9 @@ function ArgsPopout({ data }: ArgsPopoutProps) {
 			{isOpen ? (
 				<div className="absolute bg-white p-2 rounded-lg border">{data}</div>
 			) : (
-				<div className="-mt-1">...</div>
+				<div className="-mt-1">{placeholder || "..."}</div>
 			)}
-		</div>
+		</Button>
 	)
 }
 
