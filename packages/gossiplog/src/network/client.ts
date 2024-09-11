@@ -167,6 +167,8 @@ export class NetworkClient<Payload> {
 	}
 
 	private async sync() {
+		this.log("initiating merkle sync with %s", this.sourceURL)
+
 		do {
 			let stream: Stream
 			try {

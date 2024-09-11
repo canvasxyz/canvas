@@ -388,9 +388,9 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 		let complete = true
 
-		try {
-			await this.tree.read(async (txn) => {
-				const driver = new Driver(this.topic, snapshot, txn)
+		const root = await this.tree.read(async (txn) => {
+			const driver = new Driver(this.topic, snapshot, txn)
+			try {
 				for await (const keys of driver.sync()) {
 					const values = await snapshot.getValues(keys)
 
@@ -404,14 +404,16 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 						messageCount++
 					}
 				}
-			})
-		} catch (err) {
-			if (err instanceof CodeError && err.code === codes.ABORT) {
-				complete = false
-			} else {
-				throw err
+			} catch (err) {
+				if (err instanceof CodeError && err.code === codes.ABORT) {
+					complete = false
+				} else {
+					throw err
+				}
 			}
-		}
+
+			return txn.getRoot()
+		})
 
 		const duration = Math.ceil(performance.now() - start)
 		if (complete) {
@@ -420,6 +422,8 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 			this.log("aborted sync with %s (%d messages in %dms)", options.peer ?? "unknown", messageCount, duration)
 		}
 
+		// const [_, heads] = await this.getClock()
+		// this.dispatchEvent(new CustomEvent("commit", { detail: { root, heads } }))
 		this.dispatchEvent(new CustomEvent("sync", { detail: { peer: options.peer, messageCount, duration } }))
 
 		return { complete, messageCount }

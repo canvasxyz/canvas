@@ -110,7 +110,7 @@ class Connection<Payload> {
 		}
 	}
 
-	private readonly handleProtocolStream = async ({ protocol, stream }: ProtocolStream<Stream>) => {
+	private readonly handleProtocolStream = ({ protocol, stream }: ProtocolStream<Stream>) => {
 		this.log("server: new stream %s with protocol %s", stream.id, protocol)
 
 		if (protocol === this.syncProtocol) {
@@ -118,6 +118,8 @@ class Connection<Payload> {
 		} else if (protocol === this.pushProtocol) {
 			pipe(stream.source, lp.decode, decodeEvents, this.eventSink).catch((err) => this.log.error(err))
 			pipe(this.eventSource, encodeEvents, lp.encode, stream.sink).catch((err) => this.log.error(err))
+
+			this.gossipLog.getClock().then(([_, heads]) => this.push({ update: { heads: heads.map(encodeId) } }))
 		} else {
 			throw new Error("unsupported protocol")
 		}
