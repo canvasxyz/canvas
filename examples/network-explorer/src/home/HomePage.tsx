@@ -5,6 +5,7 @@ import { Link } from "react-router-dom"
 import { version } from "../../package.json"
 import ArgsPopout from "../components/ArgsPopout.js"
 import { BASE_URL, Result, fetchAndIpldParseJson, formatDistanceCustom } from "../utils.js"
+import { Card, Flex, Grid, Table, Text } from "@radix-ui/themes"
 
 function HomePage() {
 	const { data: countsData, error: countsError } = useSWR(
@@ -34,78 +35,81 @@ function HomePage() {
 	const actions = (data?.filter((item) => item[2].payload.type === "action") || []) as Result<Action>[]
 
 	return (
-		<>
-			<div className="flex flex-row bg-white rounded-lg drop-shadow p-4 px-5 gap-3">
-				<div className="w-1/2">
-					<div className="font-bold">Status</div>
-					<div className="font-medium">Online, running v{version}</div>
-					<div className="font-medium">{BASE_URL}</div>
-				</div>
-			</div>
-			<div className="grid grid-cols-2 gap-4">
-				<div className="flex flex-col gap-2">
-					<div>Topics</div>
-					<div className="border rounded-lg py-1">
-						<table className="table-auto w-full rounded text-left rtl:text-right">
-							<thead>
-								<tr className="border-b">
-									<th className="px-3 font-normal">Topic</th>
-									<th className="px-3 font-normal">Messages</th>
-									<th className="px-3 font-normal">Connections</th>
-								</tr>
-							</thead>
-							<tbody>
+		<Flex direction="column" gap="4" pt="4">
+			<Flex direction="row">
+				<Card>
+					<Flex direction="row" gap={"10px"}>
+						<Text weight="bold">Status</Text>
+						<Text weight="medium">Online, running v{version}</Text>
+						<Text weight="medium">{BASE_URL}</Text>
+					</Flex>
+				</Card>
+			</Flex>
+
+			<Grid columns="2" gap="4">
+				<Flex direction="column" gap="2">
+					<Text>Topics</Text>
+					<Card>
+						<Table.Root>
+							<Table.Header>
+								<Table.Row>
+									<Table.ColumnHeaderCell>Topic</Table.ColumnHeaderCell>
+									<Table.ColumnHeaderCell>Messages</Table.ColumnHeaderCell>
+									<Table.ColumnHeaderCell>Connections</Table.ColumnHeaderCell>
+								</Table.Row>
+							</Table.Header>
+							<Table.Body>
 								{countsData.map((row) => (
-									<tr key={row.topic}>
-										<td className="break-all px-3 py-2">
+									<Table.Row key={row.topic}>
+										<Table.Cell>
 											<Link to={`topic/${row.topic}`}>{row.topic}</Link>
-										</td>
-										<td className="break-all px-3">{row.action_count + row.session_count}</td>
-										<td className="break-all px-3">
+										</Table.Cell>
+										<Table.Cell>{row.action_count + row.session_count}</Table.Cell>
+										<Table.Cell>
 											{row.connection_count} <ArgsPopout data={JSON.stringify(row.connections)} />
-										</td>
-									</tr>
+										</Table.Cell>
+									</Table.Row>
 								))}
-							</tbody>
-						</table>
-					</div>
-				</div>
-				<div className="flex flex-col gap-2">
-					<div>Latest Actions</div>
-					<div className="border rounded-lg py-1">
-						<table className="table-auto w-full rounded text-left rtl:text-right">
-							<thead>
-								<tr className="border-b">
-									<th className="px-3 font-normal">Address</th>
-									<th className="px-3 font-normal">Action</th>
-									<th className="px-1 font-normal">Args</th>
-									<th className="px-3 font-normal">Timestamp</th>
-								</tr>
-							</thead>
-							<tbody>
+							</Table.Body>
+						</Table.Root>
+					</Card>
+				</Flex>
+				<Flex direction="column" gap="2">
+					<Text>Latest Actions</Text>
+					<Card>
+						<Table.Root>
+							<Table.Header>
+								<Table.Row>
+									<Table.ColumnHeaderCell>Address</Table.ColumnHeaderCell>
+									<Table.ColumnHeaderCell>Action</Table.ColumnHeaderCell>
+									<Table.ColumnHeaderCell>Args</Table.ColumnHeaderCell>
+									<Table.ColumnHeaderCell>Timestamp</Table.ColumnHeaderCell>
+								</Table.Row>
+							</Table.Header>
+							<Table.Body>
 								{actions.map((item) => {
 									const cid = item[0]
 									const message = item[2]
 
 									return (
-										<tr key={cid}>
-											<td className="break-all px-3 py-2">{message.payload.did.slice(0, 20)}...</td>
-											<td className="break-all px-3">{message.payload.name}</td>
-											<td className="break-all px-1">
+										<Table.Row key={cid}>
+											<Table.Cell>{message.payload.did.slice(0, 20)}...</Table.Cell>
+											<Table.Cell>{message.payload.name}</Table.Cell>
+											<Table.Cell>
 												<ArgsPopout data={JSON.stringify(message.payload.args)} />
-											</td>
-											<td className="break-all px-3">
+											</Table.Cell>
+											<Table.Cell>
 												{formatDistanceCustom(message.payload.context.timestamp).replace("about ", "~")} ago
-											</td>
-										</tr>
+											</Table.Cell>
+										</Table.Row>
 									)
 								})}
-							</tbody>
-						</table>
-					</div>
-				</div>
-			</div>
-		</>
+							</Table.Body>
+						</Table.Root>
+					</Card>
+				</Flex>
+			</Grid>
+		</Flex>
 	)
 }
 
