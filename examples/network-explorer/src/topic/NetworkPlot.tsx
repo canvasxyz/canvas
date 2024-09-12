@@ -103,7 +103,7 @@ export default function NetworkPlot({ topic }: { topic: string }) {
 
 	for (const item of items) {
 		for (const parentId of item.message.parents) {
-			links.push([item.id, parentId])
+			links.push([parentId, item.id])
 		}
 	}
 
@@ -162,14 +162,9 @@ export default function NetworkPlot({ topic }: { topic: string }) {
 				<div>
 					<svg width={graphWidth} height={divHeight}>
 						{links.map(([from, to], index) => {
-							let f = nodesById[from]
-							let t = nodesById[to]
+							const f = nodesById[from]
+							const t = nodesById[to]
 
-							if (f.y > t.y) {
-								const temp = f
-								f = t
-								t = temp
-							}
 							const path = `
 							M${f.x} ${f.y}
 							L ${t.x} ${t.y}
