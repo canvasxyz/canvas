@@ -1,12 +1,20 @@
-import { Link } from "react-router-dom"
+import { Box } from "@radix-ui/themes"
+import { Link as ReactRouterLink } from "react-router-dom"
 
 function Navbar() {
 	return (
-		<div className="flex flex-row gap-10 pt-5 pb-5 border-b border-gray-200">
-			<Link to={"/"}>
-				<div className="font-bold">🌐 &nbsp;Explorer</div>
-			</Link>
-		</div>
+		<Box pt="2" pb="4">
+			<ReactRouterLink
+				to="/"
+				style={{
+					textDecoration: "unset",
+					fontWeight: "var(--font-weight-bold)",
+					color: "black",
+				}}
+			>
+				🌐 &nbsp;Explorer
+			</ReactRouterLink>
+		</Box>
 	)
 }
 

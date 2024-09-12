@@ -112,7 +112,7 @@ export const testOnModelDB = (
 			}
 		}, run.toString())
 
-		if (testResult.result == "passed") {
+		if (testResult.result === "passed") {
 			t.pass()
 		} else {
 			t.fail(testResult.error)
@@ -134,7 +134,7 @@ export const testOnModelDB = (
 			}
 		}, run.toString())
 
-		if (testResult.result == "passed") {
+		if (testResult.result === "passed") {
 			t.pass()
 		} else {
 			t.fail(testResult.error)

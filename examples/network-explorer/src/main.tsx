@@ -1,27 +1,28 @@
+import { Container, Separator, Theme } from "@radix-ui/themes"
+import "@radix-ui/themes/styles.css"
 import React from "react"
 import ReactDOM from "react-dom/client"
-import { createBrowserRouter, RouterProvider } from "react-router-dom"
+import { createBrowserRouter, Route, RouterProvider, Routes } from "react-router-dom"
 
 import "./index.css"
 import HomePage from "./home/HomePage.js"
+import Navbar from "./components/Navbar.js"
 import Topic from "./topic/Topic.js"
-import Container from "./Container.js"
 
 const router = createBrowserRouter([
 	{
-		path: "/",
+		path: "/*",
 		element: (
-			<Container>
-				<HomePage />
-			</Container>
-		),
-	},
-	{
-		path: "/topic/:topic/*",
-		element: (
-			<Container>
-				<Topic />
-			</Container>
+			<Theme>
+				<Container>
+					<Navbar />
+					<Separator size="4" />
+					<Routes>
+						<Route path="/" element={<HomePage />} />
+						<Route path="/topic/:topic/*" element={<Topic />} />
+					</Routes>
+				</Container>
+			</Theme>
 		),
 	},
 ])

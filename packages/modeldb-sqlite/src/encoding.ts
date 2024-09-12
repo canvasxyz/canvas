@@ -101,7 +101,7 @@ function encodePrimitiveValue(
 		} else {
 			throw new TypeError(`${modelName}/${property.name} must be a boolean`)
 		}
-	} else if (property.type == "json") {
+	} else if (property.type === "json") {
 		try {
 			return json.stringify(value)
 		} catch (e) {
@@ -196,14 +196,14 @@ export function decodePrimitiveValue(modelName: string, property: PrimitivePrope
 			console.error("expected Uint8Array, got", value)
 			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected Uint8Array)`)
 		}
-	} else if (property.type == "boolean") {
+	} else if (property.type === "boolean") {
 		if (typeof value === "number") {
 			return value === 1
 		} else {
 			console.error("expected boolean, got", value)
 			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected boolean)`)
 		}
-	} else if (property.type == "json") {
+	} else if (property.type === "json") {
 		assert(typeof value === "string", 'internal error - expected typeof value === "string"')
 		try {
 			return json.parse<PrimitiveValue>(value)

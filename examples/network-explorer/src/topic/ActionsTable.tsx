@@ -1,10 +1,12 @@
 import useSWR from "swr"
 import { Action, Message, Session, Signature } from "@canvas-js/interfaces"
+import { Box, Flex, Table, Text } from "@radix-ui/themes"
 
 import ArgsPopout from "../components/ArgsPopout.js"
 import PaginationButton from "../components/PaginationButton.js"
 import useCursorStack from "../useCursorStack.js"
 import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "../utils.js"
+import { DidTooltip } from "../components/DidTooltip.js"
 
 function SessionField({ signature, message }: { signature: Signature; message: Message<Action> }) {
 	const { data: session, error } = useSWR(
@@ -26,6 +28,7 @@ function ActionsTable({ topic }: { topic: string }) {
 	// if the length of the result is n + 1, then there is another page
 	const params = new URLSearchParams({
 		type: "action",
+		limit: (entriesPerPage + 1).toString(),
 	})
 	if (currentCursor) {
 		params.append("before", currentCursor)
@@ -46,46 +49,50 @@ function ActionsTable({ topic }: { topic: string }) {
 	const actionsToDisplay = actions.slice(0, entriesPerPage)
 
 	return (
-		<div className="flex flex-col gap-2">
-			<div className="flex flex-col gap-1">
-				<div>Latest Actions</div>
-			</div>
-			<div className="border rounded-lg py-1">
-				<table className="table-auto w-full rounded text-left rtl:text-right">
-					<thead>
-						<tr className="border-b">
-							<th className="pl-6 pr-3 font-normal">Address</th>
-							<th className="px-3 font-normal">Action</th>
-							<th className="px-3 font-normal">Args</th>
-							<th className="px-3 font-normal">Timestamp</th>
-							<th className="pl-3 pr-6 font-normal">Session</th>
-						</tr>
-					</thead>
-					<tbody>
-						{actionsToDisplay.map(({ id, signature, message }) => {
-							const args = JSON.stringify(message.payload.args)
-							return (
-								<tr key={id}>
-									<td className="break-all pl-6 pr-3 py-2">{message.payload.did.slice(0, 15)}...</td>
-									<td className="break-all px-3">{message.payload.name}</td>
-									<td className="break-all px-3">{args.length > 50 ? <ArgsPopout data={args} /> : args}</td>
-									<td className="break-all px-3">{formatDistanceCustom(message.payload.context.timestamp)} ago</td>
-									<td className="break-all pl-3 pr-6">
-										{signature.publicKey}
-										<SessionField message={message} signature={signature} />
-									</td>
-								</tr>
-							)
-						})}
-					</tbody>
-				</table>
-			</div>
-			<div className="flex flex-row gap-2">
-				<div className="flex-grow"></div>
+		<Flex direction="column" gap="2" pt="4">
+			<Text size="4" weight="bold">
+				Latest Actions
+			</Text>
+			<Table.Root>
+				<Table.Header>
+					<Table.Row>
+						<Table.ColumnHeaderCell>Address</Table.ColumnHeaderCell>
+						<Table.ColumnHeaderCell>Action</Table.ColumnHeaderCell>
+						<Table.ColumnHeaderCell>Args</Table.ColumnHeaderCell>
+						<Table.ColumnHeaderCell>Timestamp</Table.ColumnHeaderCell>
+						<Table.ColumnHeaderCell>Session</Table.ColumnHeaderCell>
+					</Table.Row>
+				</Table.Header>
+				<Table.Body>
+					{actionsToDisplay.map(({ id, signature, message }) => {
+						const args = JSON.stringify(message.payload.args)
+						return (
+							<Table.Row key={id}>
+								<Table.Cell>
+									<DidTooltip did={message.payload.did || ""} />
+								</Table.Cell>
+								<Table.Cell>{message.payload.name}</Table.Cell>
+								<Table.Cell>{args.length > 50 ? <ArgsPopout data={args} /> : args}</Table.Cell>
+								<Table.Cell>{formatDistanceCustom(message.payload.context.timestamp)} ago</Table.Cell>
+								<Table.Cell>
+									<DidTooltip did={signature.publicKey || ""} />
+									<SessionField message={message} signature={signature} />
+								</Table.Cell>
+							</Table.Row>
+						)
+					})}
+				</Table.Body>
+			</Table.Root>
+			<Flex direction="row" gap="2">
+				<Box flexGrow="1" />
 				<PaginationButton text="Previous" enabled={currentCursor !== null} onClick={popCursor} />
-				<PaginationButton text="Next" enabled={hasMore} onClick={() => pushCursor(actions[entriesPerPage].id)} />
-			</div>
-		</div>
+				<PaginationButton
+					text="Next"
+					enabled={hasMore}
+					onClick={() => pushCursor(actionsToDisplay[entriesPerPage].id)}
+				/>
+			</Flex>
+		</Flex>
 	)
 }
 

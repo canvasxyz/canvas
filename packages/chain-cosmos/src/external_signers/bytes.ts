@@ -52,11 +52,11 @@ export type BytesSignedSessionData = Awaited<ReturnType<ReturnType<typeof create
 
 export function validateBytesSignedSessionData(data: any): data is BytesSignedSessionData {
 	return (
-		data.signatureType == "bytes" &&
+		data.signatureType === "bytes" &&
 		data.signature.signature instanceof Uint8Array &&
 		data.signature.pub_key instanceof Object &&
 		data.signature.pub_key.value instanceof Uint8Array &&
 		typeof data.signature.pub_key.type === "string" &&
-		data.signature.pub_key.type == pubkeyType.secp256k1
+		data.signature.pub_key.type === pubkeyType.secp256k1
 	)
 }

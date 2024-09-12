@@ -263,7 +263,7 @@
 // 			};
 // 			const value = { signingAddress, message };
 // 			const recoveredAddress = verifyTypedData(domain, fields, value, signature)
-// 			if(recoveredAddress == signingAddress) {
+// 			if(recoveredAddress === signingAddress) {
 // 				// signature is valid, perform action
 // 				db.things.set(hash, { message });
 // 			} else {
@@ -354,7 +354,7 @@
 // 			} catch (e) {
 // 				return false;
 // 			}
-// 			if(recoveredAddress == signingAddress) {
+// 			if(recoveredAddress === signingAddress) {
 // 				// signature is valid, perform action
 // 				db.things.set(hash, { message });
 // 			} else {
