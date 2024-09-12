@@ -46,12 +46,126 @@ function MessageEntry({ item }: { item: Result<Action | Session> }) {
 	return (
 		<Card>
 			<Flex direction="row">
-				{item.message.payload.type}
+				{item.message.payload.type}, id: {item.id}
 				<Box flexGrow="1" />
 				address:&nbsp;
 				<DidTooltip did={item.message.payload.did} />, clock: {item.message.clock}, branch: {item.branch}
 			</Flex>
 		</Card>
+	)
+}
+
+type Node = {
+	id: string
+	branch: number
+	x: number
+	y: number
+}
+
+function GraphLink({
+	from,
+	to,
+	lineStrokeWidth,
+	color,
+}: {
+	from: Node | undefined
+	to: Node | undefined
+	lineStrokeWidth: number
+	color: (label: string) => string
+}) {
+	let strokeDashArray: string | undefined = undefined
+	let path
+	if (!from && to) {
+		path = `
+			M${to.x} ${to.y - 20}
+			L${to.x} ${to.y}
+			`
+		strokeDashArray = "2,2"
+	} else if (!to && from) {
+		console.log("no to")
+		path = `
+			M${from.x} ${from.y}
+			L${from.x} ${from.y + 20}
+			`
+		strokeDashArray = "2,2"
+	} else if (from && to) {
+		path = `
+				M${from.x} ${from.y}
+				L ${to.x} ${to.y}
+				`
+	} else {
+		return ""
+	}
+
+	const strokeColor = from ? color(from.branch.toString()) : to ? color(to.branch.toString()) : "black"
+
+	return (
+		<>
+			<path
+				key={`link-shadow`}
+				className="link"
+				d={path}
+				fill="none"
+				stroke={"white"}
+				strokeWidth={lineStrokeWidth + 2}
+				strokeDasharray={strokeDashArray}
+			/>
+			<path
+				key={`link`}
+				className="link"
+				d={path}
+				fill="none"
+				stroke={strokeColor}
+				strokeWidth={lineStrokeWidth}
+				strokeDasharray={strokeDashArray}
+			/>
+		</>
+	)
+}
+
+function GraphNode({
+	node,
+	graphWidth,
+	nodeRadius,
+	nodeBorderRadius,
+}: {
+	node: Node
+	graphWidth: number
+	nodeRadius: number
+	nodeBorderRadius: number
+}) {
+	return (
+		<>
+			<path
+				key={`node-trace-shadow`}
+				stroke="white"
+				strokeWidth="2px"
+				d={`M${node.x} ${node.y} L${graphWidth} ${node.y}`}
+			/>
+			<path
+				key={`node-trace`}
+				stroke="lightgray"
+				strokeWidth="1px"
+				d={`M${node.x} ${node.y} L${graphWidth} ${node.y}`}
+			/>
+			<path
+				key={`node`}
+				className="selectable node"
+				data-id={node.id}
+				stroke="black"
+				strokeLinecap="round"
+				strokeWidth={nodeRadius + nodeBorderRadius}
+				d={`M${node.x} ${node.y} L${node.x} ${node.y}`}
+			/>
+			<path
+				key={`node-border`}
+				className="node"
+				stroke="white"
+				strokeLinecap="round"
+				strokeWidth={nodeRadius}
+				d={`M${node.x} ${node.y} L${node.x} ${node.y}`}
+			/>
+		</>
 	)
 }
 
@@ -136,90 +250,24 @@ export default function NetworkPlot({ topic }: { topic: string }) {
 		<Flex direction="row" pb="4">
 			<div>
 				<svg width={graphWidth} height={divHeight}>
-					{links.map(([from, to], index) => {
-						const f = nodesById[from]
-						const t = nodesById[to]
-
-						let strokeDashArray: string | undefined = undefined
-						let path
-						if (!f) {
-							path = `
-								M${t.x} ${t.y - 20}
-								L${t.x} ${t.y}
-								`
-							strokeDashArray = "2,2"
-						} else if (!t) {
-							console.log([from, to], [f, t])
-							path = `
-								M${f.x} ${f.y}
-								L${f.x} ${f.y + 20}
-								`
-							strokeDashArray = "2,2"
-						} else {
-							path = `
-								M${f.x} ${f.y}
-								L ${t.x} ${t.y}
-								`
-						}
-
-						const strokeColor = color((f || t).branch.toString())
-
+					{links.map(([from, to], index) => (
+						<GraphLink
+							key={index}
+							from={nodesById[from]}
+							to={nodesById[to]}
+							color={color}
+							lineStrokeWidth={lineStrokeWidth}
+						/>
+					))}
+					{nodes.map((node, index) => {
 						return (
-							<>
-								<path
-									key={`link-${index}-shadow`}
-									className="link"
-									d={path}
-									fill="none"
-									stroke={"white"}
-									strokeWidth={lineStrokeWidth + 2}
-									strokeDasharray={strokeDashArray}
-								/>
-								<path
-									key={`link-${index}`}
-									className="link"
-									d={path}
-									fill="none"
-									stroke={strokeColor}
-									strokeWidth={lineStrokeWidth}
-									strokeDasharray={strokeDashArray}
-								/>
-							</>
-						)
-					})}
-					{nodes.map(({ x, y, branch }, index) => {
-						return (
-							<>
-								<path
-									key={`node-trace-${index}-shadow`}
-									stroke="white"
-									strokeWidth="2px"
-									d={`M${x} ${y} L${graphWidth} ${y}`}
-								/>
-								<path
-									key={`node-trace-${index}`}
-									stroke="lightgray"
-									strokeWidth="1px"
-									d={`M${x} ${y} L${graphWidth} ${y}`}
-								/>
-								<path
-									key={`node-${index}`}
-									className="selectable node"
-									data-id={index}
-									stroke="black"
-									strokeLinecap="round"
-									strokeWidth={nodeRadius + nodeBorderRadius}
-									d={`M${x} ${y} L${x} ${y}`}
-								/>
-								<path
-									key={`node-border-${index}`}
-									className="node"
-									stroke="white"
-									strokeLinecap="round"
-									strokeWidth={nodeRadius}
-									d={`M${x} ${y} L${x} ${y}`}
-								/>
-							</>
+							<GraphNode
+								key={index}
+								node={node}
+								graphWidth={graphWidth}
+								nodeRadius={nodeRadius}
+								nodeBorderRadius={nodeBorderRadius}
+							/>
 						)
 					})}
 				</svg>
