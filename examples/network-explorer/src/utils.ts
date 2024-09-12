@@ -23,8 +23,3 @@ export const formatDistanceCustom = (timestamp: number) => {
 	result = result.replace("minute", "min")
 	return result
 }
-
-export const formatDid = (did: string) => {
-	const address = did.split(":")[4]
-	return `${address.slice(0, 8)}...${address.slice(-8)}`
-}

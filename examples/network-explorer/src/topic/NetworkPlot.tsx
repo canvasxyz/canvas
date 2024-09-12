@@ -1,5 +1,5 @@
 import { Action, Session } from "@canvas-js/interfaces"
-import { fetchAndIpldParseJson, formatDid, Result } from "../utils.js"
+import { fetchAndIpldParseJson, Result } from "../utils.js"
 import useSWR from "swr"
 import * as d3 from "d3"
 import { PropsWithChildren, useLayoutEffect, useRef, useState } from "react"
