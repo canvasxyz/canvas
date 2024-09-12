@@ -3,6 +3,8 @@ import { fetchAndIpldParseJson, formatDid, Result } from "../utils.js"
 import useSWR from "swr"
 import * as d3 from "d3"
 import { PropsWithChildren, useLayoutEffect, useRef, useState } from "react"
+import { Box, Card, Flex } from "@radix-ui/themes"
+import { DidTooltip } from "../components/DidTooltip.js"
 
 function DivWithRectUpdate(
 	props: PropsWithChildren & {
@@ -42,36 +44,14 @@ function DivWithRectUpdate(
 
 function MessageEntry({ item }: { item: Result<Action | Session> }) {
 	return (
-		<div
-			style={{
-				display: "flex",
-				flexDirection: "row",
-				border: "solid lightgray 1px",
-				borderRadius: "8px",
-				padding: "5px",
-			}}
-		>
-			<span
-				style={
-					{
-						/*color: "darkgray", fontStyle: "italic" */
-					}
-				}
-			>
+		<Card>
+			<Flex direction="row">
 				{item.message.payload.type}
-			</span>
-			<div style={{ flexGrow: 1 }}></div>
-			<span></span>
-			<span
-				style={
-					{
-						/*color: "darkgray", fontStyle: "italic"*/
-					}
-				}
-			>
-				address: {formatDid(item.message.payload.did)}, clock: {item.message.clock}, branch: {item.branch}
-			</span>
-		</div>
+				<Box flexGrow="1" />
+				address:&nbsp;
+				<DidTooltip did={item.message.payload.did} />, clock: {item.message.clock}, branch: {item.branch}
+			</Flex>
+		</Card>
 	)
 }
 
