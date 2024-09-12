@@ -134,10 +134,6 @@ export default function NetworkPlot({ topic }: { topic: string }) {
 		if (item.branch > maxBranch) {
 			maxBranch = item.branch
 		}
-
-		for (const parentId of item.message.parents) {
-			links.push([item.id, parentId])
-		}
 	}
 
 	const nodes: { id: string; branch: number; x: number; y: number }[] = items.map((item) => {
