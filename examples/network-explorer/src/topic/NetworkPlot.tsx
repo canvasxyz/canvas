@@ -133,114 +133,127 @@ export default function NetworkPlot({ topic }: { topic: string }) {
 	const nodesById = Object.fromEntries(nodes.map((node) => [node.id, node]))
 
 	return (
-		<>
-			<div style={{ display: "flex", flexDirection: "row", paddingBottom: "10px" }}>
-				<div>
-					<svg width={graphWidth} height={divHeight}>
-						{links.map(([from, to], index) => {
-							const f = nodesById[from]
-							const t = nodesById[to]
+		<Flex direction="row" pb="4">
+			<div>
+				<svg width={graphWidth} height={divHeight}>
+					{links.map(([from, to], index) => {
+						const f = nodesById[from]
+						const t = nodesById[to]
 
-							const path = `
-							M${f.x} ${f.y}
-							L ${t.x} ${t.y}
-							`
+						let strokeDashArray: string | undefined = undefined
+						let path
+						if (!f) {
+							path = `
+								M${t.x} ${t.y - 20}
+								L${t.x} ${t.y}
+								`
+							strokeDashArray = "2,2"
+						} else if (!t) {
+							console.log([from, to], [f, t])
+							path = `
+								M${f.x} ${f.y}
+								L${f.x} ${f.y + 20}
+								`
+							strokeDashArray = "2,2"
+						} else {
+							path = `
+								M${f.x} ${f.y}
+								L ${t.x} ${t.y}
+								`
+						}
 
-							return (
-								<>
-									<path
-										key={`link-${index}-shadow`}
-										className="link"
-										d={path}
-										fill="none"
-										stroke={"white"}
-										strokeWidth={lineStrokeWidth + 2}
-									/>
-									<path
-										key={`link-${index}`}
-										className="link"
-										d={path}
-										fill="none"
-										stroke={color(f.branch.toString())}
-										strokeWidth={lineStrokeWidth}
-									/>
-								</>
-							)
-						})}
-						{nodes.map(({ x, y, branch }, index) => {
-							return (
-								<>
-									<path
-										key={`node-trace-${index}-shadow`}
-										stroke="white"
-										strokeWidth="2px"
-										d={`M${x} ${y} L${graphWidth} ${y}`}
-									/>
-									<path
-										key={`node-trace-${index}`}
-										stroke="lightgray"
-										strokeWidth="1px"
-										d={`M${x} ${y} L${graphWidth} ${y}`}
-									/>
-									<path
-										key={`node-${index}`}
-										className="selectable node"
-										data-id={index}
-										stroke="black"
-										strokeLinecap="round"
-										strokeWidth={nodeRadius + nodeBorderRadius}
-										d={`M${x} ${y} L${x} ${y}`}
-									/>
-									<path
-										key={`node-border-${index}`}
-										className="node"
-										stroke="white"
-										strokeLinecap="round"
-										strokeWidth={nodeRadius}
-										d={`M${x} ${y} L${x} ${y}`}
-									/>
-								</>
-							)
-						})}
-					</svg>
-				</div>
-				<div
+						const strokeColor = color((f || t).branch.toString())
+
+						return (
+							<>
+								<path
+									key={`link-${index}-shadow`}
+									className="link"
+									d={path}
+									fill="none"
+									stroke={"white"}
+									strokeWidth={lineStrokeWidth + 2}
+									strokeDasharray={strokeDashArray}
+								/>
+								<path
+									key={`link-${index}`}
+									className="link"
+									d={path}
+									fill="none"
+									stroke={strokeColor}
+									strokeWidth={lineStrokeWidth}
+									strokeDasharray={strokeDashArray}
+								/>
+							</>
+						)
+					})}
+					{nodes.map(({ x, y, branch }, index) => {
+						return (
+							<>
+								<path
+									key={`node-trace-${index}-shadow`}
+									stroke="white"
+									strokeWidth="2px"
+									d={`M${x} ${y} L${graphWidth} ${y}`}
+								/>
+								<path
+									key={`node-trace-${index}`}
+									stroke="lightgray"
+									strokeWidth="1px"
+									d={`M${x} ${y} L${graphWidth} ${y}`}
+								/>
+								<path
+									key={`node-${index}`}
+									className="selectable node"
+									data-id={index}
+									stroke="black"
+									strokeLinecap="round"
+									strokeWidth={nodeRadius + nodeBorderRadius}
+									d={`M${x} ${y} L${x} ${y}`}
+								/>
+								<path
+									key={`node-border-${index}`}
+									className="node"
+									stroke="white"
+									strokeLinecap="round"
+									strokeWidth={nodeRadius}
+									d={`M${x} ${y} L${x} ${y}`}
+								/>
+							</>
+						)
+					})}
+				</svg>
+			</div>
+			<Flex direction="column" flexGrow="1">
+				<DivWithRectUpdate
+					onRectUpdate={(rect) => {
+						setDivHeight(rect.height)
+						setDivTop(window.scrollY + rect.top)
+					}}
 					style={{
 						display: "flex",
 						flexDirection: "column",
-						flexGrow: "1",
+						gap: "5px",
+						flexGrow: "0",
+						paddingTop: "20px",
+						width: "100%",
 					}}
 				>
-					<DivWithRectUpdate
-						onRectUpdate={(rect) => {
-							setDivHeight(rect.height)
-							setDivTop(window.scrollY + rect.top)
-						}}
-						style={{
-							display: "flex",
-							flexDirection: "column",
-							gap: "5px",
-							flexGrow: "0",
-							paddingTop: "20px",
-							width: "100%",
-						}}
-					>
-						{items.map((item, index) => (
-							<DivWithRectUpdate
-								key={index}
-								onRectUpdate={(rect) => {
-									setItemYOffsets((prev) => ({
-										...prev,
-										[item.id]: window.scrollY + rect.top + rect.height / 2,
-									}))
-								}}
-							>
-								<MessageEntry item={item} />
-							</DivWithRectUpdate>
-						))}
-					</DivWithRectUpdate>
-				</div>
-			</div>
-		</>
+					{items.map((item, index) => (
+						<DivWithRectUpdate
+							key={index}
+							onRectUpdate={(rect) => {
+								setItemYOffsets((prev) => ({
+									...prev,
+									[item.id]: window.scrollY + rect.top + rect.height / 2,
+								}))
+							}}
+						>
+							<MessageEntry item={item} />
+						</DivWithRectUpdate>
+					))}
+				</DivWithRectUpdate>
+			</Flex>
+		</Flex>
 	)
 }
