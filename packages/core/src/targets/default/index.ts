@@ -5,7 +5,11 @@ const target: PlatformTarget = {
 		throw new Error("Unsupported platform")
 	},
 
-	async attachNetwork(gossipLog, config) {
+	async connect(gossipLog, url, signal) {
+		throw new Error("Unsupported platform")
+	},
+
+	async listen(gossipLog, port, signal) {
 		throw new Error("Unsupported platform")
 	},
 }

@@ -17,6 +17,8 @@
 		"./network/client": "./lib/network/client.js",
 		"./network/server": "./lib/network/server.js",
 		"./network/peer": "./lib/network/peer.js",
+		"./network/libp2p": "./lib/network/libp2p.js",
+		"./network/peerId": "./lib/network/peerId.js",
 		"./idb": "./lib/idb/index.js",
 		"./pg": "./lib/pg/index.js",
 		"./sqlite-wasm": "./lib/sqlite-wasm/index.js",

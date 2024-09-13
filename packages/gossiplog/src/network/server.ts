@@ -27,6 +27,41 @@ import { factory, getPushProtocol, getSyncProtocol, chunk, decodeEvents, encodeE
 const ipv4Pattern = /^\d+\.\d+\.\d+.\d+$/
 const isIPv4 = (address: string) => ipv4Pattern.test(address)
 
+export class NetworkServer<Payload> {
+	public readonly wss: WebSocketServer
+	public readonly connections = new Map<string, Connection<Payload>>()
+
+	constructor(readonly gossipLog: AbstractGossipLog<Payload>, server?: http.Server) {
+		this.wss = createServer({
+			server,
+			onConnection: (duplex) => {
+				const connection = new Connection(gossipLog, duplex)
+				this.connections.set(connection.id, connection)
+				gossipLog.dispatchEvent(new CustomEvent("connect", { detail: { peer: connection.sourceURL } }))
+
+				duplex.socket.addListener("open", () => console.log("I OPENED THE THINGJFKLDSJFKSLDFJKLSDJF"))
+				duplex.socket.addEventListener("close", () => {
+					connection.close()
+					this.connections.delete(connection.id)
+					gossipLog.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: connection.sourceURL } }))
+				})
+			},
+		})
+
+		// this.wss.on("listening", (event) => console.log("LISTENING", event))
+		// this.wss.on("request", (event) => console.log("REQUEST", event))
+		// this.wss.on("connection", (ws, req) => console.log("REQUEST HEADERS", req.headers, req.headers["peer-id"]))
+	}
+
+	public listen(port: number) {
+		this.wss.listen(port)
+	}
+
+	public close() {
+		this.wss.close()
+	}
+}
+
 class Connection<Payload> {
 	readonly id = bytesToHex(randomBytes(8))
 	readonly log = logger(`canvas:network:server:${this.id}`)
@@ -37,7 +72,9 @@ class Connection<Payload> {
 	readonly sourceURL: string
 
 	constructor(readonly gossipLog: AbstractGossipLog<Payload>, readonly duplex: DuplexWebSocket) {
+		// TODO: validate duplex.socket.protocol
 		const { remoteAddress, remotePort } = duplex
+
 		this.log("new connection from %s:%d", remoteAddress, remotePort)
 		gossipLog.addEventListener("message", this.handleMessage)
 		gossipLog.addEventListener("sync", this.handleSync)
@@ -208,36 +245,5 @@ class Connection<Payload> {
 				)
 			}
 		} while (this.isConnected())
-	}
-}
-
-export class NetworkServer<Payload> {
-	public readonly wss: WebSocketServer
-	public readonly connections = new Map<string, Connection<Payload>>()
-
-	constructor(readonly gossipLog: AbstractGossipLog<Payload>, server?: http.Server) {
-		this.wss = createServer({
-			server,
-			onConnection: (duplex) => {
-				const connection = new Connection(gossipLog, duplex)
-				this.connections.set(connection.id, connection)
-				gossipLog.dispatchEvent(new CustomEvent("connect", { detail: { peer: connection.sourceURL } }))
-
-				duplex.socket.addListener("open", () => console.log("I OPENED THE THINGJFKLDSJFKSLDFJKLSDJF"))
-				duplex.socket.addEventListener("close", () => {
-					connection.close()
-					this.connections.delete(connection.id)
-					gossipLog.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: connection.sourceURL } }))
-				})
-			},
-		})
-	}
-
-	public listen(port: number) {
-		this.wss.listen(port)
-	}
-
-	public close() {
-		this.wss.close()
 	}
 }

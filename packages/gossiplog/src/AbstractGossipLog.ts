@@ -21,7 +21,7 @@ import { codes, topicPattern } from "./utils.js"
 export type GossipLogConsumer<Payload = unknown> = (
 	this: AbstractGossipLog<Payload>,
 	signedMessage: SignedMessage<Payload>,
-	context: { peerId?: string; branch: number },
+	context: { peer?: string; branch: number },
 ) => Awaitable<void>
 
 export interface GossipLogInit<Payload = unknown> {
@@ -38,9 +38,6 @@ export type GossipLogEvents<Payload = unknown> = {
 	message: CustomEvent<SignedMessage<Payload>>
 	commit: CustomEvent<{ root: Node; heads: string[] }>
 	sync: CustomEvent<{ duration: number; messageCount: number; peer?: string }>
-
-	graft: CustomEvent<{ peer: string }>
-	prune: CustomEvent<{ peer: string }>
 	connect: CustomEvent<{ peer: string }>
 	disconnect: CustomEvent<{ peer: string }>
 }

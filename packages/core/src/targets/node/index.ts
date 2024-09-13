@@ -10,9 +10,12 @@ import { NetworkPeer } from "@canvas-js/gossiplog/network/peer"
 import { assert } from "@canvas-js/utils"
 
 import type { PlatformTarget } from "../interface.js"
+import { NetworkClient } from "@canvas-js/gossiplog/network/client"
 
 const isPostgres = (path: string | pg.ConnectionConfig): boolean =>
 	typeof path !== "string" || path.startsWith("postgres://") || path.startsWith("postgresql://")
+
+const isError = (error: unknown): error is NodeJS.ErrnoException => error instanceof Error
 
 const target: PlatformTarget = {
 	async openGossipLog(location: { path: string | pg.ConnectionConfig | null; topic: string; clear?: boolean }, init) {
@@ -43,15 +46,21 @@ const target: PlatformTarget = {
 		}
 	},
 
-	attachNetwork: async (gossipLog, config) => {
-		//
+	async connect(gossipLog, url, signal) {
+		const client = new NetworkClient(gossipLog, url)
+		signal.addEventListener("abort", () => client.close())
 	},
 
-	// createLibp2p: (config) => getLibp2p(config),
+	async listen(gossipLog, handle, signal) {
+		if (typeof handle === "number") {
+			const server = new NetworkServer(gossipLog)
+			server.listen(handle)
+			signal.addEventListener("abort", () => server.close())
+		} else {
+			const peer = await NetworkPeer.create(gossipLog, handle)
+			signal.addEventListener("abort", () => peer.stop())
+		}
+	},
 }
 
 export default target
-
-function isError(error: any): error is NodeJS.ErrnoException {
-	return error instanceof Error
-}

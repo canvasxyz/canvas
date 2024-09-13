@@ -19,6 +19,7 @@ dotenv.config()
 import { Canvas } from "@canvas-js/core"
 import { createAPI, createMetricsAPI } from "@canvas-js/core/api"
 import { MIN_CONNECTIONS, MAX_CONNECTIONS } from "@canvas-js/core/constants"
+import type { NetworkConfig } from "@canvas-js/gossiplog"
 
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { ATPSigner } from "@canvas-js/chain-atp"
@@ -165,11 +166,8 @@ export async function handler(args: Args) {
 	}
 
 	const signers = [new SIWESigner(), new ATPSigner(), new CosmosSigner(), new SubstrateSigner(), new SolanaSigner()]
-	const app = await Canvas.initialize({
-		path: location,
-		topic,
-		contract,
-		signers,
+	const app = await Canvas.initialize({ path: location, topic, contract, signers })
+	await app.listen({
 		listen,
 		announce,
 		minConnections: args["min-connections"],

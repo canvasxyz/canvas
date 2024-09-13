@@ -1,9 +1,9 @@
-import type { Libp2p } from "@libp2p/interface"
-
 import type pg from "pg"
+import type http from "node:http"
 
-import type { Action, Awaitable, Session } from "@canvas-js/interfaces"
-import type { AbstractGossipLog, GossipLogInit, NetworkConfig } from "@canvas-js/gossiplog"
+import type { Action, Session } from "@canvas-js/interfaces"
+import type { AbstractGossipLog, GossipLogInit, NetworkConfig, ServiceMap } from "@canvas-js/gossiplog"
+import { Libp2p } from "@libp2p/interface"
 
 export interface PlatformTarget {
 	openGossipLog: (
@@ -11,7 +11,11 @@ export interface PlatformTarget {
 		init: GossipLogInit<Action | Session>,
 	) => Promise<AbstractGossipLog<Action | Session>>
 
-	attachNetwork: (gossipLog: AbstractGossipLog<Action | Session>, config: NetworkConfig) => Awaitable<void>
+	connect: (gossipLog: AbstractGossipLog<Action | Session>, target: string, signal: AbortSignal) => Promise<void>
 
-	// createLibp2p: (config: NetworkConfig) => Promise<Libp2p<ServiceMap>>
+	listen: (
+		gossipLog: AbstractGossipLog<Action | Session>,
+		handle: number | NetworkConfig,
+		signal: AbortSignal,
+	) => Promise<void>
 }

@@ -2,20 +2,14 @@ import assert from "node:assert"
 import express from "express"
 import ipld from "express-ipld"
 import { StatusCodes } from "http-status-codes"
-import { AbortError } from "abortable-iterator"
-import { anySignal } from "any-signal"
-import { Counter, Gauge, Summary, Registry, register } from "prom-client"
 
-import type { PeerId } from "@libp2p/interface"
-import { peerIdFromString } from "@libp2p/peer-id"
+import { Counter, Gauge, Summary, Registry, register } from "prom-client"
 
 import * as json from "@ipld/dag-json"
 
 import { Action, Message, Session, Signature } from "@canvas-js/interfaces"
 
 import { Canvas } from "./Canvas.js"
-
-import { PING_TIMEOUT } from "./constants.js"
 
 export interface APIOptions {
 	exposeModels?: boolean

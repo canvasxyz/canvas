@@ -1,5 +1,3 @@
-import process from "node:process"
-
 import { createLibp2p } from "libp2p"
 import { Libp2p } from "@libp2p/interface"
 import { identify } from "@libp2p/identify"
@@ -13,28 +11,15 @@ import { kadDHT } from "@libp2p/kad-dht"
 import { ping as pingService } from "@libp2p/ping"
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
 
-import { createFromProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
 import { Multiaddr } from "@multiformats/multiaddr"
-
-import { Registry } from "prom-client"
 
 import type { ServiceMap, NetworkConfig } from "../interface.js"
 
-const getTopicDHTProtocol = (topic: string) => `/canvas/kad/1.0.0/${topic}`
-const getPeerId = async () => {
-	const { PEER_ID } = process.env
-	if (typeof PEER_ID === "string") {
-		return await createFromProtobuf(Buffer.from(PEER_ID, "base64"))
-	} else {
-		return await createEd25519PeerId()
-	}
-}
+import { getPeerId } from "./peerId.js"
 
-export async function getLibp2p(
-	topic: string,
-	config: NetworkConfig,
-	options: { registry?: Registry } = {},
-): Promise<Libp2p<ServiceMap>> {
+const getDHTProtocol = (topic: string | null) => (topic === null ? `/canvas/kad/1.0.0` : `/canvas/kad/1.0.0/${topic}`)
+
+export async function getLibp2p(topic: string, config: NetworkConfig): Promise<Libp2p<ServiceMap>> {
 	let peerId = config.peerId
 	if (peerId === undefined) {
 		peerId = await getPeerId()
@@ -45,7 +30,7 @@ export async function getLibp2p(
 	const announce = config.announce ?? ["/ip4/127.0.0.1/tcp/8080/ws"]
 
 	return await createLibp2p({
-		peerId: peerId,
+		peerId: config.peerId,
 		start: config.start ?? false,
 		addresses: { listen, announce },
 		transports: [webSockets({ filter: all })],
@@ -67,13 +52,14 @@ export async function getLibp2p(
 		streamMuxers: [yamux()],
 		connectionEncryption: [noise({})],
 
-		metrics: prometheusMetrics(options),
+		metrics: prometheusMetrics({ registry: config.registry }),
 
 		services: {
 			identify: identify({ protocolPrefix: "canvas" }),
 			ping: pingService({ protocolPrefix: "canvas" }),
 
-			dht: kadDHT({ protocol: getTopicDHTProtocol(topic) }),
+			topicDHT: kadDHT({ protocol: getDHTProtocol(topic) }),
+			globalDHT: kadDHT({ protocol: getDHTProtocol(null) }),
 
 			pubsub: gossipsub({
 				emitSelf: false,

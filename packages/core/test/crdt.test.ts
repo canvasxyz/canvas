@@ -104,7 +104,6 @@ async function createCanvasCounterApp() {
 				},
 			},
 		},
-		start: false,
 	})
 }
 

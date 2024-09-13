@@ -38,7 +38,10 @@ export class NetworkClient<Payload> {
 		onStreamEnd: (stream) => this.log("stream %s closed (%s)", stream.id, stream.protocol),
 	})
 
-	duplex = connect(this.addr)
+	duplex = connect(this.addr, {
+		// websocket: [this.gossipLog.topic],
+	})
+
 	sourceURL = this.addr
 	eventSource = pushable<Event>({ objectMode: true })
 

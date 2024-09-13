@@ -4,6 +4,8 @@ import type { PeerId, PubSub } from "@libp2p/interface"
 import type { KadDHT } from "@libp2p/kad-dht"
 import type { PingService } from "@libp2p/ping"
 
+import type { Registry } from "prom-client"
+
 import type { SyncSource, Awaitable } from "@canvas-js/okra"
 
 export interface Snapshot extends SyncSource {
@@ -28,6 +30,9 @@ export interface NetworkConfig {
 	announce?: string[]
 
 	bootstrapList?: string[]
+
 	minConnections?: number
 	maxConnections?: number
+
+	registry?: Registry
 }

@@ -76,6 +76,10 @@ export class NetworkPeer<Payload = unknown> {
 		this.pubsub = NetworkPeer.extractGossipSub(libp2p)
 	}
 
+	public get peerId() {
+		return this.libp2p.peerId
+	}
+
 	public async start() {
 		if (this.#started) {
 			return
