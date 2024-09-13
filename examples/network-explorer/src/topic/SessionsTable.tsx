@@ -54,10 +54,10 @@ function SessionsTable({ topic }: { topic: string }) {
 						return (
 							<Table.Row key={cid}>
 								<Table.Cell>
-									<DidPopover did={message.payload.did} truncateBelow="md" />
+									<DidPopover did={message.payload.did} truncateBelow="md" numEndChars={0} />
 								</Table.Cell>
 								<Table.Cell>
-									<DidPopover did={message.payload.publicKey} truncateBelow="md" />
+									<DidPopover did={message.payload.publicKey} truncateBelow="md" numEndChars={0} />
 								</Table.Cell>
 								<Table.Cell>
 									<span className="text-gray-400">{formatDistanceCustom(message.payload.context.timestamp)} ago</span>
