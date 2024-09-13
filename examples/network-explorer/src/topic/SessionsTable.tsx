@@ -1,8 +1,11 @@
 import useSWR from "swr"
 import { Session } from "@canvas-js/interfaces"
+import { Box, Flex, Table, Text } from "@radix-ui/themes"
+
 import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "../utils.js"
 import PaginationButton from "../components/PaginationButton.js"
 import useCursorStack from "../useCursorStack.js"
+import { DidTooltip } from "../components/DidTooltip.js"
 
 const entriesPerPage = 10
 
@@ -11,7 +14,7 @@ function SessionsTable({ topic }: { topic: string }) {
 
 	// in order to determine if another page exists, we retrieve n + 1 entries
 	// if the length of the result is n + 1, then there is another page
-	const params = new URLSearchParams({ type: "session" })
+	const params = new URLSearchParams({ type: "session", limit: (entriesPerPage + 1).toString() })
 	if (currentCursor) {
 		params.append("before", currentCursor)
 	}
@@ -31,43 +34,45 @@ function SessionsTable({ topic }: { topic: string }) {
 	const hasMore = sessions.length > entriesPerPage
 
 	return (
-		<div className="flex flex-col gap-2 pb-4">
-			<div className="flex flex-col gap-1">
-				<div>Latest Sessions</div>
-			</div>
-			<div className="border rounded-lg py-1">
-				<table className="table-auto w-full rounded text-left rtl:text-right">
-					<thead>
-						<tr className="border-b">
-							<th className="px-6 font-normal">Address</th>
-							<th className="px-6 font-normal">Public Key</th>
-							<th className="px-6 font-normal">Timestamp</th>
-						</tr>
-					</thead>
-					<tbody>
-						{sessionsToDisplay.map((item) => {
-							const cid = item[0]
-							const message = item[2]
+		<Flex direction="column" gap="2" pt="4">
+			<Text size="4" weight="bold">
+				Latest Sessions
+			</Text>
+			<Table.Root>
+				<Table.Header>
+					<Table.Row>
+						<Table.ColumnHeaderCell>Address</Table.ColumnHeaderCell>
+						<Table.ColumnHeaderCell>Public Key</Table.ColumnHeaderCell>
+						<Table.ColumnHeaderCell>Timestamp</Table.ColumnHeaderCell>
+					</Table.Row>
+				</Table.Header>
+				<Table.Body>
+					{sessionsToDisplay.map((item) => {
+						const cid = item[0]
+						const message = item[2]
 
-							return (
-								<tr key={cid}>
-									<td className="break-all px-6 py-2">{message.payload.did}</td>
-									<td className="break-all px-6 py-2">{message.payload.publicKey}</td>
-									<td className="break-all px-6">
-										<span className="text-gray-400">{formatDistanceCustom(message.payload.context.timestamp)} ago</span>
-									</td>
-								</tr>
-							)
-						})}
-					</tbody>
-				</table>
-			</div>
-			<div className="flex flex-row gap-2">
-				<div className="flex-grow"></div>
+						return (
+							<Table.Row key={cid}>
+								<Table.Cell>
+									<DidTooltip did={message.payload.did || ""} />
+								</Table.Cell>
+								<Table.Cell>
+									<DidTooltip did={message.payload.publicKey || ""} />
+								</Table.Cell>
+								<Table.Cell>
+									<span className="text-gray-400">{formatDistanceCustom(message.payload.context.timestamp)} ago</span>
+								</Table.Cell>
+							</Table.Row>
+						)
+					})}
+				</Table.Body>
+			</Table.Root>
+			<Flex direction="row" gap="2">
+				<Box flexGrow="1" />
 				<PaginationButton text="Previous" enabled={currentCursor !== null} onClick={popCursor} />
 				<PaginationButton text="Next" enabled={hasMore} onClick={() => pushCursor(sessions[entriesPerPage][0])} />
-			</div>
-		</div>
+			</Flex>
+		</Flex>
 	)
 }
 

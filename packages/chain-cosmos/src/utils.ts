@@ -35,7 +35,7 @@ export function parseAddress(address: string): [chain: string, walletAddress: st
 }
 
 function extractSessionData(data: any): CosmosSessionData {
-	if (data.signatureType == "amino") {
+	if (data.signatureType === "amino") {
 		const signature = data.signature
 		if (signature instanceof Uint8Array) {
 			return {
@@ -43,7 +43,7 @@ function extractSessionData(data: any): CosmosSessionData {
 				signature,
 			}
 		}
-	} else if (data.signatureType == "bytes") {
+	} else if (data.signatureType === "bytes") {
 		const signature = data.signature.signature
 		const pub_key_value = data.signature.pub_key.value
 		const pub_key_type = data.signature.pub_key.type
@@ -51,7 +51,7 @@ function extractSessionData(data: any): CosmosSessionData {
 			signature instanceof Uint8Array &&
 			pub_key_value instanceof Uint8Array &&
 			typeof pub_key_type === "string" &&
-			pub_key_type == "tendermint/PubKeySecp256k1"
+			pub_key_type === "tendermint/PubKeySecp256k1"
 		) {
 			return {
 				signatureType: "bytes",
@@ -64,7 +64,7 @@ function extractSessionData(data: any): CosmosSessionData {
 				},
 			}
 		}
-	} else if (data.signatureType == "ethereum") {
+	} else if (data.signatureType === "ethereum") {
 		const signature = data.signature
 		if (signature instanceof Uint8Array) {
 			return {
@@ -72,7 +72,7 @@ function extractSessionData(data: any): CosmosSessionData {
 				signature: signature,
 			}
 		}
-	} else if (data.signatureType == "arbitrary") {
+	} else if (data.signatureType === "arbitrary") {
 		const signature = data.signature
 		if (signature.pub_key instanceof Object && signature.signature instanceof Uint8Array) {
 			return {

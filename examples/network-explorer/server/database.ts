@@ -3,8 +3,8 @@ import { Client, QueryResult } from "pg"
 // Define interfaces for the return types
 interface Count {
 	topic: string
-	action_count: number
-	session_count: number
+	type: string
+	count: number
 }
 
 interface Message {
@@ -13,23 +13,12 @@ interface Message {
 	type: string
 }
 
-interface CountTotal {
-	action_count: string
-	session_count: string
-}
-
 interface AddressCount {
 	count: string
 }
 
 export async function createDatabase(client: Client) {
 	await client.query(`
-		CREATE TABLE IF NOT EXISTS counts (
-			topic TEXT PRIMARY KEY,
-			action_count INTEGER,
-			session_count INTEGER
-		);
-
 		CREATE TABLE IF NOT EXISTS addresses (
 			topic TEXT,
 			address TEXT,
@@ -45,54 +34,25 @@ export async function createDatabase(client: Client) {
 
 		CREATE INDEX IF NOT EXISTS messages_type_index ON messages (type);
 		CREATE INDEX IF NOT EXISTS messages_topic_index ON messages (topic);
+		CREATE INDEX IF NOT EXISTS messages_topic_type_index ON messages (topic, type);
 	`)
 
 	return {
-		addCountsRow: async (topic: string) => {
-			return await client.query(
-				`
-				INSERT INTO counts(topic, action_count, session_count)
-				VALUES($1, 0, 0)
-				ON CONFLICT (topic) DO NOTHING;
-			`,
-				[topic],
-			)
-		},
-
-		incrementActionCounts: async (topic: string) => {
-			return await client.query(
-				`
-				UPDATE counts
-				SET action_count = action_count + 1
-				WHERE topic = $1;
-			`,
-				[topic],
-			)
-		},
-
-		incrementSessionCounts: async (topic: string) => {
-			return await client.query(
-				`
-				UPDATE counts
-				SET session_count = session_count + 1
-				WHERE topic = $1;
-			`,
-				[topic],
-			)
-		},
-
 		selectCounts: async (topic: string): Promise<QueryResult<Count>> => {
-			return await client.query<Count>("SELECT * FROM counts WHERE topic = $1", [topic])
+			return await client.query<Count>(
+				"SELECT topic, type, COUNT(*)::int FROM messages WHERE topic = $1 GROUP BY topic, type;",
+				[topic],
+			)
 		},
 
 		selectCountsAll: async (): Promise<QueryResult<Count>> => {
-			return await client.query<Count>("SELECT * FROM counts")
+			return await client.query<Count>("SELECT topic, type, COUNT(*)::int FROM messages GROUP BY topic, type;")
 		},
 
-		selectCountsTotal: async (): Promise<QueryResult<CountTotal>> => {
-			return await client.query<CountTotal>(
-				"SELECT SUM(action_count) as action_count, SUM(session_count) as session_count FROM counts",
-			)
+		selectCountsForTypeTotal: async (type: string): Promise<QueryResult<{ count: number }>> => {
+			return await client.query<{ count: number }>("SELECT COUNT(*)::int AS count FROM messages WHERE type = $1", [
+				type,
+			])
 		},
 
 		addAddress: async (topic: string, address: string) => {
@@ -108,17 +68,17 @@ export async function createDatabase(client: Client) {
 		},
 
 		selectAddressCount: async (topic: string): Promise<QueryResult<AddressCount>> => {
-			return await client.query<AddressCount>("SELECT COUNT(*) AS count FROM addresses WHERE topic = $1", [topic])
+			return await client.query<AddressCount>("SELECT COUNT(*)::int AS count FROM addresses WHERE topic = $1", [topic])
 		},
 
 		selectAddressCountsAll: async (): Promise<QueryResult<{ topic: string; count: string }>> => {
 			return await client.query<{ topic: string; count: string }>(
-				"SELECT topic, COUNT(topic) AS count FROM addresses GROUP BY topic",
+				"SELECT topic, COUNT(topic)::int AS count FROM addresses GROUP BY topic",
 			)
 		},
 
 		selectAddressCountTotal: async (): Promise<QueryResult<AddressCount>> => {
-			return await client.query<AddressCount>("SELECT COUNT(DISTINCT address) AS count FROM addresses")
+			return await client.query<AddressCount>("SELECT COUNT(DISTINCT address)::int AS count FROM addresses")
 		},
 
 		addSession: async (topic: string, id: string) => {

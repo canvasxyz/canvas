@@ -67,19 +67,14 @@ for (const topic of topics) {
 		topic,
 	})
 
-	// create empty counts row for this topic in the index table
-	await queries.addCountsRow(topic)
-
 	canvasApp.addEventListener("message", async (event) => {
 		const message = event.detail
 
-		if (message.message.payload.type == "action") {
+		if (message.message.payload.type === "action") {
 			await queries.addAction(message.message.topic, message.id)
-			await queries.incrementActionCounts(message.message.topic)
-		} else if (message.message.payload.type == "session") {
+		} else if (message.message.payload.type === "session") {
 			await queries.addSession(message.message.topic, message.id)
 			await queries.addAddress(message.message.topic, message.message.payload.did)
-			await queries.incrementSessionCounts(message.message.topic)
 		}
 	})
 
@@ -93,12 +88,21 @@ for (const topic of topics) {
 }
 
 expressApp.get("/index_api/messages", ipld(), async (req, res) => {
-	const numMessagesToReturn = 10
+	let numMessagesToReturn: number
+	if (!req.query.limit) {
+		numMessagesToReturn = 10
+	} else if (typeof req.query.limit === "string") {
+		numMessagesToReturn = parseInt(req.query.limit)
+	} else {
+		res.status(StatusCodes.BAD_REQUEST)
+		res.end()
+		return
+	}
 
 	let before: string
 	if (!req.query.before) {
 		before = MAX_MESSAGE_ID
-	} else if (typeof req.query.before == "string") {
+	} else if (typeof req.query.before === "string") {
 		before = req.query.before
 	} else {
 		res.status(StatusCodes.BAD_REQUEST)
@@ -125,7 +129,16 @@ expressApp.get("/index_api/messages", ipld(), async (req, res) => {
 })
 
 expressApp.get("/index_api/messages/:topic", ipld(), async (req, res) => {
-	const numMessagesToReturn = 10
+	let numMessagesToReturn: number
+	if (!req.query.limit) {
+		numMessagesToReturn = 10
+	} else if (typeof req.query.limit === "string") {
+		numMessagesToReturn = parseInt(req.query.limit)
+	} else {
+		res.status(StatusCodes.BAD_REQUEST)
+		res.end()
+		return
+	}
 
 	if (req.query.type !== "session" && req.query.type !== "action") {
 		console.log("invalid type", req.query.type)
@@ -138,7 +151,7 @@ expressApp.get("/index_api/messages/:topic", ipld(), async (req, res) => {
 	let before: string
 	if (!req.query.before) {
 		before = MAX_MESSAGE_ID
-	} else if (typeof req.query.before == "string") {
+	} else if (typeof req.query.before === "string") {
 		before = req.query.before
 	} else {
 		res.status(StatusCodes.BAD_REQUEST)
@@ -165,7 +178,16 @@ expressApp.get("/index_api/messages/:topic", ipld(), async (req, res) => {
 })
 
 expressApp.get("/index_api/counts", async (req, res) => {
-	const queryResult = (await queries.selectCountsAll()).rows
+	const countsQueryResult = (await queries.selectCountsAll()).rows
+
+	const actionCountsMap: Record<string, number> = {}
+	const sessionCountsMap: Record<string, number> = {}
+
+	for (const row of countsQueryResult) {
+		if (row.type === "action") actionCountsMap[row.topic] = row.count
+		if (row.type === "session") sessionCountsMap[row.topic] = row.count
+	}
+
 	const addressCountResult = (await queries.selectAddressCountsAll()).rows
 	const addressCountsMap: Record<string, number> = {}
 	const connectionCountsMap: Record<string, number> = {}
@@ -179,34 +201,51 @@ expressApp.get("/index_api/counts", async (req, res) => {
 		// 	.join(", ")
 	}
 
-	for (const row of queryResult) {
-		const r = row as any
-		r.address_count = addressCountsMap[row.topic] || 0
-		r.connection_count = connectionCountsMap[row.topic] || 0
-		r.connections = connectionsMap[row.topic] || "-"
+	const result = []
+	for (const topic of topics) {
+		result.push({
+			topic,
+			address_count: addressCountsMap[topic] || 0,
+			connection_count: connectionCountsMap[topic] || 0,
+			connections: connectionsMap[topic] || "-",
+			action_count: actionCountsMap[topic] || 0,
+			session_count: sessionCountsMap[topic] || 0,
+		})
 	}
 
-	res.json(queryResult)
+	res.json(result)
 })
 
 expressApp.get("/index_api/counts/total", async (req, res) => {
-	const queryResult = (await queries.selectCountsTotal()).rows[0]
+	const actionCount = (await queries.selectCountsForTypeTotal("action")).rows[0]
+	const sessionCount = (await queries.selectCountsForTypeTotal("session")).rows[0]
+
 	const addressCountResult = (await queries.selectAddressCountTotal()).rows[0]
 	const result = {
-		action_count: queryResult.action_count || 0,
-		session_count: queryResult.session_count || 0,
+		action_count: actionCount.count || 0,
+		session_count: sessionCount.count || 0,
 		address_count: addressCountResult.count || 0,
 	}
 	res.json(result)
 })
 
 expressApp.get("/index_api/counts/:topic", async (req, res) => {
-	const queryResult = (await queries.selectCounts(req.params.topic)).rows[0]
+	let actionCount = 0
+	let sessionCount = 0
+	for (const row of (await queries.selectCounts(req.params.topic)).rows) {
+		if (row.type === "action") {
+			actionCount = row.count
+		}
+		if (row.type === "session") {
+			sessionCount = row.count
+		}
+	}
+
 	const addressCountResult = (await queries.selectAddressCount(req.params.topic)).rows[0]
 	const result = {
 		topic: req.params.topic,
-		action_count: queryResult.action_count || 0,
-		session_count: queryResult.session_count || 0,
+		action_count: actionCount,
+		session_count: sessionCount,
 		address_count: addressCountResult.count || 0,
 		// connection_count: canvasApps[req.params.topic]?.libp2p.getConnections().length || 0,
 	}

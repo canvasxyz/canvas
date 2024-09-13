@@ -51,7 +51,7 @@ export type ArbitrarySignedSessionData = Awaited<ReturnType<ReturnType<typeof cr
 
 export function validateArbitrarySignedSessionData(data: any): data is ArbitrarySignedSessionData {
 	return (
-		data.signatureType == "arbitrary" &&
+		data.signatureType === "arbitrary" &&
 		data.signature instanceof Object &&
 		typeof data.signature.pub_key === "object" &&
 		typeof data.signature.signature === "string"

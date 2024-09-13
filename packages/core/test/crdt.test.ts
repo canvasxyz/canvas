@@ -109,7 +109,7 @@ async function createCanvasCounterApp() {
 
 async function getCounterValue(app: Awaited<ReturnType<typeof createCanvasCounterApp>>, id: string) {
 	const result = await app.db.get("counter", id)
-	if (result == null) {
+	if (result === null) {
 		return null
 	}
 	return resolveCounterValue(result.value)
@@ -126,7 +126,7 @@ test("crdt counter manually created events", async (t) => {
 
 	async function getCounterValue(app: Awaited<ReturnType<typeof createCanvasCounterApp>>, id: string) {
 		const result = await app.db.get("counter", id)
-		if (result == null) {
+		if (result === null) {
 			return null
 		}
 		return resolveCounterValue(result.value)
@@ -212,28 +212,28 @@ test("crdt counter with randomized events", async (t) => {
 	for (let i = 0; i < 200; i++) {
 		// written this way so that it keeps the typescript literal type
 		const selectedAction = enumRandom(Actions)
-		if (selectedAction == Actions.Increment) {
+		if (selectedAction === Actions.Increment) {
 			const app = apps[random(apps.length)]
 			const beforeValue = await getCounterValue(app, counterId)
 			await app.actions.incrementCounter({ id: counterId })
 			const afterValue = await getCounterValue(app, counterId)
 			t.is(afterValue!, beforeValue! + 1)
-		} else if (selectedAction == Actions.Sync) {
+		} else if (selectedAction === Actions.Sync) {
 			const [sourceApp, targetApp] = arrayRandomN(apps, 2)
 			const sourceCounterRecord = await sourceApp.db.get<CounterRecord>("counter", counterId)
 			const targetCounterRecord = await targetApp.db.get<CounterRecord>("counter", counterId)
-			if (sourceCounterRecord == null) {
+			if (sourceCounterRecord === null) {
 				t.fail(`expected source counter value to exist, received null`)
 				return
 			}
-			if (targetCounterRecord == null) {
+			if (targetCounterRecord === null) {
 				t.fail(`expected target counter value to exist, received null`)
 				return
 			}
 			await sourceApp.messageLog.serve((source) => targetApp.messageLog.sync(source))
 			const expectedCounterRecord = mergeCounterRecords(sourceCounterRecord, targetCounterRecord)
 			const targetCounterRecordAfterSync = await targetApp.db.get<CounterRecord>("counter", counterId)
-			if (targetCounterRecordAfterSync == null) {
+			if (targetCounterRecordAfterSync === null) {
 				t.fail(`expected target counter value to exist, received null`)
 				return
 			}

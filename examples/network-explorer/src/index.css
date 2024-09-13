@@ -1,3 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+.rt-Card {
+	background-color: white;
+	filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.05)) drop-shadow(0 1px 1px rgb(0 0 0 / 0.06));
+}

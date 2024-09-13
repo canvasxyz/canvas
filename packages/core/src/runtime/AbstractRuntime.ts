@@ -271,7 +271,7 @@ export abstract class AbstractRuntime {
 			const parentPositions: Position[] = []
 			const matchingEffectOnThisBranch = effectsOnThisBranch[0]
 			if (matchingEffectOnThisBranch) {
-				if (matchingEffectOnThisBranch.clock == currentMessagePosition.clock) {
+				if (matchingEffectOnThisBranch.clock === currentMessagePosition.clock) {
 					// the current message is the latest effect on this branch
 					result.add(matchingEffectOnThisBranch.key)
 					// don't explore this message's parents

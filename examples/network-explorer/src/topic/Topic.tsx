@@ -4,6 +4,7 @@ import useSWR from "swr"
 import { fetchAndIpldParseJson } from "../utils.js"
 import ActionsTable from "./ActionsTable.js"
 import SessionsTable from "./SessionsTable.js"
+import { Card, Flex, Tabs, Text } from "@radix-ui/themes"
 
 function Topic() {
 	const { topic } = useParams()
@@ -22,24 +23,38 @@ function Topic() {
 	)
 
 	return (
-		<>
-			<div className="flex flex-row bg-white rounded-lg drop-shadow p-4 gap-3">
-				<div>
-					<div className="font-bold">Topic</div>
-					<div className="font-medium">{topic}</div>
-				</div>
-				<div>
-					<div className="font-bold">Messages</div>
-					<div className="font-medium">{countsData ? countsData.action_count + countsData.session_count : "..."}</div>
-				</div>
-				<div>
-					<div className="font-bold">Addresses</div>
-					<div className="font-medium">{countsData ? countsData.address_count : "..."}</div>
-				</div>
-			</div>
-			<ActionsTable topic={topic} />
-			<SessionsTable topic={topic} />
-		</>
+		<Flex direction="column" gap="4" pt="4">
+			<Card>
+				<Flex direction="row" gap={"4"}>
+					<Flex direction="column">
+						<Text weight="bold">Topic</Text>
+						<Text weight="medium">{topic}</Text>
+					</Flex>
+					<Flex direction="column">
+						<Text weight="bold">Messages</Text>
+						<Text weight="medium">{countsData ? countsData.action_count + countsData.session_count : "..."}</Text>
+					</Flex>
+					<Flex direction="column">
+						<Text weight="bold">Addresses</Text>
+						<Text weight="medium">{countsData ? countsData.address_count : "..."}</Text>
+					</Flex>
+				</Flex>
+			</Card>
+
+			<Tabs.Root defaultValue="actions">
+				<Tabs.List>
+					<Tabs.Trigger value="actions">Actions</Tabs.Trigger>
+					<Tabs.Trigger value="sessions">Sessions</Tabs.Trigger>
+				</Tabs.List>
+				<Tabs.Content value="actions">
+					<ActionsTable topic={topic} />
+				</Tabs.Content>
+
+				<Tabs.Content value="sessions">
+					<SessionsTable topic={topic} />
+				</Tabs.Content>
+			</Tabs.Root>
+		</Flex>
 	)
 }
 

@@ -332,7 +332,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 			orderBy: { branch: "desc" },
 		})
 
-		if (maxBranchRecords.length == 0) {
+		if (maxBranchRecords.length === 0) {
 			return 0
 		} else {
 			return maxBranchRecords[0].branch + 1
@@ -340,7 +340,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 	}
 
 	private async getBranch(messageId: string, parentMessages: MessageRecord<Payload>[]) {
-		if (parentMessages.length == 0) {
+		if (parentMessages.length === 0) {
 			return await this.newBranch()
 		}
 
