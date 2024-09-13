@@ -92,7 +92,7 @@ export class NetworkClient<Payload> {
 	}
 
 	public isConnected(): boolean {
-		return this.duplex.socket.readyState == WebSocket.OPEN
+		return this.duplex.socket.readyState === WebSocket.OPEN
 	}
 
 	private push(event: Event) {

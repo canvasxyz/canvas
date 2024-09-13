@@ -134,7 +134,7 @@ class Connection<Payload> {
 
 	private readonly handleMessage = ({ detail: { id, key, value, source } }: GossipLogEvents["message"]) => {
 		this.log.trace("handling message %s from source %o", id, source)
-		if (source == undefined || source.type === "pubsub") {
+		if (source === undefined || source.type === "pubsub") {
 			this.log.trace("pushing message %s to %s", id, this.sourceURL)
 			this.push({ insert: { key, value } })
 		} else if (source.type === "push") {
