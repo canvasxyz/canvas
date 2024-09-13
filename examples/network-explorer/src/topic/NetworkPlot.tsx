@@ -5,6 +5,8 @@ import * as d3 from "d3"
 import { PropsWithChildren, useLayoutEffect, useRef, useState } from "react"
 import { Box, Card, Flex } from "@radix-ui/themes"
 import { DidTooltip } from "../components/DidTooltip.js"
+import useCursorStack from "../useCursorStack.js"
+import PaginationButton from "../components/PaginationButton.js"
 
 function DivWithRectUpdate(
 	props: PropsWithChildren & {
@@ -169,9 +171,23 @@ function GraphNode({
 	)
 }
 
+const entriesPerPage = 10
+
 export default function NetworkPlot({ topic }: { topic: string }) {
-	const { data: messages } = useSWR(
-		`/index_api/messages/${topic}?limit=all`,
+	const { currentCursor, pushCursor, popCursor } = useCursorStack<string>()
+
+	// in order to determine if another page exists, we retrieve n + 1 entries
+	// if the length of the result is n + 1, then there is another page
+	const params = new URLSearchParams({
+		type: "action",
+		limit: (entriesPerPage + 1).toString(),
+	})
+	if (currentCursor) {
+		params.append("before", currentCursor)
+	}
+
+	const { data: messages, error } = useSWR(
+		`/index_api/messages/${topic}?${params.toString()}`,
 		fetchAndIpldParseJson<Result<Action | Session>[]>,
 		{
 			refreshInterval: 1000,
@@ -182,9 +198,15 @@ export default function NetworkPlot({ topic }: { topic: string }) {
 	const [divTop, setDivTop] = useState(0)
 	const [itemYOffsets, setItemYOffsets] = useState<Record<string, number>>({})
 
+	if (error) return <div>failed to load</div>
+	if (!messages) return <div>loading...</div>
+
+	const hasMore = messages.length > entriesPerPage
+	const messagesToDisplay = messages.slice(0, entriesPerPage)
+
 	const color = d3.scaleOrdinal(d3.schemeDark2)
 
-	const items = (messages || []).slice()
+	const items = (messagesToDisplay || []).slice()
 	items.sort((a, b) => {
 		if (a.message.clock == b.message.clock) {
 			return a.branch - b.branch
@@ -247,60 +269,71 @@ export default function NetworkPlot({ topic }: { topic: string }) {
 	const nodesById = Object.fromEntries(nodes.map((node) => [node.id, node]))
 
 	return (
-		<Flex direction="row" pb="4">
-			<div>
-				<svg width={graphWidth} height={divHeight}>
-					{links.map(([from, to], index) => (
-						<GraphLink
-							key={index}
-							from={nodesById[from]}
-							to={nodesById[to]}
-							color={color}
-							lineStrokeWidth={lineStrokeWidth}
-						/>
-					))}
-					{nodes.map((node, index) => {
-						return (
-							<GraphNode
+		<Flex direction="column" gap="2" pt="4">
+			<Flex direction="row" pb="4">
+				<div>
+					<svg width={graphWidth} height={divHeight}>
+						{links.map(([from, to], index) => (
+							<GraphLink
 								key={index}
-								node={node}
-								graphWidth={graphWidth}
-								nodeRadius={nodeRadius}
-								nodeBorderRadius={nodeBorderRadius}
+								from={nodesById[from]}
+								to={nodesById[to]}
+								color={color}
+								lineStrokeWidth={lineStrokeWidth}
 							/>
-						)
-					})}
-				</svg>
-			</div>
-			<Flex direction="column" flexGrow="1">
-				<DivWithRectUpdate
-					onRectUpdate={(rect) => {
-						setDivHeight(rect.height)
-						setDivTop(window.scrollY + rect.top)
-					}}
-					style={{
-						display: "flex",
-						flexDirection: "column",
-						gap: "5px",
-						flexGrow: "0",
-						paddingTop: "20px",
-						width: "100%",
-					}}
-				>
-					{items.map((item, index) => (
-						<DivWithRectUpdate
-							key={index}
-							onRectUpdate={(rect) => {
-								setItemYOffsets((prev) => ({
-									...prev,
-									[item.id]: window.scrollY + rect.top + rect.height / 2,
-								}))
-							}}
-						>
-							<MessageEntry item={item} />
-						</DivWithRectUpdate>
-					))}
-				</DivWithRectUpdate>
+						))}
+						{nodes.map((node, index) => {
+							return (
+								<GraphNode
+									key={index}
+									node={node}
+									graphWidth={graphWidth}
+									nodeRadius={nodeRadius}
+									nodeBorderRadius={nodeBorderRadius}
+								/>
+							)
+						})}
+					</svg>
+				</div>
+				<Flex direction="column" flexGrow="1">
+					<DivWithRectUpdate
+						onRectUpdate={(rect) => {
+							setDivHeight(rect.height)
+							setDivTop(window.scrollY + rect.top)
+						}}
+						style={{
+							display: "flex",
+							flexDirection: "column",
+							gap: "5px",
+							flexGrow: "0",
+							paddingTop: "20px",
+							width: "100%",
+						}}
+					>
+						{items.map((item, index) => (
+							<DivWithRectUpdate
+								key={`${item.id}-${index}`}
+								onRectUpdate={(rect) => {
+									setItemYOffsets((prev) => ({
+										...prev,
+										[item.id]: window.scrollY + rect.top + rect.height / 2,
+									}))
+								}}
+							>
+								<MessageEntry item={item} />
+							</DivWithRectUpdate>
+						))}
+					</DivWithRectUpdate>
+				</Flex>
+			</Flex>
+			<Flex direction="row" gap="2">
+				<Box flexGrow="1" />
+				<PaginationButton text="Newer" enabled={currentCursor !== null} onClick={popCursor} />
+				<PaginationButton
+					text="Older"
+					enabled={hasMore}
+					onClick={() => pushCursor(messagesToDisplay[entriesPerPage - 1].id)}
+				/>
 			</Flex>
 		</Flex>
 	)
