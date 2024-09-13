@@ -1,30 +1,22 @@
-import http from "node:http"
 import { setTimeout } from "node:timers/promises"
-import { nanoid } from "nanoid"
 import { randomBytes, bytesToHex } from "@noble/hashes/utils"
-import { DuplexWebSocket } from "it-ws/duplex"
 
 import { GossipLog } from "@canvas-js/gossiplog/sqlite"
-import { NetworkServer } from "@canvas-js/gossiplog/network/server"
+import { NetworkPeer } from "@canvas-js/gossiplog/network/peer"
 
 import { Socket } from "../socket.js"
 import { topic } from "../constants.js"
 import { bootstrapList, listen, announce } from "./config.js"
-import { peerIdFromString } from "@libp2p/peer-id"
 
 const { SERVICE_NAME } = process.env
 
 async function start() {
-	const messageLog = new GossipLog<string>({ directory: "data", topic, apply: () => {} })
+	const gossipLog = new GossipLog<string>({ directory: "data", topic, apply: () => {} })
 
-	// const libp2p = await getLibp2p({ topic, bootstrapList, listen, announce })
+	const network = await NetworkPeer.create(gossipLog, { listen, announce, bootstrapList })
 
-	// const socket = await Socket.open(`ws://dashboard:8000`, messageLog, libp2p)
-	const peerId = peerIdFromString("12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn")
-	const socket = await Socket.open(`ws://dashboard:8000`, messageLog, null, peerId)
+	const socket = await Socket.open(`ws://dashboard:8000`, network.peerId, gossipLog)
 
-	const server = new NetworkServer(messageLog)
-	server.listen(8080)
 	// api.addListener("connection", (connection: DuplexWebSocket) => {
 	// 	const remoteAddr = connection.remoteAddress
 	// 	const id = nanoid()
@@ -36,10 +28,6 @@ async function start() {
 	// 	})
 	// })
 
-	messageLog.addEventListener("commit", ({ detail: { root } }) => {
-		socket.post("gossiplog:commit", { topic, root: `${root.level}:${bytesToHex(root.hash)}` })
-	})
-
 	// libp2p.addEventListener("start", async () => {
 	// 	console.log("libp2p started")
 
@@ -48,7 +36,7 @@ async function start() {
 	// })
 
 	{
-		const root = await messageLog.tree.read((txn) => txn.getRoot())
+		const root = await gossipLog.tree.read((txn) => txn.getRoot())
 		console.log("starting")
 		socket.post("start", { root: `${root.level}:${bytesToHex(root.hash)}` })
 	}
@@ -70,27 +58,22 @@ async function start() {
 
 	const meshPeers = new Set<string>()
 
-	messageLog.addEventListener("graft", ({ detail: { peer: peerId } }) => {
-		console.log("gossipsub:graft", topic, peerId)
-		meshPeers.add(peerId)
+	network.pubsub.addEventListener("gossipsub:graft", ({ detail: { peerId } }) => {
+		console.log("gossipsub:graft", peerId.toString())
+		meshPeers.add(peerId.toString())
 		socket.post("gossipsub:mesh:update", { topic, peers: Array.from(meshPeers) })
 	})
 
-	messageLog.addEventListener("prune", ({ detail: { peer: peerId } }) => {
-		console.log("gossipsub:prune", topic, peerId)
-		meshPeers.delete(peerId)
+	network.pubsub.addEventListener("gossipsub:prune", ({ detail: { peerId } }) => {
+		console.log("gossipsub:prune", peerId.toString())
+		meshPeers.delete(peerId.toString())
 		socket.post("gossipsub:mesh:update", { topic, peers: Array.from(meshPeers) })
 	})
 
-	messageLog.addEventListener("sync", (event) => console.log(`completed sync with ${event.detail.peer}`))
-
-	const controller = new AbortController()
-
-	process.addListener("SIGINT", () => {
+	process.addListener("SIGINT", async () => {
 		process.stdout.write("\nReceived SIGINT\n")
-		controller.abort()
-		server.close()
-		// libp2p.stop()
+		await network.stop()
+		await gossipLog.close()
 	})
 
 	let delay = 0
@@ -99,8 +82,7 @@ async function start() {
 	}
 
 	await setTimeout(delay)
-	// await libp2p.start()
-	// await messageLog.listen(libp2p)
+	await network.start()
 
 	// const intervalId = setInterval(() => void messageLog.append(bytesToHex(randomBytes(8))), 5000)
 	// controller.signal.addEventListener("abort", () => clearInterval(intervalId))

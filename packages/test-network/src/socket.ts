@@ -1,64 +1,42 @@
 import WebSocket from "isomorphic-ws"
 import { randomBytes, bytesToHex } from "@noble/hashes/utils"
-import { peerIdFromString } from "@libp2p/peer-id"
-import type { Libp2p, PeerId } from "@libp2p/interface"
-import type { AbstractGossipLog, ServiceMap } from "@canvas-js/gossiplog"
+import { TypedEventEmitter, PeerId } from "@libp2p/interface"
+import { AbstractGossipLog } from "@canvas-js/gossiplog"
 
 import type { Event } from "./types.js"
-import { createEd25519PeerId } from "@libp2p/peer-id-factory"
 
-export type SocketEvent =
-	| { type: "boop" }
-	| { type: "provide" }
-	| { type: "query" }
-	| { type: "disconnect"; target: string }
+export type SocketEvents = {
+	append: CustomEvent<{}>
+	provide: CustomEvent<{}>
+	query: CustomEvent<{}>
+	disconnect: CustomEvent<{ target: string }>
+}
 
-export class Socket {
-	public static async open(
-		url: string,
-		messageLog: AbstractGossipLog<string>,
-		libp2p: Libp2p<ServiceMap> | null,
-		peerId = libp2p?.peerId,
-	) {
+export class Socket extends TypedEventEmitter<SocketEvents> {
+	public static async open(url: string, peerId: PeerId, gossipLog: AbstractGossipLog<string>) {
 		const ws = new WebSocket(url)
 		await new Promise((resolve) => ws.addEventListener("open", resolve, { once: true }))
-
-		if (peerId === undefined) {
-			peerId = await createEd25519PeerId()
-		}
-
-		return new Socket(ws, messageLog, peerId, libp2p)
+		return new Socket(ws, peerId, gossipLog)
 	}
 
-	private constructor(
-		readonly ws: WebSocket,
-		readonly messageLog: AbstractGossipLog<string>,
-		readonly peerId: PeerId,
-		readonly libp2p: Libp2p<ServiceMap> | null,
-	) {
+	private constructor(readonly ws: WebSocket, readonly peerId: PeerId, readonly gossipLog: AbstractGossipLog<string>) {
+		super()
+
 		ws.addEventListener("message", (msg) => {
-			const event = JSON.parse(msg.data.toString()) as SocketEvent
-			console.log(`event: ${event.type}`)
-			if (event.type === "boop") {
-				messageLog.append(bytesToHex(randomBytes(8))).catch((err) => console.error(err))
-				// .then(
-				// 	({ recipients }) =>
-				// 		recipients.then(
-				// 			(peers) => console.log(`recipients: [ ${peers.join(", ")} ]`),
-				// 			(err) => console.error(err),
-				// 		),
-				// 	(err) => console.error(err),
-				// )
-			} else if (event.type === "provide") {
-				// libp2p.services.dht.refreshRoutingTable().catch((err) => console.error(err))
-			} else if (event.type === "query") {
-				libp2p?.services.dht?.refreshRoutingTable().catch((err) => console.error(err))
-			} else if (event.type === "disconnect") {
-				libp2p?.hangUp(peerIdFromString(event.target)).then(
-					() => console.log(`disconnected from ${event.target}`),
-					(err) => console.error(err),
-				)
-			}
+			const { type, ...detail } = JSON.parse(msg.data.toString())
+			this.dispatchEvent(new CustomEvent(type, { detail }))
+		})
+
+		this.addEventListener("append", () => gossipLog.append(bytesToHex(randomBytes(8))))
+
+		gossipLog.addEventListener("sync", ({ detail: { peer, messageCount, duration } }) => {
+			console.log(`completed sync with ${peer} (${messageCount} messages in ${duration}ms)`)
+		})
+
+		gossipLog.addEventListener("commit", ({ detail: commit }) => {
+			const { hash, level } = commit.root
+			const root = `${level}:${bytesToHex(hash)}`
+			this.post("gossiplog:commit", { topic: gossipLog.topic, root })
 		})
 	}
 
