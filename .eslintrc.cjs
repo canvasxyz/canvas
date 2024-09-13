@@ -20,6 +20,7 @@ module.exports = {
 		},
 	},
 	rules: {
+		eqeqeq: ["error", "smart"],
 		"@typescript-eslint/no-explicit-any": "off",
 		"@typescript-eslint/no-empty-function": "off",
 		"@typescript-eslint/no-unused-vars": "off",
@@ -27,6 +28,7 @@ module.exports = {
 		"@typescript-eslint/no-empty-interface": "off",
 		"@typescript-eslint/ban-ts-comment": "off",
 		"no-empty-pattern": "off",
+		"no-empty": "off",
 		"require-yield": "off",
 		"@typescript-eslint/ban-types": [
 			"error",
