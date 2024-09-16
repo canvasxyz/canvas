@@ -1,13 +1,14 @@
-import { TypedEventEmitter } from "@libp2p/interface"
+import { Libp2p, TypedEventEmitter } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
-import { anySignal } from "any-signal"
 
 import type pg from "pg"
 
 import { Signature, Action, Session, Message, SessionSigner, SignerCache } from "@canvas-js/interfaces"
 import { AbstractModelDB, Model } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
-import { AbstractGossipLog, GossipLogEvents, NetworkConfig } from "@canvas-js/gossiplog"
+import { AbstractGossipLog, GossipLogEvents } from "@canvas-js/gossiplog"
+import type { ServiceMap, NetworkConfig } from "@canvas-js/gossiplog/libp2p"
+
 import { assert } from "@canvas-js/utils"
 
 import target from "#target"
@@ -175,16 +176,15 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 	}
 
 	public async connect(url: string, options: { signal?: AbortSignal } = {}): Promise<void> {
-		assert(url.startsWith("ws://") || url.startsWith("wss://"), "url must start with ws:// or wss://")
-		const signal = anySignal([this.controller.signal, options.signal])
-		await target.connect(this.messageLog, url, signal)
+		await this.messageLog.connect(url, options)
 	}
 
-	public async listen(port: number, options?: { signal?: AbortSignal }): Promise<void>
-	public async listen(config: NetworkConfig, options?: { signal?: AbortSignal }): Promise<void>
-	public async listen(handle: number | NetworkConfig, options: { signal?: AbortSignal } = {}): Promise<void> {
-		const signal = anySignal([this.controller.signal, options.signal])
-		await target.listen(this.messageLog, handle, signal)
+	public async listen(port: number, options: { signal?: AbortSignal } = {}): Promise<void> {
+		await target.listen(this, port, options)
+	}
+
+	public async startLibp2p(config: NetworkConfig): Promise<Libp2p<ServiceMap<Action | Session>>> {
+		return await this.messageLog.startLibp2p(config)
 	}
 
 	/**
@@ -271,7 +271,6 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		upperBound: { id: string; inclusive: boolean } | null = null,
 		options: { reverse?: boolean } = {},
 	): AsyncIterable<[id: string, signature: Signature, message: Message<Action | Session>]> {
-		// yield* this.messageLog.iterate(lowerBound, upperBound, options)
 		const range: { lt?: string; lte?: string; gt?: string; gte?: string; reverse?: boolean; limit?: number } = {}
 		if (lowerBound) {
 			if (lowerBound.inclusive) range.gte = lowerBound.id

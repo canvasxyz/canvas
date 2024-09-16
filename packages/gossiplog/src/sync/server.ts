@@ -7,7 +7,7 @@ import { pipe } from "it-pipe"
 import { Uint8ArrayList } from "uint8arraylist"
 
 import { assert, SECONDS } from "@canvas-js/utils"
-import * as Sync from "#protocols/sync"
+import * as Sync from "@canvas-js/gossiplog/protocols/sync"
 
 import { Snapshot } from "../interface.js"
 import { decodeKey, encodeNode } from "./utils.js"

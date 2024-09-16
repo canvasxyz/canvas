@@ -8,7 +8,7 @@ import { pipe } from "it-pipe"
 import type { Key, Node } from "@canvas-js/okra"
 import { assert } from "@canvas-js/utils"
 
-import * as Sync from "#protocols/sync"
+import * as Sync from "@canvas-js/gossiplog/protocols/sync"
 
 import { encodeKey, decodeNode } from "./utils.js"
 import { Snapshot } from "../interface.js"

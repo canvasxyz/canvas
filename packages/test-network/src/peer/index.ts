@@ -1,8 +1,10 @@
 import { setTimeout } from "node:timers/promises"
 import { randomBytes, bytesToHex } from "@noble/hashes/utils"
 
+import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 import { GossipLog } from "@canvas-js/gossiplog/sqlite"
-import { NetworkPeer } from "@canvas-js/gossiplog/network/peer"
+import { getLibp2p } from "@canvas-js/gossiplog/libp2p"
+import { assert } from "@canvas-js/utils"
 
 import { Socket } from "../socket.js"
 import { topic } from "../constants.js"
@@ -13,9 +15,9 @@ const { SERVICE_NAME } = process.env
 async function start() {
 	const gossipLog = new GossipLog<string>({ directory: "data", topic, apply: () => {} })
 
-	const network = await NetworkPeer.create(gossipLog, { listen, announce, bootstrapList })
+	const libp2p = await getLibp2p(gossipLog, { listen, announce, bootstrapList })
 
-	const socket = await Socket.open(`ws://dashboard:8000`, network.peerId, gossipLog)
+	const socket = await Socket.open(`ws://dashboard:8000`, libp2p.peerId, gossipLog)
 
 	// api.addListener("connection", (connection: DuplexWebSocket) => {
 	// 	const remoteAddr = connection.remoteAddress
@@ -58,13 +60,15 @@ async function start() {
 
 	const meshPeers = new Set<string>()
 
-	network.pubsub.addEventListener("gossipsub:graft", ({ detail: { peerId } }) => {
+	const { pubsub } = libp2p.services
+	assert(pubsub instanceof GossipSub)
+	pubsub.addEventListener("gossipsub:graft", ({ detail: { peerId } }) => {
 		console.log("gossipsub:graft", peerId.toString())
 		meshPeers.add(peerId.toString())
 		socket.post("gossipsub:mesh:update", { topic, peers: Array.from(meshPeers) })
 	})
 
-	network.pubsub.addEventListener("gossipsub:prune", ({ detail: { peerId } }) => {
+	pubsub.addEventListener("gossipsub:prune", ({ detail: { peerId } }) => {
 		console.log("gossipsub:prune", peerId.toString())
 		meshPeers.delete(peerId.toString())
 		socket.post("gossipsub:mesh:update", { topic, peers: Array.from(meshPeers) })
@@ -72,7 +76,7 @@ async function start() {
 
 	process.addListener("SIGINT", async () => {
 		process.stdout.write("\nReceived SIGINT\n")
-		await network.stop()
+		await libp2p.stop()
 		await gossipLog.close()
 	})
 
@@ -82,7 +86,7 @@ async function start() {
 	}
 
 	await setTimeout(delay)
-	await network.start()
+	await libp2p.start()
 
 	// const intervalId = setInterval(() => void messageLog.append(bytesToHex(randomBytes(8))), 5000)
 	// controller.signal.addEventListener("abort", () => clearInterval(intervalId))

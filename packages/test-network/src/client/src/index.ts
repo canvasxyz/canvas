@@ -7,7 +7,7 @@ import { createEd25519PeerId } from "@libp2p/peer-id-factory"
 
 import { SECONDS } from "@canvas-js/utils"
 import { GossipLog } from "@canvas-js/gossiplog/idb"
-import { NetworkClient } from "@canvas-js/gossiplog/network/client"
+import { NetworkClient } from "@canvas-js/gossiplog/client"
 
 import { Socket } from "../../socket.js"
 import { topic } from "../../constants.js"

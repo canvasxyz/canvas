@@ -1,9 +1,8 @@
 import type pg from "pg"
-import type http from "node:http"
 
 import type { Action, Session } from "@canvas-js/interfaces"
-import type { AbstractGossipLog, GossipLogInit, NetworkConfig, ServiceMap } from "@canvas-js/gossiplog"
-import { Libp2p } from "@libp2p/interface"
+import type { AbstractGossipLog, GossipLogInit } from "@canvas-js/gossiplog"
+import type { Canvas } from "@canvas-js/core"
 
 export interface PlatformTarget {
 	openGossipLog: (
@@ -11,11 +10,5 @@ export interface PlatformTarget {
 		init: GossipLogInit<Action | Session>,
 	) => Promise<AbstractGossipLog<Action | Session>>
 
-	connect: (gossipLog: AbstractGossipLog<Action | Session>, target: string, signal: AbortSignal) => Promise<void>
-
-	listen: (
-		gossipLog: AbstractGossipLog<Action | Session>,
-		handle: number | NetworkConfig,
-		signal: AbortSignal,
-	) => Promise<void>
+	listen: (app: Canvas, port: number, options?: { signal?: AbortSignal }) => Promise<void>
 }

@@ -62,10 +62,13 @@ for (const topic of topics) {
 			},
 		},
 		signers: [new SIWESigner(), new ATPSigner(), new CosmosSigner(), new SubstrateSigner({}), new SolanaSigner()],
-		bootstrapList: [BOOTSTRAP_LIST],
-		listen: [`/ip4/0.0.0.0/tcp/${LIBP2P_PORT}/ws`],
 		topic,
 	})
+
+	// await canvasApp.listen({
+	// 	bootstrapList: [BOOTSTRAP_LIST],
+	// 	listen: [`/ip4/0.0.0.0/tcp/${LIBP2P_PORT}/ws`],
+	// })
 
 	canvasApp.addEventListener("message", async (event) => {
 		const message = event.detail

@@ -1,4 +1,4 @@
-import { TypedEventEmitter, CustomEvent, CodeError } from "@libp2p/interface"
+import { TypedEventEmitter, CustomEvent, CodeError, Libp2p } from "@libp2p/interface"
 import { Logger, logger } from "@libp2p/logger"
 import { equals, toString } from "uint8arrays"
 
@@ -8,9 +8,12 @@ import type { AbstractModelDB, ModelSchema, Effect } from "@canvas-js/modeldb"
 import { ed25519 } from "@canvas-js/signatures"
 import { assert, zip, prepare, prepareMessage } from "@canvas-js/utils"
 
-import { Driver } from "./sync/driver.js"
+import type { NetworkConfig, ServiceMap } from "@canvas-js/gossiplog/libp2p"
+import * as sync from "@canvas-js/gossiplog/sync"
 
-import type { ServiceMap, Snapshot } from "./interface.js"
+import target from "#target"
+
+import type { Snapshot } from "./interface.js"
 import { AncestorIndex } from "./AncestorIndex.js"
 import { BranchMergeIndex } from "./BranchMergeIndex.js"
 import { MessageSource, SignedMessage } from "./SignedMessage.js"
@@ -69,10 +72,10 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 	public readonly topic: string
 	public readonly signer: Signer<Payload>
+	public readonly controller = new AbortController()
 
 	public abstract db: AbstractModelDB
 	public abstract tree: Tree
-	public abstract close(): Promise<void>
 
 	protected readonly log: Logger
 
@@ -95,6 +98,13 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		this.log = logger(`canvas:gossiplog:[${this.topic}]`)
 	}
 
+	public async close() {
+		this.log("closing")
+		this.controller.abort()
+		await this.tree.close()
+		await this.db.close()
+	}
+
 	public async replay() {
 		await this.tree.read(async (txn) => {
 			for (const leaf of txn.keys()) {
@@ -111,6 +121,18 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 				await this.#apply.apply(this, [signedMessage, { branch: record.branch }])
 			}
 		})
+	}
+
+	public async connect(url: string, options: { signal?: AbortSignal } = {}): Promise<void> {
+		await target.connect(this, url, options)
+	}
+
+	public async listen(port: number, options: { signal?: AbortSignal } = {}): Promise<void> {
+		await target.listen(this, port, options)
+	}
+
+	public async startLibp2p(config: NetworkConfig): Promise<Libp2p<ServiceMap<Payload>>> {
+		return await target.startLibp2p(this, config)
 	}
 
 	public encode<T extends Payload = Payload>(
@@ -386,7 +408,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		let complete = true
 
 		const root = await this.tree.read(async (txn) => {
-			const driver = new Driver(this.topic, snapshot, txn)
+			const driver = new sync.Driver(this.topic, snapshot, txn)
 			try {
 				for await (const keys of driver.sync()) {
 					const values = await snapshot.getValues(keys)

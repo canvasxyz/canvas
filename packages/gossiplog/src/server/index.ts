@@ -3,10 +3,10 @@ import http from "node:http"
 import { logger } from "@libp2p/logger"
 import { CodeError, Stream, StreamMuxer } from "@libp2p/interface"
 import { ProtocolStream, handle, select } from "@libp2p/multistream-select"
+import { yamux } from "@chainsafe/libp2p-yamux"
 
-import { createServer, WebSocketServer } from "it-ws/server"
-import { DuplexWebSocket } from "it-ws/duplex"
-import WebSocket from "it-ws/web-socket"
+import { WebSocket } from "ws"
+import duplex, { DuplexWebSocket } from "it-ws/duplex"
 import { pipe } from "it-pipe"
 import * as lp from "it-length-prefixed"
 import { pushable } from "it-pushable"
@@ -15,50 +15,41 @@ import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 
 import { assert } from "@canvas-js/utils"
 
-import { Event } from "#protocols/events"
+import * as sync from "@canvas-js/gossiplog/sync"
+import { Event } from "@canvas-js/gossiplog/protocols/events"
 
 import { AbstractGossipLog, GossipLogEvents } from "../AbstractGossipLog.js"
-import * as sync from "../sync/index.js"
 import { decodeId, encodeId } from "../ids.js"
-import { codes } from "../utils.js"
+import { codes, getPushProtocol, getSyncProtocol, chunk, decodeEvents, encodeEvents } from "../utils.js"
 
-import { factory, getPushProtocol, getSyncProtocol, chunk, decodeEvents, encodeEvents } from "./utils.js"
+export const factory = yamux({})({ logger: { forComponent: logger } })
 
 const ipv4Pattern = /^\d+\.\d+\.\d+.\d+$/
 const isIPv4 = (address: string) => ipv4Pattern.test(address)
 
 export class NetworkServer<Payload> {
-	public readonly wss: WebSocketServer
 	public readonly connections = new Map<string, Connection<Payload>>()
 
-	constructor(readonly gossipLog: AbstractGossipLog<Payload>, server?: http.Server) {
-		this.wss = createServer({
-			server,
-			onConnection: (duplex) => {
-				const connection = new Connection(gossipLog, duplex)
-				this.connections.set(connection.id, connection)
-				gossipLog.dispatchEvent(new CustomEvent("connect", { detail: { peer: connection.sourceURL } }))
-
-				duplex.socket.addListener("open", () => console.log("I OPENED THE THINGJFKLDSJFKSLDFJKLSDJF"))
-				duplex.socket.addEventListener("close", () => {
-					connection.close()
-					this.connections.delete(connection.id)
-					gossipLog.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: connection.sourceURL } }))
-				})
-			},
-		})
-
-		// this.wss.on("listening", (event) => console.log("LISTENING", event))
-		// this.wss.on("request", (event) => console.log("REQUEST", event))
-		// this.wss.on("connection", (ws, req) => console.log("REQUEST HEADERS", req.headers, req.headers["peer-id"]))
-	}
-
-	public listen(port: number) {
-		this.wss.listen(port)
-	}
+	constructor(readonly gossipLog: AbstractGossipLog<Payload>) {}
 
 	public close() {
-		this.wss.close()
+		for (const connection of this.connections.values()) {
+			connection.close()
+		}
+
+		this.connections.clear()
+	}
+
+	public handleConnection = (socket: WebSocket, req: http.IncomingMessage) => {
+		const connection = new Connection(this.gossipLog, socket, req)
+		this.connections.set(connection.id, connection)
+		this.gossipLog.dispatchEvent(new CustomEvent("connect", { detail: { peer: connection.sourceURL } }))
+
+		socket.addEventListener("close", () => {
+			connection.close()
+			this.connections.delete(connection.id)
+			this.gossipLog.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: connection.sourceURL } }))
+		})
 	}
 }
 
@@ -71,9 +62,14 @@ class Connection<Payload> {
 	readonly syncProtocol = getSyncProtocol(this.gossipLog.topic)
 	readonly sourceURL: string
 
-	constructor(readonly gossipLog: AbstractGossipLog<Payload>, readonly duplex: DuplexWebSocket) {
-		// TODO: validate duplex.socket.protocol
-		const { remoteAddress, remotePort } = duplex
+	constructor(readonly gossipLog: AbstractGossipLog<Payload>, readonly socket: WebSocket, req: http.IncomingMessage) {
+		// TODO: validate socket.protocol
+
+		const { remoteAddress, remotePort } = req.socket
+		assert(remoteAddress !== undefined, "expected remoteAddress !== undefined")
+		assert(remotePort !== undefined, "expected remotePort !== undefined")
+
+		const stream: DuplexWebSocket = duplex(socket, { remoteAddress, remotePort })
 
 		this.log("new connection from %s:%d", remoteAddress, remotePort)
 		gossipLog.addEventListener("message", this.handleMessage)
@@ -99,7 +95,7 @@ class Connection<Payload> {
 			},
 		})
 
-		pipe(duplex, this.muxer, chunk, duplex)
+		pipe(stream, this.muxer, chunk, stream)
 			.then(() => this.muxer.close())
 			.catch((err) => this.log.error(err))
 	}
@@ -111,7 +107,7 @@ class Connection<Payload> {
 	}
 
 	public isConnected(): boolean {
-		return this.duplex.socket.readyState === WebSocket.OPEN
+		return this.socket.readyState === WebSocket.OPEN
 	}
 
 	private async newStream(protocol: string): Promise<Stream> {

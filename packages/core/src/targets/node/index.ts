@@ -1,16 +1,21 @@
 import fs from "node:fs"
 import path from "node:path"
+import http from "node:http"
+import express from "express"
+import cors from "cors"
 
 import type pg from "pg"
+import { WebSocketServer } from "ws"
 
 import { GossipLog as SqliteGossipLog } from "@canvas-js/gossiplog/sqlite"
 import { GossipLog as PostgresGossipLog } from "@canvas-js/gossiplog/pg"
-import { NetworkServer } from "@canvas-js/gossiplog/network/server"
-import { NetworkPeer } from "@canvas-js/gossiplog/network/peer"
+import { NetworkServer } from "@canvas-js/gossiplog/server"
+import { getLibp2p } from "@canvas-js/gossiplog/libp2p"
 import { assert } from "@canvas-js/utils"
+import { createAPI } from "@canvas-js/core/api"
 
 import type { PlatformTarget } from "../interface.js"
-import { NetworkClient } from "@canvas-js/gossiplog/network/client"
+import { anySignal } from "any-signal"
 
 const isPostgres = (path: string | pg.ConnectionConfig): boolean =>
 	typeof path !== "string" || path.startsWith("postgres://") || path.startsWith("postgresql://")
@@ -46,20 +51,25 @@ const target: PlatformTarget = {
 		}
 	},
 
-	async connect(gossipLog, url, signal) {
-		const client = new NetworkClient(gossipLog, url)
-		signal.addEventListener("abort", () => client.close())
-	},
+	async listen(app, port, options = {}) {
+		const api = express()
+		api.use(cors())
+		api.use("/api", createAPI(app))
 
-	async listen(gossipLog, handle, signal) {
-		if (typeof handle === "number") {
-			const server = new NetworkServer(gossipLog)
-			server.listen(handle)
-			signal.addEventListener("abort", () => server.close())
-		} else {
-			const peer = await NetworkPeer.create(gossipLog, handle)
-			signal.addEventListener("abort", () => peer.stop())
-		}
+		// TODO: add metrics API
+
+		const server = http.createServer(api)
+		const network = new NetworkServer(app.messageLog)
+		const wss = new WebSocketServer({ server, perMessageDeflate: false })
+		wss.on("connection", network.handleConnection)
+
+		const signal = anySignal([app.messageLog.controller.signal, options.signal])
+		signal.addEventListener("abort", () => {
+			network.close()
+			wss.close(() => server.close())
+		})
+
+		await new Promise<void>((resolve) => server.listen(port, resolve))
 	},
 }
 

@@ -6,8 +6,12 @@ import {
 	Stream,
 	StreamHandler,
 	CodeError,
-	Libp2p,
+	Startable,
+	PubSub,
+	Libp2pEvents,
+	TypedEventTarget,
 } from "@libp2p/interface"
+import { ConnectionManager, Registrar } from "@libp2p/interface-internal"
 
 import { GossipSub, GossipsubEvents } from "@chainsafe/libp2p-gossipsub"
 import { logger } from "@libp2p/logger"
@@ -19,65 +23,73 @@ import PQueue from "p-queue"
 
 import { assert } from "@canvas-js/utils"
 
-import { Event } from "#protocols/events"
+import * as sync from "@canvas-js/gossiplog/sync"
+import { Event } from "@canvas-js/gossiplog/protocols/events"
 
-import type { ServiceMap, NetworkConfig } from "../interface.js"
 import { AbstractGossipLog, GossipLogEvents } from "../AbstractGossipLog.js"
+import { SignedMessage } from "../SignedMessage.js"
 
 import { decodeId, encodeId } from "../ids.js"
-import { Client, Server } from "../sync/index.js"
+
 import {
 	DEFAULT_PROTOCOL_SELECT_TIMEOUT,
 	MAX_INBOUND_STREAMS,
 	MAX_OUTBOUND_STREAMS,
 	NEGOTIATE_FULLY,
 } from "../constants.js"
-import { codes } from "../utils.js"
+import { codes, decodeEvents, encodeEvents, getPushProtocol, getSyncProtocol } from "../utils.js"
 
-import { SignedMessage } from "../SignedMessage.js"
-import { getLibp2p } from "./libp2p.js"
-import { decodeEvents, encodeEvents, getPushProtocol, getSyncProtocol } from "./utils.js"
+export interface GossipLogServiceComponents {
+	pubsub: PubSub<GossipsubEvents>
+	events: TypedEventTarget<Libp2pEvents>
+	registrar: Registrar
+	connectionManager: ConnectionManager
+}
 
-export class NetworkPeer<Payload = unknown> {
-	private static extractGossipSub(libp2p: Libp2p<ServiceMap>): GossipSub {
-		const pubsub = libp2p.services.pubsub
+export interface GossipLogServiceInit<Payload> {
+	gossipLog: AbstractGossipLog<Payload>
+}
+
+export class GossipLogService<Payload = unknown> implements Startable {
+	private static extractGossipSub(components: GossipLogServiceComponents): GossipSub {
+		const pubsub = components.pubsub
 		assert(pubsub instanceof GossipSub, "expected pubsub instanceof GossipSub")
 		return pubsub
 	}
 
 	public readonly pubsub: GossipSub
+	public readonly messageLog: AbstractGossipLog<Payload>
 
 	private readonly log: Logger
-	private readonly syncProtocol = getSyncProtocol(this.messageLog.topic)
-	private readonly pushProtocol = getPushProtocol(this.messageLog.topic)
+	private readonly syncProtocol: string
+	private readonly pushProtocol: string
 	private readonly syncQueue = new PQueue({ concurrency: 1 })
 	private readonly syncQueuePeers = new Set<string>()
 
-	private readonly controller = new AbortController()
 	private readonly pushTopology = new Set<string>()
 	private readonly eventSources = new Map<string, Pushable<Event>>()
 
 	#pushTopologyId: string | null = null
-	#started = this.libp2p.status === "started"
+	#started = false
 
-	public static async create<Payload>(gossipLog: AbstractGossipLog<Payload>, { start, ...config }: NetworkConfig) {
-		const libp2p = await getLibp2p(gossipLog.topic, config)
-		const network = new NetworkPeer(libp2p, gossipLog)
-
-		if (start ?? false) {
-			await network.start()
-		}
-
-		return network
+	constructor(private readonly components: GossipLogServiceComponents, init: GossipLogServiceInit<Payload>) {
+		this.log = logger(`canvas:gossiplog:service`)
+		this.pubsub = GossipLogService.extractGossipSub(components)
+		this.messageLog = init.gossipLog
+		this.syncProtocol = getSyncProtocol(this.messageLog.topic)
+		this.pushProtocol = getPushProtocol(this.messageLog.topic)
 	}
 
-	constructor(public readonly libp2p: Libp2p<ServiceMap>, public readonly messageLog: AbstractGossipLog<Payload>) {
-		this.log = logger(`canvas:network:peer`)
-		this.pubsub = NetworkPeer.extractGossipSub(libp2p)
-	}
+	public beforeStart() {
+		this.log("beforeStart")
+		this.components.events.addEventListener("connection:open", this.handleConnectionOpen)
+		this.components.events.addEventListener("connection:close", this.handleConnectionClose)
+		this.pubsub.addEventListener("gossipsub:message", this.handleGossipsubMessage)
+		this.pubsub.addEventListener("gossipsub:graft", this.handleGossipsubGraft)
+		this.pubsub.addEventListener("gossipsub:prune", this.handleGossipsubPrune)
 
-	public get peerId() {
-		return this.libp2p.peerId
+		this.messageLog.addEventListener("message", this.handleMessage)
+		this.messageLog.addEventListener("sync", this.handleSync)
 	}
 
 	public async start() {
@@ -87,17 +99,6 @@ export class NetworkPeer<Payload = unknown> {
 
 		this.log("start")
 		this.#started = true
-
-		this.libp2p.addEventListener("connection:open", this.handleConnectionOpen)
-		this.libp2p.addEventListener("connection:close", this.handleConnectionClose)
-		this.pubsub.addEventListener("gossipsub:message", this.handleGossipsubMessage)
-		this.pubsub.addEventListener("gossipsub:graft", this.handleGossipsubGraft)
-		this.pubsub.addEventListener("gossipsub:prune", this.handleGossipsubPrune)
-
-		// this.pubsub.addEventListener("gossipsub:graft", ({detail: peer}) => this.messageLog.)
-
-		this.messageLog.addEventListener("message", this.handleMessage)
-		this.messageLog.addEventListener("sync", this.handleSync)
 
 		/**
 		 * sync is the protocol for initiating merkle syncs using the Okra index.
@@ -109,7 +110,7 @@ export class NetworkPeer<Payload = unknown> {
 		 * 3. when a peer receives a push insert with missing parents, it schedules
 		 *    a sync with the sender
 		 */
-		await this.libp2p.handle(this.syncProtocol, this.handleSyncStream, {
+		await this.components.registrar.handle(this.syncProtocol, this.handleSyncStream, {
 			maxInboundStreams: MAX_INBOUND_STREAMS,
 			maxOutboundStreams: MAX_OUTBOUND_STREAMS,
 		})
@@ -125,12 +126,12 @@ export class NetworkPeer<Payload = unknown> {
 		 *    missing messages, it pushes its new heads to all of its peers, except for
 		 *    the sync source.
 		 */
-		await this.libp2p.handle(this.pushProtocol, this.handlePushStream, {
+		await this.components.registrar.handle(this.pushProtocol, this.handlePushStream, {
 			maxInboundStreams: MAX_INBOUND_STREAMS,
 			maxOutboundStreams: MAX_OUTBOUND_STREAMS,
 		})
 
-		this.#pushTopologyId = await this.libp2p.register(this.pushProtocol, {
+		this.#pushTopologyId = await this.components.registrar.register(this.pushProtocol, {
 			notifyOnTransient: false,
 			onConnect: (peerId, connection) => {
 				this.log("connected to %p", peerId)
@@ -149,44 +150,45 @@ export class NetworkPeer<Payload = unknown> {
 				this.pushTopology.delete(peerId.toString())
 			},
 		})
+	}
 
-		await this.libp2p.start()
-
+	public afterStart() {
 		this.pubsub.subscribe(this.messageLog.topic)
+	}
+
+	public beforeStop() {
+		this.messageLog.removeEventListener("message", this.handleMessage)
+		this.messageLog.removeEventListener("sync", this.handleSync)
+
+		this.components.events.removeEventListener("connection:open", this.handleConnectionOpen)
+		this.components.events.removeEventListener("connection:close", this.handleConnectionClose)
+		this.pubsub.removeEventListener("gossipsub:message", this.handleGossipsubMessage)
+		this.pubsub.removeEventListener("gossipsub:graft", this.handleGossipsubGraft)
+		this.pubsub.removeEventListener("gossipsub:prune", this.handleGossipsubPrune)
+
+		this.pubsub.unsubscribe(this.messageLog.topic)
 	}
 
 	public async stop() {
 		this.log("stop")
-		if (this.libp2p.status !== "started") return
-		if (this.#started === false) return
-		this.#started = false
+		if (this.#started === false) {
+			return
+		}
 
-		this.controller.abort()
-		this.pubsub.unsubscribe(this.messageLog.topic)
+		this.#started = false
 
 		for (const [peer, source] of this.eventSources) {
 			source.end()
 			this.eventSources.delete(peer)
 		}
 
-		await this.libp2p.unhandle(this.syncProtocol)
-		await this.libp2p.unhandle(this.pushProtocol)
+		await this.components.registrar.unhandle(this.syncProtocol)
+		await this.components.registrar.unhandle(this.pushProtocol)
 
 		if (this.#pushTopologyId !== null) {
-			this.libp2p.unregister(this.#pushTopologyId)
+			this.components.registrar.unregister(this.#pushTopologyId)
 			this.#pushTopologyId = null
 		}
-
-		this.messageLog.removeEventListener("message", this.handleMessage)
-		this.messageLog.removeEventListener("sync", this.handleSync)
-
-		this.libp2p.removeEventListener("connection:open", this.handleConnectionOpen)
-		this.libp2p.removeEventListener("connection:close", this.handleConnectionClose)
-		this.pubsub.removeEventListener("gossipsub:message", this.handleGossipsubMessage)
-		this.pubsub.removeEventListener("gossipsub:graft", this.handleGossipsubGraft)
-		this.pubsub.removeEventListener("gossipsub:prune", this.handleGossipsubPrune)
-
-		await this.libp2p.stop()
 	}
 
 	private async newStream(connection: Connection, protocol: string): Promise<Stream> {
@@ -217,7 +219,6 @@ export class NetworkPeer<Payload = unknown> {
 		}
 
 		this.log("gossipsub:graft %s", peerId)
-		this.messageLog.dispatchEvent(new CustomEvent("graft", { detail: { peer: peerId } }))
 	}
 
 	private handleGossipsubPrune = ({ detail: { topic, peerId } }: GossipsubEvents["gossipsub:prune"]) => {
@@ -226,7 +227,6 @@ export class NetworkPeer<Payload = unknown> {
 		}
 
 		this.log("gossipsub:prune %s", peerId)
-		this.messageLog.dispatchEvent(new CustomEvent("prune", { detail: { peer: peerId } }))
 	}
 
 	private handleMessage = ({ detail: { id, key, value, source } }: GossipLogEvents["message"]) => {
@@ -401,7 +401,7 @@ export class NetworkPeer<Payload = unknown> {
 		this.log("opened incoming sync stream %s from peer %p", stream.id, peerId)
 
 		try {
-			await this.messageLog.serve((txn) => Server.handleStream(txn, stream))
+			await this.messageLog.serve((txn) => sync.Server.handleStream(txn, stream))
 			stream.close()
 		} catch (err) {
 			if (err instanceof Error) {
@@ -434,7 +434,7 @@ export class NetworkPeer<Payload = unknown> {
 	private async sync(peerId: PeerId): Promise<void> {
 		this.log("initiating sync with %p", peerId)
 
-		const connection = this.libp2p
+		const connection = this.components.connectionManager
 			.getConnections(peerId)
 			.find((connection) => connection.transient === false && connection.status === "open")
 
@@ -454,7 +454,7 @@ export class NetworkPeer<Payload = unknown> {
 
 			this.log("opened outgoing sync stream %s to peer %p", stream.id, peerId)
 
-			const client = new Client(stream)
+			const client = new sync.Client(stream)
 			try {
 				const result = await this.messageLog.sync(client)
 				if (result.complete) {
@@ -475,3 +475,8 @@ export class NetworkPeer<Payload = unknown> {
 		} while (connection.status === "open")
 	}
 }
+
+export const gossipLogService =
+	<Payload>(init: GossipLogServiceInit<Payload>) =>
+	(components: GossipLogServiceComponents) =>
+		new GossipLogService<Payload>(components, init)

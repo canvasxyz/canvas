@@ -1,25 +1,58 @@
 import { createLibp2p } from "libp2p"
-import { Libp2p } from "@libp2p/interface"
-import { identify } from "@libp2p/identify"
+import { Libp2p, PeerId, PubSub } from "@libp2p/interface"
+import { Identify, identify } from "@libp2p/identify"
 import { webSockets } from "@libp2p/websockets"
 import { all } from "@libp2p/websockets/filters"
 import { yamux } from "@chainsafe/libp2p-yamux"
 import { noise } from "@chainsafe/libp2p-noise"
 import { bootstrap } from "@libp2p/bootstrap"
-import { gossipsub } from "@chainsafe/libp2p-gossipsub"
-import { kadDHT } from "@libp2p/kad-dht"
-import { ping as pingService } from "@libp2p/ping"
+import { GossipsubEvents, gossipsub } from "@chainsafe/libp2p-gossipsub"
+import { KadDHT, kadDHT } from "@libp2p/kad-dht"
+import { PingService, ping as pingService } from "@libp2p/ping"
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
+
+import type { Registry } from "prom-client"
 
 import { Multiaddr } from "@multiformats/multiaddr"
 
-import type { ServiceMap, NetworkConfig } from "../interface.js"
+import type { AbstractGossipLog } from "@canvas-js/gossiplog"
 
 import { getPeerId } from "./peerId.js"
+import { GossipLogService, gossipLogService } from "./service.js"
+
+export interface NetworkConfig {
+	start?: boolean
+	peerId?: PeerId
+
+	/** array of local WebSocket multiaddrs, e.g. "/ip4/127.0.0.1/tcp/3000/ws" */
+	listen?: string[]
+
+	/** array of public WebSocket multiaddrs, e.g. "/dns4/myapp.com/tcp/443/wss" */
+	announce?: string[]
+
+	bootstrapList?: string[]
+
+	minConnections?: number
+	maxConnections?: number
+
+	registry?: Registry
+}
+
+export type ServiceMap<Payload> = {
+	identify: Identify
+	ping: PingService
+	pubsub: PubSub<GossipsubEvents>
+	topicDHT: KadDHT
+	globalDHT: KadDHT
+	gossipLog: GossipLogService<Payload>
+}
 
 const getDHTProtocol = (topic: string | null) => (topic === null ? `/canvas/kad/1.0.0` : `/canvas/kad/1.0.0/${topic}`)
 
-export async function getLibp2p(topic: string, config: NetworkConfig): Promise<Libp2p<ServiceMap>> {
+export async function getLibp2p<Payload>(
+	gossipLog: AbstractGossipLog<Payload>,
+	config: NetworkConfig,
+): Promise<Libp2p<ServiceMap<Payload>>> {
 	let peerId = config.peerId
 	if (peerId === undefined) {
 		peerId = await getPeerId()
@@ -31,7 +64,7 @@ export async function getLibp2p(topic: string, config: NetworkConfig): Promise<L
 
 	return await createLibp2p({
 		peerId: config.peerId,
-		start: config.start ?? false,
+		start: config.start ?? true,
 		addresses: { listen, announce },
 		transports: [webSockets({ filter: all })],
 		connectionGater: {
@@ -58,8 +91,8 @@ export async function getLibp2p(topic: string, config: NetworkConfig): Promise<L
 			identify: identify({ protocolPrefix: "canvas" }),
 			ping: pingService({ protocolPrefix: "canvas" }),
 
-			topicDHT: kadDHT({ protocol: getDHTProtocol(topic) }),
 			globalDHT: kadDHT({ protocol: getDHTProtocol(null) }),
+			topicDHT: kadDHT({ protocol: getDHTProtocol(gossipLog.topic) }),
 
 			pubsub: gossipsub({
 				emitSelf: false,
@@ -69,6 +102,8 @@ export async function getLibp2p(topic: string, config: NetworkConfig): Promise<L
 				asyncValidation: true,
 				scoreParams: { IPColocationFactorWeight: 0 },
 			}),
+
+			gossipLog: gossipLogService({ gossipLog: gossipLog }),
 		},
 	})
 }

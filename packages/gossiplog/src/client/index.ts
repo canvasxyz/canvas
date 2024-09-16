@@ -1,5 +1,6 @@
 import { CodeError, Stream } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
+import { yamux } from "@chainsafe/libp2p-yamux"
 import { ProtocolStream, select, handle } from "@libp2p/multistream-select"
 
 import WebSocket from "it-ws/web-socket"
@@ -11,14 +12,14 @@ import { equals } from "uint8arrays"
 
 import { assert } from "@canvas-js/utils"
 
-import { Event } from "#protocols/events"
+import { Event } from "@canvas-js/gossiplog/protocols/events"
+import * as sync from "@canvas-js/gossiplog/sync"
 
 import { AbstractGossipLog, GossipLogEvents } from "../AbstractGossipLog.js"
-import * as sync from "../sync/index.js"
 import { decodeId, encodeId } from "../ids.js"
-import { codes } from "../utils.js"
+import { codes, getPushProtocol, getSyncProtocol, chunk, encodeEvents, decodeEvents } from "../utils.js"
 
-import { factory, getPushProtocol, getSyncProtocol, chunk, encodeEvents, decodeEvents } from "./utils.js"
+export const factory = yamux({})({ logger: { forComponent: logger } })
 
 export class NetworkClient<Payload> {
 	log = logger("canvas:network:client")
@@ -183,6 +184,7 @@ export class NetworkClient<Payload> {
 
 			this.log("opened outgoing sync stream %s", stream.id)
 
+			// sync.Client
 			const client = new sync.Client(stream)
 			try {
 				const result = await this.gossipLog.sync(client, { peer: this.sourceURL })

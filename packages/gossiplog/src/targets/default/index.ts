@@ -1,11 +1,15 @@
 import type { PlatformTarget } from "../interface.js"
 
 const target: PlatformTarget = {
-	async openGossipLog(location, init) {
+	async connect(gossipLog, url, options) {
 		throw new Error("Unsupported platform")
 	},
 
-	async listen(app, port, options) {
+	async listen(gossipLog, port, options) {
+		throw new Error("Unsupported platform")
+	},
+
+	async startLibp2p(gossipLog, config) {
 		throw new Error("Unsupported platform")
 	},
 }

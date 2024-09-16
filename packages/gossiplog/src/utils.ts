@@ -1,5 +1,7 @@
-import { anySignal } from "any-signal"
+import { Uint8ArrayList } from "uint8arraylist"
 import * as cbor from "@ipld/dag-cbor"
+
+import { Event } from "@canvas-js/gossiplog/protocols/events"
 
 export const codes = {
 	MISSING_PARENT: "MISSING_PARENT",
@@ -24,13 +26,24 @@ export function* getAncestorClocks(clock: number): Iterable<number> {
 	}
 }
 
-export async function wait(interval: number, options: { signal: AbortSignal }) {
-	if (options.signal.aborted) {
-		return
-	}
+export const getSyncProtocol = (topic: string) => `/canvas/v1/${topic}/sync`
+export const getPushProtocol = (topic: string) => `/canvas/v1/${topic}/push`
 
-	const signal = anySignal([AbortSignal.timeout(interval), options.signal])
-	await new Promise<void>((resolve) => {
-		signal.addEventListener("abort", () => resolve())
-	}).finally(() => signal.clear())
+export async function* chunk(iter: AsyncIterable<Uint8ArrayList | Uint8Array>) {
+	for await (const item of iter) {
+		yield item.subarray()
+	}
+}
+
+export async function* decodeEvents(source: AsyncIterable<Uint8Array | Uint8ArrayList>) {
+	for await (const msg of source) {
+		const event = Event.decode(msg.subarray())
+		yield event
+	}
+}
+
+export async function* encodeEvents(source: AsyncIterable<Event>) {
+	for await (const event of source) {
+		yield Event.encode(event)
+	}
 }
