@@ -84,7 +84,7 @@ for (const topic of topics) {
 	// await canvasApp.libp2p.start()
 	// console.log(`peer id: ${canvasApp.libp2p.peerId}`)
 
-	const canvasApiApp = createAPI(canvasApp, { exposeMessages: true, exposeModels: true, exposeP2P: true })
+	const canvasApiApp = createAPI(canvasApp)
 	expressApp.use(`/canvas_api/${topic}`, canvasApiApp)
 
 	canvasApps[topic] = canvasApp
