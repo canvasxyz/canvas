@@ -306,7 +306,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 		const branch = await this.getBranch(id, parentMessageRecords)
 
-		await this.#apply.apply(this, [signedMessage, branch])
+		await this.#apply.apply(this, [signedMessage, { branch }])
 
 		const hash = toString(hashEntry(key, value), "hex")
 
