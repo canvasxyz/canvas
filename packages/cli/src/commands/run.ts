@@ -90,7 +90,7 @@ export const builder = (yargs: Argv) =>
 		})
 		.option("bootstrap", {
 			type: "array",
-			desc: "Initial application peers, e.g. /dns4/myapp.com/tcp/4444/ws",
+			desc: "Initial application peers, e.g. /dns4/myapp.com/tcp/4444/ws/p2p/12D3KooWnzt...",
 		})
 		.option("min-connections", {
 			type: "number",
