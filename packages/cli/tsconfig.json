@@ -12,6 +12,7 @@
 		{ "path": "../chain-solana" },
 		{ "path": "../chain-substrate" },
 		{ "path": "../core" },
+		{ "path": "../gossiplog" },
 		{ "path": "../interfaces" }
 	]
 }

@@ -17,6 +17,7 @@
 		"@canvas-js/chain-solana": "0.10.10",
 		"@canvas-js/chain-substrate": "0.10.10",
 		"@canvas-js/core": "0.10.10",
+		"@canvas-js/gossiplog": "0.10.10",
 		"@canvas-js/interfaces": "0.10.10",
 		"@ipld/dag-json": "^10.2.2",
 		"@libp2p/peer-id": "^4.2.0",
