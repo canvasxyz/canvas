@@ -4,8 +4,8 @@ function truncateAddress(address: string, opts?: { numStartChars?: number; numEn
 	const opts_ = opts || {}
 
 	// don't handle 0 as undefined
-	const numStartChars = opts_.numStartChars == 0 ? 0 : opts_.numStartChars || 8
-	const numEndChars = opts_.numEndChars == 0 ? 0 : opts_.numEndChars || 8
+	const numStartChars = opts_.numStartChars === 0 ? 0 : opts_.numStartChars || 8
+	const numEndChars = opts_.numEndChars === 0 ? 0 : opts_.numEndChars || 8
 
 	if (address.length <= numStartChars + numEndChars) {
 		return address
