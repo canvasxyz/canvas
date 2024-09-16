@@ -62,15 +62,15 @@ app.post("/api/query/:peerId", (req, res) => {
 	return void res.status(200).end()
 })
 
-app.post("/api/boop/:peerId", (req, res) => {
-	console.log("BOOP", req.params.peerId)
+app.post("/api/append/:peerId", (req, res) => {
+	console.log("append", req.params.peerId)
 
 	const ws = sockets.get(req.params.peerId)
 	if (ws === undefined) {
 		return void res.status(404).end()
 	}
 
-	ws.send(JSON.stringify({ type: "boop" }))
+	ws.send(JSON.stringify({ type: "append" }))
 	return void res.status(200).end()
 })
 

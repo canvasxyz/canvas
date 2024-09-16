@@ -38,11 +38,4 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 	private constructor(public readonly db: ModelDB, public readonly tree: MemoryTree, init: GossipLogInit<Payload>) {
 		super(init)
 	}
-
-	public async close() {
-		this.log("closing")
-		await this.service?.stop()
-		await this.tree.close()
-		await this.db.close()
-	}
 }

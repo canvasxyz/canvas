@@ -40,7 +40,7 @@ function enumRandom<T extends object>(enumObj: T): T[keyof T] {
 }
 
 function resolveCounterValue(v: any) {
-	if (typeof v != "string") {
+	if (typeof v !== "string") {
 		return
 	}
 	let total = 0
@@ -104,7 +104,6 @@ async function createCanvasCounterApp() {
 				},
 			},
 		},
-		start: false,
 	})
 }
 

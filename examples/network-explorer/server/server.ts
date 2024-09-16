@@ -62,10 +62,13 @@ for (const topic of topics) {
 			},
 		},
 		signers: [new SIWESigner(), new ATPSigner(), new CosmosSigner(), new SubstrateSigner({}), new SolanaSigner()],
-		bootstrapList: [BOOTSTRAP_LIST],
-		listen: [`/ip4/0.0.0.0/tcp/${LIBP2P_PORT}/ws`],
 		topic,
 	})
+
+	// await canvasApp.listen({
+	// 	bootstrapList: [BOOTSTRAP_LIST],
+	// 	listen: [`/ip4/0.0.0.0/tcp/${LIBP2P_PORT}/ws`],
+	// })
 
 	canvasApp.addEventListener("message", async (event) => {
 		const message = event.detail
@@ -78,10 +81,10 @@ for (const topic of topics) {
 		}
 	})
 
-	await canvasApp.libp2p.start()
-	console.log(`peer id: ${canvasApp.libp2p.peerId}`)
+	// await canvasApp.libp2p.start()
+	// console.log(`peer id: ${canvasApp.libp2p.peerId}`)
 
-	const canvasApiApp = createAPI(canvasApp, { exposeMessages: true, exposeModels: true, exposeP2P: true })
+	const canvasApiApp = createAPI(canvasApp)
 	expressApp.use(`/canvas_api/${topic}`, canvasApiApp)
 
 	canvasApps[topic] = canvasApp
@@ -196,11 +199,11 @@ expressApp.get("/index_api/counts", async (req, res) => {
 	const connectionsMap: Record<string, string> = {}
 	for (const row of addressCountResult) {
 		addressCountsMap[row.topic] = parseInt(row.count, 10)
-		connectionCountsMap[row.topic] = canvasApps[row.topic]?.libp2p.getConnections().length
-		connectionsMap[row.topic] = canvasApps[row.topic]?.libp2p
-			.getConnections()
-			.map((c) => c.remoteAddr.toString())
-			.join(", ")
+		// connectionCountsMap[row.topic] = canvasApps[row.topic]?.libp2p.getConnections().length
+		// connectionsMap[row.topic] = canvasApps[row.topic]?.libp2p
+		// 	.getConnections()
+		// 	.map((c) => c.remoteAddr.toString())
+		// 	.join(", ")
 	}
 
 	const result = []
@@ -249,7 +252,7 @@ expressApp.get("/index_api/counts/:topic", async (req, res) => {
 		action_count: actionCount,
 		session_count: sessionCount,
 		address_count: addressCountResult.count || 0,
-		connection_count: canvasApps[req.params.topic]?.libp2p.getConnections().length || 0,
+		// connection_count: canvasApps[req.params.topic]?.libp2p.getConnections().length || 0,
 	}
 	res.json(result)
 })

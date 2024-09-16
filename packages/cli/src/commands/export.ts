@@ -23,7 +23,7 @@ export async function handler(args: Args) {
 		throw new Error("Expected path to application directory, found path to contract file")
 	}
 
-	const app = await Canvas.initialize({ topic, path: location, contract, start: false })
+	const app = await Canvas.initialize({ topic, path: location, contract })
 	const records = await app.messageLog.getMessages()
 	for (const { id, signature, message } of records) {
 		process.stdout.write(json.stringify({ id, signature, message }))

@@ -14,7 +14,7 @@ import { CodeError } from "@libp2p/interface"
  */
 export class Driver {
 	private readonly log: Logger
-	constructor(topic: string, private readonly source: SyncSource, private readonly target: ReadOnlyTransaction) {
+	constructor(topic: string, private readonly source: SyncSource, private readonly txn: ReadOnlyTransaction) {
 		this.log = logger(`canvas:gossiplog:[${topic}]:driver`)
 	}
 
@@ -23,7 +23,7 @@ export class Driver {
 		assert(sourceRoot.key === null, "invalid source root")
 		this.log("source root: level %d, hash %s", sourceRoot.level, hex(sourceRoot.hash))
 
-		const targetRoot = this.target.getRoot()
+		const targetRoot = this.txn.getRoot()
 		assert(targetRoot.key === null, "invalid target root")
 		this.log("target root: level %d, hash %s", targetRoot.level, hex(targetRoot.hash))
 
@@ -66,7 +66,7 @@ export class Driver {
 	}
 
 	private async *syncNode(sourceNode: Node): AsyncGenerator<Uint8Array[]> {
-		const targetNode = this.target.getNode(sourceNode.level, sourceNode.key)
+		const targetNode = this.txn.getNode(sourceNode.level, sourceNode.key)
 		if (targetNode !== null) {
 			if (targetNode.level === sourceNode.level && equals(targetNode.hash, sourceNode.hash)) {
 				return
@@ -87,7 +87,7 @@ export class Driver {
 
 				assert(level === 0, "unexpected leaf level")
 
-				const leaf = this.target.getNode(0, key)
+				const leaf = this.txn.getNode(0, key)
 				if (leaf === null) {
 					keys.push(key)
 				} else if (equals(hash, leaf.hash)) {

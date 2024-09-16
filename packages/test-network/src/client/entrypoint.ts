@@ -29,7 +29,7 @@ const q = Object.entries(query)
 	.map(([name, value]) => `${name}=${encodeURIComponent(value)}`)
 	.join("&")
 
-const url = `http://localhost:8000/peer-browser/index.html?${q}`
+const url = `http://localhost:8000/client/index.html?${q}`
 
 const browser = await puppeteer.launch({
 	userDataDir: `data/${bytesToHex(randomBytes(8))}`,
@@ -56,6 +56,9 @@ for (let i = 0; i < peerCount; i++) {
 			page.on("console", (msg) => {
 				console.log(`[page-${i}] [${msg.type()}] ${msg.text()}`)
 			})
+
+			page.on("error", (err) => console.error(`[page-${i}] [error] ${err}`))
+			page.on("pageerror", (err) => console.error(`[page-${i}] [pageerror] ${err}`))
 
 			page.goto(url)
 		})

@@ -1,12 +1,8 @@
 import React, { useContext, useEffect, useState } from "react"
-import type { Connection } from "@libp2p/interface"
 
 import type { Canvas } from "@canvas-js/core"
 
 import { AppContext } from "./AppContext.js"
-
-import { PeerIdView } from "./components/PeerIdView.js"
-import { MultiaddrView } from "./components/MultiaddrView.js"
 
 export interface ConnectionStatusProps {
 	topic: string
@@ -27,12 +23,6 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({ topic }) => 
 			<div>
 				<code className="text-sm">{topic}</code>
 			</div>
-			<div>
-				<span className="text-sm">Peer Id</span>
-			</div>
-			<div>
-				<PeerIdView peerId={app.libp2p.peerId} />
-			</div>
 
 			<hr />
 			<div>
@@ -48,42 +38,37 @@ interface ConnectionListProps {
 }
 
 const ConnectionList: React.FC<ConnectionListProps> = ({ app }) => {
-	const [connections, setConnections] = useState<Connection[]>([])
+	const [peers, setPeers] = useState<string[]>([])
 
 	useEffect(() => {
 		if (app === null) {
 			return
 		}
 
-		const handleConnectionOpen = ({ detail: connection }: CustomEvent<Connection>) =>
-			void setConnections((connections) => [...connections, connection])
+		const handleConnectionOpen = ({ detail: { peer } }: CustomEvent<{ peer: string }>) =>
+			void setPeers((peers) => [...peers, peer])
 
-		const handleConnectionClose = ({ detail: connection }: CustomEvent<Connection>) =>
-			void setConnections((connections) => connections.filter(({ id }) => connection.id !== id))
+		const handleConnectionClose = ({ detail: { peer } }: CustomEvent<{ peer: string }>) =>
+			void setPeers((peers) => peers.filter((id) => id !== peer))
 
-		app.libp2p.addEventListener("connection:open", handleConnectionOpen)
-		app.libp2p.addEventListener("connection:close", handleConnectionClose)
+		app.messageLog.addEventListener("connect", handleConnectionOpen)
+		app.messageLog.addEventListener("disconnect", handleConnectionClose)
 
 		return () => {
-			app.libp2p.removeEventListener("connection:open", handleConnectionOpen)
-			app.libp2p.removeEventListener("connection:close", handleConnectionClose)
+			app.messageLog.removeEventListener("connect", handleConnectionOpen)
+			app.messageLog.removeEventListener("disconnect", handleConnectionClose)
 		}
 	}, [app])
 
-	if (!connections || Object.entries(connections).length === 0) {
+	if (peers.length === 0) {
 		return <div className="italic">No connections</div>
 	} else {
 		return (
 			<ul className="list-disc pl-4">
-				{connections.map(({ id, remotePeer, remoteAddr }) => {
+				{peers.map((peer) => {
 					return (
-						<li key={id}>
-							<div>
-								<PeerIdView peerId={remotePeer} />
-							</div>
-							<div>
-								<MultiaddrView addr={remoteAddr} peerId={remotePeer} />
-							</div>
+						<li key={peer}>
+							<code className="text-sm">{peer}</code>
 						</li>
 					)
 				})}

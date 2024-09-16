@@ -21,7 +21,7 @@ export async function handler(args: Args) {
 	const { topic, contract, location } = getContractLocation(args)
 
 	try {
-		const app = await Canvas.initialize({ topic, path: location, contract, start: false })
+		const app = await Canvas.initialize({ topic, path: location, contract })
 		const { models } = app.getApplicationData()
 		console.log(`topic: ${app.topic}\n`)
 		console.log(chalk.green("===== models ====="))

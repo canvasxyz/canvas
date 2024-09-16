@@ -5,10 +5,9 @@ import process from "node:process"
 
 import type { Argv } from "yargs"
 import chalk from "chalk"
-import stoppable from "stoppable"
 import express from "express"
 import cors from "cors"
-
+import { WebSocketServer } from "ws"
 import { multiaddr } from "@multiformats/multiaddr"
 import { WebSockets, WebSocketsSecure } from "@multiformats/multiaddr-matcher"
 
@@ -17,8 +16,9 @@ import dotenv from "dotenv"
 dotenv.config()
 
 import { Canvas } from "@canvas-js/core"
-import { createAPI, createMetricsAPI } from "@canvas-js/core/api"
+import { createAPI } from "@canvas-js/core/api"
 import { MIN_CONNECTIONS, MAX_CONNECTIONS } from "@canvas-js/core/constants"
+import { NetworkServer } from "@canvas-js/gossiplog/server"
 
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { ATPSigner } from "@canvas-js/chain-atp"
@@ -90,7 +90,7 @@ export const builder = (yargs: Argv) =>
 		})
 		.option("bootstrap", {
 			type: "array",
-			desc: "Initial application peers, e.g. /dns4/myapp.com/tcp/4444/ws",
+			desc: "Initial application peers, e.g. /dns4/myapp.com/tcp/4444/ws/p2p/12D3KooWnzt...",
 		})
 		.option("min-connections", {
 			type: "number",
@@ -109,6 +109,11 @@ export const builder = (yargs: Argv) =>
 		.option("disable-http-api", {
 			type: "boolean",
 			desc: "Disable HTTP API server",
+		})
+		.option("repl", {
+			type: "boolean",
+			desc: "Start an action REPL",
+			default: false,
 		})
 
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
@@ -164,37 +169,10 @@ export async function handler(args: Args) {
 		}
 	}
 
+	console.log(`${chalk.gray("[canvas] Starting app on topic")} ${chalk.whiteBright(topic)}`)
+
 	const signers = [new SIWESigner(), new ATPSigner(), new CosmosSigner(), new SubstrateSigner(), new SolanaSigner()]
-	const app = await Canvas.initialize({
-		path: location,
-		topic,
-		contract,
-		signers,
-		listen,
-		announce,
-		minConnections: args["min-connections"],
-		maxConnections: args["max-connections"],
-		bootstrapList: bootstrapList,
-		start: !args.offline,
-	})
-
-	console.log(`${chalk.gray("[canvas] Starting app on topic")} ${chalk.whiteBright(app.topic)}`)
-	console.log(chalk.gray(`[canvas] Using PeerId ${app.peerId.toString()}`))
-	for (const addr of listen) {
-		console.log(chalk.gray(`[canvas] Listening on ${addr}/p2p/${app.peerId.toString()}`))
-	}
-
-	app.libp2p.addEventListener("connection:open", ({ detail: connection }) => {
-		const peer = connection.remotePeer.toString()
-		const addr = connection.remoteAddr.decapsulateCode(421).toString()
-		console.log(chalk.gray(`[canvas] Opened connection to ${peer} at ${addr}`))
-	})
-
-	app.libp2p.addEventListener("connection:close", ({ detail: connection }) => {
-		const peer = connection.remotePeer.toString()
-		const addr = connection.remoteAddr.decapsulateCode(421).toString()
-		console.log(chalk.gray(`[canvas] Closed connection to ${peer} at ${addr}`))
-	})
+	const app = await Canvas.initialize({ path: location, topic, contract, signers })
 
 	app.addEventListener("message", ({ detail: { id, message } }) => {
 		if (args["verbose"]) {
@@ -204,95 +182,95 @@ export async function handler(args: Args) {
 		}
 	})
 
-	app.messageLog.addEventListener("error", ({ detail: { error } }) => {
-		if (args["verbose"]) {
-			console.log(`[canvas] ${error.name}:`, error.stack)
-		} else {
-			console.log(`[canvas] ${error.name}: ${error.message}`)
-		}
-	})
-
-	app.addEventListener("sync", ({ detail: { peerId, duration, messageCount } }) => {
+	app.addEventListener("sync", ({ detail: { peer, duration, messageCount } }) => {
 		console.log(
 			chalk.magenta(
-				`[canvas] Completed merkle sync with peer ${peerId}: applied ${messageCount} messages in ${duration}ms`,
+				`[canvas] Completed merkle sync with peer ${peer}: applied ${messageCount} messages in ${duration}ms`,
 			),
 		)
 	})
 
-	const controller = new AbortController()
+	if (!args["offline"]) {
+		// TODO: cache peer ID in .peer-id file
+		const libp2p = await app.startLibp2p({
+			listen,
+			announce,
+			minConnections: args["min-connections"],
+			maxConnections: args["max-connections"],
+			bootstrapList: bootstrapList,
+		})
 
-	controller.signal.addEventListener("abort", async () => {
-		console.log("[canvas] Closing application...")
-		await app.stop()
-		console.log("[canvas] Application closed.")
+		console.log(chalk.gray(`[canvas] Using PeerId ${libp2p.peerId.toString()}`))
+		for (const addr of listen) {
+			console.log(chalk.gray(`[canvas] Listening on ${addr}/p2p/${libp2p.peerId.toString()}`))
+		}
+
+		app.addEventListener("connect", ({ detail: { peer } }) => {
+			console.log(chalk.gray(`[canvas] Opened connection to ${peer}`))
+		})
+
+		app.addEventListener("disconnect", ({ detail: { peer } }) => {
+			console.log(chalk.gray(`[canvas] Closed connection to ${peer}`))
+		})
+	}
+
+	const controller = new AbortController()
+	controller.signal.addEventListener("abort", () => {
+		console.log("[canvas] Closing app...")
+		app.stop().then(() => console.log("[canvas] App closed"))
 	})
 
-	// await app.start()
-
-	const api = express()
-	api.use(cors())
-	api.use("/api", createAPI(app, { exposeP2P: true, exposeModels: true, exposeMessages: true }))
-
-	if (args.metrics) {
-		api.use("/metrics", createMetricsAPI(app))
-	}
-
-	if (args.static !== undefined) {
-		assert(/^(.\/)?\w[\w/]*$/.test(args.static), "Invalid directory for static files")
-		assert(fs.existsSync(args.static), "Invalid directory for static files (path not found)")
-		api.use(express.static(args.static))
-	}
-
 	if (!args["disable-http-api"]) {
-		const origin = `http://localhost:${args.port}`
+		const api = express()
+		api.use(cors())
+		api.use("/api", createAPI(app))
 
-		const server = stoppable(
-			http.createServer(api).listen(args.port, () => {
-				console.log("")
-				if (args.static) {
-					console.log(`Serving static bundle: ${chalk.bold(origin)}`)
-				}
+		// TODO: add metrics API
+		//
+		if (args.static !== undefined) {
+			assert(/^(.\/)?\w[\w/]*$/.test(args.static), "Invalid directory for static files")
+			assert(fs.existsSync(args.static), "Invalid directory for static files (path not found)")
+			api.use(express.static(args.static))
+		}
 
-				console.log(`Serving HTTP API:`)
-				console.log(`└ GET  ${origin}/api/`)
-
-				console.log(`└ GET  ${origin}/api/clock`)
-				console.log(`└ GET  ${origin}/api/messages`)
-				console.log(`└ GET  ${origin}/api/messages/:id`)
-				console.log(`└ POST ${origin}/api/messages`)
-
-				const { models, actions } = app.getApplicationData()
-				for (const name of Object.keys(models)) {
-					console.log(`└ GET  ${origin}/api/models/${name}`)
-					console.log(`└ GET  ${origin}/api/models/${name}/:key`)
-				}
-
-				console.log(`└ GET  ${origin}/api/connections`)
-				console.log(`└ GET  ${origin}/api/mesh/:topic`)
-				console.log(`└ POST ${origin}/api/ping/:peerId`)
-
-				console.log("")
-				console.log("Actions:")
-				for (const action of actions) {
-					console.log(`└ ${action}`)
-				}
-				console.log("")
-				startActionPrompt(app)
-			}),
-			0,
-		)
+		const server = http.createServer(api)
+		const network = new NetworkServer(app.messageLog)
+		const wss = new WebSocketServer({ server, perMessageDeflate: false })
+		wss.on("connection", network.handleConnection)
 
 		controller.signal.addEventListener("abort", () => {
 			console.log("[canvas] Stopping HTTP API server...")
-			server.stop((err) => {
-				if (err !== undefined) {
-					throw err
-				} else {
-					console.log("[canvas] HTTP API server stopped.")
-				}
-			})
+			network.close()
+			wss.close(() => server.close(() => console.log("[canvas] HTTP API server stopped.")))
 		})
+
+		await new Promise<void>((resolve) => server.listen(args["port"], resolve))
+
+		const origin = `http://localhost:${args.port}`
+		console.log("")
+		if (args.static) {
+			console.log(`Serving static bundle: ${chalk.bold(origin)}`)
+		}
+
+		console.log(`Serving HTTP API:`)
+		console.log(`└ GET  ${origin}/api/`)
+
+		console.log(`└ GET  ${origin}/api/clock`)
+		console.log(`└ GET  ${origin}/api/messages`)
+		console.log(`└ GET  ${origin}/api/messages/:id`)
+		console.log(`└ POST ${origin}/api/messages`)
+
+		const { models, actions } = app.getApplicationData()
+		for (const name of Object.keys(models)) {
+			console.log(`└ GET  ${origin}/api/models/${name}`)
+			console.log(`└ GET  ${origin}/api/models/${name}/:key`)
+		}
+
+		console.log("")
+		console.log("Actions:")
+		for (const action of actions) {
+			console.log(`└ ${action}`)
+		}
 	}
 
 	let stopping = false
@@ -304,7 +282,13 @@ export async function handler(args: Args) {
 			process.stdout.write(
 				`\n${chalk.yellow("Received SIGINT, attempting to exit gracefully. ^C again to force quit.")}\n`,
 			)
+
 			controller.abort()
 		}
 	})
+
+	if (args["repl"]) {
+		console.log("")
+		startActionPrompt(app)
+	}
 }

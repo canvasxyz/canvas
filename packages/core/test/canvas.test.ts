@@ -48,7 +48,6 @@ const init = async (t: ExecutionContext) => {
 	const app = await Canvas.initialize({
 		contract,
 		topic: "com.example.app",
-		start: false,
 		reset: true,
 		signers: [signer],
 	})
@@ -62,7 +61,6 @@ const initEIP712 = async (t: ExecutionContext) => {
 	const app = await Canvas.initialize({
 		contract,
 		topic: "com.example.app",
-		start: false,
 		reset: true,
 		signers: [signer],
 	})
@@ -140,7 +138,6 @@ test("insert a message into an app with multiple signers", async (t) => {
 				models: {},
 				actions: { createPost() {} },
 			},
-			start: false,
 			reset: true,
 			signers: [siweSigner, cosmosSigner],
 		})
@@ -203,7 +200,6 @@ test("create an app with an inline contract", async (t) => {
 				},
 			},
 		},
-		start: false,
 		signers: [new SIWESigner({ signer: wallet })],
 	})
 
@@ -248,7 +244,6 @@ test("get a value set by another action", async (t) => {
 				},
 			},
 		},
-		start: false,
 	})
 
 	t.teardown(() => app.stop())
@@ -309,7 +304,6 @@ test("validate action args using IPLD schemas", async (t) => {
 			},
 		},
 		signers: [new SIWESigner({ signer: wallet })],
-		start: false,
 	})
 
 	t.teardown(() => app.stop())
