@@ -11,7 +11,7 @@ function App() {
 	const wallet = useMemo(() => {
 		return ethers.Wallet.createRandom()
 	}, [])
-	const { app } = useCanvas<TickingContract>({
+	const { app } = useCanvas<TickingContract>("ws://localhost:8000", {
 		topic: "canvas-example-chat-global",
 		contract,
 		signers: [new SIWESigner({ signer: wallet })],

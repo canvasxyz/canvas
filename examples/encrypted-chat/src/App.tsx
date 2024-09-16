@@ -22,7 +22,7 @@ const getGroupId = (address1: string, address2: string) => {
 }
 
 const useChat = (topic: string, wallet: ethers.Wallet) => {
-	const { app } = useCanvas({
+	const { app } = useCanvas("ws://localhost:8000", {
 		topic,
 		signers: [new SIWESigner({ signer: wallet })],
 		contract: {

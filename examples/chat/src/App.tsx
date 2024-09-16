@@ -48,14 +48,11 @@ export const App: React.FC<{}> = ({}) => {
 
 	const topicRef = useRef(topic)
 
-	const { app } = useCanvas({
+	const { app } = useCanvas("ws://localhost:8000", {
 		path: "./db.sqlite3",
 		topic,
 		contract: { ...contract, topic: topicRef.current },
 		signers: [new SIWESigner(), new ATPSigner(), new CosmosSigner(), new SubstrateSigner({}), new SolanaSigner()],
-		// bootstrapList: bootstrapList ?? [
-		// 	`/dns4/canvas-chat.fly.dev/tcp/443/wss/p2p/12D3KooWRrJCTFxZZPWDkZJboAHBCmhZ5MK1fcixDybM8GAjJM2Q`,
-		// ],
 	})
 
 	return (

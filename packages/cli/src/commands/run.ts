@@ -205,16 +205,12 @@ export async function handler(args: Args) {
 			console.log(chalk.gray(`[canvas] Listening on ${addr}/p2p/${libp2p.peerId.toString()}`))
 		}
 
-		libp2p.addEventListener("connection:open", ({ detail: connection }) => {
-			const peer = connection.remotePeer.toString()
-			const addr = connection.remoteAddr.decapsulateCode(421).toString()
-			console.log(chalk.gray(`[canvas] Opened connection to ${peer} at ${addr}`))
+		app.addEventListener("connect", ({ detail: { peer } }) => {
+			console.log(chalk.gray(`[canvas] Opened connection to ${peer}`))
 		})
 
-		libp2p.addEventListener("connection:close", ({ detail: connection }) => {
-			const peer = connection.remotePeer.toString()
-			const addr = connection.remoteAddr.decapsulateCode(421).toString()
-			console.log(chalk.gray(`[canvas] Closed connection to ${peer} at ${addr}`))
+		app.addEventListener("disconnect", ({ detail: { peer } }) => {
+			console.log(chalk.gray(`[canvas] Closed connection to ${peer}`))
 		})
 	}
 
