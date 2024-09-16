@@ -21,11 +21,11 @@ const MAX_MESSAGE_ID = "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
 const BOOTSTRAP_LIST =
 	process.env.BOOTSTRAP_LIST ||
 	"/dns4/canvas-chat.fly.dev/tcp/443/wss/p2p/12D3KooWRrJCTFxZZPWDkZJboAHBCmhZ5MK1fcixDybM8GAjJM2Q"
-const LIBP2P_PORT = parseInt(process.env.LIBP2P_PORT || "3334", 10)
-const HTTP_PORT = parseInt(process.env.PORT || "3333", 10)
+const LIBP2P_PORT = parseInt(process.env.LIBP2P_PORT || "8889", 10)
+const HTTP_PORT = parseInt(process.env.PORT || "8888", 10)
 const HTTP_ADDR = "0.0.0.0"
 const dev = process.env.NODE_ENV !== "production"
-const topics = ["chat-example.canvas.xyz"]
+const topics = process.env.TOPIC ? [process.env.TOPIC] : ["chat-example.canvas.xyz"]
 
 console.log(`BOOTSTRAP_LIST: ${BOOTSTRAP_LIST}`)
 console.log(`LIBP2P_PORT: ${LIBP2P_PORT}`)
@@ -118,6 +118,8 @@ expressApp.get("/index_api/messages", ipld(), async (req, res) => {
 	const result = []
 	for (const messageIndexEntry of messageIndexEntries.rows) {
 		const app = canvasApps[messageIndexEntry.topic]
+		// skip messages from apps that are no longer running
+		if (!app) continue
 		const [signature, message] = await app.getMessage(messageIndexEntry.id)
 		// during initialization, the app may be missing messages, and
 		// we shouldn't send null signature/message values to the client
