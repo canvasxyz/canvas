@@ -120,11 +120,11 @@ expressApp.get("/index_api/messages", ipld(), async (req, res) => {
 		const app = canvasApps[messageIndexEntry.topic]
 		// skip messages from apps that are no longer running
 		if (!app) continue
-		const [signature, message] = await app.getMessage(messageIndexEntry.id)
+		const signedMessage = await app.getMessage(messageIndexEntry.id)
 		// during initialization, the app may be missing messages, and
 		// we shouldn't send null signature/message values to the client
-		if (signature && message) {
-			result.push([messageIndexEntry.id, signature, message])
+		if (signedMessage !== null) {
+			result.push([messageIndexEntry.id, signedMessage.signature, signedMessage.message])
 		}
 	}
 
@@ -169,11 +169,11 @@ expressApp.get("/index_api/messages/:topic", ipld(), async (req, res) => {
 	const canvasApp = canvasApps[req.params.topic]
 	const result = []
 	for (const messageId of messageIds.rows) {
-		const [signature, message] = await canvasApp.getMessage(messageId.id)
+		const signedMessage = await canvasApp.getMessage(messageId.id)
 		// during initialization, the app may be missing messages, and
 		// we shouldn't send null signature/message values to the client
-		if (signature && message) {
-			result.push([messageId.id, signature, message])
+		if (signedMessage !== null) {
+			result.push([messageId.id, signedMessage.signature, signedMessage.message])
 		}
 	}
 
@@ -286,8 +286,8 @@ expressApp.get("/index_api/latest_session/:topic", async (req, res) => {
 		return
 	}
 
-	const [_signature, message] = await canvasApp.getMessage(sessionId)
-	if (!message || message.payload.type !== "session") {
+	const signedMessage = await canvasApp.getMessage(sessionId)
+	if (signedMessage === null || signedMessage.message.payload.type !== "session") {
 		res.status(StatusCodes.NOT_FOUND)
 		res.end()
 		return
@@ -296,7 +296,7 @@ expressApp.get("/index_api/latest_session/:topic", async (req, res) => {
 	// return using ipld json stringify
 	res.status(StatusCodes.OK)
 	res.setHeader("content-type", "application/json")
-	res.end(json.encode(message.payload))
+	res.end(json.encode(signedMessage.message.payload))
 })
 
 expressApp.listen(HTTP_PORT, HTTP_ADDR, () => {
