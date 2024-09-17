@@ -25,7 +25,7 @@ export class SignedMessage<Payload = unknown> {
 	public readonly id: string
 	public readonly key: Uint8Array
 	public readonly source?: MessageSource
-	public readonly branch?: number
+	public branch?: number
 
 	private constructor(
 		public readonly signature: Signature,

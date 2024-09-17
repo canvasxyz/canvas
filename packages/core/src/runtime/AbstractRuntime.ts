@@ -103,7 +103,10 @@ export abstract class AbstractRuntime {
 		const handleSession = this.handleSession.bind(this)
 		const handleAction = this.handleAction.bind(this)
 
-		return async function (this: AbstractGossipLog<Action | Session>, { id, signature, message }, { branch }) {
+		return async function (this: AbstractGossipLog<Action | Session>, signedMessage) {
+			const { id, signature, message, branch } = signedMessage
+			assert(branch !== undefined, "internal error - expected branch !== undefined")
+
 			if (AbstractRuntime.isSession(message)) {
 				await handleSession(id, signature, message)
 			} else if (AbstractRuntime.isAction(message)) {

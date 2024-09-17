@@ -24,7 +24,6 @@ import { codes, topicPattern } from "./utils.js"
 export type GossipLogConsumer<Payload = unknown> = (
 	this: AbstractGossipLog<Payload>,
 	signedMessage: SignedMessage<Payload>,
-	context: { peer?: string; branch: number },
 ) => Awaitable<void>
 
 export interface GossipLogInit<Payload = unknown> {
@@ -116,9 +115,10 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 					continue
 				}
 
-				const signedMessage = this.encode(record.signature, record.message)
+				const { signature, message, branch } = record
+				const signedMessage = this.encode(signature, message, { branch })
 				assert(signedMessage.id === id)
-				await this.#apply.apply(this, [signedMessage, { branch: record.branch }])
+				await this.#apply.apply(this, [signedMessage])
 			}
 		})
 	}
@@ -307,8 +307,8 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		}
 
 		const branch = await this.getBranch(id, parentMessageRecords)
-
-		await this.#apply.apply(this, [signedMessage, { branch }])
+		signedMessage.branch = branch
+		await this.#apply.apply(this, [signedMessage])
 
 		const hash = toString(hashEntry(key, value), "hex")
 
