@@ -21,11 +21,12 @@ export function createAPI<Payload>(gossipLog: AbstractGossipLog<Payload>): expre
 	api.get("/messages/:id", async (req, res) => {
 		const { id } = req.params
 
-		const [signature, message] = await gossipLog.get(id)
-		if (signature === null || message === null) {
+		const signedMessage = await gossipLog.get(id)
+		if (signedMessage === null) {
 			return void res.status(StatusCodes.NOT_FOUND).end()
 		}
 
+		const { signature, message } = signedMessage
 		res.writeHead(StatusCodes.OK, { "content-type": "application/json" })
 		return void res.end(json.encode({ id, signature, message }))
 	})

@@ -43,7 +43,9 @@ testPlatforms(
 
 		await setTimeout(1000)
 
-		t.deepEqual(await c.get(id), [signature, message])
+		const result = await c.get(id)
+		t.deepEqual(result?.signature, signature)
+		t.deepEqual(result?.message, message)
 
 		t.pass()
 	},

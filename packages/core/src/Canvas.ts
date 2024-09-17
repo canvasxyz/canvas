@@ -6,7 +6,7 @@ import type pg from "pg"
 import { Signature, Action, Session, Message, SessionSigner, SignerCache } from "@canvas-js/interfaces"
 import { AbstractModelDB, Model } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
-import { AbstractGossipLog, GossipLogEvents } from "@canvas-js/gossiplog"
+import { AbstractGossipLog, GossipLogEvents, SignedMessage } from "@canvas-js/gossiplog"
 import type { ServiceMap, NetworkConfig } from "@canvas-js/gossiplog/libp2p"
 
 import { assert } from "@canvas-js/utils"
@@ -260,9 +260,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		return { id: signedMessage.id }
 	}
 
-	public async getMessage(
-		id: string,
-	): Promise<[signature: Signature, message: Message<Action | Session>] | [null, null]> {
+	public async getMessage(id: string): Promise<SignedMessage<Action | Session> | null> {
 		return await this.messageLog.get(id)
 	}
 
@@ -270,7 +268,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		lowerBound: { id: string; inclusive: boolean } | null = null,
 		upperBound: { id: string; inclusive: boolean } | null = null,
 		options: { reverse?: boolean } = {},
-	): AsyncIterable<[id: string, signature: Signature, message: Message<Action | Session>]> {
+	): AsyncIterable<SignedMessage<Action | Session>> {
 		const range: { lt?: string; lte?: string; gt?: string; gte?: string; reverse?: boolean; limit?: number } = {}
 		if (lowerBound) {
 			if (lowerBound.inclusive) range.gte = lowerBound.id

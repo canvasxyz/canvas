@@ -138,16 +138,16 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 	public encode<T extends Payload = Payload>(
 		signature: Signature,
 		message: Message<T>,
-		options: { source?: MessageSource } = {},
+		context: { source?: MessageSource; branch?: number } = {},
 	): SignedMessage<T> {
 		assert(this.topic === message.topic, "expected this.topic === topic")
 		const preparedMessage = prepareMessage(message)
 		assert(this.validatePayload(preparedMessage.payload), "error encoding message (invalid payload)")
-		return SignedMessage.encode(signature, preparedMessage, options)
+		return SignedMessage.encode(signature, preparedMessage, context)
 	}
 
-	public decode(value: Uint8Array, options: { source?: MessageSource } = {}): SignedMessage<Payload> {
-		const signedMessage = SignedMessage.decode<Payload>(value, options)
+	public decode(value: Uint8Array, context: { source?: MessageSource; branch?: number } = {}): SignedMessage<Payload> {
+		const signedMessage = SignedMessage.decode<Payload>(value, context)
 		assert(this.topic === signedMessage.message.topic, "expected this.topic === topic")
 		assert(this.validatePayload(signedMessage.message.payload), "error decoding message (invalid payload)")
 		return signedMessage
@@ -166,13 +166,14 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		return records.length > 0
 	}
 
-	public async get(id: string): Promise<[signature: Signature, message: Message<Payload>] | [null, null]> {
+	public async get(id: string): Promise<SignedMessage<Payload> | null> {
 		const record = await this.db.get<MessageRecord<Payload>>("$messages", id)
 		if (record === null) {
-			return [null, null]
-		} else {
-			return [record.signature, record.message]
+			return null
 		}
+
+		const { signature, message, branch } = record
+		return this.encode(signature, message, {})
 	}
 
 	public getMessages(
@@ -189,7 +190,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 	public async *iterate(
 		range: { lt?: string; lte?: string; gt?: string; gte?: string; reverse?: boolean; limit?: number } = {},
-	): AsyncIterable<{ id: string; signature: Signature; message: Message<Payload> }> {
+	): AsyncIterable<SignedMessage<Payload>> {
 		const { reverse = false, limit, ...where } = range
 		// TODO: use this.db.iterate()
 		const query = await this.db.query<{ id: string; signature: Signature; message: Message<Payload> }>("$messages", {
@@ -198,8 +199,9 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 			orderBy: { id: reverse ? "desc" : "asc" },
 			limit,
 		})
+
 		for await (const row of query) {
-			yield row
+			yield this.encode(row.signature, row.message)
 		}
 	}
 
@@ -460,12 +462,12 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 					// TODO: txn.getMany
 					for (const key of keys) {
 						const id = decodeId(key)
-						const [signature, message] = await this.get(id)
-						if (signature === null || message === null) {
+
+						const signedMessage = await this.get(id)
+						if (signedMessage === null) {
 							throw new CodeError("message not found", "NOT_FOUND", { id })
 						}
 
-						const signedMessage = SignedMessage.encode(signature, message)
 						assert(equals(signedMessage.key, key), "invalid message key")
 						values.push(signedMessage.value)
 					}
