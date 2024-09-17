@@ -39,7 +39,6 @@
 		"@canvas-js/interfaces": "0.10.10",
 		"@canvas-js/relay-server": "0.10.10",
 		"@canvas-js/utils": "0.10.10",
-		"@chainsafe/libp2p-gossipsub": "^14.1.0",
 		"@libp2p/interface": "^1.7.0",
 		"@libp2p/peer-id": "^4.2.0",
 		"@libp2p/peer-id-factory": "^4.2.4",

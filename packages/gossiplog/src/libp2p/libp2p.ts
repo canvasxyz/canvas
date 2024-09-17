@@ -6,10 +6,12 @@ import { all } from "@libp2p/websockets/filters"
 import { yamux } from "@chainsafe/libp2p-yamux"
 import { noise } from "@chainsafe/libp2p-noise"
 import { bootstrap } from "@libp2p/bootstrap"
-import { GossipsubEvents, gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { KadDHT, kadDHT } from "@libp2p/kad-dht"
 import { PingService, ping as pingService } from "@libp2p/ping"
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
+import { GossipsubEvents, gossipsub } from "@chainsafe/libp2p-gossipsub"
+
+export { GossipSub } from "@chainsafe/libp2p-gossipsub"
 
 import type { Registry } from "prom-client"
 

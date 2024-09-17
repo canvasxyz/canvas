@@ -1,9 +1,8 @@
 import { setTimeout } from "node:timers/promises"
 import { randomBytes, bytesToHex } from "@noble/hashes/utils"
 
-import { GossipSub } from "@chainsafe/libp2p-gossipsub"
 import { GossipLog } from "@canvas-js/gossiplog/sqlite"
-import { getLibp2p } from "@canvas-js/gossiplog/libp2p"
+import { GossipSub, getLibp2p } from "@canvas-js/gossiplog/libp2p"
 import { assert } from "@canvas-js/utils"
 
 import { Socket } from "../socket.js"
@@ -62,6 +61,7 @@ async function start() {
 
 	const { pubsub } = libp2p.services
 	assert(pubsub instanceof GossipSub)
+
 	pubsub.addEventListener("gossipsub:graft", ({ detail: { peerId } }) => {
 		console.log("gossipsub:graft", peerId.toString())
 		meshPeers.add(peerId.toString())
