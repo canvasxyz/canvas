@@ -45,7 +45,9 @@ const target: PlatformTarget = {
 	},
 
 	async startLibp2p(gossipLog, config) {
-		return await getLibp2p(gossipLog, config)
+		const libp2p = await getLibp2p(gossipLog, config)
+		gossipLog.controller.signal.addEventListener("abort", () => libp2p.stop())
+		return libp2p
 	},
 }
 
