@@ -28,6 +28,7 @@ import { SolanaSigner } from "@canvas-js/chain-solana"
 
 import { getContractLocation } from "../utils.js"
 import { startActionPrompt } from "../prompt.js"
+import stoppable from "stoppable"
 
 export const command = "run <path>"
 export const desc = "Run a Canvas application"
@@ -233,7 +234,7 @@ export async function handler(args: Args) {
 			api.use(express.static(args.static))
 		}
 
-		const server = http.createServer(api)
+		const server = stoppable(http.createServer(api))
 		const network = new NetworkServer(app.messageLog)
 		const wss = new WebSocketServer({ server, perMessageDeflate: false })
 		wss.on("connection", network.handleConnection)
@@ -241,7 +242,7 @@ export async function handler(args: Args) {
 		controller.signal.addEventListener("abort", () => {
 			console.log("[canvas] Stopping HTTP API server...")
 			network.close()
-			wss.close(() => server.close(() => console.log("[canvas] HTTP API server stopped.")))
+			wss.close(() => server.stop(() => console.log("[canvas] HTTP API server stopped.")))
 		})
 
 		await new Promise<void>((resolve) => server.listen(args["port"], resolve))
