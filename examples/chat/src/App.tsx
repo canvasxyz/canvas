@@ -48,7 +48,7 @@ export const App: React.FC<{}> = ({}) => {
 
 	const topicRef = useRef(topic)
 
-	const { app } = useCanvas("ws://localhost:8000", {
+	const { app } = useCanvas(null, {
 		path: "./db.sqlite3",
 		topic,
 		contract: { ...contract, topic: topicRef.current },
