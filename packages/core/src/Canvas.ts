@@ -4,7 +4,7 @@ import { logger } from "@libp2p/logger"
 import type pg from "pg"
 
 import { Signature, Action, Session, Message, SessionSigner, SignerCache } from "@canvas-js/interfaces"
-import { AbstractModelDB, Model } from "@canvas-js/modeldb"
+import { AbstractModelDB, Model, ModelSchema } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { AbstractGossipLog, GossipLogEvents, SignedMessage } from "@canvas-js/gossiplog"
 import type { ServiceMap, NetworkConfig } from "@canvas-js/gossiplog/libp2p"
@@ -32,6 +32,7 @@ export interface CanvasConfig<T extends Contract = Contract> {
 	runtimeMemoryLimit?: number
 
 	reset?: boolean
+	schema?: ModelSchema
 }
 
 export type ActionOptions = { signer?: SessionSigner }
@@ -77,7 +78,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 				apply: runtime.getConsumer(),
 				validatePayload: validatePayload,
 				verifySignature: verifySignature,
-				schema: runtime.schema,
+				schema: { ...config.schema, ...runtime.schema },
 			},
 		)
 

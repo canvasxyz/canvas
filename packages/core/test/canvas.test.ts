@@ -1,4 +1,5 @@
 import assert from "node:assert"
+import { randomUUID } from "node:crypto"
 import test, { ExecutionContext } from "ava"
 
 import { ethers } from "ethers"
@@ -368,4 +369,18 @@ test("call quickjs contract with did uri and wallet address", async (t) => {
 	const value = await app.db.get("posts", postId)
 	t.is(value?.address, address)
 	t.is(value?.did, `did:pkh:eip155:1:${address}`)
+})
+
+test("open custom modeldb tables", async (t) => {
+	const app = await Canvas.initialize({
+		contract,
+		topic: "com.example.app",
+		schema: { widgets: { id: "primary", name: "string" } },
+	})
+
+	t.teardown(() => app.stop())
+
+	const id = randomUUID()
+	await app.db.set("widgets", { id, name: "foobar" })
+	t.deepEqual(await app.db.get("widgets", id), { id, name: "foobar" })
 })
