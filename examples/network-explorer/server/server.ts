@@ -164,7 +164,7 @@ expressApp.get("/index_api/messages/:topic", ipld(), async (req, res) => {
 	}
 
 	const messageIds =
-		numMessagesToReturn == -1
+		numMessagesToReturn === -1
 			? await queries.selectMessagesNoLimit(req.params.topic, before, type)
 			: await queries.selectMessages(req.params.topic, before, type, numMessagesToReturn)
 

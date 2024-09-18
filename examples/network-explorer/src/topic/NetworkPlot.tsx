@@ -208,7 +208,7 @@ export default function NetworkPlot({ topic }: { topic: string }) {
 
 	const items = (messagesToDisplay || []).slice()
 	items.sort((a, b) => {
-		if (a.message.clock == b.message.clock) {
+		if (a.message.clock === b.message.clock) {
 			return a.branch - b.branch
 		} else {
 			return a.message.clock - b.message.clock
