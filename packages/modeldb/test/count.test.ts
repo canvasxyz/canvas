@@ -36,16 +36,13 @@ testOnModelDB("count entries in a modeldb table", async (t, openDB) => {
 	t.is(await db.count("user"), 3)
 })
 
-test(`Sqlite - count entries in a modeldb table with a where condition`, async (t) => {
-	const db = new ModelDBSqlite({
-		path: null,
-		models: {
-			user: {
-				id: "primary",
-				address: "string",
-				age: "number",
-				type: "string",
-			},
+testOnModelDB("count entries in a modeldb table with a where condition", async (t, openDB) => {
+	const db = await openDB(t, {
+		user: {
+			id: "primary",
+			address: "string",
+			age: "number",
+			type: "string",
 		},
 	})
 
