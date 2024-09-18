@@ -31,7 +31,10 @@ export abstract class AbstractModelDB {
 
 	abstract get<T extends ModelValue<any> = ModelValue<any>>(modelName: string, key: string): Awaitable<T | null>
 
-	abstract iterate(modelName: string): AsyncIterable<ModelValue>
+	abstract iterate<T extends ModelValue<any> = ModelValue<any>>(
+		modelName: string,
+		query?: QueryParams,
+	): AsyncIterable<T>
 
 	abstract query<T extends ModelValue<any> = ModelValue<any>>(modelName: string, query?: QueryParams): Promise<T[]>
 

@@ -62,16 +62,16 @@ export class ModelDB extends AbstractModelDB {
 		}
 	}
 
-	public async get<T extends ModelValue>(modelName: string, key: string): Promise<T | null> {
+	public async get<T extends ModelValue<any> = ModelValue<any>>(modelName: string, key: string): Promise<T | null> {
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
 		return api.get(key) as T | null
 	}
 
-	public async *iterate(modelName: string): AsyncIterable<ModelValue> {
+	public async *iterate<T extends ModelValue<any> = ModelValue<any>>(modelName: string): AsyncIterable<T> {
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
-		yield* api.values()
+		yield* api.values() as AsyncIterable<T>
 	}
 
 	public async count(modelName: string): Promise<number> {
@@ -80,7 +80,10 @@ export class ModelDB extends AbstractModelDB {
 		return api.count()
 	}
 
-	public async query<T extends ModelValue = ModelValue>(modelName: string, query: QueryParams = {}): Promise<T[]> {
+	public async query<T extends ModelValue<any> = ModelValue<any>>(
+		modelName: string,
+		query: QueryParams = {},
+	): Promise<T[]> {
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
 		return api.query(query) as T[]
