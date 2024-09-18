@@ -1,17 +1,26 @@
 import fs from "node:fs"
 import path from "node:path"
+import http from "node:http"
+import express from "express"
+import cors from "cors"
 
 import type pg from "pg"
+import { WebSocketServer } from "ws"
 
 import { GossipLog as SqliteGossipLog } from "@canvas-js/gossiplog/sqlite"
 import { GossipLog as PostgresGossipLog } from "@canvas-js/gossiplog/pg"
-import { getLibp2p } from "@canvas-js/gossiplog/libp2p/node"
+import { NetworkServer } from "@canvas-js/gossiplog/server"
+import { getLibp2p } from "@canvas-js/gossiplog/libp2p"
 import { assert } from "@canvas-js/utils"
+import { createAPI } from "@canvas-js/core/api"
 
 import type { PlatformTarget } from "../interface.js"
+import { anySignal } from "any-signal"
 
 const isPostgres = (path: string | pg.ConnectionConfig): boolean =>
 	typeof path !== "string" || path.startsWith("postgres://") || path.startsWith("postgresql://")
+
+const isError = (error: unknown): error is NodeJS.ErrnoException => error instanceof Error
 
 const target: PlatformTarget = {
 	async openGossipLog(location: { path: string | pg.ConnectionConfig | null; topic: string; clear?: boolean }, init) {
@@ -42,11 +51,26 @@ const target: PlatformTarget = {
 		}
 	},
 
-	createLibp2p: (config) => getLibp2p(config),
+	async listen(app, port, options = {}) {
+		const api = express()
+		api.use(cors())
+		api.use("/api", createAPI(app))
+
+		// TODO: add metrics API
+
+		const server = http.createServer(api)
+		const network = new NetworkServer(app.messageLog)
+		const wss = new WebSocketServer({ server, perMessageDeflate: false })
+		wss.on("connection", network.handleConnection)
+
+		const signal = anySignal([app.messageLog.controller.signal, options.signal])
+		signal.addEventListener("abort", () => {
+			network.close()
+			wss.close(() => server.close())
+		})
+
+		await new Promise<void>((resolve) => server.listen(port, resolve))
+	},
 }
 
 export default target
-
-function isError(error: any): error is NodeJS.ErrnoException {
-	return error instanceof Error
-}

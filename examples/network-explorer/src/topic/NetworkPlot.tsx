@@ -4,9 +4,9 @@ import useSWR from "swr"
 import * as d3 from "d3"
 import { PropsWithChildren, useLayoutEffect, useRef, useState } from "react"
 import { Box, Card, Flex } from "@radix-ui/themes"
-import { DidTooltip } from "../components/DidTooltip.js"
 import useCursorStack from "../useCursorStack.js"
 import PaginationButton from "../components/PaginationButton.js"
+import { DidPopover } from "../components/DidPopover.js"
 
 function DivWithRectUpdate(
 	props: PropsWithChildren & {
@@ -51,7 +51,7 @@ function MessageEntry({ item }: { item: Result<Action | Session> }) {
 				{item.message.payload.type}, id: {item.id}
 				<Box flexGrow="1" />
 				address:&nbsp;
-				<DidTooltip did={item.message.payload.did} />, clock: {item.message.clock}, branch: {item.branch}
+				<DidPopover did={item.message.payload.did} />, clock: {item.message.clock}, branch: {item.branch}
 			</Flex>
 		</Card>
 	)

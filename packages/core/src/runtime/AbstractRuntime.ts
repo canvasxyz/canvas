@@ -103,11 +103,14 @@ export abstract class AbstractRuntime {
 		const handleSession = this.handleSession.bind(this)
 		const handleAction = this.handleAction.bind(this)
 
-		return async function (this: AbstractGossipLog<Action | Session>, { id, signature, message }, branch) {
+		return async function (this: AbstractGossipLog<Action | Session>, signedMessage) {
+			const { id, signature, message, branch } = signedMessage
+			assert(branch !== undefined, "internal error - expected branch !== undefined")
+
 			if (AbstractRuntime.isSession(message)) {
 				await handleSession(id, signature, message)
 			} else if (AbstractRuntime.isAction(message)) {
-				await handleAction(id, signature, message, this, branch)
+				await handleAction(id, signature, message, this, { branch })
 			} else {
 				throw new Error("invalid message payload type")
 			}
@@ -146,7 +149,7 @@ export abstract class AbstractRuntime {
 		signature: Signature,
 		message: Message<Action>,
 		messageLog: AbstractGossipLog<Action | Session>,
-		branch: number,
+		{ branch }: { branch: number },
 	) {
 		const { did, context } = message.payload
 

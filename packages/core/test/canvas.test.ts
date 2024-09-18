@@ -48,7 +48,6 @@ const init = async (t: ExecutionContext) => {
 	const app = await Canvas.initialize({
 		contract,
 		topic: "com.example.app",
-		start: false,
 		reset: true,
 		signers: [signer],
 	})
@@ -62,7 +61,6 @@ const initEIP712 = async (t: ExecutionContext) => {
 	const app = await Canvas.initialize({
 		contract,
 		topic: "com.example.app",
-		start: false,
 		reset: true,
 		signers: [signer],
 	})
@@ -140,7 +138,6 @@ test("insert a message into an app with multiple signers", async (t) => {
 				models: {},
 				actions: { createPost() {} },
 			},
-			start: false,
 			reset: true,
 			signers: [siweSigner, cosmosSigner],
 		})
@@ -203,7 +200,6 @@ test("create an app with an inline contract", async (t) => {
 				},
 			},
 		},
-		start: false,
 		signers: [new SIWESigner({ signer: wallet })],
 	})
 
@@ -248,7 +244,6 @@ test("get a value set by another action", async (t) => {
 				},
 			},
 		},
-		start: false,
 	})
 
 	t.teardown(() => app.stop())
@@ -309,7 +304,6 @@ test("validate action args using IPLD schemas", async (t) => {
 			},
 		},
 		signers: [new SIWESigner({ signer: wallet })],
-		start: false,
 	})
 
 	t.teardown(() => app.stop())
@@ -317,11 +311,9 @@ test("validate action args using IPLD schemas", async (t) => {
 	const { id } = await app.actions.createPost({ content: "hello world!", inReplyTo: null })
 
 	// validate that the args are represented as tuples inside the action
-	const messageRecord = await app.getMessage(id)
-	assert(messageRecord !== null)
-	const message = messageRecord.message
-	assert(message !== null && message.payload.type === "action")
-	t.deepEqual(message.payload.args, ["hello world!", null])
+	const signedMessage = await app.getMessage(id)
+	assert(signedMessage !== null && signedMessage.message.payload.type === "action")
+	t.deepEqual(signedMessage.message.payload.args, ["hello world!", null])
 
 	await t.throwsAsync(() => app.actions.createPost({ content: 8 } as any), {
 		message: "action args did not validate the provided schema type",

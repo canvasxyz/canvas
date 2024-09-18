@@ -79,11 +79,10 @@ testPlatforms("append to multiple parents", async (t, openGossipLog) => {
 
 	const payload = nanoid()
 	const { id } = await log.append(payload, { signer })
-	const messageRecord = await log.get(id)
-	t.assert(messageRecord !== null)
-	t.deepEqual(messageRecord!.message, { topic, clock: 2, parents: entries.map(([id]) => id), payload })
+	const signedMessage = await log.get(id)
+	t.deepEqual(signedMessage?.message, { topic, clock: 2, parents: entries.map(([id]) => id), payload })
 
-	await expectLogEntries(t, log, [...entries, [id, signer.publicKey, messageRecord!.message]])
+	await expectLogEntries(t, log, [...entries, [id, signer.publicKey, signedMessage!.message]])
 })
 
 testPlatforms("reject invalid message", async (t, openGossipLog) => {

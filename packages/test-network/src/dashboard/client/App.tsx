@@ -81,8 +81,8 @@ export const App: React.FC<{}> = ({}) => {
 				}
 			})
 		} else {
-			console.log("boop", id)
-			fetch(`/api/boop/${id}`, { method: "POST" }).then((res) => {
+			console.log("append", id)
+			fetch(`/api/append/${id}`, { method: "POST" }).then((res) => {
 				if (!res.ok) {
 					res.text().then((err) => console.error(`[${res.status} ${res.statusText}]`, err))
 				}
@@ -108,6 +108,7 @@ export const App: React.FC<{}> = ({}) => {
 				onNodeClick={handleNodeClick}
 				onLinkClick={handleLinkClick}
 			/>
+			<hr />
 		</section>
 	)
 }

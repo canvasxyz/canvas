@@ -1,57 +1,48 @@
 import WebSocket from "isomorphic-ws"
 import { randomBytes, bytesToHex } from "@noble/hashes/utils"
-import { peerIdFromString } from "@libp2p/peer-id"
-import type { Libp2p } from "@libp2p/interface"
-import type { AbstractGossipLog, ServiceMap } from "@canvas-js/gossiplog"
+import { TypedEventEmitter, PeerId } from "@libp2p/interface"
+import { AbstractGossipLog } from "@canvas-js/gossiplog"
 
 import type { Event } from "./types.js"
 
-export type SocketEvent =
-	| { type: "boop" }
-	| { type: "provide" }
-	| { type: "query" }
-	| { type: "disconnect"; target: string }
+export type SocketEvents = {
+	append: CustomEvent<{}>
+	provide: CustomEvent<{}>
+	query: CustomEvent<{}>
+	disconnect: CustomEvent<{ target: string }>
+}
 
-export class Socket {
-	public static async open(messageLog: AbstractGossipLog<string>, libp2p: Libp2p<ServiceMap>, url: string) {
+export class Socket extends TypedEventEmitter<SocketEvents> {
+	public static async open(url: string, peerId: PeerId, gossipLog: AbstractGossipLog<string>) {
 		const ws = new WebSocket(url)
 		await new Promise((resolve) => ws.addEventListener("open", resolve, { once: true }))
-		return new Socket(messageLog, libp2p, ws)
+		return new Socket(ws, peerId, gossipLog)
 	}
 
-	private constructor(
-		readonly messageLog: AbstractGossipLog<string>,
-		readonly libp2p: Libp2p<ServiceMap>,
-		readonly ws: WebSocket,
-	) {
+	private constructor(readonly ws: WebSocket, readonly peerId: PeerId, readonly gossipLog: AbstractGossipLog<string>) {
+		super()
+
 		ws.addEventListener("message", (msg) => {
-			const event = JSON.parse(msg.data.toString()) as SocketEvent
-			console.log(`event: ${event.type}`)
-			if (event.type === "boop") {
-				messageLog.append(bytesToHex(randomBytes(8))).then(
-					({ recipients }) =>
-						recipients.then(
-							(peers) => console.log(`recipients: [ ${peers.join(", ")} ]`),
-							(err) => console.error(err),
-						),
-					(err) => console.error(err),
-				)
-			} else if (event.type === "provide") {
-				// libp2p.services.dht.refreshRoutingTable().catch((err) => console.error(err))
-			} else if (event.type === "query") {
-				libp2p.services.dht?.refreshRoutingTable().catch((err) => console.error(err))
-			} else if (event.type === "disconnect") {
-				libp2p.hangUp(peerIdFromString(event.target)).then(
-					() => console.log(`disconnected from ${event.target}`),
-					(err) => console.error(err),
-				)
-			}
+			const { type, ...detail } = JSON.parse(msg.data.toString())
+			this.dispatchEvent(new CustomEvent(type, { detail }))
+		})
+
+		this.addEventListener("append", () => gossipLog.append(bytesToHex(randomBytes(8))))
+
+		gossipLog.addEventListener("sync", ({ detail: { peer, messageCount, duration } }) => {
+			console.log(`completed sync with ${peer} (${messageCount} messages in ${duration}ms)`)
+		})
+
+		gossipLog.addEventListener("commit", ({ detail: commit }) => {
+			const { hash, level } = commit.root
+			const root = `${level}:${bytesToHex(hash)}`
+			this.post("gossiplog:commit", { topic: gossipLog.topic, root })
 		})
 	}
 
 	public post<T extends Event["type"]>(type: T, detail: (Event & { type: T })["detail"]) {
 		const timestamp = Date.now()
-		const event = { type, peerId: this.libp2p.peerId.toString(), timestamp, detail }
+		const event = { type, peerId: this.peerId.toString(), timestamp, detail }
 		this.ws.send(JSON.stringify(event), { binary: false })
 	}
 }

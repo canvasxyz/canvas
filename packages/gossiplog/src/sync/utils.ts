@@ -1,6 +1,6 @@
 import type { Key, Node } from "@canvas-js/okra"
 
-import * as Sync from "#protocols/sync"
+import * as Sync from "@canvas-js/gossiplog/protocols/sync"
 
 export const encodeKey = (key: Key) => key ?? undefined
 

@@ -1,4 +1,3 @@
-import { getLibp2p } from "@canvas-js/gossiplog/libp2p/browser"
 import { GossipLog as IdbGossipLog } from "@canvas-js/gossiplog/idb"
 
 import type { PlatformTarget } from "../interface.js"
@@ -8,7 +7,9 @@ const target: PlatformTarget = {
 		return IdbGossipLog.open(init)
 	},
 
-	createLibp2p: (config) => getLibp2p(config),
+	async listen(app, port, options) {
+		throw new Error("Cannot start API server in the browser")
+	},
 }
 
 export default target

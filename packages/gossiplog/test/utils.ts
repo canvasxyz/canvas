@@ -4,7 +4,7 @@ import path from "node:path"
 
 import test, { ExecutionContext } from "ava"
 import "fake-indexeddb/auto"
-import { locks, AbortController } from "web-locks"
+import { locks } from "web-locks"
 
 import { nanoid } from "nanoid"
 import { toString } from "uint8arrays"
@@ -20,9 +20,6 @@ import { AbstractGossipLog, GossipLogInit, encodeId, decodeClock } from "@canvas
 import { GossipLog as GossipLogSqlite } from "@canvas-js/gossiplog/sqlite"
 import { GossipLog as GossipLogIdb } from "@canvas-js/gossiplog/idb"
 import { GossipLog as GossipLogPostgres } from "@canvas-js/gossiplog/pg"
-
-// @ts-expect-error TS2322
-globalThis.AbortController = AbortController
 
 if (globalThis.navigator === undefined) {
 	// @ts-expect-error
@@ -54,32 +51,41 @@ export const testPlatforms = (
 		t: ExecutionContext<unknown>,
 		openGossipLog: <Payload>(t: ExecutionContext, init: GossipLogInit<Payload>) => Promise<AbstractGossipLog<Payload>>,
 	) => void,
+	platforms: { sqlite?: boolean; idb?: boolean; pg?: boolean } = { sqlite: true, idb: true, pg: true },
 ) => {
 	const macro = test.macro(run)
 
-	test(`Sqlite (on-disk) - ${name}`, macro, async (t, init) => {
-		const log = new GossipLogSqlite({ ...init, directory: getDirectory(t) })
-		t.teardown(() => log.close())
-		return log
-	})
+	if (platforms.sqlite) {
+		test(`Sqlite (on-disk) - ${name}`, macro, async (t, init) => {
+			const log = new GossipLogSqlite({ ...init, directory: getDirectory(t) })
+			t.teardown(() => log.close())
+			return log
+		})
+	}
 
-	test(`Sqlite (in-memory) - ${name}`, macro, async (t, init) => {
-		const log = new GossipLogSqlite(init)
-		t.teardown(() => log.close())
-		return log
-	})
+	// if (platforms.sqlite) {
+	// 	test(`Sqlite (in-memory) - ${name}`, macro, async (t, init) => {
+	// 		const log = new GossipLogSqlite(init)
+	// 		t.teardown(() => log.close())
+	// 		return log
+	// 	})
+	// }
 
-	test(`IndexedDB - ${name}`, macro, async (t, init) => {
-		const log = await GossipLogIdb.open(init)
-		t.teardown(() => log.close())
-		return log
-	})
+	if (platforms.idb) {
+		test(`IndexedDB - ${name}`, macro, async (t, init) => {
+			const log = await GossipLogIdb.open(init)
+			t.teardown(() => log.close())
+			return log
+		})
+	}
 
-	test(`Postgres - ${name}`, macro, async (t, init) => {
-		const log = await GossipLogPostgres.open(getPgConfig(), { ...init, clear: true })
-		t.teardown(() => log.close())
-		return log
-	})
+	if (platforms.pg) {
+		test(`Postgres - ${name}`, macro, async (t, init) => {
+			const log = await GossipLogPostgres.open(getPgConfig(), { ...init, clear: true })
+			t.teardown(() => log.close())
+			return log
+		})
+	}
 }
 
 export async function expectLogEntries<T>(

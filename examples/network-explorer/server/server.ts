@@ -21,11 +21,11 @@ const MAX_MESSAGE_ID = "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
 const BOOTSTRAP_LIST =
 	process.env.BOOTSTRAP_LIST ||
 	"/dns4/canvas-chat.fly.dev/tcp/443/wss/p2p/12D3KooWRrJCTFxZZPWDkZJboAHBCmhZ5MK1fcixDybM8GAjJM2Q"
-const LIBP2P_PORT = parseInt(process.env.LIBP2P_PORT || "3334", 10)
-const HTTP_PORT = parseInt(process.env.PORT || "3333", 10)
+const LIBP2P_PORT = parseInt(process.env.LIBP2P_PORT || "8889", 10)
+const HTTP_PORT = parseInt(process.env.PORT || "8888", 10)
 const HTTP_ADDR = "0.0.0.0"
 const dev = process.env.NODE_ENV !== "production"
-const topics = ["chat-example.canvas.xyz"]
+const topics = process.env.TOPIC ? [process.env.TOPIC] : ["chat-example.canvas.xyz"]
 
 console.log(`BOOTSTRAP_LIST: ${BOOTSTRAP_LIST}`)
 console.log(`LIBP2P_PORT: ${LIBP2P_PORT}`)
@@ -62,10 +62,13 @@ for (const topic of topics) {
 			},
 		},
 		signers: [new SIWESigner(), new ATPSigner(), new CosmosSigner(), new SubstrateSigner({}), new SolanaSigner()],
-		bootstrapList: [BOOTSTRAP_LIST],
-		listen: [`/ip4/0.0.0.0/tcp/${LIBP2P_PORT}/ws`],
 		topic,
 	})
+
+	// await canvasApp.listen({
+	// 	bootstrapList: [BOOTSTRAP_LIST],
+	// 	listen: [`/ip4/0.0.0.0/tcp/${LIBP2P_PORT}/ws`],
+	// })
 
 	canvasApp.addEventListener("message", async (event) => {
 		const message = event.detail
@@ -78,10 +81,10 @@ for (const topic of topics) {
 		}
 	})
 
-	await canvasApp.libp2p.start()
-	console.log(`peer id: ${canvasApp.libp2p.peerId}`)
+	// await canvasApp.libp2p.start()
+	// console.log(`peer id: ${canvasApp.libp2p.peerId}`)
 
-	const canvasApiApp = createAPI(canvasApp, { exposeMessages: true, exposeModels: true, exposeP2P: true })
+	const canvasApiApp = createAPI(canvasApp)
 	expressApp.use(`/canvas_api/${topic}`, canvasApiApp)
 
 	canvasApps[topic] = canvasApp
@@ -115,15 +118,11 @@ expressApp.get("/index_api/messages", ipld(), async (req, res) => {
 	const result = []
 	for (const messageIndexEntry of messageIndexEntries.rows) {
 		const app = canvasApps[messageIndexEntry.topic]
-		const messageRecord = await app.getMessage(messageIndexEntry.id)
-		if (messageRecord == null) {
-			console.error(`Could not find message with id ${messageIndexEntry.id}`)
-		}
-
+		const signedMessage = await app.getMessage(messageIndexEntry.id)
 		// during initialization, the app may be missing messages, and
 		// we shouldn't send null signature/message values to the client
-		if (messageRecord) {
-			result.push({ id: messageIndexEntry.id, ...messageRecord })
+		if (signedMessage !== null) {
+			result.push(signedMessage)
 		}
 	}
 
@@ -172,11 +171,11 @@ expressApp.get("/index_api/messages/:topic", ipld(), async (req, res) => {
 	const canvasApp = canvasApps[req.params.topic]
 	const result = []
 	for (const messageId of messageIds.rows) {
-		const messageRecord = await canvasApp.getMessage(messageId.id)
+		const signedMessage = await canvasApp.getMessage(messageId.id)
 		// during initialization, the app may be missing messages, and
 		// we shouldn't send null signature/message values to the client
-		if (messageRecord) {
-			result.push({ id: messageId.id, ...messageRecord })
+		if (signedMessage) {
+			result.push(signedMessage)
 		}
 	}
 
@@ -202,11 +201,11 @@ expressApp.get("/index_api/counts", async (req, res) => {
 	const connectionsMap: Record<string, string> = {}
 	for (const row of addressCountResult) {
 		addressCountsMap[row.topic] = parseInt(row.count, 10)
-		connectionCountsMap[row.topic] = canvasApps[row.topic]?.libp2p.getConnections().length
-		connectionsMap[row.topic] = canvasApps[row.topic]?.libp2p
-			.getConnections()
-			.map((c) => c.remoteAddr.toString())
-			.join(", ")
+		// connectionCountsMap[row.topic] = canvasApps[row.topic]?.libp2p.getConnections().length
+		// connectionsMap[row.topic] = canvasApps[row.topic]?.libp2p
+		// 	.getConnections()
+		// 	.map((c) => c.remoteAddr.toString())
+		// 	.join(", ")
 	}
 
 	const result = []
@@ -255,7 +254,7 @@ expressApp.get("/index_api/counts/:topic", async (req, res) => {
 		action_count: actionCount,
 		session_count: sessionCount,
 		address_count: addressCountResult.count || 0,
-		connection_count: canvasApps[req.params.topic]?.libp2p.getConnections().length || 0,
+		// connection_count: canvasApps[req.params.topic]?.libp2p.getConnections().length || 0,
 	}
 	res.json(result)
 })
@@ -289,8 +288,8 @@ expressApp.get("/index_api/latest_session/:topic", async (req, res) => {
 		return
 	}
 
-	const messageRecord = await canvasApp.getMessage(sessionId)
-	if (!messageRecord || !messageRecord.message || messageRecord.message.payload.type !== "session") {
+	const signedMessage = await canvasApp.getMessage(sessionId)
+	if (signedMessage === null || signedMessage.message.payload.type !== "session") {
 		res.status(StatusCodes.NOT_FOUND)
 		res.end()
 		return
@@ -299,7 +298,7 @@ expressApp.get("/index_api/latest_session/:topic", async (req, res) => {
 	// return using ipld json stringify
 	res.status(StatusCodes.OK)
 	res.setHeader("content-type", "application/json")
-	res.end(json.encode(messageRecord.message.payload))
+	res.end(json.encode(signedMessage.message.payload))
 })
 
 expressApp.listen(HTTP_PORT, HTTP_ADDR, () => {

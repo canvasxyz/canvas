@@ -5,7 +5,7 @@ const target: PlatformTarget = {
 		throw new Error("Unsupported platform")
 	},
 
-	async createLibp2p(config) {
+	async listen(app, port, options) {
 		throw new Error("Unsupported platform")
 	},
 }

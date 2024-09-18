@@ -168,7 +168,7 @@ export declare class Canvas extends EventEmitter<CanvasEvents> {
     (
       args: any,
       options: { chain?: string; signer?: SessionSigner },
-    ) => Promise<{ id: string; recipients: Promise<PeerId[]> }>
+    ) => Promise<{ id: string }>
   >
 
   public close(): Promise<void>
