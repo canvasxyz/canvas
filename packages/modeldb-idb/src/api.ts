@@ -18,6 +18,7 @@ import {
 	isLiteralExpression,
 	isRangeExpression,
 	validateModelValue,
+	WhereCondition,
 } from "@canvas-js/modeldb"
 
 import { getIndexName } from "./utils.js"
@@ -57,6 +58,25 @@ export class ModelAPI {
 
 	async delete(txn: IDBPTransaction<any, any, "readwrite">, key: string): Promise<void> {
 		await this.getStore(txn).delete(key)
+	}
+
+	async count(txn: IDBPTransaction<any, any, IDBTransactionMode>, where?: WhereCondition): Promise<number> {
+		const store = this.getStore(txn)
+
+		if (!where) {
+			return store.count()
+		}
+
+		const filter = getFilter(this.model, where)
+
+		let count = 0
+		for await (const { value } of store.iterate()) {
+			if (filter(value)) count++
+		}
+
+		// TODO: use index if available
+
+		return count
 	}
 
 	async query(txn: IDBPTransaction<any, any, IDBTransactionMode>, query: QueryParams): Promise<ModelValue[]> {

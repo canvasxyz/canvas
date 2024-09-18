@@ -2,7 +2,16 @@ import { IDBPDatabase, IDBPTransaction, openDB } from "idb"
 
 import { assert, signalInvalidType } from "@canvas-js/utils"
 
-import { AbstractModelDB, Config, Effect, ModelValue, ModelSchema, QueryParams, parseConfig } from "@canvas-js/modeldb"
+import {
+	AbstractModelDB,
+	Config,
+	Effect,
+	ModelValue,
+	ModelSchema,
+	QueryParams,
+	parseConfig,
+	WhereCondition,
+} from "@canvas-js/modeldb"
 
 import { ModelAPI } from "./api.js"
 import { getIndexName, checkForMissingObjectStores } from "./utils.js"
@@ -42,10 +51,7 @@ export class ModelDB extends AbstractModelDB {
 
 	readonly #models: Record<string, ModelAPI> = {}
 
-	private constructor(
-		public readonly db: IDBPDatabase,
-		config: Config,
-	) {
+	private constructor(public readonly db: IDBPDatabase, config: Config) {
 		super(config)
 
 		for (const model of config.models) {
@@ -126,11 +132,13 @@ export class ModelDB extends AbstractModelDB {
 		return result as T[]
 	}
 
-	public async count(modelName: string): Promise<number> {
+	public async count(modelName: string, where?: WhereCondition): Promise<number> {
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
 		checkForMissingObjectStores(this.db, [api.storeName])
-		return await this.db.count(api.storeName)
+
+		const result = await this.read((txn) => api.count(txn, where), [api.storeName])
+		return result as number
 	}
 
 	public async apply(effects: Effect[]): Promise<void> {
