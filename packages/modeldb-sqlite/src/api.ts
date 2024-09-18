@@ -197,7 +197,6 @@ export class ModelAPI {
 	}
 
 	public count(where?: WhereCondition): number {
-		console.log("where", where)
 		const sql: string[] = []
 
 		// SELECT

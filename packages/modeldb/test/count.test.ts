@@ -80,5 +80,7 @@ test(`Sqlite - count entries in a modeldb table with a where condition`, async (
 	t.is(await db.count("user", { age: { gte: 15 } }), 3)
 	t.is(await db.count("user", { age: { gt: 18, lt: 22 } }), 1)
 
+	t.is(await db.count("user", { type: "user", age: { gt: 18 } }), 1)
+
 	db.close()
 })
