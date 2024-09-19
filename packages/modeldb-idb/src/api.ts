@@ -60,10 +60,10 @@ export class ModelAPI {
 		await this.getStore(txn).delete(key)
 	}
 
-	async count(txn: IDBPTransaction<any, any, IDBTransactionMode>, where?: WhereCondition): Promise<number> {
+	async count(txn: IDBPTransaction<any, any, IDBTransactionMode>, where: WhereCondition = {}): Promise<number> {
 		const store = this.getStore(txn)
 
-		if (!where) {
+		if (Object.keys(where).length === 0) {
 			return store.count()
 		}
 
