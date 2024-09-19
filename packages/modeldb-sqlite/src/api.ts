@@ -196,9 +196,26 @@ export class ModelAPI {
 		}
 	}
 
-	public count(): number {
-		const { count = 0 } = this.#count.get({}) ?? {}
-		return count
+	public count(where?: WhereCondition): number {
+		const sql: string[] = []
+
+		// SELECT
+		sql.push(`SELECT COUNT(*) AS count FROM "${this.#table}"`)
+
+		// WHERE
+		const [whereExpression, params] = this.getWhereExpression(where)
+
+		if (whereExpression) {
+			sql.push(`WHERE ${whereExpression}`)
+		}
+		const results = this.db.prepare(sql.join(" ")).all(params) as RecordValue[]
+
+		const countResult = results[0].count
+		if (typeof countResult === "number") {
+			return countResult
+		} else {
+			throw new Error("internal error")
+		}
 	}
 
 	public async *values(): AsyncIterable<ModelValue> {

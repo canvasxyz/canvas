@@ -230,8 +230,20 @@ export class ModelAPI {
 		}
 	}
 
-	public async count(): Promise<number> {
-		const results = await this.client.query(`SELECT COUNT(*) AS count FROM "${this.#table}"`)
+	public async count(where?: WhereCondition): Promise<number> {
+		const sql: string[] = []
+
+		// SELECT
+		sql.push(`SELECT COUNT(*) AS count FROM "${this.#table}"`)
+
+		// WHERE
+		const [whereExpression, params] = this.getWhereExpression(where)
+
+		if (whereExpression) {
+			sql.push(`WHERE ${whereExpression}`)
+		}
+		const results = await this.client.query(sql.join(" "), params)
+
 		return parseInt(results.rows[0].count, 10) ?? 0
 	}
 

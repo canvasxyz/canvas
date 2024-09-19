@@ -2,7 +2,16 @@ import pg from "pg"
 
 import { assert, signalInvalidType } from "@canvas-js/utils"
 
-import { AbstractModelDB, Config, Effect, ModelValue, ModelSchema, QueryParams, parseConfig } from "@canvas-js/modeldb"
+import {
+	AbstractModelDB,
+	Config,
+	Effect,
+	ModelValue,
+	ModelSchema,
+	QueryParams,
+	parseConfig,
+	WhereCondition,
+} from "@canvas-js/modeldb"
 
 import { ModelAPI } from "./api.js"
 
@@ -100,10 +109,10 @@ export class ModelDB extends AbstractModelDB {
 		yield* api.values() as AsyncIterable<T>
 	}
 
-	public async count(modelName: string): Promise<number> {
+	public async count(modelName: string, where?: WhereCondition): Promise<number> {
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
-		return api.count()
+		return api.count(where)
 	}
 
 	public async query<T extends ModelValue = ModelValue>(modelName: string, query: QueryParams = {}): Promise<T[]> {

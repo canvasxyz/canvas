@@ -18,6 +18,7 @@ import {
 	isLiteralExpression,
 	isRangeExpression,
 	validateModelValue,
+	WhereCondition,
 } from "@canvas-js/modeldb"
 
 import { getIndexName } from "./utils.js"
@@ -59,6 +60,59 @@ export class ModelAPI {
 		await this.getStore(txn).delete(key)
 	}
 
+	async count(txn: IDBPTransaction<any, any, IDBTransactionMode>, where: WhereCondition = {}): Promise<number> {
+		const store = this.getStore(txn)
+
+		if (Object.keys(where).length === 0) {
+			return store.count()
+		}
+
+		// try to find an index over one of the properties in the where clause
+		// we can use this to "pre-filter" the results before performing a "table scan"
+		// choose the index that has the fewest matching entries
+		let bestIndex = null
+		let bestIndexCount = Infinity
+		for (const [property, expression] of Object.entries(where)) {
+			const modelProperty = this.model.properties.find((modelProperty) => modelProperty.name === property)
+			assert(modelProperty !== undefined, "model property does not exist")
+
+			if (modelProperty.kind === "primitive" && modelProperty.type === "json") {
+				throw new Error("json properties are not supported in where clauses")
+			}
+
+			if (expression === undefined) {
+				continue
+			}
+
+			const index = this.getIndex(store, modelProperty)
+			if (index === null) {
+				continue
+			}
+
+			const indexCount = await this.countIndex(property, index, expression)
+			if (indexCount < bestIndexCount) {
+				bestIndex = index
+				bestIndexCount = indexCount
+			}
+		}
+
+		// if our where clause has only one condition and it has an index, then just return the
+		// count from that index
+		if (Object.keys(where).length === 1 && bestIndex) {
+			return bestIndexCount
+		}
+
+		// otherwise iterate over all of the entries and count the ones that match the other conditions
+		const entriesToScan = bestIndex ? bestIndex.iterate() : store.iterate()
+		const filter = getFilter(this.model, where)
+		let count = 0
+		for await (const { value } of entriesToScan) {
+			if (filter(value)) count++
+		}
+
+		return count
+	}
+
 	async query(txn: IDBPTransaction<any, any, IDBTransactionMode>, query: QueryParams): Promise<ModelValue[]> {
 		// this.log("query %o", query)
 
@@ -85,8 +139,12 @@ export class ModelAPI {
 			// When we support multi-property indexes, we'll want to select the "best"
 			// index that matches the most number of properties with `where` clauses.
 
-			// TODO: support multi-property indexes
-			// TODO: use heuristics to select the "best" index
+			// try to find an index over one of the properties in the where clause
+			// we can use this to "pre-filter" the results before performing a "table scan"
+			// choose the index that has the fewest matching entries
+			let bestIndex = null
+			let bestIndexProperty = null
+			let bestIndexCount = Infinity
 			for (const [property, expression] of Object.entries(query.where)) {
 				const modelProperty = this.model.properties.find((modelProperty) => modelProperty.name === property)
 				assert(modelProperty !== undefined, "model property does not exist")
@@ -104,11 +162,21 @@ export class ModelAPI {
 					continue
 				}
 
+				const indexCount = await this.countIndex(property, index, expression)
+				if (indexCount < bestIndexCount) {
+					bestIndex = index
+					bestIndexProperty = property
+					bestIndexCount = indexCount
+				}
+			}
+
+			const expression = bestIndexProperty && query.where[bestIndexProperty]
+			if (bestIndex !== null && bestIndexProperty !== null && expression) {
 				// TODO: we could be smarter about this if `orderBy` & `limit` are both provided.
 				// TODO: grow the array with insertion sort, max capacity of `limit`
 				const results: ModelValue[] = []
 				let seen = 0
-				for await (const value of this.queryIndex(property, index, expression)) {
+				for await (const value of this.queryIndex(bestIndexProperty, bestIndex, expression)) {
 					if (filter(value)) {
 						if (query.offset !== undefined && seen < query.offset) {
 							seen++
@@ -207,6 +275,38 @@ export class ModelAPI {
 		}
 
 		return store.index(getIndexName(index))
+	}
+
+	private async countIndex(
+		propertyName: string,
+		storeIndex: IDBPObjectStore<any, any, string, "readonly"> | IDBPIndex<any, any, string, string, "readonly">,
+		expression: PropertyValue | NotExpression | RangeExpression | null,
+	): Promise<number> {
+		const property = this.model.properties.find((property) => property.name === propertyName)
+		assert(property !== undefined, "property not found")
+
+		if (isLiteralExpression(expression)) {
+			// Here we iterate over the index using an `only` key range
+			const range = IDBKeyRange.only(encodePropertyValue(property, expression))
+			return await storeIndex.count(range)
+		} else if (isNotExpression(expression)) {
+			// Here we iterate over the undex using an open `upperBound` key range
+			// followed by an open `lowerBound` key range. Unnecessary if expression.neq === null.
+
+			const keyRange =
+				expression.neq === undefined
+					? null
+					: expression.neq === null
+					? IDBKeyRange.lowerBound(encodePropertyValue(property, null), true)
+					: IDBKeyRange.upperBound(encodePropertyValue(property, expression.neq), true)
+
+			return await storeIndex.count(keyRange)
+		} else if (isRangeExpression(expression)) {
+			const range = getRange(property, expression)
+			return await storeIndex.count(range)
+		} else {
+			signalInvalidType(expression)
+		}
 	}
 
 	private async *queryIndex(

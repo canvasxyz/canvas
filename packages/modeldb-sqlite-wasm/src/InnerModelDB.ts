@@ -1,6 +1,6 @@
 import * as Comlink from "comlink"
 import { Logger } from "@libp2p/logger"
-import { Config, Effect, ModelValue, QueryParams } from "@canvas-js/modeldb"
+import { Config, Effect, ModelValue, QueryParams, WhereCondition } from "@canvas-js/modeldb"
 import { assert, signalInvalidType } from "@canvas-js/utils"
 import { Database } from "@sqlite.org/sqlite-wasm"
 import { ModelAPI } from "./ModelAPI.js"
@@ -51,10 +51,10 @@ export class InnerModelDB {
 		return Comlink.proxy(api.values())
 	}
 
-	public count(modelName: string): number {
+	public count(modelName: string, where?: WhereCondition): number {
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
-		return api.count()
+		return api.count(where)
 	}
 
 	public query<T extends ModelValue = ModelValue>(modelName: string, query: QueryParams = {}): T[] {
