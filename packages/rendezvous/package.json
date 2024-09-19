@@ -1,0 +1,34 @@
+{
+	"name": "@canvas-js/libp2p-rendezvous",
+	"version": "0.10.10",
+	"type": "module",
+	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
+	"main": "lib/index.js",
+	"types": "lib/index.d.ts",
+	"files": [
+		"lib"
+	],
+	"scripts": {
+		"generate": "protons ./src/protocols/rendezvous.proto",
+		"test": "ava --serial"
+	},
+	"exports": {
+		"./protocol": "./lib/protocol/index.js",
+		"./client": "./lib/client/index.js",
+		"./server": "./lib/server/index.js"
+	},
+	"dependencies": {
+		"@libp2p/interface": "^1.7.0",
+		"@libp2p/logger": "^4.0.16",
+		"@libp2p/peer-id": "^4.2.0",
+		"@libp2p/peer-record": "^7.0.25",
+		"@multiformats/multiaddr": "^12.3.0",
+		"it-length-prefixed": "^9.1.0",
+		"it-pipe": "^3.0.1",
+		"it-pushable": "^3.2.3",
+		"it-stream-types": "^2.0.1",
+		"protons-runtime": "^5.5.0",
+		"uint8arraylist": "^2.4.8",
+		"uint8arrays": "^5.1.0"
+	}
+}
