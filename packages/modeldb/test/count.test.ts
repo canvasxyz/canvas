@@ -43,6 +43,7 @@ testOnModelDB("count entries in a modeldb table with a where condition", async (
 			address: "string",
 			age: "number",
 			type: "string",
+			$indexes: [["age"]],
 		},
 	})
 
