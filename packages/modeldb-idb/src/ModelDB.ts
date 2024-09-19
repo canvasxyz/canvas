@@ -137,8 +137,7 @@ export class ModelDB extends AbstractModelDB {
 		assert(api !== undefined, `model ${modelName} not found`)
 		checkForMissingObjectStores(this.db, [api.storeName])
 
-		const result = await this.read((txn) => api.count(txn, where), [api.storeName])
-		return result as number
+		return await this.read((txn) => api.count(txn, where), [api.storeName])
 	}
 
 	public async apply(effects: Effect[]): Promise<void> {
