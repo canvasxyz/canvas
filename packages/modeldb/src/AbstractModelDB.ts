@@ -40,6 +40,8 @@ export abstract class AbstractModelDB {
 
 	abstract count(modelName: string, where?: WhereCondition): Promise<number>
 
+	abstract clear(modelName: string): Promise<void>
+
 	// Batch effect API
 
 	public abstract apply(effects: Effect[]): Promise<void>

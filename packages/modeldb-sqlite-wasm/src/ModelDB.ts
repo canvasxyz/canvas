@@ -92,6 +92,10 @@ export class ModelDB extends AbstractModelDB {
 		return this.wrappedDB.count(modelName, where)
 	}
 
+	public async clear(modelName: string): Promise<void> {
+		return this.wrappedDB.clear(modelName)
+	}
+
 	public async query<T extends ModelValue = ModelValue>(modelName: string, query: QueryParams = {}): Promise<T[]> {
 		// @ts-ignore
 		return this.wrappedDB.query(modelName, query)
