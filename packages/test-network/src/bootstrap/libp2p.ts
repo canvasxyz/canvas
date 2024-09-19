@@ -1,6 +1,6 @@
 import { createLibp2p } from "libp2p"
 import { yamux } from "@chainsafe/libp2p-yamux"
-import { CircuitRelayService, circuitRelayServer } from "@libp2p/circuit-relay-v2"
+
 import { webSockets } from "@libp2p/websockets"
 import { all } from "@libp2p/websockets/filters"
 import { noise } from "@chainsafe/libp2p-noise"
@@ -8,18 +8,24 @@ import { Identify, identify } from "@libp2p/identify"
 import { Fetch, fetch } from "@libp2p/fetch"
 import { PingService, ping } from "@libp2p/ping"
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
+import { KadDHT, kadDHT } from "@libp2p/kad-dht"
+import { GossipsubEvents, gossipsub } from "@chainsafe/libp2p-gossipsub"
 
-import { fetchDiscovery, FetchDiscoveryService } from "@canvas-js/discovery"
+import { gossipDiscovery, GossipDiscoveryService } from "@canvas-js/discovery"
 
 import { Config, getConfig } from "./config.js"
+import { PubSub } from "@libp2p/interface"
 
 export type ServiceMap = {
 	identify: Identify
-	circuitRelay: CircuitRelayService
 	fetch: Fetch
 	ping: PingService
-	discovery: FetchDiscoveryService
+	discovery: GossipDiscoveryService
+	pubsub: PubSub<GossipsubEvents>
+	globalDHT: KadDHT
 }
+
+const getDHTProtocol = (topic: string | null) => (topic === null ? `/canvas/kad/1.0.0` : `/canvas/kad/1.0.0/${topic}`)
 
 export async function getLibp2p(config: Partial<Config> = {}) {
 	const { peerId, listen, announce, minConnections, maxConnections } = await getConfig(config)
@@ -50,15 +56,21 @@ export async function getLibp2p(config: Partial<Config> = {}) {
 
 		services: {
 			identify: identify({ protocolPrefix: "canvas" }),
-			circuitRelay: circuitRelayServer({
-				reservations: {
-					maxReservations: 256,
-					reservationClearInterval: 1 * 60 * 1000,
-				},
-			}),
 			fetch: fetch({ protocolPrefix: "canvas" }),
 			ping: ping({ protocolPrefix: "canvas" }),
-			discovery: fetchDiscovery({}),
+
+			globalDHT: kadDHT({ protocol: getDHTProtocol(null), kBucketSize: 4 }),
+
+			pubsub: gossipsub({
+				emitSelf: false,
+				fallbackToFloodsub: false,
+				allowPublishToZeroTopicPeers: true,
+				globalSignaturePolicy: "StrictNoSign",
+				asyncValidation: true,
+				scoreParams: { IPColocationFactorWeight: 0 },
+			}),
+
+			discovery: gossipDiscovery({}),
 		},
 	})
 
