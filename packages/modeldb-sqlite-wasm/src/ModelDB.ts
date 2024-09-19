@@ -1,7 +1,16 @@
 import { logger } from "@libp2p/logger"
 import * as Comlink from "comlink"
 import sqlite3InitModule from "@sqlite.org/sqlite-wasm"
-import { AbstractModelDB, parseConfig, Effect, ModelValue, ModelSchema, QueryParams, Config } from "@canvas-js/modeldb"
+import {
+	AbstractModelDB,
+	parseConfig,
+	Effect,
+	ModelValue,
+	ModelSchema,
+	QueryParams,
+	Config,
+	WhereCondition,
+} from "@canvas-js/modeldb"
 import { InnerModelDB } from "./InnerModelDB.js"
 import "./worker.js"
 
@@ -79,8 +88,8 @@ export class ModelDB extends AbstractModelDB {
 		return this.wrappedDB.iterate(modelName) as AsyncIterable<T>
 	}
 
-	public async count(modelName: string): Promise<number> {
-		return this.wrappedDB.count(modelName)
+	public async count(modelName: string, where?: WhereCondition): Promise<number> {
+		return this.wrappedDB.count(modelName, where)
 	}
 
 	public async query<T extends ModelValue = ModelValue>(modelName: string, query: QueryParams = {}): Promise<T[]> {

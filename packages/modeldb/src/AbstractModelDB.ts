@@ -38,7 +38,7 @@ export abstract class AbstractModelDB {
 
 	abstract query<T extends ModelValue<any> = ModelValue<any>>(modelName: string, query?: QueryParams): Promise<T[]>
 
-	abstract count(modelName: string): Promise<number>
+	abstract count(modelName: string, where?: WhereCondition): Promise<number>
 
 	// Batch effect API
 
