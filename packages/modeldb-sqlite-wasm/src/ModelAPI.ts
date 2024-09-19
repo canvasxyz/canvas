@@ -69,6 +69,7 @@ export class ModelAPI {
 	#insert: Method<Params>
 	#update: Method<RecordValue>
 	#delete: Method<Record<`p${string}`, string>>
+	#clear: Method<{}>
 
 	// Queries
 	#selectAll: Query<{}, RecordValue>
@@ -79,7 +80,10 @@ export class ModelAPI {
 	readonly #primaryKeyName: string
 	readonly #primaryKeyParam: `p${string}`
 
-	public constructor(readonly db: OpfsDatabase, readonly model: Model) {
+	public constructor(
+		readonly db: OpfsDatabase,
+		readonly model: Model,
+	) {
 		const columns: string[] = []
 		const columnNames: `"${string}"`[] = [] // quoted column names for non-relation properties
 		const columnParams: `:p${string}`[] = [] // query params for non-relation properties
@@ -139,6 +143,8 @@ export class ModelAPI {
 
 		this.#delete = new Method<Record<`p${string}`, string>>(db, `DELETE FROM "${this.#table}" ${where}`)
 
+		this.#clear = new Method<Record<`p${string}`, string>>(db, `DELETE FROM "${this.#table}"`)
+
 		// Prepare queries
 		this.#count = new Query<{}, { count: number }>(this.db, `SELECT COUNT(*) AS count FROM "${this.#table}"`)
 
@@ -193,6 +199,20 @@ export class ModelAPI {
 		this.#delete.run({ [this.#primaryKeyParam]: key })
 		for (const relation of Object.values(this.#relations)) {
 			relation.delete(key)
+		}
+	}
+
+	public clear() {
+		const existingRecords = this.#select.all({})
+
+		this.#clear.run({})
+
+		for (const record of existingRecords) {
+			const key = record[this.#primaryKeyParam]
+			for (const relation of Object.values(this.#relations)) {
+				if (!key || typeof key !== "string") continue
+				relation.delete(key)
+			}
 		}
 	}
 
@@ -556,7 +576,10 @@ export class RelationAPI {
 	readonly #insert: Method<{ _source: string; _target: string }>
 	readonly #delete: Method<{ _source: string }>
 
-	public constructor(readonly db: OpfsDatabase, readonly relation: Relation) {
+	public constructor(
+		readonly db: OpfsDatabase,
+		readonly relation: Relation,
+	) {
 		const columns = [`_source TEXT NOT NULL`, `_target TEXT NOT NULL`]
 		db.exec(`CREATE TABLE IF NOT EXISTS "${this.table}" (${columns.join(", ")})`)
 

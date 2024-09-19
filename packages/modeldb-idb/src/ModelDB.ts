@@ -140,6 +140,12 @@ export class ModelDB extends AbstractModelDB {
 		return await this.read((txn) => api.count(txn, where), [api.storeName])
 	}
 
+	public async clear(modelName: string): Promise<void> {
+		const api = this.#models[modelName]
+		assert(api !== undefined, `model ${modelName} not found`)
+		return await this.write((txn) => api.clear(txn))
+	}
+
 	public async apply(effects: Effect[]): Promise<void> {
 		await this.write(async (txn) => {
 			for (const effect of effects) {

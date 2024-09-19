@@ -62,4 +62,10 @@ export class InnerModelDB {
 		assert(api !== undefined, `model ${modelName} not found`)
 		return api.query(query) as T[]
 	}
+
+	public clear(modelName: string): void {
+		const api = this.#models[modelName]
+		assert(api !== undefined, `model ${modelName} not found`)
+		return api.clear()
+	}
 }

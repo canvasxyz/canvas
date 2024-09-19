@@ -88,6 +88,12 @@ export class ModelDB extends AbstractModelDB {
 		return api.count(where)
 	}
 
+	public async clear(modelName: string): Promise<void> {
+		const api = this.#models[modelName]
+		assert(api !== undefined, `model ${modelName} not found`)
+		return api.clear()
+	}
+
 	public async query<T extends ModelValue<any> = ModelValue<any>>(
 		modelName: string,
 		query: QueryParams = {},

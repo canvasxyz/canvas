@@ -243,8 +243,18 @@ export class ModelAPI {
 			sql.push(`WHERE ${whereExpression}`)
 		}
 		const results = await this.client.query(sql.join(" "), params)
-
 		return parseInt(results.rows[0].count, 10) ?? 0
+	}
+
+		public async clear() {
+		const results = await this.client.query(`DELETE FROM "${this.#table}" RETURNING "${this.#primaryKeyName}"`)
+
+		for (const row of results.rows) {
+			const key = row[this.#primaryKeyName].id
+			for (const relation of Object.values(this.#relations)) {
+				await relation.delete(key)
+			}
+		}
 	}
 
 	public async *values(): AsyncIterable<ModelValue> {
@@ -605,7 +615,10 @@ export class RelationAPI {
 		return relationApi
 	}
 
-	public constructor(readonly client: pg.Client, readonly relation: Relation) {
+	public constructor(
+		readonly client: pg.Client,
+		readonly relation: Relation,
+	) {
 		this.client = client
 	}
 

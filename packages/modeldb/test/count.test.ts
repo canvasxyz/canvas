@@ -34,6 +34,8 @@ testOnModelDB("count entries in a modeldb table", async (t, openDB) => {
 	})
 
 	t.is(await db.count("user"), 3)
+	db.clear("user")
+	t.is(await db.count("user"), 0)
 })
 
 testOnModelDB("count entries in a modeldb table with a where condition", async (t, openDB) => {
