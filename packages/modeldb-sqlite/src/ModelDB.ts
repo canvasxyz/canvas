@@ -68,7 +68,10 @@ export class ModelDB extends AbstractModelDB {
 		return api.get(key) as T | null
 	}
 
-	public async *iterate<T extends ModelValue<any> = ModelValue<any>>(modelName: string): AsyncIterable<T> {
+	public async *iterate<T extends ModelValue<any> = ModelValue<any>>(
+		modelName: string,
+		query: QueryParams = {},
+	): AsyncIterable<T> {
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
 		yield* api.values() as AsyncIterable<T>
