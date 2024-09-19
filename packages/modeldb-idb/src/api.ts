@@ -139,8 +139,12 @@ export class ModelAPI {
 			// When we support multi-property indexes, we'll want to select the "best"
 			// index that matches the most number of properties with `where` clauses.
 
-			// TODO: support multi-property indexes
-			// TODO: use heuristics to select the "best" index
+			// try to find an index over one of the properties in the where clause
+			// we can use this to "pre-filter" the results before performing a "table scan"
+			// choose the index that has the fewest matching entries
+			let bestIndex = null
+			let bestIndexProperty = null
+			let bestIndexCount = Infinity
 			for (const [property, expression] of Object.entries(query.where)) {
 				const modelProperty = this.model.properties.find((modelProperty) => modelProperty.name === property)
 				assert(modelProperty !== undefined, "model property does not exist")
@@ -158,11 +162,21 @@ export class ModelAPI {
 					continue
 				}
 
+				const indexCount = await this.countIndex(property, index, expression)
+				if (indexCount < bestIndexCount) {
+					bestIndex = index
+					bestIndexProperty = property
+					bestIndexCount = indexCount
+				}
+			}
+
+			const expression = bestIndexProperty && query.where[bestIndexProperty]
+			if (bestIndex !== null && bestIndexProperty !== null && expression) {
 				// TODO: we could be smarter about this if `orderBy` & `limit` are both provided.
 				// TODO: grow the array with insertion sort, max capacity of `limit`
 				const results: ModelValue[] = []
 				let seen = 0
-				for await (const value of this.queryIndex(property, index, expression)) {
+				for await (const value of this.queryIndex(bestIndexProperty, bestIndex, expression)) {
 					if (filter(value)) {
 						if (query.offset !== undefined && seen < query.offset) {
 							seen++
