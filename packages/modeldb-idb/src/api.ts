@@ -60,6 +60,10 @@ export class ModelAPI {
 		await this.getStore(txn).delete(key)
 	}
 
+	async clear(txn: IDBPTransaction<any, any, "readwrite">) {
+		await this.getStore(txn).clear()
+	}
+
 	async count(txn: IDBPTransaction<any, any, IDBTransactionMode>, where: WhereCondition = {}): Promise<number> {
 		const store = this.getStore(txn)
 
@@ -297,8 +301,8 @@ export class ModelAPI {
 				expression.neq === undefined
 					? null
 					: expression.neq === null
-					? IDBKeyRange.lowerBound(encodePropertyValue(property, null), true)
-					: IDBKeyRange.upperBound(encodePropertyValue(property, expression.neq), true)
+						? IDBKeyRange.lowerBound(encodePropertyValue(property, null), true)
+						: IDBKeyRange.upperBound(encodePropertyValue(property, expression.neq), true)
 
 			return await storeIndex.count(keyRange)
 		} else if (isRangeExpression(expression)) {
@@ -331,8 +335,8 @@ export class ModelAPI {
 				expression.neq === undefined
 					? null
 					: expression.neq === null
-					? IDBKeyRange.lowerBound(encodePropertyValue(property, null), true)
-					: IDBKeyRange.upperBound(encodePropertyValue(property, expression.neq), true)
+						? IDBKeyRange.lowerBound(encodePropertyValue(property, null), true)
+						: IDBKeyRange.upperBound(encodePropertyValue(property, expression.neq), true)
 
 			for (let cursor = await storeIndex.openCursor(keyRange); cursor !== null; cursor = await cursor.continue()) {
 				yield this.decodeObject(cursor.value)
