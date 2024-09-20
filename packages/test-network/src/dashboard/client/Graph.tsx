@@ -3,6 +3,7 @@ import * as d3 from "d3"
 
 interface Node extends d3.SimulationNodeDatum {
 	id: string
+	topic: string | null
 }
 
 interface Link {
@@ -15,7 +16,7 @@ export interface GraphProps {
 	mesh: Record<string, string[]>
 	nodes: Node[]
 	links: Link[]
-	roots: Record<string, string>
+	roots: Record<string, string | null>
 
 	bootstrapPeerIds?: string[]
 	onNodeClick?: (id: string, shift: boolean, meta: boolean) => void

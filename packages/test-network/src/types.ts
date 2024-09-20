@@ -1,5 +1,5 @@
 type EventTypes = {
-	start: { root: string }
+	start: { root?: string; topic: string | null }
 	stop: {}
 	"connection:open": { id: string; remotePeer: string; remoteAddr: string }
 	"connection:close": { id: string; remotePeer: string; remoteAddr: string }

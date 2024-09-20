@@ -13,13 +13,13 @@ export type SocketEvents = {
 }
 
 export class Socket extends TypedEventEmitter<SocketEvents> {
-	public static async open(url: string, peerId: PeerId, gossipLog: AbstractGossipLog<string>) {
+	public static async open(url: string, peerId: PeerId, gossipLog?: AbstractGossipLog<string>) {
 		const ws = new WebSocket(url)
 		await new Promise((resolve) => ws.addEventListener("open", resolve, { once: true }))
 		return new Socket(ws, peerId, gossipLog)
 	}
 
-	private constructor(readonly ws: WebSocket, readonly peerId: PeerId, readonly gossipLog: AbstractGossipLog<string>) {
+	private constructor(readonly ws: WebSocket, readonly peerId: PeerId, readonly gossipLog?: AbstractGossipLog<string>) {
 		super()
 
 		ws.addEventListener("message", (msg) => {
@@ -27,13 +27,13 @@ export class Socket extends TypedEventEmitter<SocketEvents> {
 			this.dispatchEvent(new CustomEvent(type, { detail }))
 		})
 
-		this.addEventListener("append", () => gossipLog.append(bytesToHex(randomBytes(8))))
+		this.addEventListener("append", () => gossipLog?.append(bytesToHex(randomBytes(8))))
 
-		gossipLog.addEventListener("sync", ({ detail: { peer, messageCount, duration } }) => {
+		gossipLog?.addEventListener("sync", ({ detail: { peer, messageCount, duration } }) => {
 			console.log(`completed sync with ${peer} (${messageCount} messages in ${duration}ms)`)
 		})
 
-		gossipLog.addEventListener("commit", ({ detail: commit }) => {
+		gossipLog?.addEventListener("commit", ({ detail: commit }) => {
 			const { hash, level } = commit.root
 			const root = `${level}:${bytesToHex(hash)}`
 			this.post("gossiplog:commit", { topic: gossipLog.topic, root })

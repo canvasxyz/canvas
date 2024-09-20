@@ -6,21 +6,21 @@ import { Graph } from "./Graph.js"
 
 type State = {
 	mesh: Record<string, string[]>
-	nodes: { id: string }[]
+	nodes: { id: string; topic: string | null }[]
 	links: { id: string; source: string; target: string }[]
-	roots: Record<string, string>
+	roots: Record<string, string | null>
 }
 
-const topic = "test-network-example"
 const bootstrapPeerIds = ["12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn"]
 
 function reduce(state: State, event: Event): State {
+	// console.log(event)
 	if (event.type === "start") {
 		if (state.nodes.every((node) => node.id !== event.peerId)) {
 			return {
 				...state,
-				nodes: [...state.nodes, { id: event.peerId }],
-				roots: { ...state.roots, [event.peerId]: event.detail.root },
+				nodes: [...state.nodes, { id: event.peerId, topic: event.detail.topic }],
+				roots: { ...state.roots, [event.peerId]: event.detail.root ?? null },
 			}
 		}
 	} else if (event.type === "connection:open") {
@@ -33,15 +33,11 @@ function reduce(state: State, event: Event): State {
 	} else if (event.type === "connection:close") {
 		return { ...state, links: state.links.filter((link) => link.id !== event.detail.id) }
 	} else if (event.type === "gossipsub:mesh:update") {
-		if (event.detail.topic === topic) {
-			return { ...state, mesh: { ...state.mesh, [event.peerId]: event.detail.peers } }
-		}
+		return { ...state, mesh: { ...state.mesh, [event.peerId]: event.detail.peers } }
 	} else if (event.type === "gossiplog:commit") {
-		if (event.detail.topic === topic) {
-			return {
-				...state,
-				roots: { ...state.roots, [event.peerId]: event.detail.root },
-			}
+		return {
+			...state,
+			roots: { ...state.roots, [event.peerId]: event.detail.root },
 		}
 	}
 

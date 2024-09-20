@@ -20,33 +20,33 @@ services:
   #     - LISTEN=/ip4/127.0.0.1/tcp/8081/ws
   #     - ANNOUNCE=/dns4/localhost/tcp/8081/ws
 
-  server:
-    init: true
-    build:
-      context: .
-      dockerfile: Dockerfile.server
-    ports:
-      - "9000:9000"
-    environment:
-      # 12D3KooWNSk8zhzjqcQuXB5QZnmDxjxfKLwnW1y7p7sSgCngAYys
-      - PEER_ID=CiYAJAgBEiC7nf5epqPyalHbz1yFJiXxiOIsrn9mJpRIFtMKx8d1dhIkCAESILud/l6mo/JqUdvPXIUmJfGI4iyuf2YmlEgW0wrHx3V2GkQIARJAgf0+xw806RIxqPyvAk8N44IULSlwahwkWifHRwPxlVm7nf5epqPyalHbz1yFJiXxiOIsrn9mJpRIFtMKx8d1dg==
-      - PORT=9000
-
-  # bootstrap:
+  # server:
   #   init: true
   #   build:
   #     context: .
-  #     dockerfile: Dockerfile.peer
-  #   depends_on:
-  #     - dashboard
+  #     dockerfile: Dockerfile.server
   #   ports:
-  #     - "8080:8080"
+  #     - "9000:9000"
   #   environment:
-  #     - SERVICE_NAME=bootstrap
-  #     # - DEBUG=canvas:*
-  #     # 12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
-  #     - PEER_ID=CiYAJAgBEiC9yHdvmtjGZW9Q2lSLKlgmNYW9bxRK7uyo4g0aS0hFzxIkCAESIL3Id2+a2MZlb1DaVIsqWCY1hb1vFEru7KjiDRpLSEXPGkQIARJA8STx22fxKw7avM9/YjP3elT1YKBfA4wCIgnfs4yl/4G9yHdvmtjGZW9Q2lSLKlgmNYW9bxRK7uyo4g0aS0hFzw==
-  #     # - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
-  #     - ANNOUNCE=/dns4/bootstrap/tcp/8080/ws
-  #     # - ANNOUNCE=/dns4/localhost/tcp/8080/ws
-  #     - MIN_CONNECTIONS=0
+  #     # 12D3KooWNSk8zhzjqcQuXB5QZnmDxjxfKLwnW1y7p7sSgCngAYys
+  #     - PEER_ID=CiYAJAgBEiC7nf5epqPyalHbz1yFJiXxiOIsrn9mJpRIFtMKx8d1dhIkCAESILud/l6mo/JqUdvPXIUmJfGI4iyuf2YmlEgW0wrHx3V2GkQIARJAgf0+xw806RIxqPyvAk8N44IULSlwahwkWifHRwPxlVm7nf5epqPyalHbz1yFJiXxiOIsrn9mJpRIFtMKx8d1dg==
+  #     - PORT=9000
+
+  bootstrap:
+    init: true
+    build:
+      context: .
+      dockerfile: Dockerfile.bootstrap
+    depends_on:
+      - dashboard
+    ports:
+      - "8080:8080"
+    environment:
+      - SERVICE_NAME=bootstrap
+      - DEBUG=canvas:*,libp2p:gossipsub,libp2p:gossipsub:*
+      # 12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
+      - PEER_ID=CiYAJAgBEiC9yHdvmtjGZW9Q2lSLKlgmNYW9bxRK7uyo4g0aS0hFzxIkCAESIL3Id2+a2MZlb1DaVIsqWCY1hb1vFEru7KjiDRpLSEXPGkQIARJA8STx22fxKw7avM9/YjP3elT1YKBfA4wCIgnfs4yl/4G9yHdvmtjGZW9Q2lSLKlgmNYW9bxRK7uyo4g0aS0hFzw==
+      - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+      - ANNOUNCE=/dns4/bootstrap/tcp/8080/ws
+      # - ANNOUNCE=/dns4/localhost/tcp/8080/ws
+      - MIN_CONNECTIONS=0
