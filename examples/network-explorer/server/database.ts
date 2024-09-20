@@ -103,15 +103,31 @@ export async function createDatabase(client: Client) {
 			)
 		},
 
-		selectMessages: async (topic: string, id: string, type: string, limit: number): Promise<QueryResult<Message>> => {
+		selectMessages: async (
+			topic: string,
+			id: string,
+			type: string | null,
+			limit: number,
+		): Promise<QueryResult<Message>> => {
 			return await client.query<Message>(
 				`
 				SELECT * FROM messages
-				WHERE topic = $1 AND id <= $2 AND type = $3
+				WHERE topic = $1 AND id <= $2 AND ($3::text IS NULL OR type = $3)
 				ORDER BY id DESC
 				LIMIT $4;
 			`,
 				[topic, id, type, limit],
+			)
+		},
+
+		selectMessagesNoLimit: async (topic: string, id: string, type: string | null): Promise<QueryResult<Message>> => {
+			return await client.query<Message>(
+				`
+				SELECT * FROM messages
+				WHERE topic = $1 AND id <= $2 AND ($3::text IS NULL OR type = $3)
+				ORDER BY id DESC;
+			`,
+				[topic, id, type],
 			)
 		},
 

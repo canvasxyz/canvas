@@ -64,10 +64,10 @@ function ActionsTable() {
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
-					{actionsToDisplay.map(([cid, signature, message]: [string, Signature, Message<Action>]) => {
+					{actionsToDisplay.map(({ id, signature, message }) => {
 						const args = JSON.stringify(message.payload.args)
 						return (
-							<Table.Row key={cid}>
+							<Table.Row key={id}>
 								<Table.Cell>
 									<DidPopover did={message.payload.did || ""} truncateBelow="md" />
 								</Table.Cell>
@@ -86,7 +86,11 @@ function ActionsTable() {
 			<Flex direction="row" gap="2">
 				<Box flexGrow="1" />
 				<PaginationButton text="Previous" enabled={currentCursor !== null} onClick={popCursor} />
-				<PaginationButton text="Next" enabled={hasMore} onClick={() => pushCursor(actions[entriesPerPage][0])} />
+				<PaginationButton
+					text="Next"
+					enabled={hasMore}
+					onClick={() => pushCursor(actionsToDisplay[entriesPerPage].id)}
+				/>
 			</Flex>
 		</Flex>
 	)

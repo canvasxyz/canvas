@@ -47,12 +47,9 @@ function SessionsTable() {
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
-					{sessionsToDisplay.map((item) => {
-						const cid = item[0]
-						const message = item[2]
-
+					{sessionsToDisplay.map(({ id, message }) => {
 						return (
-							<Table.Row key={cid}>
+							<Table.Row key={id}>
 								<Table.Cell>
 									<DidPopover did={message.payload.did} truncateBelow="md" numEndChars={0} />
 								</Table.Cell>
@@ -70,7 +67,11 @@ function SessionsTable() {
 			<Flex direction="row" gap="2">
 				<Box flexGrow="1" />
 				<PaginationButton text="Previous" enabled={currentCursor !== null} onClick={popCursor} />
-				<PaginationButton text="Next" enabled={hasMore} onClick={() => pushCursor(sessions[entriesPerPage][0])} />
+				<PaginationButton
+					text="Next"
+					enabled={hasMore}
+					onClick={() => pushCursor(sessionsToDisplay[entriesPerPage].id)}
+				/>
 			</Flex>
 		</Flex>
 	)

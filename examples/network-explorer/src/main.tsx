@@ -17,7 +17,7 @@ const router = createBrowserRouter([
 					<Navbar />
 					<Separator size="4" />
 					<Routes>
-						<Route path="/" element={<HomePage />} />
+						<Route path="/*" element={<HomePage />} />
 					</Routes>
 				</Container>
 			</Theme>
