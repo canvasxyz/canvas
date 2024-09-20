@@ -60,10 +60,10 @@ for (const topic of topics) {
 		signers: [new SIWESigner(), new ATPSigner(), new CosmosSigner(), new SubstrateSigner({}), new SolanaSigner()],
 		topic,
 		schema: {
-			addresses: {
+			$addresses_index: {
 				address: "primary",
 			},
-			messages: {
+			$messages_index: {
 				id: "primary",
 				type: "string",
 			},
@@ -79,16 +79,16 @@ for (const topic of topics) {
 		const message = event.detail
 
 		if (message.message.payload.type === "action") {
-			await canvasApp.messageLog.db.set("messages", {
+			await canvasApp.messageLog.db.set("$messages_index", {
 				id: message.id,
 				type: "action",
 			})
 		} else if (message.message.payload.type === "session") {
-			await canvasApp.messageLog.db.set("messages", {
+			await canvasApp.messageLog.db.set("$messages_index", {
 				id: message.id,
 				type: "action",
 			})
-			await canvasApp.messageLog.db.set("addresses", {
+			await canvasApp.messageLog.db.set("$addresses_index", {
 				address: message.message.payload.did,
 			})
 		}
@@ -180,7 +180,7 @@ expressApp.get("/index_api/messages/:topic", ipld(), async (req, res) => {
 	}
 
 	const canvasApp = canvasApps[req.params.topic]
-	const messageIds = await canvasApp.messageLog.db.query("messages", {
+	const messageIds = await canvasApp.messageLog.db.query("$messages_index", {
 		select: { id: true },
 		where: {
 			type,
@@ -210,9 +210,9 @@ expressApp.get("/index_api/counts", async (req, res) => {
 	for (const topic of topics) {
 		const canvasApp = canvasApps[topic]
 
-		const actionCount = await canvasApp.messageLog.db.count("messages", { type: "action" })
-		const sessionCount = await canvasApp.messageLog.db.count("messages", { type: "session" })
-		const addressCount = await canvasApp.messageLog.db.count("addresses")
+		const actionCount = await canvasApp.messageLog.db.count("$messages_index", { type: "action" })
+		const sessionCount = await canvasApp.messageLog.db.count("$messages_index", { type: "session" })
+		const addressCount = await canvasApp.messageLog.db.count("$addresses_index")
 		// TODO
 		const connections = "-"
 		// TODO
@@ -233,9 +233,9 @@ expressApp.get("/index_api/counts", async (req, res) => {
 expressApp.get("/index_api/counts/:topic", async (req, res) => {
 	const canvasApp = canvasApps[req.params.topic]
 
-	const actionCount = await canvasApp.messageLog.db.count("messages", { type: "action" })
-	const sessionCount = await canvasApp.messageLog.db.count("messages", { type: "session" })
-	const addressCount = await canvasApp.messageLog.db.count("addresses")
+	const actionCount = await canvasApp.messageLog.db.count("$messages_index", { type: "action" })
+	const sessionCount = await canvasApp.messageLog.db.count("$messages_index", { type: "session" })
+	const addressCount = await canvasApp.messageLog.db.count("$addresses_index")
 	// TODO
 	const connections = "-"
 	// TODO
