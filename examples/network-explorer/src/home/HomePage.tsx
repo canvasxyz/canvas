@@ -33,7 +33,7 @@ function HomePage() {
 	if (error || countsError) return <div>failed to load</div>
 	if (!data || !countsData) return <div>loading...</div>
 
-	const actions = (data?.filter((item) => item[2].payload.type === "action") || []) as Result<Action>[]
+	const actions = data.filter((item) => item.message.payload.type === "action") as Result<Action>[]
 
 	return (
 		<Flex direction="column" gap="4" pt="4">
@@ -102,12 +102,9 @@ function HomePage() {
 							</Table.Row>
 						</Table.Header>
 						<Table.Body>
-							{actions.map((item) => {
-								const cid = item[0]
-								const message = item[2]
-
+							{actions.map(({ id, message }) => {
 								return (
-									<Table.Row key={cid}>
+									<Table.Row key={id}>
 										<Table.Cell>
 											<DidPopover did={message.payload.did || ""} />
 										</Table.Cell>

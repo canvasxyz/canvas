@@ -118,13 +118,11 @@ expressApp.get("/index_api/messages", ipld(), async (req, res) => {
 	const result = []
 	for (const messageIndexEntry of messageIndexEntries.rows) {
 		const app = canvasApps[messageIndexEntry.topic]
-		// skip messages from apps that are no longer running
-		if (!app) continue
 		const signedMessage = await app.getMessage(messageIndexEntry.id)
 		// during initialization, the app may be missing messages, and
 		// we shouldn't send null signature/message values to the client
 		if (signedMessage !== null) {
-			result.push([messageIndexEntry.id, signedMessage.signature, signedMessage.message])
+			result.push(signedMessage)
 		}
 	}
 
@@ -134,24 +132,25 @@ expressApp.get("/index_api/messages", ipld(), async (req, res) => {
 })
 
 expressApp.get("/index_api/messages/:topic", ipld(), async (req, res) => {
-	let numMessagesToReturn: number
-	if (!req.query.limit) {
-		numMessagesToReturn = 10
-	} else if (typeof req.query.limit === "string") {
-		numMessagesToReturn = parseInt(req.query.limit)
+	let numMessagesToReturn
+	if (req.query.limit && typeof req.query.limit == "string") {
+		if (req.query.limit === "all") {
+			// return all
+			numMessagesToReturn = -1
+		} else {
+			numMessagesToReturn = parseInt(req.query.limit, 10)
+		}
 	} else {
-		res.status(StatusCodes.BAD_REQUEST)
-		res.end()
-		return
+		numMessagesToReturn = 10
 	}
 
-	if (req.query.type !== "session" && req.query.type !== "action") {
+	if (req.query.type && req.query.type !== "session" && req.query.type !== "action") {
 		console.log("invalid type", req.query.type)
 		res.status(StatusCodes.BAD_REQUEST)
 		res.end()
 		return
 	}
-	const type = req.query.type
+	const type = req.query.type || null
 
 	let before: string
 	if (!req.query.before) {
@@ -164,7 +163,10 @@ expressApp.get("/index_api/messages/:topic", ipld(), async (req, res) => {
 		return
 	}
 
-	const messageIds = await queries.selectMessages(req.params.topic, before, type, numMessagesToReturn)
+	const messageIds =
+		numMessagesToReturn === -1
+			? await queries.selectMessagesNoLimit(req.params.topic, before, type)
+			: await queries.selectMessages(req.params.topic, before, type, numMessagesToReturn)
 
 	const canvasApp = canvasApps[req.params.topic]
 	const result = []
@@ -172,8 +174,8 @@ expressApp.get("/index_api/messages/:topic", ipld(), async (req, res) => {
 		const signedMessage = await canvasApp.getMessage(messageId.id)
 		// during initialization, the app may be missing messages, and
 		// we shouldn't send null signature/message values to the client
-		if (signedMessage !== null) {
-			result.push([messageId.id, signedMessage.signature, signedMessage.message])
+		if (signedMessage) {
+			result.push(signedMessage)
 		}
 	}
 
