@@ -2,15 +2,15 @@ import useSWR from "swr"
 import { Action, Message, Session, Signature } from "@canvas-js/interfaces"
 import { Box, Flex, Table, Text } from "@radix-ui/themes"
 
-import ArgsPopout from "../components/ArgsPopout.js"
-import PaginationButton from "../components/PaginationButton.js"
-import useCursorStack from "../useCursorStack.js"
-import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "../utils.js"
-import { DidPopover } from "../components/DidPopover.js"
+import ArgsPopout from "./components/ArgsPopout.js"
+import PaginationButton from "./components/PaginationButton.js"
+import useCursorStack from "./useCursorStack.js"
+import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "./utils.js"
+import { DidPopover } from "./components/DidPopover.js"
 
 function SessionField({ signature, message }: { signature: Signature; message: Message<Action> }) {
 	const { data: session, error } = useSWR(
-		`/index_api/latest_session/${message.topic}?did=${message.payload.did}&public_key=${signature.publicKey}`,
+		`/index_api/latest_session/?did=${message.payload.did}&public_key=${signature.publicKey}`,
 		fetchAndIpldParseJson<Session>,
 	)
 
@@ -21,7 +21,7 @@ function SessionField({ signature, message }: { signature: Signature; message: M
 
 const entriesPerPage = 10
 
-function ActionsTable({ topic }: { topic: string }) {
+function ActionsTable() {
 	const { currentCursor, pushCursor, popCursor } = useCursorStack<string>()
 
 	// in order to determine if another page exists, we retrieve n + 1 entries
@@ -35,7 +35,7 @@ function ActionsTable({ topic }: { topic: string }) {
 	}
 
 	const { data: actions, error } = useSWR(
-		`/index_api/messages/${topic}?${params.toString()}`,
+		`/index_api/messages?${params.toString()}`,
 		fetchAndIpldParseJson<Result<Action>[]>,
 		{
 			refreshInterval: 1000,

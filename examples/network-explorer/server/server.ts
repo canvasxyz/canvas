@@ -25,7 +25,7 @@ const LIBP2P_PORT = parseInt(process.env.LIBP2P_PORT || "8889", 10)
 const HTTP_PORT = parseInt(process.env.PORT || "8888", 10)
 const HTTP_ADDR = "0.0.0.0"
 const dev = process.env.NODE_ENV !== "production"
-const topics = process.env.TOPIC ? [process.env.TOPIC] : ["chat-example.canvas.xyz"]
+const topic = process.env.TOPIC || "chat-example.canvas.xyz"
 
 console.log(`BOOTSTRAP_LIST: ${BOOTSTRAP_LIST}`)
 console.log(`LIBP2P_PORT: ${LIBP2P_PORT}`)
@@ -49,46 +49,42 @@ expressApp.use(
 
 const canvasApps: Record<string, Canvas> = {}
 
-for (const topic of topics) {
-	console.log(`initializing canvas for topic ${topic}`)
+console.log(`initializing canvas for topic ${topic}`)
 
-	const canvasApp = await Canvas.initialize({
-		// do we need a separate database url for each topic?
-		// path: process.env.DATABASE_URL,
-		contract: {
-			models: {},
-			actions: {
-				createMessage() {},
-			},
+const canvasApp = await Canvas.initialize({
+	// do we need a separate database url for each topic?
+	// path: process.env.DATABASE_URL,
+	contract: {
+		models: {},
+		actions: {
+			createMessage() {},
 		},
-		signers: [new SIWESigner(), new ATPSigner(), new CosmosSigner(), new SubstrateSigner({}), new SolanaSigner()],
-		topic,
-	})
+	},
+	signers: [new SIWESigner(), new ATPSigner(), new CosmosSigner(), new SubstrateSigner({}), new SolanaSigner()],
+	topic,
+})
 
-	// await canvasApp.listen({
-	// 	bootstrapList: [BOOTSTRAP_LIST],
-	// 	listen: [`/ip4/0.0.0.0/tcp/${LIBP2P_PORT}/ws`],
-	// })
+// await canvasApp.listen({
+// 	bootstrapList: [BOOTSTRAP_LIST],
+// 	listen: [`/ip4/0.0.0.0/tcp/${LIBP2P_PORT}/ws`],
+// })
 
-	canvasApp.addEventListener("message", async (event) => {
-		const message = event.detail
+canvasApp.addEventListener("message", async (event) => {
+	const message = event.detail
 
-		if (message.message.payload.type === "action") {
-			await queries.addAction(message.message.topic, message.id)
-		} else if (message.message.payload.type === "session") {
-			await queries.addSession(message.message.topic, message.id)
-			await queries.addAddress(message.message.topic, message.message.payload.did)
-		}
-	})
+	if (message.message.payload.type === "action") {
+		await queries.addAction(message.message.topic, message.id)
+	} else if (message.message.payload.type === "session") {
+		await queries.addSession(message.message.topic, message.id)
+		await queries.addAddress(message.message.topic, message.message.payload.did)
+	}
+})
 
-	// await canvasApp.libp2p.start()
-	// console.log(`peer id: ${canvasApp.libp2p.peerId}`)
+// await canvasApp.libp2p.start()
+// console.log(`peer id: ${canvasApp.libp2p.peerId}`)
 
-	const canvasApiApp = createAPI(canvasApp)
-	expressApp.use(`/canvas_api/${topic}`, canvasApiApp)
-
-	canvasApps[topic] = canvasApp
-}
+const canvasApiApp = createAPI(canvasApp)
+expressApp.use(`/canvas_api/${topic}`, canvasApiApp)
 
 expressApp.get("/index_api/messages", ipld(), async (req, res) => {
 	let numMessagesToReturn: number
@@ -206,64 +202,19 @@ expressApp.get("/index_api/counts", async (req, res) => {
 		// 	.join(", ")
 	}
 
-	const result = []
-	for (const topic of topics) {
-		result.push({
-			topic,
-			address_count: addressCountsMap[topic] || 0,
-			connection_count: connectionCountsMap[topic] || 0,
-			connections: connectionsMap[topic] || "-",
-			action_count: actionCountsMap[topic] || 0,
-			session_count: sessionCountsMap[topic] || 0,
-		})
-	}
-
-	res.json(result)
-})
-
-expressApp.get("/index_api/counts/total", async (req, res) => {
-	const actionCount = (await queries.selectCountsForTypeTotal("action")).rows[0]
-	const sessionCount = (await queries.selectCountsForTypeTotal("session")).rows[0]
-
-	const addressCountResult = (await queries.selectAddressCountTotal()).rows[0]
 	const result = {
-		action_count: actionCount.count || 0,
-		session_count: sessionCount.count || 0,
-		address_count: addressCountResult.count || 0,
+		topic,
+		address_count: addressCountsMap[topic] || 0,
+		connection_count: connectionCountsMap[topic] || 0,
+		connections: connectionsMap[topic] || "-",
+		action_count: actionCountsMap[topic] || 0,
+		session_count: sessionCountsMap[topic] || 0,
 	}
+
 	res.json(result)
 })
 
-expressApp.get("/index_api/counts/:topic", async (req, res) => {
-	let actionCount = 0
-	let sessionCount = 0
-	for (const row of (await queries.selectCounts(req.params.topic)).rows) {
-		if (row.type === "action") {
-			actionCount = row.count
-		}
-		if (row.type === "session") {
-			sessionCount = row.count
-		}
-	}
-
-	const addressCountResult = (await queries.selectAddressCount(req.params.topic)).rows[0]
-	const result = {
-		topic: req.params.topic,
-		action_count: actionCount,
-		session_count: sessionCount,
-		address_count: addressCountResult.count || 0,
-		// connection_count: canvasApps[req.params.topic]?.libp2p.getConnections().length || 0,
-	}
-	res.json(result)
-})
-
-expressApp.get("/index_api/latest_session/:topic", async (req, res) => {
-	const canvasApp = canvasApps[req.params.topic]
-	if (!canvasApp) {
-		res.status(StatusCodes.NOT_FOUND)
-		res.end()
-		return
-	}
+expressApp.get("/index_api/latest_session/", async (req, res) => {
 	if (
 		!req.query.did ||
 		typeof req.query.did !== "string" ||

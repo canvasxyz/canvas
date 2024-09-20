@@ -5,9 +5,8 @@ import ReactDOM from "react-dom/client"
 import { createBrowserRouter, Route, RouterProvider, Routes } from "react-router-dom"
 
 import "./index.css"
-import HomePage from "./home/HomePage.js"
+import HomePage from "./HomePage.js"
 import Navbar from "./components/Navbar.js"
-import Topic from "./topic/Topic.js"
 
 const router = createBrowserRouter([
 	{
@@ -19,7 +18,6 @@ const router = createBrowserRouter([
 					<Separator size="4" />
 					<Routes>
 						<Route path="/" element={<HomePage />} />
-						<Route path="/topic/:topic" element={<Topic />} />
 					</Routes>
 				</Container>
 			</Theme>
