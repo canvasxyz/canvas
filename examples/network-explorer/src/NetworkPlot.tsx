@@ -270,7 +270,7 @@ export default function NetworkPlot() {
 	const nodesById = Object.fromEntries(nodes.map((node) => [node.id, node]))
 
 	return (
-		<Flex direction="column" gap="2" pt="4">
+		<Flex direction="column" gap="2">
 			<Flex direction="row" pb="4">
 				<div>
 					<svg width={graphWidth} height={divHeight}>

@@ -34,7 +34,7 @@ function SessionsTable() {
 	const hasMore = sessions.length > entriesPerPage
 
 	return (
-		<Flex direction="column" gap="2" pt="4">
+		<Flex direction="column" gap="2">
 			<Text size="4" weight="bold">
 				Latest Sessions
 			</Text>

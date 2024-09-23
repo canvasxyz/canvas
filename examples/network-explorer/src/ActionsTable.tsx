@@ -49,7 +49,7 @@ function ActionsTable() {
 	const actionsToDisplay = actions.slice(0, entriesPerPage)
 
 	return (
-		<Flex direction="column" gap="2" pt="4">
+		<Flex direction="column" gap="2">
 			<Text size="4" weight="bold">
 				Latest Actions
 			</Text>
