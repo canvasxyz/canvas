@@ -19,17 +19,23 @@ import { getIndexName, checkForMissingObjectStores } from "./utils.js"
 export interface ModelDBOptions {
 	name: string
 	models: ModelSchema
+	version?: number
 }
 
 export class ModelDB extends AbstractModelDB {
-	public static async initialize({ name, models }: ModelDBOptions) {
+	public static async initialize({ name, models, version = 1 }: ModelDBOptions) {
 		const config = parseConfig(models)
-		const db = await openDB(name, 1, {
+		const db = await openDB(name, version, {
 			upgrade(db: IDBPDatabase<unknown>, oldVersion: number, newVersion: number | null) {
-				// create object stores
+				// create missing object stores
+				const storeNames = new Set(db.objectStoreNames)
 				for (const model of config.models) {
 					const primaryKey = model.properties.find((property) => property.kind === "primary")
 					assert(primaryKey !== undefined, "expected primaryKey !== undefined")
+
+					if (storeNames.has(model.name)) {
+						continue
+					}
 
 					const recordObjectStore = db.createObjectStore(model.name, { keyPath: primaryKey.name })
 

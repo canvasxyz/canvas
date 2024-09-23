@@ -9,10 +9,11 @@ import { AbstractGossipLog, GossipLogInit } from "../AbstractGossipLog.js"
 import { MerkleIndex } from "../MerkleIndex.js"
 
 export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
-	public static async open<Payload>(init: GossipLogInit<Payload>) {
+	public static async open<Payload>(init: GossipLogInit<Payload>, options: { version?: number } = {}) {
 		const db = await ModelDB.initialize({
 			name: `canvas/v1/${init.topic}`,
 			models: { ...init.schema, ...AbstractGossipLog.schema },
+			version: options.version,
 		})
 
 		const messageCount = await db.count("$messages")
