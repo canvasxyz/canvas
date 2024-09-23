@@ -9,8 +9,8 @@ import {
 	ModelValue,
 	ModelSchema,
 	QueryParams,
-	parseConfig,
 	WhereCondition,
+	parseConfig,
 } from "@canvas-js/modeldb"
 
 import { ModelAPI } from "./api.js"
@@ -25,7 +25,7 @@ export class ModelDB extends AbstractModelDB {
 	public static async initialize({ name, models }: ModelDBOptions) {
 		const config = parseConfig(models)
 		const db = await openDB(name, 1, {
-			upgrade(db: IDBPDatabase<unknown>) {
+			upgrade(db: IDBPDatabase<unknown>, oldVersion: number, newVersion: number | null) {
 				// create object stores
 				for (const model of config.models) {
 					const primaryKey = model.properties.find((property) => property.kind === "primary")
