@@ -185,16 +185,16 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		}
 
 		const { signature, message, branch } = record
-		return this.encode(signature, message, {})
+		return this.encode(signature, message, { branch })
 	}
 
 	public getMessages(
 		range: { lt?: string; lte?: string; gt?: string; gte?: string; reverse?: boolean; limit?: number } = {},
-	): Promise<{ id: string; signature: Signature; message: Message<Payload> }[]> {
+	): Promise<{ id: string; signature: Signature; message: Message<Payload>; branch: number }[]> {
 		const { reverse = false, limit, ...where } = range
-		return this.db.query<{ id: string; signature: Signature; message: Message<Payload> }>("$messages", {
+		return this.db.query<{ id: string; signature: Signature; message: Message<Payload>; branch: number }>("$messages", {
 			where: { id: where },
-			select: { id: true, signature: true, message: true },
+			select: { id: true, signature: true, message: true, branch: true },
 			orderBy: { id: reverse ? "desc" : "asc" },
 			limit,
 		})

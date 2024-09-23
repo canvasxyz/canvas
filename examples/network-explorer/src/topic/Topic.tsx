@@ -1,13 +1,18 @@
-import { useParams } from "react-router-dom"
+import { Link, Navigate, Route, Routes, useLocation, useParams, useResolvedPath } from "react-router-dom"
 import useSWR from "swr"
 
 import { fetchAndIpldParseJson } from "../utils.js"
+import NetworkPlot from "./NetworkPlot.js"
 import ActionsTable from "./ActionsTable.js"
 import SessionsTable from "./SessionsTable.js"
-import { Card, Flex, Tabs, Text } from "@radix-ui/themes"
+import { Box, Card, Flex, TabNav, Text } from "@radix-ui/themes"
 
 function Topic() {
 	const { topic } = useParams()
+	const location = useLocation()
+	const actionsPath = useResolvedPath("./actions")
+	const sessionsPath = useResolvedPath("./sessions")
+	const networkPath = useResolvedPath("./network")
 
 	if (!topic) {
 		// TODO: 404 page
@@ -38,22 +43,28 @@ function Topic() {
 						<Text weight="bold">Addresses</Text>
 						<Text weight="medium">{countsData ? countsData.address_count : "..."}</Text>
 					</Flex>
+					<Box flexGrow="1" />
 				</Flex>
 			</Card>
 
-			<Tabs.Root defaultValue="actions">
-				<Tabs.List>
-					<Tabs.Trigger value="actions">Actions</Tabs.Trigger>
-					<Tabs.Trigger value="sessions">Sessions</Tabs.Trigger>
-				</Tabs.List>
-				<Tabs.Content value="actions">
-					<ActionsTable topic={topic} />
-				</Tabs.Content>
+			<TabNav.Root>
+				<TabNav.Link asChild active={location.pathname === actionsPath.pathname}>
+					<Link to="./actions">Actions</Link>
+				</TabNav.Link>
+				<TabNav.Link asChild active={location.pathname === sessionsPath.pathname}>
+					<Link to="./sessions">Sessions</Link>
+				</TabNav.Link>
+				<TabNav.Link asChild active={location.pathname === networkPath.pathname}>
+					<Link to="./network">Network</Link>
+				</TabNav.Link>
+			</TabNav.Root>
 
-				<Tabs.Content value="sessions">
-					<SessionsTable topic={topic} />
-				</Tabs.Content>
-			</Tabs.Root>
+			<Routes>
+				<Route path="/" element={<Navigate to="./actions" replace={true} />} />
+				<Route path="network" element={<NetworkPlot topic={topic} />} />
+				<Route path="actions" element={<ActionsTable topic={topic} />} />
+				<Route path="sessions" element={<SessionsTable topic={topic} />} />
+			</Routes>
 		</Flex>
 	)
 }

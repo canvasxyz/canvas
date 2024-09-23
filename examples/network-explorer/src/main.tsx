@@ -19,7 +19,7 @@ const router = createBrowserRouter([
 					<Separator size="4" />
 					<Routes>
 						<Route path="/" element={<HomePage />} />
-						<Route path="/topic/:topic" element={<Topic />} />
+						<Route path="/topic/:topic/*" element={<Topic />} />
 					</Routes>
 				</Container>
 			</Theme>
