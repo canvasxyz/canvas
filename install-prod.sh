@@ -1,5 +1,3 @@
-#!/usr/bin/env sh
-
 INSTALL_PATH=$(npm config get prefix)/bin/canvas
 touch ${INSTALL_PATH}
 echo "#!/usr/bin/env sh" >> ${INSTALL_PATH}
