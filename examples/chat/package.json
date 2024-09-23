@@ -16,6 +16,7 @@
 		"@canvas-js/chain-ethereum-viem": "0.10.10",
 		"@canvas-js/chain-solana": "0.10.10",
 		"@canvas-js/chain-substrate": "0.10.10",
+		"@canvas-js/cli": "0.10.10",
 		"@canvas-js/core": "0.10.10",
 		"@canvas-js/hooks": "0.10.10",
 		"@canvas-js/interfaces": "0.10.10",

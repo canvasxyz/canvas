@@ -49,8 +49,9 @@ Mount a volume to `/data`. Set the `PORT`, `LISTEN`, `ANNOUNCE`, and
 
 Create a Railway space based on the root of this Github workspace (e.g. canvasxyz/canvas).
 
-* Watch path: `/examples/chat/**`. (Only build when chat code is updated, or a chat package is updated.)
-* Custom start command: `npm run start:server --workspace=@canvas-js/chat`
+* Custom start command: `npm run start:server --workspace=@canvas-js/example-chat`
+* Custom build command: `npm run build && npm run build --workspace=@canvas-js/example-chat`
 * Public networking:
   * Add a service domain for port 8080.
   * Add a service domain for port 4444.
+* Watch path: `/examples/chat/**`. (Only build when chat code is updated, or a chat package is updated.)
