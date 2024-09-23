@@ -23,7 +23,7 @@ const LIBP2P_PORT = parseInt(process.env.LIBP2P_PORT || "8889", 10)
 const HTTP_PORT = parseInt(process.env.PORT || "8888", 10)
 const HTTP_ADDR = "0.0.0.0"
 const dev = process.env.NODE_ENV !== "production"
-const topics = process.env.TOPIC ? [process.env.TOPIC] : ["chat-example.canvas.xyz"]
+const topic = process.env.TOPIC || "chat-example.canvas.xyz"
 
 console.log(`BOOTSTRAP_LIST: ${BOOTSTRAP_LIST}`)
 console.log(`LIBP2P_PORT: ${LIBP2P_PORT}`)
@@ -43,112 +43,61 @@ expressApp.use(
 	}),
 )
 
-const canvasApps: Record<string, Canvas> = {}
+console.log(`initializing canvas for topic ${topic}`)
 
-for (const topic of topics) {
-	console.log(`initializing canvas for topic ${topic}`)
-
-	const canvasApp = await Canvas.initialize({
-		// do we need a separate database url for each topic?
-		// path: process.env.DATABASE_URL,
-		contract: {
-			models: {},
-			actions: {
-				createMessage() {},
-			},
+const canvasApp = await Canvas.initialize({
+	topic,
+	signers: [new SIWESigner(), new ATPSigner(), new CosmosSigner(), new SubstrateSigner({}), new SolanaSigner()],
+	// do we need a separate database url for each topic?
+	// path: process.env.DATABASE_URL,
+	contract: {
+		models: {},
+		actions: {
+			createMessage() {},
 		},
-		signers: [new SIWESigner(), new ATPSigner(), new CosmosSigner(), new SubstrateSigner({}), new SolanaSigner()],
-		topic,
-		schema: {
-			$addresses_index: {
-				address: "primary",
-			},
-			$messages_index: {
-				id: "primary",
-				type: "string",
-			},
+	},
+	schema: {
+		$addresses_index: {
+			address: "primary",
 		},
-	})
-
-	// await canvasApp.listen({
-	// 	bootstrapList: [BOOTSTRAP_LIST],
-	// 	listen: [`/ip4/0.0.0.0/tcp/${LIBP2P_PORT}/ws`],
-	// })
-
-	canvasApp.addEventListener("message", async (event) => {
-		const message = event.detail
-
-		if (message.message.payload.type === "action") {
-			await canvasApp.messageLog.db.set("$messages_index", {
-				id: message.id,
-				type: "action",
-			})
-		} else if (message.message.payload.type === "session") {
-			await canvasApp.messageLog.db.set("$messages_index", {
-				id: message.id,
-				type: "action",
-			})
-			await canvasApp.messageLog.db.set("$addresses_index", {
-				address: message.message.payload.did,
-			})
-		}
-	})
-
-	// await canvasApp.libp2p.start()
-	// console.log(`peer id: ${canvasApp.libp2p.peerId}`)
-
-	const canvasApiApp = createAPI(canvasApp)
-	expressApp.use(`/canvas_api/${topic}`, canvasApiApp)
-
-	canvasApps[topic] = canvasApp
-}
-
-expressApp.get("/index_api/messages", ipld(), async (req, res) => {
-	// let numMessagesToReturn: number
-	// if (!req.query.limit) {
-	// 	numMessagesToReturn = 10
-	// } else if (typeof req.query.limit === "string") {
-	// 	numMessagesToReturn = parseInt(req.query.limit)
-	// } else {
-	// 	res.status(StatusCodes.BAD_REQUEST)
-	// 	res.end()
-	// 	return
-	// }
-
-	// let before: string
-	// if (!req.query.before) {
-	// 	before = MAX_MESSAGE_ID
-	// } else if (typeof req.query.before === "string") {
-	// 	before = req.query.before
-	// } else {
-	// 	res.status(StatusCodes.BAD_REQUEST)
-	// 	res.end()
-	// 	return
-	// }
-
-	// const messageIndexEntries = await queries.selectAllMessages(before, numMessagesToReturn)
-	// TODO: implement this
-	const messageIndexEntries = { rows: [] as any[] }
-
-	const result = []
-	for (const messageIndexEntry of messageIndexEntries.rows) {
-		const app = canvasApps[messageIndexEntry.topic]
-		// skip messages from apps that are no longer running
-		if (!app) continue
-		const signedMessage = await app.getMessage(messageIndexEntry.id)
-		// during initialization, the app may be missing messages, and
-		// we shouldn't send null signature/message values to the client
-		if (signedMessage !== null) {
-			result.push([messageIndexEntry.id, signedMessage.signature, signedMessage.message])
-		}
-	}
-
-	res.status(StatusCodes.OK)
-	res.setHeader("content-type", "application/json")
-	res.end(json.encode(result))
+		$messages_index: {
+			id: "primary",
+			type: "string",
+		},
+	},
 })
 
-expressApp.get("/index_api/messages/:topic", ipld(), async (req, res) => {
+// await canvasApp.listen({
+// 	bootstrapList: [BOOTSTRAP_LIST],
+// 	listen: [`/ip4/0.0.0.0/tcp/${LIBP2P_PORT}/ws`],
+// })
+
+canvasApp.addEventListener("message", async (event) => {
+	const message = event.detail
+
+	if (message.message.payload.type === "action") {
+		await canvasApp.messageLog.db.set("$messages_index", {
+			id: message.id,
+			type: "action",
+		})
+	} else if (message.message.payload.type === "session") {
+		await canvasApp.messageLog.db.set("$messages_index", {
+			id: message.id,
+			type: "session",
+		})
+		await canvasApp.messageLog.db.set("$addresses_index", {
+			address: message.message.payload.did,
+		})
+	}
+})
+
+// await canvasApp.libp2p.start()
+// console.log(`peer id: ${canvasApp.libp2p.peerId}`)
+
+const canvasApiApp = createAPI(canvasApp)
+expressApp.use(`/canvas_api/${topic}`, canvasApiApp)
+
+expressApp.get("/index_api/messages", ipld(), async (req, res) => {
 	let numMessagesToReturn: number
 	if (!req.query.limit) {
 		numMessagesToReturn = 10
@@ -159,14 +108,6 @@ expressApp.get("/index_api/messages/:topic", ipld(), async (req, res) => {
 		res.end()
 		return
 	}
-
-	if (req.query.type !== "session" && req.query.type !== "action") {
-		console.log("invalid type", req.query.type)
-		res.status(StatusCodes.BAD_REQUEST)
-		res.end()
-		return
-	}
-	const type = req.query.type
 
 	let before: string
 	if (!req.query.before) {
@@ -179,24 +120,35 @@ expressApp.get("/index_api/messages/:topic", ipld(), async (req, res) => {
 		return
 	}
 
-	const canvasApp = canvasApps[req.params.topic]
-	const messageIds = await canvasApp.messageLog.db.query("$messages_index", {
-		select: { id: true },
-		where: {
-			type,
-			id: { lte: before },
-		},
+	let type: "action" | "session" | undefined
+	if (!req.query.type) {
+		type = undefined
+	} else if (req.query.type === "action" || req.query.type === "session") {
+		type = req.query.type
+	} else {
+		res.status(StatusCodes.BAD_REQUEST)
+		res.end()
+		return
+	}
+
+	const messageIndexEntries = await canvasApp.messageLog.db.query("$messages_index", {
+		where: { id: { lt: before }, type },
 		limit: numMessagesToReturn,
 		orderBy: { id: "desc" },
 	})
 
 	const result = []
-	for (const messageId of messageIds) {
-		const signedMessage = await canvasApp.getMessage(messageId.id)
+	for (const messageIndexEntry of messageIndexEntries) {
+		const signedMessage = await canvasApp.getMessage(messageIndexEntry.id)
 		// during initialization, the app may be missing messages, and
 		// we shouldn't send null signature/message values to the client
 		if (signedMessage !== null) {
-			result.push([messageId.id, signedMessage.signature, signedMessage.message])
+			result.push({
+				id: messageIndexEntry.id,
+				signature: signedMessage.signature,
+				message: signedMessage.message,
+				branch: signedMessage.branch,
+			})
 		}
 	}
 
@@ -206,58 +158,31 @@ expressApp.get("/index_api/messages/:topic", ipld(), async (req, res) => {
 })
 
 expressApp.get("/index_api/counts", async (req, res) => {
-	const result = []
-	for (const topic of topics) {
-		const canvasApp = canvasApps[topic]
-
-		const actionCount = await canvasApp.messageLog.db.count("$messages_index", { type: "action" })
-		const sessionCount = await canvasApp.messageLog.db.count("$messages_index", { type: "session" })
-		const addressCount = await canvasApp.messageLog.db.count("$addresses_index")
-		// TODO
-		const connections = "-"
-		// TODO
-		const connectionCount = 0
-		result.push({
-			topic,
-			action_count: actionCount,
-			session_count: sessionCount,
-			address_count: addressCount,
-			connections,
-			connection_count: connectionCount,
-		})
-	}
-
-	res.json(result)
-})
-
-expressApp.get("/index_api/counts/:topic", async (req, res) => {
-	const canvasApp = canvasApps[req.params.topic]
-
 	const actionCount = await canvasApp.messageLog.db.count("$messages_index", { type: "action" })
 	const sessionCount = await canvasApp.messageLog.db.count("$messages_index", { type: "session" })
 	const addressCount = await canvasApp.messageLog.db.count("$addresses_index")
-	// TODO
-	const connections = "-"
-	// TODO
+
+	// TODO: get these fields from the canvas app object
+	// const connectionCount = canvasApp.libp2p.getConnections().length
+	// const connections = (connectionsMap[row.topic] = canvasApps[row.topic]?.libp2p
+	// 	.getConnections()
+	// 	.map((c) => c.remoteAddr.toString())
+	// 	.join(", "))
 	const connectionCount = 0
+	const connections = "-"
+
 	const result = {
-		topic: req.params.topic,
+		topic,
+		address_count: addressCount,
+		connection_count: connectionCount,
+		connections,
 		action_count: actionCount,
 		session_count: sessionCount,
-		address_count: addressCount,
-		connections,
-		connection_count: connectionCount,
 	}
 	res.json(result)
 })
 
-expressApp.get("/index_api/latest_session/:topic", async (req, res) => {
-	const canvasApp = canvasApps[req.params.topic]
-	if (!canvasApp) {
-		res.status(StatusCodes.NOT_FOUND)
-		res.end()
-		return
-	}
+expressApp.get("/index_api/latest_session/", async (req, res) => {
 	if (
 		!req.query.did ||
 		typeof req.query.did !== "string" ||

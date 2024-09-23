@@ -2,15 +2,15 @@ import useSWR from "swr"
 import { Action, Message, Session, Signature } from "@canvas-js/interfaces"
 import { Box, Flex, Table, Text } from "@radix-ui/themes"
 
-import ArgsPopout from "../components/ArgsPopout.js"
-import PaginationButton from "../components/PaginationButton.js"
-import useCursorStack from "../useCursorStack.js"
-import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "../utils.js"
-import { DidPopover } from "../components/DidPopover.js"
+import ArgsPopout from "./components/ArgsPopout.js"
+import PaginationButton from "./components/PaginationButton.js"
+import useCursorStack from "./useCursorStack.js"
+import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "./utils.js"
+import { DidPopover } from "./components/DidPopover.js"
 
 function SessionField({ signature, message }: { signature: Signature; message: Message<Action> }) {
 	const { data: session, error } = useSWR(
-		`/index_api/latest_session/${message.topic}?did=${message.payload.did}&public_key=${signature.publicKey}`,
+		`/index_api/latest_session/?did=${message.payload.did}&public_key=${signature.publicKey}`,
 		fetchAndIpldParseJson<Session>,
 	)
 
@@ -21,7 +21,7 @@ function SessionField({ signature, message }: { signature: Signature; message: M
 
 const entriesPerPage = 10
 
-function ActionsTable({ topic }: { topic: string }) {
+function ActionsTable() {
 	const { currentCursor, pushCursor, popCursor } = useCursorStack<string>()
 
 	// in order to determine if another page exists, we retrieve n + 1 entries
@@ -35,7 +35,7 @@ function ActionsTable({ topic }: { topic: string }) {
 	}
 
 	const { data: actions, error } = useSWR(
-		`/index_api/messages/${topic}?${params.toString()}`,
+		`/index_api/messages?${params.toString()}`,
 		fetchAndIpldParseJson<Result<Action>[]>,
 		{
 			refreshInterval: 1000,
@@ -49,7 +49,7 @@ function ActionsTable({ topic }: { topic: string }) {
 	const actionsToDisplay = actions.slice(0, entriesPerPage)
 
 	return (
-		<Flex direction="column" gap="2" pt="4">
+		<Flex direction="column" gap="2">
 			<Text size="4" weight="bold">
 				Latest Actions
 			</Text>
@@ -64,10 +64,10 @@ function ActionsTable({ topic }: { topic: string }) {
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
-					{actionsToDisplay.map(([cid, signature, message]: [string, Signature, Message<Action>]) => {
+					{actionsToDisplay.map(({ id, signature, message }) => {
 						const args = JSON.stringify(message.payload.args)
 						return (
-							<Table.Row key={cid}>
+							<Table.Row key={id}>
 								<Table.Cell>
 									<DidPopover did={message.payload.did || ""} truncateBelow="md" />
 								</Table.Cell>
@@ -86,7 +86,11 @@ function ActionsTable({ topic }: { topic: string }) {
 			<Flex direction="row" gap="2">
 				<Box flexGrow="1" />
 				<PaginationButton text="Previous" enabled={currentCursor !== null} onClick={popCursor} />
-				<PaginationButton text="Next" enabled={hasMore} onClick={() => pushCursor(actions[entriesPerPage][0])} />
+				<PaginationButton
+					text="Next"
+					enabled={hasMore}
+					onClick={() => pushCursor(actionsToDisplay[entriesPerPage].id)}
+				/>
 			</Flex>
 		</Flex>
 	)
