@@ -1,18 +1,35 @@
-import { MINUTES } from "@canvas-js/utils"
-import { PeerId } from "@libp2p/interface"
+import type { PeerId } from "@libp2p/interface"
+import { logger } from "@libp2p/logger"
+
 import Database, * as sqlite from "better-sqlite3"
+
+import { assert } from "./utils.js"
+
+const now = () => BigInt(Math.ceil(Date.now() / 1000))
+
+export type DiscoverResult = {
+	cookie: Uint8Array
+	registrations: { ns: string; signedPeerRecord: Uint8Array; ttl: bigint }[]
+}
 
 export class RegistrationStore {
 	public readonly db: sqlite.Database
 
-	#interval = setInterval(() => this.gc(), 5 * MINUTES)
-	#register: sqlite.Statement
-	#unregister: sqlite.Statement
-	#discover: sqlite.Statement
-	#gc: sqlite.Statement
+	private readonly log = logger(`canvas:rendezvous:store`)
 
-	constructor() {
-		this.db = new Database(":memory:")
+	#interval = setInterval(() => this.gc(), 5 * 1000)
+
+	#gc: sqlite.Statement<{ expiration: bigint }>
+	#register: sqlite.Statement<{ peer: string; namespace: string; signed_peer_record: Uint8Array; expiration: bigint }>
+	#unregister: sqlite.Statement<{ peer: string; namespace: string }>
+	#discover: sqlite.Statement<
+		{ start: bigint; namespace: string; expiration: bigint; limit: bigint },
+		{ id: bigint; peer: string; signed_peer_record: Uint8Array; expiration: bigint }
+	>
+
+	constructor(path: string | null = null) {
+		this.db = new Database(path ?? ":memory:")
+		this.db.defaultSafeIntegers(true)
 		this.db.exec(
 			`CREATE TABLE registrations (
   		  id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -27,6 +44,8 @@ export class RegistrationStore {
 		this.db.exec(`CREATE INDEX namespaces ON registrations(namespace, peer)`)
 		this.db.exec(`CREATE INDEX peers ON registrations(peer, namespace)`)
 
+		this.#gc = this.db.prepare(`DELETE FROM registrations WHERE expiration < :expiration`)
+
 		this.#register = this.db.prepare(
 			`INSERT INTO registrations(peer, namespace, signed_peer_record, expiration)
 			  VALUES (:peer, :namespace, :signed_peer_record, :expiration)`,
@@ -35,28 +54,58 @@ export class RegistrationStore {
 		this.#unregister = this.db.prepare(`DELETE FROM registrations WHERE peer = :peer AND namespace = :namespace`)
 
 		this.#discover = this.db.prepare(
-			`SELECT * FROM registrations
-			  WHERE id >= :start AND namespace = :namespace AND expiration > :expiration
+			`SELECT id, peer, signed_peer_record, expiration FROM registrations
+			  WHERE id > :start AND namespace = :namespace AND expiration > :expiration
 				ORDER BY id DESC LIMIT :limit`,
 		)
-
-		this.#gc = this.db.prepare(`DELETE FROM registrations WHERE expiration < :expiration`)
 	}
 
-	public register(peerId: PeerId, namespace: string, signedPeerRecord: Uint8Array, ttl: number) {
-		const expiration = Date.now() + ttl * 1000
+	public register(namespace: string, peerId: PeerId, signedPeerRecord: Uint8Array, ttl: bigint) {
+		const expiration = now() + ttl
 		this.#unregister.run({ peer: peerId.toString(), namespace })
-		this.#register.run({ peer: peerId.toString(), namespace, signed_peer_record: signedPeerRecord, expiration })
+		this.#register.run({
+			peer: peerId.toString(),
+			namespace,
+			signed_peer_record: signedPeerRecord,
+			expiration,
+		})
 	}
 
-	public unregister(peerId: PeerId, namespace: string) {
+	public unregister(namespace: string, peerId: PeerId) {
 		this.#unregister.run({ peer: peerId.toString(), namespace })
 	}
 
-	public discover(namespace: string, cookie: number, limit: number): { registrations: {}[]; cookie: number } {}
+	public discover(namespace: string, limit: bigint, cookie: Uint8Array | null): DiscoverResult {
+		let start = 0n
+		if (cookie !== null) {
+			const { buffer, byteOffset, byteLength } = cookie
+			assert(byteLength === 8, "invalid cookie")
+			start = new DataView(buffer, byteOffset, byteLength).getBigUint64(0)
+		}
+
+		const expiration = now()
+		const results = this.#discover.all({ start, namespace, expiration, limit })
+
+		let lastId = 0n
+		if (results.length > 0) {
+			lastId = results[results.length - 1].id
+		}
+
+		const cookieBuffer = new ArrayBuffer(8)
+		new DataView(cookieBuffer).setBigUint64(0, lastId)
+
+		return {
+			cookie: new Uint8Array(cookieBuffer),
+			registrations: results.map((result) => ({
+				ns: namespace,
+				signedPeerRecord: result.signed_peer_record,
+				ttl: result.expiration - expiration,
+			})),
+		}
+	}
 
 	public gc() {
-		this.#gc.run({ expiration: Date.now() })
+		this.#gc.run({ expiration: now() })
 	}
 
 	public close() {
