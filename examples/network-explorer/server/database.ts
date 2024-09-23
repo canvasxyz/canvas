@@ -2,13 +2,11 @@ import { Client, QueryResult } from "pg"
 
 // Define interfaces for the return types
 interface Count {
-	topic: string
 	type: string
 	count: number
 }
 
 interface Message {
-	topic: string
 	id: string
 	type: string
 }
@@ -20,114 +18,71 @@ interface AddressCount {
 export async function createDatabase(client: Client) {
 	await client.query(`
 		CREATE TABLE IF NOT EXISTS addresses (
-			topic TEXT,
 			address TEXT,
-			PRIMARY KEY (topic, address)
+			PRIMARY KEY (address)
 		);
 
 		CREATE TABLE IF NOT EXISTS messages (
-			topic TEXT,
 			id TEXT,
 			type TEXT,
 			PRIMARY KEY (id)
 		);
 
 		CREATE INDEX IF NOT EXISTS messages_type_index ON messages (type);
-		CREATE INDEX IF NOT EXISTS messages_topic_index ON messages (topic);
-		CREATE INDEX IF NOT EXISTS messages_topic_type_index ON messages (topic, type);
 	`)
 
 	return {
-		selectCounts: async (topic: string): Promise<QueryResult<Count>> => {
-			return await client.query<Count>(
-				"SELECT topic, type, COUNT(*)::int FROM messages WHERE topic = $1 GROUP BY topic, type;",
-				[topic],
-			)
+		selectCounts: async (): Promise<QueryResult<Count>> => {
+			return await client.query<Count>("SELECT type, COUNT(*)::int FROM messages GROUP BY type;")
 		},
 
-		selectCountsAll: async (): Promise<QueryResult<Count>> => {
-			return await client.query<Count>("SELECT topic, type, COUNT(*)::int FROM messages GROUP BY topic, type;")
-		},
-
-		selectCountsForTypeTotal: async (type: string): Promise<QueryResult<{ count: number }>> => {
-			return await client.query<{ count: number }>("SELECT COUNT(*)::int AS count FROM messages WHERE type = $1", [
-				type,
-			])
-		},
-
-		addAddress: async (topic: string, address: string) => {
+		addAddress: async (address: string) => {
 			return await client.query(
 				`
-				INSERT INTO addresses(topic, address)
-				VALUES ($1, $2)
-				ON CONFLICT (topic, address)
+				INSERT INTO addresses(address)
+				VALUES ($1)
+				ON CONFLICT (address)
 				DO NOTHING;
 			`,
-				[topic, address],
+				[address],
 			)
 		},
 
-		selectAddressCount: async (topic: string): Promise<QueryResult<AddressCount>> => {
-			return await client.query<AddressCount>("SELECT COUNT(*)::int AS count FROM addresses WHERE topic = $1", [topic])
+		selectAddressCount: async (): Promise<QueryResult<AddressCount>> => {
+			return await client.query<AddressCount>("SELECT COUNT(*)::int AS count FROM addresses", [])
 		},
 
-		selectAddressCountsAll: async (): Promise<QueryResult<{ topic: string; count: string }>> => {
-			return await client.query<{ topic: string; count: string }>(
-				"SELECT topic, COUNT(topic)::int AS count FROM addresses GROUP BY topic",
-			)
-		},
-
-		selectAddressCountTotal: async (): Promise<QueryResult<AddressCount>> => {
-			return await client.query<AddressCount>("SELECT COUNT(DISTINCT address)::int AS count FROM addresses")
-		},
-
-		addSession: async (topic: string, id: string) => {
+		addSession: async (id: string) => {
 			return await client.query(
 				`
-				INSERT INTO messages(topic, type, id)
-				VALUES ($1, 'session', $2)
+				INSERT INTO messages(type, id)
+				VALUES ('session', $1)
 				ON CONFLICT (id) DO NOTHING;
 			`,
-				[topic, id],
+				[id],
 			)
 		},
 
-		addAction: async (topic: string, id: string) => {
+		addAction: async (id: string) => {
 			return await client.query(
 				`
-				INSERT INTO messages(topic, type, id)
-				VALUES ($1, 'action', $2)
+				INSERT INTO messages(type, id)
+				VALUES ('action', $1)
 				ON CONFLICT (id) DO NOTHING;
 			`,
-				[topic, id],
+				[id],
 			)
 		},
 
-		selectMessages: async (
-			topic: string,
-			id: string,
-			type: string | null,
-			limit: number,
-		): Promise<QueryResult<Message>> => {
+		selectMessages: async (id: string, type: "action" | "session", limit: number): Promise<QueryResult<Message>> => {
 			return await client.query<Message>(
 				`
 				SELECT * FROM messages
-				WHERE topic = $1 AND id <= $2 AND ($3::text IS NULL OR type = $3)
+				WHERE id <= $1 AND ($2::text IS NULL OR type = $2)
 				ORDER BY id DESC
-				LIMIT $4;
+				LIMIT $3;
 			`,
-				[topic, id, type, limit],
-			)
-		},
-
-		selectMessagesNoLimit: async (topic: string, id: string, type: string | null): Promise<QueryResult<Message>> => {
-			return await client.query<Message>(
-				`
-				SELECT * FROM messages
-				WHERE topic = $1 AND id <= $2 AND ($3::text IS NULL OR type = $3)
-				ORDER BY id DESC;
-			`,
-				[topic, id, type],
+				[id, type, limit],
 			)
 		},
 

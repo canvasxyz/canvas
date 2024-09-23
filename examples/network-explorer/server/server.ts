@@ -47,8 +47,6 @@ expressApp.use(
 	}),
 )
 
-const canvasApps: Record<string, Canvas> = {}
-
 console.log(`initializing canvas for topic ${topic}`)
 
 const canvasApp = await Canvas.initialize({
@@ -73,10 +71,10 @@ canvasApp.addEventListener("message", async (event) => {
 	const message = event.detail
 
 	if (message.message.payload.type === "action") {
-		await queries.addAction(message.message.topic, message.id)
+		await queries.addAction(message.id)
 	} else if (message.message.payload.type === "session") {
-		await queries.addSession(message.message.topic, message.id)
-		await queries.addAddress(message.message.topic, message.message.payload.did)
+		await queries.addSession(message.id)
+		await queries.addAddress(message.message.payload.did)
 	}
 })
 
@@ -109,69 +107,29 @@ expressApp.get("/index_api/messages", ipld(), async (req, res) => {
 		return
 	}
 
-	const messageIndexEntries = await queries.selectAllMessages(before, numMessagesToReturn)
+	let messageIndexEntries
+	if (!req.query.type) {
+		messageIndexEntries = await queries.selectAllMessages(before, numMessagesToReturn)
+	} else if (req.query.type === "action" || req.query.type === "session") {
+		messageIndexEntries = await queries.selectMessages(before, req.query.type, numMessagesToReturn)
+	} else {
+		res.status(StatusCodes.BAD_REQUEST)
+		res.end()
+		return
+	}
 
 	const result = []
 	for (const messageIndexEntry of messageIndexEntries.rows) {
-		const app = canvasApps[messageIndexEntry.topic]
-		const signedMessage = await app.getMessage(messageIndexEntry.id)
+		const signedMessage = await canvasApp.getMessage(messageIndexEntry.id)
 		// during initialization, the app may be missing messages, and
 		// we shouldn't send null signature/message values to the client
 		if (signedMessage !== null) {
-			result.push(signedMessage)
-		}
-	}
-
-	res.status(StatusCodes.OK)
-	res.setHeader("content-type", "application/json")
-	res.end(json.encode(result))
-})
-
-expressApp.get("/index_api/messages/:topic", ipld(), async (req, res) => {
-	let numMessagesToReturn
-	if (req.query.limit && typeof req.query.limit == "string") {
-		if (req.query.limit === "all") {
-			// return all
-			numMessagesToReturn = -1
-		} else {
-			numMessagesToReturn = parseInt(req.query.limit, 10)
-		}
-	} else {
-		numMessagesToReturn = 10
-	}
-
-	if (req.query.type && req.query.type !== "session" && req.query.type !== "action") {
-		console.log("invalid type", req.query.type)
-		res.status(StatusCodes.BAD_REQUEST)
-		res.end()
-		return
-	}
-	const type = req.query.type || null
-
-	let before: string
-	if (!req.query.before) {
-		before = MAX_MESSAGE_ID
-	} else if (typeof req.query.before === "string") {
-		before = req.query.before
-	} else {
-		res.status(StatusCodes.BAD_REQUEST)
-		res.end()
-		return
-	}
-
-	const messageIds =
-		numMessagesToReturn === -1
-			? await queries.selectMessagesNoLimit(req.params.topic, before, type)
-			: await queries.selectMessages(req.params.topic, before, type, numMessagesToReturn)
-
-	const canvasApp = canvasApps[req.params.topic]
-	const result = []
-	for (const messageId of messageIds.rows) {
-		const signedMessage = await canvasApp.getMessage(messageId.id)
-		// during initialization, the app may be missing messages, and
-		// we shouldn't send null signature/message values to the client
-		if (signedMessage) {
-			result.push(signedMessage)
+			result.push({
+				id: signedMessage.id,
+				signature: signedMessage.signature,
+				message: signedMessage.message,
+				branch: signedMessage.branch,
+			})
 		}
 	}
 
@@ -181,36 +139,36 @@ expressApp.get("/index_api/messages/:topic", ipld(), async (req, res) => {
 })
 
 expressApp.get("/index_api/counts", async (req, res) => {
-	const countsQueryResult = (await queries.selectCountsAll()).rows
+	const countsQueryResult = (await queries.selectCounts()).rows
 
-	const actionCountsMap: Record<string, number> = {}
-	const sessionCountsMap: Record<string, number> = {}
+	let actionCount: number = 0
+	let sessionCount: number = 0
 
 	for (const row of countsQueryResult) {
-		if (row.type === "action") actionCountsMap[row.topic] = row.count
-		if (row.type === "session") sessionCountsMap[row.topic] = row.count
+		if (row.type === "action") actionCount = row.count
+		if (row.type === "session") sessionCount = row.count
 	}
 
-	const addressCountResult = (await queries.selectAddressCountsAll()).rows
-	const addressCountsMap: Record<string, number> = {}
-	const connectionCountsMap: Record<string, number> = {}
-	const connectionsMap: Record<string, string> = {}
-	for (const row of addressCountResult) {
-		addressCountsMap[row.topic] = parseInt(row.count, 10)
-		// connectionCountsMap[row.topic] = canvasApps[row.topic]?.libp2p.getConnections().length
-		// connectionsMap[row.topic] = canvasApps[row.topic]?.libp2p
-		// 	.getConnections()
-		// 	.map((c) => c.remoteAddr.toString())
-		// 	.join(", ")
-	}
+	const addressCountResult = (await queries.selectAddressCount()).rows
+	const addressCount = parseInt(addressCountResult[0].count, 10)
+
+	// TODO: get these fields from the canvas app object
+	// const connectionCount = canvasApp.libp2p.getConnections().length
+	// const connections = (connectionsMap[row.topic] = canvasApps[row.topic]?.libp2p
+	// 	.getConnections()
+	// 	.map((c) => c.remoteAddr.toString())
+	// 	.join(", "))
+
+	const connectionCount = 0
+	const connections = "-"
 
 	const result = {
 		topic,
-		address_count: addressCountsMap[topic] || 0,
-		connection_count: connectionCountsMap[topic] || 0,
-		connections: connectionsMap[topic] || "-",
-		action_count: actionCountsMap[topic] || 0,
-		session_count: sessionCountsMap[topic] || 0,
+		address_count: addressCount,
+		connection_count: connectionCount,
+		connections,
+		action_count: actionCount,
+		session_count: sessionCount,
 	}
 
 	res.json(result)
