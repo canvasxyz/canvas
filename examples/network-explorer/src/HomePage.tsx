@@ -46,10 +46,10 @@ function HomePage() {
 
 			<TabNav.Root>
 				<TabNav.Link asChild active={location.pathname === actionsPath.pathname}>
-					<Link to="./actions">Actions</Link>
+					<Link to="./actions">Actions {countsData ? `(${countsData.action_count})` : ""}</Link>
 				</TabNav.Link>
 				<TabNav.Link asChild active={location.pathname === sessionsPath.pathname}>
-					<Link to="./sessions">Sessions</Link>
+					<Link to="./sessions">Sessions {countsData ? `(${countsData.session_count})` : ""}</Link>
 				</TabNav.Link>
 				<TabNav.Link asChild active={location.pathname === networkPath.pathname}>
 					<Link to="./network">Network</Link>
