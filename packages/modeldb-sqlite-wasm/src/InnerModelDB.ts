@@ -45,10 +45,10 @@ export class InnerModelDB {
 		return api.get(key) as T
 	}
 
-	public iterate(modelName: string): AsyncIterable<ModelValue> {
+	public iterate(modelName: string, query: QueryParams = {}): AsyncIterable<ModelValue> {
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
-		return Comlink.proxy(api.values())
+		return Comlink.proxy(api.iterate(query))
 	}
 
 	public count(modelName: string, where?: WhereCondition): number {

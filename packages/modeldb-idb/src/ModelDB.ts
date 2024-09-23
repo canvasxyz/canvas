@@ -109,14 +109,17 @@ export class ModelDB extends AbstractModelDB {
 		}
 	}
 
-	public async *iterate<T extends ModelValue<any> = ModelValue<any>>(modelName: string): AsyncIterable<T> {
+	public async *iterate<T extends ModelValue<any> = ModelValue<any>>(
+		modelName: string,
+		query: QueryParams = {},
+	): AsyncIterable<T> {
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
 
 		// TODO: re-open the transaction if the caller awaits on other promises between yields
 		checkForMissingObjectStores(this.db, [api.storeName])
 		const txn = this.db.transaction([api.storeName], "readonly", {})
-		yield* api.iterate(txn) as AsyncIterable<T>
+		yield* api.iterate(txn, query) as AsyncIterable<T>
 	}
 
 	public async get<T extends ModelValue>(modelName: string, key: string): Promise<T | null> {

@@ -1,5 +1,3 @@
-import { nanoid } from "nanoid"
-
 import { testOnModelDB } from "./utils.js"
 
 testOnModelDB("query (select)", async (t, openDB) => {
@@ -88,7 +86,7 @@ testOnModelDB("query (where)", async (t, openDB) => {
 
 testOnModelDB("query (order by)", async (t, openDB) => {
 	const db = await openDB(t, {
-		user: { address: "primary", name: "string?" },
+		user: { address: "primary", name: "string?", $indexes: ["name"] },
 	})
 
 	await db.set("user", { address: "a", name: "John Doe" })

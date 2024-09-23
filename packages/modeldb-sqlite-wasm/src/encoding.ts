@@ -1,4 +1,5 @@
 import * as json from "@ipld/dag-json"
+import { SqlValue } from "@sqlite.org/sqlite-wasm"
 
 import type {
 	Model,
@@ -11,8 +12,17 @@ import type {
 	ReferenceProperty,
 } from "@canvas-js/modeldb"
 
-import { assert, signalInvalidType } from "@canvas-js/utils"
-import { SqlValue } from "@sqlite.org/sqlite-wasm"
+import { assert, mapValues, signalInvalidType } from "@canvas-js/utils"
+
+export function encodeQueryParams(params: Record<string, PrimitiveValue>): Record<string, SqlValue> {
+	return mapValues(params, (value) => {
+		if (typeof value === "boolean") {
+			return value ? 1 : 0
+		} else {
+			return value
+		}
+	})
+}
 
 export function encodeRecordParams(
 	model: Model,
@@ -82,7 +92,7 @@ function encodePrimitiveValue(modelName: string, property: PrimitiveProperty, va
 		}
 	} else if (property.type === "bytes") {
 		if (value instanceof Uint8Array) {
-			return Buffer.isBuffer(value) ? value : Buffer.from(value.buffer, value.byteOffset, value.byteLength)
+			return value
 		} else {
 			throw new TypeError(`${modelName}/${property.name} must be a Uint8Array`)
 		}

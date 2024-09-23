@@ -25,7 +25,7 @@ export class ModelDB extends AbstractModelDB {
 	public readonly client: pg.Client
 
 	#models: Record<string, ModelAPI> = {}
-	#doTransaction: (effects: Effect[]) => void
+	#doTransaction: (effects: Effect[]) => Promise<void>
 
 	public static async initialize({ connectionConfig, models, clear }: ModelDBOptions) {
 		const client = new pg.Client(connectionConfig)
@@ -103,10 +103,13 @@ export class ModelDB extends AbstractModelDB {
 		return api.get(key) as Promise<T | null>
 	}
 
-	public async *iterate<T extends ModelValue<any> = ModelValue<any>>(modelName: string): AsyncIterable<T> {
+	public async *iterate<T extends ModelValue<any> = ModelValue<any>>(
+		modelName: string,
+		query: QueryParams = {},
+	): AsyncIterable<T> {
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
-		yield* api.values() as AsyncIterable<T>
+		yield* api.iterate(query) as AsyncIterable<T>
 	}
 
 	public async count(modelName: string, where?: WhereCondition): Promise<number> {
