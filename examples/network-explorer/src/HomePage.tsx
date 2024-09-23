@@ -21,10 +21,11 @@ function HomePage() {
 	const sessionsPath = useResolvedPath("./sessions")
 	const networkPath = useResolvedPath("./network")
 
-	console.log(countsData)
-
 	return (
 		<Flex direction="column" gap="4" pt="4">
+			<Text size="7" weight="bold">
+				{countsData ? countsData.topic : "..."}
+			</Text>
 			<Card>
 				<Grid columns="1fr 1fr" gap="4">
 					<Flex direction="column">
