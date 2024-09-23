@@ -8,6 +8,7 @@ import * as json from "@ipld/dag-json"
 import { createAPI as createGossipLogAPI } from "@canvas-js/gossiplog/api"
 
 import { Canvas } from "./Canvas.js"
+import { assert } from "@canvas-js/utils"
 
 export interface APIOptions {}
 
@@ -31,6 +32,24 @@ export function createAPI(app: Canvas): express.Express {
 
 		const sessions = await app.getSessions({ did, publicKey, minExpiration: minExpirationValue })
 		return void res.json(sessions)
+	})
+
+	api.get("/sessions/count", async (req, res) => {
+		const { did, publicKey } = req.query
+		assert(did === undefined || typeof did === "string")
+		assert(publicKey === undefined || typeof publicKey === "string")
+		const count = await app.db.count("$sessions", { did, public_key: publicKey })
+
+		return void res.json({ count })
+	})
+
+	api.get("/actions/count", async (req, res) => {
+		const { did, name } = req.query
+		assert(did === undefined || typeof did === "string")
+		assert(name === undefined || typeof name === "string")
+		const count = await app.db.count("$actions", { did, name })
+
+		return void res.json({ count })
 	})
 
 	api.get("/models/:model/:key", async (req, res) => {

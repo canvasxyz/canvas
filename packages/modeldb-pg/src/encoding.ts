@@ -13,7 +13,11 @@ import type {
 	ReferenceProperty,
 } from "@canvas-js/modeldb"
 
-type PostgresPrimitiveValue = string | number | boolean | Uint8Array | null
+export type PostgresPrimitiveValue = string | number | boolean | Uint8Array | null
+
+export function encodeQueryParams(params: PrimitiveValue[]): PostgresPrimitiveValue[] {
+	return params
+}
 
 export function encodeRecordParams(
 	model: Model,

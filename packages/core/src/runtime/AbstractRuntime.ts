@@ -28,6 +28,21 @@ export type ExecutionContext = {
 
 export type EffectRecord = { key: string; value: Uint8Array | null; branch: number; clock: number }
 
+export type SessionRecord = {
+	message_id: string
+	did: string
+	public_key: string
+	address: string
+	expiration: number | null
+}
+
+export type ActionRecord = {
+	message_id: string
+	did: string
+	name: string
+	timestamp: number
+}
+
 export abstract class AbstractRuntime {
 	protected static effectsModel: ModelSchema = {
 		$effects: {
@@ -48,11 +63,21 @@ export abstract class AbstractRuntime {
 	protected static sessionsModel = {
 		$sessions: {
 			message_id: "primary",
+			did: "string",
 			public_key: "string",
 			address: "string",
-			did: "string",
 			expiration: "integer?",
 			$indexes: [["address"], ["public_key"]],
+		},
+	} satisfies ModelSchema
+
+	protected static actionsModel = {
+		$actions: {
+			message_id: "primary",
+			did: "string",
+			name: "string",
+			timestamp: "integer",
+			$indexes: [["did"], ["name"]],
 		},
 	} satisfies ModelSchema
 
@@ -60,6 +85,7 @@ export abstract class AbstractRuntime {
 		return {
 			...schema,
 			...AbstractRuntime.sessionsModel,
+			...AbstractRuntime.actionsModel,
 			...AbstractRuntime.effectsModel,
 		}
 	}
@@ -135,7 +161,7 @@ export abstract class AbstractRuntime {
 		await signer.verifySession(this.topic, message.payload)
 		const address = signer.getAddressFromDid(did)
 
-		await this.db.set("$sessions", {
+		await this.db.set<SessionRecord>("$sessions", {
 			message_id: id,
 			public_key: publicKey,
 			did: did,
@@ -151,7 +177,7 @@ export abstract class AbstractRuntime {
 		messageLog: AbstractGossipLog<Action | Session>,
 		{ branch }: { branch: number },
 	) {
-		const { did, context } = message.payload
+		const { did, name, context } = message.payload
 
 		const signer = this.signers
 			.getAll()
@@ -175,7 +201,8 @@ export abstract class AbstractRuntime {
 
 		const result = await this.execute({ messageLog, modelEntries, id, signature, message, address, branch })
 
-		const effects: Effect[] = []
+		const actionRecord: ActionRecord = { message_id: id, did, name, timestamp: context.timestamp }
+		const effects: Effect[] = [{ operation: "set", model: "$actions", value: actionRecord }]
 
 		for (const [model, entries] of Object.entries(modelEntries)) {
 			for (const [key, value_] of Object.entries(entries)) {
@@ -218,9 +245,7 @@ export abstract class AbstractRuntime {
 		}
 
 		this.log("applying effects %O", effects)
-		if (effects.length > 0) {
-			await this.db.apply(effects)
-		}
+		await this.db.apply(effects)
 
 		return result
 	}

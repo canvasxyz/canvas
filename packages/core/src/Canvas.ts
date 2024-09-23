@@ -4,7 +4,7 @@ import { logger } from "@libp2p/logger"
 import type pg from "pg"
 
 import { Signature, Action, Session, Message, SessionSigner, SignerCache } from "@canvas-js/interfaces"
-import { AbstractModelDB, Model, ModelSchema } from "@canvas-js/modeldb"
+import { AbstractModelDB, Model, ModelSchema, Effect } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { AbstractGossipLog, GossipLogEvents, SignedMessage } from "@canvas-js/gossiplog"
 import type { ServiceMap, NetworkConfig } from "@canvas-js/gossiplog/libp2p"
@@ -16,6 +16,7 @@ import target from "#target"
 import type { Contract, ActionImplementationFunction, ActionImplementationObject } from "./types.js"
 import { Runtime, createRuntime } from "./runtime/index.js"
 import { validatePayload } from "./schema.js"
+import { ActionRecord } from "./runtime/AbstractRuntime.js"
 
 export type { Model } from "@canvas-js/modeldb"
 export type { PeerId } from "@libp2p/interface"
@@ -82,9 +83,53 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			},
 		)
 
-		runtime.db = messageLog.db
+		const db = messageLog.db
+		runtime.db = db
 
-		return new Canvas(signers, messageLog, runtime)
+		const app = new Canvas<T>(signers, messageLog, runtime)
+
+		// Check to see if the $actions table is empty and populate it if necessary
+		const messagesCount = await db.count("$messages")
+		// const sessionsCount = await db.count("$sessions")
+		const actionsCount = await db.count("$actions")
+		if (messagesCount > 0 && actionsCount === 0) {
+			app.log("indexing $actions table")
+			const limit = 4096
+			let resultCount: number
+			let start: string | undefined = undefined
+			do {
+				const results: { id: string; message: Message<Action | Session> }[] = await db.query<{
+					id: string
+					message: Message<Action | Session>
+				}>("$messages", {
+					limit,
+					select: { id: true, message: true },
+					where: { id: { gt: start } },
+					orderBy: { id: "asc" },
+				})
+
+				resultCount = results.length
+
+				app.log("got page of %d messages", resultCount)
+
+				const effects: Effect[] = []
+				for (const { id, message } of results) {
+					if (message.payload.type === "action") {
+						const { did, name, context } = message.payload
+						app.log("indexing action %s (name: %s, did: %s)", id, name, did)
+						const record: ActionRecord = { message_id: id, did, name, timestamp: context.timestamp }
+						effects.push({ operation: "set", model: "$actions", value: record })
+					}
+					start = id
+				}
+
+				if (effects.length > 0) {
+					await db.apply(effects)
+				}
+			} while (resultCount > 0)
+		}
+
+		return app
 	}
 
 	public readonly db: AbstractModelDB

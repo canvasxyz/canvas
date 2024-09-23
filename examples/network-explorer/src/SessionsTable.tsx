@@ -2,14 +2,14 @@ import useSWR from "swr"
 import { Session } from "@canvas-js/interfaces"
 import { Box, Flex, Table, Text } from "@radix-ui/themes"
 
-import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "../utils.js"
-import PaginationButton from "../components/PaginationButton.js"
-import useCursorStack from "../useCursorStack.js"
-import { DidPopover } from "../components/DidPopover.js"
+import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "./utils.js"
+import PaginationButton from "./components/PaginationButton.js"
+import useCursorStack from "./useCursorStack.js"
+import { DidPopover } from "./components/DidPopover.js"
 
 const entriesPerPage = 10
 
-function SessionsTable({ topic }: { topic: string }) {
+function SessionsTable() {
 	const { currentCursor, pushCursor, popCursor } = useCursorStack<string>()
 
 	// in order to determine if another page exists, we retrieve n + 1 entries
@@ -20,7 +20,7 @@ function SessionsTable({ topic }: { topic: string }) {
 	}
 
 	const { data: sessions, error } = useSWR(
-		`/index_api/messages/${topic}?${params.toString()}`,
+		`/index_api/messages?${params.toString()}`,
 		fetchAndIpldParseJson<Result<Session>[]>,
 		{
 			refreshInterval: 1000,
@@ -34,7 +34,7 @@ function SessionsTable({ topic }: { topic: string }) {
 	const hasMore = sessions.length > entriesPerPage
 
 	return (
-		<Flex direction="column" gap="2" pt="4">
+		<Flex direction="column" gap="2">
 			<Text size="4" weight="bold">
 				Latest Sessions
 			</Text>

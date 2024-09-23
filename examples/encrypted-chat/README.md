@@ -90,6 +90,17 @@ This is a demo; later versions of this protocol might add some of these features
 - Ratchets to enforce key rotation for groups.
 - Privacy-preserving broadcast using protocols like Waku.
 
+## Deploying to Railway
+
+Create a Railway space based on the root of this Github workspace (e.g. canvasxyz/canvas).
+
+* Custom start command: `./install.sh && npm run start:server --workspace=@canvas-js/example-chat-encrypted`
+* Custom build command: `npm run build && npm run build --workspace=@canvas-js/example-chat-encrypted`
+* Public networking:
+  * Add a service domain for port 8080.
+  * Add a service domain for port 4444.
+* Watch path: `/examples/encrypted-chat/**`. (Only build when chat code is updated, or a chat package is updated.)
+
 [^1]:
     Ethereum wallets implement [RFC-6979](1) so signatures are
     deterministic. To be extra careful, for financial or mission-critical

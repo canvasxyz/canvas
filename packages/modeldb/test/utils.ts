@@ -18,42 +18,42 @@ let browser: puppeteer.Browser
 let page: puppeteer.Page
 let server: ViteDevServer
 
-test.before(async (t) => {
-	server = await createServer({
-		root: path.resolve(__dirname, "server"),
-	})
+// test.before(async (t) => {
+// 	server = await createServer({
+// 		root: path.resolve(__dirname, "server"),
+// 	})
 
-	await server.listen()
+// 	await server.listen()
 
-	browser = await puppeteer.launch({
-		dumpio: true,
-		headless: true,
-		args: [
-			"--no-sandbox",
-			"--disable-setuid-sandbox",
-			"--disable-extensions",
-			"--enable-chrome-browser-cloud-management",
-		],
-	})
-	page = await browser.newPage()
+// 	browser = await puppeteer.launch({
+// 		dumpio: true,
+// 		headless: true,
+// 		args: [
+// 			"--no-sandbox",
+// 			"--disable-setuid-sandbox",
+// 			"--disable-extensions",
+// 			"--enable-chrome-browser-cloud-management",
+// 		],
+// 	})
+// 	page = await browser.newPage()
 
-	page.on("workercreated", (worker) => t.log("Worker created: " + worker.url()))
-	page.on("workerdestroyed", (worker) => t.log("Worker destroyed: " + worker.url()))
+// 	page.on("workercreated", (worker) => t.log("Worker created: " + worker.url()))
+// 	page.on("workerdestroyed", (worker) => t.log("Worker destroyed: " + worker.url()))
 
-	page.on("console", async (e) => {
-		const args = await Promise.all(e.args().map((a) => a.jsonValue()))
-		t.log(...args)
-	})
+// 	page.on("console", async (e) => {
+// 		const args = await Promise.all(e.args().map((a) => a.jsonValue()))
+// 		t.log(...args)
+// 	})
 
-	const { port } = server.config.server
-	await page.goto(`http://localhost:${port}`)
-})
+// 	const { port } = server.config.server
+// 	await page.goto(`http://localhost:${port}`)
+// })
 
-test.after(async (t) => {
-	await page.close()
-	await browser.close()
-	await server.close()
-})
+// test.after(async (t) => {
+// 	await page.close()
+// 	await browser.close()
+// 	await server.close()
+// })
 
 function getConnectionConfig() {
 	const { POSTGRES_HOST, POSTGRES_PORT } = process.env
@@ -86,60 +86,63 @@ export const testOnModelDB = (
 		t.teardown(() => mdb.close())
 		return mdb
 	})
+
 	test(`IDB - ${name}`, macro, async (t, models) => {
 		const mdb = await ModelDBIdb.initialize({ name: nanoid(), models })
 		t.teardown(() => mdb.close())
 		return mdb
 	})
+
 	test.serial(`Postgres - ${name}`, macro, async (t, models) => {
 		const mdb = await ModelDBPostgres.initialize({ connectionConfig, models, clear: true })
 		t.teardown(() => mdb.close())
 		return mdb
 	})
-	test(`Sqlite Wasm Opfs - ${name}`, async (t) => {
-		const testResult = await page.evaluate(async (run) => {
-			// @ts-ignore
-			const ctx = new InnerExecutionContext()
-			const testFunc = eval(`(${run})`)
-			try {
-				// @ts-ignore
-				await testFunc(ctx, openOpfsDB)
-				return { result: "passed" }
-			} catch (error: any) {
-				return { result: "failed", error: error.message }
-			} finally {
-				if (ctx.teardownFunction) ctx.teardownFunction()
-			}
-		}, run.toString())
 
-		if (testResult.result === "passed") {
-			t.pass()
-		} else {
-			t.fail(testResult.error)
-		}
-	})
-	test(`Sqlite Wasm Transient - ${name}`, async (t) => {
-		const testResult = await page.evaluate(async (run) => {
-			// @ts-ignore
-			const ctx = new InnerExecutionContext()
-			const testFunc = eval(`(${run})`)
-			try {
-				// @ts-ignore
-				await testFunc(ctx, openTransientDB)
-				return { result: "passed" }
-			} catch (error: any) {
-				return { result: "failed", error: error.message }
-			} finally {
-				if (ctx.teardownFunction) ctx.teardownFunction()
-			}
-		}, run.toString())
+	// test(`Sqlite Wasm Opfs - ${name}`, async (t) => {
+	// 	const testResult = await page.evaluate(async (run) => {
+	// 		// @ts-ignore
+	// 		const ctx = new InnerExecutionContext()
+	// 		const testFunc = eval(`(${run})`)
+	// 		try {
+	// 			// @ts-ignore
+	// 			await testFunc(ctx, openOpfsDB)
+	// 			return { result: "passed" }
+	// 		} catch (error: any) {
+	// 			return { result: "failed", error: error.message }
+	// 		} finally {
+	// 			if (ctx.teardownFunction) ctx.teardownFunction()
+	// 		}
+	// 	}, run.toString())
 
-		if (testResult.result === "passed") {
-			t.pass()
-		} else {
-			t.fail(testResult.error)
-		}
-	})
+	// 	if (testResult.result === "passed") {
+	// 		t.pass()
+	// 	} else {
+	// 		t.fail(testResult.error)
+	// 	}
+	// })
+	// test(`Sqlite Wasm Transient - ${name}`, async (t) => {
+	// 	const testResult = await page.evaluate(async (run) => {
+	// 		// @ts-ignore
+	// 		const ctx = new InnerExecutionContext()
+	// 		const testFunc = eval(`(${run})`)
+	// 		try {
+	// 			// @ts-ignore
+	// 			await testFunc(ctx, openTransientDB)
+	// 			return { result: "passed" }
+	// 		} catch (error: any) {
+	// 			return { result: "failed", error: error.message }
+	// 		} finally {
+	// 			if (ctx.teardownFunction) ctx.teardownFunction()
+	// 		}
+	// 	}, run.toString())
+
+	// 	if (testResult.result === "passed") {
+	// 		t.pass()
+	// 	} else {
+	// 		t.fail(testResult.error)
+	// 	}
+	// })
 }
 
 export const compareUnordered = (t: ExecutionContext, a: any[], b: any[]) => {

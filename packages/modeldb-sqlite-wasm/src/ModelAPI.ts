@@ -80,10 +80,7 @@ export class ModelAPI {
 	readonly #primaryKeyName: string
 	readonly #primaryKeyParam: `p${string}`
 
-	public constructor(
-		readonly db: OpfsDatabase,
-		readonly model: Model,
-	) {
+	public constructor(readonly db: OpfsDatabase, readonly model: Model) {
 		const columns: string[] = []
 		const columnNames: `"${string}"`[] = [] // quoted column names for non-relation properties
 		const columnParams: `:p${string}`[] = [] // query params for non-relation properties
@@ -243,7 +240,11 @@ export class ModelAPI {
 		}
 	}
 
-	public async *values(): AsyncIterable<ModelValue> {
+	public async *iterate(query: QueryParams = {}): AsyncIterable<ModelValue> {
+		if (Object.keys(query).length > 0) {
+			throw new Error("not implemented")
+		}
+
 		for (const record of this.#selectAll.iterate({})) {
 			const key = record[this.#primaryKeyName]
 			assert(typeof key === "string", 'expected typeof key === "string"')
@@ -257,6 +258,43 @@ export class ModelAPI {
 	}
 
 	public query(query: QueryParams): ModelValue[] {
+		const [sql, relations, params] = this.parseQuery(query)
+
+		const paramsWithColons: any = {}
+		for (const key of Object.keys(params)) {
+			paramsWithColons[`:${key}`] = params[key]
+		}
+
+		const results = this.db.selectObjects(sql, paramsWithColons)
+		return results.map((record): ModelValue => {
+			const key = record[this.#primaryKeyName]
+			assert(typeof key === "string", 'expected typeof primaryKey === "string"')
+
+			const value: ModelValue = {}
+			for (const [propertyName, propertyValue] of Object.entries(record)) {
+				const property = this.#properties[propertyName]
+				if (property.kind === "primary") {
+					value[propertyName] = decodePrimaryKeyValue(this.model.name, property, propertyValue)
+				} else if (property.kind === "primitive") {
+					value[propertyName] = decodePrimitiveValue(this.model.name, property, propertyValue)
+				} else if (property.kind === "reference") {
+					value[propertyName] = decodeReferenceValue(this.model.name, property, propertyValue)
+				} else if (property.kind === "relation") {
+					throw new Error("internal error")
+				} else {
+					signalInvalidType(property)
+				}
+			}
+
+			for (const relation of relations) {
+				value[relation.property] = this.#relations[relation.property].get(key)
+			}
+
+			return value
+		})
+	}
+
+	private parseQuery(query: QueryParams): [sql: string, relations: Relation[], params: Record<string, PrimitiveValue>] {
 		// See https://www.sqlite.org/lang_select.html for railroad diagram
 		const sql: string[] = []
 
@@ -304,37 +342,7 @@ export class ModelAPI {
 			params.limit = query.offset
 		}
 
-		const paramsWithColons: any = {}
-		for (const key of Object.keys(params)) {
-			paramsWithColons[`:${key}`] = params[key]
-		}
-		const results = this.db.selectObjects(sql.join(" "), paramsWithColons)
-		return results.map((record): ModelValue => {
-			const key = record[this.#primaryKeyName]
-			assert(typeof key === "string", 'expected typeof primaryKey === "string"')
-
-			const value: ModelValue = {}
-			for (const [propertyName, propertyValue] of Object.entries(record)) {
-				const property = this.#properties[propertyName]
-				if (property.kind === "primary") {
-					value[propertyName] = decodePrimaryKeyValue(this.model.name, property, propertyValue)
-				} else if (property.kind === "primitive") {
-					value[propertyName] = decodePrimitiveValue(this.model.name, property, propertyValue)
-				} else if (property.kind === "reference") {
-					value[propertyName] = decodeReferenceValue(this.model.name, property, propertyValue)
-				} else if (property.kind === "relation") {
-					throw new Error("internal error")
-				} else {
-					signalInvalidType(property)
-				}
-			}
-
-			for (const relation of relations) {
-				value[relation.property] = this.#relations[relation.property].get(key)
-			}
-
-			return value
-		})
+		return [sql.join(" "), relations, params]
 	}
 
 	private getSelectExpression(
@@ -371,8 +379,8 @@ export class ModelAPI {
 
 	private getWhereExpression(
 		where: WhereCondition = {},
-	): [where: string | null, params: Record<string, null | number | string | Buffer | boolean>] {
-		const params: Record<string, null | number | string | Buffer | boolean> = {}
+	): [where: string | null, params: Record<string, null | number | string | Uint8Array | boolean>] {
+		const params: Record<string, null | number | string | Uint8Array | boolean> = {}
 		const filters = Object.entries(where).flatMap(([name, expression], i) => {
 			const property = this.#properties[name]
 			assert(property !== undefined, "property not found")
@@ -437,7 +445,7 @@ export class ModelAPI {
 						throw new Error("invalid primitive value (expected null | number | string | Uint8Array)")
 					} else {
 						const p = `p${i}`
-						params[p] = expression instanceof Uint8Array ? Buffer.from(expression) : expression
+						params[p] = expression
 						return [`"${name}" = :${p}`]
 					}
 				} else if (isNotExpression(expression)) {
@@ -450,7 +458,7 @@ export class ModelAPI {
 						throw new Error("invalid primitive value (expected null | number | string | Uint8Array)")
 					} else {
 						const p = `p${i}`
-						params[p] = value instanceof Uint8Array ? Buffer.from(value) : value
+						params[p] = value
 						if (property.optional) {
 							return [`("${name}" ISNULL OR "${name}" != :${p})`]
 						} else {
@@ -478,7 +486,7 @@ export class ModelAPI {
 							}
 
 							const p = `p${i}q${j}`
-							params[p] = value instanceof Uint8Array ? Buffer.from(value) : value
+							params[p] = value
 							switch (key) {
 								case "gt":
 									return [`("${name}" NOTNULL) AND ("${name}" > :${p})`]
@@ -576,10 +584,7 @@ export class RelationAPI {
 	readonly #insert: Method<{ _source: string; _target: string }>
 	readonly #delete: Method<{ _source: string }>
 
-	public constructor(
-		readonly db: OpfsDatabase,
-		readonly relation: Relation,
-	) {
+	public constructor(readonly db: OpfsDatabase, readonly relation: Relation) {
 		const columns = [`_source TEXT NOT NULL`, `_target TEXT NOT NULL`]
 		db.exec(`CREATE TABLE IF NOT EXISTS "${this.table}" (${columns.join(", ")})`)
 
