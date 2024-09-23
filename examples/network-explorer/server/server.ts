@@ -46,8 +46,6 @@ expressApp.use(
 console.log(`initializing canvas for topic ${topic}`)
 
 const canvasApp = await Canvas.initialize({
-	topic,
-	signers: [new SIWESigner(), new ATPSigner(), new CosmosSigner(), new SubstrateSigner({}), new SolanaSigner()],
 	// do we need a separate database url for each topic?
 	// path: process.env.DATABASE_URL,
 	contract: {
@@ -56,6 +54,8 @@ const canvasApp = await Canvas.initialize({
 			createMessage() {},
 		},
 	},
+	signers: [new SIWESigner(), new ATPSigner(), new CosmosSigner(), new SubstrateSigner({}), new SolanaSigner()],
+	topic,
 	schema: {
 		$addresses_index: {
 			address: "primary",
