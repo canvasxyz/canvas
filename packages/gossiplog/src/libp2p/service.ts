@@ -412,7 +412,7 @@ export class GossipLogService<Payload = unknown> implements Startable {
 				stream.abort(new Error("internal error"))
 			}
 		} finally {
-			this.log("closed incoming stream %s from peer %p", stream.id, peerId)
+			this.log("closed incoming sync stream %s from peer %p", stream.id, peerId)
 		}
 	}
 
