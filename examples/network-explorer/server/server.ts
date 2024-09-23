@@ -179,6 +179,7 @@ expressApp.get("/index_api/counts", async (req, res) => {
 		action_count: actionCount,
 		session_count: sessionCount,
 	}
+
 	res.json(result)
 })
 
