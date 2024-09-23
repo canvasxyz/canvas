@@ -18,7 +18,7 @@ export interface Config {
 	start?: boolean
 }
 
-async function getLibp2p<T extends ServiceMap>(
+export async function getLibp2p<T extends ServiceMap>(
 	t: ExecutionContext,
 	config: Config,
 	services: Libp2pOptions<T>["services"],
@@ -67,12 +67,4 @@ async function getLibp2p<T extends ServiceMap>(
 	}
 
 	return libp2p as Libp2p<T & { identify: Identify }>
-}
-
-export async function getServer(t: ExecutionContext, config: Config) {
-	return await getLibp2p(t, config, { rendezvous: rendezvousServer({}) })
-}
-
-export async function getClient(t: ExecutionContext, config: Config) {
-	return await getLibp2p(t, config, { rendezvous: rendezvousClient({}) })
 }

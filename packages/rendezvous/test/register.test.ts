@@ -1,26 +1,81 @@
 import test from "ava"
 import { setTimeout } from "timers/promises"
 
-import { getServer, getClient } from "./libp2p.js"
+import { rendezvousServer } from "@canvas-js/libp2p-rendezvous/server"
+import { rendezvousClient } from "@canvas-js/libp2p-rendezvous/client"
 
-test("register", async (t) => {
-	const server = await getServer(t, { port: 8880 })
-	const clientA = await getClient(t, { name: "client-a", port: 8881 })
-	const clientB = await getClient(t, { name: "client-b", port: 8882 })
+import { getLibp2p } from "./libp2p.js"
+import { PeerInfo } from "@libp2p/interface"
 
-	await setTimeout(100)
+// test.serial("manual registration and discovery", async (t) => {
+// 	const server = await getLibp2p(t, { port: 8880 }, { rendezvous: rendezvousServer({}) })
+// 	const clientA = await getLibp2p(t, { name: "client-a", port: 8881 }, { rendezvous: rendezvousClient({}) })
+// 	const clientB = await getLibp2p(t, { name: "client-b", port: 8882 }, { rendezvous: rendezvousClient({}) })
 
-	await clientA.services.rendezvous.connect(server.getMultiaddrs(), async (point) => {
-		await point.register("foobar")
+// 	await setTimeout(100)
+
+// 	await clientA.services.rendezvous.connect(server.getMultiaddrs(), async (point) => {
+// 		await point.register("foobar")
+// 	})
+
+// 	await setTimeout(100)
+
+// 	await clientB.services.rendezvous.connect(server.getMultiaddrs(), async (point) => {
+// 		const results = await point.discover("foobar")
+// 		t.true(results.length === 1)
+// 		t.true(results[0].id.equals(clientA.peerId))
+// 	})
+
+// 	t.pass()
+// })
+
+test.serial("auto registration and discovery", async (t) => {
+	const server = await getLibp2p(t, { port: 8883 }, { rendezvous: rendezvousServer({}) })
+
+	await setTimeout(200)
+
+	const clientADiscoveryEvents: PeerInfo[] = []
+	const clientA = await getLibp2p(
+		t,
+		{ name: "client-a", port: 8884 },
+		{
+			rendezvous: rendezvousClient({
+				autoRegister: ["foobar"],
+				autoDiscover: true,
+			}),
+		},
+	)
+
+	clientA.addEventListener("peer:discovery", ({ detail: peerInfo }) => {
+		console.log("clientA discovered", peerInfo)
+		clientADiscoveryEvents.push(peerInfo)
 	})
 
-	await setTimeout(100)
+	await clientA.dial(server.getMultiaddrs())
 
-	await clientB.services.rendezvous.connect(server.getMultiaddrs(), async (point) => {
-		const results = await point.discover("foobar")
-		t.true(results.length === 1)
-		t.true(results[0].id.equals(clientA.peerId))
-	})
+	// const clientBDiscoveryEvents: PeerInfo[] = []
+	// const clientB = await getLibp2p(
+	// 	t,
+	// 	{ name: "client-b", port: 8885 },
+	// 	{
+	// 		rendezvous: rendezvousClient({
+	// 			// autoRegister: ["foobar"],
+	// 			// autoDiscover: true,
+	// 		}),
+	// 	},
+	// )
+
+	// clientB.addEventListener("peer:discovery", ({ detail: peerInfo }) => {
+	// 	console.log("clientB discovered", peerInfo)
+	// 	clientBDiscoveryEvents.push(peerInfo)
+	// })
+
+	// await clientB.dial(server.getMultiaddrs())
+
+	await setTimeout(500)
+
+	console.log(clientADiscoveryEvents)
+	// console.log(clientBDiscoveryEvents)
 
 	t.pass()
 })

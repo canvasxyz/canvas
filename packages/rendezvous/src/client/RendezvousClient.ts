@@ -4,9 +4,13 @@ import {
 	TypedEventTarget,
 	Libp2pEvents,
 	PeerStore,
-	Libp2p,
 	CodeError,
 	Peer,
+	Connection,
+	peerDiscoverySymbol,
+	serviceCapabilities,
+	TypedEventEmitter,
+	PeerDiscoveryEvents,
 } from "@libp2p/interface"
 import { Registrar, AddressManager, ConnectionManager } from "@libp2p/interface-internal"
 import { logger } from "@libp2p/logger"
@@ -15,7 +19,7 @@ import { Multiaddr } from "@multiformats/multiaddr"
 
 import * as lp from "it-length-prefixed"
 import { pipe } from "it-pipe"
-import { Pushable, pushable } from "it-pushable"
+import { pushable } from "it-pushable"
 
 import { Message, decodeMessages, encodeMessages } from "@canvas-js/libp2p-rendezvous/protocol"
 import { assert } from "./utils.js"
@@ -36,22 +40,39 @@ export type RendezvousClientComponents = {
 }
 
 export interface RendezvousClientInit {
-	// servers: string[]
+	/**
+	 * namespace or array of namespaces to register automatically
+	 * with all peers that support the rendezvous server protocol
+	 */
+	autoRegister?: string[] | null
+	autoDiscover?: boolean
+	connectionFilter?: (connection: Connection) => boolean
 }
 
-export class RendezvousClient implements Startable {
+export class RendezvousClient extends TypedEventEmitter<PeerDiscoveryEvents> implements Startable {
 	public static protocol = "/canvas/rendezvous/1.0.0"
 
-	// public readonly servers: Multiaddr[]
-	// public readonly namespaces = new Set<string>()
+	private readonly log = logger("canvas:rendezvous:client")
+	private readonly serverPeers = new Map<string, PeerId>()
+	private readonly registerIntervals = new Map<string, NodeJS.Timeout>()
 
-	private readonly log = logger(`canvas:rendezvous:client`)
+	private readonly autoRegister: string[]
+	private readonly autoDiscover: boolean
+	private readonly connectionFilter: (connection: Connection) => boolean
 
 	#started: boolean = false
+	#topologyId: string | null = null
 
 	constructor(private readonly components: RendezvousClientComponents, init: RendezvousClientInit) {
-		// this.servers = init.servers.map(multiaddr)
+		super()
+		this.autoRegister = init.autoRegister ?? []
+		this.autoDiscover = init.autoDiscover ?? true
+		this.connectionFilter = init.connectionFilter ?? ((connection) => true)
 	}
+
+	readonly [peerDiscoverySymbol] = this;
+
+	readonly [serviceCapabilities]: string[] = ["@libp2p/peer-discovery"]
 
 	public isStarted() {
 		return this.#started
@@ -59,6 +80,18 @@ export class RendezvousClient implements Startable {
 
 	public async beforeStart() {
 		this.log("beforeStart")
+
+		this.#topologyId = await this.components.registrar.register(RendezvousClient.protocol, {
+			onConnect: (peerId, connection) => {
+				if (this.connectionFilter(connection)) {
+					this.serverPeers.set(peerId.toString(), peerId)
+					this.#register(connection)
+				}
+			},
+			onDisconnect: (peerId) => {
+				this.serverPeers.delete(peerId.toString())
+			},
+		})
 	}
 
 	public async start() {
@@ -72,6 +105,15 @@ export class RendezvousClient implements Startable {
 
 	public async beforeStop() {
 		this.log("beforeStop")
+		if (this.#topologyId !== null) {
+			this.components.registrar.unregister(this.#topologyId)
+		}
+
+		for (const intervalId of this.registerIntervals.values()) {
+			clearInterval(intervalId)
+		}
+
+		this.registerIntervals.clear()
 	}
 
 	public async stop() {
@@ -81,19 +123,51 @@ export class RendezvousClient implements Startable {
 
 	public afterStop(): void {}
 
-	// public async register(ns: string | string[], options?: { ttl?: number }) {
-	// 	const namespaces = typeof ns === "string" ? [ns] : ns
-	// 	for (const namespace of namespaces) {
-	// 		this.namespaces.delete(namespace)
-	// 	}
-	// }
+	async #register(connection: Connection) {
+		const peerId = connection.remotePeer
 
-	// public async unregister(ns: string | string[]) {
-	// 	const namespaces = typeof ns === "string" ? [ns] : ns
-	// 	for (const namespace of namespaces) {
-	// 		this.namespaces.delete(namespace)
-	// 	}
-	// }
+		if (this.autoRegister.length === 0) {
+			return
+		}
+
+		const minTTL = await this.#connect(connection, async (point) => {
+			let minTTL = 0
+
+			for (const ns of this.autoRegister) {
+				const { ttl } = await point.register(ns)
+				minTTL = Math.min(minTTL, ttl)
+
+				if (this.autoDiscover) {
+					const results = await point.discover(ns)
+					for (const peerData of results) {
+						await this.components.peerStore.merge(peerData.id, peerData)
+						this.safeDispatchEvent("peer", { detail: peerData })
+					}
+				}
+			}
+
+			return minTTL
+		})
+
+		const interval = this.registerIntervals.get(peerId.toString())
+		if (interval !== undefined) {
+			clearInterval(interval)
+		}
+
+		this.registerIntervals.set(
+			peerId.toString(),
+			setInterval(() => {
+				if (this.#started === false) {
+					return
+				}
+
+				this.components.connectionManager.openConnection(peerId).then(
+					(connection) => this.#register(connection),
+					(err) => this.log.error("failed to open connection to peer %p: %O", peerId, err),
+				)
+			}, minTTL * 1000),
+		)
+	}
 
 	public async connect<T>(
 		server: PeerId | Multiaddr | Multiaddr[],
@@ -104,6 +178,10 @@ export class RendezvousClient implements Startable {
 		const connection = await this.components.connectionManager.openConnection(server)
 		this.log("got connection %s to peer %p", connection.id, connection.remotePeer)
 
+		return await this.#connect(connection, callback)
+	}
+
+	async #connect<T>(connection: Connection, callback: (point: RendezvousPoint) => T | Promise<T>): Promise<T> {
 		const stream = await connection.newStream(RendezvousClient.protocol)
 		this.log("opened outgoing rendezvous stream %s", stream.id)
 
