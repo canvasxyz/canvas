@@ -10,7 +10,6 @@ import { WebSocketServer } from "ws"
 import { GossipLog as SqliteGossipLog } from "@canvas-js/gossiplog/sqlite"
 import { GossipLog as PostgresGossipLog } from "@canvas-js/gossiplog/pg"
 import { NetworkServer } from "@canvas-js/gossiplog/server"
-import { getLibp2p } from "@canvas-js/gossiplog/libp2p"
 import { assert } from "@canvas-js/utils"
 import { createAPI } from "@canvas-js/core/api"
 
