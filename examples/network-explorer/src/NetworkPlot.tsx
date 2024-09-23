@@ -1,12 +1,13 @@
+import React from "react"
 import { Action, Session } from "@canvas-js/interfaces"
-import { fetchAndIpldParseJson, Result } from "../utils.js"
+import { fetchAndIpldParseJson, Result } from "./utils.js"
 import useSWR from "swr"
 import * as d3 from "d3"
 import { PropsWithChildren, useLayoutEffect, useRef, useState } from "react"
 import { Box, Card, Flex } from "@radix-ui/themes"
-import useCursorStack from "../useCursorStack.js"
-import PaginationButton from "../components/PaginationButton.js"
-import { DidPopover } from "../components/DidPopover.js"
+import useCursorStack from "./useCursorStack.js"
+import PaginationButton from "./components/PaginationButton.js"
+import { DidPopover } from "./components/DidPopover.js"
 
 function DivWithRectUpdate(
 	props: PropsWithChildren & {
@@ -173,7 +174,7 @@ function GraphNode({
 
 const entriesPerPage = 10
 
-export default function NetworkPlot({ topic }: { topic: string }) {
+export default function NetworkPlot() {
 	const { currentCursor, pushCursor, popCursor } = useCursorStack<string>()
 
 	// in order to determine if another page exists, we retrieve n + 1 entries
@@ -187,7 +188,7 @@ export default function NetworkPlot({ topic }: { topic: string }) {
 	}
 
 	const { data: messages, error } = useSWR(
-		`/index_api/messages/${topic}?${params.toString()}`,
+		`/index_api/messages?${params.toString()}`,
 		fetchAndIpldParseJson<Result<Action | Session>[]>,
 		{
 			refreshInterval: 1000,
@@ -269,7 +270,7 @@ export default function NetworkPlot({ topic }: { topic: string }) {
 	const nodesById = Object.fromEntries(nodes.map((node) => [node.id, node]))
 
 	return (
-		<Flex direction="column" gap="2" pt="4">
+		<Flex direction="column" gap="2">
 			<Flex direction="row" pb="4">
 				<div>
 					<svg width={graphWidth} height={divHeight}>
