@@ -5,6 +5,7 @@ export const useCanvas = <T extends Contract = Contract>(url: string | null, con
 	const [app, setApp] = useState<Canvas<T>>()
 	const [error, setError] = useState<Error>()
 
+	// TODO: ensure effect hook re-runs on signer change
 	const hashRef = useRef<string>()
 	// const renderedRef = useRef(false) // skip second render in React.StrictMode
 
@@ -45,14 +46,6 @@ export const useCanvas = <T extends Contract = Contract>(url: string | null, con
 		}
 		hashRef.current = contractHash
 	}, [url, hashContract(config.contract)])
-
-	// TODO: ensure effect hook re-runs on all other param changes
-	const signers = config.signers ?? []
-	const signerKeys = signers.map((signer) => signer.key).join("+")
-	useEffect(() => {
-		if (!app) return
-		app.updateSigners(signers)
-	}, [signerKeys])
 
 	return { app, error }
 }
