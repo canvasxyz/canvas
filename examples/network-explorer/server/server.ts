@@ -56,10 +56,6 @@ const canvasApp = await Canvas.initialize({
 		$addresses_index: {
 			address: "primary",
 		},
-		$messages_index: {
-			id: "primary",
-			type: "string",
-		},
 	},
 })
 
@@ -70,17 +66,7 @@ const canvasApp = await Canvas.initialize({
 
 canvasApp.addEventListener("message", async (event) => {
 	const message = event.detail
-
-	if (message.message.payload.type === "action") {
-		await canvasApp.messageLog.db.set("$messages_index", {
-			id: message.id,
-			type: "action",
-		})
-	} else if (message.message.payload.type === "session") {
-		await canvasApp.messageLog.db.set("$messages_index", {
-			id: message.id,
-			type: "session",
-		})
+	if (message.message.payload.type === "session") {
 		await canvasApp.messageLog.db.set("$addresses_index", {
 			address: message.message.payload.did,
 		})
