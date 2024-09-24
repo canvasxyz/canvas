@@ -259,7 +259,11 @@ export async function handler(args: Args) {
 		console.log(`└ GET  ${origin}/api/clock`)
 		console.log(`└ GET  ${origin}/api/messages`)
 		console.log(`└ GET  ${origin}/api/messages/:id`)
-		console.log(`└ POST ${origin}/api/messages`)
+		console.log(`└ POST ${origin}/api/messages/count`)
+		console.log(`└ POST ${origin}/api/actions`)
+		console.log(`└ POST ${origin}/api/actions/count`)
+		console.log(`└ POST ${origin}/api/session`)
+		console.log(`└ POST ${origin}/api/sessions/count`)
 
 		const { models, actions } = app.getApplicationData()
 		for (const name of Object.keys(models)) {
