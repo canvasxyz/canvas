@@ -97,8 +97,7 @@ export class RendezvousServer implements Startable {
 
 				const actualTTL = ttl === 0n ? defaultTTL : clamp(ttl, maxTTL)
 
-				const valid = await this.components.peerStore.consumePeerRecord(signedPeerRecord, peerId)
-				assert(valid, "invalid peer record")
+				await this.components.peerStore.consumePeerRecord(signedPeerRecord, peerId)
 
 				this.store.register(ns, peerId, signedPeerRecord, actualTTL)
 

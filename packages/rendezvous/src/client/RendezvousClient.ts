@@ -131,15 +131,21 @@ export class RendezvousClient extends TypedEventEmitter<PeerDiscoveryEvents> imp
 		}
 
 		const minTTL = await this.#connect(connection, async (point) => {
-			let minTTL = 0
+			let minTTL = Infinity
 
 			for (const ns of this.autoRegister) {
 				const { ttl } = await point.register(ns)
 				minTTL = Math.min(minTTL, ttl)
 
+				this.log("successfully registered %s with %p (ttl %d)", ns, peerId, ttl)
+
 				if (this.autoDiscover) {
 					const results = await point.discover(ns)
 					for (const peerData of results) {
+						if (peerData.id.equals(this.components.peerId)) {
+							continue
+						}
+
 						await this.components.peerStore.merge(peerData.id, peerData)
 						this.safeDispatchEvent("peer", { detail: peerData })
 					}
@@ -149,18 +155,17 @@ export class RendezvousClient extends TypedEventEmitter<PeerDiscoveryEvents> imp
 			return minTTL
 		})
 
-		const interval = this.registerIntervals.get(peerId.toString())
-		if (interval !== undefined) {
-			clearInterval(interval)
+		if (minTTL === Infinity) {
+			return
 		}
 
+		clearInterval(this.registerIntervals.get(peerId.toString()))
 		this.registerIntervals.set(
 			peerId.toString(),
-			setInterval(() => {
-				if (this.#started === false) {
-					return
-				}
+			setTimeout(() => {
+				this.registerIntervals.delete(peerId.toString())
 
+				this.log("refreshing registration with %p", peerId)
 				this.components.connectionManager.openConnection(peerId).then(
 					(connection) => this.#register(connection),
 					(err) => this.log.error("failed to open connection to peer %p: %O", peerId, err),
@@ -196,7 +201,7 @@ export class RendezvousClient extends TypedEventEmitter<PeerDiscoveryEvents> imp
 		try {
 			return await callback({
 				discover: async (namespace, options = {}) => {
-					this.log("discover(%s, %o)", namespace, options)
+					this.log.trace("discover(%s, %o)", namespace, options)
 					source.push({
 						type: Message.MessageType.DISCOVER,
 						discover: { ns: namespace, limit: BigInt(options.limit ?? 0), cookie: new Uint8Array() },
@@ -232,7 +237,7 @@ export class RendezvousClient extends TypedEventEmitter<PeerDiscoveryEvents> imp
 					return peers
 				},
 				register: async (namespace, options = {}) => {
-					this.log("register(%s, %o)", namespace, options)
+					this.log.trace("register(%s, %o)", namespace, options)
 					const multiaddrs = this.components.addressManager.getAnnounceAddrs()
 					const record = new PeerRecord({ peerId: this.components.peerId, multiaddrs })
 					const envelope = await RecordEnvelope.seal(record, this.components.peerId)
@@ -257,7 +262,7 @@ export class RendezvousClient extends TypedEventEmitter<PeerDiscoveryEvents> imp
 					return { ttl: Number(ttl) }
 				},
 				unregister: async (namespace) => {
-					this.log("unregister(%s)", namespace)
+					this.log.trace("unregister(%s)", namespace)
 					source.push({
 						type: Message.MessageType.UNREGISTER,
 						unregister: { ns: namespace },
