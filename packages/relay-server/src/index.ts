@@ -3,7 +3,7 @@ import http from "node:http"
 import { createAPI } from "./api.js"
 import { getLibp2p } from "./libp2p.js"
 
-const { PORT = "3000", FLY_APP_NAME } = process.env
+const { PORT = "8000", FLY_APP_NAME } = process.env
 const hostname = FLY_APP_NAME !== undefined ? `${FLY_APP_NAME}.internal` : "localhost"
 
 const libp2p = await getLibp2p()

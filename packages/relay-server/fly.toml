@@ -14,6 +14,7 @@ kill_timeout = '30s'
 ANNOUNCE = '/dns4/canvas-relay-server.fly.dev/tcp/443/wss'
 DEBUG = 'libp2p:circuit-relay:*'
 LISTEN = '/ip4/127.0.0.1/tcp/8080/ws'
+PORT = '8000'
 
 [[services]]
 protocol = 'tcp'
@@ -35,5 +36,5 @@ cpu_kind = 'shared'
 cpus = 2
 
 [[metrics]]
-port = 3000
+port = 8000
 path = '/metrics'
