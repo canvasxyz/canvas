@@ -28,6 +28,12 @@ export class RegistrationStore {
 	>
 
 	constructor(path: string | null = null) {
+		if (path !== null) {
+			this.log("opening database at %s", path)
+		} else {
+			this.log("opening in-memory database")
+		}
+
 		this.db = new Database(path ?? ":memory:")
 		this.db.defaultSafeIntegers(true)
 		this.db.exec(
