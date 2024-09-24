@@ -15,6 +15,7 @@ import {
 	BranchMergeRecord,
 } from "@canvas-js/gossiplog"
 import { assert, mapValues } from "@canvas-js/utils"
+import { isAction, isSession } from "../utils.js"
 
 export type ExecutionContext = {
 	messageLog: AbstractGossipLog<Action | Session>
@@ -67,7 +68,7 @@ export abstract class AbstractRuntime {
 			public_key: "string",
 			address: "string",
 			expiration: "integer?",
-			$indexes: [["address"], ["public_key"]],
+			$indexes: [["did"], ["public_key"]],
 		},
 	} satisfies ModelSchema
 
@@ -119,12 +120,6 @@ export abstract class AbstractRuntime {
 		await this.db.close()
 	}
 
-	private static isAction = (message: Message<Action | Session>): message is Message<Action> =>
-		message.payload.type === "action"
-
-	private static isSession = (message: Message<Action | Session>): message is Message<Session> =>
-		message.payload.type === "session"
-
 	public getConsumer(): GossipLogConsumer<Action | Session> {
 		const handleSession = this.handleSession.bind(this)
 		const handleAction = this.handleAction.bind(this)
@@ -133,9 +128,9 @@ export abstract class AbstractRuntime {
 			const { id, signature, message, branch } = signedMessage
 			assert(branch !== undefined, "internal error - expected branch !== undefined")
 
-			if (AbstractRuntime.isSession(message)) {
+			if (isSession(message)) {
 				await handleSession(id, signature, message)
-			} else if (AbstractRuntime.isAction(message)) {
+			} else if (isAction(message)) {
 				await handleAction(id, signature, message, this, { branch })
 			} else {
 				throw new Error("invalid message payload type")
