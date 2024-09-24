@@ -3,9 +3,10 @@ import process from "node:process"
 import { PeerId } from "@libp2p/interface"
 import { createFromProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
 
-const { PEER_ID, LISTEN, ANNOUNCE, MIN_CONNECTIONS, MAX_CONNECTIONS } = process.env
+const { DATABASE_PATH, PEER_ID, LISTEN, ANNOUNCE, MIN_CONNECTIONS, MAX_CONNECTIONS } = process.env
 
 export interface Config {
+	path: string | null
 	peerId: PeerId
 	listen: string[]
 	announce: string[]
@@ -14,6 +15,8 @@ export interface Config {
 }
 
 export async function getConfig(config: Partial<Config>): Promise<Config> {
+	const path = DATABASE_PATH ?? null
+
 	let peerId = config.peerId
 	if (peerId === undefined) {
 		peerId = await getPeerId()
@@ -26,7 +29,7 @@ export async function getConfig(config: Partial<Config>): Promise<Config> {
 	const listen = config.listen ?? LISTEN?.split(",") ?? []
 	const announce = config.announce ?? ANNOUNCE?.split(",") ?? []
 
-	return { peerId, listen, announce, minConnections, maxConnections }
+	return { path, peerId, listen, announce, minConnections, maxConnections }
 }
 
 async function getPeerId(): Promise<PeerId> {

@@ -7,11 +7,14 @@ import { Identify, identify } from "@libp2p/identify"
 import { PingService, ping } from "@libp2p/ping"
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
 
+import { rendezvousServer, RendezvousServer } from "@canvas-js/libp2p-rendezvous/server"
+
 import { Config, getConfig } from "./config.js"
 
 export type ServiceMap = {
 	identify: Identify
 	ping: PingService
+	rendezvous: RendezvousServer
 }
 
 export async function getLibp2p(config: Partial<Config> = {}) {
@@ -44,6 +47,8 @@ export async function getLibp2p(config: Partial<Config> = {}) {
 		services: {
 			identify: identify({ protocolPrefix: "canvas" }),
 			ping: ping({ protocolPrefix: "canvas" }),
+
+			rendezvous: rendezvousServer({}),
 		},
 	})
 
