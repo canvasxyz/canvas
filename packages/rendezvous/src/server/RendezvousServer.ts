@@ -35,17 +35,21 @@ export type RendezvousServerComponents = {
 	connectionManager: ConnectionManager
 }
 
-export interface RendezvousServerInit {}
+export interface RendezvousServerInit {
+	path?: string | null
+}
 
 export class RendezvousServer implements Startable {
 	public static protocol = "/canvas/rendezvous/1.0.0"
 
 	private readonly log = logger(`canvas:rendezvous:server`)
-	private readonly store = new RegistrationStore()
+	private readonly store: RegistrationStore
 
 	#started: boolean = false
 
-	constructor(private readonly components: RendezvousServerComponents, init: RendezvousServerInit) {}
+	constructor(private readonly components: RendezvousServerComponents, init: RendezvousServerInit) {
+		this.store = new RegistrationStore(init.path ?? null)
+	}
 
 	public isStarted() {
 		return this.#started
