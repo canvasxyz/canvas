@@ -11,7 +11,7 @@ import { assert } from "@canvas-js/utils"
 import * as Sync from "@canvas-js/gossiplog/protocols/sync"
 
 import { encodeKey, decodeNode } from "./utils.js"
-import { Snapshot } from "../interface.js"
+import { SyncSnapshot } from "../interface.js"
 import { codes } from "../utils.js"
 
 export async function* decodeResponses(source: AsyncIterable<Uint8Array | Uint8ArrayList>) {
@@ -27,7 +27,7 @@ export async function* encodeRequests(source: AsyncIterable<Sync.Request>) {
 	}
 }
 
-export class Client implements Snapshot {
+export class Client implements SyncSnapshot {
 	private readonly responses: AsyncIterator<Sync.Response, void, undefined>
 	private readonly requests: Pushable<Sync.Request>
 	private readonly log: Logger

@@ -15,18 +15,18 @@ export class Client {
 		if (session !== null) {
 			// then check that it exists in the log and hasn't expired
 			const query = Object.entries({
-				address: session.payload.did,
+				did: session.payload.did,
 				publicKey: session.signer.publicKey,
 				minExpiration: timestamp,
 			})
 				.map((entry) => entry.join("="))
 				.join("&")
 
-			const res = await fetch(`${this.host}/sessions?${query}`)
+			const res = await fetch(`${this.host}/sessions/count?${query}`)
 			assert(res.status === StatusCodes.OK)
 
-			const sessions: { id: string; expiration: number | null }[] = await res.json()
-			if (sessions.length === 0) {
+			const result: { count: number } = await res.json()
+			if (result.count === 0) {
 				session = null
 			}
 		}

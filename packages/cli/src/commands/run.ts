@@ -247,19 +247,27 @@ export async function handler(args: Args) {
 
 		await new Promise<void>((resolve) => server.listen(args["port"], resolve))
 
-		const origin = `http://localhost:${args.port}`
 		console.log("")
+
+		const origin = `http://localhost:${args.port}`
 		if (args.static) {
 			console.log(`Serving static bundle: ${chalk.bold(origin)}`)
 		}
 
+		const wsAPI = `ws://localhost:${args.port}`
+		console.log(`Connect browser clients to ${chalk.whiteBright(wsAPI)}`)
+		console.log("")
+
 		console.log(`Serving HTTP API:`)
 		console.log(`└ GET  ${origin}/api/`)
-
 		console.log(`└ GET  ${origin}/api/clock`)
 		console.log(`└ GET  ${origin}/api/messages`)
 		console.log(`└ GET  ${origin}/api/messages/:id`)
-		console.log(`└ POST ${origin}/api/messages`)
+		console.log(`└ POST ${origin}/api/messages/count`)
+		console.log(`└ POST ${origin}/api/actions`)
+		console.log(`└ POST ${origin}/api/actions/count`)
+		console.log(`└ POST ${origin}/api/session`)
+		console.log(`└ POST ${origin}/api/sessions/count`)
 
 		const { models, actions } = app.getApplicationData()
 		for (const name of Object.keys(models)) {
