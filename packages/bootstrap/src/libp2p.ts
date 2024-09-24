@@ -47,8 +47,7 @@ export async function getLibp2p(config: Partial<Config> = {}) {
 		services: {
 			identify: identify({ protocolPrefix: "canvas" }),
 			ping: ping({ protocolPrefix: "canvas" }),
-
-			rendezvous: rendezvousServer({}),
+			rendezvous: rendezvousServer({ path: config.path }),
 		},
 	})
 
