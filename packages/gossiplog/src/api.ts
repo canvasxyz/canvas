@@ -18,6 +18,11 @@ export function createAPI<Payload>(gossipLog: AbstractGossipLog<Payload>): expre
 		return void res.json({ clock, parents })
 	})
 
+	api.get("/messages/count", async (req, res) => {
+		const count = await gossipLog.db.count("$messages")
+		return void res.json({ count })
+	})
+
 	api.get("/messages/:id", async (req, res) => {
 		const { id } = req.params
 
@@ -46,13 +51,15 @@ export function createAPI<Payload>(gossipLog: AbstractGossipLog<Payload>): expre
 
 		assert(Number.isSafeInteger(limit) && 0 < limit && limit <= 64, "invalid `limit` query parameter")
 		assert(order === undefined || order === "asc" || order === "desc", "invalid `order` query parameter")
-		const reverse = order === "desc"
 
-		const results: { id: string; signature: Signature; message: Message }[] = []
+		type MessageRecord = { id: string; signature: Signature; message: Message<Payload> }
 
-		for (const { id, signature, message } of await gossipLog.getMessages({ gt, gte, lt, lte, reverse, limit })) {
-			results.push({ id, signature, message })
-		}
+		const results = await gossipLog.db.query<MessageRecord>("$messages", {
+			select: { id: true, signature: true, message: true },
+			where: { id: { gt, gte, lt, lte } },
+			orderBy: { id: order ?? "asc" },
+			limit,
+		})
 
 		res.writeHead(StatusCodes.OK, { "content-type": "application/json" })
 		return void res.end(json.encode(results))
