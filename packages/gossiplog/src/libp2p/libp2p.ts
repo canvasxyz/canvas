@@ -18,6 +18,7 @@ import type { Registry } from "prom-client"
 
 import { Multiaddr } from "@multiformats/multiaddr"
 
+import { RendezvousClient, rendezvousClient } from "@canvas-js/libp2p-rendezvous/client"
 import type { AbstractGossipLog } from "@canvas-js/gossiplog"
 
 import { GossipLogService, gossipLogService } from "./service.js"
@@ -46,6 +47,7 @@ export type ServiceMap<Payload> = {
 	pubsub: PubSub<GossipsubEvents>
 	gossipLog: GossipLogService<Payload>
 	dht: KadDHT
+	rendezvous: RendezvousClient
 }
 
 const getDHTProtocol = (topic: string | null) => (topic === null ? `/canvas/kad/1.0.0` : `/canvas/kad/1.0.0/${topic}`)
@@ -104,6 +106,11 @@ export async function getLibp2p<Payload>(
 			}),
 
 			gossipLog: gossipLogService({ gossipLog: gossipLog }),
+
+			rendezvous: rendezvousClient({
+				autoRegister: [gossipLog.topic],
+				autoDiscover: true,
+			}),
 		},
 	})
 }
