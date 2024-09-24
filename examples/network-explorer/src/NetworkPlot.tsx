@@ -4,7 +4,7 @@ import { fetchAndIpldParseJson, Result } from "./utils.js"
 import useSWR from "swr"
 import * as d3 from "d3"
 import { PropsWithChildren, useLayoutEffect, useRef, useState } from "react"
-import { Box, Card, Flex } from "@radix-ui/themes"
+import { Box, Card, Flex, Text } from "@radix-ui/themes"
 import useCursorStack from "./useCursorStack.js"
 import PaginationButton from "./components/PaginationButton.js"
 import { DidPopover } from "./components/DidPopover.js"
@@ -49,10 +49,14 @@ function MessageEntry({ item }: { item: Result<Action | Session> }) {
 	return (
 		<Card>
 			<Flex direction="row">
-				{item.message.payload.type}, id: {item.id}
+				<Text>
+					{item.message.payload.type}, id: {item.id}
+				</Text>
 				<Box flexGrow="1" />
-				address:&nbsp;
-				<DidPopover did={item.message.payload.did} />, clock: {item.message.clock}, branch: {item.branch}
+				<Text>
+					address:&nbsp;
+					<DidPopover did={item.message.payload.did} />, clock: {item.message.clock}, branch: {item.branch}
+				</Text>
 			</Flex>
 		</Card>
 	)
@@ -180,15 +184,14 @@ export default function NetworkPlot() {
 	// in order to determine if another page exists, we retrieve n + 1 entries
 	// if the length of the result is n + 1, then there is another page
 	const params = new URLSearchParams({
-		type: "action",
 		limit: (entriesPerPage + 1).toString(),
 	})
 	if (currentCursor) {
-		params.append("before", currentCursor)
+		params.append("gt", currentCursor)
 	}
 
 	const { data: messages, error } = useSWR(
-		`/index_api/messages?${params.toString()}`,
+		`/canvas_api/messages?${params.toString()}`,
 		fetchAndIpldParseJson<Result<Action | Session>[]>,
 		{
 			refreshInterval: 1000,

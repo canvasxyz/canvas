@@ -9,6 +9,7 @@ import { createAPI as createGossipLogAPI } from "@canvas-js/gossiplog/api"
 
 import { Canvas } from "./Canvas.js"
 import { assert } from "@canvas-js/utils"
+import { MAX_MESSAGE_ID } from "@canvas-js/gossiplog"
 
 export interface APIOptions {}
 
@@ -32,6 +33,72 @@ export function createAPI(app: Canvas): express.Express {
 
 		const sessions = await app.getSessions({ did, publicKey, minExpiration: minExpirationValue })
 		return void res.json(sessions)
+	})
+
+	api.get("/sessions_list", async (req, res) => {
+		let limit: number
+		if (!req.query.limit) {
+			limit = 10
+		} else if (typeof req.query.limit === "string") {
+			limit = parseInt(req.query.limit)
+		} else {
+			res.status(StatusCodes.BAD_REQUEST)
+			res.end()
+			return
+		}
+
+		let before: string
+		if (!req.query.before) {
+			before = MAX_MESSAGE_ID
+		} else if (typeof req.query.before === "string") {
+			before = req.query.before
+		} else {
+			res.status(StatusCodes.BAD_REQUEST)
+			res.end()
+			return
+		}
+
+		const sessionRecords = await app.db.query("$sessions", {
+			where: { message_id: { lt: before } },
+			limit,
+		})
+
+		res.status(StatusCodes.OK)
+		res.setHeader("content-type", "application/json")
+		res.end(json.encode(sessionRecords))
+	})
+
+	api.get("/actions_list", async (req, res) => {
+		let limit: number
+		if (!req.query.limit) {
+			limit = 10
+		} else if (typeof req.query.limit === "string") {
+			limit = parseInt(req.query.limit)
+		} else {
+			res.status(StatusCodes.BAD_REQUEST)
+			res.end()
+			return
+		}
+
+		let before: string
+		if (!req.query.before) {
+			before = MAX_MESSAGE_ID
+		} else if (typeof req.query.before === "string") {
+			before = req.query.before
+		} else {
+			res.status(StatusCodes.BAD_REQUEST)
+			res.end()
+			return
+		}
+
+		const actionRecords = await app.db.query("$actions", {
+			where: { message_id: { lt: before } },
+			limit,
+		})
+
+		res.status(StatusCodes.OK)
+		res.setHeader("content-type", "application/json")
+		res.end(json.encode(actionRecords))
 	})
 
 	api.get("/sessions/count", async (req, res) => {

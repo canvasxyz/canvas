@@ -48,10 +48,17 @@ export function createAPI<Payload>(gossipLog: AbstractGossipLog<Payload>): expre
 		assert(order === undefined || order === "asc" || order === "desc", "invalid `order` query parameter")
 		const reverse = order === "desc"
 
-		const results: { id: string; signature: Signature; message: Message }[] = []
+		const results: { id: string; signature: Signature; message: Message; branch: number }[] = []
 
-		for (const { id, signature, message } of await gossipLog.getMessages({ gt, gte, lt, lte, reverse, limit })) {
-			results.push({ id, signature, message })
+		for (const { id, signature, message, branch } of await gossipLog.getMessages({
+			gt,
+			gte,
+			lt,
+			lte,
+			reverse,
+			limit,
+		})) {
+			results.push({ id, signature, message, branch })
 		}
 
 		res.writeHead(StatusCodes.OK, { "content-type": "application/json" })

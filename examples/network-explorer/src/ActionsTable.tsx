@@ -1,12 +1,50 @@
 import useSWR from "swr"
-import { Action, Message, Session, Signature } from "@canvas-js/interfaces"
-import { Box, Flex, Table, Text } from "@radix-ui/themes"
 
-import ArgsPopout from "./components/ArgsPopout.js"
+import { Box, Flex, Link, Popover, Table, Text } from "@radix-ui/themes"
+
 import PaginationButton from "./components/PaginationButton.js"
 import useCursorStack from "./useCursorStack.js"
-import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "./utils.js"
+import { fetchAndIpldParseJson, formatDistanceCustom, Result } from "./utils.js"
+
 import { DidPopover } from "./components/DidPopover.js"
+import { Action, Message, Session, Signature } from "@canvas-js/interfaces"
+
+type ActionRecord = {
+	message_id: string
+	did: string
+	name: string
+	timestamp: number
+}
+
+function ActionRow({ message_id, did, timestamp, name }: ActionRecord) {
+	const { data: messageData } = useSWR(`/canvas_api/messages/${message_id}`, fetchAndIpldParseJson<Result<Action>>)
+
+	return (
+		<Table.Row>
+			<Table.Cell>
+				<DidPopover did={did || ""} truncateBelow="md" />
+			</Table.Cell>
+			<Table.Cell>
+				<Popover.Root>
+					<Popover.Trigger onClick={() => console.log("click")}>
+						<Link style={{ cursor: "pointer" }}>{name}</Link>
+					</Popover.Trigger>
+					<Popover.Content>
+						name: {name}
+						<br />
+						args:{" "}
+						{messageData ? <Text>{JSON.stringify(messageData.message.payload.args)}</Text> : <Text>Loading...</Text>}
+					</Popover.Content>
+				</Popover.Root>
+			</Table.Cell>
+			<Table.Cell>{formatDistanceCustom(timestamp)} ago</Table.Cell>
+			<Table.Cell>
+				{messageData ? <DidPopover did={messageData.signature.publicKey || ""} truncateBelow="xl" /> : null}
+				{messageData ? <SessionField message={messageData.message} signature={messageData.signature} /> : null}
+			</Table.Cell>
+		</Table.Row>
+	)
+}
 
 function SessionField({ signature, message }: { signature: Signature; message: Message<Action> }) {
 	const { data: session, error } = useSWR(
@@ -27,7 +65,6 @@ function ActionsTable() {
 	// in order to determine if another page exists, we retrieve n + 1 entries
 	// if the length of the result is n + 1, then there is another page
 	const params = new URLSearchParams({
-		type: "action",
 		limit: (entriesPerPage + 1).toString(),
 	})
 	if (currentCursor) {
@@ -35,8 +72,8 @@ function ActionsTable() {
 	}
 
 	const { data: actions, error } = useSWR(
-		`/index_api/messages?${params.toString()}`,
-		fetchAndIpldParseJson<Result<Action>[]>,
+		`/canvas_api/actions_list?${params.toString()}`,
+		fetchAndIpldParseJson<ActionRecord[]>,
 		{
 			refreshInterval: 1000,
 		},
@@ -57,30 +94,15 @@ function ActionsTable() {
 				<Table.Header>
 					<Table.Row>
 						<Table.ColumnHeaderCell>Address</Table.ColumnHeaderCell>
-						<Table.ColumnHeaderCell>Action</Table.ColumnHeaderCell>
-						<Table.ColumnHeaderCell>Args</Table.ColumnHeaderCell>
+						<Table.ColumnHeaderCell>Name</Table.ColumnHeaderCell>
 						<Table.ColumnHeaderCell>Timestamp</Table.ColumnHeaderCell>
 						<Table.ColumnHeaderCell>Session</Table.ColumnHeaderCell>
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
-					{actionsToDisplay.map(({ id, signature, message }) => {
-						const args = JSON.stringify(message.payload.args)
-						return (
-							<Table.Row key={id}>
-								<Table.Cell>
-									<DidPopover did={message.payload.did || ""} truncateBelow="md" />
-								</Table.Cell>
-								<Table.Cell>{message.payload.name}</Table.Cell>
-								<Table.Cell>{args.length > 50 ? <ArgsPopout data={args} /> : args}</Table.Cell>
-								<Table.Cell>{formatDistanceCustom(message.payload.context.timestamp)} ago</Table.Cell>
-								<Table.Cell>
-									<DidPopover did={signature.publicKey || ""} truncateBelow="xl" />
-									<SessionField message={message} signature={signature} />
-								</Table.Cell>
-							</Table.Row>
-						)
-					})}
+					{actionsToDisplay.map((actionRecord) => (
+						<ActionRow key={actionRecord.message_id} {...actionRecord} />
+					))}
 				</Table.Body>
 			</Table.Root>
 			<Flex direction="row" gap="2">
@@ -89,7 +111,7 @@ function ActionsTable() {
 				<PaginationButton
 					text="Next"
 					enabled={hasMore}
-					onClick={() => pushCursor(actionsToDisplay[entriesPerPage].id)}
+					onClick={() => pushCursor(actionsToDisplay[entriesPerPage].message_id)}
 				/>
 			</Flex>
 		</Flex>

@@ -1,11 +1,19 @@
 import useSWR from "swr"
-import { Session } from "@canvas-js/interfaces"
+// import { Session } from "@canvas-js/interfaces"
 import { Box, Flex, Table, Text } from "@radix-ui/themes"
 
-import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "./utils.js"
+import { fetchAndIpldParseJson, formatDistanceCustom } from "./utils.js"
 import PaginationButton from "./components/PaginationButton.js"
 import useCursorStack from "./useCursorStack.js"
 import { DidPopover } from "./components/DidPopover.js"
+
+type SessionRecord = {
+	message_id: string
+	did: string
+	public_key: string
+	address: string
+	expiration: number | null
+}
 
 const entriesPerPage = 10
 
@@ -20,8 +28,8 @@ function SessionsTable() {
 	}
 
 	const { data: sessions, error } = useSWR(
-		`/index_api/messages?${params.toString()}`,
-		fetchAndIpldParseJson<Result<Session>[]>,
+		`/canvas_api/sessions_list?${params.toString()}`,
+		fetchAndIpldParseJson<SessionRecord[]>,
 		{
 			refreshInterval: 1000,
 		},
@@ -43,21 +51,26 @@ function SessionsTable() {
 					<Table.Row>
 						<Table.ColumnHeaderCell>Address</Table.ColumnHeaderCell>
 						<Table.ColumnHeaderCell>Public Key</Table.ColumnHeaderCell>
-						<Table.ColumnHeaderCell>Timestamp</Table.ColumnHeaderCell>
+						<Table.ColumnHeaderCell>Expiration</Table.ColumnHeaderCell>
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
-					{sessionsToDisplay.map(({ id, message }) => {
+					{sessionsToDisplay.map(({ message_id, did, public_key, expiration }) => {
 						return (
-							<Table.Row key={id}>
+							<Table.Row key={message_id}>
 								<Table.Cell>
-									<DidPopover did={message.payload.did} truncateBelow="md" numEndChars={0} />
+									<DidPopover did={did} truncateBelow="md" numEndChars={0} />
 								</Table.Cell>
 								<Table.Cell>
-									<DidPopover did={message.payload.publicKey} truncateBelow="md" numEndChars={0} />
+									<DidPopover did={public_key} truncateBelow="md" numEndChars={0} />
 								</Table.Cell>
+								{/* TODO: do we want to display the timestamp (creation date) for the session? */}
 								<Table.Cell>
-									<span className="text-gray-400">{formatDistanceCustom(message.payload.context.timestamp)} ago</span>
+									{expiration !== null ? (
+										<span className="text-gray-400">{formatDistanceCustom(expiration)}</span>
+									) : (
+										"-"
+									)}
 								</Table.Cell>
 							</Table.Row>
 						)
@@ -70,7 +83,7 @@ function SessionsTable() {
 				<PaginationButton
 					text="Next"
 					enabled={hasMore}
-					onClick={() => pushCursor(sessionsToDisplay[entriesPerPage].id)}
+					onClick={() => pushCursor(sessionsToDisplay[entriesPerPage].message_id)}
 				/>
 			</Flex>
 		</Flex>

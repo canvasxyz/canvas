@@ -1,6 +1,5 @@
 import cors from "cors"
 import express from "express"
-import ipld from "express-ipld"
 import pg from "pg"
 import { StatusCodes } from "http-status-codes"
 import * as json from "@ipld/dag-json"
@@ -12,9 +11,6 @@ import { ATPSigner } from "@canvas-js/chain-atp"
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
 import { SubstrateSigner } from "@canvas-js/chain-substrate"
 import { SolanaSigner } from "@canvas-js/chain-solana"
-
-// this is copied from @canvas-js/gossiplog - we don't need anything else from that module
-const MAX_MESSAGE_ID = "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
 
 const BOOTSTRAP_LIST =
 	process.env.BOOTSTRAP_LIST ||
@@ -95,93 +91,7 @@ canvasApp.addEventListener("message", async (event) => {
 // console.log(`peer id: ${canvasApp.libp2p.peerId}`)
 
 const canvasApiApp = createAPI(canvasApp)
-expressApp.use(`/canvas_api/${topic}`, canvasApiApp)
-
-expressApp.get("/index_api/messages", ipld(), async (req, res) => {
-	let numMessagesToReturn: number
-	if (!req.query.limit) {
-		numMessagesToReturn = 10
-	} else if (typeof req.query.limit === "string") {
-		numMessagesToReturn = parseInt(req.query.limit)
-	} else {
-		res.status(StatusCodes.BAD_REQUEST)
-		res.end()
-		return
-	}
-
-	let before: string
-	if (!req.query.before) {
-		before = MAX_MESSAGE_ID
-	} else if (typeof req.query.before === "string") {
-		before = req.query.before
-	} else {
-		res.status(StatusCodes.BAD_REQUEST)
-		res.end()
-		return
-	}
-
-	let type: "action" | "session" | undefined
-	if (!req.query.type) {
-		type = undefined
-	} else if (req.query.type === "action" || req.query.type === "session") {
-		type = req.query.type
-	} else {
-		res.status(StatusCodes.BAD_REQUEST)
-		res.end()
-		return
-	}
-
-	const messageIndexEntries = await canvasApp.messageLog.db.query("$messages_index", {
-		where: { id: { lt: before }, type },
-		limit: numMessagesToReturn,
-		orderBy: { id: "desc" },
-	})
-
-	const result = []
-	for (const messageIndexEntry of messageIndexEntries) {
-		const signedMessage = await canvasApp.getMessage(messageIndexEntry.id)
-		// during initialization, the app may be missing messages, and
-		// we shouldn't send null signature/message values to the client
-		if (signedMessage !== null) {
-			result.push({
-				id: messageIndexEntry.id,
-				signature: signedMessage.signature,
-				message: signedMessage.message,
-				branch: signedMessage.branch,
-			})
-		}
-	}
-
-	res.status(StatusCodes.OK)
-	res.setHeader("content-type", "application/json")
-	res.end(json.encode(result))
-})
-
-expressApp.get("/index_api/counts", async (req, res) => {
-	const actionCount = await canvasApp.messageLog.db.count("$messages_index", { type: "action" })
-	const sessionCount = await canvasApp.messageLog.db.count("$messages_index", { type: "session" })
-	const addressCount = await canvasApp.messageLog.db.count("$addresses_index")
-
-	// TODO: get these fields from the canvas app object
-	// const connectionCount = canvasApp.libp2p.getConnections().length
-	// const connections = (connectionsMap[row.topic] = canvasApps[row.topic]?.libp2p
-	// 	.getConnections()
-	// 	.map((c) => c.remoteAddr.toString())
-	// 	.join(", "))
-	const connectionCount = 0
-	const connections = "-"
-
-	const result = {
-		topic,
-		address_count: addressCount,
-		connection_count: connectionCount,
-		connections,
-		action_count: actionCount,
-		session_count: sessionCount,
-	}
-
-	res.json(result)
-})
+expressApp.use(`/canvas_api`, canvasApiApp)
 
 expressApp.get("/index_api/latest_session/", async (req, res) => {
 	if (
