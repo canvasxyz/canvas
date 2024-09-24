@@ -9,7 +9,7 @@ import { Uint8ArrayList } from "uint8arraylist"
 import { assert, SECONDS } from "@canvas-js/utils"
 import * as Sync from "@canvas-js/gossiplog/protocols/sync"
 
-import { Snapshot } from "../interface.js"
+import { SyncSnapshot } from "../interface.js"
 import { decodeKey, encodeNode } from "./utils.js"
 
 export async function* encodeResponses(responses: AsyncIterable<Sync.Response>): AsyncIterable<Uint8Array> {
@@ -30,7 +30,7 @@ export async function* decodeRequests(
 export class Server implements Duplex<Pushable<Sync.Response>, AsyncIterable<Sync.Request>> {
 	public static timeout = 2 * SECONDS
 
-	public static async handleStream(txn: Snapshot, stream: Stream) {
+	public static async handleStream(txn: SyncSnapshot, stream: Stream) {
 		const server = new Server(txn, stream)
 
 		const signal = AbortSignal.timeout(Server.timeout)
@@ -53,7 +53,10 @@ export class Server implements Duplex<Pushable<Sync.Response>, AsyncIterable<Syn
 
 	#ended = false
 
-	private constructor(private readonly txn: Snapshot, stream: Stream) {
+	private constructor(
+		private readonly txn: SyncSnapshot,
+		stream: Stream,
+	) {
 		this.log = logger(`canvas:sync:server:${stream.id}`)
 	}
 

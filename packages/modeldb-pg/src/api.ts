@@ -1,4 +1,5 @@
 import pg from "pg"
+import Cursor from "pg-cursor"
 
 import { assert, signalInvalidType, mapValues, mapValuesAsync, zip } from "@canvas-js/utils"
 
@@ -28,6 +29,8 @@ import {
 	decodePrimitiveValue,
 	decodeRecord,
 	decodeReferenceValue,
+	encodeQueryParams,
+	PostgresPrimitiveValue,
 } from "./encoding.js"
 
 const primitiveColumnTypes = {
@@ -242,11 +245,11 @@ export class ModelAPI {
 		if (whereExpression) {
 			sql.push(`WHERE ${whereExpression}`)
 		}
-		const results = await this.client.query(sql.join(" "), params)
+		const results = await this.client.query(sql.join(" "), encodeQueryParams(params))
 		return parseInt(results.rows[0].count, 10) ?? 0
 	}
 
-		public async clear() {
+	public async clear() {
 		const results = await this.client.query(`DELETE FROM "${this.#table}" RETURNING "${this.#primaryKeyName}"`)
 
 		for (const row of results.rows) {
@@ -257,25 +260,92 @@ export class ModelAPI {
 		}
 	}
 
-	public async *values(): AsyncIterable<ModelValue> {
-		// TODO: optimize to single query
-		// TODO: use iterable query
-		const { rows } = await this.client.query(`SELECT ${this.#columnNames.join(", ")} FROM "${this.#table}"`)
+	// public async *values(): AsyncIterable<ModelValue> {
+	// 	// TODO: optimize to single query
+	// 	// TODO: use iterable query
+	// 	const { rows } = await this.client.query(`SELECT ${this.#columnNames.join(", ")} FROM "${this.#table}"`)
 
-		for (const row of rows) {
-			const key = row[this.#primaryKeyName]
-			assert(typeof key === "string", 'expected typeof key === "string"')
-			const relations = await mapValuesAsync(this.#relations, (api) => api.get(key))
-			const value = {
-				...decodeRecord(this.model, row),
-				...relations,
-			}
+	// 	this.client
 
-			yield value
+	// 	for (const row of rows) {
+	// 		const key = row[this.#primaryKeyName]
+	// 		assert(typeof key === "string", 'expected typeof key === "string"')
+	// 		const relations = await mapValuesAsync(this.#relations, (api) => api.get(key))
+	// 		const value = {
+	// 			...decodeRecord(this.model, row),
+	// 			...relations,
+	// 		}
+
+	// 		yield value
+	// 	}
+	// }
+
+	public async *iterate(query: QueryParams): AsyncIterable<ModelValue> {
+		const [sql, relations, params] = this.parseQuery(query)
+		const cursor = this.client.query(new Cursor(sql, encodeQueryParams(params)))
+		let resultCount
+		try {
+			do {
+				const results = await cursor.read(3)
+				resultCount = results.length
+				for (const record of results) {
+					yield await this.parseRecord(record, relations)
+				}
+			} while (resultCount > 0)
+		} finally {
+			await cursor.close()
 		}
 	}
 
 	public async query(query: QueryParams): Promise<ModelValue[]> {
+		const [sql, relations, params] = this.parseQuery(query)
+
+		const results = await this.client.query<Record<string, PostgresPrimitiveValue>, any[]>(
+			sql,
+			encodeQueryParams(params),
+		)
+
+		const values = []
+		for (const record of results.rows) {
+			const value = await this.parseRecord(record, relations)
+			values.push(value)
+		}
+
+		return values
+	}
+
+	private async parseRecord(
+		record: Record<string, PostgresPrimitiveValue>,
+		relations: Relation[],
+	): Promise<ModelValue> {
+		const key = record[this.#primaryKeyName]
+		assert(typeof key === "string", 'expected typeof primaryKey === "string"')
+
+		const value: ModelValue = {}
+		for (const [propertyName, propertyValue] of Object.entries(record)) {
+			const property = this.#properties[propertyName]
+			if (property.kind === "primary") {
+				value[propertyName] = decodePrimaryKeyValue(this.model.name, property, propertyValue)
+			} else if (property.kind === "primitive") {
+				value[propertyName] = decodePrimitiveValue(this.model.name, property, propertyValue)
+			} else if (property.kind === "reference") {
+				value[propertyName] = decodeReferenceValue(this.model.name, property, propertyValue)
+			} else if (property.kind === "relation") {
+				throw new Error("internal error")
+			} else {
+				signalInvalidType(property)
+			}
+		}
+
+		// TODO: optimize to single query
+		for (const relation of relations) {
+			value[relation.property] = await this.#relations[relation.property].get(key)
+		}
+
+		return value
+	}
+
+	private parseQuery(query: QueryParams): [sql: string, relations: Relation[], params: PrimitiveValue[]] {
 		const sql: string[] = []
 
 		// SELECT
@@ -318,44 +388,11 @@ export class ModelAPI {
 
 		// OFFSET
 		if (typeof query.offset === "number") {
-			sql.push(`LIMIT $${params.length + 1}`)
+			sql.push(`OFFSET $${params.length + 1}`)
 			params.push(query.offset)
 		}
 
-		const results = await this.client.query<Record<string, string | number | boolean | Uint8Array | null>, any[]>(
-			sql.join(" "),
-			params,
-		)
-		const finalResults = []
-
-		for (const record of results.rows) {
-			const key = record[this.#primaryKeyName]
-			assert(typeof key === "string", 'expected typeof primaryKey === "string"')
-
-			const value: ModelValue = {}
-			for (const [propertyName, propertyValue] of Object.entries(record)) {
-				const property = this.#properties[propertyName]
-				if (property.kind === "primary") {
-					value[propertyName] = decodePrimaryKeyValue(this.model.name, property, propertyValue)
-				} else if (property.kind === "primitive") {
-					value[propertyName] = decodePrimitiveValue(this.model.name, property, propertyValue)
-				} else if (property.kind === "reference") {
-					value[propertyName] = decodeReferenceValue(this.model.name, property, propertyValue)
-				} else if (property.kind === "relation") {
-					throw new Error("internal error")
-				} else {
-					signalInvalidType(property)
-				}
-			}
-
-			// TODO: optimize to single query
-			for (const relation of relations) {
-				value[relation.property] = await this.#relations[relation.property].get(key)
-			}
-
-			finalResults.push(value)
-		}
-		return finalResults
+		return [sql.join(" "), relations, params]
 	}
 
 	private getSelectExpression(
@@ -390,10 +427,8 @@ export class ModelAPI {
 		return [columns.join(", "), relations]
 	}
 
-	private getWhereExpression(
-		where: WhereCondition = {},
-	): [where: string | null, params: Array<null | number | string | Buffer | boolean>] {
-		const params: Array<null | number | string | Buffer | boolean> = []
+	private getWhereExpression(where: WhereCondition = {}): [where: string | null, params: PrimitiveValue[]] {
+		const params: PrimitiveValue[] = []
 
 		let i = 0
 		const filters = Object.entries(where).flatMap(([name, expression]) => {
@@ -615,10 +650,7 @@ export class RelationAPI {
 		return relationApi
 	}
 
-	public constructor(
-		readonly client: pg.Client,
-		readonly relation: Relation,
-	) {
+	public constructor(readonly client: pg.Client, readonly relation: Relation) {
 		this.client = client
 	}
 

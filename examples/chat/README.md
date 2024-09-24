@@ -25,8 +25,8 @@ export const actions = {
 
 ## Server
 
-Run `npm run server:dev` to start a temporary in-memory server, or
-`npm run server:start` to persist data to a `.cache` directory.
+Run `npm run dev:server` to start a temporary in-memory server, or
+`npm run start:server` to persist data to a `.cache` directory.
 
 To deploy the replication server:
 
@@ -44,3 +44,14 @@ If you are forking this example, you should change:
 
 Mount a volume to `/data`. Set the `PORT`, `LISTEN`, `ANNOUNCE`, and
 `BOOTSTRAP_LIST` environment variables if appropriate.
+
+## Deploying to Railway
+
+Create a Railway space based on the root of this Github workspace (e.g. canvasxyz/canvas).
+
+* Custom start command: `./install-prod.sh && npm run start:server --workspace=@canvas-js/example-chat`
+* Custom build command: `npm run build && npm run build --workspace=@canvas-js/example-chat`
+* Public networking:
+  * Add a service domain for port 8080.
+  * Add a service domain for port 4444.
+* Watch path: `/examples/chat/**`. (Only build when chat code is updated, or a chat package is updated.)

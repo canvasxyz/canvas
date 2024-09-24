@@ -9,8 +9,8 @@ import {
 	ModelValue,
 	ModelSchema,
 	QueryParams,
-	parseConfig,
 	WhereCondition,
+	parseConfig,
 } from "@canvas-js/modeldb"
 
 import { ModelAPI } from "./api.js"
@@ -19,17 +19,23 @@ import { getIndexName, checkForMissingObjectStores } from "./utils.js"
 export interface ModelDBOptions {
 	name: string
 	models: ModelSchema
+	version?: number
 }
 
 export class ModelDB extends AbstractModelDB {
-	public static async initialize({ name, models }: ModelDBOptions) {
+	public static async initialize({ name, models, version = 1 }: ModelDBOptions) {
 		const config = parseConfig(models)
-		const db = await openDB(name, 1, {
-			upgrade(db: IDBPDatabase<unknown>) {
-				// create object stores
+		const db = await openDB(name, version, {
+			upgrade(db: IDBPDatabase<unknown>, oldVersion: number, newVersion: number | null) {
+				// create missing object stores
+				const storeNames = new Set(db.objectStoreNames)
 				for (const model of config.models) {
 					const primaryKey = model.properties.find((property) => property.kind === "primary")
 					assert(primaryKey !== undefined, "expected primaryKey !== undefined")
+
+					if (storeNames.has(model.name)) {
+						continue
+					}
 
 					const recordObjectStore = db.createObjectStore(model.name, { keyPath: primaryKey.name })
 
@@ -109,14 +115,17 @@ export class ModelDB extends AbstractModelDB {
 		}
 	}
 
-	public async *iterate<T extends ModelValue<any> = ModelValue<any>>(modelName: string): AsyncIterable<T> {
+	public async *iterate<T extends ModelValue<any> = ModelValue<any>>(
+		modelName: string,
+		query: QueryParams = {},
+	): AsyncIterable<T> {
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
 
 		// TODO: re-open the transaction if the caller awaits on other promises between yields
 		checkForMissingObjectStores(this.db, [api.storeName])
 		const txn = this.db.transaction([api.storeName], "readonly", {})
-		yield* api.iterate(txn) as AsyncIterable<T>
+		yield* api.iterate(txn, query) as AsyncIterable<T>
 	}
 
 	public async get<T extends ModelValue>(modelName: string, key: string): Promise<T | null> {

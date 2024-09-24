@@ -25,21 +25,39 @@ export class ContractRuntime extends AbstractRuntime {
 
 		const vm = await VM.initialize({ runtimeMemoryLimit })
 
-		const { models: modelsHandle, actions: actionsHandle, ...rest } = vm.import(contract).consume(vm.unwrapObject)
+		const {
+			contract: contractHandle,
+			models: modelsHandle,
+			actions: actionsHandle,
+			...rest
+		} = vm.import(contract).consume(vm.unwrapObject)
 
 		for (const [name, handle] of Object.entries(rest)) {
 			console.warn(`extraneous export ${JSON.stringify(name)}`)
 			handle.dispose()
 		}
 
-		assert(actionsHandle !== undefined, "missing `actions` export")
+		assert(
+			contractHandle !== undefined || (actionsHandle !== undefined && modelsHandle !== undefined),
+			"must export `contract` or `models` and `actions`",
+		)
+
+		const contractUnwrap = contractHandle?.consume(vm.unwrapObject)
+		const actionsUnwrap =
+			contractHandle !== undefined
+				? contractUnwrap.actions.consume(vm.unwrapObject)
+				: actionsHandle.consume(vm.unwrapObject)
+		const modelsUnwrap =
+			contractHandle !== undefined
+				? contractUnwrap.models.consume(vm.context.dump)
+				: modelsHandle.consume(vm.context.dump)
 
 		const argsTransformers: Record<
 			string,
 			{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
 		> = {}
 
-		const actions = mapEntries(actionsHandle.consume(vm.unwrapObject), ([actionName, handle]) => {
+		const actions = mapEntries(actionsUnwrap, ([actionName, handle]) => {
 			if (vm.context.typeof(handle) === "function") {
 				argsTransformers[actionName] = { toTyped: (x: any) => x, toRepresentation: (x: any) => x }
 				return handle.consume(vm.cache)
@@ -62,8 +80,7 @@ export class ContractRuntime extends AbstractRuntime {
 		})
 
 		// TODO: validate that models satisfies ModelSchema
-		assert(modelsHandle !== undefined, "missing `models` export")
-		const modelSchema = modelsHandle.consume(vm.context.dump) as ModelSchema
+		const modelSchema = modelsUnwrap as ModelSchema
 
 		const schema = AbstractRuntime.getModelSchema(modelSchema)
 		return new ContractRuntime(topic, signers, schema, vm, actions, argsTransformers)

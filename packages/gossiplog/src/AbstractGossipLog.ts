@@ -13,7 +13,7 @@ import * as sync from "@canvas-js/gossiplog/sync"
 
 import target from "#target"
 
-import type { Snapshot } from "./interface.js"
+import type { SyncSnapshot } from "./interface.js"
 import { AncestorIndex } from "./AncestorIndex.js"
 import { BranchMergeIndex } from "./BranchMergeIndex.js"
 import { MessageSource, SignedMessage } from "./SignedMessage.js"
@@ -401,7 +401,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 	 * Sync with a remote source, applying and inserting all missing messages into the local log
 	 */
 	public async sync(
-		snapshot: Snapshot,
+		snapshot: SyncSnapshot,
 		options: { peer?: string } = {},
 	): Promise<{ complete: boolean; messageCount: number }> {
 		const start = performance.now()
@@ -450,7 +450,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		return { complete, messageCount }
 	}
 
-	public serve<T>(callback: (snapshot: Snapshot) => Awaitable<T>): Promise<T> {
+	public serve<T>(callback: (snapshot: SyncSnapshot) => Awaitable<T>): Promise<T> {
 		return this.tree.read((txn) =>
 			callback({
 				getRoot: () => txn.getRoot(),

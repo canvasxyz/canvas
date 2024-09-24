@@ -27,6 +27,7 @@ import {
 	decodePrimitiveValue,
 	decodeRecord,
 	decodeReferenceValue,
+	encodeQueryParams,
 	encodeRecordParams,
 } from "./encoding.js"
 import { Method, Query } from "./utils.js"
@@ -81,10 +82,7 @@ export class ModelAPI {
 	readonly #primaryKeyName: string
 	readonly #primaryKeyParam: `p${string}`
 
-	public constructor(
-		readonly db: Database,
-		readonly model: Model,
-	) {
+	public constructor(readonly db: Database, readonly model: Model) {
 		const columns: string[] = []
 		const columnNames: `"${string}"`[] = [] // quoted column names for non-relation properties
 		const columnParams: `:p${string}`[] = [] // query params for non-relation properties
@@ -228,6 +226,7 @@ export class ModelAPI {
 		if (whereExpression) {
 			sql.push(`WHERE ${whereExpression}`)
 		}
+
 		const results = this.db.prepare(sql.join(" ")).all(params) as RecordValue[]
 
 		const countResult = results[0].count
@@ -238,20 +237,48 @@ export class ModelAPI {
 		}
 	}
 
-	public async *values(): AsyncIterable<ModelValue> {
-		for (const record of this.#selectAll.iterate({})) {
-			const key = record[this.#primaryKeyName]
-			assert(typeof key === "string", 'expected typeof key === "string"')
-			const value = {
-				...decodeRecord(this.model, record),
-				...mapValues(this.#relations, (api) => api.get(key)),
-			}
+	public query(query: QueryParams): ModelValue[] {
+		const [sql, relations, params] = this.parseQuery(query)
+		const results = this.db.prepare<QueryParams, RecordValue>(sql).all(encodeQueryParams(params))
+		return results.map((record) => this.parseRecord(record, relations))
+	}
 
-			yield value
+	public *iterate(query: QueryParams): Iterable<ModelValue> {
+		const [sql, relations, params] = this.parseQuery(query)
+
+		for (const record of this.db.prepare<{}, RecordValue>(sql).iterate(encodeQueryParams(params))) {
+			yield this.parseRecord(record, relations)
 		}
 	}
 
-	public query(query: QueryParams): ModelValue[] {
+	private parseRecord(record: RecordValue, relations: Relation[]): ModelValue {
+		const key = record[this.#primaryKeyName]
+		assert(typeof key === "string", 'expected typeof primaryKey === "string"')
+
+		const value: ModelValue = {}
+		for (const [propertyName, propertyValue] of Object.entries(record)) {
+			const property = this.#properties[propertyName]
+			if (property.kind === "primary") {
+				value[propertyName] = decodePrimaryKeyValue(this.model.name, property, propertyValue)
+			} else if (property.kind === "primitive") {
+				value[propertyName] = decodePrimitiveValue(this.model.name, property, propertyValue)
+			} else if (property.kind === "reference") {
+				value[propertyName] = decodeReferenceValue(this.model.name, property, propertyValue)
+			} else if (property.kind === "relation") {
+				throw new Error("internal error")
+			} else {
+				signalInvalidType(property)
+			}
+		}
+
+		for (const relation of relations) {
+			value[relation.property] = this.#relations[relation.property].get(key)
+		}
+
+		return value
+	}
+
+	private parseQuery(query: QueryParams): [sql: string, relations: Relation[], params: Record<string, PrimitiveValue>] {
 		// See https://www.sqlite.org/lang_select.html for railroad diagram
 		const sql: string[] = []
 
@@ -295,37 +322,11 @@ export class ModelAPI {
 
 		// OFFSET
 		if (typeof query.offset === "number") {
-			sql.push(`LIMIT :offset`)
-			params.limit = query.offset
+			sql.push(`OFFSET :offset`)
+			params.offset = query.offset
 		}
 
-		const results = this.db.prepare(sql.join(" ")).all(params) as RecordValue[]
-		return results.map((record): ModelValue => {
-			const key = record[this.#primaryKeyName]
-			assert(typeof key === "string", 'expected typeof primaryKey === "string"')
-
-			const value: ModelValue = {}
-			for (const [propertyName, propertyValue] of Object.entries(record)) {
-				const property = this.#properties[propertyName]
-				if (property.kind === "primary") {
-					value[propertyName] = decodePrimaryKeyValue(this.model.name, property, propertyValue)
-				} else if (property.kind === "primitive") {
-					value[propertyName] = decodePrimitiveValue(this.model.name, property, propertyValue)
-				} else if (property.kind === "reference") {
-					value[propertyName] = decodeReferenceValue(this.model.name, property, propertyValue)
-				} else if (property.kind === "relation") {
-					throw new Error("internal error")
-				} else {
-					signalInvalidType(property)
-				}
-			}
-
-			for (const relation of relations) {
-				value[relation.property] = this.#relations[relation.property].get(key)
-			}
-
-			return value
-		})
+		return [sql.join(" "), relations, params]
 	}
 
 	private getSelectExpression(
@@ -362,8 +363,8 @@ export class ModelAPI {
 
 	private getWhereExpression(
 		where: WhereCondition = {},
-	): [where: string | null, params: Record<string, null | number | string | Buffer | boolean>] {
-		const params: Record<string, null | number | string | Buffer | boolean> = {}
+	): [where: string | null, params: Record<string, PrimitiveValue>] {
+		const params: Record<string, PrimitiveValue> = {}
 		const filters = Object.entries(where).flatMap(([name, expression], i) => {
 			const property = this.#properties[name]
 			assert(property !== undefined, "property not found")
@@ -428,7 +429,7 @@ export class ModelAPI {
 						throw new Error("invalid primitive value (expected null | number | string | Uint8Array)")
 					} else {
 						const p = `p${i}`
-						params[p] = expression instanceof Uint8Array ? Buffer.from(expression) : expression
+						params[p] = expression
 						return [`"${name}" = :${p}`]
 					}
 				} else if (isNotExpression(expression)) {
@@ -442,7 +443,7 @@ export class ModelAPI {
 					}
 
 					const p = `p${i}`
-					params[p] = value instanceof Uint8Array ? Buffer.from(value) : value
+					params[p] = value
 					if (property.optional) {
 						return [`("${name}" ISNULL OR "${name}" != :${p})`]
 					} else {
@@ -567,10 +568,7 @@ export class RelationAPI {
 	readonly #insert: Method<{ _source: string; _target: string }>
 	readonly #delete: Method<{ _source: string }>
 
-	public constructor(
-		readonly db: Database,
-		readonly relation: Relation,
-	) {
+	public constructor(readonly db: Database, readonly relation: Relation) {
 		const columns = [`_source TEXT NOT NULL`, `_target TEXT NOT NULL`]
 		db.exec(`CREATE TABLE IF NOT EXISTS "${this.table}" (${columns.join(", ")})`)
 

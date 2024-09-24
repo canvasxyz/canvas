@@ -3,10 +3,7 @@ import { OpfsDatabase, PreparedStatement, SqlValue } from "@sqlite.org/sqlite-wa
 export class Query<P extends { [column: string]: SqlValue }, R> {
 	private readonly statement: PreparedStatement
 
-	constructor(
-		db: OpfsDatabase,
-		private readonly sql: string,
-	) {
+	constructor(db: OpfsDatabase, private readonly sql: string) {
 		this.statement = db.prepare(sql)
 	}
 
@@ -41,24 +38,27 @@ export class Query<P extends { [column: string]: SqlValue }, R> {
 		}
 	}
 
-	public iterate(params: P): IterableIterator<R> {
+	public *iterate(params: P): IterableIterator<R> {
 		const statement = this.statement
 		const paramsWithColons = Object.fromEntries(Object.entries(params).map(([key, value]) => [":" + key, value]))
+		if (Object.keys(paramsWithColons).length > 0) statement.bind(paramsWithColons)
+
+		const iter: IterableIterator<R> = {
+			[Symbol.iterator]() {
+				return this
+			},
+			next() {
+				const done = statement.step()
+				if (done) {
+					return { done: true, value: undefined }
+				} else {
+					return { done: false, value: statement.get({}) as R }
+				}
+			},
+		}
+
 		try {
-			if (Object.keys(paramsWithColons).length > 0) statement.bind(paramsWithColons)
-			return {
-				[Symbol.iterator]() {
-					return this
-				},
-				next() {
-					const done = statement.step()
-					if (done) {
-						return { done: true, value: undefined }
-					} else {
-						return { done: false, value: statement.get({}) as R }
-					}
-				},
-			}
+			yield* iter
 		} finally {
 			statement.reset(true)
 		}
@@ -68,10 +68,7 @@ export class Query<P extends { [column: string]: SqlValue }, R> {
 export class Method<P extends { [column: string]: SqlValue }> {
 	private readonly statement: PreparedStatement
 
-	constructor(
-		db: OpfsDatabase,
-		private readonly sql: string,
-	) {
+	constructor(db: OpfsDatabase, private readonly sql: string) {
 		this.statement = db.prepare(sql)
 	}
 

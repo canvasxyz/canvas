@@ -1,20 +1,14 @@
-import { ethers } from "ethers"
 import "./App.css"
 
-import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { TickingContract, useCanvas, useLiveQuery, useTick } from "@canvas-js/hooks"
-import { MouseEventHandler, useMemo } from "react"
+import { MouseEventHandler } from "react"
 
 import { contract, Direction, maxX, maxY, TilesList } from "./contract.js"
 
 function App() {
-	const wallet = useMemo(() => {
-		return ethers.Wallet.createRandom()
-	}, [])
-	const { app } = useCanvas<TickingContract>("ws://localhost:8000", {
+	const { app } = useCanvas<TickingContract>(null, {
 		topic: "canvas-example-chat-global",
 		contract,
-		signers: [new SIWESigner({ signer: wallet })],
 	})
 
 	const stateQuery = useLiveQuery<{

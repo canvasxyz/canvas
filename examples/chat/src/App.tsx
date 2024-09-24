@@ -19,28 +19,11 @@ import { SessionStatus } from "./SessionStatus.js"
 import { ConnectionStatus } from "./ConnectionStatus.js"
 import { Connect } from "./connect/index.js"
 import { LogStatus } from "./LogStatus.js"
+import { contract } from "./contract.js"
 
 const topic = "chat-example.canvas.xyz"
 const bootstrapList: string[] | undefined =
 	import.meta.env.VITE_BOOTSTRAP_LIST && import.meta.env.VITE_BOOTSTRAP_LIST.split(",")
-
-export const contract = {
-	models: {
-		message: {
-			id: "primary",
-			address: "string",
-			content: "string",
-			timestamp: "integer",
-			$indexes: ["address", "timestamp"],
-		},
-	},
-	actions: {
-		async createMessage(db, { content }, { id, address, timestamp }) {
-			console.log("received message:", content)
-			await db.set("message", { id, address, content, timestamp })
-		},
-	},
-} satisfies Contract
 
 export const App: React.FC<{}> = ({}) => {
 	const [sessionSigner, setSessionSigner] = useState<SessionSigner | null>(null)
@@ -48,7 +31,7 @@ export const App: React.FC<{}> = ({}) => {
 
 	const topicRef = useRef(topic)
 
-	const { app } = useCanvas("ws://localhost:8000", {
+	const { app } = useCanvas(null, {
 		path: "./db.sqlite3",
 		topic,
 		contract: { ...contract, topic: topicRef.current },

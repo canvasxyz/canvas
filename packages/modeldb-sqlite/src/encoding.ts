@@ -11,13 +11,25 @@ import type {
 	ReferenceProperty,
 } from "@canvas-js/modeldb"
 
-import { assert, signalInvalidType } from "@canvas-js/utils"
+import { assert, mapValues, signalInvalidType } from "@canvas-js/utils"
 
 // this is the type of a primitive value as stored in sqlite
 // this may not match onto the types in the model
 // because sqlite does not natively support all of the types we might want
 // for example, sqlite does not have a boolean or a json type
 type SqlitePrimitiveValue = string | number | Buffer | null
+
+export function encodeQueryParams(params: Record<string, PrimitiveValue>): Record<string, SqlitePrimitiveValue> {
+	return mapValues(params, (value) => {
+		if (typeof value === "boolean") {
+			return value ? 1 : 0
+		} else if (value instanceof Uint8Array) {
+			return Buffer.isBuffer(value) ? value : Buffer.from(value.buffer, value.byteOffset, value.byteLength)
+		} else {
+			return value
+		}
+	})
+}
 
 export function encodeRecordParams(
 	model: Model,

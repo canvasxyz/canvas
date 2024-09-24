@@ -1,5 +1,6 @@
 import * as json from "@ipld/dag-json"
 import { Logger, logger } from "@libp2p/logger"
+import { randomBytes, bytesToHex } from "@noble/hashes/utils"
 
 import type {
 	Action,
@@ -25,6 +26,7 @@ export abstract class AbstractSessionSigner<AuthorizationData, WalletAddress ext
 	public readonly sessionDuration: number | null
 
 	protected readonly log: Logger
+	protected readonly privkeySeed: string
 
 	#cache = new Map<string, { session: Session; signer: Signer<Action | Session<AuthorizationData>> }>()
 
@@ -35,6 +37,13 @@ export abstract class AbstractSessionSigner<AuthorizationData, WalletAddress ext
 	) {
 		this.log = logger(`canvas:signer:${key}`)
 		this.sessionDuration = options.sessionDuration ?? null
+
+		let seed = target.get(`canvas:signers/${key}/seed`)
+		if (seed === null || seed.length !== 64 || !seed.match(/^[0-9a-f]+$/i)) {
+			seed = bytesToHex(randomBytes(32))
+			target.set(`canvas:signers/${key}/seed`, seed)
+		}
+		this.privkeySeed = seed
 	}
 
 	public abstract match: (address: string) => boolean
