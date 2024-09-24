@@ -18,7 +18,7 @@ export type ServiceMap = {
 }
 
 export async function getLibp2p(config: Partial<Config> = {}) {
-	const { peerId, listen, announce, minConnections, maxConnections } = await getConfig(config)
+	const { path, peerId, listen, announce, minConnections, maxConnections } = await getConfig(config)
 	console.log("using PeerId", peerId.toString())
 
 	console.log(
@@ -47,7 +47,7 @@ export async function getLibp2p(config: Partial<Config> = {}) {
 		services: {
 			identify: identify({ protocolPrefix: "canvas" }),
 			ping: ping({ protocolPrefix: "canvas" }),
-			rendezvous: rendezvousServer({ path: config.path }),
+			rendezvous: rendezvousServer({ path }),
 		},
 	})
 

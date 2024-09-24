@@ -50,3 +50,4 @@ services:
       - ANNOUNCE=/dns4/bootstrap/tcp/8080/ws
       # - ANNOUNCE=/dns4/localhost/tcp/8080/ws
       - MIN_CONNECTIONS=0
+      - DATABASE_PATH=db.sqlite

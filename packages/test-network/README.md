@@ -9,7 +9,7 @@ $ npm run dev
 Then generate a docker-compose.yml file for the number of server peers you want to run
 
 ```
-$ ./generate.sh 16
+$ ./docker-compose.sh 16
 ```
 
 Then start the docker contains
