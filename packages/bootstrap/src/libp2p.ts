@@ -1,30 +1,18 @@
-import { PubSub } from "@libp2p/interface"
 import { createLibp2p } from "libp2p"
 import { webSockets } from "@libp2p/websockets"
 import { all } from "@libp2p/websockets/filters"
 import { yamux } from "@chainsafe/libp2p-yamux"
 import { noise } from "@chainsafe/libp2p-noise"
 import { Identify, identify } from "@libp2p/identify"
-import { Fetch, fetch } from "@libp2p/fetch"
 import { PingService, ping } from "@libp2p/ping"
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
-import { KadDHT, kadDHT } from "@libp2p/kad-dht"
-import { GossipsubEvents, gossipsub } from "@chainsafe/libp2p-gossipsub"
-
-import { gossipDiscovery, GossipDiscoveryService } from "@canvas-js/discovery"
 
 import { Config, getConfig } from "./config.js"
 
 export type ServiceMap = {
 	identify: Identify
-	fetch: Fetch
 	ping: PingService
-	discovery: GossipDiscoveryService
-	pubsub: PubSub<GossipsubEvents>
-	globalDHT: KadDHT
 }
-
-const getDHTProtocol = (topic: string | null) => (topic === null ? `/canvas/kad/1.0.0` : `/canvas/kad/1.0.0/${topic}`)
 
 export async function getLibp2p(config: Partial<Config> = {}) {
 	const { peerId, listen, announce, minConnections, maxConnections } = await getConfig(config)
@@ -55,21 +43,7 @@ export async function getLibp2p(config: Partial<Config> = {}) {
 
 		services: {
 			identify: identify({ protocolPrefix: "canvas" }),
-			fetch: fetch({ protocolPrefix: "canvas" }),
 			ping: ping({ protocolPrefix: "canvas" }),
-
-			globalDHT: kadDHT({ protocol: getDHTProtocol(null), kBucketSize: 4 }),
-
-			pubsub: gossipsub({
-				emitSelf: false,
-				fallbackToFloodsub: false,
-				allowPublishToZeroTopicPeers: true,
-				globalSignaturePolicy: "StrictNoSign",
-				asyncValidation: true,
-				scoreParams: { IPColocationFactorWeight: 0 },
-			}),
-
-			discovery: gossipDiscovery({}),
 		},
 	})
 

@@ -5,5 +5,5 @@
 		"rootDir": "src",
 		"outDir": "lib"
 	},
-	"references": [{ "path": "../discovery" }, { "path": "../rendezvous" }]
+	"references": []
 }

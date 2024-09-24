@@ -18,8 +18,6 @@ import type { Registry } from "prom-client"
 
 import { Multiaddr } from "@multiformats/multiaddr"
 
-import { gossipDiscovery, GossipDiscoveryService } from "@canvas-js/discovery"
-
 import type { AbstractGossipLog } from "@canvas-js/gossiplog"
 
 import { GossipLogService, gossipLogService } from "./service.js"
@@ -46,10 +44,8 @@ export type ServiceMap<Payload> = {
 	identify: Identify
 	ping: PingService
 	pubsub: PubSub<GossipsubEvents>
-	discovery: GossipDiscoveryService
 	gossipLog: GossipLogService<Payload>
-	topicDHT: KadDHT
-	globalDHT: KadDHT
+	dht: KadDHT
 }
 
 const getDHTProtocol = (topic: string | null) => (topic === null ? `/canvas/kad/1.0.0` : `/canvas/kad/1.0.0/${topic}`)
@@ -96,8 +92,7 @@ export async function getLibp2p<Payload>(
 			identify: identify({ protocolPrefix: "canvas" }),
 			ping: pingService({ protocolPrefix: "canvas" }),
 
-			globalDHT: kadDHT({ protocol: getDHTProtocol(null), kBucketSize: 4 }),
-			topicDHT: kadDHT({ protocol: getDHTProtocol(gossipLog.topic) }),
+			dht: kadDHT({ protocol: getDHTProtocol(gossipLog.topic) }),
 
 			pubsub: gossipsub({
 				emitSelf: false,
@@ -107,8 +102,6 @@ export async function getLibp2p<Payload>(
 				asyncValidation: true,
 				scoreParams: { IPColocationFactorWeight: 0 },
 			}),
-
-			discovery: gossipDiscovery(),
 
 			gossipLog: gossipLogService({ gossipLog: gossipLog }),
 		},
