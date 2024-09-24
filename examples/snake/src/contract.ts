@@ -90,14 +90,33 @@ export const contract = {
 				throw new Error(`invalid value for 'direction' given: ${direction}`)
 			}
 
-			if (
-				next[0] < 0 ||
-				next[0] > maxX ||
-				next[1] < 0 ||
-				next[1] > maxY ||
-				tilesList.some(([tx, ty]) => tx === next[0] && ty === next[1])
-			) {
+			// make snake wraparound instead of ending the game when hitting a corner
+
+			// if (
+			// 	next[0] < 0 ||
+			// 	next[0] > maxX ||
+			// 	next[1] < 0 ||
+			// 	next[1] > maxY ||
+			// 	tilesList.some(([tx, ty]) => tx === next[0] && ty === next[1])
+			// ) {
+			// 	await db.set("state", { key: "0", gameOver: "true", direction, tickCount, tiles })
+			// 	console.log("game end")
+			// 	return
+			// }
+
+			if (next[0] < 0) {
+				next[0] = maxX
+			} else if (next[0] > maxX) {
+				next[0] = 0
+			} else if (next[1] < 0) {
+				next[1] = maxY
+			} else if (next[1] > maxY) {
+				next[1] = 0
+			}
+
+			if (tilesList.some(([tx, ty]) => tx === next[0] && ty === next[1])) {
 				await db.set("state", { key: "0", gameOver: "true", direction, tickCount, tiles })
+				console.log("game ended")
 				return
 			}
 
