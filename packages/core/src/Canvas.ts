@@ -111,7 +111,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			await messageLog.append(config.snapshot)
 		}
 
-		const app = new Canvas<T>(signers, messageLog, runtime)
+		const app = new Canvas<T>(signers, messageLog, runtime, config)
 
 		// Check to see if the $actions table is empty and populate it if necessary
 		const messagesCount = await db.count("$messages")
@@ -180,6 +180,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		public readonly signers: SignerCache,
 		public readonly messageLog: AbstractGossipLog<Action | Session | Snapshot>,
 		private readonly runtime: Runtime,
+		public readonly config: CanvasConfig,
 	) {
 		super()
 		this.db = runtime.db
