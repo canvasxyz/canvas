@@ -115,7 +115,6 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 
 				const effects: Effect[] = []
 				for (const { id, message } of results) {
-					console.log(message)
 					if (message.payload.type === "action") {
 						const { did, name, context } = message.payload
 						app.log("indexing action %s (name: %s, did: %s)", id, name, did)
