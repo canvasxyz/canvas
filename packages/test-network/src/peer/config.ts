@@ -1,8 +1,12 @@
 import { multiaddr } from "@multiformats/multiaddr"
 
-const { BOOTSTRAP_LIST, LISTEN, ANNOUNCE } = process.env
+import * as constants from "../constants.js"
+
+const { BOOTSTRAP_LIST, LISTEN, ANNOUNCE, TOPIC } = process.env
 
 export const bootstrapList = BOOTSTRAP_LIST === undefined ? [] : BOOTSTRAP_LIST.split(" ")
+
+export const topic = TOPIC ?? constants.topic
 
 for (const address of bootstrapList) {
 	const ma = multiaddr(address)

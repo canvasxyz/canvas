@@ -1,6 +1,13 @@
 import AggregateError from "aggregate-error"
 import { CodeError } from "@libp2p/interface"
 import { anySignal } from "any-signal"
+import { Action, Message, Session } from "@canvas-js/interfaces"
+
+export const isAction = (message: Message<Action | Session>): message is Message<Action> =>
+	message.payload.type === "action"
+
+export const isSession = (message: Message<Action | Session>): message is Message<Session> =>
+	message.payload.type === "session"
 
 export function getErrorMessage(err: unknown): string {
 	if (err instanceof Error && err.name === "AggregateError") {

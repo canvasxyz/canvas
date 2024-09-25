@@ -19,6 +19,8 @@
 		"dashboard:client:dev": "npm run dashboard:client:build -- --watch",
 		"dashboard:server:build": "esbuild lib/dashboard/server/index.js --bundle --outdir=dist/dashboard/server --platform=node --target=node20 --format=esm --banner:js=\"import { createRequire as yix6bKft } from 'module'; const require = yix6bKft(import.meta.url);\"",
 		"dashboard:server:dev": "npm run dashboard:server:build -- --watch",
+		"bootstrap:build": "esbuild lib/bootstrap/index.js --bundle --outdir=dist/bootstrap --platform=node --target=node20 --format=esm --external:better-sqlite3 --banner:js=\"import { createRequire as yix6bKft } from 'module'; const require = yix6bKft(import.meta.url);\"",
+		"bootstrap:dev": "npm run bootstrap:build -- --watch",
 		"peer:build": "esbuild lib/peer/index.js --bundle --outdir=dist/peer --platform=node --target=node20 --format=esm --external:@canvas-js/okra-lmdb --external:better-sqlite3 --banner:js=\"import { createRequire as yix6bKft } from 'module'; const require = yix6bKft(import.meta.url);\"",
 		"peer:dev": "npm run peer:build -- --watch",
 		"server:build": "esbuild lib/server/index.js --bundle --outdir=dist/server --platform=node --target=node20 --format=esm --external:@canvas-js/okra-lmdb --external:better-sqlite3 --banner:js=\"import { createRequire as yix6bKft } from 'module'; const require = yix6bKft(import.meta.url);\"",
@@ -35,6 +37,7 @@
 		"vite": "^5.3.1"
 	},
 	"dependencies": {
+		"@canvas-js/bootstrap": "0.10.10",
 		"@canvas-js/gossiplog": "0.10.10",
 		"@canvas-js/interfaces": "0.10.10",
 		"@canvas-js/relay-server": "0.10.10",

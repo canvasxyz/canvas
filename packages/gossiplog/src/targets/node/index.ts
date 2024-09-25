@@ -5,13 +5,15 @@ import cors from "cors"
 import { WebSocketServer } from "ws"
 import { anySignal } from "any-signal"
 
+import type { AbstractGossipLog } from "@canvas-js/gossiplog"
 import { NetworkClient } from "@canvas-js/gossiplog/client"
 import { NetworkServer } from "@canvas-js/gossiplog/server"
-import { getLibp2p } from "@canvas-js/gossiplog/libp2p"
+import { getLibp2p, ServiceMap, NetworkConfig, GossipSub } from "@canvas-js/gossiplog/libp2p"
 import { createAPI } from "@canvas-js/gossiplog/api"
 import { assert } from "@canvas-js/utils"
 
 import type { PlatformTarget } from "../interface.js"
+import { getPeerId } from "./peerId.js"
 
 const target: PlatformTarget = {
 	async connect(gossipLog, url, options = {}) {
@@ -45,9 +47,12 @@ const target: PlatformTarget = {
 	},
 
 	async startLibp2p(gossipLog, config) {
-		const libp2p = await getLibp2p(gossipLog, config)
-		gossipLog.controller.signal.addEventListener("abort", () => libp2p.stop())
-		return libp2p
+		let peerId = config.peerId
+		if (peerId === undefined) {
+			peerId = await getPeerId()
+		}
+
+		return await getLibp2p(gossipLog, { ...config, peerId })
 	},
 }
 

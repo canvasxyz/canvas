@@ -15,23 +15,23 @@ export class Client {
 		if (session !== null) {
 			// then check that it exists in the log and hasn't expired
 			const query = Object.entries({
-				address: session.payload.did,
+				did: session.payload.did,
 				publicKey: session.signer.publicKey,
 				minExpiration: timestamp,
 			})
 				.map((entry) => entry.join("="))
 				.join("&")
 
-			const res = await fetch(`${this.host}/sessions?${query}`)
+			const res = await fetch(`${this.host}/api/sessions/count?${query}`)
 			assert(res.status === StatusCodes.OK)
 
-			const sessions: { id: string; expiration: number | null }[] = await res.json()
-			if (sessions.length === 0) {
+			const result: { count: number } = await res.json()
+			if (result.count === 0) {
 				session = null
 			}
 		}
 
-		const head: { clock: number; parents: string[] } = await fetch(`${this.host}/clock`).then((res) => res.json())
+		const head: { clock: number; parents: string[] } = await fetch(`${this.host}/api/clock`).then((res) => res.json())
 
 		if (session === null) {
 			session = await this.signer.newSession(this.topic)
@@ -63,7 +63,7 @@ export class Client {
 	private async insert(delegateSigner: Signer<Action | Session>, message: Message<Action | Session>): Promise<string> {
 		const signature = await delegateSigner.sign(message)
 
-		const res = await fetch(`${this.host}/messages`, {
+		const res = await fetch(`${this.host}/api/messages`, {
 			method: "POST",
 			headers: { "content-type": "application/json" },
 			body: json.stringify({ signature, message }),

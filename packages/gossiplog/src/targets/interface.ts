@@ -1,6 +1,6 @@
 import type { Libp2p } from "@libp2p/interface"
 import type { AbstractGossipLog } from "@canvas-js/gossiplog"
-import type { ServiceMap, NetworkConfig } from "@canvas-js/gossiplog/libp2p"
+import type { ServiceMap, NetworkConfig, GossipSub } from "@canvas-js/gossiplog/libp2p"
 
 export type AbortOptions = { signal?: AbortSignal }
 

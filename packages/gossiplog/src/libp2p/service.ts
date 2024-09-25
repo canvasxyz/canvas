@@ -72,12 +72,12 @@ export class GossipLogService<Payload = unknown> implements Startable {
 	#pushTopologyId: string | null = null
 	#started = false
 
-	constructor(private readonly components: GossipLogServiceComponents, init: GossipLogServiceInit<Payload>) {
-		this.log = logger(`canvas:gossiplog:service`)
+	constructor(private readonly components: GossipLogServiceComponents, { gossipLog }: GossipLogServiceInit<Payload>) {
+		this.log = logger(`canvas:gossiplog:[${gossipLog.topic}]:service`)
 		this.pubsub = GossipLogService.extractGossipSub(components)
-		this.messageLog = init.gossipLog
-		this.syncProtocol = getSyncProtocol(this.messageLog.topic)
-		this.pushProtocol = getPushProtocol(this.messageLog.topic)
+		this.syncProtocol = getSyncProtocol(gossipLog.topic)
+		this.pushProtocol = getPushProtocol(gossipLog.topic)
+		this.messageLog = gossipLog
 	}
 
 	public beforeStart() {

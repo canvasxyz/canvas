@@ -132,7 +132,19 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 	}
 
 	public async startLibp2p(config: NetworkConfig): Promise<Libp2p<ServiceMap<Payload>>> {
-		return await target.startLibp2p(this, config)
+		const libp2p = await target.startLibp2p(this, config)
+
+		this.controller.signal.addEventListener("abort", () => libp2p.stop())
+
+		libp2p.addEventListener("connection:open", ({ detail: connection }) => {
+			this.dispatchEvent(new CustomEvent("connect", { detail: { peer: connection.remotePeer.toString() } }))
+		})
+
+		libp2p.addEventListener("connection:close", ({ detail: connection }) => {
+			this.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: connection.remotePeer.toString() } }))
+		})
+
+		return libp2p
 	}
 
 	public encode<T extends Payload = Payload>(

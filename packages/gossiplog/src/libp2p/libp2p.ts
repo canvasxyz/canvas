@@ -10,6 +10,7 @@ import { KadDHT, kadDHT } from "@libp2p/kad-dht"
 import { PingService, ping as pingService } from "@libp2p/ping"
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
 import { GossipsubEvents, gossipsub } from "@chainsafe/libp2p-gossipsub"
+import { createEd25519PeerId } from "@libp2p/peer-id-factory"
 
 export { GossipSub } from "@chainsafe/libp2p-gossipsub"
 
@@ -17,9 +18,9 @@ import type { Registry } from "prom-client"
 
 import { Multiaddr } from "@multiformats/multiaddr"
 
+import { RendezvousClient, rendezvousClient } from "@canvas-js/libp2p-rendezvous/client"
 import type { AbstractGossipLog } from "@canvas-js/gossiplog"
 
-import { getPeerId } from "./peerId.js"
 import { GossipLogService, gossipLogService } from "./service.js"
 
 export interface NetworkConfig {
@@ -44,9 +45,9 @@ export type ServiceMap<Payload> = {
 	identify: Identify
 	ping: PingService
 	pubsub: PubSub<GossipsubEvents>
-	topicDHT: KadDHT
-	globalDHT: KadDHT
 	gossipLog: GossipLogService<Payload>
+	dht: KadDHT
+	rendezvous: RendezvousClient
 }
 
 const getDHTProtocol = (topic: string | null) => (topic === null ? `/canvas/kad/1.0.0` : `/canvas/kad/1.0.0/${topic}`)
@@ -57,7 +58,7 @@ export async function getLibp2p<Payload>(
 ): Promise<Libp2p<ServiceMap<Payload>>> {
 	let peerId = config.peerId
 	if (peerId === undefined) {
-		peerId = await getPeerId()
+		peerId = await createEd25519PeerId()
 	}
 
 	const bootstrapList = config.bootstrapList ?? []
@@ -93,8 +94,7 @@ export async function getLibp2p<Payload>(
 			identify: identify({ protocolPrefix: "canvas" }),
 			ping: pingService({ protocolPrefix: "canvas" }),
 
-			globalDHT: kadDHT({ protocol: getDHTProtocol(null) }),
-			topicDHT: kadDHT({ protocol: getDHTProtocol(gossipLog.topic) }),
+			dht: kadDHT({ protocol: getDHTProtocol(gossipLog.topic) }),
 
 			pubsub: gossipsub({
 				emitSelf: false,
@@ -106,6 +106,11 @@ export async function getLibp2p<Payload>(
 			}),
 
 			gossipLog: gossipLogService({ gossipLog: gossipLog }),
+
+			rendezvous: rendezvousClient({
+				autoRegister: [gossipLog.topic],
+				autoDiscover: true,
+			}),
 		},
 	})
 }
