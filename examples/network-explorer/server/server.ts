@@ -68,8 +68,6 @@ canvasApp.addEventListener("message", async (event) => {
 // await canvasApp.libp2p.start()
 // console.log(`peer id: ${canvasApp.libp2p.peerId}`)
 
-await canvasApp.listen(8890)
-
 const canvasApiApp = createAPI(canvasApp)
 canvasApiApp.get("/addresses/count", async (req, res) => {
 	const addressesCount = await canvasApp.messageLog.db.count("$addresses_index")
