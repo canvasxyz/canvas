@@ -47,7 +47,7 @@
 		"@canvas-js/okra": "^0.4.5",
 		"@canvas-js/okra-lmdb": "^0.2.0",
 		"@canvas-js/okra-memory": "^0.4.5",
-		"@canvas-js/libp2p-rendezvous": "0.10.10",
+		"@canvas-js/libp2p-rendezvous": "0.1.0",
 		"@canvas-js/signatures": "0.10.10",
 		"@canvas-js/utils": "0.10.10",
 		"@chainsafe/libp2p-gossipsub": "^13.1.1",

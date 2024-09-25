@@ -14,8 +14,6 @@
 		{ "path": "./packages/core/test" },
 		{ "path": "./packages/bootstrap" },
 		{ "path": "./packages/relay-server" },
-		{ "path": "./packages/rendezvous" },
-		{ "path": "./packages/rendezvous/test" },
 		{ "path": "./packages/signatures" },
 		{ "path": "./packages/signatures/test" },
 		{ "path": "./packages/modeldb" },
