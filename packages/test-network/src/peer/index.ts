@@ -11,15 +11,15 @@ const { SERVICE_NAME } = process.env
 async function start() {
 	const gossipLog = new GossipLog<string>({ directory: "data", topic, apply: () => {} })
 
-	const libp2p = await gossipLog.startLibp2p({ listen, announce, bootstrapList })
+	const libp2p = await gossipLog.startLibp2p({ start: false, listen, announce, bootstrapList })
 
 	const socket = await Socket.open(`ws://dashboard:8000`, libp2p.peerId, gossipLog)
 
-	{
+	libp2p.addEventListener("start", async () => {
+		console.log("libp2p started")
 		const root = await gossipLog.tree.read((txn) => txn.getRoot())
-		console.log("starting")
 		socket.post("start", { topic, root: `${root.level}:${bytesToHex(root.hash)}` })
-	}
+	})
 
 	libp2p.addEventListener("stop", () => {
 		console.log("libp2p stopped")
@@ -62,7 +62,7 @@ async function start() {
 
 	let delay = 0
 	if (SERVICE_NAME !== "bootstrap") {
-		delay = 1000 + Math.random() * 5000
+		delay = 1000 + Math.random() * 20000
 	}
 
 	await setTimeout(delay)
