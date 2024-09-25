@@ -11,7 +11,6 @@
 		{ "path": "../modeldb-idb" },
 		{ "path": "../modeldb-pg" },
 		{ "path": "../modeldb-sqlite" },
-		{ "path": "../rendezvous" },
 		{ "path": "../signatures" },
 		{ "path": "../utils" }
 	]

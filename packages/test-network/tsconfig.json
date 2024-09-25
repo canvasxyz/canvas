@@ -7,7 +7,7 @@
 		"jsx": "react"
 	},
 	"references": [
-		{ "path": "../bootstrap" },
+		{ "path": "../bootstrap-peer" },
 		{ "path": "../gossiplog" },
 		{ "path": "../interfaces" },
 		{ "path": "../relay-server" },

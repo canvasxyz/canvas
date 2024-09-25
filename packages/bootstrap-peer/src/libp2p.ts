@@ -51,21 +51,5 @@ export async function getLibp2p(config: Partial<Config> = {}) {
 		},
 	})
 
-	libp2p.addEventListener("start", async () => {
-		console.log("libp2p started")
-	})
-
-	libp2p.addEventListener("stop", () => {
-		console.log("libp2p stopped")
-	})
-
-	libp2p.addEventListener("connection:open", ({ detail: { remotePeer, remoteAddr } }) => {
-		console.log(`connection:open ${remotePeer} ${remoteAddr}`)
-	})
-
-	libp2p.addEventListener("connection:close", ({ detail: { remotePeer, remoteAddr } }) => {
-		console.log(`connection:close ${remotePeer} ${remoteAddr}`)
-	})
-
 	return libp2p
 }
