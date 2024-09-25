@@ -27,9 +27,9 @@ hard_limit = 1024
 soft_limit = 512
 
 [[vm]]
-memory = '2gb'
+memory = '1gb'
 cpu_kind = 'shared'
-cpus = 2
+cpus = 1
 
 [[metrics]]
 port = 8000
