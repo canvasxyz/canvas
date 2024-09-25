@@ -16,6 +16,10 @@ function HomePage() {
 		},
 	)
 
+	const { data: userCountData } = useSWR(`/users/count`, fetchAndIpldParseJson<{ count: number }>, {
+		refreshInterval: 1000,
+	})
+
 	const location = useLocation()
 	const actionsPath = useResolvedPath("./actions")
 	const sessionsPath = useResolvedPath("./sessions")
@@ -39,7 +43,7 @@ function HomePage() {
 						</Flex>
 						<Flex gap="2">
 							<Text weight="bold">Unique addresses:</Text>
-							<Text weight="medium">{countsData ? countsData.address_count : "-"}</Text>
+							<Text weight="medium">{userCountData ? userCountData.count : "-"}</Text>
 						</Flex>
 					</Flex>
 				</Grid>
