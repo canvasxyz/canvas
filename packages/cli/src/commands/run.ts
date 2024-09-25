@@ -204,8 +204,13 @@ export async function handler(args: Args) {
 
 		const id = libp2p.peerId.toString()
 		console.log(chalk.gray(`[canvas] Using PeerId ${id}`))
+
 		for (const addr of listen) {
 			console.log(chalk.gray(`[canvas] Listening on ${addr}/p2p/${id}`))
+		}
+
+		for (const addr of announce) {
+			console.log(chalk.gray(`[canvas] Announcing on ${addr}/p2p/${id}`))
 		}
 
 		app.addEventListener("connect", ({ detail: { peer } }) => {
