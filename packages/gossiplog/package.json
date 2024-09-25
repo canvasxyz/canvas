@@ -15,6 +15,7 @@
 	"exports": {
 		".": "./lib/index.js",
 		"./api": "./lib/api.js",
+		"./bootstrap": "./lib/bootstrap.js",
 		"./client": "./lib/client/index.js",
 		"./server": "./lib/server/index.js",
 		"./libp2p": "./lib/libp2p/index.js",

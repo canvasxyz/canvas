@@ -19,7 +19,8 @@ import type { Registry } from "prom-client"
 import { Multiaddr } from "@multiformats/multiaddr"
 
 import { RendezvousClient, rendezvousClient } from "@canvas-js/libp2p-rendezvous/client"
-import type { AbstractGossipLog } from "@canvas-js/gossiplog"
+import { AbstractGossipLog } from "@canvas-js/gossiplog"
+import { defaultBootstrapList } from "@canvas-js/gossiplog/bootstrap"
 
 import { GossipLogService, gossipLogService } from "./service.js"
 
@@ -61,7 +62,7 @@ export async function getLibp2p<Payload>(
 		peerId = await createEd25519PeerId()
 	}
 
-	const bootstrapList = config.bootstrapList ?? []
+	const bootstrapList = config.bootstrapList ?? defaultBootstrapList
 	const listen = config.listen ?? ["/ip4/127.0.0.1/tcp/8080/ws"]
 	const announce = config.announce ?? ["/ip4/127.0.0.1/tcp/8080/ws"]
 
