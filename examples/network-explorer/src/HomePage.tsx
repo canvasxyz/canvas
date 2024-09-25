@@ -16,7 +16,7 @@ function HomePage() {
 		refreshInterval: 1000,
 	})
 
-	const { data: addressCountData } = useSWR(`/api/addresses/count`, fetchAndIpldParseJson<{ count: number }>, {
+	const { data: userCountData } = useSWR(`/api/users/count`, fetchAndIpldParseJson<{ count: number }>, {
 		refreshInterval: 1000,
 	})
 
@@ -43,7 +43,7 @@ function HomePage() {
 						</Flex>
 						<Flex gap="2">
 							<Text weight="bold">Unique addresses:</Text>
-							<Text weight="medium">{addressCountData ? addressCountData.count : "-"}</Text>
+							<Text weight="medium">{userCountData ? userCountData.count : "-"}</Text>
 						</Flex>
 					</Flex>
 				</Grid>

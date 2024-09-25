@@ -56,25 +56,10 @@ const canvasApp = await Canvas.initialize({
 // 	listen: [`/ip4/0.0.0.0/tcp/${LIBP2P_PORT}/ws`],
 // })
 
-canvasApp.addEventListener("message", async (event) => {
-	const message = event.detail
-	if (message.message.payload.type === "session") {
-		await canvasApp.messageLog.db.set("$addresses_index", {
-			address: message.message.payload.did,
-		})
-	}
-})
-
 // await canvasApp.libp2p.start()
 // console.log(`peer id: ${canvasApp.libp2p.peerId}`)
 
 const canvasApiApp = createAPI(canvasApp)
-canvasApiApp.get("/addresses/count", async (req, res) => {
-	const addressesCount = await canvasApp.messageLog.db.count("$addresses_index")
-	res.writeHead(200, { "content-type": "application/json" })
-	res.end(JSON.stringify({ count: addressesCount }))
-})
-
 expressApp.use("/api/", canvasApiApp)
 
 expressApp.listen(HTTP_PORT, HTTP_ADDR, () => {
