@@ -19,9 +19,13 @@ function SessionsTable() {
 		params.append("before", currentCursor)
 	}
 
-	const { data: sessions, error } = useSWR(`/sessions?${params.toString()}`, fetchAndIpldParseJson<Result<Session>[]>, {
-		refreshInterval: 1000,
-	})
+	const { data: sessions, error } = useSWR(
+		`/api/sessions?${params.toString()}`,
+		fetchAndIpldParseJson<Result<Session>[]>,
+		{
+			refreshInterval: 1000,
+		},
+	)
 
 	if (error) return <div>failed to load</div>
 	if (!sessions) return <div>loading...</div>

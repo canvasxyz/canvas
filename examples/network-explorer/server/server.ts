@@ -75,7 +75,7 @@ canvasApiApp.get("/addresses/count", async (req, res) => {
 	res.end(JSON.stringify({ count: addressesCount }))
 })
 
-expressApp.use("/", canvasApiApp)
+expressApp.use("/api/", canvasApiApp)
 
 expressApp.listen(HTTP_PORT, HTTP_ADDR, () => {
 	console.log(`> Ready on http://${HTTP_ADDR}:${HTTP_PORT}`)

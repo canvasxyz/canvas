@@ -8,15 +8,15 @@ import { Link, Navigate, Route, Routes, useLocation, useResolvedPath } from "rea
 import useSWR from "swr"
 
 function HomePage() {
-	const { data: appInfoData } = useSWR(`/`, fetchAndIpldParseJson<{ topic: string }>)
-	const { data: actionCountData } = useSWR(`/actions/count/`, fetchAndIpldParseJson<{ count: number }>, {
+	const { data: appInfoData } = useSWR(`/api/`, fetchAndIpldParseJson<{ topic: string }>)
+	const { data: actionCountData } = useSWR(`/api/actions/count`, fetchAndIpldParseJson<{ count: number }>, {
 		refreshInterval: 1000,
 	})
-	const { data: sessionCountData } = useSWR(`/sessions/count/`, fetchAndIpldParseJson<{ count: number }>, {
+	const { data: sessionCountData } = useSWR(`/api/sessions/count`, fetchAndIpldParseJson<{ count: number }>, {
 		refreshInterval: 1000,
 	})
 
-	const { data: addressCountData } = useSWR(`/addresses/count/`, fetchAndIpldParseJson<{ count: number }>, {
+	const { data: addressCountData } = useSWR(`/api/addresses/count`, fetchAndIpldParseJson<{ count: number }>, {
 		refreshInterval: 1000,
 	})
 

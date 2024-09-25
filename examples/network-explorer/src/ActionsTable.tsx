@@ -11,7 +11,7 @@ import { Action, Message, Session, Signature } from "@canvas-js/interfaces"
 
 function SessionField({ signature, message }: { signature: Signature; message: Message<Action> }) {
 	const { data: sessions, error } = useSWR(
-		`/sessions?did=${message.payload.did}&publicKey=${signature.publicKey}`,
+		`/api/sessions?did=${message.payload.did}&publicKey=${signature.publicKey}`,
 		fetchAndIpldParseJson<Result<Session>[]>,
 	)
 
@@ -39,9 +39,13 @@ function ActionsTable() {
 		params.append("before", currentCursor)
 	}
 
-	const { data: actions, error } = useSWR(`/actions?${params.toString()}`, fetchAndIpldParseJson<Result<Action>[]>, {
-		refreshInterval: 1000,
-	})
+	const { data: actions, error } = useSWR(
+		`/api/actions?${params.toString()}`,
+		fetchAndIpldParseJson<Result<Action>[]>,
+		{
+			refreshInterval: 1000,
+		},
+	)
 
 	if (error) return <div>failed to load</div>
 	if (!actions) return <div>loading...</div>

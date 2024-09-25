@@ -191,7 +191,7 @@ export default function NetworkPlot() {
 	}
 
 	const { data: messages, error } = useSWR(
-		`/messages?${params.toString()}`,
+		`/api/messages?${params.toString()}`,
 		fetchAndIpldParseJson<Result<Action | Session>[]>,
 		{
 			refreshInterval: 1000,
