@@ -7,7 +7,7 @@ kill_timeout = '30s'
 
 [env]
 ANNOUNCE = '/dns4/canvas-bootstrap-p2.fly.dev/tcp/443/wss'
-DEBUG = 'libp2p:rendezvous:*'
+DEBUG = 'canvas:rendezvous:*'
 LISTEN = '/ip4/127.0.0.1/tcp/8080/ws'
 DATABASE_PATH = 'db.sqlite'
 PORT = '8000'
