@@ -68,30 +68,33 @@ function ActionsTable() {
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
-					{actionsToDisplay.map(({ id, message, signature }) => (
-						<Table.Row key={id}>
-							<Table.Cell>
-								<DidPopover did={message.payload.did} truncateBelow="md" />
-							</Table.Cell>
-							<Table.Cell>
-								<Popover.Root>
-									<Popover.Trigger onClick={() => console.log("click")}>
-										<Link style={{ cursor: "pointer" }}>{message.payload.name}</Link>
-									</Popover.Trigger>
-									<Popover.Content>
-										name: {message.payload.name}
-										<br />
-										args: <Text>{JSON.stringify(message.payload.args)}</Text>
-									</Popover.Content>
-								</Popover.Root>
-							</Table.Cell>
-							<Table.Cell>{formatDistanceCustom(message.payload.context.timestamp)} ago</Table.Cell>
-							<Table.Cell>
-								<DidPopover did={signature.publicKey || ""} truncateBelow="xl" />
-								<SessionField message={message} signature={signature} />
-							</Table.Cell>
-						</Table.Row>
-					))}
+					{actionsToDisplay.map(({ id, message, signature }) => {
+						const args = JSON.stringify(message.payload.args)
+						return (
+							<Table.Row key={id}>
+								<Table.Cell>
+									<DidPopover did={message.payload.did} truncateBelow="md" />
+								</Table.Cell>
+								<Table.Cell>
+									<Popover.Root>
+										<Popover.Trigger onClick={() => console.log("click")}>
+											<Link style={{ cursor: "pointer" }}>{message.payload.name}</Link>
+										</Popover.Trigger>
+										<Popover.Content>
+											name: {message.payload.name}
+											<br />
+											args: <Text>{args}</Text>
+										</Popover.Content>
+									</Popover.Root>
+								</Table.Cell>
+								<Table.Cell>{formatDistanceCustom(message.payload.context.timestamp)} ago</Table.Cell>
+								<Table.Cell>
+									<DidPopover did={signature.publicKey || ""} truncateBelow="xl" />
+									<SessionField message={message} signature={signature} />
+								</Table.Cell>
+							</Table.Row>
+						)
+					})}
 				</Table.Body>
 			</Table.Root>
 			<Flex direction="row" gap="2">
