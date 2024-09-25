@@ -1,0 +1,36 @@
+app = 'canvas-testnet-p2'
+primary_region = 'ewr'
+kill_signal = 'SIGINT'
+kill_timeout = '30s'
+
+[build]
+
+[env]
+ANNOUNCE = '/dns4/canvas-testnet-p2.fly.dev/tcp/443/wss'
+DEBUG = 'libp2p:rendezvous:*'
+LISTEN = '/ip4/127.0.0.1/tcp/8080/ws'
+DATABASE_PATH = 'db.sqlite'
+PORT = '8000'
+
+[[services]]
+protocol = 'tcp'
+internal_port = 8080
+processes = ['app']
+
+[[services.ports]]
+port = 443
+handlers = ['tls', 'http']
+
+[services.concurrency]
+type = 'connections'
+hard_limit = 1024
+soft_limit = 512
+
+[[vm]]
+memory = '2gb'
+cpu_kind = 'shared'
+cpus = 2
+
+[[metrics]]
+port = 8000
+path = '/metrics'
