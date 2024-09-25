@@ -10,15 +10,16 @@ import cors from "cors"
 import { WebSocketServer } from "ws"
 import { multiaddr } from "@multiformats/multiaddr"
 import { WebSockets, WebSocketsSecure } from "@multiformats/multiaddr-matcher"
-
+import stoppable from "stoppable"
 import dotenv from "dotenv"
 
 dotenv.config()
 
-import { Canvas } from "@canvas-js/core"
+import { Canvas, PeerId } from "@canvas-js/core"
 import { createAPI } from "@canvas-js/core/api"
 import { MIN_CONNECTIONS, MAX_CONNECTIONS } from "@canvas-js/core/constants"
 import { NetworkServer } from "@canvas-js/gossiplog/server"
+import { defaultBootstrapList } from "@canvas-js/gossiplog/bootstrap"
 
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { ATPSigner } from "@canvas-js/chain-atp"
@@ -28,8 +29,6 @@ import { SolanaSigner } from "@canvas-js/chain-solana"
 
 import { getContractLocation } from "../utils.js"
 import { startActionPrompt } from "../prompt.js"
-import stoppable from "stoppable"
-import { defaultBootstrapList } from "@canvas-js/gossiplog/bootstrap"
 
 export const command = "run <path>"
 export const desc = "Run a Canvas application"
