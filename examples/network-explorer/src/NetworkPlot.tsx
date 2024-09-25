@@ -4,7 +4,7 @@ import { fetchAndIpldParseJson, Result } from "./utils.js"
 import useSWR from "swr"
 import * as d3 from "d3"
 import { PropsWithChildren, useLayoutEffect, useRef, useState } from "react"
-import { Box, Card, Flex, Text } from "@radix-ui/themes"
+import { Box, Card, Flex } from "@radix-ui/themes"
 import useCursorStack from "./useCursorStack.js"
 import PaginationButton from "./components/PaginationButton.js"
 import { DidPopover } from "./components/DidPopover.js"
@@ -49,14 +49,10 @@ function MessageEntry({ item }: { item: Result<Action | Session> }) {
 	return (
 		<Card>
 			<Flex direction="row">
-				<Text>
-					{item.message.payload.type}, id: {item.id}
-				</Text>
+				{item.message.payload.type}, id: {item.id}
 				<Box flexGrow="1" />
-				<Text>
-					address:&nbsp;
-					<DidPopover did={item.message.payload.did} />, clock: {item.message.clock}, branch: {item.branch}
-				</Text>
+				address:&nbsp;
+				<DidPopover did={item.message.payload.did} />, clock: {item.message.clock}, branch: {item.branch}
 			</Flex>
 		</Card>
 	)

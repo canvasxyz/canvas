@@ -62,7 +62,7 @@ function ActionsTable() {
 				<Table.Header>
 					<Table.Row>
 						<Table.ColumnHeaderCell>Address</Table.ColumnHeaderCell>
-						<Table.ColumnHeaderCell>Name</Table.ColumnHeaderCell>
+						<Table.ColumnHeaderCell>Action</Table.ColumnHeaderCell>
 						<Table.ColumnHeaderCell>Timestamp</Table.ColumnHeaderCell>
 						<Table.ColumnHeaderCell>Session</Table.ColumnHeaderCell>
 					</Table.Row>

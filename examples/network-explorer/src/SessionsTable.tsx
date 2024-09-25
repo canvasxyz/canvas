@@ -47,18 +47,17 @@ function SessionsTable() {
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
-					{sessionsToDisplay.map(({ id, message, signature }) => {
+					{sessionsToDisplay.map(({ id, message }) => {
 						return (
 							<Table.Row key={id}>
 								<Table.Cell>
 									<DidPopover did={message.payload.did} truncateBelow="md" numEndChars={0} />
 								</Table.Cell>
 								<Table.Cell>
-									<DidPopover did={signature.publicKey} truncateBelow="md" numEndChars={0} />
+									<DidPopover did={message.payload.publicKey} truncateBelow="md" numEndChars={0} />
 								</Table.Cell>
-								{/* TODO: do we want to display the timestamp (creation date) for the session? */}
 								<Table.Cell>
-									<span className="text-gray-400">{formatDistanceCustom(message.payload.context.timestamp)}</span>
+									<span className="text-gray-400">{formatDistanceCustom(message.payload.context.timestamp)}</span> ago
 								</Table.Cell>
 							</Table.Row>
 						)

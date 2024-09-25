@@ -42,7 +42,6 @@ export function DidPopover({
 	return (
 		<Popover.Root>
 			<Popover.Trigger>
-				{/* <Box display="inline-block"> */}
 				<Link style={{ cursor: "pointer" }}>
 					{truncateBelow ? (
 						<>
