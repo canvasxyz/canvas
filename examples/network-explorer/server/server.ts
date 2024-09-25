@@ -44,11 +44,6 @@ const canvasApp = await Canvas.initialize({
 	},
 	signers: [new SIWESigner(), new ATPSigner(), new CosmosSigner(), new SubstrateSigner({}), new SolanaSigner()],
 	topic,
-	schema: {
-		$addresses_index: {
-			address: "primary",
-		},
-	},
 })
 
 // await canvasApp.listen({
