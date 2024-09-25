@@ -1,8 +1,5 @@
 import cors from "cors"
 import express from "express"
-import pg from "pg"
-import { StatusCodes } from "http-status-codes"
-import * as json from "@ipld/dag-json"
 
 import { createAPI } from "@canvas-js/core/api"
 import { Canvas } from "@canvas-js/core"
@@ -26,11 +23,6 @@ console.log(`LIBP2P_PORT: ${LIBP2P_PORT}`)
 console.log(`HTTP_PORT: ${HTTP_PORT}`)
 console.log(`HTTP_ADDR: ${HTTP_ADDR}`)
 console.log(`dev: ${dev}`)
-
-const client = new pg.Client({
-	connectionString: process.env.DATABASE_URL || "postgresql://test@localhost:5432/network-explorer",
-})
-await client.connect()
 
 const expressApp = express()
 expressApp.use(
@@ -77,44 +69,7 @@ canvasApp.addEventListener("message", async (event) => {
 // console.log(`peer id: ${canvasApp.libp2p.peerId}`)
 
 const canvasApiApp = createAPI(canvasApp)
-expressApp.use(`/canvas_api`, canvasApiApp)
 
-expressApp.get("/index_api/latest_session/", async (req, res) => {
-	if (
-		!req.query.did ||
-		typeof req.query.did !== "string" ||
-		!req.query.public_key ||
-		typeof req.query.public_key !== "string"
-	) {
-		res.status(StatusCodes.BAD_REQUEST)
-		res.end()
-		return
-	}
-
-	const sessionId = await canvasApp.getSession({
-		did: req.query.did,
-		publicKey: req.query.public_key,
-	})
-
-	if (!sessionId) {
-		res.status(StatusCodes.NOT_FOUND)
-		res.end()
-		return
-	}
-
-	const signedMessage = await canvasApp.getMessage(sessionId)
-	if (signedMessage === null || signedMessage.message.payload.type !== "session") {
-		res.status(StatusCodes.NOT_FOUND)
-		res.end()
-		return
-	}
-
-	// return using ipld json stringify
-	res.status(StatusCodes.OK)
-	res.setHeader("content-type", "application/json")
-	res.end(json.encode(signedMessage.message.payload))
-})
-
-expressApp.listen(HTTP_PORT, HTTP_ADDR, () => {
+canvasApiApp.listen(HTTP_PORT, HTTP_ADDR, () => {
 	console.log(`> Ready on http://${HTTP_ADDR}:${HTTP_PORT}`)
 })
