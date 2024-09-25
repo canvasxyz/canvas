@@ -456,7 +456,7 @@ export class GossipLogService<Payload = unknown> implements Startable {
 
 			const client = new sync.Client(stream)
 			try {
-				const result = await this.messageLog.sync(client)
+				const result = await this.messageLog.sync(client, { peer: peerId.toString() })
 				if (result.complete) {
 					break
 				} else {
