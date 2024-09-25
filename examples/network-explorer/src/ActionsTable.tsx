@@ -9,52 +9,20 @@ import { fetchAndIpldParseJson, formatDistanceCustom, Result } from "./utils.js"
 import { DidPopover } from "./components/DidPopover.js"
 import { Action, Message, Session, Signature } from "@canvas-js/interfaces"
 
-type ActionRecord = {
-	message_id: string
-	did: string
-	name: string
-	timestamp: number
-}
-
-function ActionRow({ message_id, did, timestamp, name }: ActionRecord) {
-	const { data: messageData } = useSWR(`/canvas_api/messages/${message_id}`, fetchAndIpldParseJson<Result<Action>>)
-
-	return (
-		<Table.Row>
-			<Table.Cell>
-				<DidPopover did={did || ""} truncateBelow="md" />
-			</Table.Cell>
-			<Table.Cell>
-				<Popover.Root>
-					<Popover.Trigger onClick={() => console.log("click")}>
-						<Link style={{ cursor: "pointer" }}>{name}</Link>
-					</Popover.Trigger>
-					<Popover.Content>
-						name: {name}
-						<br />
-						args:{" "}
-						{messageData ? <Text>{JSON.stringify(messageData.message.payload.args)}</Text> : <Text>Loading...</Text>}
-					</Popover.Content>
-				</Popover.Root>
-			</Table.Cell>
-			<Table.Cell>{formatDistanceCustom(timestamp)} ago</Table.Cell>
-			<Table.Cell>
-				{messageData ? <DidPopover did={messageData.signature.publicKey || ""} truncateBelow="xl" /> : null}
-				{messageData ? <SessionField message={messageData.message} signature={messageData.signature} /> : null}
-			</Table.Cell>
-		</Table.Row>
-	)
-}
-
 function SessionField({ signature, message }: { signature: Signature; message: Message<Action> }) {
-	const { data: session, error } = useSWR(
-		`/index_api/latest_session/?did=${message.payload.did}&public_key=${signature.publicKey}`,
-		fetchAndIpldParseJson<Session>,
+	const { data: sessions, error } = useSWR(
+		`/sessions?did=${message.payload.did}&publicKey=${signature.publicKey}`,
+		fetchAndIpldParseJson<Result<Session>[]>,
 	)
 
 	if (error) return <span className="text-red-400">failed to load</span>
 
-	return <span className="text-gray-400"> {session && formatDistanceCustom(session.context.timestamp)} ago</span>
+	return (
+		<span className="text-gray-400">
+			{" "}
+			{sessions && sessions.length > 0 && formatDistanceCustom(sessions[0].message.payload.context.timestamp)} ago
+		</span>
+	)
 }
 
 const entriesPerPage = 10
@@ -71,13 +39,9 @@ function ActionsTable() {
 		params.append("before", currentCursor)
 	}
 
-	const { data: actions, error } = useSWR(
-		`/canvas_api/actions_list?${params.toString()}`,
-		fetchAndIpldParseJson<ActionRecord[]>,
-		{
-			refreshInterval: 1000,
-		},
-	)
+	const { data: actions, error } = useSWR(`/actions?${params.toString()}`, fetchAndIpldParseJson<Result<Action>[]>, {
+		refreshInterval: 1000,
+	})
 
 	if (error) return <div>failed to load</div>
 	if (!actions) return <div>loading...</div>
@@ -100,8 +64,29 @@ function ActionsTable() {
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
-					{actionsToDisplay.map((actionRecord) => (
-						<ActionRow key={actionRecord.message_id} {...actionRecord} />
+					{actionsToDisplay.map(({ id, message, signature }) => (
+						<Table.Row key={id}>
+							<Table.Cell>
+								<DidPopover did={message.payload.did} truncateBelow="md" />
+							</Table.Cell>
+							<Table.Cell>
+								<Popover.Root>
+									<Popover.Trigger onClick={() => console.log("click")}>
+										<Link style={{ cursor: "pointer" }}>{message.payload.name}</Link>
+									</Popover.Trigger>
+									<Popover.Content>
+										name: {message.payload.name}
+										<br />
+										args: <Text>{JSON.stringify(message.payload.args)}</Text>
+									</Popover.Content>
+								</Popover.Root>
+							</Table.Cell>
+							<Table.Cell>{formatDistanceCustom(message.payload.context.timestamp)} ago</Table.Cell>
+							<Table.Cell>
+								<DidPopover did={signature.publicKey || ""} truncateBelow="xl" />
+								<SessionField message={message} signature={signature} />
+							</Table.Cell>
+						</Table.Row>
 					))}
 				</Table.Body>
 			</Table.Root>
@@ -111,7 +96,7 @@ function ActionsTable() {
 				<PaginationButton
 					text="Next"
 					enabled={hasMore}
-					onClick={() => pushCursor(actionsToDisplay[entriesPerPage].message_id)}
+					onClick={() => pushCursor(actionsToDisplay[entriesPerPage].id)}
 				/>
 			</Flex>
 		</Flex>

@@ -44,7 +44,7 @@ export function createAPI<Payload>(gossipLog: AbstractGossipLog<Payload>): expre
 		type MessageRecord = { id: string; signature: Signature; message: Message<Payload> }
 
 		const results = await gossipLog.db.query<MessageRecord>("$messages", {
-			select: { id: true, signature: true, message: true },
+			select: { id: true, branch: true, signature: true, message: true },
 			where: { id: range },
 			orderBy: { id: order },
 			limit,

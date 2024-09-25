@@ -129,7 +129,7 @@ export function createAPI(app: Canvas): express.Express {
 				expiration: number | null
 			}>("$sessions", {
 				select: { message_id: true, expiration: true },
-				where: { message_id: range, did, publicKey },
+				where: { message_id: range, did, public_key: publicKey },
 				orderBy: { message_id: order },
 			})) {
 				if (minExpiration === undefined || expiration === null || minExpiration <= expiration) {

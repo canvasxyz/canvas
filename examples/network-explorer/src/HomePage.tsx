@@ -8,11 +8,15 @@ import { Link, Navigate, Route, Routes, useLocation, useResolvedPath } from "rea
 import useSWR from "swr"
 
 function HomePage() {
-	const { data: appInfoData } = useSWR(`/canvas_api/`, fetchAndIpldParseJson<{ topic: string }>)
-	const { data: actionCountData } = useSWR(`/canvas_api/actions/count/`, fetchAndIpldParseJson<{ count: number }>, {
+	const { data: appInfoData } = useSWR(`/`, fetchAndIpldParseJson<{ topic: string }>)
+	const { data: actionCountData } = useSWR(`/actions/count/`, fetchAndIpldParseJson<{ count: number }>, {
 		refreshInterval: 1000,
 	})
-	const { data: sessionCountData } = useSWR(`/canvas_api/sessions/count/`, fetchAndIpldParseJson<{ count: number }>, {
+	const { data: sessionCountData } = useSWR(`/sessions/count/`, fetchAndIpldParseJson<{ count: number }>, {
+		refreshInterval: 1000,
+	})
+
+	const { data: addressCountData } = useSWR(`/addresses/count/`, fetchAndIpldParseJson<{ count: number }>, {
 		refreshInterval: 1000,
 	})
 
@@ -39,7 +43,7 @@ function HomePage() {
 						</Flex>
 						<Flex gap="2">
 							<Text weight="bold">Unique addresses:</Text>
-							{/* <Text weight="medium">{countsData ? countsData.address_count : "-"}</Text> */}
+							<Text weight="medium">{addressCountData ? addressCountData.count : "-"}</Text>
 						</Flex>
 					</Flex>
 				</Grid>

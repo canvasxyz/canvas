@@ -191,7 +191,7 @@ export default function NetworkPlot() {
 	}
 
 	const { data: messages, error } = useSWR(
-		`/canvas_api/messages?${params.toString()}`,
+		`/messages?${params.toString()}`,
 		fetchAndIpldParseJson<Result<Action | Session>[]>,
 		{
 			refreshInterval: 1000,
