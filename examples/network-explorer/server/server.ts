@@ -71,7 +71,6 @@ canvasApp.addEventListener("message", async (event) => {
 const canvasApiApp = createAPI(canvasApp)
 canvasApiApp.get("/addresses/count", async (req, res) => {
 	const addressesCount = await canvasApp.messageLog.db.count("$addresses_index")
-
 	res.writeHead(200, { "content-type": "application/json" })
 	res.end(JSON.stringify({ count: addressesCount }))
 })
