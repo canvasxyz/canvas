@@ -2,10 +2,6 @@ import { sha256 } from "@noble/hashes/sha256"
 import { bytesToHex } from "@noble/hashes/utils"
 import * as cbor from "@ipld/dag-cbor"
 
-import * as espree from "espree"
-import * as eslintScope from "eslint-scope"
-import globals from "globals"
-
 import { MIN_MESSAGE_ID } from "@canvas-js/gossiplog"
 import { Snapshot, SnapshotEffect } from "@canvas-js/interfaces"
 import { assert } from "@canvas-js/utils"
@@ -21,86 +17,11 @@ export const isMergeFunction = (value: unknown): value is ModelSchema["$merge"] 
 export const isIndexInit = (value: unknown): value is IndexInit[] => typeof value === "string" || Array.isArray(value)
 export const isPropertyTypish = (value: unknown): value is PropertyType => typeof value === "string"
 
-// function serializeActions(contract: Contract): SnapshotActionSchema {
-// 	const result: Record<string, string> = {}
-// 	for (const [name, fn] of Object.entries(contract.actions)) {
-// 		result[name] = fn.toString()
-// 	}
-// 	return result
-// }
-
-// function serializeModels(contract: Contract): SnapshotModelSchema {
-// 	const result: SnapshotModelSchema = {}
-// 	for (const [modelName, modelSchema] of Object.entries(contract.models)) {
-// 		result[modelName] = {}
-// 		for (const [key, value] of Object.entries(modelSchema)) {
-// 			if (key === "$merge") {
-// 				assert(isMergeFunction(value))
-// 				result[modelName][key] = typeof value === "function" ? value.toString() : value
-// 			} else if (key === "$indexes") {
-// 				assert(isIndexInit(value))
-// 				result[modelName][key] = value
-// 			} else {
-// 				assert(isPropertyTypish(value))
-// 				result[modelName][key] = value
-// 			}
-// 		}
-// 	}
-// 	return result
-// }
-
-// function createContractSnapshot<T extends Contract>(config: CanvasConfig<T>) {
-// 	if (typeof config.contract === "string") {
-// 		return {
-// 			file: config.contract,
-// 			hash: hashContract(config.contract),
-// 		}
-// 	} else {
-// 		return {
-// 			actions: serializeActions(config.contract),
-// 			models: serializeModels(config.contract),
-// 			hash: hashContract(config.contract),
-// 		}
-// 	}
-// }
-
-export function checkContract(contract: Contract): boolean {
-	function hasDanglingReferences(code: string) {
-		// use latest quickjs supported version (es2023)
-		const ast = espree.parse(code, { range: true, ecmaVersion: 2023 })
-		const scopeManager = eslintScope.analyze(ast, { ecmaVersion: 2023 })
-		scopeManager.globalScope.through.forEach((ref) => {
-			if (ref.identifier.name in globals.es2023 || ref.identifier.name in globals.browser) return
-			console.log("unexpected action variable access", ref.identifier.name, "at char", ref.identifier.range?.[0])
-			return true
-		})
-		return false
-	}
-	let valid = true
-	for (const model of Object.values(contract.models)) {
-		if (model.$merge === undefined) {
-			continue
-		}
-		if (hasDanglingReferences(model.$merge.toString())) {
-			valid = false
-		}
-	}
-	for (const fn of Object.values(contract.actions)) {
-		if (hasDanglingReferences(fn.toString())) {
-			valid = false
-		}
-	}
-	return valid
-}
-
 export function hashContract<T extends Contract>(contract: T | string): string | null {
 	if (typeof contract === "string") {
 		const hash = sha256(contract)
 		return bytesToHex(hash)
 	} else {
-		// if (!checkContract(contract)) {
-		// 	return null
-		// }
 		const contractCodeMap: Record<string, string> = Object.fromEntries(
 			Object.entries(contract.actions).map(([name, fn]) => [name, fn.toString()]),
 		)
@@ -116,10 +37,6 @@ export function hashSnapshot(snapshot: Snapshot): string | null {
 	return bytesToHex(hash).slice(0, 16)
 }
 
-// A snapshot contains:
-// 1) previous modeldb stored as flattened $effects and models
-// 2) new contract code, including models and actions (optional)
-// 3) no $sessions, no $messages (snapshots can be appended to the log later, with sync cut-off)
 export async function createSnapshot<T extends Contract>(
 	app: Canvas | undefined,
 	config: CanvasConfig<T>,
@@ -160,6 +77,5 @@ export async function createSnapshot<T extends Contract>(
 		type: "snapshot",
 		models,
 		effects,
-		// contract: createContractSnapshot(config),
 	}
 }
