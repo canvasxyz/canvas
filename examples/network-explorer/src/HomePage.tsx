@@ -16,7 +16,7 @@ function HomePage() {
 		refreshInterval: 1000,
 	})
 
-	const { data: userCountData } = useSWR(`/api/users/count`, fetchAndIpldParseJson<{ count: number }>, {
+	const { data: userCountData } = useSWR(`/api/dids/count`, fetchAndIpldParseJson<{ count: number }>, {
 		refreshInterval: 1000,
 	})
 

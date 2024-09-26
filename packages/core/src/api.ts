@@ -172,13 +172,13 @@ export function createAPI(app: Canvas): express.Express {
 		return void res.end(json.encode(results))
 	})
 
-	api.get("/users", async (req, res) => {
-		const users = await app.db.query("$dids")
+	api.get("/dids", async (req, res) => {
+		const dids = await app.db.query("$dids")
 		res.writeHead(StatusCodes.OK, { "content-type": "application/json" })
-		return void res.end(json.encode(users))
+		return void res.end(json.encode(dids))
 	})
 
-	api.get("/users/count", async (req, res) => {
+	api.get("/dids/count", async (req, res) => {
 		const count = await app.db.count("$dids")
 		res.writeHead(StatusCodes.OK, { "content-type": "application/json" })
 		return void res.end(json.encode({ count: count }))
