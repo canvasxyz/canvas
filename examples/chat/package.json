@@ -26,7 +26,7 @@
 		"@magic-ext/auth": "^4.3.2",
 		"@metamask/providers": "^14.0.2",
 		"@multiformats/multiaddr": "^12.3.0",
-		"@noble/hashes": "^1.4.0",
+		"@noble/hashes": "^1.5.0",
 		"@polkadot/extension-dapp": "^0.46.9",
 		"@terra-money/feather.js": "^2.0.4",
 		"@types/react": "^18.3.3",
