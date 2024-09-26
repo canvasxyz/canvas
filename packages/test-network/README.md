@@ -15,7 +15,7 @@ $ ./docker-compose.sh 16
 Then start the docker contains
 
 ```
-$ docker compose rm -f && docker compose up --build --remove-orphans
+$ npm run start
 ```
 
 Then open the dashboard at http://localhost:8000
