@@ -22,8 +22,9 @@ import { LogStatus } from "./LogStatus.js"
 import { contract } from "./contract.js"
 
 const topic = "chat-example.canvas.xyz"
-const bootstrapList: string[] | undefined =
-	import.meta.env.VITE_BOOTSTRAP_LIST && import.meta.env.VITE_BOOTSTRAP_LIST.split(",")
+
+const wsURL = import.meta.env.VITE_CANVAS_WS_URL ?? null
+console.log("websocket API URL:", wsURL)
 
 export const App: React.FC<{}> = ({}) => {
 	const [sessionSigner, setSessionSigner] = useState<SessionSigner | null>(null)
@@ -31,8 +32,7 @@ export const App: React.FC<{}> = ({}) => {
 
 	const topicRef = useRef(topic)
 
-	const { app } = useCanvas(null, {
-		path: "./db.sqlite3",
+	const { app } = useCanvas(wsURL, {
 		topic,
 		contract: { ...contract, topic: topicRef.current },
 		signers: [new SIWESigner(), new ATPSigner(), new CosmosSigner(), new SubstrateSigner({}), new SolanaSigner()],

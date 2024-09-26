@@ -1,4 +1,4 @@
-import { getLibp2p } from "@canvas-js/bootstrap/libp2p"
+import { getLibp2p } from "@canvas-js/bootstrap-peer/libp2p"
 
 import { Socket } from "../socket.js"
 

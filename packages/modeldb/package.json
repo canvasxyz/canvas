@@ -19,8 +19,8 @@
 		"@canvas-js/modeldb-sqlite-wasm": "0.10.10",
 		"fake-indexeddb": "^6.0.0",
 		"nanoid": "^5.0.7",
-		"puppeteer": "^22.13.1",
-		"vite": "^5.3.5"
+		"puppeteer": "^23.4.1",
+		"vite": "^5.4.8"
 	},
 	"dependencies": {
 		"@canvas-js/utils": "0.10.10",

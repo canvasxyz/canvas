@@ -26,7 +26,7 @@ export async function getConfig(config: Partial<Config>): Promise<Config> {
 	if (MIN_CONNECTIONS !== undefined) minConnections = parseInt(MIN_CONNECTIONS)
 	if (MAX_CONNECTIONS !== undefined) maxConnections = parseInt(MAX_CONNECTIONS)
 
-	const listen = config.listen ?? LISTEN?.split(",") ?? []
+	const listen = config.listen ?? LISTEN?.split(",") ?? ["/ip4/127.0.0.1/tcp/8080/ws"]
 	const announce = config.announce ?? ANNOUNCE?.split(",") ?? []
 
 	return { path, peerId, listen, announce, minConnections, maxConnections }

@@ -48,6 +48,5 @@ services:
       - PEER_ID=CiYAJAgBEiC9yHdvmtjGZW9Q2lSLKlgmNYW9bxRK7uyo4g0aS0hFzxIkCAESIL3Id2+a2MZlb1DaVIsqWCY1hb1vFEru7KjiDRpLSEXPGkQIARJA8STx22fxKw7avM9/YjP3elT1YKBfA4wCIgnfs4yl/4G9yHdvmtjGZW9Q2lSLKlgmNYW9bxRK7uyo4g0aS0hFzw==
       - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
       - ANNOUNCE=/dns4/bootstrap/tcp/8080/ws
-      # - ANNOUNCE=/dns4/localhost/tcp/8080/ws
       - MIN_CONNECTIONS=0
       - DATABASE_PATH=db.sqlite

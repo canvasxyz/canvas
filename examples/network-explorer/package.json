@@ -33,7 +33,7 @@
 		"react-dom": "^18.3.1",
 		"react-router-dom": "^6.20.1",
 		"swr": "^2.2.5",
-		"vite": "^5.3.1"
+		"vite": "^5.4.8"
 	},
 	"devDependencies": {
 		"@types/cors": "^2.8.17",

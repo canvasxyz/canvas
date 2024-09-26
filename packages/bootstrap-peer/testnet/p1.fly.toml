@@ -1,9 +1,4 @@
-# fly.toml app configuration file generated for canvas-relay-server on 2024-06-26T10:44:07-04:00
-#
-# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
-#
-
-app = 'canvas-relay-server'
+app = 'canvas-testnet-p1'
 primary_region = 'ewr'
 kill_signal = 'SIGINT'
 kill_timeout = '30s'
@@ -11,10 +6,11 @@ kill_timeout = '30s'
 [build]
 
 [env]
-ANNOUNCE = '/dns4/canvas-relay-server.fly.dev/tcp/443/wss'
-DEBUG = 'libp2p:circuit-relay:*'
+ANNOUNCE = '/dns4/canvas-testnet-p1.fly.dev/tcp/443/wss'
+DEBUG = 'canvas:*,libp2p:*'
 LISTEN = '/ip4/127.0.0.1/tcp/8080/ws'
 DATABASE_PATH = 'db.sqlite'
+PORT = '8000'
 
 [[services]]
 protocol = 'tcp'
@@ -31,10 +27,10 @@ hard_limit = 1024
 soft_limit = 512
 
 [[vm]]
-memory = '2gb'
+memory = '1gb'
 cpu_kind = 'shared'
-cpus = 2
+cpus = 1
 
 [[metrics]]
-port = 3000
+port = 8000
 path = '/metrics'
