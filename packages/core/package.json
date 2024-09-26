@@ -70,7 +70,7 @@
 	"devDependencies": {
 		"@canvas-js/chain-cosmos": "0.10.10",
 		"@types/node": "^20.14.6",
-		"@types/pg": "^8.11.6",
+		"@types/pg": "^8.11.10",
 		"dotenv": "^16.4.5",
 		"nanoid": "^5.0.7",
 		"p-defer": "^4.0.1",

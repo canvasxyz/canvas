@@ -99,7 +99,7 @@
 		"ws": "^8.18.0"
 	},
 	"devDependencies": {
-		"@types/pg": "^8.11.6",
+		"@types/pg": "^8.11.10",
 		"@types/pg-cursor": "^2.7.2",
 		"fake-indexeddb": "^6.0.0",
 		"it-pair": "^2.0.6",
