@@ -31,7 +31,7 @@ type Session struct {
 
 type SnapshotEffect struct {
   key       String
-  value     Bytes
+  value     nullable Bytes
 }
 
 type Snapshot struct {
