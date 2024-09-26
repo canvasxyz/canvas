@@ -35,7 +35,7 @@ export const useCanvas = <T extends Contract = Contract>(url: string | null, con
 		} else {
 			// the contract changed, snapshot the old app
 			// TODO: cache the last snapshot, and reuse it if no new actions have been applied
-			createSnapshot(app, config).then((snapshot) => {
+			createSnapshot(app).then((snapshot) => {
 				Canvas.initialize<T>({ ...config, reset: true, snapshot })
 					.then(setupApp)
 					.catch((error) => {

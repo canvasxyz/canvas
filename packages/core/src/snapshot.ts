@@ -7,7 +7,7 @@ import { Snapshot, SnapshotEffect } from "@canvas-js/interfaces"
 import { assert } from "@canvas-js/utils"
 import type { ModelSchema, IndexInit, PropertyType } from "@canvas-js/modeldb"
 
-import { Canvas, CanvasConfig } from "./Canvas.js"
+import { Canvas } from "./Canvas.js"
 import { Contract /* SnapshotActionSchema, SnapshotModelSchema, */ } from "./types.js"
 import { EffectRecord } from "./runtime/AbstractRuntime.js"
 
@@ -37,10 +37,7 @@ export function hashSnapshot(snapshot: Snapshot): string | null {
 	return bytesToHex(hash).slice(0, 16)
 }
 
-export async function createSnapshot<T extends Contract>(
-	app: Canvas | undefined,
-	config: CanvasConfig<T>,
-): Promise<Snapshot | null> {
+export async function createSnapshot<T extends Contract>(app: Canvas | undefined): Promise<Snapshot | null> {
 	if (!app) return null
 
 	// flatten models
