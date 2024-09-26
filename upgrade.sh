@@ -16,9 +16,9 @@ WORKSPACE_FLAGS=$(echo "$PACKAGES" | sed 's/^/-w /' | tr '\n' ' ')
 INSTALL_COMMAND="npm install $1@latest $WORKSPACE_FLAGS"
 
 # Echo the command and ask for confirmation
-echo "\nPrepared upgrade command:"
+echo "Prepared upgrade command:"
 echo "$INSTALL_COMMAND"
-echo "\nPress Enter to execute this command, or Ctrl+C to cancel..."
+echo "Press Enter to execute this command, or Ctrl+C to cancel..."
 read
 
 # Execute the command
