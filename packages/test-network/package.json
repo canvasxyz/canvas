@@ -13,6 +13,7 @@
 		".": "./lib/index.js"
 	},
 	"scripts": {
+		"start": "docker compose rm -f && docker compose up --build --remove-orphans",
 		"build": "concurrently \"npm:*:build\"",
 		"dev": "concurrently \"npm:*:dev\"",
 		"dashboard:client:build": "vite build --outDir dist/dashboard/client",

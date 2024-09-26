@@ -10,15 +10,16 @@ import cors from "cors"
 import { WebSocketServer } from "ws"
 import { multiaddr } from "@multiformats/multiaddr"
 import { WebSockets, WebSocketsSecure } from "@multiformats/multiaddr-matcher"
-
+import stoppable from "stoppable"
 import dotenv from "dotenv"
 
 dotenv.config()
 
-import { Canvas } from "@canvas-js/core"
+import { Canvas, PeerId } from "@canvas-js/core"
 import { createAPI } from "@canvas-js/core/api"
 import { MIN_CONNECTIONS, MAX_CONNECTIONS } from "@canvas-js/core/constants"
 import { NetworkServer } from "@canvas-js/gossiplog/server"
+import { defaultBootstrapList } from "@canvas-js/gossiplog/bootstrap"
 
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { ATPSigner } from "@canvas-js/chain-atp"
@@ -28,7 +29,6 @@ import { SolanaSigner } from "@canvas-js/chain-solana"
 
 import { getContractLocation } from "../utils.js"
 import { startActionPrompt } from "../prompt.js"
-import stoppable from "stoppable"
 
 export const command = "run <path>"
 export const desc = "Run a Canvas application"
@@ -151,25 +151,6 @@ export async function handler(args: Args) {
 		listen.push(address)
 	}
 
-	let bootstrapList: string[] = []
-	if (args.offline) {
-		bootstrapList = []
-	} else if (args.bootstrap !== undefined) {
-		console.log(chalk.yellowBright("[canvas] Using custom bootstrap servers"))
-		bootstrapList = []
-		for (const address of args.bootstrap) {
-			assert(typeof address === "string", "bootstrap address must be a string")
-			console.log(chalk.yellowBright(`[canvas] - ${address}`))
-			bootstrapList.push(address)
-		}
-	} else if (BOOTSTRAP_LIST !== undefined) {
-		bootstrapList = BOOTSTRAP_LIST.split(" ")
-		console.log(chalk.yellowBright("[canvas] Using custom bootstrap servers"))
-		for (const address of bootstrapList) {
-			console.log(chalk.yellowBright(`[canvas] - ${address}`))
-		}
-	}
-
 	console.log(`${chalk.gray("[canvas] Starting app on topic")} ${chalk.whiteBright(topic)}`)
 
 	const signers = [new SIWESigner(), new ATPSigner(), new CosmosSigner(), new SubstrateSigner(), new SolanaSigner()]
@@ -191,7 +172,26 @@ export async function handler(args: Args) {
 		)
 	})
 
-	if (!args["offline"]) {
+	if (!args.offline) {
+		let bootstrapList = defaultBootstrapList
+		if (args.offline) {
+			bootstrapList = []
+		} else if (args.bootstrap !== undefined) {
+			console.log(chalk.yellowBright("[canvas] Using custom bootstrap servers"))
+			bootstrapList = []
+			for (const address of args.bootstrap) {
+				assert(typeof address === "string", "bootstrap address must be a string")
+				console.log(chalk.yellowBright(`[canvas] - ${address}`))
+				bootstrapList.push(address)
+			}
+		} else if (BOOTSTRAP_LIST !== undefined) {
+			bootstrapList = BOOTSTRAP_LIST.split(" ")
+			console.log(chalk.yellowBright("[canvas] Using custom bootstrap servers"))
+			for (const address of bootstrapList) {
+				console.log(chalk.yellowBright(`[canvas] - ${address}`))
+			}
+		}
+
 		// TODO: cache peer ID in .peer-id file
 		const libp2p = await app.startLibp2p({
 			listen,
@@ -201,9 +201,15 @@ export async function handler(args: Args) {
 			bootstrapList: bootstrapList,
 		})
 
-		console.log(chalk.gray(`[canvas] Using PeerId ${libp2p.peerId.toString()}`))
+		const id = libp2p.peerId.toString()
+		console.log(chalk.gray(`[canvas] Using PeerId ${id}`))
+
 		for (const addr of listen) {
-			console.log(chalk.gray(`[canvas] Listening on ${addr}/p2p/${libp2p.peerId.toString()}`))
+			console.log(chalk.gray(`[canvas] Listening on ${addr}/p2p/${id}`))
+		}
+
+		for (const addr of announce) {
+			console.log(chalk.gray(`[canvas] Announcing on ${addr}/p2p/${id}`))
 		}
 
 		app.addEventListener("connect", ({ detail: { peer } }) => {
