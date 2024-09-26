@@ -21,7 +21,7 @@
 		"@canvas-js/modeldb-idb": "0.10.10"
 	},
 	"devDependencies": {
-		"@types/react": "^18.3.3",
+		"@types/react": "^18.3.9",
 		"react": "^18.3.1"
 	}
 }
