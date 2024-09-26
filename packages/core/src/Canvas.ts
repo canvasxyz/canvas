@@ -107,11 +107,6 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			if (!config.reset) {
 				throw new Error("snapshot must be provided with reset: true")
 			}
-
-			for (const modelName of Object.keys({ ...config.schema, ...runtime.schema })) {
-				console.log(await db.count(modelName), modelName, "count")
-			}
-
 			await messageLog.append(config.snapshot)
 		}
 
