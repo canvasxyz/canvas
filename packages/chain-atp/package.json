@@ -23,7 +23,7 @@
 		"@ipld/dag-json": "^10.2.2",
 		"@libp2p/logger": "^4.0.16",
 		"@noble/hashes": "^1.5.0",
-		"multiformats": "^13.1.3"
+		"multiformats": "^13.3.0"
 	},
 	"devDependencies": {
 		"@canvas-js/chain-atp": "0.10.10"
