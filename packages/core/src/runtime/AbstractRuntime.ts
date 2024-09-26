@@ -83,7 +83,7 @@ export abstract class AbstractRuntime {
 	} satisfies ModelSchema
 
 	protected static usersModel = {
-		$users: {
+		$dids: {
 			did: "primary",
 			$indexes: [["did"]],
 		},
@@ -177,7 +177,7 @@ export abstract class AbstractRuntime {
 				},
 			},
 			{
-				model: "$users",
+				model: "$dids",
 				operation: "set",
 				value: { did },
 			},

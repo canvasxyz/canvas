@@ -173,13 +173,13 @@ export function createAPI(app: Canvas): express.Express {
 	})
 
 	api.get("/users", async (req, res) => {
-		const users = await app.db.query("$users")
+		const users = await app.db.query("$dids")
 		res.writeHead(StatusCodes.OK, { "content-type": "application/json" })
 		return void res.end(json.encode(users))
 	})
 
 	api.get("/users/count", async (req, res) => {
-		const count = await app.db.count("$users")
+		const count = await app.db.count("$dids")
 		res.writeHead(StatusCodes.OK, { "content-type": "application/json" })
 		return void res.end(json.encode({ count: count }))
 	})
