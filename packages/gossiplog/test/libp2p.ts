@@ -1,17 +1,17 @@
-import assert from "node:assert"
 import type { ExecutionContext } from "ava"
 
 import pDefer, { DeferredPromise } from "p-defer"
 
-import type { PeerId, Libp2p } from "@libp2p/interface"
-
-import { createEd25519PeerId } from "@libp2p/peer-id-factory"
+import type { Libp2p, PrivateKey } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
-import { GossipSub } from "@chainsafe/libp2p-gossipsub"
+import { generateKeyPair } from "@libp2p/crypto/keys"
+import { peerIdFromPrivateKey } from "@libp2p/peer-id"
 
 import { Awaitable, Message, Signature } from "@canvas-js/interfaces"
 import { AbstractGossipLog, SignedMessage } from "@canvas-js/gossiplog"
 import { getLibp2p, ServiceMap } from "@canvas-js/gossiplog/libp2p"
+
+import { mapValues } from "@canvas-js/utils"
 
 export type NetworkNodeInit = Record<string, { port: number; peers?: string[] }>
 
@@ -29,9 +29,13 @@ export async function createNetwork<T extends NetworkNodeInit, Payload>(
 ): Promise<{ [K in keyof T]: NetworkNode<Payload> }> {
 	const names = Object.keys(networkInit)
 
-	const peerIds = await Promise.all(
-		names.map<Promise<[string, PeerId]>>((name) => createEd25519PeerId().then((peerId) => [name, peerId])),
+	const privateKeys = await Promise.all(
+		names.map<Promise<[string, PrivateKey]>>((name) =>
+			generateKeyPair("Ed25519").then((privateKey) => [name, privateKey]),
+		),
 	).then((entries) => Object.fromEntries(entries))
+
+	const peerIds = mapValues(privateKeys, peerIdFromPrivateKey)
 
 	const log = logger("canvas:gossiplog:test")
 
@@ -39,31 +43,27 @@ export async function createNetwork<T extends NetworkNodeInit, Payload>(
 		Object.entries(networkInit).map(async ([name, { port, peers }]) => {
 			const messageLog = await openMessageLog()
 
-			const peerId = peerIds[name]
 			const address = getAddress(port)
 			const bootstrapList =
 				peers?.map((peerName) => `${getAddress(networkInit[peerName].port)}/p2p/${peerIds[peerName]}`) ?? []
 
-			const minConnections = peers?.length ?? 0
-
 			const libp2p = await getLibp2p(messageLog, {
 				start: false,
-				peerId,
+				privateKey: privateKeys[name],
 				listen: [address],
 				announce: [address],
 				bootstrapList,
-				minConnections,
 			})
 
-			libp2p.addEventListener("start", () => log("[%p] started", peerId))
+			libp2p.addEventListener("start", () => log("[%p] started", peerIds[name]))
 
 			libp2p.addEventListener("transport:listening", ({ detail: listener }) => {
 				const addrs = listener.getAddrs().map((addr) => addr.toString())
-				log("[%p] listening on", peerId, addrs)
+				log("[%p] listening on", peerIds[name], addrs)
 			})
 
 			libp2p.addEventListener("peer:discovery", ({ detail: peerInfo }) => {
-				log("[%p] discovered peer %p", peerId, peerInfo.id)
+				log("[%p] discovered peer %p", peerIds[name], peerInfo.id)
 			})
 
 			return [name, { messageLog, libp2p }]
@@ -118,10 +118,7 @@ export async function waitForGraft<Payload>(
 ): Promise<void> {
 	const wait = (source: string, target: string) =>
 		new Promise<void>((resolve) => {
-			const { pubsub } = network[source].libp2p.services
-			assert(pubsub instanceof GossipSub)
-
-			pubsub.addEventListener(
+			network[source].libp2p.services.pubsub.addEventListener(
 				"gossipsub:graft",
 				({ detail: { peerId } }) => {
 					if (peerId === network[target].libp2p.peerId.toString()) {

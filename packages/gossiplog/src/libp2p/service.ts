@@ -5,7 +5,6 @@ import {
 	Connection,
 	Stream,
 	StreamHandler,
-	CodeError,
 	Startable,
 	PubSub,
 	Libp2pEvents,
@@ -25,6 +24,7 @@ import { assert } from "@canvas-js/utils"
 
 import * as sync from "@canvas-js/gossiplog/sync"
 import { Event } from "@canvas-js/gossiplog/protocols/events"
+import { MissingParentError } from "@canvas-js/gossiplog/errors"
 
 import { AbstractGossipLog, GossipLogEvents } from "../AbstractGossipLog.js"
 import { SignedMessage } from "../SignedMessage.js"
@@ -37,7 +37,7 @@ import {
 	MAX_OUTBOUND_STREAMS,
 	NEGOTIATE_FULLY,
 } from "../constants.js"
-import { codes, decodeEvents, encodeEvents, getPushProtocol, getSyncProtocol } from "../utils.js"
+import { decodeEvents, encodeEvents, getPushProtocol, getSyncProtocol } from "../utils.js"
 
 export interface GossipLogServiceComponents {
 	pubsub: PubSub<GossipsubEvents>
@@ -132,7 +132,7 @@ export class GossipLogService<Payload = unknown> implements Startable {
 		})
 
 		this.#pushTopologyId = await this.components.registrar.register(this.pushProtocol, {
-			notifyOnTransient: false,
+			notifyOnLimitedConnection: false,
 			onConnect: (peerId, connection) => {
 				this.log("connected to %p", peerId)
 				this.pushTopology.add(peerId.toString())
@@ -306,7 +306,7 @@ export class GossipLogService<Payload = unknown> implements Startable {
 				this.pubsub.reportMessageValidationResult(msgId, sourceId, TopicValidatorResult.Accept)
 			},
 			(err) => {
-				if (err instanceof CodeError && err.code === codes.MISSING_PARENT) {
+				if (err instanceof MissingParentError) {
 					this.log.trace("ignoring gossipsub message %s", msgId)
 					this.pubsub.reportMessageValidationResult(msgId, sourceId, TopicValidatorResult.Ignore)
 					this.scheduleSync(propagationSource)
@@ -344,7 +344,7 @@ export class GossipLogService<Payload = unknown> implements Startable {
 		try {
 			await this.messageLog.insert(signedMessage)
 		} catch (err) {
-			if (err instanceof CodeError && err.code === codes.MISSING_PARENT) {
+			if (err instanceof MissingParentError) {
 				this.scheduleSync(peerId)
 				return
 			} else {
@@ -436,7 +436,7 @@ export class GossipLogService<Payload = unknown> implements Startable {
 
 		const connection = this.components.connectionManager
 			.getConnections(peerId)
-			.find((connection) => connection.transient === false && connection.status === "open")
+			.find((connection) => connection.limits === undefined && connection.status === "open")
 
 		if (connection === undefined) {
 			this.log("no longer connected to %p", peerId)

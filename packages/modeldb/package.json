@@ -25,7 +25,7 @@
 	"dependencies": {
 		"@canvas-js/utils": "0.10.10",
 		"@ipld/dag-json": "^10.2.2",
-		"@libp2p/logger": "^4.0.16",
+		"@libp2p/logger": "^5.1.0",
 		"uint8arrays": "^5.1.0"
 	}
 }

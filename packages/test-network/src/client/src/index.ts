@@ -3,7 +3,8 @@ import Debugger from "weald"
 ;(Debugger as any).useColors = () => false
 
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
-import { createEd25519PeerId } from "@libp2p/peer-id-factory"
+import { generateKeyPair } from "@libp2p/crypto/keys"
+import { peerIdFromPrivateKey } from "@libp2p/peer-id"
 
 import { SECONDS } from "@canvas-js/utils"
 import { GossipLog } from "@canvas-js/gossiplog/idb"
@@ -12,7 +13,9 @@ import { NetworkClient } from "@canvas-js/gossiplog/client"
 import { Socket } from "../../socket.js"
 import { topic } from "../../constants.js"
 
-const peerId = await createEd25519PeerId()
+const privateKey = await generateKeyPair("Ed25519")
+const peerId = peerIdFromPrivateKey(privateKey)
+
 console.log(`using peer id ${peerId}`)
 
 const gossipLog = await GossipLog.open<string>({ topic, apply: () => {} })
@@ -77,7 +80,7 @@ const network = new NetworkClient(gossipLog, `ws://localhost:9000`)
 
 	socket.post("connection:open", {
 		id: bytesToHex(randomBytes(8)),
-		remotePeer: "12D3KooWNSk8zhzjqcQuXB5QZnmDxjxfKLwnW1y7p7sSgCngAYys",
+		remotePeer: "12D3KooWGrTsJkCdCsVdWFzTUdxsxHPRfbAhUp6qw6RhdtNvnW2Z",
 		remoteAddr: network.sourceURL,
 	})
 }

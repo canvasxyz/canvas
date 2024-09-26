@@ -3,11 +3,6 @@ import * as cbor from "@ipld/dag-cbor"
 
 import { Event } from "@canvas-js/gossiplog/protocols/events"
 
-export const codes = {
-	MISSING_PARENT: "MISSING_PARENT",
-	ABORT: "ABORT",
-}
-
 export const cborNull: Uint8Array = cbor.encode(null)
 
 // eslint-disable-next-line no-useless-escape

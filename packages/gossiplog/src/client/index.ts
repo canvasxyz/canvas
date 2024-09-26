@@ -1,4 +1,4 @@
-import { CodeError, Stream } from "@libp2p/interface"
+import { Stream } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
 import { yamux } from "@chainsafe/libp2p-yamux"
 import { ProtocolStream, select, handle } from "@libp2p/multistream-select"
@@ -14,10 +14,11 @@ import { assert } from "@canvas-js/utils"
 
 import { Event } from "@canvas-js/gossiplog/protocols/events"
 import * as sync from "@canvas-js/gossiplog/sync"
+import { MissingParentError } from "@canvas-js/gossiplog/errors"
 
 import { AbstractGossipLog, GossipLogEvents } from "../AbstractGossipLog.js"
 import { decodeId, encodeId } from "../ids.js"
-import { codes, getPushProtocol, getSyncProtocol, chunk, encodeEvents, decodeEvents } from "../utils.js"
+import { getPushProtocol, getSyncProtocol, chunk, encodeEvents, decodeEvents } from "../utils.js"
 
 export const factory = yamux({})({ logger: { forComponent: logger } })
 
@@ -142,7 +143,7 @@ export class NetworkClient<Payload> {
 		try {
 			await this.gossipLog.insert(signedMessage)
 		} catch (err) {
-			if (err instanceof CodeError && err.code === codes.MISSING_PARENT) {
+			if (err instanceof MissingParentError) {
 				this.sync()
 				return
 			} else {

@@ -4,7 +4,8 @@ import { equals } from "uint8arrays"
 
 import { Node, SyncSource, ReadOnlyTransaction } from "@canvas-js/okra"
 import { assert } from "@canvas-js/utils"
-import { CodeError } from "@libp2p/interface"
+
+import { ConflictError } from "@canvas-js/gossiplog/errors"
 
 /**
  * This differs from the sync function exported from @canvas-js/okra in three ways
@@ -96,10 +97,7 @@ export class Driver {
 					this.log.error("conflict at key %s", hex(key))
 					this.log.error("- target hash: %s", hex(leaf.hash))
 					this.log.error("+ source hash: %s", hex(hash))
-					throw new CodeError("conflicting values for key", "CONFLICT", {
-						source: { level, key, hash },
-						target: leaf,
-					})
+					throw new ConflictError({ level, key, hash }, leaf)
 				}
 			}
 

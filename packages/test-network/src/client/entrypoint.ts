@@ -1,25 +1,9 @@
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 import puppeteer from "puppeteer"
 
-const { RELAY_SERVER, BOOTSTRAP_LIST, MIN_CONNECTIONS, MAX_CONNECTIONS, DELAY, PEER_COUNT } = process.env
+const { DELAY, PEER_COUNT } = process.env
 
 const query: Record<string, string> = {}
-
-if (RELAY_SERVER !== undefined) {
-	query.relayServer = RELAY_SERVER
-}
-
-if (BOOTSTRAP_LIST !== undefined) {
-	query.bootstrapList = BOOTSTRAP_LIST.split(" ").join(",")
-}
-
-if (MIN_CONNECTIONS !== undefined) {
-	query.minConnections = MIN_CONNECTIONS
-}
-
-if (MAX_CONNECTIONS !== undefined) {
-	query.maxConnections = MAX_CONNECTIONS
-}
 
 if (DELAY !== undefined) {
 	query.delay = DELAY

@@ -26,7 +26,7 @@ cat <<EOF >> docker-compose.yml
       - SERVICE_NAME=peer-a$i
       - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
       - ANNOUNCE=/dns4/peer-a$i/tcp/8080/ws
-      - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
+      - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWMvSCSeJ6zxJJRQZSpyGqbNcqSJfcJGZLRiMVMePXzMax
 EOF
 done
 
@@ -47,7 +47,7 @@ done
 #       - SERVICE_NAME=peer-b$i
 #       - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
 #       - ANNOUNCE=/dns4/peer-b$i/tcp/8080/ws
-#       - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
+#       - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWMvSCSeJ6zxJJRQZSpyGqbNcqSJfcJGZLRiMVMePXzMax
 # EOF
 # done
 
@@ -68,7 +68,7 @@ done
 #       - SERVICE_NAME=peer-c$i
 #       - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
 #       - ANNOUNCE=/dns4/peer-c$i/tcp/8080/ws
-#       - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
+#       - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWMvSCSeJ6zxJJRQZSpyGqbNcqSJfcJGZLRiMVMePXzMax
 # EOF
 # done
 
@@ -89,7 +89,7 @@ done
 #       - SERVICE_NAME=peer-d$i
 #       - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
 #       - ANNOUNCE=/dns4/peer-d$i/tcp/8080/ws
-#       - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn
+#       - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWMvSCSeJ6zxJJRQZSpyGqbNcqSJfcJGZLRiMVMePXzMax
 # EOF
 # done
 

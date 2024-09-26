@@ -9,6 +9,7 @@ import { PingService, ping } from "@libp2p/ping"
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
 
 import { Config, getConfig } from "./config.js"
+import { peerIdFromPrivateKey } from "@libp2p/peer-id"
 
 export type ServiceMap = {
 	identify: Identify
@@ -17,7 +18,9 @@ export type ServiceMap = {
 }
 
 export async function getLibp2p(config: Partial<Config> = {}) {
-	const { peerId, listen, announce, minConnections, maxConnections } = await getConfig(config)
+	const { privateKey, listen, announce, maxConnections } = await getConfig(config)
+
+	const peerId = peerIdFromPrivateKey(privateKey)
 	console.log("using PeerId", peerId.toString())
 
 	console.log(
@@ -31,15 +34,15 @@ export async function getLibp2p(config: Partial<Config> = {}) {
 	)
 
 	return await createLibp2p<ServiceMap>({
-		peerId: peerId,
+		privateKey: privateKey,
 		start: false,
 		addresses: { listen, announce },
 		transports: [webSockets({ filter: all })],
-		connectionManager: { minConnections, maxConnections },
+		connectionManager: { maxConnections },
 		connectionMonitor: { protocolPrefix: "canvas" },
 
 		streamMuxers: [yamux()],
-		connectionEncryption: [noise({})],
+		connectionEncrypters: [noise({})],
 
 		metrics: prometheusMetrics({}),
 

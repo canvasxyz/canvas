@@ -11,7 +11,7 @@ type State = {
 	roots: Record<string, string | null>
 }
 
-const bootstrapPeerIds = ["12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn"]
+const bootstrapPeerIds = ["12D3KooWMvSCSeJ6zxJJRQZSpyGqbNcqSJfcJGZLRiMVMePXzMax"]
 
 function reduce(state: State, event: Event): State {
 	// console.log(event)

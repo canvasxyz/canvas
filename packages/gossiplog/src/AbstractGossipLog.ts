@@ -1,4 +1,4 @@
-import { TypedEventEmitter, CustomEvent, CodeError, Libp2p } from "@libp2p/interface"
+import { TypedEventEmitter, Libp2p } from "@libp2p/interface"
 import { Logger, logger } from "@libp2p/logger"
 import { equals, toString } from "uint8arrays"
 
@@ -9,6 +9,7 @@ import { ed25519 } from "@canvas-js/signatures"
 import { assert, zip, prepare, prepareMessage } from "@canvas-js/utils"
 
 import type { NetworkConfig, ServiceMap } from "@canvas-js/gossiplog/libp2p"
+import { AbortError, MessageNotFoundError, MissingParentError } from "@canvas-js/gossiplog/errors"
 import * as sync from "@canvas-js/gossiplog/sync"
 
 import target from "#target"
@@ -19,7 +20,7 @@ import { BranchMergeIndex } from "./BranchMergeIndex.js"
 import { MessageSource, SignedMessage } from "./SignedMessage.js"
 import { decodeId, encodeId, messageIdPattern } from "./ids.js"
 import { getNextClock } from "./schema.js"
-import { codes, topicPattern } from "./utils.js"
+import { topicPattern } from "./utils.js"
 
 export type GossipLogConsumer<Payload = unknown> = (
 	this: AbstractGossipLog<Payload>,
@@ -280,7 +281,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 				if (leaf === null) {
 					const parent = decodeId(parentKey)
 					this.log.error("missing parent %s of message %s: %O", parent, id, message)
-					throw new CodeError(`missing parent ${parent} of message ${id}`, codes.MISSING_PARENT)
+					throw new MissingParentError(parent, id)
 				}
 			}
 
@@ -430,7 +431,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 					}
 				}
 			} catch (err) {
-				if (err instanceof CodeError && err.code === codes.ABORT) {
+				if (err instanceof AbortError) {
 					complete = false
 				} else {
 					throw err
@@ -447,8 +448,6 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 			this.log("aborted sync with %s (%d messages in %dms)", options.peer ?? "unknown", messageCount, duration)
 		}
 
-		// const [_, heads] = await this.getClock()
-		// this.dispatchEvent(new CustomEvent("commit", { detail: { root, heads } }))
 		this.dispatchEvent(new CustomEvent("sync", { detail: { peer: options.peer, messageCount, duration } }))
 
 		return { complete, messageCount }
@@ -469,7 +468,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 						const signedMessage = await this.get(id)
 						if (signedMessage === null) {
-							throw new CodeError("message not found", "NOT_FOUND", { id })
+							throw new MessageNotFoundError(id)
 						}
 
 						assert(equals(signedMessage.key, key), "invalid message key")

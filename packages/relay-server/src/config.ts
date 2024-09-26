@@ -1,36 +1,34 @@
-import { PeerId } from "@libp2p/interface"
-import { createFromProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
+import { PrivateKey } from "@libp2p/interface"
+import { generateKeyPair, privateKeyFromProtobuf } from "@libp2p/crypto/keys"
 
-const { PEER_ID, LISTEN, ANNOUNCE, MIN_CONNECTIONS, MAX_CONNECTIONS } = process.env
+const { LIBP2P_PRIVATE_KEY, LISTEN, ANNOUNCE, MIN_CONNECTIONS, MAX_CONNECTIONS } = process.env
 
 export interface Config {
-	peerId: PeerId
+	privateKey: PrivateKey
 	listen: string[]
 	announce: string[]
-	minConnections: number
 	maxConnections: number
 }
 
 export async function getConfig(config: Partial<Config>): Promise<Config> {
-	let peerId = config.peerId
-	if (peerId === undefined) {
-		peerId = await getPeerId()
+	let privateKey = config.privateKey
+	if (privateKey === undefined) {
+		privateKey = await getPrivateKey()
 	}
 
-	let { minConnections = 0, maxConnections = 1024 } = config
-	if (MIN_CONNECTIONS !== undefined) minConnections = parseInt(MIN_CONNECTIONS)
+	let { maxConnections = 1024 } = config
 	if (MAX_CONNECTIONS !== undefined) maxConnections = parseInt(MAX_CONNECTIONS)
 
 	const listen = config.listen ?? LISTEN?.split(",") ?? []
 	const announce = config.announce ?? ANNOUNCE?.split(",") ?? []
 
-	return { peerId, listen, announce, minConnections, maxConnections }
+	return { privateKey, listen, announce, maxConnections }
 }
 
-async function getPeerId(): Promise<PeerId> {
-	if (typeof PEER_ID === "string") {
-		return await createFromProtobuf(Buffer.from(PEER_ID, "base64"))
+async function getPrivateKey(): Promise<PrivateKey> {
+	if (typeof LIBP2P_PRIVATE_KEY === "string") {
+		return privateKeyFromProtobuf(Buffer.from(LIBP2P_PRIVATE_KEY, "base64"))
 	} else {
-		return await createEd25519PeerId()
+		return await generateKeyPair("Ed25519")
 	}
 }

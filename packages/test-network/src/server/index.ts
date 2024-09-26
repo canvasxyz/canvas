@@ -1,24 +1,27 @@
 import { WebSocketServer } from "ws"
-import { PeerId } from "@libp2p/interface"
+import { PeerId, PrivateKey } from "@libp2p/interface"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
-import { createFromProtobuf, createEd25519PeerId } from "@libp2p/peer-id-factory"
 
 import { GossipLog } from "@canvas-js/gossiplog/sqlite"
 import { NetworkServer } from "@canvas-js/gossiplog/server"
 
 import { Socket } from "../socket.js"
 import { topic } from "../constants.js"
+import { generateKeyPair, privateKeyFromProtobuf } from "@libp2p/crypto/keys"
+import { peerIdFromPrivateKey } from "@libp2p/peer-id"
 
-const { PEER_ID, PORT } = process.env
+const { LIBP2P_PRIVATE_KEY, PORT } = process.env
 
 const port = parseInt(PORT ?? "9000")
 
-let peerId: PeerId
-if (typeof PEER_ID === "string") {
-	peerId = await createFromProtobuf(Buffer.from(PEER_ID, "base64"))
+let privateKey: PrivateKey
+if (typeof LIBP2P_PRIVATE_KEY === "string") {
+	privateKey = privateKeyFromProtobuf(Buffer.from(LIBP2P_PRIVATE_KEY, "base64"))
 } else {
-	peerId = await createEd25519PeerId()
+	privateKey = await generateKeyPair("Ed25519")
 }
+
+const peerId = peerIdFromPrivateKey(privateKey)
 
 const directory = `data/${bytesToHex(randomBytes(8))}`
 console.log("[server] Using directory", directory)

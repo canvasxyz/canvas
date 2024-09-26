@@ -13,7 +13,7 @@ import { createAPI } from "@canvas-js/gossiplog/api"
 import { assert } from "@canvas-js/utils"
 
 import type { PlatformTarget } from "../interface.js"
-import { getPeerId } from "./peerId.js"
+import { getPrivateKey } from "./privateKey.js"
 
 const target: PlatformTarget = {
 	async connect(gossipLog, url, options = {}) {
@@ -47,12 +47,12 @@ const target: PlatformTarget = {
 	},
 
 	async startLibp2p(gossipLog, config) {
-		let peerId = config.peerId
-		if (peerId === undefined) {
-			peerId = await getPeerId()
+		let privateKey = config.privateKey
+		if (privateKey === undefined) {
+			privateKey = await getPrivateKey()
 		}
 
-		return await getLibp2p(gossipLog, { ...config, peerId })
+		return await getLibp2p(gossipLog, { ...config, privateKey })
 	},
 }
 
