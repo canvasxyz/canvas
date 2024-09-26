@@ -8,7 +8,7 @@ import { assert } from "@canvas-js/utils"
 import type { ModelSchema, IndexInit, PropertyType } from "@canvas-js/modeldb"
 
 import { Canvas } from "./Canvas.js"
-import { Contract /* SnapshotActionSchema, SnapshotModelSchema, */ } from "./types.js"
+import { Contract } from "./types.js"
 import { EffectRecord } from "./runtime/AbstractRuntime.js"
 
 // typeguards
