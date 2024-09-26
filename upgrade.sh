@@ -17,7 +17,9 @@ INSTALL_COMMAND="npm install $1@latest $WORKSPACE_FLAGS"
 
 # Echo the command and ask for confirmation
 echo "Prepared upgrade command:"
+echo ""
 echo "$INSTALL_COMMAND"
+echo ""
 echo "Press Enter to execute this command, or Ctrl+C to cancel..."
 read
 
