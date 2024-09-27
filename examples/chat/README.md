@@ -1,6 +1,6 @@
 # Chat Example
 
-[Demo](https://canvas-chat.pages.dev/) - [Github](https://github.com/canvasxyz/canvas/tree/main/examples/chat)
+[Demo](https://canvas-chat-example.p2p.app/) - [Github](https://github.com/canvasxyz/canvas/tree/main/examples/chat)
 
 The simple chat example implements a public messaging room
 with persistence over libp2p.
