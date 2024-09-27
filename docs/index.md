@@ -9,7 +9,7 @@ layout: home
 </HeroRow>
 
 Canvas is a framework for TypeScript applications, that puts your
-core application logic into a durable state container (like Redux),
+core application logic into a durable state container like Redux,
 making it possible to write reactive applications that run everywhere.
 
 You can use it like an embedded, instant-sync database in the browser,
@@ -61,6 +61,7 @@ export const contract = {
   }
 }
 
+// From the command line: // [!code highlight]
 $ canvas run contract.ts --topic demo.canvas.xyz // [!code highlight]
 ```
 
@@ -100,7 +101,7 @@ abstract much of this away. Now, you can just write your state
 mutations once, and have them run isomorphically on both the frontend
 and backend.
 
-To learn more, check out our [documentation](/1-introduction), or
+To learn more, check out our [docs](/1-introduction), or
 join us on [Github](https://github.com/canvasxyz/canvas) and
 [Discord](https://discord.gg/yQ5pTkAS).
 

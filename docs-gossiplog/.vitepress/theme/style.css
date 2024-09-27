@@ -139,7 +139,7 @@ pre {
 .VPContent.is-home .vp-doc > div > div > p,
 .VPContent.is-home .vp-doc > div > div > ul,
 .VPContent.is-home .vp-doc > div > div > ol {
-  max-width: 560px;
+  max-width: 580px;
 }
 
 @media (max-width: 959px) {
