@@ -20,7 +20,7 @@ import { BranchMergeIndex } from "./BranchMergeIndex.js"
 import { MessageSource, SignedMessage } from "./SignedMessage.js"
 import { decodeId, encodeId, messageIdPattern } from "./ids.js"
 import { getNextClock } from "./schema.js"
-import { topicPattern } from "./utils.js"
+import { gossiplogTopicPattern } from "./utils.js"
 
 export type GossipLogConsumer<Payload = unknown> = (
 	this: AbstractGossipLog<Payload>,
@@ -86,7 +86,10 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 	protected constructor(init: GossipLogInit<Payload>) {
 		super()
-		assert(topicPattern.test(init.topic), "invalid topic (must match [a-zA-Z0-9\\.\\-])")
+		assert(
+			gossiplogTopicPattern.test(init.topic),
+			"invalid topic (must be of the form 'topic' or 'topic#hash', where topic matches [a-zA-Z0-9\\.\\-])",
+		)
 
 		this.topic = init.topic
 		this.signer = init.signer ?? ed25519.create()

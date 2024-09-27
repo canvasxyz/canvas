@@ -1,6 +1,7 @@
 import type { SignatureScheme, Signer } from "./Signer.js"
 import type { Session } from "./Session.js"
 import type { Action } from "./Action.js"
+import type { Snapshot } from "./Snapshot.js"
 import type { Awaitable } from "./Awaitable.js"
 
 export type DidIdentifier = `did:${string}`
@@ -16,7 +17,7 @@ export interface AbstractSessionData {
 }
 
 export interface SessionSigner<AuthorizationData = any> {
-	scheme: SignatureScheme<Action | Session<AuthorizationData>>
+	scheme: SignatureScheme<Action | Session<AuthorizationData> | Snapshot>
 	match: (did: DidIdentifier) => boolean
 
 	getDid: () => Awaitable<DidIdentifier>
@@ -27,10 +28,10 @@ export interface SessionSigner<AuthorizationData = any> {
 	getSession: (
 		topic: string,
 		options?: { did?: DidIdentifier } | { address: string },
-	) => Awaitable<{ payload: Session<AuthorizationData>; signer: Signer<Action | Session<AuthorizationData>> } | null>
+	) => Awaitable<{ payload: Session<AuthorizationData>; signer: Signer<Action | Session<AuthorizationData> | Snapshot> } | null>
 	newSession: (
 		topic: string,
-	) => Awaitable<{ payload: Session<AuthorizationData>; signer: Signer<Action | Session<AuthorizationData>> }>
+	) => Awaitable<{ payload: Session<AuthorizationData>; signer: Signer<Action | Session<AuthorizationData> | Snapshot> }>
 
 	/**
 	 * Verify that `session.data` authorizes `session.publicKey`

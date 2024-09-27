@@ -5,7 +5,7 @@ import type { Argv } from "yargs"
 import chalk from "chalk"
 import * as json from "@ipld/dag-json"
 
-import type { Action, Message, Session, Signature } from "@canvas-js/interfaces"
+import type { Action, Message, Session, Signature, Snapshot } from "@canvas-js/interfaces"
 import { Canvas } from "@canvas-js/core"
 
 import { getContractLocation } from "../utils.js"
@@ -52,7 +52,7 @@ export async function handler(args: Args) {
 		const { id, signature, message } = json.parse<{
 			id: string
 			signature: Signature
-			message: Message<Action | Session>
+			message: Message<Action | Session | Snapshot>
 		}>(line)
 
 		try {

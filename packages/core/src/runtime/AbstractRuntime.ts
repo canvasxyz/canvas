@@ -4,7 +4,7 @@ import { bytesToHex } from "@noble/hashes/utils"
 import { logger } from "@libp2p/logger"
 import { TypeTransformerFunction } from "@ipld/schema/typed.js"
 
-import type { Signature, Action, Message, Session, SignerCache } from "@canvas-js/interfaces"
+import type { Signature, Action, Message, Session, Snapshot, SignerCache } from "@canvas-js/interfaces"
 
 import { AbstractModelDB, Effect, ModelValue, ModelSchema } from "@canvas-js/modeldb"
 import {
@@ -15,10 +15,10 @@ import {
 	BranchMergeRecord,
 } from "@canvas-js/gossiplog"
 import { assert, mapValues } from "@canvas-js/utils"
-import { isAction, isSession } from "../utils.js"
+import { isAction, isSession, isSnapshot } from "../utils.js"
 
 export type ExecutionContext = {
-	messageLog: AbstractGossipLog<Action | Session>
+	messageLog: AbstractGossipLog<Action | Session | Snapshot>
 	id: string
 	signature: Signature
 	message: Message<Action>
@@ -51,13 +51,6 @@ export abstract class AbstractRuntime {
 			value: "bytes?",
 			branch: "integer",
 			clock: "integer",
-		},
-	} satisfies ModelSchema
-
-	protected static versionsModel = {
-		$versions: {
-			key: "primary", // `${model}/${hash(key)}
-			version: "bytes",
 		},
 	} satisfies ModelSchema
 
@@ -120,11 +113,12 @@ export abstract class AbstractRuntime {
 		await this.db.close()
 	}
 
-	public getConsumer(): GossipLogConsumer<Action | Session> {
+	public getConsumer(): GossipLogConsumer<Action | Session | Snapshot> {
 		const handleSession = this.handleSession.bind(this)
 		const handleAction = this.handleAction.bind(this)
+		const handleSnapshot = this.handleSnapshot.bind(this)
 
-		return async function (this: AbstractGossipLog<Action | Session>, signedMessage) {
+		return async function (this: AbstractGossipLog<Action | Session | Snapshot>, signedMessage) {
 			const { id, signature, message, branch } = signedMessage
 			assert(branch !== undefined, "internal error - expected branch !== undefined")
 
@@ -132,8 +126,31 @@ export abstract class AbstractRuntime {
 				await handleSession(id, signature, message)
 			} else if (isAction(message)) {
 				await handleAction(id, signature, message, this, { branch })
+			} else if (isSnapshot(message)) {
+				await handleSnapshot(id, signature, message, this)
 			} else {
 				throw new Error("invalid message payload type")
+			}
+		}
+	}
+
+	private async handleSnapshot(
+		id: string,
+		signature: Signature,
+		message: Message<Snapshot>,
+		messageLog: AbstractGossipLog<Action | Session | Snapshot>,
+	) {
+		const { models, effects } = message.payload
+
+		const messages = await messageLog.getMessages()
+		assert(messages.length === 0, "snapshot must be first entry on log")
+
+		for (const { key, value } of effects) {
+			await this.db.set("$effects", { key, value, branch: 0, clock: 0 })
+		}
+		for (const [model, rows] of Object.entries(models)) {
+			for (const row of rows) {
+				await this.db.set(model, cbor.decode(row) as any)
 			}
 		}
 	}
@@ -169,7 +186,7 @@ export abstract class AbstractRuntime {
 		id: string,
 		signature: Signature,
 		message: Message<Action>,
-		messageLog: AbstractGossipLog<Action | Session>,
+		messageLog: AbstractGossipLog<Action | Session | Snapshot>,
 		{ branch }: { branch: number },
 	) {
 		const { did, name, context } = message.payload
@@ -412,8 +429,8 @@ export abstract class AbstractRuntime {
 
 			// eslint-disable-next-line no-constant-condition
 			while (true) {
-				const results = await this.db.query<{ key: string; value: Uint8Array }>("$effects", {
-					select: { key: true, value: true },
+				const results = await this.db.query<{ key: string; value: Uint8Array; clock: number }>("$effects", {
+					select: { key: true, value: true, clock: true },
 					where: { key: { gte: lowerBound, lt: upperBound } },
 					orderBy: { key: "desc" },
 					limit: 1,
@@ -421,6 +438,10 @@ export abstract class AbstractRuntime {
 
 				if (results.length === 0) {
 					return null
+				}
+
+				if (results[0].clock === 0) {
+					return cbor.decode<null | T>(results[0].value)
 				}
 
 				const [effect] = results

@@ -5,6 +5,7 @@ import { randomBytes, bytesToHex } from "@noble/hashes/utils"
 import type {
 	Action,
 	Session,
+	Snapshot,
 	Signer,
 	Awaitable,
 	SignatureScheme,
@@ -28,11 +29,11 @@ export abstract class AbstractSessionSigner<AuthorizationData, WalletAddress ext
 	protected readonly log: Logger
 	protected readonly privkeySeed: string
 
-	#cache = new Map<string, { session: Session; signer: Signer<Action | Session<AuthorizationData>> }>()
+	#cache = new Map<string, { session: Session; signer: Signer<Action | Session<AuthorizationData> | Snapshot> }>()
 
 	public constructor(
 		public readonly key: string,
-		public readonly scheme: SignatureScheme<Action | Session<AuthorizationData>>,
+		public readonly scheme: SignatureScheme<Action | Session<AuthorizationData> | Snapshot>,
 		options: AbstractSessionSignerOptions = {},
 	) {
 		this.log = logger(`canvas:signer:${key}`)
@@ -63,7 +64,7 @@ export abstract class AbstractSessionSigner<AuthorizationData, WalletAddress ext
 	 */
 	public async newSession(
 		topic: string,
-	): Promise<{ payload: Session<AuthorizationData>; signer: Signer<Action | Session<AuthorizationData>> }> {
+	): Promise<{ payload: Session<AuthorizationData>; signer: Signer<Action | Session<AuthorizationData> | Snapshot> }> {
 		const signer = this.scheme.create()
 		const did = await this.getDid()
 		const session = await this.authorize({
@@ -90,7 +91,10 @@ export abstract class AbstractSessionSigner<AuthorizationData, WalletAddress ext
 	public async getSession(
 		topic: string,
 		options: { did?: string; address?: string } = {},
-	): Promise<{ payload: Session<AuthorizationData>; signer: Signer<Action | Session<AuthorizationData>> } | null> {
+	): Promise<{
+		payload: Session<AuthorizationData>
+		signer: Signer<Action | Session<AuthorizationData> | Snapshot>
+	} | null> {
 		let did
 		if (options.address) {
 			const dids = this.listSessions(topic).filter((did) => did.endsWith(":" + options.address))

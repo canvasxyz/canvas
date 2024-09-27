@@ -3,7 +3,7 @@ import { logger } from "@libp2p/logger"
 
 import type pg from "pg"
 
-import { Signature, Action, Session, Message, SessionSigner, SignerCache } from "@canvas-js/interfaces"
+import { Signature, Action, Session, Message, Snapshot, SessionSigner, SignerCache } from "@canvas-js/interfaces"
 import { AbstractModelDB, Model, ModelSchema, Effect } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { AbstractGossipLog, GossipLogEvents, SignedMessage } from "@canvas-js/gossiplog"
@@ -15,8 +15,10 @@ import target from "#target"
 
 import type { Contract, ActionImplementationFunction, ActionImplementationObject } from "./types.js"
 import { Runtime, createRuntime } from "./runtime/index.js"
-import { validatePayload } from "./schema.js"
 import { ActionRecord } from "./runtime/AbstractRuntime.js"
+import { validatePayload } from "./schema.js"
+import { hashSnapshot } from "./snapshot.js"
+import { topicPattern } from "./utils.js"
 
 export type { Model } from "@canvas-js/modeldb"
 export type { PeerId } from "@libp2p/interface"
@@ -32,25 +34,31 @@ export interface CanvasConfig<T extends Contract = Contract> {
 	/** set a memory limit for the quickjs runtime, only used if `contract` is a string */
 	runtimeMemoryLimit?: number
 
+	/** clear all models and metadata before starting */
 	reset?: boolean
+
+	/** define additional tables in the local modeldb database */
 	schema?: ModelSchema
+
+	/** provide a snapshot to initialize the runtime database with, requires `reset: true` */
+	snapshot?: Snapshot | null
 }
 
 export type ActionOptions = { signer?: SessionSigner }
 
 export type ActionAPI<Args = any> = (
-	args: Args,
+	args?: Args,
 	options?: ActionOptions,
 ) => Promise<{ id: string; signature: Signature; message: Message<Action> }>
 
-export interface CanvasEvents extends GossipLogEvents<Action | Session> {
+export interface CanvasEvents extends GossipLogEvents<Action | Session | Snapshot> {
 	stop: Event
 }
 
 export type CanvasLogEvent = CustomEvent<{
 	id: string
 	signature: unknown
-	message: Message<Action | Session>
+	message: Message<Action | Session | Snapshot>
 }>
 
 export type ApplicationData = {
@@ -63,19 +71,22 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 	public static async initialize<T extends Contract>(config: CanvasConfig<T>): Promise<Canvas<T>> {
 		const { topic, path = null, contract, signers: initSigners = [], runtimeMemoryLimit } = config
 
+		assert(topicPattern.test(topic), "invalid topic (must match [a-zA-Z0-9\\.\\-])")
+
 		const signers = new SignerCache(initSigners.length === 0 ? [new SIWESigner()] : initSigners)
 
-		const verifySignature = (signature: Signature, message: Message<Action | Session>) => {
+		const verifySignature = (signature: Signature, message: Message<Action | Session | Snapshot>) => {
 			const signer = signers.getAll().find((signer) => signer.scheme.codecs.includes(signature.codec))
 			assert(signer !== undefined, "no matching signer found")
 			return signer.scheme.verify(signature, message)
 		}
 
 		const runtime = await createRuntime(topic, signers, contract, { runtimeMemoryLimit })
+		const gossipTopic = config.snapshot ? `topic#${hashSnapshot(config.snapshot)}` : topic // topic for peering
 		const messageLog = await target.openGossipLog(
-			{ topic, path },
+			{ topic: gossipTopic, path },
 			{
-				topic: topic,
+				topic, // topic for signing and execution, in runtime consumer
 				apply: runtime.getConsumer(),
 				validatePayload: validatePayload,
 				verifySignature: verifySignature,
@@ -85,6 +96,19 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 
 		const db = messageLog.db
 		runtime.db = db
+
+		if (config.reset) {
+			for (const modelName of Object.keys({ ...config.schema, ...runtime.schema, ...AbstractGossipLog.schema })) {
+				await db.clear(modelName)
+			}
+		}
+
+		if (config.snapshot) {
+			if (!config.reset) {
+				throw new Error("snapshot must be provided with reset: true")
+			}
+			await messageLog.append(config.snapshot)
+		}
 
 		const app = new Canvas<T>(signers, messageLog, runtime)
 
@@ -137,8 +161,8 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		[K in keyof T["actions"]]: T["actions"][K] extends ActionImplementationFunction<infer Args>
 			? ActionAPI<Args>
 			: T["actions"][K] extends ActionImplementationObject<infer Args>
-			? ActionAPI<Args>
-			: never
+				? ActionAPI<Args>
+				: never
 	}
 
 	private readonly controller = new AbortController()
@@ -146,7 +170,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 
 	private constructor(
 		public readonly signers: SignerCache,
-		public readonly messageLog: AbstractGossipLog<Action | Session>,
+		public readonly messageLog: AbstractGossipLog<Action | Session | Snapshot>,
 		private readonly runtime: Runtime,
 	) {
 		super()
@@ -198,7 +222,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 				const argsTransformer = runtime.argsTransformers[name]
 				assert(argsTransformer !== undefined, "invalid action name")
 
-				const argsRepresentation = argsTransformer.toRepresentation(args)
+				const argsRepresentation = args === undefined ? null : argsTransformer.toRepresentation(args)
 				assert(argsRepresentation !== undefined, "action args did not validate the provided schema type")
 
 				const { id, signature, message } = await this.messageLog.append<Action>(
@@ -229,7 +253,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		await target.listen(this, port, options)
 	}
 
-	public async startLibp2p(config: NetworkConfig): Promise<Libp2p<ServiceMap<Action | Session>>> {
+	public async startLibp2p(config: NetworkConfig): Promise<Libp2p<ServiceMap<Action | Session | Snapshot>>> {
 		return await this.messageLog.startLibp2p(config)
 	}
 
@@ -298,7 +322,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 	 * Low-level utility method for internal and debugging use.
 	 * The normal way to apply actions is to use the `Canvas.actions[name](...)` functions.
 	 */
-	public async insert(signature: Signature, message: Message<Session | Action>): Promise<{ id: string }> {
+	public async insert(signature: Signature, message: Message<Session | Action | Snapshot>): Promise<{ id: string }> {
 		assert(message.topic === this.topic, "invalid message topic")
 
 		const signedMessage = this.messageLog.encode(signature, message)
@@ -306,7 +330,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		return { id: signedMessage.id }
 	}
 
-	public async getMessage(id: string): Promise<SignedMessage<Action | Session> | null> {
+	public async getMessage(id: string): Promise<SignedMessage<Action | Session | Snapshot> | null> {
 		return await this.messageLog.get(id)
 	}
 
@@ -314,7 +338,7 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		lowerBound: { id: string; inclusive: boolean } | null = null,
 		upperBound: { id: string; inclusive: boolean } | null = null,
 		options: { reverse?: boolean } = {},
-	): AsyncIterable<SignedMessage<Action | Session>> {
+	): AsyncIterable<SignedMessage<Action | Session | Snapshot>> {
 		const range: { lt?: string; lte?: string; gt?: string; gte?: string; reverse?: boolean; limit?: number } = {}
 		if (lowerBound) {
 			if (lowerBound.inclusive) range.gte = lowerBound.id
