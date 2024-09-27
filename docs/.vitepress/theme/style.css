@@ -172,6 +172,23 @@ pre {
   margin-top: -20px;
 }
 
+
+.VPContent.is-home .vp-code-group {
+  margin-top: 45px;
+}
+
+.VPContent.is-home .vp-code-group [class*='language-'] code .highlighted {
+  padding: 12px 24px 0;
+}
+.VPContent.is-home .vp-code-group [class*='language-'] code .highlighted + .highlighted {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.VPContent.is-home .vp-code-group [class*='language-'] code .highlighted:last-child {
+  padding-bottom: 12px;
+}
+
+
 .VPContent.is-home .named-fence-block {
   position: relative;
   display: block;
