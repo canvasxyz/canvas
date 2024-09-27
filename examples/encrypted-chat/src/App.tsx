@@ -7,64 +7,23 @@ import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 
 import { usePrivkey } from "./components/privkeys"
+import { contract } from "./contract"
+
+const wsURL = import.meta.env.VITE_CANVAS_WS_URL ?? null
+console.log("websocket API URL:", wsURL)
 
 const formatAddress = (address: string | null | undefined) => {
 	return address?.slice(0, 6)
-}
-const toCAIP = (address: string) => {
-	return "did:pkh:eip155:1:" + address
-}
-const fromCAIP = (address: string) => {
-	return address.replace("did:pkh:eip155:1:", "")
 }
 const getGroupId = (address1: string, address2: string) => {
 	return address1 < address2 ? `${address1},${address2}` : `${address1},${address2}`
 }
 
 const useChat = (topic: string, wallet: ethers.Wallet) => {
-	const { app } = useCanvas(null, {
+	const { app } = useCanvas(wsURL, {
 		topic,
 		signers: [new SIWESigner({ signer: wallet })],
-		contract: {
-			models: {
-				encryptionKeys: {
-					address: "primary",
-					key: "string",
-				},
-				encryptionGroups: {
-					id: "primary",
-					groupKeys: "string",
-					key: "string",
-				},
-				privateMessages: {
-					id: "primary",
-					ciphertext: "string",
-					group: "string",
-					timestamp: "integer",
-					$indexes: [["timestamp"]],
-				},
-			},
-			actions: {
-				registerEncryptionKey: (db, { key }, { address }) => {
-					db.set("encryptionKeys", { address, key })
-				},
-				createEncryptionGroup: (db, { members, groupKeys, groupPublicKey }, { address }) => {
-					// TODO: enforce the encryption group is sorted correctly, and each groupKey is registered correctly
-					if (members.indexOf(fromCAIP(address)) === -1) throw new Error()
-					const id = members.join()
-
-					db.set("encryptionGroups", {
-						id,
-						groupKeys: JSON.stringify(groupKeys),
-						key: groupPublicKey,
-					})
-				},
-				sendPrivateMessage: (db, { group, ciphertext }, { timestamp, id }) => {
-					// TODO: check address is in group
-					db.set("privateMessages", { id, ciphertext, group, timestamp })
-				},
-			},
-		},
+		contract,
 	})
 
 	const people = useLiveQuery(app, "encryptionKeys", { orderBy: { address: "desc" } })
@@ -82,10 +41,10 @@ const useChat = (topic: string, wallet: ethers.Wallet) => {
 			if (!app) throw new Error()
 			if (!wallet) throw new Error()
 
-			const myKey = await app.db.get("encryptionKeys", toCAIP(wallet.address))
+			const myKey = await app.db.get("encryptionKeys", wallet.address)
 			if (!myKey) throw new Error("Wallet has not registered an encryption key")
 
-			const recipientKey = await app.db.get("encryptionKeys", toCAIP(recipient))
+			const recipientKey = await app.db.get("encryptionKeys", recipient)
 			if (!recipientKey) throw new Error("Recipient has not registered an encryption key")
 
 			const members = [wallet.address, recipient]
@@ -93,7 +52,7 @@ const useChat = (topic: string, wallet: ethers.Wallet) => {
 
 			const groupPrivateKey = ethers.Wallet.createRandom().privateKey
 			const groupPublicKey = getEncryptionPublicKey(groupPrivateKey.slice(2))
-			const groupKeys = (await Promise.all(members.map((member) => app.db.get("encryptionKeys", toCAIP(member)))))
+			const groupKeys = (await Promise.all(members.map((member) => app.db.get("encryptionKeys", member))))
 				.map((result) => result?.key)
 				.map((key) => {
 					return encryptSafely({ publicKey: key as string, data: groupPrivateKey, version: "x25519-xsalsa20-poly1305" })
@@ -144,14 +103,14 @@ function Wrapper() {
 
 function App({ wallet1, wallet2 }: { wallet1: ethers.Wallet; wallet2: ethers.Wallet }) {
 	const { app, people, registerEncryptionKey, createEncryptionGroup, sendPrivateMessage } = useChat(
-		"example-topic",
+		"chat-encrypted.canvas.xyz",
 		wallet1,
 	)
 
-	const { registerEncryptionKey: registerEncryptionKey2 } = useChat("example-topic", wallet2)
+	const { registerEncryptionKey: registerEncryptionKey2 } = useChat("chat-encrypted.canvas.xyz", wallet2)
 
-	const registration1 = useLiveQuery(app, "encryptionKeys", { where: { address: toCAIP(wallet1?.address) } })
-	const registration2 = useLiveQuery(app, "encryptionKeys", { where: { address: toCAIP(wallet2?.address) } })
+	const registration1 = useLiveQuery(app, "encryptionKeys", { where: { address: wallet1?.address } })
+	const registration2 = useLiveQuery(app, "encryptionKeys", { where: { address: wallet2?.address } })
 
 	const [conversationAddress, setConversationAddress] = useState<string>()
 
@@ -171,9 +130,9 @@ function App({ wallet1, wallet2 }: { wallet1: ethers.Wallet; wallet2: ethers.Wal
 									style={{ width: "100%", textAlign: "left" }}
 									onClick={() => setConversationAddress(address)}
 								>
-									{formatAddress(fromCAIP(address))} <span title={key}>🔐</span>{" "}
-									{fromCAIP(address) === wallet1?.address && <span>[You]</span>}
-									{fromCAIP(address) === wallet2?.address && <span>[Guest]</span>}
+									{formatAddress(address)} <span title={key}>🔐</span>{" "}
+									{address === wallet1?.address && <span>[You]</span>}
+									{address === wallet2?.address && <span>[Guest]</span>}
 								</button>
 							)
 						})}
@@ -188,7 +147,7 @@ function App({ wallet1, wallet2 }: { wallet1: ethers.Wallet; wallet2: ethers.Wal
 							<Conversation
 								app={app}
 								wallet={wallet1}
-								conversationAddress={fromCAIP(conversationAddress)}
+								conversationAddress={conversationAddress}
 								sendPrivateMessage={sendPrivateMessage}
 								createEncryptionGroup={createEncryptionGroup}
 							/>

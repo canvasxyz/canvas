@@ -6,7 +6,7 @@
 	"scripts": {
 		"build": "vite build",
 		"dev": "vite",
-		"dev:server": "canvas run --offline --port 8080 --static dist --topic chat-example.canvas.xyz contract.canvas.js"
+		"dev:server": "canvas run --offline --port 8080 --static dist --topic chat-example.canvas.xyz src/contract.ts"
 	},
 	"dependencies": {
 		"@canvas-js/chain-atp": "0.10.10",
