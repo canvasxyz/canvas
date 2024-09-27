@@ -1,6 +1,6 @@
 {
 	"name": "@canvas-js/modeldb",
-	"version": "0.10.10",
+	"version": "0.11.0",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"type": "module",
 	"engines": {
@@ -16,14 +16,14 @@
 		"test": "ava --serial"
 	},
 	"devDependencies": {
-		"@canvas-js/modeldb-sqlite-wasm": "0.10.10",
+		"@canvas-js/modeldb-sqlite-wasm": "0.11.0",
 		"fake-indexeddb": "^6.0.0",
 		"nanoid": "^5.0.7",
 		"puppeteer": "^23.4.1",
 		"vite": "^5.4.8"
 	},
 	"dependencies": {
-		"@canvas-js/utils": "0.10.10",
+		"@canvas-js/utils": "0.11.0",
 		"@ipld/dag-json": "^10.2.2",
 		"@libp2p/logger": "^5.1.0",
 		"uint8arrays": "^5.1.0"
