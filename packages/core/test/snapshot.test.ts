@@ -1,8 +1,8 @@
 import test from "ava"
 
 import { Canvas, Contract, createSnapshot } from "@canvas-js/core"
-import { Action, Session, Message } from "@canvas-js/interfaces";
-import { SIWESigner } from "@canvas-js/chain-ethereum";
+import { Action, Session, Message } from "@canvas-js/interfaces"
+import { SIWESigner } from "@canvas-js/chain-ethereum"
 
 test("snapshot persists data across apps", async (t) => {
 	const contract = {
@@ -102,7 +102,6 @@ test("snapshot persists data with merge functions", async (t) => {
 		},
 		actions: {
 			async createPost(db, { id, content }: { id: string; content: string }) {
-				console.log(id, content)
 				await db.set("posts", { id, content })
 			},
 			async deletePost(db, { id }: { id: string }) {
@@ -123,36 +122,36 @@ test("snapshot persists data with merge functions", async (t) => {
 		topic: config.topic,
 		clock: 1,
 		parents: [],
-		payload: session.payload
+		payload: session.payload,
 	}
 	const sessionMessageSignature = await session.signer.sign(sessionMessage)
-	await app.insert(sessionMessageSignature, sessionMessage)
+	const { id: idSession } = await app.insert(sessionMessageSignature, sessionMessage)
 
 	const a: Message<Action> = {
 		topic: config.topic,
-		clock: 1,
-		parents: [],
+		clock: 2,
+		parents: [idSession],
 		payload: {
 			type: "action",
 			did: session.payload.did,
 			name: "createPost",
-			args: { id: "a", content: "foo", },
-			context: { timestamp: new Date().getTime() }
-		}
+			args: { id: "a", content: "foo" },
+			context: { timestamp: new Date().getTime() },
+		},
 	}
 	const { id: idA } = await app.insert(await session.signer.sign(a), a)
 
 	const b: Message<Action> = {
 		topic: config.topic,
-		clock: 1,
-		parents: [],
+		clock: 2,
+		parents: [idSession],
 		payload: {
 			type: "action",
 			did: session.payload.did,
 			name: "createPost",
-			args: { id: "a", content: "foo", },
-			context: { timestamp: new Date().getTime() }
-		}
+			args: { id: "a", content: "foo" },
+			context: { timestamp: new Date().getTime() },
+		},
 	}
 	const { id: idB } = await app.insert(await session.signer.sign(b), b)
 
