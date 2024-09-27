@@ -1,7 +1,7 @@
 import http from "node:http"
 
 import { logger } from "@libp2p/logger"
-import { CodeError, Stream, StreamMuxer } from "@libp2p/interface"
+import { Stream, StreamMuxer } from "@libp2p/interface"
 import { ProtocolStream, handle, select } from "@libp2p/multistream-select"
 import { yamux } from "@chainsafe/libp2p-yamux"
 
@@ -17,10 +17,11 @@ import { assert } from "@canvas-js/utils"
 
 import * as sync from "@canvas-js/gossiplog/sync"
 import { Event } from "@canvas-js/gossiplog/protocols/events"
+import { MissingParentError } from "@canvas-js/gossiplog/errors"
 
 import { AbstractGossipLog, GossipLogEvents } from "../AbstractGossipLog.js"
 import { decodeId, encodeId } from "../ids.js"
-import { codes, getPushProtocol, getSyncProtocol, chunk, decodeEvents, encodeEvents } from "../utils.js"
+import { getPushProtocol, getSyncProtocol, chunk, decodeEvents, encodeEvents } from "../utils.js"
 
 export const factory = yamux({})({ logger: { forComponent: logger } })
 
@@ -184,7 +185,7 @@ class Connection<Payload> {
 		try {
 			await this.gossipLog.insert(signedMessage)
 		} catch (err) {
-			if (err instanceof CodeError && err.code === codes.MISSING_PARENT) {
+			if (err instanceof MissingParentError) {
 				this.sync()
 				return
 			} else {

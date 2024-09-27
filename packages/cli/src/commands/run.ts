@@ -93,11 +93,6 @@ export const builder = (yargs: Argv) =>
 			type: "array",
 			desc: "Initial application peers, e.g. /dns4/myapp.com/tcp/4444/ws/p2p/12D3KooWnzt...",
 		})
-		.option("min-connections", {
-			type: "number",
-			desc: "Auto-dial peers while below a threshold",
-			default: MIN_CONNECTIONS,
-		})
 		.option("max-connections", {
 			type: "number",
 			desc: "Stop accepting connections above a limit",
@@ -196,7 +191,6 @@ export async function handler(args: Args) {
 		const libp2p = await app.startLibp2p({
 			listen,
 			announce,
-			minConnections: args["min-connections"],
 			maxConnections: args["max-connections"],
 			bootstrapList: bootstrapList,
 		})

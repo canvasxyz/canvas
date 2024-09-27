@@ -26,8 +26,8 @@ $ npm i @canvas-js/core
 import { Canvas } from "@canvas-js/core"
 
 const app = await Canvas.initialize({
+  topic: "com.example.my-app",
   contract: {
-    topic: "com.example.my-app",
     models: {
       posts: {
         id: "primary",
@@ -116,42 +116,18 @@ export type ActionContext = {
 import { Signature, Action, Session, SessionSigner } from "@canvas-js/interfaces"
 import { AbstractModelDB } from "@canvas-js/modeldb"
 
-export interface NetworkConfig {
-  offline?: boolean
-  disablePing?: boolean
-  /** array of local WebSocket multiaddrs, e.g. "/ip4/127.0.0.1/tcp/3000/ws" */
-  listen?: string[]
-  /** array of public WebSocket multiaddrs, e.g. "/dns4/myapp.com/tcp/443/wss" */
-  announce?: string[]
-  bootstrapList?: string[]
-  minConnections?: number
-  maxConnections?: number
-  discoveryTopic?: string
-  discoveryInterval?: number
-  trackAllPeers?: boolean
-  enableWebRTC?: boolean
-}
-export interface CanvasConfig<T extends Contract = Contract> extends NetworkConfig {
-  contract: string | T
-  signers?: SessionSigner[]
+export interface CanvasConfig<T extends Contract = Contract> {
   /** data directory path (NodeJS only) */
   path?: string | null
-  /** provide an existing libp2p instance instead of creating a new one */
-  libp2p?: Libp2p<ServiceMap>
+  topic: string
+  contract: string | T
+  signers?: SessionSigner[]
   runtimeMemoryLimit?: number
 }
 
-export interface CanvasEvents extends GossipLogEvents<Action | Session | Snapshot, unknown> {
-  close: Event
-  connect: CustomEvent<{
-    peer: PeerId
-  }>
-  disconnect: CustomEvent<{
-    peer: PeerId
-  }>
-  "connections:updated": CustomEvent<ConnectionsInfo>
-  "presence:join": CustomEvent<PresenceInfo>
-  "presence:leave": CustomEvent<PresenceInfo>
+export interface CanvasEvents extends GossipLogEvents<Action | Session | Snapshot> {
+  connect: CustomEvent<{ peer: string }>
+  disconnect: CustomEvent<{ peer: string }>
 }
 
 export declare class Canvas extends EventEmitter<CanvasEvents> {
@@ -159,16 +135,11 @@ export declare class Canvas extends EventEmitter<CanvasEvents> {
 
   public readonly topic: string
   public readonly signers: SessionSigner[]
-  public readonly peerId: PeerId
-  public readonly libp2p: Libp2p<ServiceMap> | null
   public readonly db: AbstractModelDB
 
   public readonly actions: Record<
     string,
-    (
-      args: any,
-      options: { chain?: string; signer?: SessionSigner },
-    ) => Promise<{ id: string }>
+    (args: any, options: { chain?: string; signer?: SessionSigner }) => Promise<{ id: string }>
   >
 
   public close(): Promise<void>

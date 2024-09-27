@@ -201,11 +201,25 @@ export abstract class AbstractRuntime {
 
 		const address = signer.getAddressFromDid(did)
 
-		const sessions = await this.db.query<{ id: string; expiration: number | null }>("$sessions", {
+		const sessions = await this.db.query<{ message_id: string; expiration: number | null }>("$sessions", {
 			where: { public_key: signature.publicKey, did: did },
 		})
 
-		if (sessions.every(({ expiration }) => expiration !== null && expiration < context.timestamp)) {
+		const activeSessions = sessions.filter(({ expiration }) => expiration === null || expiration > context.timestamp)
+
+		let sessionId: string | null = null
+		for (const { message_id } of activeSessions) {
+			const visited = new Set<string>()
+			for (const parentId of message.parents) {
+				const isAncestor = await messageLog.isAncestor(parentId, message_id, visited)
+				if (isAncestor) {
+					sessionId = message_id
+					break
+				}
+			}
+		}
+
+		if (sessionId === null) {
 			throw new Error(`missing session ${signature.publicKey} for ${did}`)
 		}
 
@@ -257,7 +271,15 @@ export abstract class AbstractRuntime {
 		}
 
 		this.log("applying effects %O", effects)
-		await this.db.apply(effects)
+
+		try {
+			await this.db.apply(effects)
+		} catch (err) {
+			if (err instanceof Error) {
+				err.message = `${name}: ${err.message}`
+			}
+			throw err
+		}
 
 		return result
 	}

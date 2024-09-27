@@ -131,7 +131,7 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
   }
 
   .HeroRow.has-image .main {
-    max-width: 660px;
+    max-width: 640px;
   }
 }
 

@@ -1,5 +1,5 @@
 import { createLibp2p } from "libp2p"
-import { Libp2p, PeerId, PubSub } from "@libp2p/interface"
+import { Libp2p, PeerId, PrivateKey, PubSub } from "@libp2p/interface"
 import { Identify, identify } from "@libp2p/identify"
 import { webSockets } from "@libp2p/websockets"
 import { all } from "@libp2p/websockets/filters"
@@ -10,7 +10,6 @@ import { KadDHT, kadDHT } from "@libp2p/kad-dht"
 import { PingService, ping as pingService } from "@libp2p/ping"
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
 import { GossipsubEvents, gossipsub } from "@chainsafe/libp2p-gossipsub"
-import { createEd25519PeerId } from "@libp2p/peer-id-factory"
 
 export { GossipSub } from "@chainsafe/libp2p-gossipsub"
 
@@ -23,10 +22,11 @@ import { AbstractGossipLog } from "@canvas-js/gossiplog"
 import { defaultBootstrapList } from "@canvas-js/gossiplog/bootstrap"
 
 import { GossipLogService, gossipLogService } from "./service.js"
+import { generateKeyPair } from "@libp2p/crypto/keys"
 
 export interface NetworkConfig {
 	start?: boolean
-	peerId?: PeerId
+	privateKey?: PrivateKey
 
 	/** array of local WebSocket multiaddrs, e.g. "/ip4/127.0.0.1/tcp/3000/ws" */
 	listen?: string[]
@@ -35,10 +35,7 @@ export interface NetworkConfig {
 	announce?: string[]
 
 	bootstrapList?: string[]
-
-	minConnections?: number
 	maxConnections?: number
-
 	registry?: Registry
 }
 
@@ -51,23 +48,23 @@ export type ServiceMap<Payload> = {
 	rendezvous: RendezvousClient
 }
 
-const getDHTProtocol = (topic: string | null) => (topic === null ? `/canvas/kad/1.0.0` : `/canvas/kad/1.0.0/${topic}`)
+const getDHTProtocol = (topic: string) => `/canvas/kad/1.0.0/${topic}`
 
 export async function getLibp2p<Payload>(
 	gossipLog: AbstractGossipLog<Payload>,
 	config: NetworkConfig,
 ): Promise<Libp2p<ServiceMap<Payload>>> {
-	let peerId = config.peerId
-	if (peerId === undefined) {
-		peerId = await createEd25519PeerId()
+	let privateKey = config.privateKey
+	if (privateKey === undefined) {
+		privateKey = await generateKeyPair("Ed25519")
 	}
 
 	const bootstrapList = config.bootstrapList ?? defaultBootstrapList
 	const listen = config.listen ?? ["/ip4/127.0.0.1/tcp/8080/ws"]
 	const announce = config.announce ?? ["/ip4/127.0.0.1/tcp/8080/ws"]
 
-	return await createLibp2p({
-		peerId: config.peerId,
+	const libp2p = await createLibp2p({
+		privateKey: privateKey,
 		start: config.start ?? true,
 		addresses: { listen, announce },
 		transports: [webSockets({ filter: all })],
@@ -76,7 +73,6 @@ export async function getLibp2p<Payload>(
 		},
 
 		connectionManager: {
-			minConnections: config.minConnections,
 			maxConnections: config.maxConnections,
 			maxIncomingPendingConnections: 256,
 			inboundConnectionThreshold: 16,
@@ -87,7 +83,7 @@ export async function getLibp2p<Payload>(
 		peerDiscovery: bootstrapList.length > 0 ? [bootstrap({ list: bootstrapList })] : [],
 
 		streamMuxers: [yamux()],
-		connectionEncryption: [noise({})],
+		connectionEncrypters: [noise({})],
 
 		metrics: prometheusMetrics({ registry: config.registry }),
 
@@ -114,4 +110,14 @@ export async function getLibp2p<Payload>(
 			}),
 		},
 	})
+
+	libp2p.services.rendezvous.addEventListener("peer", ({ detail: peerInfo }) => {
+		const dht = libp2p.services.dht as KadDHT & {
+			routingTable: { size: number; add: (peerId: PeerId) => Promise<void> }
+		}
+
+		dht.routingTable.add(peerInfo.id)
+	})
+
+	return libp2p
 }

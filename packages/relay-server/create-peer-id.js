@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 
-import { createEd25519PeerId, exportToProtobuf } from "@libp2p/peer-id-factory"
+import { generateKeyPair, privateKeyToProtobuf } from "@libp2p/crypto/keys"
+import { peerIdFromPublicKey } from "@libp2p/peer-id"
 
-const id = await createEd25519PeerId()
-console.log(`# ${id}`)
-console.log(`PEER_ID=${Buffer.from(exportToProtobuf(id)).toString("base64")}`)
+const privateKey = await generateKeyPair("Ed25519")
+const peerId = peerIdFromPublicKey(privateKey.publicKey)
+console.log(`# ${peerId}`)
+console.log(`LIBP2P_PRIVATE_KEY=${Buffer.from(privateKeyToProtobuf(privateKey)).toString("base64")}`)

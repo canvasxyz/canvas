@@ -1,5 +1,4 @@
 import AggregateError from "aggregate-error"
-import { CodeError } from "@libp2p/interface"
 import { anySignal } from "any-signal"
 import { Action, Message, Session, Snapshot } from "@canvas-js/interfaces"
 
@@ -18,8 +17,6 @@ export function getErrorMessage(err: unknown): string {
 	if (err instanceof Error && err.name === "AggregateError") {
 		const { errors } = err as AggregateError
 		return errors.map(getErrorMessage).join("; ")
-	} else if (err instanceof CodeError) {
-		return `${err.code}: ${err.message}`
 	} else if (err instanceof Error) {
 		return `${err.name}: ${err.message}`
 	} else {

@@ -1,4 +1,4 @@
-import { Stream, CodeError } from "@libp2p/interface"
+import { Stream } from "@libp2p/interface"
 import { Logger, logger } from "@libp2p/logger"
 import { Pushable, pushable } from "it-pushable"
 import { Uint8ArrayList } from "uint8arraylist"
@@ -9,10 +9,10 @@ import type { Key, Node } from "@canvas-js/okra"
 import { assert } from "@canvas-js/utils"
 
 import * as Sync from "@canvas-js/gossiplog/protocols/sync"
+import { AbortError } from "@canvas-js/gossiplog/errors"
 
 import { encodeKey, decodeNode } from "./utils.js"
 import { SyncSnapshot } from "../interface.js"
-import { codes } from "../utils.js"
 
 export async function* decodeResponses(source: AsyncIterable<Uint8Array | Uint8ArrayList>) {
 	for await (const msg of source) {
@@ -95,7 +95,7 @@ export class Client implements SyncSnapshot {
 
 		this.log.trace("res: %O", res)
 		if (res.abort !== undefined) {
-			throw new CodeError("sync aborted by server", codes.ABORT, res.abort)
+			throw new AbortError()
 		}
 
 		return res

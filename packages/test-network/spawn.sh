@@ -12,9 +12,6 @@ echo "starting $PROCESS_COUNT processes of $PEER_COUNT peers"
 # Command to run (replace 'your_command_here' with your actual command)
 command="node lib/client/entrypoint.js"
 
-# export BOOTSTRAP_LIST="/dns4/localhost/tcp/8080/ws/p2p/12D3KooWNbCWxWV3Tmu38pEi2hHVUiBHbr7x6bHLFQXRqgui6Vrn"
-# export RELAY_SERVER="/dns4/localhost/tcp/8081/ws/p2p/12D3KooWEaSQnJTxztTHmKmcQkDy3oScjo8ww4JCKig73XH4cmb3"
-
 for i in $(seq 1 $PROCESS_COUNT)
 do
     # Start the command and prefix its output
