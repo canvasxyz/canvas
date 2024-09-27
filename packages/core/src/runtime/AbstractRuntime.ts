@@ -254,7 +254,15 @@ export abstract class AbstractRuntime {
 		}
 
 		this.log("applying effects %O", effects)
-		await this.db.apply(effects)
+
+		try {
+			await this.db.apply(effects)
+		} catch (err) {
+			if (err instanceof Error) {
+				err.message = `${name}: ${err.message}`
+			}
+			throw err
+		}
 
 		return result
 	}
