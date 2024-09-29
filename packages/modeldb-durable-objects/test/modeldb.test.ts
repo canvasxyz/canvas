@@ -13,28 +13,26 @@ test.beforeEach(async () => {
 	})
 })
 
-test.afterEach(async () => {
+test.afterEach.always(async () => {
 	await worker.stop()
 })
 
 test("durable object should store and return data in modeldb", async (t) => {
 	const uuid = "d37f4bbf-d51c-4b20-8a1c-7bc53a588e4d"
+	const data = { id: "foo", value: "123" }
+
+	const clear = await worker.fetch(`http://example.com/${uuid}/clear`, {
+		method: "POST",
+	})
+	t.is(clear.status, 200)
 
 	const post = await worker.fetch(`http://example.com/${uuid}`, {
 		method: "POST",
-		body: JSON.stringify({ key: "foo", value: "123" }),
+		body: JSON.stringify(data),
 	})
-	t.true(post.ok)
 	t.is(post.status, 200)
 
-	console.log("put", await post.text())
-
-	const key = "foo"
-	const response = await worker.fetch(`http://example.com/${uuid}/${key}`)
-	t.true(response.ok)
+	const response = await worker.fetch(`http://example.com/${uuid}/${data.id}`)
 	t.is(response.status, 200)
-
-	const data = await response.json()
-	console.log("get", data)
-	t.deepEqual(data, { key: "foo", value: "123" })
+	t.deepEqual(JSON.parse(await response.text()), { id: "foo", value: "123" })
 })

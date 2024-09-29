@@ -74,6 +74,12 @@ export class ModelDB extends AbstractModelDB {
 		return api.get(key) as T | null
 	}
 
+	public async set<T extends ModelValue<any> = ModelValue<any>>(modelName: string, value: T): Promise<void> {
+		const api = this.#models[modelName]
+		assert(api !== undefined, `model ${modelName} not found`)
+		return api.set(value)
+	}
+
 	public async *iterate<T extends ModelValue<any> = ModelValue<any>>(
 		modelName: string,
 		query: QueryParams = {},

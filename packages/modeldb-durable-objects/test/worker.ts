@@ -9,7 +9,8 @@ export interface Env {
 export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext) {
 		const url = new URL(request.url)
-		const id = env.TEST_OBJECT.idFromName(url.pathname)
+		const uuid = url.pathname.split("/")[1]
+		const id = env.TEST_OBJECT.idFromName(uuid)
 		const stub = env.TEST_OBJECT.get(id)
 
 		// forward request to durable object

@@ -1,25 +1,25 @@
 import { SqlStorage } from "@cloudflare/workers-types"
 
-export class Query<P, R> {
+export class Query<R> {
 	constructor(
 		private readonly db: SqlStorage,
 		private readonly sql: string,
 	) {}
 
-	public get(params: P): R | null {
+	public get(params: any[]): R | null {
 		try {
-			return this.db.exec(this.sql, params).one() as R
+			return this.db.exec(this.sql, ...params).one() as R
 		} catch (err) {
 			return null
 		}
 	}
 
-	public all(params: P): R[] {
-		return this.db.exec(this.sql, params).toArray() as R[]
+	public all(params: any[]): R[] {
+		return this.db.exec(this.sql, ...params).toArray() as R[]
 	}
 
-	public iterate(params: P): IterableIterator<R> {
-		return this.db.exec(this.sql, params) as IterableIterator<R>
+	public iterate(params: any[]): IterableIterator<R> {
+		return this.db.exec(this.sql, ...params) as IterableIterator<R>
 	}
 }
 
@@ -29,7 +29,7 @@ export class Method<P> {
 		private readonly sql: string,
 	) {}
 
-	public run(params: P) {
-		this.db.exec(this.sql, params)
+	public run(params: any[]) {
+		this.db.exec(this.sql, ...params)
 	}
 }
