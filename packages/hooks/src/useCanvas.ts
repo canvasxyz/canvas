@@ -7,7 +7,7 @@ export const useCanvas = <T extends Contract = Contract>(url: string | null, con
 
 	// TODO: ensure effect hook re-runs on signer change
 	const hashRef = useRef<string>()
-	const lastSnapshotRef = useRef<Snapshot>()
+	const snapshotRef = useRef<Snapshot>()
 	// const renderedRef = useRef(false) // skip second render in React.StrictMode
 
 	useEffect(() => {
@@ -16,32 +16,30 @@ export const useCanvas = <T extends Contract = Contract>(url: string | null, con
 
 		const contractHash = hashContract(config.contract)
 
-		function setupApp<T extends Contract>(newApp: Canvas<T>) {
+		function setupApp<T extends Contract>(appUrl: string | null, app: Canvas<T>) {
 			if (url) {
-				newApp.connect(url).then(() => setApp(newApp))
+				app.connect(url).then(() => setApp(app))
 			} else {
-				setApp(newApp)
+				setApp(app)
 			}
 		}
 
-		const updateSnapshot = async () => {
+		async function updateSnapshot() {
 			if (!app || contractHash === hashRef.current) {
 				// app just initialized, or contract remains unchanged
-				await Canvas.initialize<T>(config).then(setupApp)
-			} else if ((await app.db.count("$messages")) > 1 && lastSnapshotRef.current) {
-				// the contract changed, reuse the old snapshot
-				const snapshot = lastSnapshotRef.current
-				await Canvas.initialize<T>({ ...config, reset: true, snapshot }).then(setupApp)
+				await Canvas.initialize<T>(config).then(setupApp.bind(null, url))
+			} else if ((await app.db.count("$messages")) > 1 && snapshotRef.current) {
+				// contract changed, reuse the old snapshot
+				const snapshot = snapshotRef.current
+				await Canvas.initialize<T>({ ...config, reset: true, snapshot }).then(setupApp.bind(null, url))
 			} else {
-				// the contract changed, make a new snapshot
+				// contract changed, make a new snapshot
 				const snapshot = await app.createSnapshot()
-				await Canvas.initialize<T>({ ...config, reset: true, snapshot })
-					.then(setupApp)
-					.then(() => {
-						lastSnapshotRef.current = snapshot
-					})
+				await Canvas.initialize<T>({ ...config, reset: true, snapshot }).then(setupApp.bind(null, url))
+				snapshotRef.current = snapshot
 			}
 		}
+
 		updateSnapshot().catch((error) => {
 			console.error(error)
 			setError(error)
