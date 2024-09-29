@@ -17,7 +17,7 @@ export const isMergeFunction = (value: unknown): value is ModelSchema["$merge"] 
 export const isIndexInit = (value: unknown): value is IndexInit[] => typeof value === "string" || Array.isArray(value)
 export const isPropertyTypish = (value: unknown): value is PropertyType => typeof value === "string"
 
-export function hashContract<T extends Contract>(contract: T | string): string | null {
+export function hashContract<T extends Contract>(contract: T | string): string {
 	if (typeof contract === "string") {
 		const hash = sha256(contract)
 		return bytesToHex(hash)
@@ -32,7 +32,7 @@ export function hashContract<T extends Contract>(contract: T | string): string |
 	}
 }
 
-export function hashSnapshot(snapshot: Snapshot): string | null {
+export function hashSnapshot(snapshot: Snapshot): string {
 	const hash = sha256(cbor.encode(snapshot))
 	return bytesToHex(hash).slice(0, 16)
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react"
-import { Canvas, Contract, type CanvasConfig, hashContract } from "@canvas-js/core"
+import { Canvas, Contract, type CanvasConfig, type Snapshot, hashContract } from "@canvas-js/core"
 
 export const useCanvas = <T extends Contract = Contract>(url: string | null, config: CanvasConfig<T>) => {
 	const [app, setApp] = useState<Canvas<T>>()
@@ -7,6 +7,7 @@ export const useCanvas = <T extends Contract = Contract>(url: string | null, con
 
 	// TODO: ensure effect hook re-runs on signer change
 	const hashRef = useRef<string>()
+	const lastSnapshotRef = useRef<Snapshot>()
 	// const renderedRef = useRef(false) // skip second render in React.StrictMode
 
 	useEffect(() => {
@@ -14,7 +15,6 @@ export const useCanvas = <T extends Contract = Contract>(url: string | null, con
 		// renderedRef.current = true
 
 		const contractHash = hashContract(config.contract)
-		if (contractHash === null) return // TODO: don't fail through if contract has dangling references
 
 		function setupApp<T extends Contract>(newApp: Canvas<T>) {
 			if (url) {
@@ -24,26 +24,29 @@ export const useCanvas = <T extends Contract = Contract>(url: string | null, con
 			}
 		}
 
-		if (!app || contractHash === hashRef.current) {
-			// either the app just initialized, or the contract remains unchanged
-			Canvas.initialize<T>(config)
-				.then(setupApp)
-				.catch((error) => {
-					console.error(error)
-					setError(error)
-				})
-		} else {
-			// the contract changed, snapshot the old app
-			// TODO: cache the last snapshot, and reuse it if no new actions have been applied
-			app.createSnapshot().then((snapshot) => {
-				Canvas.initialize<T>({ ...config, reset: true, snapshot })
+		const updateSnapshot = async () => {
+			if (!app || contractHash === hashRef.current) {
+				// app just initialized, or contract remains unchanged
+				await Canvas.initialize<T>(config).then(setupApp)
+			} else if ((await app.db.count("$messages")) > 1 && lastSnapshotRef.current) {
+				// the contract changed, reuse the old snapshot
+				const snapshot = lastSnapshotRef.current
+				await Canvas.initialize<T>({ ...config, reset: true, snapshot }).then(setupApp)
+			} else {
+				// the contract changed, make a new snapshot
+				const snapshot = await app.createSnapshot()
+				await Canvas.initialize<T>({ ...config, reset: true, snapshot })
 					.then(setupApp)
-					.catch((error) => {
-						console.error(error)
-						setError(error)
+					.then(() => {
+						lastSnapshotRef.current = snapshot
 					})
-			})
+			}
 		}
+		updateSnapshot().catch((error) => {
+			console.error(error)
+			setError(error)
+		})
+
 		hashRef.current = contractHash
 	}, [url, hashContract(config.contract)])
 
