@@ -1,56 +1,46 @@
-import {
-	DurableObject,
-	DurableObjectState,
-	Request,
-	Response as WorkerResponse,
-	Headers,
-	WebSocket,
-	Body,
-} from "@cloudflare/workers-types/experimental"
+import { DurableObject } from "cloudflare:workers"
 import { Env } from "./worker.js"
+import { ModelDB } from "../src/index.js"
 
-// can't import worker Response
-export declare class Response extends Body {
-	constructor(body?: BodyInit | null, init?: ResponseInit)
-	static redirect(url: string, status?: number): Response
-	static json(any: any, maybeInit?: ResponseInit | Response): Response
-	clone(): Response
-	get status(): number
-	get statusText(): string
-	get headers(): Headers
-	get ok(): boolean
-	get redirected(): boolean
-	get url(): string
-	get webSocket(): WebSocket | null
-	get cf(): any | undefined
-}
-
-export class TestObject implements DurableObject {
+export class TestObject extends DurableObject {
 	state: DurableObjectState
 	env: Env
-	storage: Record<string, string>
+	db: ModelDB
 
 	constructor(state: DurableObjectState, env: Env) {
+		super(state, env)
+
 		this.state = state
 		this.env = env
-		this.storage = {}
+		this.db = new ModelDB({
+			db: state.storage.sql,
+			models: {
+				store: {
+					key: "primary",
+					value: "json",
+				},
+			},
+		})
 	}
 
 	async get(request: Request) {
-		return new Response(JSON.stringify(this.storage))
+		const splits = request.url.split("/")
+		const key = splits[splits.length - 1]
+		const value = await this.db.get("store", key)
+
+		return new Response(JSON.stringify({ key, value }))
 	}
 
 	async post(request: Request) {
 		const json = await request.json<Record<string, string>>()
 
 		for (const [key, value] of Object.entries(json)) {
-			this.storage[key] = value
+			await this.db.set("store", { key, value })
 		}
-
-		return new Response(JSON.stringify(this.storage))
+		return new Response(JSON.stringify({ status: "Success" }))
 	}
 
-	async fetch(request: Request): Promise<WorkerResponse> {
+	async fetch(request: Request): Promise<Response> {
 		if (request.method === "GET") {
 			return this.get(request)
 		} else if (request.method === "POST") {
