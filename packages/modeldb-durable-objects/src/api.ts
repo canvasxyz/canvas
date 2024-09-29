@@ -62,9 +62,12 @@ function getPropertyColumnType(property: Property): string {
 const getPropertyColumn = (property: Property) => `'${property.name}' ${getPropertyColumnType(property)}`
 
 export class ModelAPI {
-	#table = this.model.name
+	// #table = this.model.name
+	// #properties: Record<string, Property> = Object.fromEntries(this.model.properties.map((property) => [property.name, property]))
+
+	#table: string
+	#properties: Record<string, Property>
 	#params: Record<string, `p${string}`> = {}
-	#properties = Object.fromEntries(this.model.properties.map((property) => [property.name, property]))
 
 	// Methods
 	#insert: Method<Params>
@@ -81,7 +84,14 @@ export class ModelAPI {
 	readonly #primaryKeyName: string
 	readonly #primaryKeyParam: `p${string}`
 
-	public constructor(readonly db: SqlStorage, readonly model: Model) {
+	public constructor(
+		readonly db: SqlStorage,
+		readonly model: Model,
+	) {
+		// in the cloudflare runtime, `this` cannot be used when assigning default values to private properties
+		this.#table = model.name
+		this.#properties = Object.fromEntries(model.properties.map((property) => [property.name, property]))
+
 		const columns: string[] = []
 		const columnNames: `"${string}"`[] = [] // quoted column names for non-relation properties
 		const columnParams: `:p${string}`[] = [] // query params for non-relation properties
@@ -570,7 +580,10 @@ export class RelationAPI {
 	readonly #insert: Method<{ _source: string; _target: string }>
 	readonly #delete: Method<{ _source: string }>
 
-	public constructor(readonly db: SqlStorage, readonly relation: Relation) {
+	public constructor(
+		readonly db: SqlStorage,
+		readonly relation: Relation,
+	) {
 		const columns = [`_source TEXT NOT NULL`, `_target TEXT NOT NULL`]
 		db.exec(`CREATE TABLE IF NOT EXISTS "${this.table}" (${columns.join(", ")})`)
 

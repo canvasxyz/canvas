@@ -7,8 +7,11 @@ export class Query<P, R> {
 	) {}
 
 	public get(params: P): R | null {
-		const result = this.db.exec(this.sql, params).one() as R | undefined
-		return result ?? null
+		try {
+			return this.db.exec(this.sql, params).one() as R
+		} catch (err) {
+			return null
+		}
 	}
 
 	public all(params: P): R[] {

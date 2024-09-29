@@ -22,15 +22,19 @@ test("durable object should store and return data in modeldb", async (t) => {
 
 	const post = await worker.fetch(`http://example.com/${uuid}`, {
 		method: "POST",
-		body: JSON.stringify({ foo: 123 }),
+		body: JSON.stringify({ key: "foo", value: "123" }),
 	})
 	t.true(post.ok)
 	t.is(post.status, 200)
 
-	const response = await worker.fetch(`http://example.com/${uuid}`)
+	console.log("put", await post.text())
+
+	const key = "foo"
+	const response = await worker.fetch(`http://example.com/${uuid}/${key}`)
 	t.true(response.ok)
 	t.is(response.status, 200)
 
 	const data = await response.json()
-	t.deepEqual(data, { foo: 123 })
+	console.log("get", data)
+	t.deepEqual(data, { key: "foo", value: "123" })
 })

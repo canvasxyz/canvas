@@ -24,20 +24,17 @@ export class TestObject extends DurableObject {
 	}
 
 	async get(request: Request) {
-		const splits = request.url.split("/")
-		const key = splits[splits.length - 1]
+		const key = request.url.replace(/^https?:\/\//, "").split("/")[2]
 		const value = await this.db.get("store", key)
 
 		return new Response(JSON.stringify({ key, value }))
 	}
 
 	async post(request: Request) {
-		const json = await request.json<Record<string, string>>()
+		const result = await request.json<Record<string, string>>()
+		await this.db.set("store", result)
 
-		for (const [key, value] of Object.entries(json)) {
-			await this.db.set("store", { key, value })
-		}
-		return new Response(JSON.stringify({ status: "Success" }))
+		return new Response(JSON.stringify({ status: "Success", result }))
 	}
 
 	async fetch(request: Request): Promise<Response> {
