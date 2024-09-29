@@ -37,9 +37,7 @@ export function hashSnapshot(snapshot: Snapshot): string | null {
 	return bytesToHex(hash).slice(0, 16)
 }
 
-export async function createSnapshot<T extends Contract>(app: Canvas | undefined): Promise<Snapshot | null> {
-	if (!app) return null
-
+export async function createSnapshot<T extends Contract>(app: Canvas): Promise<Snapshot> {
 	// flatten models
 	const modelData: Record<string, Uint8Array[]> = {}
 	for (const [modelName, modelSchema] of Object.entries(app.db.models)) {

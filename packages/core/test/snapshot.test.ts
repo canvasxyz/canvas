@@ -1,6 +1,6 @@
 import test from "ava"
 
-import { Canvas, Contract, createSnapshot } from "@canvas-js/core"
+import { Canvas, Contract } from "@canvas-js/core"
 import { Action, Session, Message } from "@canvas-js/interfaces"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 
@@ -45,7 +45,7 @@ test("snapshot persists data across apps", async (t) => {
 	t.is(parents.length, 1)
 
 	// snapshot and add some more actions
-	const snapshot = await createSnapshot(app)
+	const snapshot = await app.createSnapshot()
 	await app.stop()
 
 	const app2 = await Canvas.initialize({ reset: true, snapshot, ...config })
@@ -73,7 +73,7 @@ test("snapshot persists data across apps", async (t) => {
 	t.is((await app2.db.get("posts", "f"))?.content, "4")
 
 	// snapshot a second time
-	const snapshot2 = await createSnapshot(app2)
+	const snapshot2 = await app2.createSnapshot()
 	const app3 = await Canvas.initialize({ reset: true, snapshot: snapshot2, ...config })
 
 	t.is((await app3.db.get("posts", "a"))?.content, "1")
@@ -157,7 +157,7 @@ test("snapshot persists data with merge functions", async (t) => {
 
 	t.deepEqual(await app.db.get("posts", "a"), { id: "a", content: "foofoo" })
 
-	const snapshot = await createSnapshot(app)
+	const snapshot = await app.createSnapshot()
 	await app.stop()
 
 	const app2 = await Canvas.initialize({ reset: true, snapshot, ...config })

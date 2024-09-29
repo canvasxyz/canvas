@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react"
-import { Canvas, Contract, type CanvasConfig, hashContract, createSnapshot } from "@canvas-js/core"
+import { Canvas, Contract, type CanvasConfig, hashContract } from "@canvas-js/core"
 
 export const useCanvas = <T extends Contract = Contract>(url: string | null, config: CanvasConfig<T>) => {
 	const [app, setApp] = useState<Canvas<T>>()
@@ -35,7 +35,7 @@ export const useCanvas = <T extends Contract = Contract>(url: string | null, con
 		} else {
 			// the contract changed, snapshot the old app
 			// TODO: cache the last snapshot, and reuse it if no new actions have been applied
-			createSnapshot(app).then((snapshot) => {
+			app.createSnapshot().then((snapshot) => {
 				Canvas.initialize<T>({ ...config, reset: true, snapshot })
 					.then(setupApp)
 					.catch((error) => {

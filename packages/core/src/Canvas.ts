@@ -17,7 +17,7 @@ import type { Contract, ActionImplementationFunction, ActionImplementationObject
 import { Runtime, createRuntime } from "./runtime/index.js"
 import { ActionRecord } from "./runtime/AbstractRuntime.js"
 import { validatePayload } from "./schema.js"
-import { hashSnapshot } from "./snapshot.js"
+import { createSnapshot, hashSnapshot } from "./snapshot.js"
 import { topicPattern } from "./utils.js"
 
 export type { Model } from "@canvas-js/modeldb"
@@ -372,5 +372,9 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		} else {
 			return sessions[0].message_id
 		}
+	}
+
+	public async createSnapshot(): Promise<Snapshot> {
+		return createSnapshot(this)
 	}
 }
