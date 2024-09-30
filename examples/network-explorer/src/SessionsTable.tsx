@@ -2,7 +2,7 @@ import useSWR from "swr"
 import { Session } from "@canvas-js/interfaces"
 import { Box, Flex, Table, Text } from "@radix-ui/themes"
 
-import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "./utils.js"
+import { fetchAndIpldParseJson, formatDistanceCustom, Result } from "./utils.js"
 import PaginationButton from "./components/PaginationButton.js"
 import useCursorStack from "./useCursorStack.js"
 import { DidPopover } from "./components/DidPopover.js"
@@ -20,7 +20,7 @@ function SessionsTable() {
 	}
 
 	const { data: sessions, error } = useSWR(
-		`/index_api/messages?${params.toString()}`,
+		`/api/sessions?${params.toString()}`,
 		fetchAndIpldParseJson<Result<Session>[]>,
 		{
 			refreshInterval: 1000,
@@ -57,7 +57,7 @@ function SessionsTable() {
 									<DidPopover did={message.payload.publicKey} truncateBelow="md" numEndChars={0} />
 								</Table.Cell>
 								<Table.Cell>
-									<span className="text-gray-400">{formatDistanceCustom(message.payload.context.timestamp)} ago</span>
+									<span className="text-gray-400">{formatDistanceCustom(message.payload.context.timestamp)}</span> ago
 								</Table.Cell>
 							</Table.Row>
 						)

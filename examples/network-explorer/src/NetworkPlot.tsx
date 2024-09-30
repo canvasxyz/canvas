@@ -180,15 +180,14 @@ export default function NetworkPlot() {
 	// in order to determine if another page exists, we retrieve n + 1 entries
 	// if the length of the result is n + 1, then there is another page
 	const params = new URLSearchParams({
-		type: "action",
 		limit: (entriesPerPage + 1).toString(),
 	})
 	if (currentCursor) {
-		params.append("before", currentCursor)
+		params.append("gt", currentCursor)
 	}
 
 	const { data: messages, error } = useSWR(
-		`/index_api/messages?${params.toString()}`,
+		`/api/messages?${params.toString()}`,
 		fetchAndIpldParseJson<Result<Action | Session>[]>,
 		{
 			refreshInterval: 1000,

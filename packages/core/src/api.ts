@@ -129,7 +129,7 @@ export function createAPI(app: Canvas): express.Express {
 				expiration: number | null
 			}>("$sessions", {
 				select: { message_id: true, expiration: true },
-				where: { message_id: range, did, publicKey },
+				where: { message_id: range, did, public_key: publicKey },
 				orderBy: { message_id: order },
 			})) {
 				if (minExpiration === undefined || expiration === null || minExpiration <= expiration) {
@@ -170,6 +170,18 @@ export function createAPI(app: Canvas): express.Express {
 
 		res.writeHead(StatusCodes.OK, { "content-type": "application/json" })
 		return void res.end(json.encode(results))
+	})
+
+	api.get("/dids", async (req, res) => {
+		const dids = await app.db.query("$dids")
+		res.writeHead(StatusCodes.OK, { "content-type": "application/json" })
+		return void res.end(json.encode(dids))
+	})
+
+	api.get("/dids/count", async (req, res) => {
+		const count = await app.db.count("$dids")
+		res.writeHead(StatusCodes.OK, { "content-type": "application/json" })
+		return void res.end(json.encode({ count: count }))
 	})
 
 	api.get("/models/:model/:key", async (req, res) => {

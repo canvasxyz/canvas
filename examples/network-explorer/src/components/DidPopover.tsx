@@ -1,4 +1,4 @@
-import { Box, Popover } from "@radix-ui/themes"
+import { Box, Link, Popover } from "@radix-ui/themes"
 
 function truncateAddress(address: string, opts?: { numStartChars?: number; numEndChars?: number }) {
 	const opts_ = opts || {}
@@ -42,7 +42,7 @@ export function DidPopover({
 	return (
 		<Popover.Root>
 			<Popover.Trigger>
-				<Box display="inline-block">
+				<Link style={{ cursor: "pointer" }}>
 					{truncateBelow ? (
 						<>
 							<Box display={{ [truncateBelow]: "none" }}>{truncatedAddress}</Box>
@@ -51,7 +51,7 @@ export function DidPopover({
 					) : (
 						truncatedAddress
 					)}
-				</Box>
+				</Link>
 			</Popover.Trigger>
 			<Popover.Content>
 				<Box>{did}</Box>

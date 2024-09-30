@@ -1,22 +1,28 @@
 import useSWR from "swr"
-import { Action, Message, Session, Signature } from "@canvas-js/interfaces"
-import { Box, Flex, Table, Text } from "@radix-ui/themes"
 
-import ArgsPopout from "./components/ArgsPopout.js"
+import { Box, Flex, Link, Popover, Table, Text } from "@radix-ui/themes"
+
 import PaginationButton from "./components/PaginationButton.js"
 import useCursorStack from "./useCursorStack.js"
-import { Result, fetchAndIpldParseJson, formatDistanceCustom } from "./utils.js"
+import { fetchAndIpldParseJson, formatDistanceCustom, Result } from "./utils.js"
+
 import { DidPopover } from "./components/DidPopover.js"
+import { Action, Message, Session, Signature } from "@canvas-js/interfaces"
 
 function SessionField({ signature, message }: { signature: Signature; message: Message<Action> }) {
-	const { data: session, error } = useSWR(
-		`/index_api/latest_session/?did=${message.payload.did}&public_key=${signature.publicKey}`,
-		fetchAndIpldParseJson<Session>,
+	const { data: sessions, error } = useSWR(
+		`/api/sessions?did=${message.payload.did}&publicKey=${signature.publicKey}`,
+		fetchAndIpldParseJson<Result<Session>[]>,
 	)
 
 	if (error) return <span className="text-red-400">failed to load</span>
 
-	return <span className="text-gray-400"> {session && formatDistanceCustom(session.context.timestamp)} ago</span>
+	return (
+		<span className="text-gray-400">
+			{" "}
+			{sessions && sessions.length > 0 && formatDistanceCustom(sessions[0].message.payload.context.timestamp)} ago
+		</span>
+	)
 }
 
 const entriesPerPage = 10
@@ -27,7 +33,6 @@ function ActionsTable() {
 	// in order to determine if another page exists, we retrieve n + 1 entries
 	// if the length of the result is n + 1, then there is another page
 	const params = new URLSearchParams({
-		type: "action",
 		limit: (entriesPerPage + 1).toString(),
 	})
 	if (currentCursor) {
@@ -35,7 +40,7 @@ function ActionsTable() {
 	}
 
 	const { data: actions, error } = useSWR(
-		`/index_api/messages?${params.toString()}`,
+		`/api/actions?${params.toString()}`,
 		fetchAndIpldParseJson<Result<Action>[]>,
 		{
 			refreshInterval: 1000,
@@ -58,21 +63,30 @@ function ActionsTable() {
 					<Table.Row>
 						<Table.ColumnHeaderCell>Address</Table.ColumnHeaderCell>
 						<Table.ColumnHeaderCell>Action</Table.ColumnHeaderCell>
-						<Table.ColumnHeaderCell>Args</Table.ColumnHeaderCell>
 						<Table.ColumnHeaderCell>Timestamp</Table.ColumnHeaderCell>
 						<Table.ColumnHeaderCell>Session</Table.ColumnHeaderCell>
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
-					{actionsToDisplay.map(({ id, signature, message }) => {
+					{actionsToDisplay.map(({ id, message, signature }) => {
 						const args = JSON.stringify(message.payload.args)
 						return (
 							<Table.Row key={id}>
 								<Table.Cell>
-									<DidPopover did={message.payload.did || ""} truncateBelow="md" />
+									<DidPopover did={message.payload.did} truncateBelow="md" />
 								</Table.Cell>
-								<Table.Cell>{message.payload.name}</Table.Cell>
-								<Table.Cell>{args.length > 50 ? <ArgsPopout data={args} /> : args}</Table.Cell>
+								<Table.Cell>
+									<Popover.Root>
+										<Popover.Trigger onClick={() => console.log("click")}>
+											<Link style={{ cursor: "pointer" }}>{message.payload.name}</Link>
+										</Popover.Trigger>
+										<Popover.Content>
+											name: {message.payload.name}
+											<br />
+											args: <Text>{args}</Text>
+										</Popover.Content>
+									</Popover.Root>
+								</Table.Cell>
 								<Table.Cell>{formatDistanceCustom(message.payload.context.timestamp)} ago</Table.Cell>
 								<Table.Cell>
 									<DidPopover did={signature.publicKey || ""} truncateBelow="xl" />
