@@ -1,9 +1,7 @@
 import test from "ava"
-
-import { ModelDB } from "@canvas-js/modeldb-durable-objects"
-
 import { unstable_dev } from "wrangler"
 import type { UnstableDevWorker } from "wrangler"
+import { ModelDBProxy } from "@canvas-js/modeldb-durable-objects"
 
 let worker: UnstableDevWorker
 
@@ -21,18 +19,19 @@ test("durable object should store and return data in modeldb", async (t) => {
 	const uuid = "d37f4bbf-d51c-4b20-8a1c-7bc53a588e4d"
 	const data = { id: "foo", value: "123" }
 
-	const clear = await worker.fetch(`http://example.com/${uuid}/clear`, {
-		method: "POST",
+	const proxy = new ModelDBProxy(worker, {
+		store: {
+			id: "primary",
+			value: "json",
+		},
 	})
-	t.is(clear.status, 200)
+	await proxy.initialize()
 
-	const post = await worker.fetch(`http://example.com/${uuid}`, {
-		method: "POST",
-		body: JSON.stringify(data),
-	})
-	t.is(post.status, 200)
+	await proxy.clear("store")
 
-	const response = await worker.fetch(`http://example.com/${uuid}/${data.id}`)
-	t.is(response.status, 200)
-	t.deepEqual(JSON.parse(await response.text()), { id: "foo", value: "123" })
+	await proxy.set("store", { id: "foo", value: "123" })
+
+	const result = await proxy.get("store", "foo")
+
+	t.deepEqual(result, { id: "foo", value: "123" })
 })
