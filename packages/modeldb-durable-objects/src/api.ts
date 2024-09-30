@@ -168,7 +168,7 @@ export class ModelAPI {
 
 		return {
 			...decodeRecord(this.model, record),
-			// ...mapValues(this.#relations, (api) => api.get(key)),
+			...mapValues(this.#relations, (api) => api.get(key)),
 		}
 	}
 
@@ -246,14 +246,12 @@ export class ModelAPI {
 		}
 	}
 
-	// TODO
 	public query(query: QueryParams): ModelValue[] {
 		const [sql, relations, params] = this.parseQuery(query)
 		const results = this.db.exec(sql, ...encodeQueryParams(params)).toArray()
 		return results.map((record) => this.parseRecord(record, relations))
 	}
 
-	// TODO
 	public *iterate(query: QueryParams): Iterable<ModelValue> {
 		const [sql, relations, params] = this.parseQuery(query)
 

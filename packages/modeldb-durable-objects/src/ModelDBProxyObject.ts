@@ -1,4 +1,4 @@
-import { ModelSchema } from "@canvas-js/modeldb"
+import { ModelSchema, QueryParams } from "@canvas-js/modeldb"
 import * as json from "@ipld/dag-json"
 
 import { Env } from "./ModelDBProxyWorker.js"
@@ -34,7 +34,16 @@ export class ModelDBProxyObject {
 			const [modelSchema] = args as ModelSchema[]
 			this.initialize(modelSchema)
 			return new Response(json.stringify({ status: "Success" }))
+		} else if (call === "iterate") {
+			if (!this.db) throw new Error("uninitialized")
+			const iterateArgs = args as [string, QueryParams | undefined]
+			const result = []
+			for await (const item of this.db.iterate.apply(this.db, iterateArgs)) {
+				result.push(item)
+			}
+			return new Response(json.stringify(result))
 		} else {
+			if (!this.db) throw new Error("uninitialized")
 			const callFn = (this.db as any)[call] as Function
 			const result = await callFn.apply(this.db, args)
 			return new Response(json.stringify(result ?? null))

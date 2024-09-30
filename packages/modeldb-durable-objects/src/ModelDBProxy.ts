@@ -60,9 +60,11 @@ export class ModelDBProxy extends AbstractModelDB {
 		return this.proxyFetch("get", [modelName, key])
 	}
 
-	// TODO
-	iterate<T extends ModelValue<any> = ModelValue<any>>(modelName: string, query?: QueryParams): AsyncIterable<T> {
-		throw new Error("unimplemented")
+	async *iterate<T extends ModelValue<any> = ModelValue<any>>(modelName: string, query?: QueryParams): AsyncIterable<T> {
+		const items: T[] = await this.proxyFetch("iterate", [modelName, query]);
+		for (const item of items) {
+			yield item;
+		}
 	}
 
 	query<T extends ModelValue<any> = ModelValue<any>>(modelName: string, query?: QueryParams): Promise<T[]> {
