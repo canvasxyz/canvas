@@ -8,6 +8,7 @@ import {
 	WhereCondition,
 } from "@canvas-js/modeldb"
 import { Awaitable } from "@canvas-js/interfaces"
+import { prepare } from "@canvas-js/utils"
 import * as json from "@ipld/dag-json"
 
 import { ModelDB } from "./ModelDB.js"
@@ -60,15 +61,18 @@ export class ModelDBProxy extends AbstractModelDB {
 		return this.proxyFetch("get", [modelName, key])
 	}
 
-	async *iterate<T extends ModelValue<any> = ModelValue<any>>(modelName: string, query?: QueryParams): AsyncIterable<T> {
-		const items: T[] = await this.proxyFetch("iterate", [modelName, query]);
+	async *iterate<T extends ModelValue<any> = ModelValue<any>>(
+		modelName: string,
+		query?: QueryParams,
+	): AsyncIterable<T> {
+		const items: T[] = await this.proxyFetch("iterate", [modelName, prepare(query)])
 		for (const item of items) {
-			yield item;
+			yield item
 		}
 	}
 
 	query<T extends ModelValue<any> = ModelValue<any>>(modelName: string, query?: QueryParams): Promise<T[]> {
-		return this.proxyFetch("query", [modelName, query])
+		return this.proxyFetch("query", [modelName, prepare(query)])
 	}
 
 	count(modelName: string, where?: WhereCondition): Promise<number> {
