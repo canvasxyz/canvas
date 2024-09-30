@@ -1,4 +1,4 @@
-import { assert } from "@canvas-js/utils"
+import { assert, signalInvalidType } from "@canvas-js/utils"
 
 import {
 	AbstractModelDB,
@@ -23,7 +23,6 @@ export class ModelDB extends AbstractModelDB {
 	public readonly db: SqlStorage
 
 	#models: Record<string, ModelAPI> = {}
-	// #transaction: sqlite.Transaction<(effects: Effect[]) => void>
 
 	constructor({ db, models }: ModelDBOptions) {
 		super(parseConfig(models))
@@ -32,20 +31,6 @@ export class ModelDB extends AbstractModelDB {
 		for (const model of Object.values(this.models)) {
 			this.#models[model.name] = new ModelAPI(this.db, model)
 		}
-
-		// this.#transaction = this.db.transaction((effects) => {
-		// 	for (const effect of effects) {
-		// 		const model = this.models[effect.model]
-		// 		assert(model !== undefined, `model ${effect.model} not found`)
-		// 		if (effect.operation === "set") {
-		// 			this.#models[effect.model].set(effect.value)
-		// 		} else if (effect.operation === "delete") {
-		// 			this.#models[effect.model].delete(effect.key)
-		// 		} else {
-		// 			signalInvalidType(effect)
-		// 		}
-		// 	}
-		// })
 	}
 
 	public async close() {
@@ -53,7 +38,18 @@ export class ModelDB extends AbstractModelDB {
 	}
 
 	public async apply(effects: Effect[]) {
-		// this.#transaction(effects)
+		// no #transaction, durable object operations are implicitly transactionalized
+		for (const effect of effects) {
+			const model = this.models[effect.model]
+			assert(model !== undefined, `model ${effect.model} not found`)
+			if (effect.operation === "set") {
+				this.#models[effect.model].set(effect.value)
+			} else if (effect.operation === "delete") {
+				this.#models[effect.model].delete(effect.key)
+			} else {
+				signalInvalidType(effect)
+			}
+		}
 
 		for (const { model, query, filter, callback } of this.subscriptions.values()) {
 			if (effects.some(filter)) {

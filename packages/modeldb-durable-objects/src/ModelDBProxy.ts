@@ -48,8 +48,8 @@ export class ModelDBProxy extends AbstractModelDB {
 	async proxyFetch<T>(call: string, args: any[]): Promise<T> {
 		const body = json.stringify(args)
 		const response = await this.worker.fetch(`${this.baseUrl}/${this.uuid}/${call}`, { method: "POST", body })
-		const result = (await response.json()) as T
-		return result
+		if (!response.body) throw new Error("unexpected")
+		return json.decode(await response.arrayBuffer()) as T
 	}
 
 	async close(): Promise<void> {

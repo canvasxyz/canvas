@@ -37,7 +37,7 @@ export class ModelDBProxyObject {
 		} else {
 			const callFn = (this.db as any)[call] as Function
 			const result = await callFn.apply(this.db, args)
-			return new Response(json.stringify(result ?? {}))
+			return new Response(json.stringify(result ?? null))
 		}
 	}
 }
