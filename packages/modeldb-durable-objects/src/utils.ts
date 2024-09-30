@@ -33,3 +33,11 @@ export class Method<P> {
 		this.db.exec(this.sql, ...params)
 	}
 }
+
+// required because crypto.randomUUID may not be available in all runtimes
+export const randomUUID = () => {
+	return "xxxx-xxxx-xxx-xxxx".replace(/[x]/g, (c) => {
+		const r = Math.floor(Math.random() * 16)
+		return r.toString(16)
+	})
+}

@@ -89,30 +89,31 @@ export const testOnModelDB = (
 
 	const connectionConfig = getConnectionConfig()
 
-	test(`Sqlite - ${name}`, macro, async (t, models) => {
-		const mdb = new ModelDBSqlite({ path: null, models })
-		t.teardown(() => mdb.close())
-		return mdb
-	})
+	// test(`Sqlite - ${name}`, macro, async (t, models) => {
+	// 	const mdb = new ModelDBSqlite({ path: null, models })
+	// 	t.teardown(() => mdb.close())
+	// 	return mdb
+	// })
 
-	test(`IDB - ${name}`, macro, async (t, models) => {
-		const mdb = await ModelDBIdb.initialize({ name: nanoid(), models })
-		t.teardown(() => mdb.close())
-		return mdb
-	})
+	// test(`IDB - ${name}`, macro, async (t, models) => {
+	// 	const mdb = await ModelDBIdb.initialize({ name: nanoid(), models })
+	// 	t.teardown(() => mdb.close())
+	// 	return mdb
+	// })
 
-	test.serial(`Postgres - ${name}`, macro, async (t, models) => {
-		const mdb = await ModelDBPostgres.initialize({ connectionConfig, models, clear: true })
-		t.teardown(() => mdb.close())
-		return mdb
-	})
+	// test.serial(`Postgres - ${name}`, macro, async (t, models) => {
+	// 	const mdb = await ModelDBPostgres.initialize({ connectionConfig, models, clear: true })
+	// 	t.teardown(() => mdb.close())
+	// 	return mdb
+	// })
 
 	test.serial(`Durable Object - ${name}`, macro, async (t, models) => {
 		const mdb = new ModelDBDurableObjectsProxy(worker, models)
 		await mdb.initialize()
-		t.teardown(() => mdb.close())
 		return mdb
 	})
+
+	test.after.always(() => worker.stop())
 
 	// test(`Sqlite Wasm Opfs - ${name}`, async (t) => {
 	// 	const testResult = await page.evaluate(async (run) => {

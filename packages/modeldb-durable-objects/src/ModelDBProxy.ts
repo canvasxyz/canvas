@@ -10,8 +10,8 @@ import {
 import { Awaitable } from "@canvas-js/interfaces"
 
 import { ModelDB } from "./ModelDB.js"
+import { randomUUID } from "./utils.js"
 import { UnstableDevWorker } from "wrangler"
-import { randomUUID } from "crypto"
 
 export class ModelDBProxy extends AbstractModelDB {
 	worker: UnstableDevWorker
@@ -25,7 +25,7 @@ export class ModelDBProxy extends AbstractModelDB {
 		this.worker = worker
 		this.baseUrl = baseUrl ?? "http://example.com"
 		this.initialized = false
-		this.uuid = uuid ?? randomUUID().toString()
+		this.uuid = uuid ?? randomUUID()
 
 		this.proxyFetch("initialize", [models]).then(() => {
 			this.initialized = true
@@ -69,7 +69,7 @@ export class ModelDBProxy extends AbstractModelDB {
 	}
 
 	count(modelName: string, where?: WhereCondition): Promise<number> {
-		return this.proxyFetch("query", [modelName, where])
+		return this.proxyFetch("count", where ? [modelName, where] : [modelName])
 	}
 
 	clear(modelName: string): Promise<void> {
