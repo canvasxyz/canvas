@@ -8,6 +8,7 @@ import {
 	WhereCondition,
 } from "@canvas-js/modeldb"
 import { Awaitable } from "@canvas-js/interfaces"
+import * as json from "@ipld/dag-json"
 
 import { ModelDB } from "./ModelDB.js"
 import { randomUUID } from "./utils.js"
@@ -45,7 +46,7 @@ export class ModelDBProxy extends AbstractModelDB {
 	}
 
 	async proxyFetch<T>(call: string, args: any[]): Promise<T> {
-		const body = JSON.stringify(args)
+		const body = json.stringify(args)
 		const response = await this.worker.fetch(`${this.baseUrl}/${this.uuid}/${call}`, { method: "POST", body })
 		const result = (await response.json()) as T
 		return result

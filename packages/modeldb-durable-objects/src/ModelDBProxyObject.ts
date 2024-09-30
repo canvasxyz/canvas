@@ -1,6 +1,8 @@
+import { ModelSchema } from "@canvas-js/modeldb"
+import * as json from "@ipld/dag-json"
+
 import { Env } from "./ModelDBProxyWorker.js"
 import { ModelDB } from "./ModelDB.js"
-import { ModelSchema } from "@canvas-js/modeldb"
 
 // a durable object that wraps ModelDBProxy
 export class ModelDBProxyObject {
@@ -26,16 +28,16 @@ export class ModelDBProxyObject {
 		const url = new URL(request.url)
 
 		const [root, objectId, call] = url.pathname.split("/")
-		const args = await request.json()
+		const args = json.decode(await request.bytes())
 
 		if (call === "initialize") {
 			const [modelSchema] = args as ModelSchema[]
 			this.initialize(modelSchema)
-			return new Response(JSON.stringify({ status: "Success" }))
+			return new Response(json.stringify({ status: "Success" }))
 		} else {
 			const callFn = (this.db as any)[call] as Function
 			const result = await callFn.apply(this.db, args)
-			return new Response(JSON.stringify(result ?? {}))
+			return new Response(json.stringify(result ?? {}))
 		}
 	}
 }

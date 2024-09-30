@@ -1,6 +1,7 @@
 name = "modeldb-durable-objects"
 main = "src/ModelDBProxyWorker.ts"
 compatibility_date = "2024-09-25"
+compatibility_flags = ["nodejs_compat_v2"]
 
 [durable_objects]
 bindings = [

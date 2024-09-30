@@ -79,7 +79,7 @@ export class ModelAPI {
 	#select: Query<RecordValue>
 	#count: Query<{ count: number }>
 
-	// readonly #relations: Record<string, RelationAPI> = {}
+	readonly #relations: Record<string, RelationAPI> = {}
 	readonly #primaryKeyName: string
 
 	public constructor(
@@ -104,13 +104,12 @@ export class ModelAPI {
 					primaryKey = property
 				}
 			} else if (property.kind === "relation") {
-				throw new Error("modeldb-durable-objects does not support relations")
-				// this.#relations[property.name] = new RelationAPI(db, {
-				// 	source: model.name,
-				// 	property: property.name,
-				// 	target: property.target,
-				// 	indexed: false,
-				// })
+				this.#relations[property.name] = new RelationAPI(db, {
+					source: model.name,
+					property: property.name,
+					target: property.target,
+					indexed: false,
+				})
 			} else {
 				signalInvalidType(property)
 			}
@@ -187,13 +186,13 @@ export class ModelAPI {
 			this.#update.run([...encodedParams, key])
 		}
 
-		// for (const [name, relation] of Object.entries(this.#relations)) {
-		// 	if (existingRecord !== null) {
-		// 		relation.delete(key)
-		// 	}
+		for (const [name, relation] of Object.entries(this.#relations)) {
+			if (existingRecord !== null) {
+				relation.delete(key)
+			}
 
-		// 	relation.add(key, value[name])
-		// }
+			relation.add(key, value[name])
+		}
 	}
 
 	public delete(key: string) {
@@ -203,23 +202,23 @@ export class ModelAPI {
 		}
 
 		this.#delete.run([key])
-		// for (const relation of Object.values(this.#relations)) {
-		// 	relation.delete(key)
-		// }
+		for (const relation of Object.values(this.#relations)) {
+			relation.delete(key)
+		}
 	}
 
 	public clear() {
-		// const existingRecords = this.#selectAll.all([]) // TODO: use this.#selectAll.iterate([])
+		const existingRecords = this.#selectAll.all([]) // TODO: use this.#selectAll.iterate([])
 
 		this.#clear.run([])
 
-		// for (const record of existingRecords) {
-		// 	const key = record[this.#primaryKeyName] // TODO: this was primaryKeyParam elsewhere, was that right?
-		// 	for (const relation of Object.values(this.#relations)) {
-		// 		if (!key || typeof key !== "string") continue
-		// 		relation.delete(key)
-		// 	}
-		// }
+		for (const record of existingRecords) {
+			const key = record[this.#primaryKeyName] // TODO: this was primaryKeyParam elsewhere, was that right?
+			for (const relation of Object.values(this.#relations)) {
+				if (!key || typeof key !== "string") continue
+				relation.delete(key)
+			}
+		}
 	}
 
 	public count(where?: WhereCondition): number {
@@ -237,7 +236,6 @@ export class ModelAPI {
 			params = whereParams
 		}
 
-		// const results = this.db.prepare(sql.join(" ")).all(params) as RecordValue[]
 		const results = this.db.exec(sql.join(" "), ...params).toArray()
 
 		const countResult = results[0].count
@@ -284,9 +282,9 @@ export class ModelAPI {
 			}
 		}
 
-		// for (const relation of relations) {
-		// 	value[relation.property] = this.#relations[relation.property].get(key)
-		// }
+		for (const relation of relations) {
+			value[relation.property] = this.#relations[relation.property].get(key)
+		}
 
 		return value
 	}
@@ -392,7 +390,6 @@ export class ModelAPI {
 						throw new TypeError("invalid primary key value (expected string)")
 					}
 
-					const p = `p${i}`
 					params.push(expression)
 					return [`"${name}" = ?`]
 				} else if (isNotExpression(expression)) {
@@ -401,7 +398,6 @@ export class ModelAPI {
 						throw new TypeError("invalid primary key value (expected string)")
 					}
 
-					const p = `p${i}`
 					params.push(value)
 					return [`"${name}" != ?`]
 				} else if (isRangeExpression(expression)) {
@@ -415,7 +411,6 @@ export class ModelAPI {
 								throw new TypeError("invalid primary key value (expected string)")
 							}
 
-							const p = `p${i}q${j}`
 							params.push(value)
 							switch (key) {
 								case "gt":
@@ -441,7 +436,6 @@ export class ModelAPI {
 					} else if (Array.isArray(expression)) {
 						throw new Error("invalid primitive value (expected null | number | string | Uint8Array)")
 					} else {
-						const p = `p${i}`
 						params.push(expression)
 						return [`"${name}" = ?`]
 					}
@@ -455,7 +449,6 @@ export class ModelAPI {
 						throw new Error("invalid primitive value (expected null | number | string | Uint8Array)")
 					}
 
-					const p = `p${i}`
 					params.push(value)
 					if (property.optional) {
 						return [`("${name}" ISNULL OR "${name}" != ?)`]
@@ -482,7 +475,6 @@ export class ModelAPI {
 								}
 							}
 
-							const p = `p${i}q${j}`
 							params.push(value instanceof Uint8Array ? Buffer.from(value) : value)
 							switch (key) {
 								case "gt":
@@ -504,7 +496,6 @@ export class ModelAPI {
 					if (reference === null) {
 						return [`"${name}" ISNULL`]
 					} else if (typeof reference === "string") {
-						const p = `p${i}`
 						params.push(reference)
 						return [`"${name}" = ?`]
 					} else {
@@ -515,7 +506,6 @@ export class ModelAPI {
 					if (reference === null) {
 						return [`"${name}" NOTNULL`]
 					} else if (typeof reference === "string") {
-						const p = `p${i}`
 						params.push(reference)
 						return [`"${name}" != ?`]
 					} else {
@@ -527,37 +517,34 @@ export class ModelAPI {
 					signalInvalidType(expression)
 				}
 			} else if (property.kind === "relation") {
-				throw new Error("modeldb-durable-objects does not support relations")
-				// const relationTable = this.#relations[property.name].table
-				// if (isLiteralExpression(expression)) {
-				// 	const references = expression
-				// 	assert(Array.isArray(references), "invalid relation value (expected string[])")
-				// 	const targets: string[] = []
-				// 	for (const [j, reference] of references.entries()) {
-				// 		assert(typeof reference === "string", "invalid relation value (expected string[])")
-				// 		const p = `p${i}q${j}`
-				// 		params.push(reference)
-				// 		targets.push(`"${this.#primaryKeyName}" IN (SELECT _source FROM "${relationTable}" WHERE (_target = ?))`)
-				// 	}
-				// 	return targets.length > 0 ? [targets.join(" AND ")] : []
-				// } else if (isNotExpression(expression)) {
-				// 	const references = expression.neq
-				// 	assert(Array.isArray(references), "invalid relation value (expected string[])")
-				// 	const targets: string[] = []
-				// 	for (const [j, reference] of references.entries()) {
-				// 		assert(typeof reference === "string", "invalid relation value (expected string[])")
-				// 		const p = `p${i}q${j}`
-				// 		params.push(reference)
-				// 		targets.push(
-				// 			`"${this.#primaryKeyName}" NOT IN (SELECT _source FROM "${relationTable}" WHERE (_target = ?))`,
-				// 		)
-				// 	}
-				// 	return targets.length > 0 ? [targets.join(" AND ")] : []
-				// } else if (isRangeExpression(expression)) {
-				// 	throw new Error("cannot use range expressions on relation values")
-				// } else {
-				// 	signalInvalidType(expression)
-				// }
+				const relationTable = this.#relations[property.name].table
+				if (isLiteralExpression(expression)) {
+					const references = expression
+					assert(Array.isArray(references), "invalid relation value (expected string[])")
+					const targets: string[] = []
+					for (const [j, reference] of references.entries()) {
+						assert(typeof reference === "string", "invalid relation value (expected string[])")
+						params.push(reference)
+						targets.push(`"${this.#primaryKeyName}" IN (SELECT _source FROM "${relationTable}" WHERE (_target = ?))`)
+					}
+					return targets.length > 0 ? [targets.join(" AND ")] : []
+				} else if (isNotExpression(expression)) {
+					const references = expression.neq
+					assert(Array.isArray(references), "invalid relation value (expected string[])")
+					const targets: string[] = []
+					for (const [j, reference] of references.entries()) {
+						assert(typeof reference === "string", "invalid relation value (expected string[])")
+						params.push(reference)
+						targets.push(
+							`"${this.#primaryKeyName}" NOT IN (SELECT _source FROM "${relationTable}" WHERE (_target = ?))`,
+						)
+					}
+					return targets.length > 0 ? [targets.join(" AND ")] : []
+				} else if (isRangeExpression(expression)) {
+					throw new Error("cannot use range expressions on relation values")
+				} else {
+					signalInvalidType(expression)
+				}
 			} else {
 				signalInvalidType(property)
 			}
@@ -571,57 +558,57 @@ export class ModelAPI {
 	}
 }
 
-// export class RelationAPI {
-// 	public readonly table = `${this.relation.source}/${this.relation.property}`
-// 	public readonly sourceIndex = `${this.relation.source}/${this.relation.property}/source`
-// 	public readonly targetIndex = `${this.relation.source}/${this.relation.property}/target`
+export class RelationAPI {
+	public readonly table = `${this.relation.source}/${this.relation.property}`
+	public readonly sourceIndex = `${this.relation.source}/${this.relation.property}/source`
+	public readonly targetIndex = `${this.relation.source}/${this.relation.property}/target`
 
-// 	readonly #select: Query<{ _target: string }>
-// 	readonly #insert: Method<{ _source: string; _target: string }>
-// 	readonly #delete: Method<{ _source: string }>
+	readonly #select: Query<{ _target: string }>
+	readonly #insert: Method<{ _source: string; _target: string }>
+	readonly #delete: Method<{ _source: string }>
 
-// 	public constructor(
-// 		readonly db: SqlStorage,
-// 		readonly relation: Relation,
-// 	) {
-// 		const columns = [`_source TEXT NOT NULL`, `_target TEXT NOT NULL`]
-// 		db.exec(`CREATE TABLE IF NOT EXISTS "${this.table}" (${columns.join(", ")})`)
+	public constructor(
+		readonly db: SqlStorage,
+		readonly relation: Relation,
+	) {
+		const columns = [`_source TEXT NOT NULL`, `_target TEXT NOT NULL`]
+		db.exec(`CREATE TABLE IF NOT EXISTS "${this.table}" (${columns.join(", ")})`)
 
-// 		db.exec(`CREATE INDEX IF NOT EXISTS "${this.sourceIndex}" ON "${this.table}" (_source)`)
+		db.exec(`CREATE INDEX IF NOT EXISTS "${this.sourceIndex}" ON "${this.table}" (_source)`)
 
-// 		if (relation.indexed) {
-// 			db.exec(`CREATE INDEX IF NOT EXISTS "${this.targetIndex}" ON "${this.table}" (_target)`)
-// 		}
+		if (relation.indexed) {
+			db.exec(`CREATE INDEX IF NOT EXISTS "${this.targetIndex}" ON "${this.table}" (_target)`)
+		}
 
-// 		// Prepare methods
-// 		this.#insert = new Method<{ _source: string; _target: string }>(
-// 			this.db,
-// 			`INSERT INTO "${this.table}" (_source, _target) VALUES (:_source, :_target)`,
-// 		)
+		// Prepare methods
+		this.#insert = new Method<{ _source: string; _target: string }>(
+			this.db,
+			`INSERT INTO "${this.table}" (_source, _target) VALUES (:_source, :_target)`,
+		)
 
-// 		this.#delete = new Method<{ _source: string }>(this.db, `DELETE FROM "${this.table}" WHERE _source = :_source`)
+		this.#delete = new Method<{ _source: string }>(this.db, `DELETE FROM "${this.table}" WHERE _source = :_source`)
 
-// 		// Prepare queries
-// 		this.#select = new Query<{ _target: string }>(
-// 			this.db,
-// 			`SELECT _target FROM "${this.table}" WHERE _source = :_source`,
-// 		)
-// 	}
+		// Prepare queries
+		this.#select = new Query<{ _target: string }>(
+			this.db,
+			`SELECT _target FROM "${this.table}" WHERE _source = :_source`,
+		)
+	}
 
-// 	public get(source: string): string[] {
-// 		const targets = this.#select.all([source])
-// 		return targets.map(({ _target: target }) => target)
-// 	}
+	public get(source: string): string[] {
+		const targets = this.#select.all([source])
+		return targets.map(({ _target: target }) => target)
+	}
 
-// 	public add(source: string, targets: PropertyValue) {
-// 		assert(Array.isArray(targets), "expected string[]")
-// 		for (const target of targets) {
-// 			assert(typeof target === "string", "expected string[]")
-// 			this.#insert.run([source, target])
-// 		}
-// 	}
+	public add(source: string, targets: PropertyValue) {
+		assert(Array.isArray(targets), "expected string[]")
+		for (const target of targets) {
+			assert(typeof target === "string", "expected string[]")
+			this.#insert.run([source, target])
+		}
+	}
 
-// 	public delete(source: string) {
-// 		this.#delete.run([source])
-// 	}
-// }
+	public delete(source: string) {
+		this.#delete.run([source])
+	}
+}
