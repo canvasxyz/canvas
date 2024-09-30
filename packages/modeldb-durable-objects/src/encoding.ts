@@ -205,6 +205,8 @@ export function decodePrimitiveValue(modelName: string, property: PrimitivePrope
 	} else if (property.type === "bytes") {
 		if (Buffer.isBuffer(value)) {
 			return new Uint8Array(value.buffer, value.byteOffset, value.byteLength)
+		} else if (value instanceof ArrayBuffer) {
+			return new Uint8Array(value)
 		} else {
 			console.error("expected Uint8Array, got", value)
 			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected Uint8Array)`)
