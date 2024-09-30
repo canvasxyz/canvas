@@ -6,7 +6,7 @@ import { ModelDBProxy } from "@canvas-js/modeldb-durable-objects"
 let worker: UnstableDevWorker
 
 test.beforeEach(async () => {
-	worker = await unstable_dev("test/worker.ts", {
+	worker = await unstable_dev("src/ModelDBProxyWorker.ts", {
 		experimental: { disableExperimentalWarning: true },
 	})
 })
@@ -16,15 +16,13 @@ test.afterEach.always(async () => {
 })
 
 test("durable object should store and return data in modeldb", async (t) => {
-	const uuid = "d37f4bbf-d51c-4b20-8a1c-7bc53a588e4d"
-	const data = { id: "foo", value: "123" }
-
 	const proxy = new ModelDBProxy(worker, {
 		store: {
 			id: "primary",
 			value: "json",
 		},
 	})
+
 	await proxy.initialize()
 
 	await proxy.clear("store")

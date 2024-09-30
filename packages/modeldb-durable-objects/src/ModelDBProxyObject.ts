@@ -1,15 +1,14 @@
-import { DurableObject } from "cloudflare:workers"
-import { Env } from "./worker.js"
-import { ModelDB } from "../src/ModelDB.js"
+import { Env } from "./ModelDBProxyWorker.js"
+import { ModelDB } from "./ModelDB.js"
 import { ModelSchema } from "@canvas-js/modeldb"
 
-export class ModelDBProxyObject extends DurableObject {
+// a durable object that wraps ModelDBProxy
+export class ModelDBProxyObject {
 	state: DurableObjectState
 	env: Env
 	db?: ModelDB
 
 	constructor(state: DurableObjectState, env: Env) {
-		super(state, env)
 		this.state = state
 		this.env = env
 	}
@@ -26,7 +25,7 @@ export class ModelDBProxyObject extends DurableObject {
 		if (request.method !== "POST") throw new Error("invalid method")
 		const url = new URL(request.url)
 
-		const [root, objectId, call] = url.pathname.split('/')
+		const [root, objectId, call] = url.pathname.split("/")
 		const args = await request.json()
 
 		if (call === "initialize") {
@@ -36,7 +35,7 @@ export class ModelDBProxyObject extends DurableObject {
 		} else {
 			const callFn = (this.db as any)[call] as Function
 			const result = await callFn.apply(this.db, args)
-			return new Response(JSON.stringify(result ?? {}))			
+			return new Response(JSON.stringify(result ?? {}))
 		}
 	}
 }

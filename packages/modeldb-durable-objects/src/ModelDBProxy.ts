@@ -19,8 +19,6 @@ export class ModelDBProxy extends AbstractModelDB {
 	initialized: boolean
 	uuid: string
 
-	// `http://example.com/${uuid}`
-
 	constructor(worker: UnstableDevWorker, models: ModelSchema, baseUrl?: string, uuid?: string) {
 		super(parseConfig(models))
 
@@ -28,7 +26,7 @@ export class ModelDBProxy extends AbstractModelDB {
 		this.baseUrl = baseUrl ?? "http://example.com"
 		this.initialized = false
 		this.uuid = uuid ?? randomUUID().toString()
-		console.log(models)
+
 		this.proxyFetch("initialize", [models]).then(() => {
 			this.initialized = true
 		})
@@ -49,13 +47,12 @@ export class ModelDBProxy extends AbstractModelDB {
 	async proxyFetch<T>(call: string, args: any[]): Promise<T> {
 		const body = JSON.stringify(args)
 		const response = await this.worker.fetch(`${this.baseUrl}/${this.uuid}/${call}`, { method: "POST", body })
-		const result = await response.json() as T
-		return result 
+		const result = (await response.json()) as T
+		return result
 	}
 
-	// TODO
-	close(): Promise<void> {
-		throw new Error("unimplemented")
+	async close(): Promise<void> {
+		await this.worker.stop()
 	}
 
 	get<T extends ModelValue<any> = ModelValue<any>>(modelName: string, key: string): Awaitable<T | null> {
