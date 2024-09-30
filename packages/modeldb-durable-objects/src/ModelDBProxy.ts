@@ -50,6 +50,7 @@ export class ModelDBProxy extends AbstractModelDB {
 		const body = json.stringify(args)
 		const response = await this.worker.fetch(`${this.baseUrl}/${this.uuid}/${call}`, { method: "POST", body })
 		if (!response.body) throw new Error("unexpected")
+		if (!response.ok) throw new Error("error")
 		return json.decode(await response.arrayBuffer()) as T
 	}
 
