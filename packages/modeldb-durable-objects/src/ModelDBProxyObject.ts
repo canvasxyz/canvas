@@ -42,13 +42,17 @@ export class ModelDBProxyObject {
 				if (!this.db) throw new Error("uninitialized")
 				const iterateArgs = args as [string, QueryParams | undefined]
 				const result = []
-				for await (const item of this.db.iterate.apply(this.db, iterateArgs)) {
+				for await (const item of this.db.iterate(...iterateArgs)) {
 					result.push(item)
 				}
 				return new Response(json.stringify(result))
 			} else if (call === "subscribe") {
 				if (!this.db) throw new Error("uninitialized")
-				const [modelName, query, subscriptionId] = args as [modelName: string, query: QueryParams, subscriptionId: number]
+				const [modelName, query, subscriptionId] = args as [
+					modelName: string,
+					query: QueryParams,
+					subscriptionId: number,
+				]
 				this.db.subscribe(modelName, query, (results: ModelValue[]) => {
 					this.subscriptionResults.push({ subscriptionId, results })
 				})
@@ -66,7 +70,7 @@ export class ModelDBProxyObject {
 		} catch (err) {
 			const errorMessage = err instanceof Error ? err.message : err
 			const errorMessageString = (errorMessage as any).toString()
-			return new Response(errorMessageString, { status: 400 });
+			return new Response(errorMessageString, { status: 400 })
 		}
 	}
 }
