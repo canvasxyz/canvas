@@ -116,8 +116,9 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 		const messagesCount = await db.count("$messages")
 		// const sessionsCount = await db.count("$sessions")
 		const actionsCount = await db.count("$actions")
-		if (messagesCount > 0 && actionsCount === 0) {
-			app.log("indexing $actions table")
+		const usersCount = await db.count("$dids")
+		if (messagesCount > 0 && (actionsCount === 0 || usersCount === 0)) {
+			app.log("indexing $actions and $dids table")
 			const limit = 4096
 			let resultCount: number
 			let start: string | undefined = undefined
@@ -143,6 +144,12 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 						app.log("indexing action %s (name: %s, did: %s)", id, name, did)
 						const record: ActionRecord = { message_id: id, did, name, timestamp: context.timestamp }
 						effects.push({ operation: "set", model: "$actions", value: record })
+					} else if (message.payload.type === "session") {
+						// index user
+						const { did, publicKey } = message.payload
+						app.log("indexing user %s (did: %s)", publicKey, did)
+						const record = { did }
+						effects.push({ operation: "set", model: "$dids", value: record })
 					}
 					start = id
 				}

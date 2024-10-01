@@ -8,13 +8,17 @@ import { Link, Navigate, Route, Routes, useLocation, useResolvedPath } from "rea
 import useSWR from "swr"
 
 function HomePage() {
-	const { data: countsData } = useSWR(
-		`/index_api/counts/`,
-		fetchAndIpldParseJson<{ topic: string; action_count: number; session_count: number; address_count: number }>,
-		{
-			refreshInterval: 1000,
-		},
-	)
+	const { data: appInfoData } = useSWR(`/api/`, fetchAndIpldParseJson<{ topic: string }>)
+	const { data: actionCountData } = useSWR(`/api/actions/count`, fetchAndIpldParseJson<{ count: number }>, {
+		refreshInterval: 1000,
+	})
+	const { data: sessionCountData } = useSWR(`/api/sessions/count`, fetchAndIpldParseJson<{ count: number }>, {
+		refreshInterval: 1000,
+	})
+
+	const { data: userCountData } = useSWR(`/api/dids/count`, fetchAndIpldParseJson<{ count: number }>, {
+		refreshInterval: 1000,
+	})
 
 	const location = useLocation()
 	const actionsPath = useResolvedPath("./actions")
@@ -24,7 +28,7 @@ function HomePage() {
 	return (
 		<Flex direction="column" gap="4" pt="4">
 			<Text size="7" weight="bold">
-				{countsData ? countsData.topic : "..."}
+				{appInfoData ? appInfoData.topic : "..."}
 			</Text>
 			<Card>
 				<Grid columns="1fr 1fr" gap="4">
@@ -39,7 +43,7 @@ function HomePage() {
 						</Flex>
 						<Flex gap="2">
 							<Text weight="bold">Unique addresses:</Text>
-							<Text weight="medium">{countsData ? countsData.address_count : "-"}</Text>
+							<Text weight="medium">{userCountData ? userCountData.count : "-"}</Text>
 						</Flex>
 					</Flex>
 				</Grid>
@@ -47,10 +51,10 @@ function HomePage() {
 
 			<TabNav.Root>
 				<TabNav.Link asChild active={location.pathname === actionsPath.pathname}>
-					<Link to="./actions">Actions {countsData ? `(${countsData.action_count})` : ""}</Link>
+					<Link to="./actions">Actions {actionCountData ? `(${actionCountData.count})` : ""}</Link>
 				</TabNav.Link>
 				<TabNav.Link asChild active={location.pathname === sessionsPath.pathname}>
-					<Link to="./sessions">Sessions {countsData ? `(${countsData.session_count})` : ""}</Link>
+					<Link to="./sessions">Sessions {sessionCountData ? `(${sessionCountData.count})` : ""}</Link>
 				</TabNav.Link>
 				<TabNav.Link asChild active={location.pathname === networkPath.pathname}>
 					<Link to="./network">Network</Link>

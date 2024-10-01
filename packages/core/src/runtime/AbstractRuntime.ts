@@ -75,12 +75,20 @@ export abstract class AbstractRuntime {
 		},
 	} satisfies ModelSchema
 
+	protected static usersModel = {
+		$dids: {
+			did: "primary",
+			$indexes: [["did"]],
+		},
+	} satisfies ModelSchema
+
 	protected static getModelSchema(schema: ModelSchema): ModelSchema {
 		return {
 			...schema,
 			...AbstractRuntime.sessionsModel,
 			...AbstractRuntime.actionsModel,
 			...AbstractRuntime.effectsModel,
+			...AbstractRuntime.usersModel,
 		}
 	}
 
@@ -173,13 +181,25 @@ export abstract class AbstractRuntime {
 		await signer.verifySession(this.topic, message.payload)
 		const address = signer.getAddressFromDid(did)
 
-		await this.db.set<SessionRecord>("$sessions", {
-			message_id: id,
-			public_key: publicKey,
-			did: did,
-			address: address,
-			expiration: duration === undefined ? null : timestamp + duration,
-		})
+		const effects: Effect[] = [
+			{
+				model: "$sessions",
+				operation: "set",
+				value: {
+					message_id: id,
+					public_key: publicKey,
+					did,
+					address,
+					expiration: duration === undefined ? null : timestamp + duration,
+				},
+			},
+			{
+				model: "$dids",
+				operation: "set",
+				value: { did },
+			},
+		]
+		await this.db.apply(effects)
 	}
 
 	private async handleAction(
