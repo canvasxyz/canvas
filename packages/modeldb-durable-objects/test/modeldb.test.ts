@@ -1,7 +1,7 @@
 import test from "ava"
 import { unstable_dev } from "wrangler"
 import type { UnstableDevWorker } from "wrangler"
-import { ModelDBProxy } from "../src/ModelDProxy.js"
+import { ModelDBProxy } from "../src/ModelDBProxy.js"
 
 let worker: UnstableDevWorker
 
