@@ -30,10 +30,13 @@ export type GossipLogConsumer<Payload = unknown> = (
 export interface GossipLogInit<Payload = unknown> {
 	topic: string
 	apply: GossipLogConsumer<Payload>
+	signer?: Signer<Payload>
+
+	/** validate that the IPLD `payload` is a `Payload` type */
 	validatePayload?: (payload: unknown) => payload is Payload
 	verifySignature?: (signature: Signature, message: Message<Payload>) => Awaitable<void>
 
-	signer?: Signer<Payload>
+	/** add extra tables to the local database for private use */
 	schema?: ModelSchema
 }
 
@@ -215,7 +218,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 	/**
 	 * Sign and append a new *unsigned* message to the end of the log.
-	 * The concurrent heads of the local log are used as parents.
+	 * The current concurrent heads of the local log are used as parents.
 	 */
 	public async append<T extends Payload = Payload>(
 		payload: T,

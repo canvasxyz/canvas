@@ -28,12 +28,18 @@ Logs are identified by a global `topic` string. Any number of peers can replicat
 
 GossipLog makes this all possible at the expense of two major tradeoffs:
 
-1. Logs are only **partially ordered**. The messages in the log are structured in a causal dependency graph; GossipLog guarantees that each message will only be delivered after all of its transitive dependencies are delivered, but doesn't guarantee delivery order within that.
-2. Logs must be deterministically **self-authenticating**.
+<dl>
+  <dt>Logs are only <strong>partially ordered</strong>.</dt>
+  <dd>
+    This means that GossipLog is best for applications where eventual consistency is acceptable, and where message delivery is commutative (and idempotent) in effect. The entries of the log are organized in a causal dependency graph; GossipLog guarantees that each message will only be applied after all of its transitive dependencies are applied, but doesn't guarantee order within that.
+  </dd>
+  <dt>Logs must be deterministically <strong>self-authenticating</strong>.</dt>
+  <dd>
+    This means that the access control logic - who can append what to the log - must be expressed as a pure function of the payload, message signature + public key, and any state accumulated from the message's transitive dependencies.
+  </dd>
+</dl>
 
-The implications of 1) are that GossipLog is best for applications where eventual consistency is acceptable, and where message delivery is commutative (and idempotent) in effect. GossipLog messages carry a built-in logical clock that can be easily used to create last-write-wins registers and other CRDT primitives.
-
-The implications of 2) are that the access control logic - who can append what to the log - must be expressed as a pure function of the payload, message signature + public key, and any state accumulated from the message's transitive dependencies. The simplest case would be a whitelist of known "owner" public keys, but bridging these to on-chain identities like DAO memberships via session keys is also possible. See the notes on [advanced authentication use cases](#advanced-authentication-use-cases) for more detail.
+GossipLog tries to make it as simple as possible to work within these constraints. All messages carry a built-in logical clock that can be used to easily create last-write-wins registers and other CRDT primitives. Similarly, the simplest case form of ACL is a whitelist of fixex "owner" public keys, but bridging these to on-chain identities like DAO memberships via session keys is also possible. See the notes on [advanced authentication use cases](#advanced-authentication-use-cases) for more detail.
 
 ## Design
 
@@ -54,7 +60,7 @@ Similar to Git commits, every message has zero or more parent messages, giving t
 
 ![](https://github.com/canvasxyz/canvas/blob/069aeecdcd7fdcdb2a012efd79ee9eb4a1215516/packages/gossiplog/Component%201.png)
 
-We can derive a logical clock value for each message from its depth in the graph, or, equivalently, by incrementing the maximum clock value of its direct parents. When a peer appends a new payload value to its local replica, it creates a message with all of its current "heads" (messages without children) as parents, and incrementing the clock.
+We derive a logical clock value for each message from its depth in the graph, or, equivalently, by incrementing the maximum clock value of its direct parents. When a peer appends a new payload value to its local replica, it creates a message with all of its current "heads" (messages without children) as parents, and incrementing the clock.
 
 ### Message signatures
 
@@ -106,7 +112,7 @@ The message clock is encoded using a special variable-length format designed to 
 
 Clock values less than 128 are encoded as-is in a single byte.
 
-For clock values larger than 128, the variable-length begins with a unary representation (in bits) of the number of additional *bytes* (not bits) used to represent the clock value, followed by a `0` separator bit, followed by the binary clock value padded on the left.
+For clock values larger than 128, the variable-length begins with a unary representation (in bits) of the number of additional _bytes_ (not bits) used to represent the clock value, followed by a `0` separator bit, followed by the binary clock value padded on the left.
 
 ```
 | input   | input (binary)             | output (binary)            | output (hex)  |
@@ -136,47 +142,74 @@ These string message IDs can be sorted directly using the normal JavaScript stri
 
 ### Initialization
 
-The browser/IndexedDB and NodeJS/SQLite GossipLog implementations are exported from separate subpaths:
+The browser/IndexedDB and NodeJS/SQLite GossipLog implementations are exported from separate subpaths
+
+#### IndexedDB
 
 ```ts
 import { GossipLog } from "@canvas-js/gossiplog/idb"
 
-// opens an IndexedDB database named `canvas/${init.topic}`
-const gossipLog = await GossipLog.open({ ...init })
+// opens an IndexedDB database named `my-app-log`
+const gossipLog = await GossipLog.open({ ...init, name: "my-app-log" })
 ```
+
+#### SQLite
 
 ```ts
 import { GossipLog } from "@canvas-js/gossiplog/sqlite"
 
-// opens a SQLite database at path/to/data/directory/db.sqlite,
-// and an LMDB merkle index at path/to/data/directory/message-index
-const gossipLog = await GossipLog.open({ ...init, path: "path/to/data/directory" })
+{
+  // opens a SQLite database at path/to/data/directory/db.sqlite,
+  // and an LMDB merkle index at path/to/data/directory/message-index
+  const gossipLog = new GossipLog({ ...init, directory: "path/to/data/directory" })
+}
+
+{
+  // opens an in-memory SQLite database and an in-memory merkle index
+  const gossipLog = new GossipLog({ ...init, directory: null })
+}
 ```
+
+#### Configuration
 
 All backends are configured with the same `init` object:
 
 ```ts
 import type { Signature, Signer, Message } from "@canvas-js/interfaces"
 
-type GossipLogConsumer<Payload = unknown> = (
-	signedMessage: { id: string; signature: Signature, message: Message<Payload> },
-) => Awaitable<void>
+// This is an internal class used to cache encoded and decoded formats
+// of signed messages together. The user `apply` function is called
+// with instances of `SignedMessage`.
+declare class SignedMessage<Payload> {
+  /** use gossipLog.encode() and gossipLog.decode() to get SignedMessage instances */
+  private constructor() {}
 
-interface GossipLogInit<Payload = unknown> {
+  readonly id: string
+  readonly signature: Signature
+  readonly message: Message<Payload>
+
+  /** serialized bytes for storage/transport */
+  readonly key: Uint8Array
+  readonly value: Uint8Array
+}
+
+type GossipLogConsumer<Payload> = (signedMessage: SignedMessage<Payload>) => Awaitable<void>
+
+interface GossipLogInit<Payload> {
   topic: string
-	apply: GossipLogConsumer<Payload>
-	validatePayload?: (payload: unknown) => payload is Payload
-	verifySignature?: (signature: Signature, message: Message<Payload>) => Awaitable<void>
+  apply: GossipLogConsumer<Payload>
+  signer?: Signer<Payload> // a random Ed25519 private key will be generated if not provided
 
-	signer?: Signer<Payload>
+  validatePayload?: (payload: unknown) => payload is Payload
+  verifySignature?: (signature: Signature, message: Message<Payload>) => Awaitable<void>
 }
 ```
 
 The `topic` is the global topic string identifying the log - we recommend using NSIDs like `com.example.my-app`. Topics must match `/^[a-zA-Z0-9\.\-]+$/`.
 
-Logs are generic in a `Payload` parameter. You can provide a `validatePayload` method as a TypeScript type predicate to synchronously validate an `unknown` value as a `Payload` (it is only guaranteed to be an IPLD data model value). Only use `validatePayload` for type/schema validation, not for authentication or authorization.
+Logs are generic in a `Payload` parameter. You can provide a `validatePayload` method as a TypeScript type predicate to synchronously validate an `unknown` value as a `Payload` (it is only guaranteed to be an IPLD data model value). Only use `validatePayload` for type/schema validation, not for authn/authz.
 
-The `apply` function is the main attraction. It is invoked once for every message, both for messages appended locally and for messages received from other peers. It is called with the message ID, the signature, and the message itself. If `apply` throws an error, then the message will be discarded and not persisted.
+The `apply` function is the main event consumer. It is invoked once for every message, both for messages appended locally and for messages received from other peers. It is called with the message ID, the signature, and the message itself. If `apply` throws an error, then the message will be discarded and not persisted.
 
 `apply` has three primary responsibilities: authorizing public keys, validating payload semantics, and performing side effects.
 
@@ -196,61 +229,69 @@ Payloads may require additional application-specific validation beyond what is c
 
 Once you have a `GossipLog` instance, you can append a new payload to the log with `gossipLog.append(payload)`.
 
-When , the `signature` and `message` will be sent to other peers, who will insert them directly using `gossipLog.insert`.
+If the log is connected to peers (via libp2p or directly via WebSocket), the `signature` and `message` will be sent to those peers, who will automatically validate and insert them using `gossipLog.insert`.
 
 ### Inserting existing messages
 
 Given an existing `signature: Signature` and `message: Message<Payload>` - such as a signed message received over the network from another peer - we can insert them locally using `gossipLog.insert(signature, message)`.
 
+Typically, you should never need to call `.insert` yourself unless you are doing something special, like delivering messages using your own network transport.
+
 ### Syncing with other peers
 
 GossipLog supports two network topologies: client/server and peer-to-peer.
 
-Client/server means one server imports and runs a `NetworkServer` class, and accepts WebSocket connections on a dedicated port. Clients (which can run in the browser or NodeJS) import `NetworkClient` and connect to the server via `ws://` URL.
+#### Client/server
+
+Client/server means one server starts a HTTP server, and accepts WebSocket connections on a dedicated port. Clients (which can run in the browser or NodeJS) connect to the server via `ws://` URL.
 
 ```ts
 // Server
 import { GossipLog } from "@canvas-js/gossiplog/sqlite"
-import { NetworkServer } from "@canvas-js/gossiplog/network/server"
 
 const log = new GossipLog({ ... })
-const server = new NetworkServer(log)
-server.listen(8080)
+await log.listen(8080)
 ```
 
 ```ts
 // Client
 import { GossipLog } from "@canvas-js/gossiplog/idb"
-import { NetworkClient } from "@canvas-js/gossiplog/network/client"
 
 const log = await GossipLog.open({ ... })
-const client = new NetworkClient(log, "ws://localhost:8080")
+await log.connect("ws://localhost:8080")
 ```
 
-The peer-to-peer topology uses libp2p, and can only run in NodeJS since it requires all peers to be dialable. Peers can import and start a `NetworkPeer`, passing in one or more WebSocket [multiaddr](https://github.com/multiformats/multiaddr) addresses for listening and announcing. For example, to advertise on DNS name `my.app.com` while binding to the local port 80, a peer would use:
+#### Peer-to-peer
+
+The peer-to-peer topology uses libp2p, and can only run in NodeJS. Peers can import and start a `NetworkPeer`, passing in one or more WebSocket [multiaddr](https://github.com/multiformats/multiaddr) addresses for listening and announcing. For example, to advertise on DNS name `my.app.com` while binding to the local port 80, a peer would use:
 
 ```ts
 import { GossipLog } from "@canvas-js/gossiplog/sqlite"
-import { NetworkPeer } from "@canvas-js/gossiplog/network/peer"
 
 const log = new GossipLog({ ... })
-const peer = await NetworkPeer.create(log, {
+const libp2p = await log.startLibp2p({
   listen: ["/ip4/127.0.0.1/tcp/80/ws"],
-  announce: ["/dns4/my.app.com/tcp/443/wss"],
+  announce: ["/dns4/my.app.com/tcp/443/wss"], // this is required if you want to be dialable!
 })
+
+// the `libp2p` peer will automatically connect and sync with other
+// GossipLog instances on the same topic...
 ```
+
+By default, the libp2p node is configured to connect to the default Canvas bootstrap servers, and use the libp2p [rendezvous protocol](https://github.com/libp2p/specs/tree/master/rendezvous) to find other peers on the same topic.
 
 ### Advanced authentication use cases
 
 Expressing an application's access control logic purely in terms of public keys and signatures can be challenging. The simplest case is one where a only a known fixed set of public keys are allowed to write to the log. Another simple case is for open-ended applications where end users have keypairs, and the application can access the private key and programmatically sign messages directly.
 
-A more complex case is one where the application doesn't have programmatic access to a private key, such as web3 apps where wallets require user confirmations for every signature (and only sign messages in particular formats). One approach here is to use sessions, a designated type of message payload that registers a temporary public key and carries an additional signature authorizing the public key to take actions on behalf of some other identity, like an on-chain address. This is implemented for Canvas apps for a variety of chains via the session signer interface.
+A more complex case is one where the application doesn't have programmatic access to a private key, such as web3 apps where wallets require user confirmations for every signature (and only sign messages in particular formats). One approach here is to use [sessions](https://docs.canvas.xyz/8-advanced.html), a designated type of message payload that registers a temporary public key and carries an additional signature authorizing the public key to take actions on behalf of some other identity, like an on-chain address. This is implemented for Canvas apps for a variety of chains via the [session signer interface](https://docs.canvas.xyz/8-advanced.html#creating-your-own-session-signer).
 
 ## API
 
 Topics must match `/^[a-zA-Z0-9\.\-]+$/`.
 
 ```ts
+import type { TypedEventEmitter, Libp2p, PrivateKey } from "@libp2p/interface"
 import type { Signature, Signer, Message, Awaitable } from "@canvas-js/interfaces"
 
 export class SignedMessage<Payload> {
@@ -266,6 +307,14 @@ export class SignedMessage<Payload> {
   readonly value: Uint8Array
 }
 
+export type GossipLogEvents<Payload = unknown> = {
+  message: CustomEvent<SignedMessage<Payload>>
+	commit: CustomEvent<{ root: Node; heads: string[] }>
+	sync: CustomEvent<{ duration: number; messageCount: number; peer?: string }>
+	connect: CustomEvent<{ peer: string }>
+	disconnect: CustomEvent<{ peer: string }>
+}
+
 export type GossipLogConsumer<Payload = unknown> = (
 	signedMessage: SignedMessage<Payload>,
 ) => Awaitable<void>
@@ -273,42 +322,69 @@ export type GossipLogConsumer<Payload = unknown> = (
 export type GossipLogInit<Payload = unknown> = {
 	topic: string
 	apply: GossipLogConsumer<Payload>
+	signer?: Signer<Payload>
+
+	/** validate that the IPLD `payload` is a `Payload` type */
 	validatePayload?: (payload: unknown) => payload is Payload
 	verifySignature?: (signature: Signature, message: Message<Payload>) => Awaitable<void>
 
-	signer?: Signer<Payload>
+	/** add extra tables to the local database for private use */
 	schema?: ModelSchema
 }
 
-export type GossipLogEvents<Payload = unknown> = {
-	message: CustomEvent<SignedMessage<Payload>>
-	commit: CustomEvent<{ root: Node; heads: string[] }>
-	sync: CustomEvent<{ duration: number; messageCount: number; peer?: string }>
+export interface NetworkConfig {
+ 	start?: boolean
+	privateKey?: PrivateKey
+
+	/** array of local WebSocket multiaddrs, e.g. "/ip4/127.0.0.1/tcp/3000/ws" */
+	listen?: string[]
+
+	/** array of public WebSocket multiaddrs, e.g. "/dns4/myapp.com/tcp/443/wss" */
+	announce?: string[]
+
+	bootstrapList?: string[]
+	maxConnections?: number
 }
 
 export interface GossipLog<Payload = unknown>
-  extends EventEmitter<GossipLogEvents<Payload>> {
+  extends TypedEventEmitter<GossipLogEvents<Payload>> {
 
   public readonly topic: string
 
-  public close(): Promise<void>
+  public async close(): Promise<void>
 
-  public append<T extends Payload>(
+  /**
+	 * Sign and append a new *unsigned* message to the end of the log.
+	 * The current concurrent heads of the local log are used as parents.
+	 */
+  public async append<T extends Payload>(
     payload: T,
     options?: { signer?: Signer<Payload> },
   ): Promise<SignedMessage<T>>
 
-  public insert(signedMessage: SignedMessage<Payload>): Promise<void>
+ 	/**
+	 * Insert an existing signed message into the log (ie received via HTTP API).
+	 * If any of the parents are not present, throw an error.
+	 */
+  public async insert(signedMessage: SignedMessage<Payload>): Promise<void>
 
-  public has(id: string): Promise<boolean>
-  public get(id: string): Promise<[signature: Signature, message: Message<Payload>] | [null, null]>
+  public async has(id: string): Promise<boolean>
+  public async get(id: string): Promise<SignedMessage<Payload> | null>
+  public async iterate(
+		range?: { lt?: string; lte?: string; gt?: string; gte?: string; reverse?: boolean; limit?: number },
+	): AsyncIterable<SignedMessage<Payload>>
 
-  public iterate(
-    range?: { lt?: string; lte?: string; gt?: string; gte?: string; reverse?: boolean; limit?: number },
-  ): AsyncIterable<{ id: string; signature: Signature; message: Message<Payload> }>
+  public async replay(): Promise<void>
+  public async getClock(): Promise<[clock: number, parents: string[]]>
 
-  public replay(): Promise<void>
-  public getClock(): Promise<[clock: number, parents: string[]]>
+  /** connect directly to a server ws:// URL */
+ 	public async connect(url: string, options: { signal?: AbortSignal } = {}): Promise<void>
+
+  /** start a WebSocket server */
+	public async listen(port: number, options: { signal?: AbortSignal } = {}): Promise<void>
+
+	/** start a Libp2p peer */
+	public async startLibp2p(config: NetworkConfig): Promise<Libp2p>
 
   public encode(signature: Signature, message: Message<T>): SignedMessage<Payload>
   public decode(value: Uint8Array): SignedMessage<Payload>
