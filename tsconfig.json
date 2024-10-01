@@ -19,6 +19,8 @@
 		{ "path": "./packages/modeldb" },
 		{ "path": "./packages/modeldb/test" },
 		{ "path": "./packages/modeldb/test/server" },
+		{ "path": "./packages/modeldb-durable-objects" },
+		{ "path": "./packages/modeldb-durable-objects/test" },
 		{ "path": "./packages/modeldb-idb" },
 		{ "path": "./packages/modeldb-pg" },
 		{ "path": "./packages/modeldb-sqlite" },

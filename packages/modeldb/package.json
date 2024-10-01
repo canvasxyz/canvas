@@ -17,10 +17,13 @@
 	},
 	"devDependencies": {
 		"@canvas-js/modeldb-sqlite-wasm": "0.11.0",
+		"@canvas-js/modeldb-durable-objects": "0.11.0",
+		"@cloudflare/workers-types": "^4.20240925.0",
 		"fake-indexeddb": "^6.0.0",
 		"nanoid": "^5.0.7",
 		"puppeteer": "^23.4.1",
-		"vite": "^5.4.8"
+		"vite": "^5.4.8",
+		"wrangler": "^3.78.12"
 	},
 	"dependencies": {
 		"@canvas-js/utils": "0.11.0",
