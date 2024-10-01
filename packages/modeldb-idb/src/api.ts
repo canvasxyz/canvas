@@ -50,6 +50,18 @@ export class ModelAPI {
 		}
 	}
 
+	public async getMany<Mode extends IDBTransactionMode>(
+		txn: IDBPTransaction<any, any, Mode>,
+		keys: string[],
+	): Promise<(ModelValue | null)[]> {
+		// TODO: if keys are near each other, we could try using a range instead of getting each key individually
+		const results = []
+		for (const key of keys) {
+			results.push(await this.get(txn, key))
+		}
+		return results
+	}
+
 	async set(txn: IDBPTransaction<any, any, "readwrite">, value: ModelValue): Promise<void> {
 		validateModelValue(this.model, value)
 		const object = this.encodeObject(value)
