@@ -48,7 +48,7 @@ GossipLog tries to make it as simple as possible to work within these constraint
 Log contain _messages_. Messages carry abitrary application-defined payloads. GossipLog uses the [IPLD data model](https://ipld.io/docs/data-model/), a superset of JSON that includes raw bytes and [CIDs](https://github.com/multiformats/cid) as primitive types.
 
 ```ts
-type Message<Payload = unknown> = {
+type Message<Payload> = {
   topic: string
   clock: number
   parents: string[]
@@ -178,7 +178,7 @@ All backends are configured with the same `init` object:
 import type { Signature, Signer, Message } from "@canvas-js/interfaces"
 
 // This is an internal class used to cache encoded and decoded formats
-// of signed messages together. The user `apply` function is called
+// of signed messages together. The user's `apply` function is called
 // with instances of `SignedMessage`.
 declare class SignedMessage<Payload> {
   /** use gossipLog.encode() and gossipLog.decode() to get SignedMessage instances */
@@ -205,7 +205,7 @@ interface GossipLogInit<Payload> {
 }
 ```
 
-The `topic` is the global topic string identifying the log - we recommend using NSIDs like `com.example.my-app`. Topics must match `/^[a-zA-Z0-9\.\-]+$/`.
+The `topic` is the global topic string identifying the log - we recommend using DNS names like `my-app.example.com`. Topics must match `/^[a-zA-Z0-9\.\-]+$/`.
 
 Logs are generic in a `Payload` parameter. You can provide a `validatePayload` method as a TypeScript type predicate to synchronously validate an `unknown` value as a `Payload` (it is only guaranteed to be an IPLD data model value). Only use `validatePayload` for type/schema validation, not for authn/authz.
 
@@ -233,7 +233,12 @@ If the log is connected to peers (via libp2p or directly via WebSocket), the `si
 
 ### Inserting existing messages
 
-Given an existing `signature: Signature` and `message: Message<Payload>` - such as a signed message received over the network from another peer - we can insert them locally using `gossipLog.insert(signature, message)`.
+If for some reason you have an existing `signature: Signature` and `message: Message<Payload>`, such as a signed message received over the network from another peer or constructed manually without using `.append`, you can still manually insert it into the log by using `.encode` and then calling `.insert`.
+
+```ts
+const signedMessage = gossipLog.encode(signature, message)
+await gossipLog.insert(signedMessage)
+```
 
 Typically, you should never need to call `.insert` yourself unless you are doing something special, like delivering messages using your own network transport.
 
@@ -309,82 +314,80 @@ export class SignedMessage<Payload> {
 
 export type GossipLogEvents<Payload = unknown> = {
   message: CustomEvent<SignedMessage<Payload>>
-	commit: CustomEvent<{ root: Node; heads: string[] }>
-	sync: CustomEvent<{ duration: number; messageCount: number; peer?: string }>
-	connect: CustomEvent<{ peer: string }>
-	disconnect: CustomEvent<{ peer: string }>
+  commit: CustomEvent<{ root: Node; heads: string[] }>
+  sync: CustomEvent<{ duration: number; messageCount: number; peer?: string }>
+  connect: CustomEvent<{ peer: string }>
+  disconnect: CustomEvent<{ peer: string }>
 }
 
-export type GossipLogConsumer<Payload = unknown> = (
-	signedMessage: SignedMessage<Payload>,
-) => Awaitable<void>
+export type GossipLogConsumer<Payload = unknown> = (signedMessage: SignedMessage<Payload>) => Awaitable<void>
 
 export type GossipLogInit<Payload = unknown> = {
-	topic: string
-	apply: GossipLogConsumer<Payload>
-	signer?: Signer<Payload>
+  topic: string
+  apply: GossipLogConsumer<Payload>
+  signer?: Signer<Payload>
 
-	/** validate that the IPLD `payload` is a `Payload` type */
-	validatePayload?: (payload: unknown) => payload is Payload
-	verifySignature?: (signature: Signature, message: Message<Payload>) => Awaitable<void>
+  /** validate that the IPLD `payload` is a `Payload` type */
+  validatePayload?: (payload: unknown) => payload is Payload
+  verifySignature?: (signature: Signature, message: Message<Payload>) => Awaitable<void>
 
-	/** add extra tables to the local database for private use */
-	schema?: ModelSchema
+  /** add extra tables to the local database for private use */
+  schema?: ModelSchema
 }
 
 export interface NetworkConfig {
- 	start?: boolean
-	privateKey?: PrivateKey
+  start?: boolean
+  privateKey?: PrivateKey
 
-	/** array of local WebSocket multiaddrs, e.g. "/ip4/127.0.0.1/tcp/3000/ws" */
-	listen?: string[]
+  /** array of local WebSocket multiaddrs, e.g. "/ip4/127.0.0.1/tcp/3000/ws" */
+  listen?: string[]
 
-	/** array of public WebSocket multiaddrs, e.g. "/dns4/myapp.com/tcp/443/wss" */
-	announce?: string[]
+  /** array of public WebSocket multiaddrs, e.g. "/dns4/myapp.com/tcp/443/wss" */
+  announce?: string[]
 
-	bootstrapList?: string[]
-	maxConnections?: number
+  bootstrapList?: string[]
+  maxConnections?: number
 }
 
-export interface GossipLog<Payload = unknown>
-  extends TypedEventEmitter<GossipLogEvents<Payload>> {
+export interface GossipLog<Payload = unknown> extends TypedEventEmitter<GossipLogEvents<Payload>> {
+  readonly topic: string
 
-  public readonly topic: string
-
-  public async close(): Promise<void>
+  public close(): Promise<void>
 
   /**
-	 * Sign and append a new *unsigned* message to the end of the log.
-	 * The current concurrent heads of the local log are used as parents.
-	 */
-  public async append<T extends Payload>(
-    payload: T,
-    options?: { signer?: Signer<Payload> },
-  ): Promise<SignedMessage<T>>
+   * Sign and append a new *unsigned* message to the end of the log.
+   * The current concurrent heads of the local log are used as parents.
+   */
+  public append<T extends Payload>(payload: T, options?: { signer?: Signer<Payload> }): Promise<SignedMessage<T>>
 
- 	/**
-	 * Insert an existing signed message into the log (ie received via HTTP API).
-	 * If any of the parents are not present, throw an error.
-	 */
-  public async insert(signedMessage: SignedMessage<Payload>): Promise<void>
+  /**
+   * Insert an existing signed message into the log (ie received via HTTP API).
+   * If any of the parents are not present, throw an error.
+   */
+  public insert(signedMessage: SignedMessage<Payload>): Promise<void>
 
-  public async has(id: string): Promise<boolean>
-  public async get(id: string): Promise<SignedMessage<Payload> | null>
-  public async iterate(
-		range?: { lt?: string; lte?: string; gt?: string; gte?: string; reverse?: boolean; limit?: number },
-	): AsyncIterable<SignedMessage<Payload>>
+  public has(id: string): Promise<boolean>
+  public get(id: string): Promise<SignedMessage<Payload> | null>
+  public iterate(range?: {
+    lt?: string
+    lte?: string
+    gt?: string
+    gte?: string
+    reverse?: boolean
+    limit?: number
+  }): AsyncIterable<SignedMessage<Payload>>
 
-  public async replay(): Promise<void>
-  public async getClock(): Promise<[clock: number, parents: string[]]>
+  public replay(): Promise<void>
+  public getClock(): Promise<[clock: number, parents: string[]]>
 
   /** connect directly to a server ws:// URL */
- 	public async connect(url: string, options: { signal?: AbortSignal } = {}): Promise<void>
+  public connect(url: string, options: { signal?: AbortSignal } = {}): Promise<void>
 
   /** start a WebSocket server */
-	public async listen(port: number, options: { signal?: AbortSignal } = {}): Promise<void>
+  public listen(port: number, options: { signal?: AbortSignal } = {}): Promise<void>
 
-	/** start a Libp2p peer */
-	public async startLibp2p(config: NetworkConfig): Promise<Libp2p>
+  /** start a Libp2p peer */
+  public startLibp2p(config: NetworkConfig): Promise<Libp2p>
 
   public encode(signature: Signature, message: Message<T>): SignedMessage<Payload>
   public decode(value: Uint8Array): SignedMessage<Payload>
