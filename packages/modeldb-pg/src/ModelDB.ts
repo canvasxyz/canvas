@@ -103,6 +103,12 @@ export class ModelDB extends AbstractModelDB {
 		return api.get(key) as Promise<T | null>
 	}
 
+	public async getMany<T extends ModelValue>(modelName: string, keys: string[]): Promise<(T | null)[]> {
+		const api = this.#models[modelName]
+		assert(api !== undefined, `model ${modelName} not found`)
+		return api.getMany(keys) as Promise<(T | null)[]>
+	}
+
 	public async *iterate<T extends ModelValue<any> = ModelValue<any>>(
 		modelName: string,
 		query: QueryParams = {},
