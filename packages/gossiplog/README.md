@@ -58,7 +58,7 @@ type Message<Payload> = {
 
 Similar to Git commits, every message has zero or more parent messages, giving the log a graph structure.
 
-![](https://github.com/canvasxyz/canvas/blob/069aeecdcd7fdcdb2a012efd79ee9eb4a1215516/packages/gossiplog/Component%201.png)
+<img width="938" alt="Component 1" src="https://github.com/user-attachments/assets/12a9b272-5ed1-4d8b-801c-6021cdc771da">
 
 We derive a logical clock value for each message from its depth in the graph, or, equivalently, by incrementing the maximum clock value of its direct parents. When a peer appends a new payload value to its local replica, it creates a message with all of its current "heads" (messages without children) as parents, and incrementing the clock.
 
@@ -104,9 +104,9 @@ await log.append({ ...payload }, { signer: signerB })
 
 ### Message IDs
 
-Message IDs begin with the message clock, followed by the sha2-256 hash of the serialized signed message, and truncated to 20 bytes total. These are encoded using the [`base32hex`](https://www.rfc-editor.org/rfc/rfc4648#section-7) alphabet to get 32-character string IDs, like `054ki1oubq8airsc9d8sbg0t7itqbdlf`.
+Message IDs begin with the message clock, followed by the sha2-256 hash of the serialized signed message, and truncated to 20 bytes total. These are encoded using the [`base32hex`](https://www.rfc-editor.org/rfc/rfc4648#section-7) alphabet to get 32-character string IDs, like `9j9dfp0rr52t9jnvj1imqj2ivfh9v3r3`.
 
-![](https://github.com/canvasxyz/canvas/blob/84b3a2fd7b3cf36e202089c4ff3471121dffbe4b/packages/gossiplog/Component%202.png)
+<img width="517" alt="Component 2" src="https://github.com/user-attachments/assets/2a795584-60ec-4d1e-a98b-ef3d26bf6c3f">
 
 The message clock is encoded using a special variable-length format designed to preseve sorting order (ie message IDs sort lexicographically according to their clock values).
 
