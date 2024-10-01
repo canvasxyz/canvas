@@ -161,6 +161,9 @@ export class ModelAPI {
 	}
 
 	public getMany(keys: string[]): (ModelValue | null)[] {
+		if (keys.length === 0) {
+			return []
+		}
 		const params: Record<`p${number}`, string> = {}
 		const whereParts = []
 		for (const [i, key] of keys.entries()) {
