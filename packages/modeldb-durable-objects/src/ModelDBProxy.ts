@@ -22,7 +22,8 @@ type Subscription = {
 	callback: (results: ModelValue[]) => Awaitable<void>
 }
 
-// A test proxy for Durable Objects. Uses extra requests to fetch subscriptions.
+// A mock ModelDB that proxies requests to a Durable Objects via a ModelDBProxyWorker.
+// Use this for testing only, it makes extra requests to fetch subscriptions.
 export class ModelDBProxy extends AbstractModelDB {
 	worker: UnstableDevWorker
 	baseUrl: string
@@ -63,11 +64,11 @@ export class ModelDBProxy extends AbstractModelDB {
 		const body = json.stringify(args)
 		const response = await this.worker.fetch(`${this.baseUrl}/${this.uuid}/${call}`, { method: "POST", body })
 		if (!response.body) throw new Error("unexpected")
-		if (!response.ok) throw new Error("error")
+		if (!response.ok) throw new Error(await response.text())
 		const result = json.decode(await response.arrayBuffer()) as T
 
 		// Update subscriptions. Could cause a race condition because of
-		// the async call to /fetchSubscriptions, so only use for testing.
+		// the async call to /fetchSubscriptions.
 		if (this.subscriptions.size > 0) {
 			const subscriptionResponse = await this.worker.fetch(`${this.baseUrl}/${this.uuid}/fetchSubscriptions`, {
 				method: "POST",
@@ -86,7 +87,7 @@ export class ModelDBProxy extends AbstractModelDB {
 	async fetchSubscriptions(): Promise<ModelValue[]> {
 		const response = await this.worker.fetch(`${this.baseUrl}/${this.uuid}/fetchSubscriptions`, { method: "POST" })
 		if (!response.body) throw new Error("unexpected")
-		if (!response.ok) throw new Error("error")
+		if (!response.ok) throw new Error(await response.text())
 		const results = json.decode(await response.arrayBuffer()) as ModelValue[]
 		return results
 	}
@@ -104,14 +105,14 @@ export class ModelDBProxy extends AbstractModelDB {
 		modelName: string,
 		query?: QueryParams,
 	): AsyncIterable<T> {
-		const items: T[] = await this.proxyFetch("iterate", [modelName, prepare(query)])
+		const items: T[] = await this.proxyFetch("iterate", query ? [modelName, prepare(query)] : [modelName])
 		for (const item of items) {
 			yield item
 		}
 	}
 
 	query<T extends ModelValue<any> = ModelValue<any>>(modelName: string, query?: QueryParams): Promise<T[]> {
-		return this.proxyFetch("query", [modelName, prepare(query)])
+		return this.proxyFetch("query", query ? [modelName, prepare(query)] : [modelName])
 	}
 
 	count(modelName: string, where?: WhereCondition): Promise<number> {
