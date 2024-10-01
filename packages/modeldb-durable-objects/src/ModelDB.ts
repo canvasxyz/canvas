@@ -1,5 +1,5 @@
 import { assert, signalInvalidType } from "@canvas-js/utils"
-
+import { Awaitable } from "@canvas-js/interfaces"
 import {
 	AbstractModelDB,
 	parseConfig,
@@ -19,8 +19,18 @@ export interface ModelDBOptions {
 	models: ModelSchema
 }
 
+type Subscription = {
+	model: string
+	query: QueryParams
+	filter: (effect: Effect) => boolean
+	callback: (results: ModelValue[]) => Awaitable<void>
+}
+
 export class ModelDB extends AbstractModelDB {
 	public readonly db: SqlStorage
+
+	protected readonly subscriptions = new Map<number, Subscription>()
+	#subscriptionId = 0
 
 	#models: Record<string, ModelAPI> = {}
 
@@ -70,12 +80,6 @@ export class ModelDB extends AbstractModelDB {
 		return api.get(key) as T | null
 	}
 
-	public async set<T extends ModelValue<any> = ModelValue<any>>(modelName: string, value: T): Promise<void> {
-		const api = this.#models[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
-		return api.set(value)
-	}
-
 	public async *iterate<T extends ModelValue<any> = ModelValue<any>>(
 		modelName: string,
 		query: QueryParams = {},
@@ -104,5 +108,35 @@ export class ModelDB extends AbstractModelDB {
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
 		return api.query(query) as T[]
+	}
+
+	public subscribe(
+		modelName: string,
+		query: QueryParams,
+		callback: (results: ModelValue[]) => Awaitable<void>,
+	): { id: number; results: Promise<ModelValue[]> } {
+		const model = this.models[modelName]
+		assert(model !== undefined, `model ${modelName} not found`)
+
+		const filter = this.getEffectFilter(model, query)
+		const id = this.#subscriptionId++
+		this.subscriptions.set(id, { model: modelName, query, filter, callback })
+
+		return {
+			id,
+			results: this.query(modelName, query).then((results) =>
+				Promise.resolve(callback(results)).then(
+					() => results,
+					(err) => {
+						this.log.error(err)
+						return results
+					},
+				),
+			),
+		}
+	}
+
+	public unsubscribe(id: number) {
+		this.subscriptions.delete(id)
 	}
 }

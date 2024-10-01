@@ -1,18 +1,21 @@
-import { ModelSchema, QueryParams } from "@canvas-js/modeldb"
+import { ModelSchema, ModelValue, QueryParams } from "@canvas-js/modeldb"
 import * as json from "@ipld/dag-json"
 
 import { Env } from "./ModelDBProxyWorker.js"
 import { ModelDB } from "./ModelDB.js"
 
-// a durable object that wraps ModelDBProxy
+// A Durable Object that puts ModelDBProxy behind a stub Cloudflare worker.
 export class ModelDBProxyObject {
 	state: DurableObjectState
 	env: Env
 	db?: ModelDB
 
+	subscriptionResults: Array<{ subscriptionId: number; results: ModelValue[] }>
+
 	constructor(state: DurableObjectState, env: Env) {
 		this.state = state
 		this.env = env
+		this.subscriptionResults = []
 	}
 
 	initialize(modelSchema: ModelSchema) {
@@ -28,7 +31,7 @@ export class ModelDBProxyObject {
 		const url = new URL(request.url)
 
 		const [root, objectId, call] = url.pathname.split("/")
-		const args = json.decode(await request.bytes())
+		const args = call === "fetchSubscriptions" ? null : json.decode(await request.bytes())
 
 		if (call === "initialize") {
 			const [modelSchema] = args as ModelSchema[]
@@ -42,6 +45,17 @@ export class ModelDBProxyObject {
 				result.push(item)
 			}
 			return new Response(json.stringify(result))
+		} else if (call === "subscribe") {
+			if (!this.db) throw new Error("uninitialized")
+			const [modelName, query, subscriptionId] = args as [modelName: string, query: QueryParams, subscriptionId: number]
+			this.db.subscribe(modelName, query, (results: ModelValue[]) => {
+				this.subscriptionResults.push({ subscriptionId, results })
+			})
+			return new Response(json.stringify(this.subscriptionResults))
+		} else if (call === "fetchSubscriptions") {
+			const result = json.stringify(this.subscriptionResults)
+			this.subscriptionResults = []
+			return new Response(result)
 		} else {
 			if (!this.db) throw new Error("uninitialized")
 			const callFn = (this.db as any)[call] as Function
