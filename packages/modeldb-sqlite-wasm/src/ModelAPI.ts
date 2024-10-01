@@ -80,16 +80,18 @@ export class ModelAPI {
 	readonly #primaryKeyName: string
 	readonly #primaryKeyParam: `p${string}`
 
+	columnNames: string[]
+
 	public constructor(readonly db: OpfsDatabase, readonly model: Model) {
 		const columns: string[] = []
-		const columnNames: `"${string}"`[] = [] // quoted column names for non-relation properties
+		this.columnNames = [] // quoted column names for non-relation properties
 		const columnParams: `:p${string}`[] = [] // query params for non-relation properties
 		let primaryKeyIndex: number | null = null
 		let primaryKey: PrimaryKeyProperty | null = null
 		for (const [i, property] of model.properties.entries()) {
 			if (property.kind === "primary" || property.kind === "primitive" || property.kind === "reference") {
 				columns.push(getPropertyColumn(property))
-				columnNames.push(`"${property.name}"`)
+				this.columnNames.push(`"${property.name}"`)
 				columnParams.push(`:p${i}`)
 				this.#params[property.name] = `p${i}`
 
@@ -126,7 +128,7 @@ export class ModelAPI {
 		}
 
 		// Prepare methods
-		const insertNames = columnNames.join(", ")
+		const insertNames = this.columnNames.join(", ")
 		const insertParams = columnParams.join(", ")
 		this.#insert = new Method<Params>(
 			db,
@@ -134,7 +136,7 @@ export class ModelAPI {
 		)
 
 		const where = `WHERE "${this.#primaryKeyName}" = :${this.#primaryKeyParam}`
-		const updateEntries = Array.from(zip(columnNames, columnParams)).map(([name, param]) => `${name} = ${param}`)
+		const updateEntries = Array.from(zip(this.columnNames, columnParams)).map(([name, param]) => `${name} = ${param}`)
 
 		this.#update = new Method<Params>(db, `UPDATE "${this.#table}" SET ${updateEntries.join(", ")} ${where}`)
 
@@ -147,22 +149,37 @@ export class ModelAPI {
 
 		this.#select = new Query<Record<string, `p${string}`>, RecordValue>(
 			this.db,
-			`SELECT ${columnNames.join(", ")} FROM "${this.#table}" ${where}`,
+			`SELECT ${this.columnNames.join(", ")} FROM "${this.#table}" ${where}`,
 		)
 
-		this.#selectAll = new Query<{}, RecordValue>(this.db, `SELECT ${columnNames.join(", ")} FROM "${this.#table}"`)
+		this.#selectAll = new Query<{}, RecordValue>(this.db, `SELECT ${this.columnNames.join(", ")} FROM "${this.#table}"`)
 	}
 
 	public get(key: string): ModelValue | null {
-		const record = this.#select.get({ [this.#primaryKeyParam]: key })
-		if (record === null) {
-			return null
+		return this.getMany([key])[0]
+	}
+
+	public getMany(keys: string[]): (ModelValue | null)[] {
+		const params: Record<`p${number}`, string> = {}
+		const whereParts = []
+		for (const [i, key] of keys.entries()) {
+			whereParts.push(`"${this.#primaryKeyName}" = :p${i}`)
+			params[`p${i}`] = key
 		}
 
-		return {
-			...decodeRecord(this.model, record),
-			...mapValues(this.#relations, (api) => api.get(key)),
+		const queryString = `SELECT ${this.columnNames.join(", ")} FROM "${this.#table}" WHERE ${whereParts.join(" OR ")}`
+
+		const query = new Query<Record<`p${string}`, string>, RecordValue>(this.db, queryString)
+		const rowsByKey: Record<string, ModelValue> = {}
+		for (const row of query.all(params)) {
+			const rowKey = row[this.#primaryKeyName]
+			assert(typeof rowKey === "string", 'expected typeof primaryKey === "string"')
+			rowsByKey[rowKey] = {
+				...decodeRecord(this.model, row),
+				...mapValues(this.#relations, (api) => api.get(rowKey)),
+			}
 		}
+		return keys.map((key) => rowsByKey[key] ?? null)
 	}
 
 	public set(value: ModelValue) {
