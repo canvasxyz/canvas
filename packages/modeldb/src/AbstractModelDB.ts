@@ -31,6 +31,11 @@ export abstract class AbstractModelDB {
 
 	abstract get<T extends ModelValue<any> = ModelValue<any>>(modelName: string, key: string): Awaitable<T | null>
 
+	abstract getMany<T extends ModelValue<any> = ModelValue<any>>(
+		modelName: string,
+		key: string[],
+	): Awaitable<(T | null)[]>
+
 	abstract iterate<T extends ModelValue<any> = ModelValue<any>>(
 		modelName: string,
 		query?: QueryParams,
