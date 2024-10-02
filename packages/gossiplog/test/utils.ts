@@ -107,9 +107,9 @@ export const testPlatforms = (
 			return log
 		})
 	}
-
-	test.after.always(() => worker.stop())
 }
+
+test.after.always(() => worker.stop())
 
 export async function expectLogEntries<T>(
 	t: ExecutionContext<unknown>,
