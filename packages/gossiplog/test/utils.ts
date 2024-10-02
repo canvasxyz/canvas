@@ -10,6 +10,9 @@ import { nanoid } from "nanoid"
 import { toString } from "uint8arrays"
 import { PoolConfig } from "pg"
 
+import { unstable_dev } from "wrangler"
+import type { UnstableDevWorker } from "wrangler"
+
 import { Key, Node } from "@canvas-js/okra"
 
 import type { Signer, Message } from "@canvas-js/interfaces"
@@ -20,6 +23,7 @@ import { AbstractGossipLog, GossipLogInit, encodeId, decodeClock } from "@canvas
 import { GossipLog as GossipLogSqlite } from "@canvas-js/gossiplog/sqlite"
 import { GossipLog as GossipLogIdb } from "@canvas-js/gossiplog/idb"
 import { GossipLog as GossipLogPostgres } from "@canvas-js/gossiplog/pg"
+import { GossipLog as GossipLogDurableObjects } from "@canvas-js/gossiplog/do"
 
 if (globalThis.navigator === undefined) {
 	// @ts-expect-error
@@ -45,13 +49,22 @@ function getPgConfig(): string | PoolConfig {
 	}
 }
 
+const worker = await unstable_dev("test/worker.ts", {
+	experimental: { disableExperimentalWarning: true },
+})
+
 export const testPlatforms = (
 	name: string,
 	run: (
 		t: ExecutionContext<unknown>,
 		openGossipLog: <Payload>(t: ExecutionContext, init: GossipLogInit<Payload>) => Promise<AbstractGossipLog<Payload>>,
 	) => void,
-	platforms: { sqlite?: boolean; idb?: boolean; pg?: boolean } = { sqlite: true, idb: true, pg: true },
+	platforms: { sqlite?: boolean; idb?: boolean; pg?: boolean; do?: boolean } = {
+		sqlite: true,
+		idb: true,
+		pg: true,
+		do: true,
+	},
 ) => {
 	const macro = test.macro(run)
 
@@ -82,6 +95,14 @@ export const testPlatforms = (
 	if (platforms.pg) {
 		test(`Postgres - ${name}`, macro, async (t, init) => {
 			const log = await GossipLogPostgres.open(getPgConfig(), { ...init, clear: true })
+			t.teardown(() => log.close())
+			return log
+		})
+	}
+
+	if (platforms.do) {
+		test(`Durable Objects - ${name}`, macro, async (t, init) => {
+			const log = await GossipLogDurableObjects.open({ ...init, worker, useTestProxy: true })
 			t.teardown(() => log.close())
 			return log
 		})

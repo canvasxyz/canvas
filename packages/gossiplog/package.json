@@ -20,6 +20,7 @@
 		"./client": "./lib/client/index.js",
 		"./server": "./lib/server/index.js",
 		"./libp2p": "./lib/libp2p/index.js",
+		"./do": "./lib/do/index.js",
 		"./idb": "./lib/idb/index.js",
 		"./pg": "./lib/pg/index.js",
 		"./sqlite": "./lib/sqlite/index.js",
@@ -100,12 +101,14 @@
 		"ws": "^8.18.0"
 	},
 	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20240925.0",
 		"@types/pg": "^8.11.10",
 		"@types/pg-cursor": "^2.7.2",
 		"fake-indexeddb": "^6.0.0",
 		"it-pair": "^2.0.6",
 		"p-defer": "^4.0.1",
 		"prando": "^6.0.1",
-		"web-locks": "^0.0.8"
+		"web-locks": "^0.0.8",
+		"wrangler": "^3.78.12"
 	}
 }
