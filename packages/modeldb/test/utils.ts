@@ -107,7 +107,7 @@ export const testOnModelDB = (
 		return mdb
 	})
 
-	test.serial(`Durable Object - ${name}`, macro, async (t, models) => {
+	test.serial(`Durable Objects - ${name}`, macro, async (t, models) => {
 		const mdb = new ModelDBDurableObjectsProxy(worker, models)
 		await mdb.initialize()
 		return mdb

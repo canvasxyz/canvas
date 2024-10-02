@@ -49,13 +49,17 @@ export class ModelDB extends AbstractModelDB {
 
 	public async apply(effects: Effect[]) {
 		// support transactions by rolling back each ModelValue
-		const rollback: Array<{ model: string, key: string, value: ModelValue | null }> = []
+		const rollback: Array<{ model: string; key: string; value: ModelValue | null }> = []
 		try {
 			for (const effect of effects) {
 				const model = this.models[effect.model]
 				assert(model !== undefined, `model ${effect.model} not found`)
 				if (effect.operation === "set") {
-					rollback.push({ model: effect.model, key: effect.value[model.primaryKey], value: this.#models[effect.model].get(effect.value[model.primaryKey]) })
+					rollback.push({
+						model: effect.model,
+						key: effect.value[model.primaryKey],
+						value: this.#models[effect.model].get(effect.value[model.primaryKey]),
+					})
 					this.#models[effect.model].set(effect.value)
 				} else if (effect.operation === "delete") {
 					rollback.push({ model: effect.model, key: effect.key, value: this.#models[effect.model].get(effect.key) })
