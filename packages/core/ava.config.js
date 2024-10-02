@@ -1,5 +1,5 @@
 export default {
-	files: ["./test/*.test.ts"],
+	files: ["./test/*.test.ts", "./test/replicated/*.test.ts"],
 	concurrency: 1,
 	typescript: {
 		compile: false,

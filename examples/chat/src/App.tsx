@@ -18,7 +18,7 @@ import { LogStatus } from "./LogStatus.js"
 const topic = "chat-example.canvas.xyz"
 const bootstrapList = import.meta.env.VITE_BOOTSTRAP_LIST && import.meta.env.VITE_BOOTSTRAP_LIST.split(",")
 
-export const contract = {
+const contract = {
 	models: {
 		message: {
 			id: "primary",
