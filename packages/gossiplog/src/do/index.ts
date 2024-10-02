@@ -1,0 +1,64 @@
+import fs from "node:fs"
+
+import { toString } from "uint8arrays"
+
+import { Tree, Mode } from "@canvas-js/okra"
+import { Tree as MemoryTree } from "@canvas-js/okra-memory"
+
+import { ModelDB, ModelDBProxy } from "@canvas-js/modeldb-durable-objects"
+
+import { UnstableDevWorker } from "wrangler"
+import { SqlStorage } from "@cloudflare/workers-types"
+
+import { AbstractGossipLog, GossipLogInit } from "../AbstractGossipLog.js"
+import { MerkleIndex } from "../MerkleIndex.js"
+
+export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
+	public static async open<Payload>({
+		db,
+		worker,
+		useTestProxy,
+		...init
+	}: {
+		db?: SqlStorage
+		worker?: UnstableDevWorker
+		useTestProxy?: boolean
+	} & GossipLogInit<Payload>) {
+		let mdb: ModelDB | ModelDBProxy
+
+		if (useTestProxy && worker) {
+			mdb = new ModelDBProxy(worker, { ...init.schema, ...AbstractGossipLog.schema })
+			await mdb.initialize()
+		} else if (!useTestProxy && db) {
+			mdb = new ModelDB({ db, models: { ...init.schema, ...AbstractGossipLog.schema } })
+		} else {
+			throw new Error("must provide db or worker && useTestProxy")
+		}
+
+		const messageCount = await mdb.count("$messages")
+		const merkleIndex = new MerkleIndex(mdb)
+		const start = performance.now()
+		const tree = await MemoryTree.fromEntries({ mode: Mode.Index }, merkleIndex.entries())
+		const root = await tree.read((txn) => txn.getRoot())
+		const delta = performance.now() - start
+
+		const gossipLog = new GossipLog(mdb, tree, init)
+
+		gossipLog.log(
+			`build in-memory merkle tree (root %d:%s, %d entries, %dms)`,
+			root.level,
+			toString(root.hash, "hex"),
+			messageCount,
+			Math.round(delta),
+		)
+		return gossipLog
+	}
+
+	private constructor(
+		public readonly db: ModelDB | ModelDBProxy,
+		public readonly tree: MemoryTree,
+		init: GossipLogInit<Payload>,
+	) {
+		super(init)
+	}
+}
