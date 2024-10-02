@@ -81,23 +81,21 @@ export class ModelAPI {
 
 	readonly #relations: Record<string, RelationAPI> = {}
 	readonly #primaryKeyName: string
+	columnNames: `"${string}"`[]
 
-	public constructor(
-		readonly db: SqlStorage,
-		readonly model: Model,
-	) {
+	public constructor(readonly db: SqlStorage, readonly model: Model) {
 		// in the cloudflare runtime, `this` cannot be used when assigning default values to private properties
 		this.#table = model.name
 		this.#properties = Object.fromEntries(model.properties.map((property) => [property.name, property]))
 
 		const columns: string[] = []
-		const columnNames: `"${string}"`[] = [] // quoted column names for non-relation properties
+		this.columnNames = [] // quoted column names for non-relation properties
 		let primaryKeyIndex: number | null = null
 		let primaryKey: PrimaryKeyProperty | null = null
 		for (const [i, property] of model.properties.entries()) {
 			if (property.kind === "primary" || property.kind === "primitive" || property.kind === "reference") {
 				columns.push(getPropertyColumn(property))
-				columnNames.push(`"${property.name}"`)
+				this.columnNames.push(`"${property.name}"`)
 
 				if (property.kind === "primary") {
 					primaryKeyIndex = i
@@ -131,15 +129,15 @@ export class ModelAPI {
 		}
 
 		// Prepare methods
-		const insertNames = columnNames.join(", ")
-		const insertParams = columnNames.map(() => "?").join(", ")
+		const insertNames = this.columnNames.join(", ")
+		const insertParams = this.columnNames.map(() => "?").join(", ")
 		this.#insert = new Method<Params>(
 			db,
 			`INSERT OR IGNORE INTO "${this.#table}" (${insertNames}) VALUES (${insertParams})`,
 		)
 
 		const wherePrimaryKeyEquals = `WHERE "${this.#primaryKeyName}" = ?`
-		const updateEntries = columnNames.map((name) => `${name} = ?`)
+		const updateEntries = this.columnNames.map((name) => `${name} = ?`)
 
 		this.#update = new Method<Params>(
 			db,
@@ -154,10 +152,10 @@ export class ModelAPI {
 		this.#count = new Query<{ count: number }>(this.db, `SELECT COUNT(*) AS count FROM "${this.#table}"`)
 		this.#select = new Query<RecordValue>(
 			this.db,
-			`SELECT ${columnNames.join(", ")} FROM "${this.#table}" ${wherePrimaryKeyEquals}`,
+			`SELECT ${this.columnNames.join(", ")} FROM "${this.#table}" ${wherePrimaryKeyEquals}`,
 		)
 
-		this.#selectAll = new Query<RecordValue>(this.db, `SELECT ${columnNames.join(", ")} FROM "${this.#table}"`)
+		this.#selectAll = new Query<RecordValue>(this.db, `SELECT ${this.columnNames.join(", ")} FROM "${this.#table}"`)
 	}
 
 	public get(key: string): ModelValue | null {
@@ -170,6 +168,32 @@ export class ModelAPI {
 			...decodeRecord(this.model, record),
 			...mapValues(this.#relations, (api) => api.get(key)),
 		}
+	}
+
+	public getMany(keys: string[]): (ModelValue | null)[] {
+		if (keys.length === 0) {
+			return []
+		}
+		const params = []
+		const whereParts = []
+		for (const [i, key] of keys.entries()) {
+			whereParts.push(`"${this.#primaryKeyName}" = :p${i}`)
+			params.push(key)
+		}
+
+		const queryString = `SELECT ${this.columnNames.join(", ")} FROM "${this.#table}" WHERE ${whereParts.join(" OR ")}`
+
+		const query = new Query<RecordValue>(this.db, queryString)
+		const rowsByKey: Record<string, ModelValue> = {}
+		for (const row of query.all(params)) {
+			const rowKey = row[this.#primaryKeyName]
+			assert(typeof rowKey === "string", 'expected typeof primaryKey === "string"')
+			rowsByKey[rowKey] = {
+				...decodeRecord(this.model, row),
+				...mapValues(this.#relations, (api) => api.get(rowKey)),
+			}
+		}
+		return keys.map((key) => rowsByKey[key] ?? null)
 	}
 
 	public set(value: ModelValue) {
@@ -565,10 +589,7 @@ export class RelationAPI {
 	readonly #insert: Method<{ _source: string; _target: string }>
 	readonly #delete: Method<{ _source: string }>
 
-	public constructor(
-		readonly db: SqlStorage,
-		readonly relation: Relation,
-	) {
+	public constructor(readonly db: SqlStorage, readonly relation: Relation) {
 		const columns = [`_source TEXT NOT NULL`, `_target TEXT NOT NULL`]
 		db.exec(`CREATE TABLE IF NOT EXISTS "${this.table}" (${columns.join(", ")})`)
 
