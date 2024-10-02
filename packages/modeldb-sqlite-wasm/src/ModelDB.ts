@@ -84,6 +84,11 @@ export class ModelDB extends AbstractModelDB {
 		return this.wrappedDB.get(modelName, key)
 	}
 
+	public async getMany<T extends ModelValue>(modelName: string, keys: string[]): Promise<(T | null)[]> {
+		// @ts-ignore
+		return this.wrappedDB.getMany(modelName, keys)
+	}
+
 	public async *iterate<T extends ModelValue<any> = ModelValue<any>>(modelName: string): AsyncIterable<T> {
 		return this.wrappedDB.iterate(modelName) as AsyncIterable<T>
 	}

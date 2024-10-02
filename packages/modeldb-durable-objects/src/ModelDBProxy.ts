@@ -100,6 +100,10 @@ export class ModelDBProxy extends AbstractModelDB {
 		return this.proxyFetch("get", [modelName, key])
 	}
 
+	getMany<T extends ModelValue<any> = ModelValue<any>>(modelName: string, keys: string[]): Awaitable<(T | null)[]> {
+		return this.proxyFetch("getMany", [modelName, keys])
+	}
+
 	async *iterate<T extends ModelValue<any> = ModelValue<any>>(
 		modelName: string,
 		query?: QueryParams,

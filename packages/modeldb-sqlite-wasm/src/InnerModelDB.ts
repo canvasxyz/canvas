@@ -45,6 +45,12 @@ export class InnerModelDB {
 		return api.get(key) as T
 	}
 
+	public getMany<T extends ModelValue>(modelName: string, keys: string[]): T[] {
+		const api = this.#models[modelName]
+		assert(api !== undefined, `model ${modelName} not found`)
+		return api.getMany(keys) as T[]
+	}
+
 	public iterate(modelName: string, query: QueryParams = {}): AsyncIterable<ModelValue> {
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)

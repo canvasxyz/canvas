@@ -142,20 +142,42 @@ export class ModelAPI {
 	}
 
 	public async get(key: string): Promise<ModelValue | null> {
-		const { rows } = await this.client.query(
-			`SELECT ${this.#columnNames.join(", ")} FROM "${this.#table}" WHERE "${this.#primaryKeyName}" = $1`,
-			[key],
-		)
+		return (await this.getMany([key]))[0]
+	}
 
-		if (rows[0] === undefined) {
-			return null
+	public async getMany(keys: string[]): Promise<(ModelValue | null)[]> {
+		let queryResult
+		if (keys.length === 1) {
+			queryResult = await this.client.query(
+				`SELECT ${this.#columnNames.join(", ")} FROM "${this.#table}" WHERE "${this.#primaryKeyName}" = $1`,
+				[keys[0]],
+			)
+		} else {
+			queryResult = await this.client.query(
+				`SELECT ${this.#columnNames.join(", ")} FROM "${this.#table}" WHERE "${this.#primaryKeyName}" = ANY($1)`,
+				[keys],
+			)
 		}
 
-		const relations = await mapValuesAsync(this.#relations, (api) => api.get(key))
-		return {
-			...decodeRecord(this.model, rows[0]),
-			...relations,
+		const relations = await mapValuesAsync(this.#relations, (api) => api.getMany(keys))
+
+		const rowsByKey: Record<string, ModelValue> = {}
+		for (const row of queryResult.rows) {
+			const rowKey = row[this.#primaryKeyName]
+			assert(typeof rowKey === "string", 'expected typeof primaryKey === "string"')
+
+			const rowRelations: Record<string, string[]> = {}
+			for (const relationName of Object.keys(this.#relations)) {
+				rowRelations[relationName] = relations[relationName][rowKey]
+			}
+
+			rowsByKey[rowKey] = {
+				...decodeRecord(this.model, row),
+				...rowRelations,
+			}
 		}
+
+		return keys.map((key) => rowsByKey[key] ?? null)
 	}
 
 	public async set(value: ModelValue) {
@@ -655,11 +677,30 @@ export class RelationAPI {
 	}
 
 	public async get(source: string): Promise<string[]> {
-		const results = await this.client.query<{ _target: string }>(
-			`SELECT _target FROM "${this.table}" WHERE _source = $1`,
-			[source],
-		)
-		return results.rows.map((result) => result._target)
+		return (await this.getMany([source]))[source]
+	}
+
+	public async getMany(sources: string[]): Promise<Record<string, string[]>> {
+		// postgres doesn't know at planning time if the array has a single string
+		let queryResult: { rows: { _source: string; _target: string }[] }
+		if (sources.length === 1) {
+			queryResult = await this.client.query<{ _source: string; _target: string }>(
+				`SELECT _source, _target FROM "${this.table}" WHERE _source = $1`,
+				[sources[0]],
+			)
+		} else {
+			queryResult = await this.client.query<{ _source: string; _target: string }>(
+				`SELECT _source, _target FROM "${this.table}" WHERE _source = ANY($1)`,
+				[sources],
+			)
+		}
+
+		const results: Record<string, string[]> = {}
+		for (const row of queryResult.rows) {
+			results[row._source] ||= []
+			results[row._source].push(row._target)
+		}
+		return results
 	}
 
 	public async add(source: string, targets: PropertyValue) {
