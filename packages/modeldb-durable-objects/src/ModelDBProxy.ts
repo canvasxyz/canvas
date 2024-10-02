@@ -93,7 +93,6 @@ export class ModelDBProxy extends AbstractModelDB {
 	}
 
 	async close(): Promise<void> {
-		await this.worker.stop()
 		this.initialized = false
 	}
 
