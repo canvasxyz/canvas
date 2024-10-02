@@ -6,7 +6,7 @@ const version = 2
 
 const target: PlatformTarget = {
 	openGossipLog: ({ path }, init) => {
-		return IdbGossipLog.open(init, { version })
+		return IdbGossipLog.open({ ...init, version })
 	},
 
 	async listen(app, port, options) {

@@ -7,12 +7,16 @@ import { nanoid } from "nanoid"
 import { fileURLToPath } from "node:url"
 import { createServer, ViteDevServer } from "vite"
 
+import { unstable_dev } from "wrangler"
+import type { UnstableDevWorker } from "wrangler"
+
 const __dirname = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "..")
 
 import type { AbstractModelDB, ModelSchema } from "@canvas-js/modeldb"
 import { ModelDB as ModelDBSqlite } from "@canvas-js/modeldb-sqlite"
 import { ModelDB as ModelDBIdb } from "@canvas-js/modeldb-idb"
 import { ModelDB as ModelDBPostgres } from "@canvas-js/modeldb-pg"
+import { ModelDBProxy as ModelDBDurableObjectsProxy } from "@canvas-js/modeldb-durable-objects"
 
 let browser: puppeteer.Browser
 let page: puppeteer.Page
@@ -70,6 +74,10 @@ function getConnectionConfig() {
 	}
 }
 
+const worker = await unstable_dev("test/worker.ts", {
+	experimental: { disableExperimentalWarning: true },
+})
+
 export const testOnModelDB = (
 	name: string,
 	run: (
@@ -98,6 +106,14 @@ export const testOnModelDB = (
 		t.teardown(() => mdb.close())
 		return mdb
 	})
+
+	test.serial(`Durable Objects - ${name}`, macro, async (t, models) => {
+		const mdb = new ModelDBDurableObjectsProxy(worker, models)
+		await mdb.initialize()
+		return mdb
+	})
+
+	test.after.always(() => worker.stop())
 
 	// test(`Sqlite Wasm Opfs - ${name}`, async (t) => {
 	// 	const testResult = await page.evaluate(async (run) => {

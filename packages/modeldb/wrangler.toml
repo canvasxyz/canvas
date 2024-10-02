@@ -1,0 +1,12 @@
+name = "modeldb"
+compatibility_date = "2024-09-25"
+compatibility_flags = ["nodejs_compat_v2"]
+
+[durable_objects]
+bindings = [
+  { name = "PROXY_OBJECT", class_name = "ModelDBProxyObject" }
+]
+
+[[migrations]]
+tag = "v1" # Should be unique for each entry
+new_sqlite_classes = ["ModelDBProxyObject"]
