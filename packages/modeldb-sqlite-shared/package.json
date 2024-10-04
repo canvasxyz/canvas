@@ -1,0 +1,24 @@
+{
+	"name": "@canvas-js/modeldb-sqlite-shared",
+	"version": "0.11.0",
+	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
+	"type": "module",
+	"engines": {
+		"node": ">=20.0.0"
+	},
+	"files": [
+		"lib"
+	],
+	"main": "./lib/index.js",
+	"types": "./lib/index.d.ts",
+	"sideEffects": false,
+	"scripts": {
+		"test": "ava"
+	},
+	"dependencies": {
+		"@canvas-js/interfaces": "0.11.0",
+		"@canvas-js/modeldb": "0.11.0",
+		"@canvas-js/utils": "0.11.0"
+	},
+	"devDependencies": {}
+}
