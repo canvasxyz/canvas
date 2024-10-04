@@ -12,21 +12,36 @@ import { GossipLog as PostgresGossipLog } from "@canvas-js/gossiplog/pg"
 import { NetworkServer } from "@canvas-js/gossiplog/server"
 import { assert } from "@canvas-js/utils"
 import { createAPI } from "@canvas-js/core/api"
+import { SqlStorage } from "@cloudflare/workers-types"
 
 import type { PlatformTarget } from "../interface.js"
 import { anySignal } from "any-signal"
 
-const isPostgres = (path: string | pg.ConnectionConfig): boolean =>
-	typeof path !== "string" || path.startsWith("postgres://") || path.startsWith("postgresql://")
+const isPostgresConnectionConfig = (
+	path: string | pg.ConnectionConfig | SqlStorage | null,
+): path is pg.ConnectionConfig =>
+	path !== null &&
+	typeof path === "object" &&
+	("connectionString" in path || ("user" in path && "host" in path && "database" in path))
+
+const isPostgres = (path: string | pg.ConnectionConfig | SqlStorage): boolean =>
+	isPostgresConnectionConfig(path) ||
+	(typeof path === "string" && (path.startsWith("postgres://") || path.startsWith("postgresql://")))
 
 const isError = (error: unknown): error is NodeJS.ErrnoException => error instanceof Error
 
 const target: PlatformTarget = {
-	async openGossipLog(location: { path: string | pg.ConnectionConfig | null; topic: string; clear?: boolean }, init) {
+	async openGossipLog(
+		location: { path: string | pg.ConnectionConfig | SqlStorage | null; topic: string; clear?: boolean },
+		init,
+	) {
 		if (location.path === null) {
 			return new SqliteGossipLog(init)
 		} else if (isPostgres(location.path)) {
-			return await PostgresGossipLog.open(location.path, { ...init, clear: location.clear })
+			return await PostgresGossipLog.open(location.path as string | pg.ConnectionConfig, {
+				...init,
+				clear: location.clear,
+			})
 		} else {
 			assert(typeof location.path === "string", 'expected typeof location.path === "string"')
 			const gossipLog = new SqliteGossipLog({ directory: location.path, ...init })

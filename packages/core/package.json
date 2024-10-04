@@ -21,6 +21,7 @@
 		"#target": {
 			"browser": "./lib/targets/browser/index.js",
 			"node": "./lib/targets/node/index.js",
+			"worker": "./lib/targets/worker/index.js",
 			"default": "./lib/targets/default/index.js"
 		}
 	},
@@ -32,6 +33,7 @@
 		"@canvas-js/gossiplog": "0.11.0",
 		"@canvas-js/interfaces": "0.11.0",
 		"@canvas-js/modeldb": "0.11.0",
+		"@canvas-js/modeldb-durable-objects": "0.11.0",
 		"@canvas-js/modeldb-idb": "0.11.0",
 		"@canvas-js/modeldb-pg": "0.11.0",
 		"@canvas-js/modeldb-sqlite": "0.11.0",
@@ -69,6 +71,7 @@
 	},
 	"devDependencies": {
 		"@canvas-js/chain-cosmos": "0.11.0",
+		"@cloudflare/workers-types": "^4.20240925.0",
 		"@types/node": "^20.14.6",
 		"@types/pg": "^8.11.10",
 		"dotenv": "^16.4.5",

@@ -18,11 +18,13 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 		db,
 		worker,
 		useTestProxy,
+		clear,
 		...init
 	}: {
 		db?: SqlStorage
 		worker?: UnstableDevWorker
 		useTestProxy?: boolean
+		clear?: boolean
 	} & GossipLogInit<Payload>) {
 		let mdb: ModelDB | ModelDBProxy
 
@@ -33,6 +35,12 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 			mdb = new ModelDB({ db, models: { ...init.schema, ...AbstractGossipLog.schema } })
 		} else {
 			throw new Error("must provide db or worker && useTestProxy")
+		}
+
+		if (clear) {
+			for (const table of Object.keys({ ...init.schema, ...AbstractGossipLog.schema })) {
+				await mdb.clear(table)
+			}
 		}
 
 		const messageCount = await mdb.count("$messages")
