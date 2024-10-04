@@ -467,17 +467,20 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 				getChildren: (level, key) => txn.getChildren(level, key),
 				getValues: async (keys) => {
 					const values: Uint8Array[] = []
+					const ids = keys.map(decodeId)
 
-					// TODO: txn.getMany
-					for (const key of keys) {
-						const id = decodeId(key)
+					const messageRecords = await this.db.getMany<MessageRecord<Payload>>("$messages", ids)
 
-						const signedMessage = await this.get(id)
-						if (signedMessage === null) {
-							throw new MessageNotFoundError(id)
+					for (let i = 0; i < messageRecords.length; i++) {
+						const messageRecord = messageRecords[i]
+						if (messageRecord === null) {
+							throw new MessageNotFoundError(ids[i])
 						}
 
-						assert(equals(signedMessage.key, key), "invalid message key")
+						const { signature, message, branch } = messageRecord
+						const signedMessage = this.encode(signature, message, { branch })
+
+						assert(equals(signedMessage.key, keys[i]), "invalid message key")
 						values.push(signedMessage.value)
 					}
 

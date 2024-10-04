@@ -11,6 +11,7 @@ import { assert } from "@canvas-js/utils"
 
 import { Canvas } from "./Canvas.js"
 import { isAction, isSession } from "./utils.js"
+import { SignedMessage } from "@canvas-js/gossiplog"
 
 export interface APIOptions {}
 
@@ -48,11 +49,12 @@ export function createAPI(app: Canvas): express.Express {
 				}
 			}
 
-			for (const id of messageIds) {
-				const signedMessage = await app.db.get("$messages", id)
+			const signedMessages = await app.db.getMany<SignedMessage<Action>>("$messages", messageIds)
+
+			for (const signedMessage of signedMessages) {
 				assert(signedMessage !== null, "internal error - missing record in $messages")
 				const { signature, message } = signedMessage
-				results.push({ id, signature, message })
+				results.push({ id: signedMessage.id, signature, message })
 			}
 		} else {
 			for await (const { id, signature, message } of app.db.iterate<{
