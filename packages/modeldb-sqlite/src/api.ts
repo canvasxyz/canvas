@@ -157,33 +157,19 @@ export class ModelAPI {
 	}
 
 	public get(key: string): ModelValue | null {
-		return this.getMany([key])[0]
+		const record = this.#select.get({ [this.#primaryKeyParam]: key })
+		if (record === null) {
+			return null
+		}
+
+		return {
+			...decodeRecord(this.model, record),
+			...mapValues(this.#relations, (api) => api.get(key)),
+		}
 	}
 
 	public getMany(keys: string[]): (ModelValue | null)[] {
-		if (keys.length === 0) {
-			return []
-		}
-		const params: Record<`p${number}`, string> = {}
-		const whereParts = []
-		for (const [i, key] of keys.entries()) {
-			whereParts.push(`"${this.#primaryKeyName}" = :p${i}`)
-			params[`p${i}`] = key
-		}
-
-		const queryString = `SELECT ${this.columnNames.join(", ")} FROM "${this.#table}" WHERE ${whereParts.join(" OR ")}`
-
-		const query = new Query<Record<`p${string}`, string>, RecordValue>(this.db, queryString)
-		const rowsByKey: Record<string, ModelValue> = {}
-		for (const row of query.all(params)) {
-			const rowKey = row[this.#primaryKeyName]
-			assert(typeof rowKey === "string", 'expected typeof primaryKey === "string"')
-			rowsByKey[rowKey] = {
-				...decodeRecord(this.model, row),
-				...mapValues(this.#relations, (api) => api.get(rowKey)),
-			}
-		}
-		return keys.map((key) => rowsByKey[key] ?? null)
+		return keys.map((key) => this.get(key))
 	}
 
 	public set(value: ModelValue) {
