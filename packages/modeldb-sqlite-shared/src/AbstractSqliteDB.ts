@@ -16,7 +16,7 @@ export abstract class AbstractSqliteDB {
 export abstract class Query {
 	public abstract get(params: Record<string, SqlValue>): Record<string, SqlValue> | null
 	public abstract all(params: Record<string, SqlValue>): Record<string, SqlValue>[]
-	public abstract iterate(params: Record<string, SqlValue>): IterableIterator<any>
+	public abstract iterate(params: Record<string, SqlValue>): IterableIterator<Record<string, SqlValue>>
 }
 
 export abstract class Method {

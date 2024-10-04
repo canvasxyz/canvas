@@ -11,8 +11,8 @@ import {
 	QueryParams,
 	WhereCondition,
 } from "@canvas-js/modeldb"
-
-import { ModelAPI } from "./api.js"
+import { ModelAPI } from "@canvas-js/modeldb-sqlite-shared"
+import { SqliteDB } from "./DBWrapper.js"
 
 export interface ModelDBOptions {
 	path: string | null
@@ -31,7 +31,7 @@ export class ModelDB extends AbstractModelDB {
 		this.db = new Database(path ?? ":memory:")
 
 		for (const model of Object.values(this.models)) {
-			this.#models[model.name] = new ModelAPI(this.db, model)
+			this.#models[model.name] = new ModelAPI(new SqliteDB(this.db), model)
 		}
 
 		this.#transaction = this.db.transaction((effects) => {
@@ -91,7 +91,7 @@ export class ModelDB extends AbstractModelDB {
 	): AsyncIterable<T> {
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
-		yield* api.iterate(query) as Iterable<T>
+		yield* api.iterate(query) as any
 	}
 
 	public async count(modelName: string, where?: WhereCondition): Promise<number> {

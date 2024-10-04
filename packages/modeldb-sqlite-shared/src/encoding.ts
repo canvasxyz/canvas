@@ -13,7 +13,7 @@ import type {
 
 import { assert, mapValues, signalInvalidType } from "@canvas-js/utils"
 
-export type SqlValue = string | number | null | bigint | Uint8Array | Int8Array | ArrayBuffer
+export type SqlValue = string | number | null | bigint | Uint8Array | Int8Array | ArrayBuffer | boolean
 
 export function encodeQueryParams(params: Record<string, PrimitiveValue>): Record<string, SqlValue> {
 	return mapValues(params, (value) => {
