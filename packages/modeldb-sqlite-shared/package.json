@@ -3,6 +3,7 @@
 	"version": "0.11.0",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"type": "module",
+	"private": true,
 	"engines": {
 		"node": ">=20.0.0"
 	},
