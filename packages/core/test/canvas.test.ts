@@ -216,6 +216,68 @@ test("create an app with an inline contract", async (t) => {
 	t.is(value?.address, `did:pkh:eip155:1:${wallet.address}`)
 })
 
+test("merge into a value set by another action", async (t) => {
+	const app = await Canvas.initialize({
+		topic: "com.example.app",
+		contract: {
+			models: {
+				game: { id: "primary", state: "json", label: "string" },
+			},
+			actions: {
+				async createGame(db) {
+					await db.set("game", {
+						id: "0",
+						state: { started: false, player1: "foo", player2: "bar" } as any,
+						label: "foobar",
+					})
+				},
+				async updateGame(db) {
+					await db.merge("game", {
+						id: "0",
+						state: { started: true } as any,
+						label: "foosball",
+					})
+				},
+				async updateGameMultipleMerges(db) {
+					await db.merge("game", { id: "0", state: { extra1: { a: 1, b: 1 } } as any })
+					await db.merge("game", { id: "0", state: { extra2: "b" } as any })
+					await db.merge("game", { id: "0", state: { extra3: null, extra1: { b: 2, c: 3 } } as any })
+				},
+			},
+		},
+	})
+
+	t.teardown(() => app.stop())
+
+	await app.actions.createGame()
+	t.deepEqual(await app.db.get("game", "0"), {
+		id: "0",
+		state: { started: false, player1: "foo", player2: "bar" },
+		label: "foobar",
+	})
+
+	await app.actions.updateGame()
+	t.deepEqual(await app.db.get("game", "0"), {
+		id: "0",
+		state: { started: true, player1: "foo", player2: "bar" },
+		label: "foosball",
+	})
+
+	await app.actions.updateGameMultipleMerges()
+	t.deepEqual(await app.db.get("game", "0"), {
+		id: "0",
+		state: {
+			started: true,
+			player1: "foo",
+			player2: "bar",
+			extra1: { a: 1, b: 2, c: 3 },
+			extra2: "b",
+			extra3: null,
+		},
+		label: "foosball",
+	})
+})
+
 test("get a value set by another action", async (t) => {
 	const wallet = ethers.Wallet.createRandom()
 
