@@ -115,7 +115,7 @@ async function getCounterValue(app: Awaited<ReturnType<typeof createCanvasCounte
 	return resolveCounterValue(result.value)
 }
 
-test("crdt counter manually created events", async (t) => {
+test("merge custom events using $merge", async (t) => {
 	const app1 = await createCanvasCounterApp()
 	const app2 = await createCanvasCounterApp()
 
