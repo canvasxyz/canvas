@@ -1,12 +1,16 @@
+import assert from "node:assert"
+
 import { multiaddr } from "@multiformats/multiaddr"
 
-import * as constants from "../constants.js"
+const { BOOTSTRAP_LIST, LISTEN, ANNOUNCE, TOPIC, DELAY = "0", INTERVAL = "0" } = process.env
 
-const { BOOTSTRAP_LIST, LISTEN, ANNOUNCE, TOPIC } = process.env
+export const delay = parseInt(DELAY) * 1000
+export const interval = parseInt(INTERVAL) * 1000
 
 export const bootstrapList = BOOTSTRAP_LIST?.split(" ") ?? []
 
-export const topic = TOPIC ?? constants.topic
+assert(typeof TOPIC === "string")
+export const topic = TOPIC
 
 for (const address of bootstrapList) {
 	const ma = multiaddr(address)
@@ -17,18 +21,10 @@ for (const address of bootstrapList) {
 	}
 }
 
-export const listen: string[] = []
-if (typeof LISTEN === "string") {
-	listen.push(LISTEN)
-} else {
-	listen.push(`/ip4/127.0.0.1/tcp/8080/ws`)
-}
+export const listen = LISTEN?.split(" ") ?? ["/ip4/127.0.0.1/tcp/8080/ws"]
 
 console.log("listening on", listen)
 
-export const announce: string[] = []
-if (typeof ANNOUNCE === "string") {
-	announce.push(ANNOUNCE)
-}
+export const announce = ANNOUNCE?.split(" ") ?? []
 
 console.log("announcing on", announce)

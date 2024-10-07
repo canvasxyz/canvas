@@ -65,7 +65,7 @@ const socket = await Socket.open(`ws://localhost:8000`, peerId, gossipLog)
 // 	socket.post("connection:close", { id, remotePeer: remotePeer.toString(), remoteAddr: remoteAddr.toString() })
 // })
 
-await gossipLog.append(bytesToHex(randomBytes(8)))
+// await gossipLog.append(bytesToHex(randomBytes(8)))
 
 const maxDelay = parseInt(params.delay ?? "1") * 1000
 const delay = maxDelay * Math.random()
@@ -85,7 +85,7 @@ const network = new NetworkClient(gossipLog, `ws://localhost:9000`)
 	})
 }
 
-// const id = setInterval(() => messageLog.append(bytesToHex(randomBytes(8))), maxDelay)
-const id = setInterval(() => gossipLog.append(bytesToHex(randomBytes(8))), 10 * SECONDS)
+const id = setInterval(() => gossipLog.append(bytesToHex(randomBytes(8))), maxDelay)
+// const id = setInterval(() => gossipLog.append(bytesToHex(randomBytes(8))), 10 * SECONDS)
 
 // libp2p.addEventListener("stop", () => clearInterval(id))

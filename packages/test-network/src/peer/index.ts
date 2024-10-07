@@ -4,9 +4,7 @@ import { randomBytes, bytesToHex } from "@noble/hashes/utils"
 import { GossipLog } from "@canvas-js/gossiplog/sqlite"
 
 import { Socket } from "../socket.js"
-import { bootstrapList, listen, announce, topic } from "./config.js"
-
-const { SERVICE_NAME } = process.env
+import { bootstrapList, listen, announce, topic, delay, interval } from "./config.js"
 
 async function start() {
 	const gossipLog = new GossipLog<string>({ directory: "data", topic, apply: () => {} })
@@ -60,16 +58,13 @@ async function start() {
 		await gossipLog.close()
 	})
 
-	let delay = 0
-	if (SERVICE_NAME !== "bootstrap") {
-		delay = 1000 + Math.random() * 20000
-	}
-
-	await setTimeout(delay)
+	await setTimeout(1000 + Math.random() * delay)
 	await libp2p.start()
 
-	// const intervalId = setInterval(() => void messageLog.append(bytesToHex(randomBytes(8))), 5000)
-	// controller.signal.addEventListener("abort", () => clearInterval(intervalId))
+	if (interval !== null && interval !== 0) {
+		const intervalId = setInterval(() => void gossipLog.append(bytesToHex(randomBytes(8))), interval)
+		gossipLog.controller.signal.addEventListener("abort", () => clearInterval(intervalId))
+	}
 }
 
 start()
