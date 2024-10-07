@@ -18,4 +18,7 @@ export class SqliteDB extends AbstractSqliteDB {
 	transaction(fn: () => void): void {
 		this.transaction(fn)
 	}
+	close() {
+		this.db.close()
+	}
 }
