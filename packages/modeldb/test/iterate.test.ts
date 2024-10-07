@@ -1,4 +1,4 @@
-import { nanoid } from "nanoid"
+import { randomBytes } from "node:crypto"
 import { testOnModelDBNoWasm } from "./utils.js"
 
 testOnModelDBNoWasm("iterate (select)", async (t, openDB) => {
@@ -35,7 +35,7 @@ testOnModelDBNoWasm("iterate (orderBy)", async (t, openDB) => {
 
 	const users: { id: string }[] = []
 	for (let i = 0; i < 100; i++) {
-		const user = { id: nanoid() }
+		const user = { id: randomBytes(8).toString("hex") }
 		await db.set("user", user)
 		users.push(user)
 	}

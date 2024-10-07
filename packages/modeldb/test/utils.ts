@@ -104,7 +104,6 @@ export const testOnModelDB = (
 		do: true,
 	},
 ) => {
-	console.log(platforms)
 	const macro = test.macro(run)
 
 	const connectionConfig = getConnectionConfig()
