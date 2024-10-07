@@ -80,16 +80,6 @@ function getConnectionConfig() {
 	}
 }
 
-export const testOnModelDB = (
-	name: string,
-	run: (
-		t: ExecutionContext<unknown>,
-		openDB: (t: ExecutionContext, models: ModelSchema) => Promise<AbstractModelDB>,
-	) => void,
-) => {
-	return testOnModelDBInner(name, run, { wasm: true })
-}
-
 export const testOnModelDBNoWasm = (
 	name: string,
 	run: (
@@ -97,46 +87,61 @@ export const testOnModelDBNoWasm = (
 		openDB: (t: ExecutionContext, models: ModelSchema) => Promise<AbstractModelDB>,
 	) => void,
 ) => {
-	return testOnModelDBInner(name, run, { wasm: false })
+	return testOnModelDB(name, run, { sqliteWasm: false, sqlite: true, idb: true, pg: true, do: true })
 }
 
-const testOnModelDBInner = (
+export const testOnModelDB = (
 	name: string,
 	run: (
 		t: ExecutionContext<unknown>,
 		openDB: (t: ExecutionContext, models: ModelSchema) => Promise<AbstractModelDB>,
 	) => void,
-	opts: { wasm: boolean } = { wasm: true },
+	platforms: { sqliteWasm: boolean; sqlite: boolean; idb: boolean; pg: boolean; do: boolean } = {
+		sqliteWasm: true,
+		sqlite: true,
+		idb: true,
+		pg: true,
+		do: true,
+	},
 ) => {
+	console.log(platforms)
 	const macro = test.macro(run)
 
 	const connectionConfig = getConnectionConfig()
 
-	test(`Sqlite - ${name}`, macro, async (t, models) => {
-		const mdb = new ModelDBSqlite({ path: null, models })
-		t.teardown(() => mdb.close())
-		return mdb
-	})
+	if (platforms.sqlite) {
+		test(`Sqlite - ${name}`, macro, async (t, models) => {
+			const mdb = new ModelDBSqlite({ path: null, models })
+			t.teardown(() => mdb.close())
+			return mdb
+		})
+	}
 
-	test(`IDB - ${name}`, macro, async (t, models) => {
-		const mdb = await ModelDBIdb.initialize({ name: nanoid(), models })
-		t.teardown(() => mdb.close())
-		return mdb
-	})
+	if (platforms.idb) {
+		test(`IDB - ${name}`, macro, async (t, models) => {
+			const mdb = await ModelDBIdb.initialize({ name: nanoid(), models })
+			t.teardown(() => mdb.close())
+			return mdb
+		})
+	}
 
-	test.serial(`Postgres - ${name}`, macro, async (t, models) => {
-		const mdb = await ModelDBPostgres.initialize({ connectionConfig, models, clear: true })
-		t.teardown(() => mdb.close())
-		return mdb
-	})
+	if (platforms.pg) {
+		test.serial(`Postgres - ${name}`, macro, async (t, models) => {
+			const mdb = await ModelDBPostgres.initialize({ connectionConfig, models, clear: true })
+			t.teardown(() => mdb.close())
+			return mdb
+		})
+	}
 
-	test.serial(`Durable Objects - ${name}`, macro, async (t, models) => {
-		const mdb = new ModelDBDurableObjectsProxy(worker, models)
-		await mdb.initialize()
-		return mdb
-	})
+	if (platforms.do) {
+		test.serial(`Durable Objects - ${name}`, macro, async (t, models) => {
+			const mdb = new ModelDBDurableObjectsProxy(worker, models)
+			await mdb.initialize()
+			return mdb
+		})
+	}
 
-	if (opts.wasm) {
+	if (platforms.sqliteWasm) {
 		test(`Sqlite Wasm Opfs - ${name}`, async (t) => {
 			const testResult = await page.evaluate(async (run) => {
 				// @ts-ignore
