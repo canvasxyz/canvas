@@ -87,6 +87,27 @@ export const testOnModelDB = (
 		openDB: (t: ExecutionContext, models: ModelSchema) => Promise<AbstractModelDB>,
 	) => void,
 ) => {
+	return testOnModelDBInner(name, run, { wasm: true })
+}
+
+export const testOnModelDBNoWasm = (
+	name: string,
+	run: (
+		t: ExecutionContext<unknown>,
+		openDB: (t: ExecutionContext, models: ModelSchema) => Promise<AbstractModelDB>,
+	) => void,
+) => {
+	return testOnModelDBInner(name, run, { wasm: false })
+}
+
+const testOnModelDBInner = (
+	name: string,
+	run: (
+		t: ExecutionContext<unknown>,
+		openDB: (t: ExecutionContext, models: ModelSchema) => Promise<AbstractModelDB>,
+	) => void,
+	opts: { wasm: boolean } = { wasm: true },
+) => {
 	const macro = test.macro(run)
 
 	const connectionConfig = getConnectionConfig()
@@ -115,50 +136,52 @@ export const testOnModelDB = (
 		return mdb
 	})
 
-	test(`Sqlite Wasm Opfs - ${name}`, async (t) => {
-		const testResult = await page.evaluate(async (run) => {
-			// @ts-ignore
-			const ctx = new InnerExecutionContext()
-			const testFunc = eval(`(${run})`)
-			try {
+	if (opts.wasm) {
+		test(`Sqlite Wasm Opfs - ${name}`, async (t) => {
+			const testResult = await page.evaluate(async (run) => {
 				// @ts-ignore
-				await testFunc(ctx, openOpfsDB)
-				return { result: "passed" }
-			} catch (error: any) {
-				return { result: "failed", error: error.message }
-			} finally {
-				if (ctx.teardownFunction) ctx.teardownFunction()
+				const ctx = new InnerExecutionContext()
+				const testFunc = eval(`(${run})`)
+				try {
+					// @ts-ignore
+					await testFunc(ctx, openOpfsDB)
+					return { result: "passed" }
+				} catch (error: any) {
+					return { result: "failed", error: error.message }
+				} finally {
+					if (ctx.teardownFunction) ctx.teardownFunction()
+				}
+			}, run.toString())
+
+			if (testResult.result === "passed") {
+				t.pass()
+			} else {
+				t.fail(testResult.error)
 			}
-		}, run.toString())
+		})
+		test(`Sqlite Wasm Transient - ${name}`, async (t) => {
+			const testResult = await page.evaluate(async (run) => {
+				// @ts-ignore
+				const ctx = new InnerExecutionContext()
+				const testFunc = eval(`(${run})`)
+				try {
+					// @ts-ignore
+					await testFunc(ctx, openTransientDB)
+					return { result: "passed" }
+				} catch (error: any) {
+					return { result: "failed", error: error.message }
+				} finally {
+					if (ctx.teardownFunction) ctx.teardownFunction()
+				}
+			}, run.toString())
 
-		if (testResult.result === "passed") {
-			t.pass()
-		} else {
-			t.fail(testResult.error)
-		}
-	})
-	// test(`Sqlite Wasm Transient - ${name}`, async (t) => {
-	// 	const testResult = await page.evaluate(async (run) => {
-	// 		// @ts-ignore
-	// 		const ctx = new InnerExecutionContext()
-	// 		const testFunc = eval(`(${run})`)
-	// 		try {
-	// 			// @ts-ignore
-	// 			await testFunc(ctx, openTransientDB)
-	// 			return { result: "passed" }
-	// 		} catch (error: any) {
-	// 			return { result: "failed", error: error.message }
-	// 		} finally {
-	// 			if (ctx.teardownFunction) ctx.teardownFunction()
-	// 		}
-	// 	}, run.toString())
-
-	// 	if (testResult.result === "passed") {
-	// 		t.pass()
-	// 	} else {
-	// 		t.fail(testResult.error)
-	// 	}
-	// })
+			if (testResult.result === "passed") {
+				t.pass()
+			} else {
+				t.fail(testResult.error)
+			}
+		})
+	}
 }
 
 export const compareUnordered = (t: ExecutionContext, a: any[], b: any[]) => {

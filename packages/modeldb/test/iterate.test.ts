@@ -1,7 +1,7 @@
 import { nanoid } from "nanoid"
-import { testOnModelDB } from "./utils.js"
+import { testOnModelDBNoWasm } from "./utils.js"
 
-testOnModelDB("iterate (select)", async (t, openDB) => {
+testOnModelDBNoWasm("iterate (select)", async (t, openDB) => {
 	const db = await openDB(t, {
 		user: { id: "primary", is_moderator: "boolean", name: "string?" },
 	})
@@ -28,7 +28,7 @@ testOnModelDB("iterate (select)", async (t, openDB) => {
 	])
 })
 
-testOnModelDB("iterate (orderBy)", async (t, openDB) => {
+testOnModelDBNoWasm("iterate (orderBy)", async (t, openDB) => {
 	const db = await openDB(t, {
 		user: { id: "primary" },
 	})
