@@ -269,7 +269,7 @@ export class ModelAPI {
 		return results.map((record) => this.parseRecord(record, relations))
 	}
 
-	public *iterate(query: QueryParams): Iterable<ModelValue> {
+	public async *iterate(query: QueryParams): AsyncIterable<ModelValue> {
 		const [sql, relations, params] = this.parseQuery(query)
 
 		for (const record of this.db.prepareQuery<RecordValue>(sql).iterate(encodeQueryParams(params))) {
