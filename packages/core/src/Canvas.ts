@@ -69,23 +69,24 @@ export type ApplicationData = {
 }
 
 export type ContainerConfig = Omit<CanvasConfig<Contract>, "contract" | "topic"> & {
-	connection: { topic: string, url: string }
+	connection: { topic: string; url: string }
 	models: Contract["models"]
 	actions: Contract["actions"]
+	imports?: Contract["imports"]
 }
 
 function exclude<T, K extends keyof T>(obj: T, keys: K[]): Omit<T, K> {
-	const result = { ...obj };
+	const result = { ...obj }
 	for (const key of keys) {
-	  delete result[key];
+		delete result[key]
 	}
-	return result;
-  }
+	return result
+}
 
 export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<CanvasEvents> {
 	public static async initializeContainer<T extends Contract>(config: ContainerConfig): Promise<Canvas<T>> {
-		const contract = { models: config.models, actions: config.actions } as T
-		return this.initialize<T>({ topic: config.connection.topic, contract, ...exclude(config, ["models", "actions"]) })
+		const contract = { models: config.models, actions: config.actions, imports: config.imports } as T
+		return this.initialize<T>({ topic: config.connection.topic, contract, ...exclude(config, ["models", "actions", "imports"]) })
 	}
 
 	public static async initialize<T extends Contract>(config: CanvasConfig<T>): Promise<Canvas<T>> {

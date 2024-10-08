@@ -6,31 +6,115 @@ import type pg from "pg"
 import type { SignerCache } from "@canvas-js/interfaces"
 import { AbstractModelDB, ModelValue, ModelSchema, validateModelValue, mergeModelValues } from "@canvas-js/modeldb"
 import { VM } from "@canvas-js/vm"
-import { assert, mapEntries, mapValues, JSValue } from "@canvas-js/utils"
+import {
+	assert,
+	JSValue,
+	FunctionalJSValue,
+	JSFunction,
+	JSFunctionAsync,
+	mapEntries,
+	mapValues,
+} from "@canvas-js/utils"
 
 import target from "#target"
 
 import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
 import { sha256 } from "@noble/hashes/sha256"
 import { bytesToHex } from "@noble/hashes/utils"
+import { Contract, Models, Actions, ImportType } from "../types.js"
+
+const stringify = (data: FunctionalJSValue): string => {
+	// eslint-disable-next-line @typescript-eslint/ban-types
+	return JSON.stringify(data, (key: string, value: JSValue | Function): JSValue => {
+		// Can't check for existing keys of '/' inside the replacer because JSON.stringify
+		// calls it on the returned replacement values.
+		// if (key === "/") {
+		// 	throw new Error("Cannot encode keys of '/'. Did you try to encode an existing dag-json struct?")
+		// }
+		if (typeof value === "function") {
+			// This should use espree/acorn to identify the exact Function signature before
+			// serialization, since there are probably unhandled inconsistencies including
+			// around whitespace, argument syntaxes, etc.
+			//
+			// There are at least a few syntaxes that must be handled, each potentially async:
+			//
+			// - arrow functions `() => { doStuff(); }`
+			// - named functions `function foo() { doStuff(); }`
+			// - anonymous functions `function() { doStuff(); }`
+			// - member functions `foo() { doStuff(); }`
+			// - builtin functions `function foo() { [native code] }`
+			//
+			const fn = value.toString().trim()
+			let wrapped
+			if (fn.startsWith("(")) {
+				// arrow function
+				wrapped = `fn = ${fn};`
+			} else if (fn.match(/function\W+/)) {
+				// sync named/anonymous function
+				wrapped = `fn = ${fn};`
+			} else if (fn.match(/async\W+function/)) {
+				// async named/anonymous functions
+				wrapped = `fn = ${fn};`
+			} else if (fn.match(/async\W+/)) {
+				// member functions
+				wrapped = `fn = async function ${fn.slice(5)};`
+			} else {
+				// member functions
+				wrapped = `fn = function ${fn};`
+			}
+			return { "/": { fn: wrapped } }
+		}
+		return value
+	})
+}
 
 export class ContractRuntime extends AbstractRuntime {
 	public static async init(
 		topic: string,
 		signers: SignerCache,
-		contract: string,
+		contract: Contract | string,
 		options: { runtimeMemoryLimit?: number } = {},
 	): Promise<ContractRuntime> {
 		const { runtimeMemoryLimit } = options
 
 		const vm = await VM.initialize({ runtimeMemoryLimit })
 
+		// TODO: rehydrate could be moved outside the runtime
+		// and exposed as a global.
+		const contractString =
+			typeof contract === "string"
+				? contract
+				: `
+const rehydrateFunction = (fn) => eval(fn);
+const rehydrate = (data) => Object.fromEntries(
+	Object.entries(data).map(([k, v]) =>
+    (typeof v === "object" && v["/"] !== undefined) ? [k, rehydrateFunction(v["/"].fn)] : typeof v === "object" ? [k, rehydrate(v)]: [k, v]
+	)
+);
+const $models = ${stringify(contract.models)};
+const $actions = ${stringify(contract.actions)};
+export const models = rehydrate($models);
+export const actions = rehydrate($actions);
+`
+
+		if (typeof contract !== "string" && contract.imports) {
+			vm.setGlobalValues(
+				mapEntries(contract.imports, ([key, value]) => {
+					if (typeof value === "function") {
+						return vm.wrapFunction(value as JSFunction | JSFunctionAsync) // TODO: make ImportType = JSFunction | JSFunctionAsync
+					} else {
+						return vm.wrapValue(value)
+					}
+				}),
+			)
+		}
+
 		const {
 			contract: contractHandle,
 			models: modelsHandle,
 			actions: actionsHandle,
 			...rest
-		} = vm.import(contract).consume(vm.unwrapObject)
+		} = vm.import(contractString).consume(vm.unwrapObject)
 
 		for (const [name, handle] of Object.entries(rest)) {
 			console.warn(`extraneous export ${JSON.stringify(name)}`)
@@ -124,7 +208,7 @@ export class ContractRuntime extends AbstractRuntime {
 			string,
 			{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
 		>,
-		private disposeSetupHandles: () => void
+		private disposeSetupHandles: () => void,
 	) {
 		super()
 		this.#databaseAPI = vm
@@ -229,6 +313,7 @@ export class ContractRuntime extends AbstractRuntime {
 			blockhash: blockhash ?? null,
 			timestamp,
 		})
+
 		try {
 			const result = await this.vm.callAsync(actionHandle, actionHandle, [this.#databaseAPI, argsHandle, ctxHandle])
 

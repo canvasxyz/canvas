@@ -1,14 +1,23 @@
-import { TypeTransformerFunction, create } from "@ipld/schema/typed.js"
+import { TypeTransformerFunction, create as createIpld } from "@ipld/schema/typed.js"
 import { fromDSL } from "@ipld/schema/from-dsl.js"
 import type pg from "pg"
 
 import type { SignerCache } from "@canvas-js/interfaces"
 import { AbstractModelDB, ModelSchema, ModelValue, validateModelValue, mergeModelValues } from "@canvas-js/modeldb"
-import { assert, mapEntries } from "@canvas-js/utils"
+import { assert, filterMapEntries } from "@canvas-js/utils"
 
 import target from "#target"
 
-import { ActionImplementationFunction, Contract, ModelAPI } from "../types.js"
+import {
+	ActionImplementation,
+	ActionImplementationFunction,
+	ActionImplementationObject,
+	CapturedImportType,
+	ImportType,
+	Contract,
+	ModelAPI,
+} from "../types.js"
+import { captureImport, uncaptureImports } from "../imports.js"
 import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
 
 const identity = (x: any) => x
@@ -26,23 +35,32 @@ export class FunctionRuntime extends AbstractRuntime {
 			{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
 		> = {}
 
-		const actions = mapEntries(contract.actions, ([actionName, action]) => {
-			if (typeof action === "function") {
-				argsTransformers[actionName] = { toTyped: identity, toRepresentation: identity }
-				return action as ActionImplementationFunction
-			}
+		const imports: Record<string, CapturedImportType> = {}
+		for (const [key, value] of Object.entries(contract.imports ?? {})) {
+			imports[key] = captureImport(value)
+		}
 
-			if (action.argsType !== undefined) {
-				const { schema, name } = action.argsType
-				argsTransformers[actionName] = create(fromDSL(schema), name)
-			} else {
-				argsTransformers[actionName] = { toTyped: identity, toRepresentation: identity }
-			}
+		const actions = filterMapEntries(
+			contract.actions,
+			([actionName, action]) => actionName !== "$imports",
+			([actionName, action]: [string, ActionImplementation]) => {
+				if (typeof action === "function") {
+					argsTransformers[actionName] = { toTyped: identity, toRepresentation: identity }
+					return action as ActionImplementationFunction
+				}
 
-			return action.apply
-		})
+				if (action.argsType !== undefined) {
+					const { schema, name } = action.argsType
+					argsTransformers[actionName] = createIpld(fromDSL(schema), name)
+				} else {
+					argsTransformers[actionName] = { toTyped: identity, toRepresentation: identity }
+				}
 
-		return new FunctionRuntime(topic, signers, schema, actions, argsTransformers)
+				return action.apply
+			},
+		)
+
+		return new FunctionRuntime(topic, signers, schema, actions, imports, argsTransformers)
 	}
 
 	#context: ExecutionContext | null = null
@@ -53,6 +71,7 @@ export class FunctionRuntime extends AbstractRuntime {
 		public readonly signers: SignerCache,
 		public readonly schema: ModelSchema,
 		public readonly actions: Record<string, ActionImplementationFunction>,
+		public readonly imports: Record<string, CapturedImportType>,
 		public readonly argsTransformers: Record<
 			string,
 			{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
@@ -113,14 +132,19 @@ export class FunctionRuntime extends AbstractRuntime {
 		this.#context = context
 
 		try {
-			return await action(this.#db, typedArgs, {
-				id: context.id,
-				publicKey,
-				did,
-				address,
-				blockhash: blockhash ?? null,
-				timestamp,
-			})
+			return await action(
+				this.#db,
+				typedArgs,
+				{
+					id: context.id,
+					publicKey,
+					did,
+					address,
+					blockhash: blockhash ?? null,
+					timestamp,
+				},
+				uncaptureImports(this.imports),
+			)
 		} finally {
 			this.#context = null
 		}

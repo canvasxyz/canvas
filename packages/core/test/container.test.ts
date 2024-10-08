@@ -41,6 +41,9 @@ test("merge into a value set by another action", async (t) => {
 			updateGame,
 			updateGameMultipleMerges,
 		},
+		imports: {
+			GLOBAL_ID,
+		},
 	})
 
 	t.teardown(() => app.stop())
