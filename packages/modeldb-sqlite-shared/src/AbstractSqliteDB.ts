@@ -1,22 +1,24 @@
+import { SqlitePrimitiveValue } from "./encoding.js"
+
 export abstract class AbstractSqliteDB {
 	// exec ? or maybe always prepare
 	// i don't think we really need a separate Method class
 	// prepareMethod
 	// prepareQuery
 
-	public abstract prepareQuery<P, R>(sql: string): Query<P, R>
-	public abstract prepareMethod<P>(sql: string): Method<P>
+	public abstract prepareQuery<R>(sql: string): Query<R>
+	public abstract prepareMethod(sql: string): Method
 
 	// execute something in a transaction
 	public abstract transaction(fn: () => void): void
 }
 
-export abstract class Query<P, R> {
-	public abstract get(params: P): R | null
-	public abstract all(params: P): R[]
-	public abstract iterate(params: P): IterableIterator<R>
+export abstract class Query<R> {
+	public abstract get(params: SqlitePrimitiveValue[]): R | null
+	public abstract all(params: SqlitePrimitiveValue[]): R[]
+	public abstract iterate(params: SqlitePrimitiveValue[]): IterableIterator<R>
 }
 
-export abstract class Method<P> {
-	public abstract run(params: P): void
+export abstract class Method {
+	public abstract run(params: SqlitePrimitiveValue[]): void
 }

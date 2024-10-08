@@ -17,22 +17,20 @@ export type SqlitePrimitiveValue = string | number | Uint8Array | null
 export type RecordValue = Record<string, SqlitePrimitiveValue>
 export type Params = Record<`p${string}`, SqlitePrimitiveValue>
 
-export function encodeQueryParams(params: Record<string, PrimitiveValue>): RecordValue {
-	return mapValues(params, (value) => {
+export function encodeQueryParams(params: PrimitiveValue[]): SqlitePrimitiveValue[] {
+	return params.map((value) => {
 		if (typeof value === "boolean") {
 			return value ? 1 : 0
+		} else if (value instanceof Uint8Array) {
+			return Buffer.isBuffer(value) ? value : Buffer.from(value.buffer, value.byteOffset, value.byteLength)
 		} else {
 			return value
 		}
 	})
 }
 
-export function encodeRecordParams(
-	model: Model,
-	value: ModelValue,
-	params: Record<string, `p${string}`>,
-): { [arg: `p${string}`]: SqlitePrimitiveValue } {
-	const values: Record<string, SqlitePrimitiveValue> = {}
+export function encodeRecordParams(model: Model, value: ModelValue): Array<SqlitePrimitiveValue | null> {
+	const result: Array<SqlitePrimitiveValue | null> = []
 
 	for (const property of model.properties) {
 		const propertyValue = value[property.name]
@@ -40,14 +38,14 @@ export function encodeRecordParams(
 			throw new Error(`missing value for property ${model.name}/${property.name}`)
 		}
 
-		const param = params[property.name]
 		if (property.kind === "primary") {
-			values[param] = encodePrimaryKeyValue(model.name, property, value[property.name])
+			result.push(encodePrimaryKeyValue(model.name, property, value[property.name]))
 		} else if (property.kind === "primitive") {
-			values[param] = encodePrimitiveValue(model.name, property, value[property.name])
+			result.push(encodePrimitiveValue(model.name, property, value[property.name]))
 		} else if (property.kind === "reference") {
-			values[param] = encodeReferenceValue(model.name, property, value[property.name])
+			result.push(encodeReferenceValue(model.name, property, value[property.name]))
 		} else if (property.kind === "relation") {
+			// TODO: add test for relation
 			assert(Array.isArray(value[property.name]))
 			continue
 		} else {
@@ -55,7 +53,7 @@ export function encodeRecordParams(
 		}
 	}
 
-	return values
+	return result
 }
 
 function encodePrimaryKeyValue(modelName: string, property: PrimaryKeyProperty, value: PropertyValue): string {
