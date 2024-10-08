@@ -6,24 +6,20 @@ First build the dashboard client bundles
 $ npm run dev
 ```
 
-Then generate a docker-compose.yml file for the number of server peers you want to run
-
-```
-$ ./docker-compose.sh 16
-```
-
-Then start the docker contains
+Then start the docker containers
 
 ```
 $ npm run start
 ```
 
-Then open the dashboard at http://localhost:8000
+Open http://localhost:8000 to view the dashboard.
 
-To open a browser peer manually, open http://localhost:8000/peer-browser/index.html
-
-To spawn several browser peers, run
+Configure the network by creating a .env file
 
 ```
-$ ./spawn.sh
+NUM_TOPICS=1
+NUM_PEERS=8
+DELAY=10
+INTERVAL=10
+DEBUG=canvas:*
 ```

@@ -3,7 +3,7 @@ import { fromDSL } from "@ipld/schema/from-dsl.js"
 import type pg from "pg"
 
 import type { SignerCache } from "@canvas-js/interfaces"
-import { AbstractModelDB, ModelSchema, ModelValue, validateModelValue } from "@canvas-js/modeldb"
+import { AbstractModelDB, ModelSchema, ModelValue, validateModelValue, mergeModelValues } from "@canvas-js/modeldb"
 import { assert, mapEntries } from "@canvas-js/utils"
 
 import target from "#target"
@@ -71,6 +71,14 @@ export class FunctionRuntime extends AbstractRuntime {
 				const { primaryKey } = this.db.models[model]
 				const key = value[primaryKey] as string
 				this.#context.modelEntries[model][key] = value
+			},
+			merge: async (model: string, value: ModelValue) => {
+				assert(this.#context !== null, "expected this.#context !== null")
+				const { primaryKey } = this.db.models[model]
+				const key = value[primaryKey] as string
+				const mergedValue = mergeModelValues(value, (await this.getModelValue(this.#context, model, key)) ?? {})
+				validateModelValue(this.db.models[model], mergedValue)
+				this.#context.modelEntries[model][key] = mergedValue
 			},
 			delete: async (model: string, key: string) => {
 				assert(this.#context !== null, "expected this.#context !== null")

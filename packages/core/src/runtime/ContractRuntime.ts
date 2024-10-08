@@ -4,7 +4,7 @@ import { fromDSL } from "@ipld/schema/from-dsl.js"
 import type pg from "pg"
 
 import type { SignerCache } from "@canvas-js/interfaces"
-import { AbstractModelDB, ModelValue, ModelSchema, validateModelValue } from "@canvas-js/modeldb"
+import { AbstractModelDB, ModelValue, ModelSchema, validateModelValue, mergeModelValues } from "@canvas-js/modeldb"
 import { VM } from "@canvas-js/vm"
 import { assert, mapEntries } from "@canvas-js/utils"
 
@@ -121,6 +121,34 @@ export class ContractRuntime extends AbstractRuntime {
 					assert(typeof key === "string", "expected value[primaryKey] to be a string")
 					this.#context.modelEntries[model][key] = value
 				}),
+				merge: vm.context.newFunction("merge", (modelHandle, valueHandle) => {
+					assert(this.#context !== null, "expected this.#modelEntries !== null")
+					const model = vm.context.getString(modelHandle)
+					assert(this.db.models[model] !== undefined, "model not found")
+					const { primaryKey } = this.db.models[model]
+					const value = this.vm.unwrapValue(valueHandle) as ModelValue
+					validateModelValue(this.db.models[model], value)
+					const key = value[primaryKey] as string
+					assert(typeof key === "string", "expected value[primaryKey] to be a string")
+					const promise = vm.context.newPromise()
+
+					// TODO: Ensure concurrent merges into the same value don't create a race condition
+					// if the user doesn't call db.merge() with await.
+					this.getModelValue(this.#context, model, key)
+						.then((previousValue) => {
+							const mergedValue = mergeModelValues(value, previousValue ?? {})
+							assert(this.#context !== null)
+							this.#context.modelEntries[model][key] = mergedValue
+							promise.resolve()
+						})
+						.catch((err) => {
+							promise.reject()
+						})
+
+					promise.settled.then(vm.runtime.executePendingJobs)
+					return promise.handle
+				}),
+
 				delete: vm.context.newFunction("delete", (modelHandle, keyHandle) => {
 					assert(this.#context !== null, "expected this.#modelEntries !== null")
 					const model = vm.context.getString(modelHandle)

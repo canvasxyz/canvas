@@ -42,7 +42,6 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - SERVICE_NAME=bootstrap
       - DEBUG=canvas:*,libp2p:gossipsub,libp2p:gossipsub:*
       # 12D3KooWMvSCSeJ6zxJJRQZSpyGqbNcqSJfcJGZLRiMVMePXzMax
       - LIBP2P_PRIVATE_KEY=CAESQBo16VWKm49tGi+/Ta5PFDkWAPybZOlnCAWvx2m/en2as9pIrXgwHnvSNDxC1/YySl3XTBKkBMijTVuk0LycFkk=

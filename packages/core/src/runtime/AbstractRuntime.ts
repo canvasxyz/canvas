@@ -316,9 +316,12 @@ export abstract class AbstractRuntime {
 		type Position = { branch: number; clock: number }
 		const stack: Position[] = []
 
-		for (const parentMessageId of context.message.parents) {
-			const parentMessageRecord = await context.messageLog.db.get("$messages", parentMessageId)
-			if (!parentMessageRecord) {
+		const parentMessageRecords = await context.messageLog.db.getMany("$messages", context.message.parents)
+
+		for (let i = 0; i < parentMessageRecords.length; i++) {
+			const parentMessageRecord = parentMessageRecords[i]
+			const parentMessageId = context.message.parents[i]
+			if (parentMessageRecord == null) {
 				throw new Error(`message ${parentMessageId} not found`)
 			}
 			stack.push({ branch: parentMessageRecord.branch, clock: parentMessageRecord.message.clock })

@@ -1,4 +1,4 @@
-import { signalInvalidType } from "@canvas-js/utils"
+import { signalInvalidType, merge } from "@canvas-js/utils"
 
 import type { Model, ModelValue, Property, PropertyValue } from "./types.js"
 
@@ -6,6 +6,10 @@ export type Awaitable<T> = T | Promise<T>
 
 // eslint-disable-next-line no-useless-escape
 export const namePattern = /^[a-zA-Z0-9$:_\-\.]+$/
+
+export function mergeModelValues(from: ModelValue, into: ModelValue): ModelValue {
+	return merge(from, into) as ModelValue
+}
 
 export function validateModelValue(model: Model, value: ModelValue) {
 	for (const property of model.properties) {

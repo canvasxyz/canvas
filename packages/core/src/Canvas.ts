@@ -8,6 +8,7 @@ import { AbstractModelDB, Model, ModelSchema, Effect } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { AbstractGossipLog, GossipLogEvents, SignedMessage } from "@canvas-js/gossiplog"
 import type { ServiceMap, NetworkConfig } from "@canvas-js/gossiplog/libp2p"
+import type { SqlStorage } from "@cloudflare/workers-types"
 
 import { assert } from "@canvas-js/utils"
 
@@ -28,8 +29,8 @@ export interface CanvasConfig<T extends Contract = Contract> {
 	contract: string | T
 	signers?: SessionSigner[]
 
-	/** data directory path (NodeJS/sqlite), or postgres connection config (NodeJS/pg) */
-	path?: string | pg.ConnectionConfig | null
+	/** data directory path (NodeJS/sqlite), postgres connection config (NodeJS/pg), or storage backend (Cloudflare DO) */
+	path?: string | pg.ConnectionConfig | SqlStorage | null
 
 	/** set a memory limit for the quickjs runtime, only used if `contract` is a string */
 	runtimeMemoryLimit?: number

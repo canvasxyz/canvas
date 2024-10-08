@@ -30,3 +30,40 @@ export function typeOf(value: JSValue) {
 		return "Object"
 	}
 }
+
+export function isObject(value: JSValue): value is JSObject {
+	return typeOf(value) === "Object"
+}
+
+export function merge(from: JSValue, into: JSValue): JSValue {
+	if (from === null) {
+		return from
+	} else if (typeof from === "boolean") {
+		return from
+	} else if (typeof from === "number") {
+		return from
+	} else if (typeof from === "string") {
+		return from
+	} else if (from instanceof Uint8Array) {
+		return from
+	} else if (Array.isArray(from)) {
+		return from
+	} else {
+		// only merge objects
+		if (!isObject(from)) return from
+		if (!isObject(into)) return from
+
+		const mergedKeys = Array.from(new Set([...Object.keys(from), ...Object.keys(into as {})]))
+		const result: Record<string, JSValue> = {}
+		for (const key of mergedKeys) {
+			if (from[key] === undefined) {
+				result[key] = into[key]
+			} else if (into[key] === undefined) {
+				result[key] = from[key]
+			} else {
+				result[key] = merge(from[key], into[key])
+			}
+		}
+		return result
+	}
+}
