@@ -127,7 +127,6 @@ export class ContractRuntime extends AbstractRuntime {
 					assert(this.db.models[model] !== undefined, "model not found")
 					const { primaryKey } = this.db.models[model]
 					const value = this.vm.unwrapValue(valueHandle) as ModelValue
-					validateModelValue(this.db.models[model], value)
 					const key = value[primaryKey] as string
 					assert(typeof key === "string", "expected value[primaryKey] to be a string")
 					const promise = vm.context.newPromise()
@@ -137,6 +136,7 @@ export class ContractRuntime extends AbstractRuntime {
 					this.getModelValue(this.#context, model, key)
 						.then((previousValue) => {
 							const mergedValue = mergeModelValues(value, previousValue ?? {})
+							validateModelValue(this.db.models[model], mergedValue)
 							assert(this.#context !== null)
 							this.#context.modelEntries[model][key] = mergedValue
 							promise.resolve()
