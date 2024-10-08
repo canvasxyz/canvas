@@ -1,9 +1,11 @@
 import * as Comlink from "comlink"
 import { Logger } from "@libp2p/logger"
 import { Config, Effect, ModelValue, QueryParams, WhereCondition } from "@canvas-js/modeldb"
+import { ModelAPI } from "@canvas-js/modeldb-sqlite-shared"
 import { assert, signalInvalidType } from "@canvas-js/utils"
 import { Database } from "@sqlite.org/sqlite-wasm"
-import { ModelAPI } from "./ModelAPI.js"
+
+import { SqliteDB } from "./DBWrapper.js"
 
 export class InnerModelDB {
 	public readonly db: Database
@@ -12,9 +14,10 @@ export class InnerModelDB {
 
 	public constructor(db: Database, config: Config, log: Logger) {
 		this.db = db
+		const wrappedDb = new SqliteDB(this.db)
 
 		for (const model of Object.values(config.models)) {
-			this.#models[model.name] = new ModelAPI(this.db, model)
+			this.#models[model.name] = new ModelAPI(wrappedDb, model)
 		}
 		this.log = log
 	}

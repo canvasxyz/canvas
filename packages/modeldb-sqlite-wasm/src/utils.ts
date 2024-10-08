@@ -1,6 +1,7 @@
-import { OpfsDatabase, PreparedStatement, SqlValue } from "@sqlite.org/sqlite-wasm"
+import { SqlitePrimitiveValue } from "@canvas-js/modeldb-sqlite-shared"
+import { OpfsDatabase, PreparedStatement } from "@sqlite.org/sqlite-wasm"
 
-export class Query<P extends { [column: string]: SqlValue }, R> {
+export class Query<P extends { [column: string]: SqlitePrimitiveValue }, R> {
 	private readonly statement: PreparedStatement
 
 	constructor(db: OpfsDatabase, private readonly sql: string) {
@@ -65,7 +66,7 @@ export class Query<P extends { [column: string]: SqlValue }, R> {
 	}
 }
 
-export class Method<P extends { [column: string]: SqlValue }> {
+export class Method<P extends { [column: string]: SqlitePrimitiveValue }> {
 	private readonly statement: PreparedStatement
 
 	constructor(db: OpfsDatabase, private readonly sql: string) {
