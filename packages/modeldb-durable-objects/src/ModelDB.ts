@@ -12,7 +12,7 @@ import {
 
 import { SqlStorage } from "@cloudflare/workers-types"
 import { ModelAPI } from "@canvas-js/modeldb-sqlite-shared"
-import { SqliteDB } from "./DBWrapper.js"
+import { SqliteDB } from "./SqliteDB.js"
 
 export interface ModelDBOptions {
 	db: SqlStorage

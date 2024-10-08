@@ -5,7 +5,7 @@ import { ModelAPI } from "@canvas-js/modeldb-sqlite-shared"
 import { assert, signalInvalidType } from "@canvas-js/utils"
 import { Database } from "@sqlite.org/sqlite-wasm"
 
-import { SqliteDB } from "./DBWrapper.js"
+import { SqliteDB } from "./SqliteDB.js"
 
 export class InnerModelDB {
 	public readonly db: Database
