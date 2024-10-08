@@ -13,7 +13,7 @@ import type {
 
 import { assert, mapValues, signalInvalidType } from "@canvas-js/utils"
 
-export type SqlitePrimitiveValue = string | number | Uint8Array | null
+export type SqlitePrimitiveValue = string | number | Uint8Array | ArrayBuffer | null
 export type RecordValue = Record<string, SqlitePrimitiveValue>
 export type Params = Record<`p${string}`, SqlitePrimitiveValue>
 
@@ -200,6 +200,8 @@ export function decodePrimitiveValue(modelName: string, property: PrimitivePrope
 			return new Uint8Array(value.buffer, value.byteOffset, value.byteLength)
 		} else if (value instanceof Uint8Array) {
 			return value
+		} else if (value instanceof ArrayBuffer) {
+			return new Uint8Array(value)
 		} else {
 			console.error("expected Uint8Array, got", value)
 			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected Uint8Array)`)
