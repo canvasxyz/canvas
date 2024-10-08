@@ -1,10 +1,7 @@
 import { SqlStorage } from "@cloudflare/workers-types"
 
 export class Query<R> {
-	constructor(
-		private readonly db: SqlStorage,
-		private readonly sql: string,
-	) {}
+	constructor(private readonly db: SqlStorage, private readonly sql: string) {}
 
 	public get(params: any[]): R | null {
 		try {
@@ -23,11 +20,8 @@ export class Query<R> {
 	}
 }
 
-export class Method<P> {
-	constructor(
-		private readonly db: SqlStorage,
-		private readonly sql: string,
-	) {}
+export class Method {
+	constructor(private readonly db: SqlStorage, private readonly sql: string) {}
 
 	public run(params: any[]) {
 		this.db.exec(this.sql, ...params)
