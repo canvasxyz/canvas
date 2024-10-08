@@ -13,9 +13,11 @@ import type {
 
 import { assert, mapValues, signalInvalidType } from "@canvas-js/utils"
 
-export type SqlValue = string | number | null | bigint | Uint8Array | Int8Array | ArrayBuffer | boolean
+export type SqlitePrimitiveValue = string | number | Uint8Array | null
+export type RecordValue = Record<string, SqlitePrimitiveValue>
+export type Params = Record<`p${string}`, SqlitePrimitiveValue>
 
-export function encodeQueryParams(params: Record<string, PrimitiveValue>): Record<string, SqlValue> {
+export function encodeQueryParams(params: Record<string, PrimitiveValue>): RecordValue {
 	return mapValues(params, (value) => {
 		if (typeof value === "boolean") {
 			return value ? 1 : 0
@@ -29,8 +31,8 @@ export function encodeRecordParams(
 	model: Model,
 	value: ModelValue,
 	params: Record<string, `p${string}`>,
-): { [arg: `p${string}`]: SqlValue } {
-	const values: Record<string, SqlValue> = {}
+): { [arg: `p${string}`]: SqlitePrimitiveValue } {
+	const values: Record<string, SqlitePrimitiveValue> = {}
 
 	for (const property of model.properties) {
 		const propertyValue = value[property.name]
@@ -64,7 +66,11 @@ function encodePrimaryKeyValue(modelName: string, property: PrimaryKeyProperty, 
 	}
 }
 
-function encodePrimitiveValue(modelName: string, property: PrimitiveProperty, value: PropertyValue): SqlValue {
+function encodePrimitiveValue(
+	modelName: string,
+	property: PrimitiveProperty,
+	value: PropertyValue,
+): SqlitePrimitiveValue {
 	if (value === null) {
 		if (property.optional) {
 			return null
@@ -129,7 +135,7 @@ function encodeReferenceValue(modelName: string, property: ReferenceProperty, va
 	}
 }
 
-export function decodeRecord(model: Model, record: Record<string, SqlValue>): ModelValue {
+export function decodeRecord(model: Model, record: RecordValue): ModelValue {
 	const value: ModelValue = {}
 
 	for (const property of model.properties) {
@@ -152,7 +158,7 @@ export function decodeRecord(model: Model, record: Record<string, SqlValue>): Mo
 export function decodePrimaryKeyValue(
 	modelName: string,
 	property: PrimaryKeyProperty,
-	value: SqlValue,
+	value: SqlitePrimitiveValue,
 ): PrimaryKeyValue {
 	if (typeof value !== "string") {
 		throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected string)`)
@@ -161,7 +167,7 @@ export function decodePrimaryKeyValue(
 	return value
 }
 
-export function decodePrimitiveValue(modelName: string, property: PrimitiveProperty, value: SqlValue) {
+export function decodePrimitiveValue(modelName: string, property: PrimitiveProperty, value: SqlitePrimitiveValue) {
 	if (value === null) {
 		if (property.optional) {
 			return null
@@ -221,7 +227,11 @@ export function decodePrimitiveValue(modelName: string, property: PrimitivePrope
 	}
 }
 
-export function decodeReferenceValue(modelName: string, property: ReferenceProperty, value: SqlValue): string | null {
+export function decodeReferenceValue(
+	modelName: string,
+	property: ReferenceProperty,
+	value: SqlitePrimitiveValue,
+): string | null {
 	if (value === null) {
 		if (property.optional) {
 			return null

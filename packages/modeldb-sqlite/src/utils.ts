@@ -1,7 +1,10 @@
 import type * as sqlite from "better-sqlite3"
-import { Query as AbstractQuery, SqlValue } from "@canvas-js/modeldb-sqlite-shared"
-
-export class Query extends AbstractQuery {
+import {
+	Query as AbstractQuery,
+	Method as AbstractMethod,
+	SqlitePrimitiveValue,
+} from "@canvas-js/modeldb-sqlite-shared"
+export class Query<P extends { [column: string]: SqlitePrimitiveValue }, R> extends AbstractQuery<P, R> {
 	private readonly statement: sqlite.Statement
 
 	constructor(db: sqlite.Database, private readonly sql: string) {
@@ -9,24 +12,25 @@ export class Query extends AbstractQuery {
 		this.statement = db.prepare(sql)
 	}
 
-	public get(params: Record<string, SqlValue>): Record<string, SqlValue> | null {
-		const result = this.statement.get(params)
-		return (result ?? null) as Record<string, SqlValue> | null
+	public get(params: P): R | null {
+		const result = this.statement.get(params) as R | undefined
+		return result ?? null
 	}
 
-	public all(params: Record<string, SqlValue>): Record<string, SqlValue>[] {
-		return this.statement.all(params) as Record<string, SqlValue>[]
+	public all(params: P): R[] {
+		return this.statement.all(params) as R[]
 	}
 
-	public iterate(params: Record<string, SqlValue>): IterableIterator<Record<string, SqlValue>> {
-		return this.statement.iterate(params) as IterableIterator<Record<string, SqlValue>>
+	public iterate(params: P): IterableIterator<R> {
+		return this.statement.iterate(params) as IterableIterator<R>
 	}
 }
 
-export class Method<P> {
+export class Method<P extends { [column: string]: SqlitePrimitiveValue }> extends AbstractMethod<P> {
 	private readonly statement: sqlite.Statement
 
 	constructor(db: sqlite.Database, private readonly sql: string) {
+		super()
 		this.statement = db.prepare(sql)
 	}
 

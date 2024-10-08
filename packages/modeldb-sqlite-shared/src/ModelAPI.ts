@@ -27,7 +27,8 @@ import {
 	decodeReferenceValue,
 	encodeQueryParams,
 	encodeRecordParams,
-	SqlValue,
+	Params,
+	RecordValue,
 } from "./encoding.js"
 import { AbstractSqliteDB, Method, Query } from "./AbstractSqliteDB.js"
 
@@ -64,14 +65,14 @@ export class ModelAPI {
 	#properties = Object.fromEntries(this.model.properties.map((property) => [property.name, property]))
 
 	// Methods
-	#insert: Method
-	#update: Method
-	#delete: Method
-	#clear: Method
+	#insert: Method<Params>
+	#update: Method<RecordValue>
+	#delete: Method<Record<`p${string}`, string>>
+	#clear: Method<{}>
 
 	// Queries
-	#selectAll: Query
-	#select: Query
+	#selectAll: Query<{}, RecordValue>
+	#select: Query<Record<`p${string}`, string>, RecordValue>
 
 	readonly #relations: Record<string, RelationAPI> = {}
 	readonly #primaryKeyName: string
@@ -223,7 +224,7 @@ export class ModelAPI {
 			sql.push(`WHERE ${whereExpression}`)
 		}
 
-		const results = this.db.prepareQuery(sql.join(" ")).all(params)
+		const results = this.db.prepareQuery(sql.join(" ")).all(params) as RecordValue[]
 
 		const countResult = results[0].count
 		if (typeof countResult === "number") {
@@ -233,15 +234,15 @@ export class ModelAPI {
 		}
 	}
 
-	public *iterate(query: QueryParams): Iterable<ModelValue> {
+	public async *iterate(query: QueryParams): AsyncIterable<ModelValue> {
 		const [sql, relations, params] = this.parseQuery(query)
 
-		for (const record of this.db.prepareQuery(sql).iterate(encodeQueryParams(params))) {
+		for (const record of this.db.prepareQuery<QueryParams, RecordValue>(sql).iterate(encodeQueryParams(params))) {
 			yield this.parseRecord(record, relations)
 		}
 	}
 
-	private parseRecord(record: Record<string, SqlValue>, relations: Relation[]): any {
+	private parseRecord(record: RecordValue, relations: Relation[]): any {
 		const key = record[this.#primaryKeyName]
 		assert(typeof key === "string", 'expected typeof primaryKey === "string"')
 
@@ -271,7 +272,7 @@ export class ModelAPI {
 	public query(query: QueryParams): ModelValue[] {
 		const [sql, relations, params] = this.parseQuery(query)
 
-		const results = this.db.prepareQuery(sql).all(params as any)
+		const results = this.db.prepareQuery<QueryParams, RecordValue>(sql).all(params as any)
 
 		return results.map((record): ModelValue => {
 			const key = record[this.#primaryKeyName]
@@ -587,9 +588,9 @@ export class RelationAPI {
 	public readonly sourceIndex = `${this.relation.source}/${this.relation.property}/source`
 	public readonly targetIndex = `${this.relation.source}/${this.relation.property}/target`
 
-	readonly #select: Query
-	readonly #insert: Method
-	readonly #delete: Method
+	readonly #select: Query<{ _source: string }, { _target: string }>
+	readonly #insert: Method<{ _source: string; _target: string }>
+	readonly #delete: Method<{ _source: string }>
 
 	public constructor(readonly db: AbstractSqliteDB, readonly relation: Relation) {
 		const columns = [`_source TEXT NOT NULL`, `_target TEXT NOT NULL`]
