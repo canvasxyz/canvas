@@ -21,43 +21,49 @@ import { ModelDBProxy as ModelDBDurableObjectsProxy } from "@canvas-js/modeldb-d
 let browser: puppeteer.Browser
 let page: puppeteer.Page
 let server: ViteDevServer
+let worker: UnstableDevWorker
 
-// test.before(async (t) => {
-// 	server = await createServer({
-// 		root: path.resolve(__dirname, "server"),
-// 	})
+test.before(async (t) => {
+	server = await createServer({
+		root: path.resolve(__dirname, "server"),
+	})
 
-// 	await server.listen()
+	await server.listen()
 
-// 	browser = await puppeteer.launch({
-// 		dumpio: true,
-// 		headless: true,
-// 		args: [
-// 			"--no-sandbox",
-// 			"--disable-setuid-sandbox",
-// 			"--disable-extensions",
-// 			"--enable-chrome-browser-cloud-management",
-// 		],
-// 	})
-// 	page = await browser.newPage()
+	browser = await puppeteer.launch({
+		dumpio: true,
+		headless: true,
+		args: [
+			"--no-sandbox",
+			"--disable-setuid-sandbox",
+			"--disable-extensions",
+			"--enable-chrome-browser-cloud-management",
+		],
+	})
+	page = await browser.newPage()
 
-// 	page.on("workercreated", (worker) => t.log("Worker created: " + worker.url()))
-// 	page.on("workerdestroyed", (worker) => t.log("Worker destroyed: " + worker.url()))
+	page.on("workercreated", (worker) => t.log("Worker created: " + worker.url()))
+	page.on("workerdestroyed", (worker) => t.log("Worker destroyed: " + worker.url()))
 
-// 	page.on("console", async (e) => {
-// 		const args = await Promise.all(e.args().map((a) => a.jsonValue()))
-// 		t.log(...args)
-// 	})
+	page.on("console", async (e) => {
+		const args = await Promise.all(e.args().map((a) => a.jsonValue()))
+		t.log(...args)
+	})
 
-// 	const { port } = server.config.server
-// 	await page.goto(`http://localhost:${port}`)
-// })
+	const { port } = server.config.server
+	await page.goto(`http://localhost:${port}`)
 
-// test.after(async (t) => {
-// 	await page.close()
-// 	await browser.close()
-// 	await server.close()
-// })
+	worker = await unstable_dev("test/worker.ts", {
+		experimental: { disableExperimentalWarning: true },
+	})
+})
+
+test.after(async (t) => {
+	await page.close()
+	await browser.close()
+	await server.close()
+	worker.stop()
+})
 
 function getConnectionConfig() {
 	const { POSTGRES_HOST, POSTGRES_PORT } = process.env
@@ -74,9 +80,15 @@ function getConnectionConfig() {
 	}
 }
 
-const worker = await unstable_dev("test/worker.ts", {
-	experimental: { disableExperimentalWarning: true },
-})
+export const testOnModelDBNoWasm = (
+	name: string,
+	run: (
+		t: ExecutionContext<unknown>,
+		openDB: (t: ExecutionContext, models: ModelSchema) => Promise<AbstractModelDB>,
+	) => void,
+) => {
+	return testOnModelDB(name, run, { sqliteWasm: false, sqlite: true, idb: true, pg: true, do: true })
+}
 
 export const testOnModelDB = (
 	name: string,
@@ -84,81 +96,96 @@ export const testOnModelDB = (
 		t: ExecutionContext<unknown>,
 		openDB: (t: ExecutionContext, models: ModelSchema) => Promise<AbstractModelDB>,
 	) => void,
+	platforms: { sqliteWasm: boolean; sqlite: boolean; idb: boolean; pg: boolean; do: boolean } = {
+		sqliteWasm: true,
+		sqlite: true,
+		idb: true,
+		pg: true,
+		do: true,
+	},
 ) => {
 	const macro = test.macro(run)
 
 	const connectionConfig = getConnectionConfig()
 
-	test(`Sqlite - ${name}`, macro, async (t, models) => {
-		const mdb = new ModelDBSqlite({ path: null, models })
-		t.teardown(() => mdb.close())
-		return mdb
-	})
+	if (platforms.sqlite) {
+		test(`Sqlite - ${name}`, macro, async (t, models) => {
+			const mdb = new ModelDBSqlite({ path: null, models })
+			t.teardown(() => mdb.close())
+			return mdb
+		})
+	}
 
-	test(`IDB - ${name}`, macro, async (t, models) => {
-		const mdb = await ModelDBIdb.initialize({ name: nanoid(), models })
-		t.teardown(() => mdb.close())
-		return mdb
-	})
+	if (platforms.idb) {
+		test(`IDB - ${name}`, macro, async (t, models) => {
+			const mdb = await ModelDBIdb.initialize({ name: nanoid(), models })
+			t.teardown(() => mdb.close())
+			return mdb
+		})
+	}
 
-	test.serial(`Postgres - ${name}`, macro, async (t, models) => {
-		const mdb = await ModelDBPostgres.initialize({ connectionConfig, models, clear: true })
-		t.teardown(() => mdb.close())
-		return mdb
-	})
+	if (platforms.pg) {
+		test.serial(`Postgres - ${name}`, macro, async (t, models) => {
+			const mdb = await ModelDBPostgres.initialize({ connectionConfig, models, clear: true })
+			t.teardown(() => mdb.close())
+			return mdb
+		})
+	}
 
-	test.serial(`Durable Objects - ${name}`, macro, async (t, models) => {
-		const mdb = new ModelDBDurableObjectsProxy(worker, models)
-		await mdb.initialize()
-		return mdb
-	})
+	if (platforms.do) {
+		test.serial(`Durable Objects - ${name}`, macro, async (t, models) => {
+			const mdb = new ModelDBDurableObjectsProxy(worker, models)
+			await mdb.initialize()
+			return mdb
+		})
+	}
 
-	test.after.always(() => worker.stop())
+	if (platforms.sqliteWasm) {
+		test(`Sqlite Wasm Opfs - ${name}`, async (t) => {
+			const testResult = await page.evaluate(async (run) => {
+				// @ts-ignore
+				const ctx = new InnerExecutionContext()
+				const testFunc = eval(`(${run})`)
+				try {
+					// @ts-ignore
+					await testFunc(ctx, openOpfsDB)
+					return { result: "passed" }
+				} catch (error: any) {
+					return { result: "failed", error: error.message }
+				} finally {
+					if (ctx.teardownFunction) ctx.teardownFunction()
+				}
+			}, run.toString())
 
-	// test(`Sqlite Wasm Opfs - ${name}`, async (t) => {
-	// 	const testResult = await page.evaluate(async (run) => {
-	// 		// @ts-ignore
-	// 		const ctx = new InnerExecutionContext()
-	// 		const testFunc = eval(`(${run})`)
-	// 		try {
-	// 			// @ts-ignore
-	// 			await testFunc(ctx, openOpfsDB)
-	// 			return { result: "passed" }
-	// 		} catch (error: any) {
-	// 			return { result: "failed", error: error.message }
-	// 		} finally {
-	// 			if (ctx.teardownFunction) ctx.teardownFunction()
-	// 		}
-	// 	}, run.toString())
+			if (testResult.result === "passed") {
+				t.pass()
+			} else {
+				t.fail(testResult.error)
+			}
+		})
+		test(`Sqlite Wasm Transient - ${name}`, async (t) => {
+			const testResult = await page.evaluate(async (run) => {
+				// @ts-ignore
+				const ctx = new InnerExecutionContext()
+				const testFunc = eval(`(${run})`)
+				try {
+					// @ts-ignore
+					await testFunc(ctx, openTransientDB)
+					return { result: "passed" }
+				} catch (error: any) {
+					return { result: "failed", error: error.message }
+				} finally {
+					if (ctx.teardownFunction) ctx.teardownFunction()
+				}
+			}, run.toString())
 
-	// 	if (testResult.result === "passed") {
-	// 		t.pass()
-	// 	} else {
-	// 		t.fail(testResult.error)
-	// 	}
-	// })
-	// test(`Sqlite Wasm Transient - ${name}`, async (t) => {
-	// 	const testResult = await page.evaluate(async (run) => {
-	// 		// @ts-ignore
-	// 		const ctx = new InnerExecutionContext()
-	// 		const testFunc = eval(`(${run})`)
-	// 		try {
-	// 			// @ts-ignore
-	// 			await testFunc(ctx, openTransientDB)
-	// 			return { result: "passed" }
-	// 		} catch (error: any) {
-	// 			return { result: "failed", error: error.message }
-	// 		} finally {
-	// 			if (ctx.teardownFunction) ctx.teardownFunction()
-	// 		}
-	// 	}, run.toString())
-
-	// 	if (testResult.result === "passed") {
-	// 		t.pass()
-	// 	} else {
-	// 		t.fail(testResult.error)
-	// 	}
-	// })
+			if (testResult.result === "passed") {
+				t.pass()
+			} else {
+				t.fail(testResult.error)
+			}
+		})
+	}
 }
 
 export const compareUnordered = (t: ExecutionContext, a: any[], b: any[]) => {
