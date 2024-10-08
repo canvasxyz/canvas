@@ -9,11 +9,11 @@ export class SqliteDB extends AbstractSqliteDB {
 		this.db = db
 	}
 
-	prepareQuery<P extends { [column: string]: SqlitePrimitiveValue }, R>(sql: string) {
-		return new Query<P, R>(this.db, sql)
+	prepareQuery<R>(sql: string) {
+		return new Query<R>(this.db, sql)
 	}
-	prepareMethod<P extends { [column: string]: SqlitePrimitiveValue }>(sql: string) {
-		return new Method<P>(this.db, sql)
+	prepareMethod(sql: string) {
+		return new Method(this.db, sql)
 	}
 	transaction(fn: () => void): void {
 		this.transaction(fn)

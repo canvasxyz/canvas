@@ -90,7 +90,11 @@ export class ModelDB extends AbstractModelDB {
 	}
 
 	public async *iterate<T extends ModelValue<any> = ModelValue<any>>(modelName: string): AsyncIterable<T> {
-		return this.wrappedDB.iterate(modelName) as AsyncIterable<T>
+		// @ts-ignore
+		const iterator = await this.wrappedDB.iterate(modelName, null)
+		for (const value of iterator) {
+			yield value as T
+		}
 	}
 
 	public async count(modelName: string, where?: WhereCondition): Promise<number> {

@@ -1,20 +1,18 @@
 import { SqlitePrimitiveValue } from "@canvas-js/modeldb-sqlite-shared"
 import { OpfsDatabase, PreparedStatement } from "@sqlite.org/sqlite-wasm"
 
-export class Query<P extends { [column: string]: SqlitePrimitiveValue }, R> {
+export class Query<R> {
 	private readonly statement: PreparedStatement
 
 	constructor(db: OpfsDatabase, private readonly sql: string) {
 		this.statement = db.prepare(sql)
 	}
 
-	public get(params: P): R | null {
+	public get(params: SqlitePrimitiveValue[]): R | null {
 		const statement = this.statement
 
-		const paramsWithColons = Object.fromEntries(Object.entries(params).map(([key, value]) => [":" + key, value]))
-
 		try {
-			if (Object.keys(paramsWithColons).length > 0) statement.bind(paramsWithColons)
+			if (params.length > 0) statement.bind(params)
 			if (!statement.step()) {
 				return null
 			}
@@ -24,11 +22,11 @@ export class Query<P extends { [column: string]: SqlitePrimitiveValue }, R> {
 		}
 	}
 
-	public all(params: P): R[] {
+	public all(params: SqlitePrimitiveValue[]): R[] {
 		const statement = this.statement
-		const paramsWithColons = Object.fromEntries(Object.entries(params).map(([key, value]) => [":" + key, value]))
+
 		try {
-			if (Object.keys(paramsWithColons).length > 0) statement.bind(paramsWithColons)
+			if (params.length > 0) statement.bind(params)
 			const result = []
 			while (statement.step()) {
 				result.push(statement.get({}) as R)
@@ -39,10 +37,9 @@ export class Query<P extends { [column: string]: SqlitePrimitiveValue }, R> {
 		}
 	}
 
-	public *iterate(params: P): IterableIterator<R> {
+	public *iterate(params: SqlitePrimitiveValue[]): IterableIterator<R> {
 		const statement = this.statement
-		const paramsWithColons = Object.fromEntries(Object.entries(params).map(([key, value]) => [":" + key, value]))
-		if (Object.keys(paramsWithColons).length > 0) statement.bind(paramsWithColons)
+		if (params.length > 0) statement.bind(params)
 
 		const iter: IterableIterator<R> = {
 			[Symbol.iterator]() {
@@ -66,17 +63,16 @@ export class Query<P extends { [column: string]: SqlitePrimitiveValue }, R> {
 	}
 }
 
-export class Method<P extends { [column: string]: SqlitePrimitiveValue }> {
+export class Method {
 	private readonly statement: PreparedStatement
 
 	constructor(db: OpfsDatabase, private readonly sql: string) {
 		this.statement = db.prepare(sql)
 	}
 
-	public run(params: P) {
+	public run(params: SqlitePrimitiveValue[]) {
 		const statement = this.statement
-		const paramsWithColons = Object.fromEntries(Object.entries(params).map(([key, value]) => [":" + key, value]))
-		if (Object.keys(paramsWithColons).length > 0) statement.bind(paramsWithColons)
+		if (params.length > 0) statement.bind(params)
 		statement.step()
 		statement.reset(true)
 	}

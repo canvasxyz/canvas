@@ -168,18 +168,16 @@ export class ModelAPI {
 		if (keys.length === 0) {
 			return []
 		}
-		const params = []
 		const whereParts = []
-		for (const [i, key] of keys.entries()) {
-			whereParts.push(`"${this.#primaryKeyName}" = :p${i}`)
-			params.push(key)
+		for (const key of keys) {
+			whereParts.push(`"${this.#primaryKeyName}" = ?`)
 		}
 
 		const queryString = `SELECT ${this.columnNames.join(", ")} FROM "${this.#table}" WHERE ${whereParts.join(" OR ")}`
 
 		const query = this.db.prepareQuery<RecordValue>(queryString)
 		const rowsByKey: Record<string, ModelValue> = {}
-		for (const row of query.all(params)) {
+		for (const row of query.all(keys)) {
 			const rowKey = row[this.#primaryKeyName]
 			assert(typeof rowKey === "string", 'expected typeof primaryKey === "string"')
 			rowsByKey[rowKey] = {
@@ -595,12 +593,12 @@ export class RelationAPI {
 		}
 
 		// Prepare methods
-		this.#insert = db.prepareMethod(`INSERT INTO "${this.table}" (_source, _target) VALUES (:_source, :_target)`)
+		this.#insert = db.prepareMethod(`INSERT INTO "${this.table}" (_source, _target) VALUES (?, ?)`)
 
-		this.#delete = db.prepareMethod(`DELETE FROM "${this.table}" WHERE _source = :_source`)
+		this.#delete = db.prepareMethod(`DELETE FROM "${this.table}" WHERE _source = ?`)
 
 		// Prepare queries
-		this.#select = db.prepareQuery<{ _target: string }>(`SELECT _target FROM "${this.table}" WHERE _source = :_source`)
+		this.#select = db.prepareQuery<{ _target: string }>(`SELECT _target FROM "${this.table}" WHERE _source = ?`)
 	}
 
 	public get(source: string): string[] {
