@@ -41,7 +41,7 @@ test("apply container actions with db.merge", async (t) => {
 			updateGame,
 			updateGameMultipleMerges,
 		},
-		imports: {
+		globals: {
 			GLOBAL_ID,
 		},
 	})
@@ -119,7 +119,7 @@ test("apply container actions with different function syntaxes", async (t) => {
 			testMemberFunction: external.testMemberFunction,
 			testAsyncMemberFunction: external.testAsyncMemberFunction,
 		},
-		imports: {
+		globals: {
 			GLOBAL_ID,
 		},
 	})

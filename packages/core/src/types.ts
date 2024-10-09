@@ -5,7 +5,7 @@ import type { JSValue } from "@canvas-js/utils"
 export type Contract = {
 	models: ModelSchema
 	actions: Record<string, ActionImplementation>
-	imports?: Record<string, ImportType>
+	globals?: Record<string, ImportType>
 }
 
 export type Models = Contract["models"]
@@ -22,7 +22,6 @@ export type ActionImplementationFunction<Args = any> = (
 	db: ModelAPI,
 	args: Args,
 	context: ActionContext,
-	imports: Record<string, ImportType>, // TODO: these should be added to the scope instead
 ) => Awaitable<void>
 
 // eslint-disable-next-line @typescript-eslint/ban-types

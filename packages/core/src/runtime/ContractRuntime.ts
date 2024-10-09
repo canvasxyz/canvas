@@ -97,9 +97,9 @@ export const models = rehydrate($models);
 export const actions = rehydrate($actions);
 `
 
-		if (typeof contract !== "string" && contract.imports) {
+		if (typeof contract !== "string" && contract.globals) {
 			vm.setGlobalValues(
-				mapEntries(contract.imports, ([key, value]) => {
+				mapEntries(contract.globals, ([key, value]) => {
 					if (typeof value === "function") {
 						return vm.wrapFunction(value as JSFunction | JSFunctionAsync) // TODO: make ImportType = JSFunction | JSFunctionAsync
 					} else {

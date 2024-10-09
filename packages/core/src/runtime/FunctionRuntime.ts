@@ -35,9 +35,8 @@ export class FunctionRuntime extends AbstractRuntime {
 			{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
 		> = {}
 
-		const imports: Record<string, CapturedImportType> = {}
-		for (const [key, value] of Object.entries(contract.imports ?? {})) {
-			imports[key] = captureImport(value)
+		if (contract.globals && Object.keys(contract.globals).length !== 0) {
+			throw new Error("cannot initialize FunctionRuntime with globals")
 		}
 
 		const actions = filterMapEntries(
@@ -60,7 +59,7 @@ export class FunctionRuntime extends AbstractRuntime {
 			},
 		)
 
-		return new FunctionRuntime(topic, signers, schema, actions, imports, argsTransformers)
+		return new FunctionRuntime(topic, signers, schema, actions, argsTransformers)
 	}
 
 	#context: ExecutionContext | null = null
@@ -71,7 +70,6 @@ export class FunctionRuntime extends AbstractRuntime {
 		public readonly signers: SignerCache,
 		public readonly schema: ModelSchema,
 		public readonly actions: Record<string, ActionImplementationFunction>,
-		public readonly imports: Record<string, CapturedImportType>,
 		public readonly argsTransformers: Record<
 			string,
 			{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
@@ -143,7 +141,6 @@ export class FunctionRuntime extends AbstractRuntime {
 					blockhash: blockhash ?? null,
 					timestamp,
 				},
-				uncaptureImports(this.imports),
 			)
 		} finally {
 			this.#context = null
