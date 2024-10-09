@@ -1,40 +1,36 @@
 import type * as sqlite from "better-sqlite3"
-
-export class Query<P, R> {
+import { Query as AbstractQuery, Method as AbstractMethod, SqlitePrimitiveValue } from "@canvas-js/modeldb/utils"
+export class Query<R> extends AbstractQuery<R> {
 	private readonly statement: sqlite.Statement
 
-	constructor(
-		db: sqlite.Database,
-		private readonly sql: string,
-	) {
+	constructor(db: sqlite.Database, private readonly sql: string) {
+		super()
 		this.statement = db.prepare(sql)
 	}
 
-	public get(params: P): R | null {
-		const result = this.statement.get(params) as R | undefined
+	public get(params: SqlitePrimitiveValue[]): R | null {
+		const result = this.statement.get(...params) as R | undefined
 		return result ?? null
 	}
 
-	public all(params: P): R[] {
-		return this.statement.all(params) as R[]
+	public all(params: SqlitePrimitiveValue[]): R[] {
+		return this.statement.all(...params) as R[]
 	}
 
-	public iterate(params: P): IterableIterator<R> {
-		return this.statement.iterate(params) as IterableIterator<R>
+	public iterate(params: SqlitePrimitiveValue[]): IterableIterator<R> {
+		return this.statement.iterate(...params) as IterableIterator<R>
 	}
 }
 
-export class Method<P> {
+export class Method extends AbstractMethod {
 	private readonly statement: sqlite.Statement
 
-	constructor(
-		db: sqlite.Database,
-		private readonly sql: string,
-	) {
+	constructor(db: sqlite.Database, private readonly sql: string) {
+		super()
 		this.statement = db.prepare(sql)
 	}
 
-	public run(params: P) {
-		this.statement.run(params)
+	public run(params: SqlitePrimitiveValue[]) {
+		this.statement.run(...params)
 	}
 }

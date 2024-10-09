@@ -1,8 +1,5 @@
-import test from "ava"
-
 // test for the `count` function in the ModelDB class
 
-import { ModelDB as ModelDBSqlite } from "@canvas-js/modeldb-sqlite"
 import { nanoid } from "nanoid"
 import { testOnModelDB } from "./utils.js"
 

@@ -13,14 +13,12 @@ import type {
 
 import { assert, mapValues, signalInvalidType } from "@canvas-js/utils"
 
-// this is the type of a primitive value as stored in sqlite
-// this may not match onto the types in the model
-// because sqlite does not natively support all of the types we might want
-// for example, sqlite does not have a boolean or a json type
-type SqlitePrimitiveValue = string | number | Buffer | null
+export type SqlitePrimitiveValue = string | number | Uint8Array | ArrayBuffer | null
+export type RecordValue = Record<string, SqlitePrimitiveValue>
+export type Params = Record<`p${string}`, SqlitePrimitiveValue>
 
-export function encodeQueryParams(params: Record<string, PrimitiveValue>): Record<string, SqlitePrimitiveValue> {
-	return mapValues(params, (value) => {
+export function encodeQueryParams(params: PrimitiveValue[]): SqlitePrimitiveValue[] {
+	return params.map((value) => {
 		if (typeof value === "boolean") {
 			return value ? 1 : 0
 		} else if (value instanceof Uint8Array) {
@@ -31,12 +29,8 @@ export function encodeQueryParams(params: Record<string, PrimitiveValue>): Recor
 	})
 }
 
-export function encodeRecordParams(
-	model: Model,
-	value: ModelValue,
-	params: Record<string, `p${string}`>,
-): Record<`p${string}`, string | number | Buffer | null> {
-	const values: Record<`p${string}`, string | number | Buffer | null> = {}
+export function encodeRecordParams(model: Model, value: ModelValue): Array<SqlitePrimitiveValue | null> {
+	const result: Array<SqlitePrimitiveValue | null> = []
 
 	for (const property of model.properties) {
 		const propertyValue = value[property.name]
@@ -44,14 +38,14 @@ export function encodeRecordParams(
 			throw new Error(`missing value for property ${model.name}/${property.name}`)
 		}
 
-		const param = params[property.name]
 		if (property.kind === "primary") {
-			values[param] = encodePrimaryKeyValue(model.name, property, value[property.name])
+			result.push(encodePrimaryKeyValue(model.name, property, value[property.name]))
 		} else if (property.kind === "primitive") {
-			values[param] = encodePrimitiveValue(model.name, property, value[property.name])
+			result.push(encodePrimitiveValue(model.name, property, value[property.name]))
 		} else if (property.kind === "reference") {
-			values[param] = encodeReferenceValue(model.name, property, value[property.name])
+			result.push(encodeReferenceValue(model.name, property, value[property.name]))
 		} else if (property.kind === "relation") {
+			// TODO: add test for relation
 			assert(Array.isArray(value[property.name]))
 			continue
 		} else {
@@ -59,7 +53,7 @@ export function encodeRecordParams(
 		}
 	}
 
-	return values
+	return result
 }
 
 function encodePrimaryKeyValue(modelName: string, property: PrimaryKeyProperty, value: PropertyValue): string {
@@ -103,7 +97,7 @@ function encodePrimitiveValue(
 		}
 	} else if (property.type === "bytes") {
 		if (value instanceof Uint8Array) {
-			return Buffer.isBuffer(value) ? value : Buffer.from(value.buffer, value.byteOffset, value.byteLength)
+			return value
 		} else {
 			throw new TypeError(`${modelName}/${property.name} must be a Uint8Array`)
 		}
@@ -139,7 +133,7 @@ function encodeReferenceValue(modelName: string, property: ReferenceProperty, va
 	}
 }
 
-export function decodeRecord(model: Model, record: Record<string, string | number | Buffer | null>): ModelValue {
+export function decodeRecord(model: Model, record: RecordValue): ModelValue {
 	const value: ModelValue = {}
 
 	for (const property of model.properties) {
@@ -162,7 +156,7 @@ export function decodeRecord(model: Model, record: Record<string, string | numbe
 export function decodePrimaryKeyValue(
 	modelName: string,
 	property: PrimaryKeyProperty,
-	value: string | number | Buffer | null,
+	value: SqlitePrimitiveValue,
 ): PrimaryKeyValue {
 	if (typeof value !== "string") {
 		throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected string)`)
@@ -204,6 +198,10 @@ export function decodePrimitiveValue(modelName: string, property: PrimitivePrope
 	} else if (property.type === "bytes") {
 		if (Buffer.isBuffer(value)) {
 			return new Uint8Array(value.buffer, value.byteOffset, value.byteLength)
+		} else if (value instanceof Uint8Array) {
+			return value
+		} else if (value instanceof ArrayBuffer) {
+			return new Uint8Array(value)
 		} else {
 			console.error("expected Uint8Array, got", value)
 			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected Uint8Array)`)
@@ -232,7 +230,7 @@ export function decodePrimitiveValue(modelName: string, property: PrimitivePrope
 export function decodeReferenceValue(
 	modelName: string,
 	property: ReferenceProperty,
-	value: string | number | Uint8Array | null,
+	value: SqlitePrimitiveValue,
 ): string | null {
 	if (value === null) {
 		if (property.optional) {
