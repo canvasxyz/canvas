@@ -1,23 +1,14 @@
-import { TypeTransformerFunction, create as createIpld } from "@ipld/schema/typed.js"
+import { TypeTransformerFunction, create } from "@ipld/schema/typed.js"
 import { fromDSL } from "@ipld/schema/from-dsl.js"
 import type pg from "pg"
 
 import type { SignerCache } from "@canvas-js/interfaces"
 import { AbstractModelDB, ModelSchema, ModelValue, validateModelValue, mergeModelValues } from "@canvas-js/modeldb"
-import { assert, filterMapEntries } from "@canvas-js/utils"
+import { assert, mapEntries } from "@canvas-js/utils"
 
 import target from "#target"
 
-import {
-	ActionImplementation,
-	ActionImplementationFunction,
-	ActionImplementationObject,
-	CapturedImportType,
-	ImportType,
-	Contract,
-	ModelAPI,
-} from "../types.js"
-import { captureImport, uncaptureImports } from "../imports.js"
+import { ActionImplementationFunction, Contract, ModelAPI } from "../types.js"
 import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
 
 const identity = (x: any) => x
@@ -39,25 +30,21 @@ export class FunctionRuntime extends AbstractRuntime {
 			throw new Error("cannot initialize FunctionRuntime with globals")
 		}
 
-		const actions = filterMapEntries(
-			contract.actions,
-			([actionName, action]) => actionName !== "$imports",
-			([actionName, action]: [string, ActionImplementation]) => {
-				if (typeof action === "function") {
-					argsTransformers[actionName] = { toTyped: identity, toRepresentation: identity }
-					return action as ActionImplementationFunction
-				}
+		const actions = mapEntries(contract.actions, ([actionName, action]) => {
+			if (typeof action === "function") {
+				argsTransformers[actionName] = { toTyped: identity, toRepresentation: identity }
+				return action as ActionImplementationFunction
+			}
 
-				if (action.argsType !== undefined) {
-					const { schema, name } = action.argsType
-					argsTransformers[actionName] = createIpld(fromDSL(schema), name)
-				} else {
-					argsTransformers[actionName] = { toTyped: identity, toRepresentation: identity }
-				}
+			if (action.argsType !== undefined) {
+				const { schema, name } = action.argsType
+				argsTransformers[actionName] = create(fromDSL(schema), name)
+			} else {
+				argsTransformers[actionName] = { toTyped: identity, toRepresentation: identity }
+			}
 
-				return action.apply
-			},
-		)
+			return action.apply
+		})
 
 		return new FunctionRuntime(topic, signers, schema, actions, argsTransformers)
 	}
@@ -130,18 +117,14 @@ export class FunctionRuntime extends AbstractRuntime {
 		this.#context = context
 
 		try {
-			return await action(
-				this.#db,
-				typedArgs,
-				{
-					id: context.id,
-					publicKey,
-					did,
-					address,
-					blockhash: blockhash ?? null,
-					timestamp,
-				},
-			)
+			return await action(this.#db, typedArgs, {
+				id: context.id,
+				publicKey,
+				did,
+				address,
+				blockhash: blockhash ?? null,
+				timestamp,
+			})
 		} finally {
 			this.#context = null
 		}
