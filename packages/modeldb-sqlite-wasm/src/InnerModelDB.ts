@@ -1,7 +1,7 @@
 import * as Comlink from "comlink"
 import { Logger } from "@libp2p/logger"
 import { Config, Effect, ModelValue, QueryParams, WhereCondition } from "@canvas-js/modeldb"
-import { ModelAPI } from "@canvas-js/modeldb-sqlite-shared"
+import { ModelAPI } from "@canvas-js/modeldb/utils"
 import { assert, signalInvalidType } from "@canvas-js/utils"
 import { Database } from "@sqlite.org/sqlite-wasm"
 

@@ -1,4 +1,4 @@
-import { SqlitePrimitiveValue } from "@canvas-js/modeldb-sqlite-shared"
+import { SqlitePrimitiveValue } from "@canvas-js/modeldb/utils"
 import { OpfsDatabase, PreparedStatement } from "@sqlite.org/sqlite-wasm"
 
 export class Query<R> {

@@ -1,5 +1,5 @@
 import * as sqlite from "better-sqlite3"
-import { AbstractSqliteDB, SqlitePrimitiveValue } from "@canvas-js/modeldb-sqlite-shared"
+import { AbstractSqliteDB } from "@canvas-js/modeldb/utils"
 import { Query, Method } from "./utils.js"
 
 export class SqliteDB extends AbstractSqliteDB {

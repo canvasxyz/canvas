@@ -5,5 +5,5 @@
 		"rootDir": "src",
 		"outDir": "lib"
 	},
-	"references": [{ "path": "../modeldb" }, { "path": "../modeldb-sqlite-shared" }, { "path": "../utils" }]
+	"references": [{ "path": "../modeldb" }, { "path": "../utils" }]
 }

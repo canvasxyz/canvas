@@ -1,5 +1,5 @@
 import { SqlStorage } from "@cloudflare/workers-types"
-import { AbstractSqliteDB } from "@canvas-js/modeldb-sqlite-shared"
+import { AbstractSqliteDB } from "@canvas-js/modeldb/utils"
 import { Query, Method } from "./utils.js"
 
 export class SqliteDB extends AbstractSqliteDB {
@@ -16,7 +16,7 @@ export class SqliteDB extends AbstractSqliteDB {
 		return new Method(this.db, sql)
 	}
 	transaction(fn: () => void): void {
-		this.transaction(fn)
+		// transactions are not supported by SqlStorage database interface
 	}
 	close() {
 		// no close method

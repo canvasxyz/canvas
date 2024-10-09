@@ -11,7 +11,7 @@ import {
 	QueryParams,
 	WhereCondition,
 } from "@canvas-js/modeldb"
-import { ModelAPI } from "@canvas-js/modeldb-sqlite-shared"
+import { ModelAPI } from "@canvas-js/modeldb/utils"
 import { SqliteDB } from "./SqliteDB.js"
 
 export interface ModelDBOptions {

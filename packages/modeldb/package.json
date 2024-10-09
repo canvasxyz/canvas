@@ -9,7 +9,10 @@
 	"files": [
 		"lib"
 	],
-	"main": "./lib/index.js",
+	"exports": {
+		".": "./lib/index.js",
+		"./utils": "./lib/utils/index.js"
+	},
 	"types": "./lib/index.d.ts",
 	"sideEffects": false,
 	"scripts": {

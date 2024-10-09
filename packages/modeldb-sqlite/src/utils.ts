@@ -1,9 +1,5 @@
 import type * as sqlite from "better-sqlite3"
-import {
-	Query as AbstractQuery,
-	Method as AbstractMethod,
-	SqlitePrimitiveValue,
-} from "@canvas-js/modeldb-sqlite-shared"
+import { Query as AbstractQuery, Method as AbstractMethod, SqlitePrimitiveValue } from "@canvas-js/modeldb/utils"
 export class Query<R> extends AbstractQuery<R> {
 	private readonly statement: sqlite.Statement
 
