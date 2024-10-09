@@ -6,7 +6,7 @@ import type pg from "pg"
 import type { SignerCache } from "@canvas-js/interfaces"
 import { AbstractModelDB, ModelValue, ModelSchema, validateModelValue, mergeModelValues } from "@canvas-js/modeldb"
 import { VM } from "@canvas-js/vm"
-import { assert, mapEntries } from "@canvas-js/utils"
+import { assert, mapEntries, mapValues, JSValue } from "@canvas-js/utils"
 
 import target from "#target"
 
@@ -42,15 +42,10 @@ export class ContractRuntime extends AbstractRuntime {
 			"must export `contract` or `models` and `actions`",
 		)
 
+		// intermediate unwrapped objects Record<string, QuickJSHandle>
 		const contractUnwrap = contractHandle?.consume(vm.unwrapObject)
-		const actionsUnwrap =
-			contractHandle !== undefined
-				? contractUnwrap.actions.consume(vm.unwrapObject)
-				: actionsHandle.consume(vm.unwrapObject)
-		const modelsUnwrap =
-			contractHandle !== undefined
-				? contractUnwrap.models.consume(vm.context.dump)
-				: modelsHandle.consume(vm.context.dump)
+		const actionsUnwrap = (contractHandle ? contractUnwrap.actions : actionsHandle).consume(vm.unwrapObject)
+		const modelsUnwrap = (contractHandle ? contractUnwrap.models : modelsHandle).consume(vm.unwrapObject)
 
 		const argsTransformers: Record<
 			string,
@@ -79,11 +74,40 @@ export class ContractRuntime extends AbstractRuntime {
 			return apply.consume(vm.cache)
 		})
 
-		// TODO: validate that models satisfies ModelSchema
-		const modelSchema = modelsUnwrap as ModelSchema
+		// TODO: Validate that models satisfies ModelSchema
+		const mergeHandles: Record<string, QuickJSHandle> = {}
+
+		const modelSchema = mapEntries(modelsUnwrap, ([name, handle]) => {
+			// Extract the $merge handle, which is not included in `fields`
+			// because vm.context.dump only passes on JSON-able fields.
+			const mergeHandle = vm.unwrapObject(handle)["$merge"]
+			const fields = handle.consume(vm.context.dump)
+			if (mergeHandle) {
+				mergeHandles[name] = mergeHandle
+				fields.$merge = (merge1: JSValue, merge2: JSValue) => {
+					const merge1Handle = vm.wrapValue(merge1)
+					const merge2Handle = vm.wrapValue(merge2)
+					const callResult = vm.context.callFunction(mergeHandle, vm.context.null, merge1Handle, merge2Handle)
+					merge1Handle.dispose()
+					merge2Handle.dispose()
+					if (callResult.error) {
+						callResult.error.dispose() // do we need this?
+						throw new Error(`error in ${name}.$merge`)
+					}
+					return callResult.value.consume(vm.context.dump)
+				}
+			}
+			return fields
+		}) as ModelSchema
+
+		const cleanupSetupHandles = () => {
+			for (const handle of Object.values(mergeHandles)) {
+				handle.dispose()
+			}
+		}
 
 		const schema = AbstractRuntime.getModelSchema(modelSchema)
-		return new ContractRuntime(topic, signers, schema, vm, actions, argsTransformers)
+		return new ContractRuntime(topic, signers, schema, vm, actions, argsTransformers, cleanupSetupHandles)
 	}
 
 	readonly #databaseAPI: QuickJSHandle
@@ -100,6 +124,7 @@ export class ContractRuntime extends AbstractRuntime {
 			string,
 			{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
 		>,
+		private disposeSetupHandles: () => void
 	) {
 		super()
 		this.#databaseAPI = vm
@@ -164,6 +189,7 @@ export class ContractRuntime extends AbstractRuntime {
 		try {
 			await super.close()
 		} finally {
+			this.disposeSetupHandles()
 			this.vm.dispose()
 		}
 	}
