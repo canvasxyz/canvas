@@ -4,8 +4,8 @@ import * as cbor from "@ipld/dag-cbor"
 
 import { MIN_MESSAGE_ID } from "@canvas-js/gossiplog"
 import { Snapshot, SnapshotEffect } from "@canvas-js/interfaces"
-import { assert } from "@canvas-js/utils"
-import type { ModelSchema, IndexInit, PropertyType } from "@canvas-js/modeldb"
+import { assert, mapValues } from "@canvas-js/utils"
+import type { ModelSchema, IndexInit, PropertyType, ModelValue } from "@canvas-js/modeldb"
 
 import { Canvas } from "./Canvas.js"
 import { Contract } from "./types.js"
@@ -46,7 +46,15 @@ export async function createSnapshot<T extends Contract>(app: Canvas): Promise<S
 		}
 		modelData[modelName] = []
 		for await (const row of app.db.iterate(modelName)) {
-			modelData[modelName].push(cbor.encode(row))
+			const rowWithZeroedIndexedAt = Object.fromEntries(
+				Object.entries(row).map(([key, value]) => {
+					if (key === "$indexed_at") {
+						return [key, 0]
+					}
+					return [key, value]
+				}),
+			) as ModelValue
+			modelData[modelName].push(cbor.encode(rowWithZeroedIndexedAt))
 		}
 	}
 	const models = modelData
