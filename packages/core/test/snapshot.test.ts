@@ -155,14 +155,17 @@ test("snapshot persists data with merge functions", async (t) => {
 	}
 	const { id: idB } = await app.insert(await session.signer.sign(b), b)
 
-	t.deepEqual(await app.db.get("posts", "a"), { id: "a", content: "foofoo" })
+	const posts_a = await app.db.get("posts", "a")
+	delete posts_a!["$indexed_at"]
+	t.deepEqual(posts_a, { id: "a", content: "foofoo" })
 
 	const snapshot = await app.createSnapshot()
 	await app.stop()
 
 	const app2 = await Canvas.initialize({ reset: true, snapshot, ...config })
 
-	t.deepEqual(await app2.db.get("posts", "a"), { id: "a", content: "foofoo" })
+	// snapshots should clear the $indexed_at field
+	t.deepEqual(await app2.db.get("posts", "a"), { $indexed_at: 0, id: "a", content: "foofoo" })
 
 	t.pass()
 })
