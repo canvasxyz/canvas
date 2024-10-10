@@ -1,9 +1,11 @@
 import type { ModelSchema, ModelValue, IndexInit, PropertyType } from "@canvas-js/modeldb"
 import type { Awaitable, SnapshotEffect } from "@canvas-js/interfaces"
+import type { JSValue } from "@canvas-js/utils"
 
 export type Contract = {
 	models: ModelSchema
 	actions: Record<string, ActionImplementation>
+	globals?: Record<string, ImportType>
 }
 
 export type Models = Contract["models"]
@@ -21,6 +23,11 @@ export type ActionImplementationFunction<Args = any> = (
 	args: Args,
 	context: ActionContext,
 ) => Awaitable<void>
+
+// eslint-disable-next-line @typescript-eslint/ban-types
+export type ImportType = JSValue | Function
+
+export type CapturedImportType = { value: Uint8Array } | { fn: string }
 
 export type ModelAPI = {
 	get: <T extends ModelValue = ModelValue>(model: string, key: string) => Promise<T | null>

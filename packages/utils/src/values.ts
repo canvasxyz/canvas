@@ -6,6 +6,13 @@ export interface JSObject {
 	[key: string]: JSValue
 }
 
+// eslint-disable-next-line @typescript-eslint/ban-types
+export type FunctionalJSValue = null | boolean | number | string | Uint8Array | FunctionalJSArray | FunctionalJSObject | Function
+export interface FunctionalJSArray extends Array<FunctionalJSValue> {}
+export interface FunctionalJSObject {
+	[key: string]: FunctionalJSValue
+}
+
 // Functions
 
 export type JSFunction = (...args: JSValue[]) => undefined | JSValue

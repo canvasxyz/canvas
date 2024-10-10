@@ -294,13 +294,13 @@ test("get a value set by another action", async (t) => {
 				},
 				async createPost(db, { content }: { content: string }, { id, did }) {
 					const user = await db.get("user", did)
-					assert(user !== null)
+					if (user === null) throw new Error()
 					await db.set("post", { id, from: did, content })
 				},
 				async deletePost(db, { id }: { id: string }, { did }) {
 					const post = await db.get("post", id)
 					if (post !== null) {
-						assert(post.from === did, "cannot delete others' posts")
+						if (post.from !== did) throw new Error("cannot delete others' posts")
 						await db.delete("post", id)
 					}
 				},
