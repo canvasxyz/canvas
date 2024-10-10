@@ -324,6 +324,9 @@ export const actions = rehydrate($actions);
 					return this.vm.unwrapValue(result)
 				}
 			})
+		} catch (err) {
+			console.error(`Error calling actions.${name}:`, typedArgs, err)
+			throw err
 		} finally {
 			argsHandle.dispose()
 			ctxHandle.dispose()
