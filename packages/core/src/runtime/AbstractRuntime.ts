@@ -83,8 +83,13 @@ export abstract class AbstractRuntime {
 	} satisfies ModelSchema
 
 	protected static getModelSchema(schema: ModelSchema): ModelSchema {
+		const schemaWithIndexedAt = mapValues(schema, (model) => ({
+			...model,
+			$indexed_at: "integer",
+		}))
+
 		return {
-			...schema,
+			...schemaWithIndexedAt,
 			...AbstractRuntime.sessionsModel,
 			...AbstractRuntime.actionsModel,
 			...AbstractRuntime.effectsModel,
@@ -285,6 +290,7 @@ export abstract class AbstractRuntime {
 				if (value === null) {
 					effects.push({ model, operation: "delete", key })
 				} else {
+					value["$indexed_at"] = new Date().getTime()
 					effects.push({ model, operation: "set", value })
 				}
 			}
