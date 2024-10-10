@@ -3,13 +3,13 @@ import { fromDSL } from "@ipld/schema/from-dsl.js"
 import type pg from "pg"
 
 import type { SignerCache } from "@canvas-js/interfaces"
-import { AbstractModelDB, ModelSchema, ModelValue, validateModelValue, mergeModelValues } from "@canvas-js/modeldb"
+import { AbstractModelDB, ModelSchema, ModelValue, mergeModelValues } from "@canvas-js/modeldb"
 import { assert, mapEntries } from "@canvas-js/utils"
 
 import target from "#target"
 
 import { ActionImplementationFunction, Contract, ModelAPI } from "../types.js"
-import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
+import { AbstractRuntime, ExecutionContext, validateModelValueWithoutIndexedAt } from "./AbstractRuntime.js"
 
 const identity = (x: any) => x
 
@@ -67,7 +67,7 @@ export class FunctionRuntime extends AbstractRuntime {
 			},
 			set: async (model: string, value: ModelValue) => {
 				assert(this.#context !== null, "expected this.#context !== null")
-				validateModelValue(this.db.models[model], value)
+				validateModelValueWithoutIndexedAt(this.db.models[model], value)
 				const { primaryKey } = this.db.models[model]
 				const key = value[primaryKey] as string
 				this.#context.modelEntries[model][key] = value
@@ -77,7 +77,7 @@ export class FunctionRuntime extends AbstractRuntime {
 				const { primaryKey } = this.db.models[model]
 				const key = value[primaryKey] as string
 				const mergedValue = mergeModelValues(value, (await this.getModelValue(this.#context, model, key)) ?? {})
-				validateModelValue(this.db.models[model], mergedValue)
+				validateModelValueWithoutIndexedAt(this.db.models[model], mergedValue)
 				this.#context.modelEntries[model][key] = mergedValue
 			},
 			delete: async (model: string, key: string) => {

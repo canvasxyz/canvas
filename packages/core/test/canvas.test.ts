@@ -249,21 +249,27 @@ test("merge into a value set by another action", async (t) => {
 	t.teardown(() => app.stop())
 
 	await app.actions.createGame()
-	t.deepEqual(await app.db.get("game", "0"), {
+	const game_0_0 = await app.db.get("game", "0")
+	delete game_0_0!["$indexed_at"]
+	t.deepEqual(game_0_0, {
 		id: "0",
 		state: { started: false, player1: "foo", player2: "bar" },
 		label: "foobar",
 	})
 
 	await app.actions.updateGame()
-	t.deepEqual(await app.db.get("game", "0"), {
+	const game_0_1 = await app.db.get("game", "0")
+	delete game_0_1!["$indexed_at"]
+	t.deepEqual(game_0_1, {
 		id: "0",
 		state: { started: true, player1: "foo", player2: "bar" },
 		label: "foosball",
 	})
 
 	await app.actions.updateGameMultipleMerges()
-	t.deepEqual(await app.db.get("game", "0"), {
+	const game_0_2 = await app.db.get("game", "0")
+	delete game_0_2!["$indexed_at"]
+	t.deepEqual(game_0_2, {
 		id: "0",
 		state: {
 			started: true,
@@ -321,7 +327,7 @@ test("get a value set by another action", async (t) => {
 
 	t.deepEqual(
 		await app.db
-			.query<{ id: string; from: string; content: string }>("post", {})
+			.query<{ id: string; from: string; content: string }>("post", { select: { id: true, from: true, content: true } })
 			.then((results) => results.sort(compareIDs)),
 		[
 			{ id: a, from: `did:pkh:eip155:1:${wallet.address}`, content: "foo" },

@@ -6,7 +6,7 @@ import { TypeTransformerFunction } from "@ipld/schema/typed.js"
 
 import type { Signature, Action, Message, Session, Snapshot, SignerCache } from "@canvas-js/interfaces"
 
-import { AbstractModelDB, Effect, ModelValue, ModelSchema } from "@canvas-js/modeldb"
+import { AbstractModelDB, Effect, ModelValue, ModelSchema, Model, validatePropertyValue } from "@canvas-js/modeldb"
 import {
 	GossipLogConsumer,
 	MAX_MESSAGE_ID,
@@ -16,6 +16,23 @@ import {
 } from "@canvas-js/gossiplog"
 import { assert, mapValues } from "@canvas-js/utils"
 import { isAction, isSession, isSnapshot } from "../utils.js"
+
+export function validateModelValueWithoutIndexedAt(model: Model, value: ModelValue) {
+	for (const property of model.properties) {
+		if (property.name === "$indexed_at") {
+			if (value["$indexed_at"] !== undefined) {
+				throw new Error(`write to db.${model.name}: unexpected $indexed_at`)
+			}
+			continue
+		}
+
+		const propertyValue = value[property.name]
+		if (propertyValue === undefined) {
+			throw new Error(`write to db.${model.name}: missing ${property.name}`)
+		}
+		validatePropertyValue(model.name, property, propertyValue)
+	}
+}
 
 export type ExecutionContext = {
 	messageLog: AbstractGossipLog<Action | Session | Snapshot>
@@ -83,8 +100,13 @@ export abstract class AbstractRuntime {
 	} satisfies ModelSchema
 
 	protected static getModelSchema(schema: ModelSchema): ModelSchema {
+		const schemaWithIndexedAt = mapValues(schema, (model) => ({
+			...model,
+			$indexed_at: "integer",
+		}))
+
 		return {
-			...schema,
+			...schemaWithIndexedAt,
 			...AbstractRuntime.sessionsModel,
 			...AbstractRuntime.actionsModel,
 			...AbstractRuntime.effectsModel,
@@ -285,6 +307,7 @@ export abstract class AbstractRuntime {
 				if (value === null) {
 					effects.push({ model, operation: "delete", key })
 				} else {
+					value["$indexed_at"] = new Date().getTime()
 					effects.push({ model, operation: "set", value })
 				}
 			}
