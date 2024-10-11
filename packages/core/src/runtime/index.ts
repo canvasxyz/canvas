@@ -13,10 +13,9 @@ export async function createRuntime(
 	contract: string | Contract,
 	options: { runtimeMemoryLimit?: number } = {},
 ): Promise<AbstractRuntime> {
-	return ContractRuntime.init(topic, signers, contract, options)
-	// if (typeof contract === "string") {
-	// 	return ContractRuntime.init(topic, signers, contract, options)
-	// } else {
-	// 	return FunctionRuntime.init(topic, signers, contract)
-	// }
+	if (typeof contract === "string") {
+		return ContractRuntime.init(topic, signers, contract, options)
+	} else {
+		return FunctionRuntime.init(topic, signers, contract)
+	}
 }
