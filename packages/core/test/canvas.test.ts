@@ -215,7 +215,7 @@ test("create an app with an inline contract", async (t) => {
 	t.is(value?.address, `did:pkh:eip155:1:${wallet.address}`)
 })
 
-test("merge into a value set by another action", async (t) => {
+test("merge and update into a value set by another action", async (t) => {
 	const app = await Canvas.initialize({
 		topic: "com.example.app",
 		contract: {
@@ -241,6 +241,10 @@ test("merge into a value set by another action", async (t) => {
 					await db.merge("game", { id: "0", state: { extra1: { a: 1, b: 1 } } as any })
 					await db.merge("game", { id: "0", state: { extra2: "b" } as any })
 					await db.merge("game", { id: "0", state: { extra3: null, extra1: { b: 2, c: 3 } } as any })
+				},
+				async updateGameMultipleUpdates(db) {
+					await db.update("game", { id: "0", state: { extra1: { a: 1, b: 2 } } as any })
+					await db.update("game", { id: "0", state: { extra3: null, extra1: { b: 2, c: 3 } } as any })
 				},
 			},
 		},
@@ -272,6 +276,16 @@ test("merge into a value set by another action", async (t) => {
 			extra1: { a: 1, b: 2, c: 3 },
 			extra2: "b",
 			extra3: null,
+		},
+		label: "foosball",
+	})
+
+	await app.actions.updateGameMultipleUpdates()
+	t.deepEqual(await app.db.get("game", "0"), {
+		id: "0",
+		state: {
+			extra3: null,
+			extra1: { b: 2, c: 3 },
 		},
 		label: "foosball",
 	})

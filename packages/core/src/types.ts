@@ -26,6 +26,7 @@ export type ModelAPI<ModelTypes extends Record<string, ModelValue> = Record<stri
 	get: <M extends keyof ModelTypes>(model: M, key: string) => Promise<ModelTypes[M] | null>
 	set: <M extends keyof ModelTypes>(model: M, value: ModelTypes[M]) => Promise<void>
 	merge: <M extends keyof ModelTypes>(model: M, value: ModelTypes[M]) => Promise<void>
+	update: <M extends keyof ModelTypes>(model: M, value: ModelTypes[M]) => Promise<void>
 	delete: <M extends keyof ModelTypes>(model: M, key: string) => Promise<void>
 }
 
