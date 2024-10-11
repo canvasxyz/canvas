@@ -29,12 +29,12 @@ export type ImportType = JSValue | Function
 
 export type CapturedImportType = { value: Uint8Array } | { fn: string }
 
-export type ModelAPI = {
-	get: <T extends ModelValue = ModelValue>(model: string, key: string) => Promise<T | null>
-	set: (model: string, value: ModelValue) => Promise<void>
-	merge: (model: string, value: ModelValue) => Promise<void>
-	update: (model: string, value: ModelValue) => Promise<void>
-	delete: (model: string, key: string) => Promise<void>
+export type ModelAPI<ModelTypes extends Record<string, ModelValue> = Record<string, ModelValue>> = {
+	get: <M extends keyof ModelTypes>(model: M, key: string) => Promise<ModelTypes[M] | null>
+	set: <M extends keyof ModelTypes>(model: M, value: ModelTypes[M]) => Promise<void>
+	merge: <M extends keyof ModelTypes>(model: M, value: ModelTypes[M]) => Promise<void>
+	update: <M extends keyof ModelTypes>(model: M, value: ModelTypes[M]) => Promise<void>
+	delete: <M extends keyof ModelTypes>(model: M, key: string) => Promise<void>
 }
 
 export type ActionContext = {
