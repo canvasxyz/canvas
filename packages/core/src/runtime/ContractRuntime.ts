@@ -4,7 +4,14 @@ import { fromDSL } from "@ipld/schema/from-dsl.js"
 import type pg from "pg"
 
 import type { SignerCache } from "@canvas-js/interfaces"
-import { AbstractModelDB, ModelValue, ModelSchema, validateModelValue, mergeModelValues } from "@canvas-js/modeldb"
+import {
+	AbstractModelDB,
+	ModelValue,
+	ModelSchema,
+	validateModelValue,
+	updateModelValues,
+	mergeModelValues,
+} from "@canvas-js/modeldb"
 import { VM } from "@canvas-js/vm"
 import {
 	assert,
@@ -229,6 +236,33 @@ export const actions = rehydrate($actions);
 					const key = value[primaryKey] as string
 					assert(typeof key === "string", "expected value[primaryKey] to be a string")
 					this.#context.modelEntries[model][key] = value
+				}),
+				update: vm.context.newFunction("update", (modelHandle, valueHandle) => {
+					assert(this.#context !== null, "expected this.#modelEntries !== null")
+					const model = vm.context.getString(modelHandle)
+					assert(this.db.models[model] !== undefined, "model not found")
+					const { primaryKey } = this.db.models[model]
+					const value = this.vm.unwrapValue(valueHandle) as ModelValue
+					const key = value[primaryKey] as string
+					assert(typeof key === "string", "expected value[primaryKey] to be a string")
+					const promise = vm.context.newPromise()
+
+					// TODO: Ensure concurrent merges into the same value don't create a race condition
+					// if the user doesn't call db.update() with await.
+					this.getModelValue(this.#context, model, key)
+						.then((previousValue) => {
+							const mergedValue = updateModelValues(value, previousValue ?? {})
+							validateModelValue(this.db.models[model], mergedValue)
+							assert(this.#context !== null)
+							this.#context.modelEntries[model][key] = mergedValue
+							promise.resolve()
+						})
+						.catch((err) => {
+							promise.reject()
+						})
+
+					promise.settled.then(vm.runtime.executePendingJobs)
+					return promise.handle
 				}),
 				merge: vm.context.newFunction("merge", (modelHandle, valueHandle) => {
 					assert(this.#context !== null, "expected this.#modelEntries !== null")

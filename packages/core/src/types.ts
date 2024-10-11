@@ -33,6 +33,7 @@ export type ModelAPI = {
 	get: <T extends ModelValue = ModelValue>(model: string, key: string) => Promise<T | null>
 	set: (model: string, value: ModelValue) => Promise<void>
 	merge: (model: string, value: ModelValue) => Promise<void>
+	update: (model: string, value: ModelValue) => Promise<void>
 	delete: (model: string, key: string) => Promise<void>
 }
 

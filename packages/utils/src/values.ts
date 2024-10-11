@@ -7,7 +7,15 @@ export interface JSObject {
 }
 
 // eslint-disable-next-line @typescript-eslint/ban-types
-export type FunctionalJSValue = null | boolean | number | string | Uint8Array | FunctionalJSArray | FunctionalJSObject | Function
+export type FunctionalJSValue =
+	| null
+	| boolean
+	| number
+	| string
+	| Uint8Array
+	| FunctionalJSArray
+	| FunctionalJSObject
+	| Function
 export interface FunctionalJSArray extends Array<FunctionalJSValue> {}
 export interface FunctionalJSObject {
 	[key: string]: FunctionalJSValue
@@ -69,6 +77,38 @@ export function merge(from: JSValue, into: JSValue): JSValue {
 				result[key] = from[key]
 			} else {
 				result[key] = merge(from[key], into[key])
+			}
+		}
+		return result
+	}
+}
+
+export function update(from: JSValue, into: JSValue): JSValue {
+	if (from === null) {
+		return from
+	} else if (typeof from === "boolean") {
+		return from
+	} else if (typeof from === "number") {
+		return from
+	} else if (typeof from === "string") {
+		return from
+	} else if (from instanceof Uint8Array) {
+		return from
+	} else if (Array.isArray(from)) {
+		return from
+	} else {
+		// update fields without recursive merging
+		if (!isObject(from)) return from
+		if (!isObject(into)) return from
+
+		const result: Record<string, JSValue> = { ...into }
+		for (const key of Object.keys(from)) {
+			if (from[key] === undefined) {
+				result[key] = into[key]
+			} else if (into[key] === undefined) {
+				result[key] = from[key]
+			} else {
+				result[key] = from[key]
 			}
 		}
 		return result
