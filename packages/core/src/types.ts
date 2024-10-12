@@ -1,5 +1,8 @@
-import type { ModelSchema, ModelValue, IndexInit, PropertyType } from "@canvas-js/modeldb"
-import type { Awaitable, SnapshotEffect } from "@canvas-js/interfaces"
+import type { ModelSchema, ModelValue } from "@canvas-js/modeldb"
+import type { Awaitable } from "@canvas-js/interfaces"
+import type { JSValue } from "@canvas-js/utils"
+
+export type { ModelValue } from "@canvas-js/modeldb"
 
 export type Contract = {
 	models: ModelSchema

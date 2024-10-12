@@ -2,7 +2,6 @@ import test from "ava"
 
 import { Canvas, Contract } from "@canvas-js/core"
 import { Action, Session, Message } from "@canvas-js/interfaces"
-import { SIWESigner } from "@canvas-js/chain-ethereum"
 
 test("snapshot persists data across apps", async (t) => {
 	const contract = {
@@ -84,7 +83,7 @@ test("snapshot persists data across apps", async (t) => {
 	t.is((await app3.db.get("posts", "f"))?.content, "4")
 	t.is(await app3.db.get("posts", "g"), null)
 
-	const [clock3, parents3] = await app3.messageLog.getClock()
+	const [clock3] = await app3.messageLog.getClock()
 	t.is(clock3, 2) // one snapshot
 	t.is(parents2.length, 1)
 })
@@ -139,7 +138,7 @@ test("snapshot persists data with merge functions", async (t) => {
 			context: { timestamp: new Date().getTime() },
 		},
 	}
-	const { id: idA } = await app.insert(await session.signer.sign(a), a)
+	await app.insert(await session.signer.sign(a), a)
 
 	const b: Message<Action> = {
 		topic: config.topic,
@@ -153,7 +152,7 @@ test("snapshot persists data with merge functions", async (t) => {
 			context: { timestamp: new Date().getTime() },
 		},
 	}
-	const { id: idB } = await app.insert(await session.signer.sign(b), b)
+	await app.insert(await session.signer.sign(b), b)
 
 	t.deepEqual(await app.db.get("posts", "a"), { id: "a", content: "foofoo" })
 
@@ -217,7 +216,7 @@ test("snapshot persists data with merge functions and inline contract", async (t
 			context: { timestamp: new Date().getTime() },
 		},
 	}
-	const { id: idA } = await app.insert(await session.signer.sign(a), a)
+	await app.insert(await session.signer.sign(a), a)
 
 	const b: Message<Action> = {
 		topic: config.topic,
@@ -231,7 +230,7 @@ test("snapshot persists data with merge functions and inline contract", async (t
 			context: { timestamp: new Date().getTime() },
 		},
 	}
-	const { id: idB } = await app.insert(await session.signer.sign(b), b)
+	await app.insert(await session.signer.sign(b), b)
 
 	t.deepEqual(await app.db.get("posts", "a"), { id: "a", content: "foofoo" })
 

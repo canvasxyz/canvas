@@ -17,7 +17,7 @@ export type PropertyType =
 
 export type IndexInit = string | string[]
 
-type MergeFunction = (value1: any, value2: any) => any
+export type MergeFunction = (value1: any, value2: any) => any
 export type ModelSchema = Record<
 	string,
 	{ $indexes?: IndexInit[]; $merge?: MergeFunction } & Record<string, PropertyType | IndexInit[] | MergeFunction>
