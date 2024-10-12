@@ -20,7 +20,7 @@ export type IndexInit = string | string[]
 export type MergeFunction = (value1: any, value2: any) => any
 export type ModelSchema = Record<
 	string,
-	{ $indexes?: IndexInit[]; $merge?: MergeFunction } & Record<string, PropertyType | IndexInit[] | MergeFunction>
+	{ $indexes?: IndexInit[]; $merge?: MergeFunction } | Record<string, PropertyType>
 >
 
 // These are more structured representations of the schema defined by ModelSchema that are easier
