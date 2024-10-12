@@ -33,8 +33,8 @@ export const App: React.FC<{}> = ({}) => {
 	const topicRef = useRef(topic)
 
 	const { app } = useCanvas(wsURL, {
-		topic,
-		contract: { ...contract, topic: topicRef.current },
+		topic: topicRef.current,
+		contract: { ...contract },
 		signers: [new SIWESigner(), new ATPSigner(), new CosmosSigner(), new SubstrateSigner({}), new SolanaSigner()],
 	})
 

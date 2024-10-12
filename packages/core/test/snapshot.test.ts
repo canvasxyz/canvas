@@ -1,29 +1,28 @@
 import test from "ava"
 
-import { Canvas, Contract } from "@canvas-js/core"
+import { Canvas, Contract, Config } from "@canvas-js/core"
 import { Action, Session, Message } from "@canvas-js/interfaces"
+import { MergeFunction } from "@canvas-js/modeldb"
 
 test("snapshot persists data across apps", async (t) => {
-	const contract = {
-		models: {
-			posts: {
-				id: "primary",
-				content: "string",
-			},
-		},
-		actions: {
-			async createPost(db, { id, content }: { id: string; content: string }) {
-				await db.set("posts", { id, content })
-			},
-			async deletePost(db, { id }: { id: string }) {
-				await db.delete("posts", id)
-			},
-		},
-	} satisfies Contract
-
-	const config = {
+	const config: Config = {
 		topic: "com.example.app",
-		contract,
+		contract: {
+			models: {
+				posts: {
+					id: "primary",
+					content: "string",
+				},
+			},
+			actions: {
+				async createPost(db, { id, content }: { id: string; content: string }) {
+					await db.set("posts", { id, content })
+				},
+				async deletePost(db, { id }: { id: string }) {
+					await db.delete("posts", id)
+				},
+			},
+		},
 	}
 
 	const app = await Canvas.initialize(config)
@@ -89,29 +88,33 @@ test("snapshot persists data across apps", async (t) => {
 })
 
 test("snapshot persists data with merge functions", async (t) => {
-	const contract = {
-		models: {
-			posts: {
-				id: "primary",
-				content: "string",
-				$merge: ({ id, content }, { id: id2, content: content2 }) => {
-					return { id, content: content + content2 }
+	const config: Config<{
+		posts: {
+			id: "primary",
+			content: "string",
+			$merge: MergeFunction<any>
+		}
+	}> = {
+		topic: "com.example.app",
+		contract: {
+			models: {
+				posts: {
+					id: "primary",
+					content: "string",
+					$merge: ({ id, content }, { content: content2 }) => {
+						return { id, content: content + content2 }
+					},
 				},
 			},
-		},
-		actions: {
-			async createPost(db, { id, content }: { id: string; content: string }) {
-				await db.set("posts", { id, content })
+			actions: {
+				async createPost(db, { id, content }: { id: string; content: string }) {
+					await db.set("posts", { id, content })
+				},
+				async deletePost(db, { id }: { id: string }) {
+					await db.delete("posts", id)
+				},
 			},
-			async deletePost(db, { id }: { id: string }) {
-				await db.delete("posts", id)
-			},
-		},
-	} satisfies Contract
-
-	const config = {
-		topic: "com.example.app",
-		contract,
+		}
 	}
 
 	const app = await Canvas.initialize(config)

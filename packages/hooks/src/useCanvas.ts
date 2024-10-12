@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef } from "react"
-import { Canvas, Contract, type CanvasConfig, type Snapshot, hashContract } from "@canvas-js/core"
+import { Canvas, Contract, type ModelSchema, type Config, type Snapshot, hashContract } from "@canvas-js/core"
 
-export const useCanvas = <T extends Contract = Contract>(url: string | null, config: CanvasConfig<T>) => {
+export const useCanvas = <M extends ModelSchema = any, T extends Contract<M> = Contract<M>>(
+	url: string | null,
+	config: Config<T>,
+) => {
 	const [app, setApp] = useState<Canvas<T>>()
 	const [error, setError] = useState<Error>()
 
@@ -16,7 +19,7 @@ export const useCanvas = <T extends Contract = Contract>(url: string | null, con
 
 		const contractHash = hashContract(config.contract)
 
-		function setupApp<T extends Contract>(appUrl: string | null, app: Canvas<T>) {
+		function setupApp(appUrl: string | null, app: Canvas<any>) {
 			if (url) {
 				app.connect(url).then(() => setApp(app))
 			} else {
