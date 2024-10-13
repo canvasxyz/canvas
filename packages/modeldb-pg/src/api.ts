@@ -32,6 +32,7 @@ import {
 	encodeQueryParams,
 	PostgresPrimitiveValue,
 } from "./encoding.js"
+import { isPrimitiveValue } from "@canvas-js/modeldb/src/utils.js"
 
 const primitiveColumnTypes = {
 	integer: "BIGINT",
@@ -511,6 +512,7 @@ export class ModelAPI {
 					throw new Error("json properties are not supported in where clauses")
 				}
 				if (isLiteralExpression(expression)) {
+					assert(isPrimitiveValue(expression))
 					if (expression === null) {
 						return [`"${name}" ISNULL`]
 					} else if (Array.isArray(expression)) {
@@ -529,6 +531,8 @@ export class ModelAPI {
 					} else if (Array.isArray(value)) {
 						throw new Error("invalid primitive value (expected null | number | string | boolean | Uint8Array)")
 					}
+
+					assert(isPrimitiveValue(value))
 
 					const p = ++i
 					params[p - 1] = value instanceof Uint8Array ? Buffer.from(value) : value
@@ -672,7 +676,10 @@ export class RelationAPI {
 		return relationApi
 	}
 
-	public constructor(readonly client: pg.Client, readonly relation: Relation) {
+	public constructor(
+		readonly client: pg.Client,
+		readonly relation: Relation,
+	) {
 		this.client = client
 	}
 

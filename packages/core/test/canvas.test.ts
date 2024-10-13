@@ -1,4 +1,3 @@
-import assert from "node:assert"
 import { randomUUID } from "node:crypto"
 import test, { ExecutionContext } from "ava"
 
@@ -226,7 +225,7 @@ test("merge and update into a value set by another action", async (t) => {
 				async createGame(db) {
 					await db.set("game", {
 						id: "0",
-						state: { started: false, player1: "foo", player2: "bar" } as any,
+						state: { started: false, player1: "foo", player2: "bar" },
 						label: "foobar",
 					})
 				},
@@ -238,13 +237,13 @@ test("merge and update into a value set by another action", async (t) => {
 					})
 				},
 				async updateGameMultipleMerges(db) {
-					await db.merge("game", { id: "0", state: { extra1: { a: 1, b: 1 } } as any })
-					await db.merge("game", { id: "0", state: { extra2: "b" } as any })
-					await db.merge("game", { id: "0", state: { extra3: null, extra1: { b: 2, c: 3 } } as any })
+					await db.merge("game", { id: "0", state: { extra1: { a: 1, b: 1 } } })
+					await db.merge("game", { id: "0", state: { extra2: "b" } })
+					await db.merge("game", { id: "0", state: { extra3: null, extra1: { b: 2, c: 3 } } })
 				},
 				async updateGameMultipleUpdates(db) {
-					await db.update("game", { id: "0", state: { extra1: { a: 1, b: 2 } } as any })
-					await db.update("game", { id: "0", state: { extra3: null, extra1: { b: 2, c: 3 } } as any })
+					await db.update("game", { id: "0", state: { extra1: { a: 1, b: 2 } } })
+					await db.update("game", { id: "0", state: { extra3: null, extra1: { b: 2, c: 3 } } })
 				},
 			},
 		},
@@ -294,7 +293,10 @@ test("merge and update into a value set by another action", async (t) => {
 test("get a value set by another action", async (t) => {
 	const wallet = ethers.Wallet.createRandom()
 
-	const app = await Canvas.initialize({
+	const app = await Canvas.initialize<{
+		user: { id: "primary", name: "string" },
+		post: { id: "primary", from: "@user", content: "string" },
+	}>({
 		topic: "com.example.app",
 		signers: [new SIWESigner({ signer: wallet })],
 		contract: {

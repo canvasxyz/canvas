@@ -24,7 +24,7 @@ import { topicPattern } from "./utils.js"
 export type { Model } from "@canvas-js/modeldb"
 export type { PeerId } from "@libp2p/interface"
 
-export type CanvasConfig<T extends Contract = Contract> = {
+export type Config<M extends ModelSchema = any, T extends Contract<M> = Contract<M>> = {
 	topic: string
 	contract: string | T
 	signers?: SessionSigner[]
@@ -68,7 +68,7 @@ export type ApplicationData = {
 	actions: string[]
 }
 
-export type ContainerConfig = Omit<CanvasConfig<Contract>, "contract" | "topic"> & {
+export type ContainerConfig = Omit<Config<Contract>, "contract" | "topic"> & {
 	connection: { topic: string; url: string }
 	models: Contract["models"]
 	actions: Contract["actions"]
@@ -83,13 +83,16 @@ function exclude<T, K extends keyof T>(obj: T, keys: K[]): Omit<T, K> {
 	return result
 }
 
-export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<CanvasEvents> {
+export class Canvas<
+	M extends ModelSchema = any,
+	T extends Contract<M> = Contract<M>,
+> extends TypedEventEmitter<CanvasEvents> {
 	public static async initializeContainer<T extends Contract>(config: ContainerConfig): Promise<Canvas<T>> {
 		const contract = { models: config.models, actions: config.actions, globals: config.globals } as T
 		return this.initialize<T>({ topic: config.connection.topic, contract, ...exclude(config, ["models", "actions", "globals"]) })
 	}
 
-	public static async initialize<T extends Contract>(config: CanvasConfig<T>): Promise<Canvas<T>> {
+	public static async initialize<M extends ModelSchema>(config: Config<M>): Promise<Canvas<M>> {
 		const { topic, path = null, contract, signers: initSigners = [], runtimeMemoryLimit } = config
 
 		assert(topicPattern.test(topic), "invalid topic (must match [a-zA-Z0-9\\.\\-])")
@@ -131,7 +134,8 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 			await messageLog.append(config.snapshot)
 		}
 
-		const app = new Canvas<T>(signers, messageLog, runtime)
+		type ContractType = typeof contract extends Contract<M> ? typeof contract : Contract<M>
+		const app = new Canvas<ContractType>(signers, messageLog, runtime)
 
 		// Check to see if the $actions table is empty and populate it if necessary
 		const messagesCount = await db.count("$messages")
@@ -186,9 +190,9 @@ export class Canvas<T extends Contract = Contract> extends TypedEventEmitter<Can
 
 	public readonly db: AbstractModelDB
 	public readonly actions = {} as {
-		[K in keyof T["actions"]]: T["actions"][K] extends ActionImplementationFunction<infer Args>
+		[K in keyof T["actions"]]: T["actions"][K] extends ActionImplementationFunction<any, infer Args>
 			? ActionAPI<Args>
-			: T["actions"][K] extends ActionImplementationObject<infer Args>
+			: T["actions"][K] extends ActionImplementationObject<any, infer Args>
 				? ActionAPI<Args>
 				: never
 	}

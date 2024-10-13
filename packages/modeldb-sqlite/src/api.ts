@@ -31,6 +31,7 @@ import {
 	encodeRecordParams,
 } from "./encoding.js"
 import { Method, Query } from "./utils.js"
+import { isPrimitiveValue } from "@canvas-js/modeldb/src/utils.js"
 
 type RecordValue = Record<string, string | number | Buffer | null>
 type Params = Record<`p${string}`, string | number | Buffer | null>
@@ -84,7 +85,10 @@ export class ModelAPI {
 
 	columnNames: `"${string}"`[]
 
-	public constructor(readonly db: Database, readonly model: Model) {
+	public constructor(
+		readonly db: Database,
+		readonly model: Model,
+	) {
 		const columns: string[] = []
 		this.columnNames = [] // quoted column names for non-relation properties
 		const columnParams: `:p${string}`[] = [] // query params for non-relation properties
@@ -434,6 +438,7 @@ export class ModelAPI {
 					} else if (Array.isArray(expression)) {
 						throw new Error("invalid primitive value (expected null | number | string | Uint8Array)")
 					} else {
+						assert(isPrimitiveValue(expression))
 						const p = `p${i}`
 						params[p] = expression
 						return [`"${name}" = :${p}`]
@@ -447,6 +452,8 @@ export class ModelAPI {
 					} else if (Array.isArray(value)) {
 						throw new Error("invalid primitive value (expected null | number | string | Uint8Array)")
 					}
+
+					assert(isPrimitiveValue(value))
 
 					const p = `p${i}`
 					params[p] = value
@@ -574,7 +581,10 @@ export class RelationAPI {
 	readonly #insert: Method<{ _source: string; _target: string }>
 	readonly #delete: Method<{ _source: string }>
 
-	public constructor(readonly db: Database, readonly relation: Relation) {
+	public constructor(
+		readonly db: Database,
+		readonly relation: Relation,
+	) {
 		const columns = [`_source TEXT NOT NULL`, `_target TEXT NOT NULL`]
 		db.exec(`CREATE TABLE IF NOT EXISTS "${this.table}" (${columns.join(", ")})`)
 

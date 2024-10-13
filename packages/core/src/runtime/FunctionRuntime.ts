@@ -1,6 +1,5 @@
 import { TypeTransformerFunction, create } from "@ipld/schema/typed.js"
 import { fromDSL } from "@ipld/schema/from-dsl.js"
-import type pg from "pg"
 
 import type { SignerCache } from "@canvas-js/interfaces"
 import {
@@ -10,6 +9,7 @@ import {
 	validateModelValue,
 	mergeModelValues,
 	updateModelValues,
+	DeriveModelTypes,
 } from "@canvas-js/modeldb"
 import { assert, mapEntries } from "@canvas-js/utils"
 
@@ -20,8 +20,12 @@ import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
 
 const identity = (x: any) => x
 
-export class FunctionRuntime extends AbstractRuntime {
-	public static async init(topic: string, signers: SignerCache, contract: Contract): Promise<FunctionRuntime> {
+export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
+	public static async init<M extends ModelSchema>(
+		topic: string,
+		signers: SignerCache,
+		contract: Contract<M>,
+	): Promise<FunctionRuntime<M>> {
 		assert(contract.actions !== undefined, "contract initialized without actions")
 		assert(contract.models !== undefined, "contract initialized without models")
 
@@ -40,7 +44,7 @@ export class FunctionRuntime extends AbstractRuntime {
 		const actions = mapEntries(contract.actions, ([actionName, action]) => {
 			if (typeof action === "function") {
 				argsTransformers[actionName] = { toTyped: identity, toRepresentation: identity }
-				return action as ActionImplementationFunction
+				return action as ActionImplementationFunction<DeriveModelTypes<M>, any>
 			}
 
 			if (action.argsType !== undefined) {
@@ -57,13 +61,13 @@ export class FunctionRuntime extends AbstractRuntime {
 	}
 
 	#context: ExecutionContext | null = null
-	readonly #db: ModelAPI
+	readonly #db: ModelAPI<DeriveModelTypes<M>>
 
 	constructor(
 		public readonly topic: string,
 		public readonly signers: SignerCache,
 		public readonly schema: ModelSchema,
-		public readonly actions: Record<string, ActionImplementationFunction>,
+		public readonly actions: Record<string, ActionImplementationFunction<DeriveModelTypes<M>, any>>,
 		public readonly argsTransformers: Record<
 			string,
 			{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
@@ -72,30 +76,32 @@ export class FunctionRuntime extends AbstractRuntime {
 		super()
 
 		this.#db = {
-			get: async <T extends ModelValue = ModelValue>(model: string, key: string) => {
+			get: async (model: string, key: string) => {
 				assert(this.#context !== null, "expected this.#context !== null")
-				return await this.getModelValue<T>(this.#context, model, key)
+				return await this.getModelValue(this.#context, model, key)
 			},
-			set: async (model: string, value: ModelValue) => {
+			set: (model, value) => {
 				assert(this.#context !== null, "expected this.#context !== null")
 				validateModelValue(this.db.models[model], value)
 				const { primaryKey } = this.db.models[model]
-				const key = value[primaryKey] as string
+				const key = (value as ModelValue)[primaryKey] as string
 				this.#context.modelEntries[model][key] = value
 			},
-			update: async (model: string, value: ModelValue) => {
+			update: async (model, value) => {
 				assert(this.#context !== null, "expected this.#context !== null")
 				const { primaryKey } = this.db.models[model]
-				const key = value[primaryKey] as string
-				const mergedValue = updateModelValues(value, (await this.getModelValue(this.#context, model, key)) ?? {})
+				const key = (value as ModelValue)[primaryKey] as string
+				const modelValue = await this.getModelValue(this.#context, model, key)
+				const mergedValue = updateModelValues(value as ModelValue, modelValue ?? {})
 				validateModelValue(this.db.models[model], mergedValue)
 				this.#context.modelEntries[model][key] = mergedValue
 			},
-			merge: async (model: string, value: ModelValue) => {
+			merge: async (model, value) => {
 				assert(this.#context !== null, "expected this.#context !== null")
 				const { primaryKey } = this.db.models[model]
-				const key = value[primaryKey] as string
-				const mergedValue = mergeModelValues(value, (await this.getModelValue(this.#context, model, key)) ?? {})
+				const key = (value as ModelValue)[primaryKey] as string
+				const modelValue = await this.getModelValue(this.#context, model, key)
+				const mergedValue = mergeModelValues(value as ModelValue, modelValue ?? {})
 				validateModelValue(this.db.models[model], mergedValue)
 				this.#context.modelEntries[model][key] = mergedValue
 			},

@@ -14,7 +14,7 @@ type State = {
 	gameOver: "true" | ""
 }
 
-export const contract = {
+export const contract: Contract = {
 	models: {
 		state: {
 			key: "primary", // "0" since this is a singleton

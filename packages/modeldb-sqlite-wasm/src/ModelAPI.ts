@@ -29,6 +29,7 @@ import {
 } from "./encoding.js"
 import { Method, Query } from "./utils.js"
 import { OpfsDatabase, SqlValue } from "@sqlite.org/sqlite-wasm"
+import { isPrimitiveValue } from "@canvas-js/modeldb/src/utils.js"
 
 type RecordValue = Record<string, SqlValue>
 type Params = Record<`p${string}`, SqlValue>
@@ -465,6 +466,7 @@ export class ModelAPI {
 					} else if (Array.isArray(expression)) {
 						throw new Error("invalid primitive value (expected null | number | string | Uint8Array)")
 					} else {
+						assert(isPrimitiveValue(expression))
 						const p = `p${i}`
 						params[p] = expression
 						return [`"${name}" = :${p}`]
@@ -478,6 +480,7 @@ export class ModelAPI {
 					} else if (Array.isArray(value)) {
 						throw new Error("invalid primitive value (expected null | number | string | Uint8Array)")
 					} else {
+						assert(isPrimitiveValue(value))
 						const p = `p${i}`
 						params[p] = value
 						if (property.optional) {

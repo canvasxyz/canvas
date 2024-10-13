@@ -1,7 +1,6 @@
 import { QuickJSHandle } from "quickjs-emscripten"
 import { TypeTransformerFunction, create } from "@ipld/schema/typed.js"
 import { fromDSL } from "@ipld/schema/from-dsl.js"
-import type pg from "pg"
 
 import type { SignerCache } from "@canvas-js/interfaces"
 import {
@@ -28,7 +27,7 @@ import target from "#target"
 import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
 import { sha256 } from "@noble/hashes/sha256"
 import { bytesToHex } from "@noble/hashes/utils"
-import { Contract, Models, Actions, ImportType } from "../types.js"
+import { Contract, ImportType } from "../types.js"
 
 const stringify = (data: FunctionalJSValue): string => {
 	// eslint-disable-next-line @typescript-eslint/ban-types

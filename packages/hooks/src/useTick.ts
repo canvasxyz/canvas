@@ -1,17 +1,11 @@
 import { useEffect } from "react"
-import type { Canvas, Contract, CanvasLogEvent, ActionImplementation } from "@canvas-js/core"
+import type { Canvas, Contract, CanvasLogEvent, ActionImplementation, DeriveModelTypes, ModelSchema } from "@canvas-js/core"
 import type { Action } from "@canvas-js/interfaces"
-
-export type TickingContract = Contract & {
-	actions: {
-		tick: ActionImplementation
-	}
-}
 
 // const tickState = { last: 0 }
 
-export const useTick = (
-	app: Canvas<TickingContract> | undefined,
+export const useTick = <T extends ModelSchema = any>(
+	app: Canvas<T> | undefined,
 	condition: string | boolean | null,
 	interval: number,
 ) => {

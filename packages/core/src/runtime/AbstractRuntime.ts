@@ -273,8 +273,10 @@ export abstract class AbstractRuntime {
 
 				if (mergeFunction) {
 					const existingValue = await this.db.get(model, key)
-					if (existingValue !== null) {
+					if (existingValue !== null && value !== null) {
 						value = mergeFunction(existingValue, value)
+					} else if (existingValue !== null) {
+						value = existingValue
 					}
 				} else {
 					if (results.length > 0) {
