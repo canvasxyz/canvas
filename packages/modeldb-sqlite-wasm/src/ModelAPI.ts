@@ -15,6 +15,7 @@ import {
 	isNotExpression,
 	isLiteralExpression,
 	isRangeExpression,
+	isPrimitiveValue,
 	validateModelValue,
 } from "@canvas-js/modeldb"
 
@@ -29,7 +30,6 @@ import {
 } from "./encoding.js"
 import { Method, Query } from "./utils.js"
 import { OpfsDatabase, SqlValue } from "@sqlite.org/sqlite-wasm"
-import { isPrimitiveValue } from "@canvas-js/modeldb/src/utils.js"
 
 type RecordValue = Record<string, SqlValue>
 type Params = Record<`p${string}`, SqlValue>

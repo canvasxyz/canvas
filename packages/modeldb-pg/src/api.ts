@@ -18,6 +18,7 @@ import {
 	isNotExpression,
 	isLiteralExpression,
 	isRangeExpression,
+	isPrimitiveValue,
 	validateModelValue,
 } from "@canvas-js/modeldb"
 
@@ -32,7 +33,6 @@ import {
 	encodeQueryParams,
 	PostgresPrimitiveValue,
 } from "./encoding.js"
-import { isPrimitiveValue } from "@canvas-js/modeldb/src/utils.js"
 
 const primitiveColumnTypes = {
 	integer: "BIGINT",

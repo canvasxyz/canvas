@@ -15,6 +15,7 @@ import {
 	isNotExpression,
 	isLiteralExpression,
 	isRangeExpression,
+	isPrimitiveValue,
 	validateModelValue,
 } from "@canvas-js/modeldb"
 
@@ -30,7 +31,6 @@ import {
 } from "./encoding.js"
 import { Method, Query } from "./utils.js"
 import { SqlStorage } from "@cloudflare/workers-types"
-import { isPrimitiveValue } from "@canvas-js/modeldb/src/utils.js"
 
 type RecordValue = Record<string, string | number | Buffer | ArrayBuffer | null>
 type Params = Array<string | number | Buffer | ArrayBuffer | null>

@@ -17,6 +17,7 @@ import {
 	isNotExpression,
 	isLiteralExpression,
 	isRangeExpression,
+	isPrimitiveValue,
 	validateModelValue,
 } from "@canvas-js/modeldb"
 
@@ -31,7 +32,6 @@ import {
 	encodeRecordParams,
 } from "./encoding.js"
 import { Method, Query } from "./utils.js"
-import { isPrimitiveValue } from "@canvas-js/modeldb/src/utils.js"
 
 type RecordValue = Record<string, string | number | Buffer | null>
 type Params = Record<`p${string}`, string | number | Buffer | null>
