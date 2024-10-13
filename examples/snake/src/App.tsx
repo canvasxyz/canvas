@@ -1,6 +1,6 @@
 import "./App.css"
 
-import { TickingContract, useCanvas, useLiveQuery, useTick } from "@canvas-js/hooks"
+import { useCanvas, useLiveQuery, useTick } from "@canvas-js/hooks"
 import { MouseEventHandler, useState } from "react"
 
 import { contract, Direction, maxX, maxY, TilesList } from "./contract.js"
@@ -8,7 +8,7 @@ import { contract, Direction, maxX, maxY, TilesList } from "./contract.js"
 function App() {
 	const [ticking, setTicking] = useState(() => localStorage.getItem("ticking") === "true")
 
-	const { app } = useCanvas<TickingContract>(null, {
+	const { app } = useCanvas(null, {
 		topic: "canvas-example-chat-global",
 		contract,
 	})

@@ -1,5 +1,7 @@
 // These are "init types" for the `models` value used to initialize the database.
 
+import { JSONValue } from "@canvas-js/utils"
+
 export type PrimaryKeyType = "primary"
 export type PrimitiveType = "integer" | "float" | "number" | "string" | "bytes" | "boolean" | "json"
 export type OptionalPrimitiveType = `${PrimitiveType}?`
@@ -17,10 +19,11 @@ export type PropertyType =
 
 export type IndexInit = string | string[]
 
-export type MergeFunction = (value1: any, value2: any) => any
+export type MergeFunction<T extends ModelValue<any>> = (value1: T, value2: T) => T
+
 export type ModelSchema = Record<
 	string,
-	{ $indexes?: IndexInit[]; $merge?: MergeFunction } | Record<string, PropertyType>
+	{ $indexes?: IndexInit[]; $merge?: MergeFunction<any> } | Record<string, PropertyType>
 >
 
 // These are more structured representations of the schema defined by ModelSchema that are easier
@@ -43,7 +46,7 @@ export type Model = {
 	primaryKey: string
 	properties: Property[]
 	indexes: string[][]
-	merge: MergeFunction | undefined
+	merge: MergeFunction<any> | undefined
 }
 
 export type Config = {
@@ -58,7 +61,7 @@ export type PrimitiveValue = number | string | Uint8Array | null | boolean
 export type ReferenceValue = string | null
 export type RelationValue = string[]
 
-export type PropertyValue = PrimaryKeyValue | PrimitiveValue | ReferenceValue | RelationValue
+export type PropertyValue = PrimaryKeyValue | PrimitiveValue | ReferenceValue | RelationValue | JSONValue
 
 export type ModelValue<T = PropertyValue> = Record<string, T>
 
@@ -72,6 +75,50 @@ export type QueryParams = {
 	orderBy?: Record<string, "asc" | "desc">
 	limit?: number
 	offset?: number
+}
+
+// Derives typed PropertyValue = PrimaryKeyValue | PrimitiveValue | ReferenceValue | RelationValue | JSONValue
+// from a given PropertyType
+
+export type DerivePropertyType<T extends PropertyType> = T extends "primary"
+	? PrimaryKeyValue
+	: T extends "integer" | "float" | "number"
+		? number
+		: T extends "integer?" | "float?" | "number?"
+			? number | null
+			: T extends "string"
+				? string
+				: T extends "string?"
+					? string | null
+					: T extends "bytes"
+						? Uint8Array
+						: T extends "bytes?"
+							? Uint8Array | null
+							: T extends "boolean"
+								? boolean
+								: T extends "boolean?"
+									? boolean | null
+									: T extends "json"
+										? JSONValue
+										: T extends `@${string}`
+											? ReferenceValue
+											: T extends `@${string}?`
+												? ReferenceValue | null
+												: T extends `@${string}[]`
+													? RelationValue
+													: never
+
+export type DeriveModelTypes<T extends ModelSchema> = {
+	[K in keyof T as Exclude<K, "$merge" | "$indexes">]: {
+		[P in keyof T[K] as Exclude<P, "$merge" | "$indexes">]: T[K][P] extends PropertyType
+			? DerivePropertyType<T[K][P]>
+			: never
+	}
+}
+
+export type Contract<T extends ModelSchema = ModelSchema> = {
+	models: T
+	actions: Record<string, DeriveModelTypes<T>>
 }
 
 // Batch effect API

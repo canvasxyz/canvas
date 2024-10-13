@@ -285,14 +285,16 @@ function getRelationFilter(
 			Array.isArray(reference) && reference.every((value) => typeof value === "string"),
 			"invalid relation expression (expected string[])",
 		)
-		return (value) => reference.every((target) => Array.isArray(value) && value.includes(target))
+		return (value) =>
+			reference.every((target) => Array.isArray(value) && typeof target === "string" && value.includes(target))
 	} else if (isNotExpression(expression)) {
 		const reference = expression.neq
 		assert(
 			Array.isArray(reference) && reference.every((value) => typeof value === "string"),
 			"invalid relation expression (expected string[])",
 		)
-		return (value) => reference.every((target) => Array.isArray(value) && !value.includes(target))
+		return (value) =>
+			reference.every((target) => Array.isArray(value) && typeof target === "string" && !value.includes(target))
 	} else if (isRangeExpression(expression)) {
 		throw new Error("cannot use range expressions on relation values")
 	} else {

@@ -1,25 +1,16 @@
 import { QuickJSHandle } from "quickjs-emscripten"
 import { TypeTransformerFunction, create } from "@ipld/schema/typed.js"
 import { fromDSL } from "@ipld/schema/from-dsl.js"
-import type pg from "pg"
 
 import type { SignerCache } from "@canvas-js/interfaces"
-import {
-	AbstractModelDB,
-	ModelValue,
-	ModelSchema,
-	validateModelValue,
-	updateModelValues,
-	mergeModelValues,
-} from "@canvas-js/modeldb"
+import { ModelValue, ModelSchema, validateModelValue, updateModelValues, mergeModelValues } from "@canvas-js/modeldb"
 import { VM } from "@canvas-js/vm"
 import { assert, mapEntries, mapValues, JSValue } from "@canvas-js/utils"
 
 import target from "#target"
 
 import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
-import { sha256 } from "@noble/hashes/sha256"
-import { bytesToHex } from "@noble/hashes/utils"
+import { Contract } from "../types.js"
 
 export class ContractRuntime extends AbstractRuntime {
 	public static async init(
@@ -131,7 +122,7 @@ export class ContractRuntime extends AbstractRuntime {
 			string,
 			{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
 		>,
-		private disposeSetupHandles: () => void
+		private disposeSetupHandles: () => void,
 	) {
 		super()
 		this.#databaseAPI = vm
