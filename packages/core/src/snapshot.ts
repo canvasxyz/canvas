@@ -17,7 +17,7 @@ export const isMergeFunction = (value: unknown): value is ModelSchema["$merge"] 
 export const isIndexInit = (value: unknown): value is IndexInit[] => typeof value === "string" || Array.isArray(value)
 export const isPropertyTypish = (value: unknown): value is PropertyType => typeof value === "string"
 
-export function hashContract<T extends Contract>(contract: T | string): string {
+export function hashContract<T extends Contract<any>>(contract: T | string): string {
 	if (typeof contract === "string") {
 		const hash = sha256(contract)
 		return bytesToHex(hash)
@@ -37,7 +37,7 @@ export function hashSnapshot(snapshot: Snapshot): string {
 	return bytesToHex(hash).slice(0, 16)
 }
 
-export async function createSnapshot<T extends Contract>(app: Canvas): Promise<Snapshot> {
+export async function createSnapshot<T extends Contract<any>>(app: Canvas): Promise<Snapshot> {
 	// flatten models
 	const modelData: Record<string, Uint8Array[]> = {}
 	for (const [modelName, modelSchema] of Object.entries(app.db.models)) {

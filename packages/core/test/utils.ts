@@ -5,7 +5,7 @@ import path from "node:path"
 import test, { ExecutionContext } from "ava"
 import { nanoid } from "nanoid"
 
-import { Canvas, CanvasConfig } from "@canvas-js/core"
+import { Canvas, Config } from "@canvas-js/core"
 
 export function getDirectory(t: ExecutionContext<unknown>): string {
 	const directory = path.resolve(os.tmpdir(), nanoid())
@@ -20,7 +20,7 @@ export function getDirectory(t: ExecutionContext<unknown>): string {
 
 export const testPlatforms = (
 	name: string,
-	run: (t: ExecutionContext<unknown>, open: (t: ExecutionContext, init: CanvasConfig) => Promise<Canvas>) => void,
+	run: (t: ExecutionContext<unknown>, open: (t: ExecutionContext, init: Config) => Promise<Canvas>) => void,
 ) => {
 	const macro = test.macro(run)
 

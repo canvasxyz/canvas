@@ -15,6 +15,7 @@ import {
 	isNotExpression,
 	isLiteralExpression,
 	isRangeExpression,
+	isPrimitiveValue,
 	validateModelValue,
 } from "@canvas-js/modeldb"
 
@@ -458,6 +459,7 @@ export class ModelAPI {
 					} else if (Array.isArray(expression)) {
 						throw new Error("invalid primitive value (expected null | number | string | Uint8Array)")
 					} else {
+						assert(isPrimitiveValue(expression))
 						params.push(expression)
 						return [`"${name}" = ?`]
 					}
@@ -470,6 +472,8 @@ export class ModelAPI {
 					} else if (Array.isArray(value)) {
 						throw new Error("invalid primitive value (expected null | number | string | Uint8Array)")
 					}
+
+					assert(isPrimitiveValue(value))
 
 					params.push(value)
 					if (property.optional) {

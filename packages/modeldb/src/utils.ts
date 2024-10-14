@@ -1,20 +1,48 @@
-import { signalInvalidType, merge } from "@canvas-js/utils"
+import { signalInvalidType, merge, update, JSONValue } from "@canvas-js/utils"
 
-import type { Model, ModelValue, Property, PropertyValue } from "./types.js"
+import type {
+	Model,
+	ModelValue,
+	PrimaryKeyValue,
+	PrimitiveValue,
+	Property,
+	PropertyValue,
+	ReferenceValue,
+	RelationValue,
+} from "./types.js"
 
 export type Awaitable<T> = T | Promise<T>
 
 // eslint-disable-next-line no-useless-escape
 export const namePattern = /^[a-zA-Z0-9$:_\-\.]+$/
 
-export function mergeModelValues(from: ModelValue, into: ModelValue): ModelValue {
+export function updateModelValues(from: ModelValue | undefined, into: ModelValue | undefined): ModelValue {
+	return update(from, into) as ModelValue
+}
+
+export function mergeModelValues(from: ModelValue | undefined, into: ModelValue | undefined): ModelValue {
 	return merge(from, into) as ModelValue
+}
+
+export function isPrimitiveValue(
+	value: PrimaryKeyValue | PrimitiveValue | JSONValue,
+): value is PrimaryKeyValue | PrimitiveValue {
+	return (
+		typeof value === "string" ||
+		typeof value === "number" ||
+		value === null ||
+		typeof value === "boolean" ||
+		value instanceof Uint8Array
+	)
 }
 
 export function validateModelValue(model: Model, value: ModelValue) {
 	for (const property of model.properties) {
 		const propertyValue = value[property.name]
 		if (propertyValue === undefined) {
+			if ("optional" in property && property.optional) {
+				return
+			}
 			throw new Error(`write to db.${model.name}: missing ${property.name}`)
 		}
 		validatePropertyValue(model.name, property, propertyValue)

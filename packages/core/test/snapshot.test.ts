@@ -1,30 +1,28 @@
 import test from "ava"
 
-import { Canvas, Contract } from "@canvas-js/core"
+import { Canvas, Contract, Config } from "@canvas-js/core"
 import { Action, Session, Message } from "@canvas-js/interfaces"
-import { SIWESigner } from "@canvas-js/chain-ethereum"
+import { MergeFunction } from "@canvas-js/modeldb"
 
 test("snapshot persists data across apps", async (t) => {
-	const contract = {
-		models: {
-			posts: {
-				id: "primary",
-				content: "string",
-			},
-		},
-		actions: {
-			async createPost(db, { id, content }: { id: string; content: string }) {
-				await db.set("posts", { id, content })
-			},
-			async deletePost(db, { id }: { id: string }) {
-				await db.delete("posts", id)
-			},
-		},
-	} satisfies Contract
-
-	const config = {
+	const config: Config = {
 		topic: "com.example.app",
-		contract,
+		contract: {
+			models: {
+				posts: {
+					id: "primary",
+					content: "string",
+				},
+			},
+			actions: {
+				async createPost(db, { id, content }: { id: string; content: string }) {
+					await db.set("posts", { id, content })
+				},
+				async deletePost(db, { id }: { id: string }) {
+					await db.delete("posts", id)
+				},
+			},
+		},
 	}
 
 	const app = await Canvas.initialize(config)
@@ -84,35 +82,39 @@ test("snapshot persists data across apps", async (t) => {
 	t.is((await app3.db.get("posts", "f"))?.content, "4")
 	t.is(await app3.db.get("posts", "g"), null)
 
-	const [clock3, parents3] = await app3.messageLog.getClock()
+	const [clock3] = await app3.messageLog.getClock()
 	t.is(clock3, 2) // one snapshot
 	t.is(parents2.length, 1)
 })
 
 test("snapshot persists data with merge functions", async (t) => {
-	const contract = {
-		models: {
-			posts: {
-				id: "primary",
-				content: "string",
-				$merge: ({ id, content }, { id: id2, content: content2 }) => {
-					return { id, content: content + content2 }
+	const config: Config<{
+		posts: {
+			id: "primary",
+			content: "string",
+			$merge: MergeFunction<any>
+		}
+	}> = {
+		topic: "com.example.app",
+		contract: {
+			models: {
+				posts: {
+					id: "primary",
+					content: "string",
+					$merge: ({ id, content }, { content: content2 }) => {
+						return { id, content: content + content2 }
+					},
 				},
 			},
-		},
-		actions: {
-			async createPost(db, { id, content }: { id: string; content: string }) {
-				await db.set("posts", { id, content })
+			actions: {
+				async createPost(db, { id, content }: { id: string; content: string }) {
+					await db.set("posts", { id, content })
+				},
+				async deletePost(db, { id }: { id: string }) {
+					await db.delete("posts", id)
+				},
 			},
-			async deletePost(db, { id }: { id: string }) {
-				await db.delete("posts", id)
-			},
-		},
-	} satisfies Contract
-
-	const config = {
-		topic: "com.example.app",
-		contract,
+		}
 	}
 
 	const app = await Canvas.initialize(config)
@@ -139,7 +141,7 @@ test("snapshot persists data with merge functions", async (t) => {
 			context: { timestamp: new Date().getTime() },
 		},
 	}
-	const { id: idA } = await app.insert(await session.signer.sign(a), a)
+	await app.insert(await session.signer.sign(a), a)
 
 	const b: Message<Action> = {
 		topic: config.topic,
@@ -153,7 +155,7 @@ test("snapshot persists data with merge functions", async (t) => {
 			context: { timestamp: new Date().getTime() },
 		},
 	}
-	const { id: idB } = await app.insert(await session.signer.sign(b), b)
+	await app.insert(await session.signer.sign(b), b)
 
 	const posts_a = await app.db.get("posts", "a")
 	delete posts_a!["$indexed_at"]
@@ -220,7 +222,7 @@ test("snapshot persists data with merge functions and inline contract", async (t
 			context: { timestamp: new Date().getTime() },
 		},
 	}
-	const { id: idA } = await app.insert(await session.signer.sign(a), a)
+	await app.insert(await session.signer.sign(a), a)
 
 	const b: Message<Action> = {
 		topic: config.topic,
@@ -234,7 +236,7 @@ test("snapshot persists data with merge functions and inline contract", async (t
 			context: { timestamp: new Date().getTime() },
 		},
 	}
-	const { id: idB } = await app.insert(await session.signer.sign(b), b)
+	await app.insert(await session.signer.sign(b), b)
 
 	const posts_a = await app.db.get("posts", "a")
 	delete posts_a!["$indexed_at"]

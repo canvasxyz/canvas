@@ -1,12 +1,12 @@
 import assert from "node:assert"
 import test from "ava"
-import * as json from "@ipld/dag-json"
 import Prando from "prando"
 
 import { ethers } from "ethers"
 
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { Canvas } from "@canvas-js/core"
+import { MergeFunction } from "@canvas-js/modeldb"
 
 const rng = new Prando.default()
 
@@ -70,11 +70,16 @@ async function createCanvasCounterApp() {
 	const wallet = ethers.Wallet.createRandom()
 
 	const topic = "xyz.canvas.crdt-counter"
-	return await Canvas.initialize({
+	return await Canvas.initialize<{
+		counter: {
+			id: "primary"
+			value: "json"
+			$merge: MergeFunction<any>
+		}
+	}>({
 		topic,
 		signers: [new SIWESigner({ signer: wallet })],
 		contract: {
-			topic,
 			models: {
 				counter: {
 					id: "primary",
