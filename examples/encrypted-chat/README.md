@@ -94,8 +94,9 @@ This is a demo; later versions of this protocol might add some of these features
 
 Create a Railway space based on the root of this Github workspace (e.g. canvasxyz/canvas).
 
-* Custom start command: `./install-prod.sh && npm run start:server --workspace=@canvas-js/example-chat-encrypted`
-* Custom build command: `npm run build && npm run build --workspace=@canvas-js/example-chat-encrypted`
+* Custom build command: `npm run build && VITE_CANVAS_WS_URL=wss://canvas-chat-example-encrypted.p2p.app npm run build --workspace=@canvas-js/example-chat-encrypted`
+* Custom start command: `./install-prod.sh && canvas run /tmp/canvas-example-chat-encrypted --port 8080 --static examples/encrypted-chat/dist --topic chat-example-encrypted.canvas.xyz --init examples/encrypted-chat/contract.canvas.js`
+* Watch paths: `/examples/encrypted-chat/**`
 * Public networking:
   * Add a service domain for port 8080.
   * Add a service domain for port 4444.

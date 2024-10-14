@@ -28,7 +28,6 @@ test("validate action args using IPLD schemas", async (t) => {
 			},
 			actions: {
 				createPost: {
-					requireSessionAuthentication: false,
 					argsType: { schema, name: "CreatePostPayload" },
 					apply: async (
 						db,
