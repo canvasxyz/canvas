@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react"
-import { Canvas, Contract, type CanvasConfig, type Snapshot, hashContract } from "@canvas-js/core"
+import { Canvas, Contract, type Config, type Snapshot, hashContract } from "@canvas-js/core"
 
-export const useContainer = <T extends Contract = Contract>(url: string | null, config: CanvasConfig<T>) => {
+export const useContainer = <T extends Contract = Contract>(url: string | null, config: Config<T>) => {
 	const [app, setApp] = useState<Canvas<T>>()
 	const [error, setError] = useState<Error>()
 
