@@ -23,7 +23,7 @@ export type ActionImplementationFunction<T extends Record<string, ModelValue>, A
 	db: ModelAPI<T>,
 	args: Args,
 	context: ActionContext,
-) => Awaitable<void>
+) => Awaitable<any>
 
 export type ImportType = JSValue | Function
 
