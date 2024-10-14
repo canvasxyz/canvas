@@ -89,11 +89,7 @@ export class Canvas<
 > extends TypedEventEmitter<CanvasEvents> {
 	public static async initializeContainer<T extends Contract>(config: ContainerConfig): Promise<Canvas<T>> {
 		const contract = { models: config.models, actions: config.actions, globals: config.globals } as T
-		return this.initialize<T>({
-			topic: config.connection.topic,
-			contract,
-			...exclude(config, ["models", "actions", "globals"]),
-		})
+		return this.initialize<T>({ topic: config.connection.topic, contract, ...exclude(config, ["models", "actions", "globals"]) })
 	}
 
 	public static async initialize<M extends ModelSchema>(config: Config<M>): Promise<Canvas<M>> {
@@ -201,18 +197,6 @@ export class Canvas<
 				: never
 	}
 
-	public readonly direct = {} as {
-		[K in keyof T["actions"]]: T["actions"][K] extends ActionImplementationFunction<any, infer Args>
-			? Args extends any[]
-				? (...args: Args) => Promise<{ id: string; signature: Signature; message: Message<Action> }>
-				: (args: Args) => Promise<{ id: string; signature: Signature; message: Message<Action> }>
-			: T["actions"][K] extends ActionImplementationObject<any, infer Args>
-				? Args extends any[]
-					? (...args: Args) => Promise<{ id: string; signature: Signature; message: Message<Action> }>
-					: (args: Args) => Promise<{ id: string; signature: Signature; message: Message<Action> }>
-				: never
-	}
-
 	private readonly controller = new AbortController()
 	private readonly log = logger("canvas:core")
 
@@ -290,7 +274,6 @@ export class Canvas<
 			}
 
 			Object.assign(this.actions, { [name]: action })
-			Object.assign(this.direct, { [name]: (...args: any[]) => action(args) })
 		}
 	}
 
