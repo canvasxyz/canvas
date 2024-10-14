@@ -46,6 +46,7 @@ export async function createSnapshot<T extends Contract<any>>(app: Canvas): Prom
 		}
 		modelData[modelName] = []
 		for await (const row of app.db.iterate(modelName)) {
+			// the $indexed_at field is not part of the snapshot so we want to set it to zero
 			const rowWithZeroedIndexedAt = Object.fromEntries(
 				Object.entries(row).map(([key, value]) => {
 					if (key === "$indexed_at") {
