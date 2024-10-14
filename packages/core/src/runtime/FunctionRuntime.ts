@@ -79,6 +79,7 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 				assert(this.#context !== null, "expected this.#context !== null")
 				validateModelValue(this.db.models[model], value)
 				const { primaryKey } = this.db.models[model]
+				assert(primaryKey in value, `db.set(${model}): missing primary key ${primaryKey}`)
 				const key = (value as ModelValue)[primaryKey] as string
 				this.#context.modelEntries[model][key] = value
 			},
@@ -86,12 +87,14 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 				assert(this.#context !== null, "expected this.#context !== null")
 				validateModelValue(this.db.models[model], value)
 				const { primaryKey } = this.db.models[model]
+				assert(primaryKey in value, `db.update(${model}): missing primary key ${primaryKey}`)
 				const key = (value as ModelValue)[primaryKey] as string
 				this.#context.modelEntries[model][key] = value
 			},
 			update: async (model, value) => {
 				assert(this.#context !== null, "expected this.#context !== null")
 				const { primaryKey } = this.db.models[model]
+				assert(primaryKey in value, `db.update(${model}): missing primary key ${primaryKey}`)
 				const key = (value as ModelValue)[primaryKey] as string
 				const modelValue = await this.getModelValue(this.#context, model, key)
 				const mergedValue = updateModelValues(value as ModelValue, modelValue ?? {})
@@ -101,6 +104,7 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 			merge: async (model, value) => {
 				assert(this.#context !== null, "expected this.#context !== null")
 				const { primaryKey } = this.db.models[model]
+				assert(primaryKey in value, `db.merge(${model}): missing primary key ${primaryKey}`)
 				const key = (value as ModelValue)[primaryKey] as string
 				const modelValue = await this.getModelValue(this.#context, model, key)
 				const mergedValue = mergeModelValues(value as ModelValue, modelValue ?? {})
