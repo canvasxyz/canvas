@@ -40,6 +40,9 @@ export function validateModelValue(model: Model, value: ModelValue) {
 	for (const property of model.properties) {
 		const propertyValue = value[property.name]
 		if (propertyValue === undefined) {
+			if ("optional" in property && property.optional) {
+				return
+			}
 			throw new Error(`write to db.${model.name}: missing ${property.name}`)
 		}
 		validatePropertyValue(model.name, property, propertyValue)
