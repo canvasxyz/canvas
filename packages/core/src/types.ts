@@ -2,7 +2,7 @@ import type { DeriveModelTypes, ModelSchema, ModelValue } from "@canvas-js/model
 import type { Awaitable } from "@canvas-js/interfaces"
 import type { JSValue } from "@canvas-js/utils"
 
-export type { ModelSchema } from "@canvas-js/modeldb"
+export type { ModelSchema, DeriveModelTypes } from "@canvas-js/modeldb"
 
 export type Contract<T extends ModelSchema = any> = {
 	models: T
