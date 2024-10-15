@@ -386,6 +386,10 @@ export class ModelAPI {
 	private decodeObject(object: ObjectValue): ModelValue {
 		const value: ModelValue = {}
 		for (const property of this.model.properties) {
+			if (object[property.name] === undefined || object[property.name] === null) {
+				value[property.name] = null
+				continue
+			}
 			value[property.name] = decodePropertyValue(property, object[property.name])
 		}
 
