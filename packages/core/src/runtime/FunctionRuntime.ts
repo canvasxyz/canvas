@@ -82,6 +82,13 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 				const key = (value as ModelValue)[primaryKey] as string
 				this.#context.modelEntries[model][key] = value
 			},
+			create: (model, value) => {
+				assert(this.#context !== null, "expected this.#context !== null")
+				validateModelValue(this.db.models[model], value)
+				const { primaryKey } = this.db.models[model]
+				const key = (value as ModelValue)[primaryKey] as string
+				this.#context.modelEntries[model][key] = value
+			},
 			update: async (model, value) => {
 				assert(this.#context !== null, "expected this.#context !== null")
 				const { primaryKey } = this.db.models[model]
