@@ -144,6 +144,17 @@ export class ContractRuntime extends AbstractRuntime {
 					assert(typeof key === "string", "expected value[primaryKey] to be a string")
 					this.#context.modelEntries[model][key] = value
 				}),
+				create: vm.context.newFunction("create", (modelHandle, valueHandle) => {
+					assert(this.#context !== null, "expected this.#modelEntries !== null")
+					const model = vm.context.getString(modelHandle)
+					assert(this.db.models[model] !== undefined, "model not found")
+					const value = this.vm.unwrapValue(valueHandle) as ModelValue
+					validateModelValue(this.db.models[model], value)
+					const { primaryKey } = this.db.models[model]
+					const key = value[primaryKey] as string
+					assert(typeof key === "string", "expected value[primaryKey] to be a string")
+					this.#context.modelEntries[model][key] = value
+				}),
 				update: vm.context.newFunction("update", (modelHandle, valueHandle) => {
 					assert(this.#context !== null, "expected this.#modelEntries !== null")
 					const model = vm.context.getString(modelHandle)
