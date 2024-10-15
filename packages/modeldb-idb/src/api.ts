@@ -176,8 +176,8 @@ export class ModelAPI {
 				expression.neq === undefined
 					? null
 					: expression.neq === null
-					? IDBKeyRange.lowerBound(encodePropertyValue(property, null), true)
-					: IDBKeyRange.upperBound(encodePropertyValue(property, expression.neq), true)
+						? IDBKeyRange.lowerBound(encodePropertyValue(property, null), true)
+						: IDBKeyRange.upperBound(encodePropertyValue(property, expression.neq), true)
 
 			return await storeIndex.count(keyRange)
 		} else if (isRangeExpression(expression)) {
@@ -224,8 +224,8 @@ export class ModelAPI {
 				expression.neq === undefined
 					? null
 					: expression.neq === null
-					? IDBKeyRange.lowerBound(encodePropertyValue(property, null), true)
-					: IDBKeyRange.upperBound(encodePropertyValue(property, expression.neq), true)
+						? IDBKeyRange.lowerBound(encodePropertyValue(property, null), true)
+						: IDBKeyRange.upperBound(encodePropertyValue(property, expression.neq), true)
 
 			for (
 				let cursor = await storeIndex.openCursor(keyRange, direction);
@@ -397,7 +397,7 @@ function encodePropertyValue(property: Property, propertyValue: PropertyValue): 
 	if (property.kind === "primary") {
 		return propertyValue
 	} else if (property.kind === "primitive") {
-		if (property.optional) {
+		if (property.nullable) {
 			assert(property.type !== "json")
 			return propertyValue === null ? [] : [propertyValue]
 		} else if (property.type === "json") {
@@ -406,7 +406,7 @@ function encodePropertyValue(property: Property, propertyValue: PropertyValue): 
 			return propertyValue
 		}
 	} else if (property.kind === "reference") {
-		if (property.optional) {
+		if (property.nullable) {
 			return propertyValue === null ? [] : [propertyValue]
 		} else {
 			return propertyValue
@@ -423,7 +423,7 @@ function decodePropertyValue(property: Property, objectPropertyValue: PropertyVa
 		assert(typeof objectPropertyValue === "string", 'expected objectPropertyValue === "string"')
 		return objectPropertyValue
 	} else if (property.kind === "primitive") {
-		if (property.optional) {
+		if (property.nullable) {
 			assert(property.type !== "json")
 			assert(Array.isArray(objectPropertyValue))
 			return objectPropertyValue.length === 0 ? null : objectPropertyValue[0]
@@ -435,7 +435,7 @@ function decodePropertyValue(property: Property, objectPropertyValue: PropertyVa
 			return objectPropertyValue
 		}
 	} else if (property.kind === "reference") {
-		if (property.optional) {
+		if (property.nullable) {
 			assert(Array.isArray(objectPropertyValue))
 			return objectPropertyValue.length === 0 ? null : objectPropertyValue[0]
 		} else {

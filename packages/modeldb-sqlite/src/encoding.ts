@@ -76,7 +76,7 @@ function encodePrimitiveValue(
 	value: PropertyValue,
 ): SqlitePrimitiveValue {
 	if (value === null) {
-		if (property.optional) {
+		if (property.nullable) {
 			return null
 		} else if (property.type === "json") {
 			return "null"
@@ -127,7 +127,7 @@ function encodePrimitiveValue(
 
 function encodeReferenceValue(modelName: string, property: ReferenceProperty, value: PropertyValue): string | null {
 	if (value === null) {
-		if (property.optional) {
+		if (property.nullable) {
 			return null
 		} else {
 			throw new TypeError(`${modelName}/${property.name} cannot be null`)
@@ -173,7 +173,7 @@ export function decodePrimaryKeyValue(
 
 export function decodePrimitiveValue(modelName: string, property: PrimitiveProperty, value: SqlitePrimitiveValue) {
 	if (value === null) {
-		if (property.optional) {
+		if (property.nullable) {
 			return null
 		} else {
 			throw new Error(`internal error - missing ${modelName}/${property.name} value`)
@@ -235,7 +235,7 @@ export function decodeReferenceValue(
 	value: string | number | Uint8Array | null,
 ): string | null {
 	if (value === null) {
-		if (property.optional) {
+		if (property.nullable) {
 			return null
 		} else {
 			throw new TypeError(`internal error - missing ${modelName}/${property.name} value`)

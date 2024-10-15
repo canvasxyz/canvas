@@ -49,9 +49,9 @@ function getPropertyColumnType(property: Property): string {
 		return "TEXT PRIMARY KEY NOT NULL"
 	} else if (property.kind === "primitive") {
 		const type = primitiveColumnTypes[property.type]
-		return property.optional ? type : `${type} NOT NULL`
+		return property.nullable ? type : `${type} NOT NULL`
 	} else if (property.kind === "reference") {
-		return property.optional ? "TEXT" : "TEXT NOT NULL"
+		return property.nullable ? "TEXT" : "TEXT NOT NULL"
 	} else if (property.kind === "relation") {
 		throw new Error("internal error - relation properties don't map to columns")
 	} else {
@@ -83,7 +83,10 @@ export class ModelAPI {
 
 	columnNames: string[]
 
-	public constructor(readonly db: OpfsDatabase, readonly model: Model) {
+	public constructor(
+		readonly db: OpfsDatabase,
+		readonly model: Model,
+	) {
 		const columns: string[] = []
 		this.columnNames = [] // quoted column names for non-relation properties
 		const columnParams: `:p${string}`[] = [] // query params for non-relation properties
@@ -483,7 +486,7 @@ export class ModelAPI {
 						assert(isPrimitiveValue(value))
 						const p = `p${i}`
 						params[p] = value
-						if (property.optional) {
+						if (property.nullable) {
 							return [`("${name}" ISNULL OR "${name}" != :${p})`]
 						} else {
 							return [`"${name}" != :${p}`]
@@ -608,7 +611,10 @@ export class RelationAPI {
 	readonly #insert: Method<{ _source: string; _target: string }>
 	readonly #delete: Method<{ _source: string }>
 
-	public constructor(readonly db: OpfsDatabase, readonly relation: Relation) {
+	public constructor(
+		readonly db: OpfsDatabase,
+		readonly relation: Relation,
+	) {
 		const columns = [`_source TEXT NOT NULL`, `_target TEXT NOT NULL`]
 		db.exec(`CREATE TABLE IF NOT EXISTS "${this.table}" (${columns.join(", ")})`)
 
