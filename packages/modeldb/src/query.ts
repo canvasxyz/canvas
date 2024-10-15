@@ -173,10 +173,10 @@ export function getCompare(
 	orderBy: Record<string, "asc" | "desc">,
 ): (a: ModelValue, b: ModelValue) => -1 | 0 | 1 {
 	const entries = Object.entries(orderBy)
-	assert(entries.length === 1, "orderBy must have exactly one entry")
+	assert(entries.length === 1, `error comparing ${model.name}: orderBy must have exactly one entry`)
 	const [[propertyName, direction]] = entries
 	const property = model.properties.find((property) => property.name === propertyName)
-	assert(property !== undefined, "property not found")
+	assert(property !== undefined, `error comparing ${model.name}: property not found`)
 
 	if (property.kind === "primary") {
 		if (direction === "asc") {
@@ -208,7 +208,7 @@ export function getCompare(
 			signalInvalidType(direction)
 		}
 	} else if (property.kind === "relation") {
-		throw new Error("cannot orderBy a relation property")
+		throw new Error(`error comparing ${model.name}: cannot orderBy a relation property`)
 	} else {
 		signalInvalidType(property)
 	}
@@ -218,6 +218,9 @@ export function getFilter(model: Model, where: WhereCondition = {}): (value: Mod
 	const filters: { property: string; filter: (value: PropertyValue) => boolean }[] = []
 	for (const [property, expression] of Object.entries(where)) {
 		if (expression === undefined) {
+			continue
+		}
+		if (Array.isArray(expression) && expression.every((value) => value === undefined)) {
 			continue
 		}
 
@@ -234,7 +237,7 @@ function getPropertyFilter(
 	expression: PropertyValue | NotExpression | RangeExpression,
 ): (value: PropertyValue) => boolean {
 	const property = model.properties.find((property) => property.name === propertyName)
-	assert(property !== undefined)
+	assert(property !== undefined, `error filtering ${model.name}.${propertyName}: property not found`)
 
 	if (property.kind === "primary") {
 		return getPrimitiveFilter(
@@ -260,15 +263,15 @@ function getReferenceFilter(
 ): (value: PropertyValue) => boolean {
 	if (isLiteralExpression(expression)) {
 		const reference = expression
-		assert(reference === null || typeof reference === "string", "invalid reference value expression")
+		assert(reference === null || typeof reference === "string", `error filtering ${modelName}.${property.name}: invalid reference value expression`)
 		return (value) => value === reference
 	} else if (isNotExpression(expression)) {
 		const reference = expression.neq
-		assert(reference === null || typeof reference === "string", "invalid reference value expression")
+		assert(reference === null || typeof reference === "string", `error filtering ${modelName}.${property.name}: invalid reference value expression`)
 		return (value) => value !== reference
 	} else if (isRangeExpression(expression)) {
 		// idk there's no real reason not to allow this
-		throw new Error("cannot use range expressions on reference values")
+		throw new Error(`error filtering ${modelName}.${property.name}: cannot use range expressions on reference values`)
 	} else {
 		signalInvalidType(expression)
 	}
@@ -283,7 +286,7 @@ function getRelationFilter(
 		const reference = expression
 		assert(
 			Array.isArray(reference) && reference.every((value) => typeof value === "string"),
-			"invalid relation expression (expected string[])",
+			`error filtering ${modelName}.${property.name}: invalid relation expression (expected string[])`,
 		)
 		return (value) =>
 			reference.every((target) => Array.isArray(value) && typeof target === "string" && value.includes(target))
@@ -291,12 +294,12 @@ function getRelationFilter(
 		const reference = expression.neq
 		assert(
 			Array.isArray(reference) && reference.every((value) => typeof value === "string"),
-			"invalid relation expression (expected string[])",
+			`error filtering ${modelName}.${property.name}: invalid relation expression (expected string[])`,
 		)
 		return (value) =>
 			reference.every((target) => Array.isArray(value) && typeof target === "string" && !value.includes(target))
 	} else if (isRangeExpression(expression)) {
-		throw new Error("cannot use range expressions on relation values")
+		throw new Error(`error filtering ${modelName}.${property.name}: cannot use range expressions on relation values`)
 	} else {
 		signalInvalidType(expression)
 	}
