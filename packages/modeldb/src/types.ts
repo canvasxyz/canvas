@@ -100,12 +100,12 @@ export type DerivePropertyType<T extends PropertyType> = T extends "primary"
 									? boolean | null
 									: T extends "json"
 										? JSONValue
-										: T extends `@${string}`
-											? ReferenceValue
+										: T extends `@${string}[]`
+											? RelationValue
 											: T extends `@${string}?`
 												? ReferenceValue | null
-												: T extends `@${string}[]`
-													? RelationValue
+												: T extends `@${string}`
+													? ReferenceValue
 													: never
 
 export type DeriveModelTypes<T extends ModelSchema> = {
