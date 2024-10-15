@@ -4,7 +4,7 @@ import { logger } from "@libp2p/logger"
 import type pg from "pg"
 
 import { Signature, Action, Session, Message, Snapshot, SessionSigner, SignerCache } from "@canvas-js/interfaces"
-import { AbstractModelDB, Model, ModelSchema, Effect } from "@canvas-js/modeldb"
+import { AbstractModelDB, Model, ModelSchema, Effect, DeriveModelTypes } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { AbstractGossipLog, GossipLogEvents, SignedMessage } from "@canvas-js/gossiplog"
 import type { ServiceMap, NetworkConfig } from "@canvas-js/gossiplog/libp2p"
@@ -89,7 +89,11 @@ export class Canvas<
 > extends TypedEventEmitter<CanvasEvents> {
 	public static async initializeContainer<T extends Contract>(config: ContainerConfig): Promise<Canvas<T>> {
 		const contract = { models: config.models, actions: config.actions, globals: config.globals } as T
-		return this.initialize<T>({ topic: config.connection.topic, contract, ...exclude(config, ["models", "actions", "globals"]) })
+		return this.initialize<T>({
+			topic: config.connection.topic,
+			contract,
+			...exclude(config, ["models", "actions", "globals"]),
+		})
 	}
 
 	public static async initialize<M extends ModelSchema>(config: Config<M>): Promise<Canvas<M>> {

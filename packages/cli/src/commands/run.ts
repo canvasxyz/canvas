@@ -229,7 +229,7 @@ export async function handler(args: Args) {
 		// TODO: add metrics API
 		//
 		if (args.static !== undefined) {
-			assert(/^(.\/)?\w[\w/]*$/.test(args.static), "Invalid directory for static files")
+			assert(/^(.\/)?\w[\w-_/]*$/.test(args.static), "Invalid directory for static files")
 			assert(fs.existsSync(args.static), "Invalid directory for static files (path not found)")
 			api.use(express.static(args.static))
 		}

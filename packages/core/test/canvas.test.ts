@@ -8,6 +8,7 @@ import { ed25519 } from "@canvas-js/signatures"
 import { SIWESigner, Eip712Signer } from "@canvas-js/chain-ethereum"
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
 import { Canvas } from "@canvas-js/core"
+import { assert } from "@canvas-js/utils"
 
 const contract = `
 export const models = {
@@ -25,7 +26,14 @@ export const models = {
 export const actions = {
   async createPost(db, { content, isVisible, metadata }, { id, did, address, timestamp }) {
     const postId = [did, id].join("/")
+console.log(1, postId)
     await db.set("posts", { id: postId, content, address, did, isVisible, timestamp, metadata });
+  },
+
+  async updatePost(db, { postId, content, isVisible, metadata }, { id, did, address, timestamp }) {
+    const post = await db.get("posts", postId)
+    if (post.did !== did) throw new Error("can only update own posts")
+    await db.update("posts", { id: postId, content, isVisible, metadata });
   },
 
   async deletePost(db, key, { did }) {
@@ -94,6 +102,16 @@ test("apply an action and read a record from the database", async (t) => {
 	t.log(`applied action ${id2}`)
 	const clock2 = await app.messageLog.getClock()
 	t.is(clock2[0], 4)
+
+	const { id: id3 } = await app.actions.updatePost({
+		postId,
+		content: "update",
+		isVisible: false,
+		something: null,
+		metadata: {},
+	})
+	const clock3 = await app.messageLog.getClock()
+	t.is(clock3[0], 5)
 })
 
 test("create and delete a post", async (t) => {
@@ -294,8 +312,8 @@ test("get a value set by another action", async (t) => {
 	const wallet = ethers.Wallet.createRandom()
 
 	const app = await Canvas.initialize<{
-		user: { id: "primary", name: "string" },
-		post: { id: "primary", from: "@user", content: "string" },
+		user: { id: "primary"; name: "string" }
+		post: { id: "primary"; from: "@user"; content: "string" }
 	}>({
 		topic: "com.example.app",
 		signers: [new SIWESigner({ signer: wallet })],

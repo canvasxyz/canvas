@@ -52,7 +52,7 @@ export function validatePropertyValue(modelName: string, property: Property, val
 			throw new TypeError(`write to db.${modelName}.${property.name}: expected a string, received a ${typeof value}`)
 		}
 	} else if (property.kind === "primitive") {
-		if (property.optional && value === null) {
+		if (property.nullable && value === null) {
 			return
 		} else if (property.type === "integer") {
 			if (typeof value !== "number") {
@@ -98,7 +98,7 @@ export function validatePropertyValue(modelName: string, property: Property, val
 			signalInvalidType(property.type)
 		}
 	} else if (property.kind === "reference") {
-		if (property.optional && value === null) {
+		if (property.nullable && value === null) {
 			return
 		} else if (typeof value !== "string") {
 			throw new TypeError(`write to db.${modelName}.${property.name}: expected a string, received a ${typeof value}`)

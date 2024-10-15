@@ -239,7 +239,7 @@ function getPropertyFilter(
 	if (property.kind === "primary") {
 		return getPrimitiveFilter(
 			model.name,
-			{ name: propertyName, kind: "primitive", type: "string", optional: false },
+			{ name: propertyName, kind: "primitive", type: "string", nullable: false },
 			expression,
 		)
 	} else if (property.kind === "primitive") {

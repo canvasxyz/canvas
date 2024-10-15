@@ -1,5 +1,5 @@
 import { useEffect } from "react"
-import type { Canvas, Contract, CanvasLogEvent, ActionImplementation, DeriveModelTypes, ModelSchema } from "@canvas-js/core"
+import type { Canvas, Contract, CanvasLogEvent, ActionImplementation, ModelSchema } from "@canvas-js/core"
 import type { Action } from "@canvas-js/interfaces"
 
 // const tickState = { last: 0 }

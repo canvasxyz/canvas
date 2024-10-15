@@ -4,17 +4,17 @@ import { JSONValue } from "@canvas-js/utils"
 
 export type PrimaryKeyType = "primary"
 export type PrimitiveType = "integer" | "float" | "number" | "string" | "bytes" | "boolean" | "json"
-export type OptionalPrimitiveType = `${PrimitiveType}?`
+export type NullablePrimitiveType = `${PrimitiveType}?`
 export type ReferenceType = `@${string}`
-export type OptionalReferenceType = `@${string}?`
+export type NullableReferenceType = `@${string}?`
 export type RelationType = `@${string}[]`
 
 export type PropertyType =
 	| PrimaryKeyType
 	| PrimitiveType
-	| OptionalPrimitiveType
+	| NullablePrimitiveType
 	| ReferenceType
-	| OptionalReferenceType
+	| NullableReferenceType
 	| RelationType
 
 export type IndexInit = string | string[]
@@ -30,8 +30,8 @@ export type ModelSchema = Record<
 // to work with at runtime
 
 export type PrimaryKeyProperty = { name: string; kind: "primary" }
-export type PrimitiveProperty = { name: string; kind: "primitive"; type: PrimitiveType; optional: boolean }
-export type ReferenceProperty = { name: string; kind: "reference"; target: string; optional: boolean }
+export type PrimitiveProperty = { name: string; kind: "primitive"; type: PrimitiveType; nullable: boolean }
+export type ReferenceProperty = { name: string; kind: "reference"; target: string; nullable: boolean }
 export type RelationProperty = { name: string; kind: "relation"; target: string }
 export type Property = PrimaryKeyProperty | PrimitiveProperty | ReferenceProperty | RelationProperty
 
