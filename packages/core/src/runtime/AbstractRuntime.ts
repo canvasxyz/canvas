@@ -6,7 +6,15 @@ import { TypeTransformerFunction } from "@ipld/schema/typed.js"
 
 import type { Signature, Action, Message, Session, Snapshot, SignerCache } from "@canvas-js/interfaces"
 
-import { AbstractModelDB, Effect, ModelValue, ModelSchema } from "@canvas-js/modeldb"
+import {
+	AbstractModelDB,
+	Effect,
+	ModelValue,
+	ModelSchema,
+	mergeModelValues,
+	updateModelValues,
+	validateModelValue,
+} from "@canvas-js/modeldb"
 import {
 	GossipLogConsumer,
 	MAX_MESSAGE_ID,
@@ -23,11 +31,24 @@ export type ExecutionContext = {
 	signature: Signature
 	message: Message<Action>
 	address: string
-	modelEntries: Record<string, Record<string, ModelValue | null>>
+	modelActionEffects: Record<string, Record<string, ActionEffect[]>>
 	branch: number
 }
 
 export type EffectRecord = { key: string; value: Uint8Array | null; branch: number; clock: number }
+
+type CreateSetActionEffect = {
+	operation: "create" | "set"
+	value: ModelValue
+}
+type MergeUpdateActionEffect = {
+	operation: "merge" | "update"
+	value: Partial<ModelValue>
+}
+type DeleteActionEffect = {
+	operation: "delete"
+}
+export type ActionEffect = CreateSetActionEffect | MergeUpdateActionEffect | DeleteActionEffect
 
 export type SessionRecord = {
 	message_id: string
@@ -243,46 +264,33 @@ export abstract class AbstractRuntime {
 			throw new Error(`missing session ${signature.publicKey} for ${did}`)
 		}
 
-		const modelEntries: Record<string, Record<string, ModelValue | null>> = mapValues(this.db.models, () => ({}))
+		// const modelActionEffects: Record<string, Record<string, ActionEffect[]>> =
 
-		const result = await this.execute({ messageLog, modelEntries, id, signature, message, address, branch })
+		const executionContext = {
+			messageLog,
+			modelActionEffects: mapValues(this.db.models, () => ({})) as Record<string, Record<string, ActionEffect[]>>,
+			id,
+			signature,
+			message,
+			address,
+			branch,
+		}
+		const result = await this.execute(executionContext)
 
 		const actionRecord: ActionRecord = { message_id: id, did, name, timestamp: context.timestamp }
 		const effects: Effect[] = [{ operation: "set", model: "$actions", value: actionRecord }]
 
-		for (const [model, entries] of Object.entries(modelEntries)) {
-			for (const [key, value_] of Object.entries(entries)) {
+		for (const [model, entries] of Object.entries(executionContext.modelActionEffects)) {
+			for (const key of Object.keys(entries)) {
+				const value = await this.getModelValue(executionContext, model, key)
+
 				const keyHash = AbstractRuntime.getKeyHash(key)
-				let value = value_
-
-				const mergeFunction = this.db.models[model].merge
-
 				const effectKey = `${model}/${keyHash}/${id}`
-				const results = await this.db.query<{ key: string }>("$effects", {
-					select: { key: true },
-					where: { key: { gt: effectKey, lte: `${model}/${keyHash}/${MAX_MESSAGE_ID}` } },
-					limit: 1,
-				})
-
 				effects.push({
 					model: "$effects",
 					operation: "set",
 					value: { key: effectKey, value: value && cbor.encode(value), branch: branch, clock: message.clock },
 				})
-
-				if (mergeFunction) {
-					const existingValue = await this.db.get(model, key)
-					if (existingValue !== null && value !== null) {
-						value = mergeFunction(existingValue, value)
-					} else if (existingValue !== null) {
-						value = existingValue
-					}
-				} else {
-					if (results.length > 0) {
-						this.log("skipping effect %o because it is superceeded by effects %O", [key, value], results)
-						continue
-					}
-				}
 
 				if (value === null) {
 					effects.push({ model, operation: "delete", key })
@@ -417,15 +425,11 @@ export abstract class AbstractRuntime {
 		return Array.from(result)
 	}
 
-	protected async getModelValue<T extends ModelValue = ModelValue>(
+	private async getModelValueFromDB<T extends ModelValue = ModelValue>(
 		context: ExecutionContext,
 		model: string,
 		key: string,
 	): Promise<null | T> {
-		if (context.modelEntries[model][key] !== undefined) {
-			return context.modelEntries[model][key] as T
-		}
-
 		const { merge } = this.db.models[model]
 		if (merge !== undefined) {
 			const concurrentAncestors = await this.getConcurrentAncestors(context, model, key)
@@ -483,5 +487,31 @@ export abstract class AbstractRuntime {
 				upperBound = effect.key
 			}
 		}
+	}
+
+	protected async getModelValue<T extends ModelValue = ModelValue>(
+		context: ExecutionContext,
+		model: string,
+		key: string,
+	): Promise<null | T> {
+		// get the existing value from the database
+		let value = await this.getModelValueFromDB(context, model, key)
+
+		// if there exist locally unapplied effects from this action, then apply them to the value
+		if (context.modelActionEffects[model][key] !== undefined) {
+			for (const actionEffect of context.modelActionEffects[model][key]) {
+				if (actionEffect.operation === "create" || actionEffect.operation === "set") {
+					value = actionEffect.value as T
+				} else if (actionEffect.operation === "delete") {
+					value = null
+				} else if (actionEffect.operation === "merge") {
+					value = mergeModelValues(value || undefined, actionEffect.value as ModelValue)
+				} else if (actionEffect.operation === "update") {
+					value = updateModelValues(value || undefined, actionEffect.value as ModelValue)
+				}
+			}
+		}
+
+		return value as T | null
 	}
 }
