@@ -13,13 +13,7 @@ function App() {
 		contract,
 	})
 
-	const stateQuery = useLiveQuery<{
-		key: string
-		direction: string
-		tickCount: number
-		tiles: string
-		gameOver: string
-	}>(app, "state")
+	const stateQuery = useLiveQuery(app, "state")
 	const state = stateQuery && stateQuery[0]
 	const tiles = state?.tiles && (JSON.parse(state.tiles) as TilesList)
 	useTick(app, ticking, 400)
@@ -70,7 +64,7 @@ function App() {
 										margin: "1px 2px",
 										background:
 											tiles &&
-											tiles.find(([tileX, tileY]) => {
+											tiles.find(([tileX, tileY]: [number, number]) => {
 												const y = maxY - yinv
 												return x === tileX && y === tileY
 											})
