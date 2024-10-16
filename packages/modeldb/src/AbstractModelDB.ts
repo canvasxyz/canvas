@@ -4,7 +4,7 @@ import { assert } from "@canvas-js/utils"
 
 import { Config, ModelValue, Effect, Model, QueryParams, WhereCondition } from "./types.js"
 import { getFilter } from "./query.js"
-import { Awaitable } from "./utils.js"
+import { Awaitable, mergeModelValues, updateModelValues } from "./utils.js"
 
 type Subscription = {
 	model: string
@@ -59,6 +59,20 @@ export abstract class AbstractModelDB {
 
 	public async delete(modelName: string, key: string) {
 		await this.apply([{ operation: "delete", model: modelName, key }])
+	}
+
+	public async update<T extends ModelValue<any> = ModelValue<any>>(modelName: string, value: T) {
+		const key = this.models[modelName].primaryKey
+		const existingValue = await this.get<T>(modelName, value[key])
+		const updatedValue = updateModelValues(value, existingValue ?? {})
+		await this.apply([{ operation: "set", model: modelName, value: updatedValue }])
+	}
+
+	public async merge<T extends ModelValue<any> = ModelValue<any>>(modelName: string, value: T) {
+		const key = this.models[modelName].primaryKey
+		const existingValue = await this.get<T>(modelName, value[key])
+		const mergedValue = mergeModelValues(value, existingValue ?? {})
+		await this.apply([{ operation: "set", model: modelName, value: mergedValue }])
 	}
 
 	public subscribe(
