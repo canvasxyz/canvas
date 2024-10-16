@@ -169,7 +169,7 @@ export class ModelAPI {
 
 			const rowRelations: Record<string, string[]> = {}
 			for (const relationName of Object.keys(this.#relations)) {
-				rowRelations[relationName] = relations[relationName][rowKey]
+				rowRelations[relationName] = relations[relationName][rowKey] ?? []
 			}
 
 			rowsByKey[rowKey] = {
