@@ -36,6 +36,10 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 			{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
 		> = {}
 
+		if (contract.globals && Object.keys(contract.globals).length !== 0) {
+			throw new Error("cannot initialize FunctionRuntime with globals")
+		}
+
 		const actions = mapEntries(contract.actions, ([actionName, action]) => {
 			if (typeof action === "function") {
 				argsTransformers[actionName] = { toTyped: identity, toRepresentation: identity }

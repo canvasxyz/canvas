@@ -16,6 +16,7 @@ import {
 } from "@canvas-js/gossiplog"
 import { assert, mapValues } from "@canvas-js/utils"
 import { isAction, isSession, isSnapshot } from "../utils.js"
+import { ImportType } from "../types.js"
 
 export type ExecutionContext = {
 	messageLog: AbstractGossipLog<Action | Session | Snapshot>

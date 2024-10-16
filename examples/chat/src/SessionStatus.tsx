@@ -38,7 +38,7 @@ const SessionList: React.FC<SessionListProps> = ({ address }) => {
 
 	const timestamp = useMemo(() => Date.now(), [])
 
-	const results = useLiveQuery<{ public_key: string; expiration: number; message_id: string }>(app, "$sessions", {
+	const results = useLiveQuery(app, "$sessions", {
 		where: { address, expiration: { gt: timestamp } },
 	})
 

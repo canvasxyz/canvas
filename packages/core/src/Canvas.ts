@@ -68,10 +68,34 @@ export type ApplicationData = {
 	actions: string[]
 }
 
+export type ContainerConfig = Omit<Config<Contract>, "contract" | "topic"> & {
+	connection: { topic: string; url: string }
+	models: Contract["models"]
+	actions: Contract["actions"]
+	globals?: Contract["globals"]
+}
+
+function exclude<T, K extends keyof T>(obj: T, keys: K[]): Omit<T, K> {
+	const result = { ...obj }
+	for (const key of keys) {
+		delete result[key]
+	}
+	return result
+}
+
 export class Canvas<
 	M extends ModelSchema = any,
 	T extends Contract<M> = Contract<M>,
 > extends TypedEventEmitter<CanvasEvents> {
+	public static async initializeContainer<T extends Contract>(config: ContainerConfig): Promise<Canvas<T>> {
+		const contract = { models: config.models, actions: config.actions, globals: config.globals } as T
+		return this.initialize<T>({
+			topic: config.connection.topic,
+			contract,
+			...exclude(config, ["models", "actions", "globals"]),
+		})
+	}
+
 	public static async initialize<M extends ModelSchema>(config: Config<M>): Promise<Canvas<M>> {
 		const { topic, path = null, contract, signers: initSigners = [], runtimeMemoryLimit } = config
 
