@@ -287,7 +287,9 @@ test("merge and update into a value set by another action", async (t) => {
 	})
 
 	await app.actions.updateGameMultipleUpdates()
-	t.deepEqual(await app.db.get("game", "0"), {
+	const game_0_3 = await app.db.get("game", "0")
+	delete game_0_3!["$indexed_at"]
+	t.deepEqual(game_0_3, {
 		id: "0",
 		state: {
 			extra3: null,
@@ -301,8 +303,8 @@ test("get a value set by another action", async (t) => {
 	const wallet = ethers.Wallet.createRandom()
 
 	const app = await Canvas.initialize<{
-		user: { id: "primary", name: "string" },
-		post: { id: "primary", from: "@user", content: "string" },
+		user: { id: "primary"; name: "string" }
+		post: { id: "primary"; from: "@user"; content: "string" }
 	}>({
 		topic: "com.example.app",
 		signers: [new SIWESigner({ signer: wallet })],
