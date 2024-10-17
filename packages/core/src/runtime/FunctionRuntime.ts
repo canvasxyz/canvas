@@ -2,14 +2,7 @@ import { TypeTransformerFunction, create } from "@ipld/schema/typed.js"
 import { fromDSL } from "@ipld/schema/from-dsl.js"
 
 import type { SignerCache } from "@canvas-js/interfaces"
-import {
-	ModelSchema,
-	ModelValue,
-	validateModelValue,
-	mergeModelValues,
-	updateModelValues,
-	DeriveModelTypes,
-} from "@canvas-js/modeldb"
+import { ModelSchema, ModelValue, validateModelValue, DeriveModelTypes } from "@canvas-js/modeldb"
 import { assert, mapEntries } from "@canvas-js/utils"
 
 import target from "#target"
@@ -82,7 +75,12 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 				assert(primaryKey in value, `db.set(${model}): missing primary key ${primaryKey}`)
 				assert(primaryKey !== null && primaryKey !== undefined, `db.set(${model}): ${primaryKey} primary key`)
 				const key = (value as ModelValue)[primaryKey] as string
-				this.#context.modelEntries[model][key] = value
+
+				this.#context.modelActionEffects[model][key] ||= []
+				this.#context.modelActionEffects[model][key].push({
+					operation: "set",
+					value,
+				})
 			},
 			create: (model, value) => {
 				assert(this.#context !== null, "expected this.#context !== null")
@@ -91,18 +89,24 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 				assert(primaryKey in value, `db.update(${model}): missing primary key ${primaryKey}`)
 				assert(primaryKey !== null && primaryKey !== undefined, `db.set(${model}): ${primaryKey} primary key`)
 				const key = (value as ModelValue)[primaryKey] as string
-				this.#context.modelEntries[model][key] = value
+				this.#context.modelActionEffects[model][key] ||= []
+				this.#context.modelActionEffects[model][key].push({
+					operation: "create",
+					value,
+				})
 			},
 			update: async (model, value) => {
 				assert(this.#context !== null, "expected this.#context !== null")
 				const { primaryKey } = this.db.models[model]
 				assert(primaryKey in value, `db.update(${model}): missing primary key ${primaryKey}`)
 				assert(primaryKey !== null && primaryKey !== undefined, `db.set(${model}): ${primaryKey} primary key`)
+
 				const key = (value as ModelValue)[primaryKey] as string
-				const modelValue = await this.getModelValue(this.#context, model, key)
-				const mergedValue = updateModelValues(value as ModelValue, modelValue ?? {})
-				validateModelValue(this.db.models[model], mergedValue)
-				this.#context.modelEntries[model][key] = mergedValue
+				this.#context.modelActionEffects[model][key] ||= []
+				this.#context.modelActionEffects[model][key].push({
+					operation: "update",
+					value: value as any,
+				})
 			},
 			merge: async (model, value) => {
 				assert(this.#context !== null, "expected this.#context !== null")
@@ -110,14 +114,18 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 				assert(primaryKey in value, `db.merge(${model}): missing primary key ${primaryKey}`)
 				assert(primaryKey !== null && primaryKey !== undefined, `db.set(${model}): ${primaryKey} primary key`)
 				const key = (value as ModelValue)[primaryKey] as string
-				const modelValue = await this.getModelValue(this.#context, model, key)
-				const mergedValue = mergeModelValues(value as ModelValue, modelValue ?? {})
-				validateModelValue(this.db.models[model], mergedValue)
-				this.#context.modelEntries[model][key] = mergedValue
+				this.#context.modelActionEffects[model][key] ||= []
+				this.#context.modelActionEffects[model][key].push({
+					operation: "merge",
+					value: value as any,
+				})
 			},
 			delete: async (model: string, key: string) => {
 				assert(this.#context !== null, "expected this.#context !== null")
-				this.#context.modelEntries[model][key] = null
+				this.#context.modelActionEffects[model][key] ||= []
+				this.#context.modelActionEffects[model][key].push({
+					operation: "delete",
+				})
 			},
 		}
 	}
