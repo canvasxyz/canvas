@@ -8,7 +8,7 @@ import {
 	Effect,
 	ModelValue,
 	ModelSchema,
-	MergedModelValue,
+	ModelValueWithIncludes,
 	QueryParams,
 	WhereCondition,
 	parseConfig,
@@ -172,7 +172,7 @@ export class ModelDB extends AbstractModelDB {
 				const cache: Record<string, Record<string, ModelValue>> = {} // { [table]: { [id]: ModelValue } }
 
 				const { include, ...rootQuery } = query
-				const modelValues = (await root.query(txn, rootQuery)) as MergedModelValue[]
+				const modelValues = (await root.query(txn, rootQuery)) as ModelValueWithIncludes[]
 
 				// Two-pass recursive query to populate includes. The first pass populates
 				// the cache with all models in the response, but doesn't join any of them.
@@ -182,7 +182,7 @@ export class ModelDB extends AbstractModelDB {
 				// This is necessary because making joins automatically in one recursive
 				// query would cause the same join to be applied everywhere, because the
 				// cache only maintains one instance for every record.
-				const populateCache = async (records: MergedModelValue[], include: IncludeExpression) => {
+				const populateCache = async (records: ModelValueWithIncludes[], include: IncludeExpression) => {
 					for (const includeKey of Object.keys(include)) {
 						// mergedCache[table] ||= {}
 						cache[includeKey] ||= {}
@@ -214,7 +214,7 @@ export class ModelDB extends AbstractModelDB {
 						}
 					}
 				}
-				const populateRecords = async (records: MergedModelValue[], include: IncludeExpression) => {
+				const populateRecords = async (records: ModelValueWithIncludes[], include: IncludeExpression) => {
 					if (Object.keys(include).length === 0) return
 					for (const record of records) {
 						for (const includeKey of Object.keys(include)) {

@@ -64,7 +64,7 @@ export type RelationValue = string[]
 export type PropertyValue = PrimaryKeyValue | PrimitiveValue | ReferenceValue | RelationValue | JSONValue
 
 export type ModelValue<T = PropertyValue> = { [key: string]: T }
-export type MergedModelValue<T = PropertyValue> = { [key: string]: T | MergedModelValue<T> | MergedModelValue<T>[] }
+export type ModelValueWithIncludes<T = PropertyValue> = { [key: string]: T | ModelValueWithIncludes<T> | ModelValueWithIncludes<T>[] }
 
 export type WhereCondition = Record<string, PropertyValue | NotExpression | RangeExpression | undefined>
 export type NotExpression = { neq: PropertyValue | undefined }
