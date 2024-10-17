@@ -1,9 +1,11 @@
 import * as Comlink from "comlink"
 import { Logger } from "@libp2p/logger"
 import { Config, Effect, ModelValue, QueryParams, WhereCondition } from "@canvas-js/modeldb"
+import { ModelAPI } from "@canvas-js/modeldb/utils"
 import { assert, signalInvalidType } from "@canvas-js/utils"
 import { Database } from "@sqlite.org/sqlite-wasm"
-import { ModelAPI } from "./ModelAPI.js"
+
+import { SqliteDB } from "./SqliteDB.js"
 
 export class InnerModelDB {
 	public readonly db: Database
@@ -12,9 +14,10 @@ export class InnerModelDB {
 
 	public constructor(db: Database, config: Config, log: Logger) {
 		this.db = db
+		const wrappedDb = new SqliteDB(this.db)
 
 		for (const model of Object.values(config.models)) {
-			this.#models[model.name] = new ModelAPI(this.db, model)
+			this.#models[model.name] = new ModelAPI(wrappedDb, model)
 		}
 		this.log = log
 	}
@@ -51,10 +54,10 @@ export class InnerModelDB {
 		return api.getMany(keys) as T[]
 	}
 
-	public iterate(modelName: string, query: QueryParams = {}): AsyncIterable<ModelValue> {
+	public iterate<T extends ModelValue>(modelName: string, query: QueryParams = {}): AsyncIterable<T> {
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
-		return Comlink.proxy(api.iterate(query))
+		return Comlink.proxy(api.iterate(query)) as AsyncIterable<T>
 	}
 
 	public count(modelName: string, where?: WhereCondition): number {
