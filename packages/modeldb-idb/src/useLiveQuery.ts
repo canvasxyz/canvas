@@ -15,20 +15,6 @@ export function useLiveQuery<T extends ModelValue = ModelValue>(
 
 	const [results, setResults] = useState<null | T[]>(null)
 
-	// const { isLoading, error, data } = db.useQuery({
-	//   game: {
-	//     $: { where: { id: gameId } },
-	//     player: {
-	//       unit: {
-	//         player: {},
-	//       },
-	//       city: {
-	//         player: {},
-	//       },
-	//     },
-	//   },
-	// });
-
 	useEffect(() => {
 		// Unsubscribe from the cached database handle, if necessary
 		if (

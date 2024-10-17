@@ -74,7 +74,7 @@ export type IncludeExpression = { [key: string]: IncludeExpression }
 
 export type QueryParams = {
 	select?: Record<string, boolean>
-	include?: IncludeExpression
+	include?: IncludeExpression // TODO: only supported on modeldb-idb right now
 	where?: WhereCondition
 	orderBy?: Record<string, "asc" | "desc">
 	limit?: number

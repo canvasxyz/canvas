@@ -8,10 +8,10 @@ import {
 	Effect,
 	ModelValue,
 	ModelSchema,
+	MergedModelValue,
 	QueryParams,
 	WhereCondition,
 	parseConfig,
-	MergedModelValue,
 	IncludeExpression,
 } from "@canvas-js/modeldb"
 
