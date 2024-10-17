@@ -2,7 +2,7 @@ import { logger } from "@libp2p/logger"
 
 import { assert } from "@canvas-js/utils"
 
-import { Config, ModelValue, Effect, Model, QueryParams, WhereCondition } from "./types.js"
+import { Config, ModelValue, Effect, Model, QueryParams, WhereCondition, ModelValueWithIncludes } from "./types.js"
 import { getFilter } from "./query.js"
 import { Awaitable, flattenKeys, mergeModelValues, updateModelValues } from "./utils.js"
 
@@ -10,7 +10,7 @@ type Subscription = {
 	model: string
 	query: QueryParams
 	filter: (effect: Effect) => boolean
-	callback: (results: ModelValue[]) => Awaitable<void>
+	callback: (results: ModelValue[] | ModelValueWithIncludes[]) => Awaitable<void>
 }
 
 export abstract class AbstractModelDB {
@@ -78,7 +78,7 @@ export abstract class AbstractModelDB {
 	public subscribe(
 		modelName: string,
 		query: QueryParams,
-		callback: (results: ModelValue[]) => Awaitable<void>,
+		callback: (results: ModelValue[] | ModelValueWithIncludes[]) => Awaitable<void>,
 	): { id: number; results: Promise<ModelValue[]> } {
 		const model = this.models[modelName]
 		assert(model !== undefined, `model ${modelName} not found`)

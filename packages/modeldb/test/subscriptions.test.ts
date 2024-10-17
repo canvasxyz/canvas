@@ -1,4 +1,4 @@
-import type { ModelValue } from "@canvas-js/modeldb"
+import type { ModelValue, ModelValueWithIncludes } from "@canvas-js/modeldb"
 
 import { testOnModelDB } from "./utils.js"
 
@@ -12,7 +12,7 @@ testOnModelDB("subscriptions", async (t, openDB) => {
 		},
 	})
 
-	const changes: { results: ModelValue[] }[] = []
+	const changes: { results: ModelValue[] | ModelValueWithIncludes[] }[] = []
 	const { id, results } = db.subscribe("user", {}, (results) => {
 		changes.push({ results })
 	})
@@ -44,7 +44,7 @@ testOnModelDB("subscriptions (filtering on model and query)", async (t, openDB) 
 	await db.set("user", { address: "b" })
 	await db.set("user", { address: "c" })
 
-	const changes: { results: ModelValue[] }[] = []
+	const changes: { results: ModelValue[] | ModelValueWithIncludes[] }[] = []
 	const { id, results } = db.subscribe("room", { where: { creator: "a" } }, (results) => {
 		changes.push({ results })
 	})
@@ -81,7 +81,7 @@ testOnModelDB(
 			player: { id: "primary" },
 		})
 
-		const changes: { results: ModelValue[] }[] = []
+		const changes: { results: ModelValue[] | ModelValueWithIncludes[] }[] = []
 		const { id, results } = db.subscribe(
 			"game",
 			{
@@ -117,10 +117,6 @@ testOnModelDB(
 		await db.update("item", { itemId: "item-02", content: "tode" })
 
 		t.is(await db.count("player"), 2)
-
-		console.log(JSON.stringify(changes[changes.length - 1], null, 2))
-
-		return
 
 		t.deepEqual(changes, [
 			// TODO: these shouldn't fire once relations are filtered by key

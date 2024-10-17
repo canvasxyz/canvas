@@ -8,11 +8,9 @@ import {
 	Effect,
 	ModelValue,
 	ModelSchema,
-	ModelValueWithIncludes,
 	QueryParams,
 	WhereCondition,
 	parseConfig,
-	IncludeExpression,
 	flattenKeys,
 } from "@canvas-js/modeldb"
 
@@ -209,7 +207,7 @@ export class ModelDB extends AbstractModelDB {
 					assert(api !== undefined, `model ${model} not found`)
 					if (effects.some((effect) => filter(effect))) {
 						try {
-							const results = await api.query(txn, query)
+							const results = query.include ? await api.queryWithInclude(txn, this.#models, query) : await api.query(txn, query)
 							await callback(results)
 						} catch (err) {
 							this.log.error(err)
