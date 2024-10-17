@@ -266,6 +266,7 @@ export class ModelAPI {
 	}
 
 	public async *iterate(query: QueryParams = {}): AsyncIterable<ModelValue> {
+		// TODO: implement iterate (needs special handling over comlink)
 		if (Object.keys(query).length > 0) {
 			throw new Error("not implemented")
 		}
@@ -365,6 +366,11 @@ export class ModelAPI {
 		if (typeof query.offset === "number") {
 			sql.push(`LIMIT :offset`)
 			params.limit = query.offset
+		}
+
+		// JOIN (not supported)
+		if (query.include) {
+			throw new Error("cannot use 'include' in queries outside the browser/idb")
 		}
 
 		return [sql.join(" "), relations, params]

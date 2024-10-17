@@ -1,3 +1,4 @@
+import { IncludeExpression } from "@canvas-js/modeldb"
 import type { IDBPDatabase } from "idb"
 
 export const getIndexName = (index: string[]) => index.join("/")
@@ -12,6 +13,15 @@ If necessary, you can clear IndexedDB by running this in the console:
 
 const dbs = await window.indexedDB.databases()
 dbs.forEach(db => { window.indexedDB.deleteDatabase(db.name) })`)
+		}
+	}
+}
+
+export function* flattenKeys(obj: IncludeExpression): Generator<string> {
+	for (const key of Object.keys(obj)) {
+		yield key;
+		for (const nestedKey of flattenKeys(obj[key])) {
+			yield nestedKey;
 		}
 	}
 }

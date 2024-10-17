@@ -8,13 +8,15 @@ import {
 	Effect,
 	ModelValue,
 	ModelSchema,
+	ModelValueWithIncludes,
 	QueryParams,
 	WhereCondition,
 	parseConfig,
+	IncludeExpression,
 } from "@canvas-js/modeldb"
 
 import { ModelAPI } from "./api.js"
-import { getIndexName, checkForMissingObjectStores } from "./utils.js"
+import { getIndexName, checkForMissingObjectStores, flattenKeys } from "./utils.js"
 
 export interface ModelDBOptions {
 	name: string
@@ -57,7 +59,10 @@ export class ModelDB extends AbstractModelDB {
 
 	readonly #models: Record<string, ModelAPI> = {}
 
-	private constructor(public readonly db: IDBPDatabase, config: Config) {
+	private constructor(
+		public readonly db: IDBPDatabase,
+		config: Config,
+	) {
 		super(config)
 
 		for (const model of config.models) {
@@ -141,9 +146,106 @@ export class ModelDB extends AbstractModelDB {
 	}
 
 	public async query<T extends ModelValue = ModelValue>(modelName: string, query: QueryParams = {}): Promise<T[]> {
+		if (query.include) {
+			return this.queryWithInclude<T>(modelName, query)
+		}
+
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
 		const result = await this.read((txn) => api.query(txn, query), [api.storeName])
+		return result as T[]
+	}
+
+	private async queryWithInclude<T extends ModelValue = ModelValue>(
+		modelName: string,
+		query: QueryParams = {},
+	): Promise<T[]> {
+		assert(query.include)
+		const root = this.#models[modelName]
+		const modelNames = Array.from(new Set([...flattenKeys({ [modelName]: query.include })]))
+		for (const modelName of modelNames) {
+			assert(this.#models[modelName] !== undefined, `model ${modelName} not found`)
+		}
+
+		const result = await this.read(
+			async (txn) => {
+				const cache: Record<string, Record<string, ModelValue>> = {} // { [table]: { [id]: ModelValue } }
+
+				const { include, ...rootQuery } = query
+				const modelValues = (await root.query(txn, rootQuery)) as ModelValueWithIncludes[]
+
+				// Two-pass recursive query to populate includes. The first pass populates
+				// the cache with all models in the response, but doesn't join any of them.
+				// The second pass makes joins on-copy for every reference/relation in
+				// `include` and updates the result record in-place to add the joins.
+				//
+				// This is necessary because making joins automatically in one recursive
+				// query would cause the same join to be applied everywhere, because the
+				// cache only maintains one instance for every record.
+				const populateCache = async (records: ModelValueWithIncludes[], include: IncludeExpression) => {
+					for (const includeKey of Object.keys(include)) {
+						// mergedCache[table] ||= {}
+						cache[includeKey] ||= {}
+						for (const record of records) {
+							const includeValue = record[includeKey]
+							// Reference type
+							if (!Array.isArray(includeValue)) {
+								assert(typeof includeValue === "string", "include should only be used with references or relations")
+								if (cache[includeKey][includeValue]) continue
+								const [result] = await this.#models[includeKey].query(txn, { where: { id: includeValue } })
+								if (result === undefined) throw new Error("expected a reference to be populated")
+								cache[includeKey][includeValue] = { ...result }
+								if (include[includeKey]) {
+									await populateCache([result], include[includeKey])
+								}
+								continue
+							}
+							// Relation type
+							for (const item of includeValue) {
+								assert(typeof item === "string", "include should only be used with references or relations")
+								if (cache[includeKey][item]) continue
+								const [result] = await this.#models[includeKey].query(txn, { where: { id: item } })
+								if (result === undefined) throw new Error("expected a relation to be populated")
+								cache[includeKey][item] = { ...result }
+								if (include[includeKey]) {
+									await populateCache([result], include[includeKey])
+								}
+							}
+						}
+					}
+				}
+				const populateRecords = async (records: ModelValueWithIncludes[], include: IncludeExpression) => {
+					if (Object.keys(include).length === 0) return
+					for (const record of records) {
+						for (const includeKey of Object.keys(include)) {
+							const includeValue = record[includeKey]
+							if (!Array.isArray(includeValue)) {
+								// Reference type
+								assert(typeof includeValue === "string", "expected reference to be a string")
+								record[includeKey] = { ...cache[includeKey][includeValue] } // replace propertyValue
+								if (include[includeKey]) {
+									await populateRecords([record[includeKey]], include[includeKey])
+								}
+							} else {
+								// Relation type
+								record[includeKey] = includeValue.map((pk) => {
+									assert(typeof pk === "string", "expected relation to be a string[]")
+									return { ...cache[includeKey][pk] }
+								}) // replace propertyValue
+								if (include[includeKey]) {
+									await populateRecords(record[includeKey], include[includeKey])
+								}
+							}
+						}
+					}
+				}
+				await populateCache(modelValues, query.include ?? {})
+				await populateRecords(modelValues, query.include ?? {})
+				return modelValues
+			},
+			modelNames.map((m: string) => this.#models[m].storeName),
+		)
+
 		return result as T[]
 	}
 
