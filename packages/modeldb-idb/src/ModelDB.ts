@@ -171,59 +171,67 @@ export class ModelDB extends AbstractModelDB {
 		const result = await this.read(
 			async (txn) => {
 				const cache: Record<string, Record<string, ModelValue>> = {} // { [table]: { [id]: ModelValue } }
-
-				const rootQuery = { ...query }
-				delete rootQuery.include
+				const { include, ...rootQuery } = query
 				const modelValues = (await root.query(txn, rootQuery)) as MergedModelValue[]
 
-				// Fetch references and relations in `query.include`
-				for (const table of Object.keys(include)) {
-					cache[table] ||= {}
-					for (const record of modelValues) {
-						const propertyValue = record[table]
-						// Reference type
-						if (!Array.isArray(propertyValue)) {
-							assert(typeof propertyValue === "string", "include should only be used with references or relations")
-							assert(typeof record[table] === "string", "references should not be populated yet")
-							if (cache[table][propertyValue]) continue
-							const [result] = await this.#models[table].query(txn, { where: { id: record[table] } })
-							if (result === undefined) throw new Error("expected a reference to be populated")
-							cache[table][propertyValue] = result
-							continue
-						}
-						// Relation type
-						for (const item of propertyValue) {
-							assert(typeof item === "string", "include should only be used with references or relations")
-							if (cache[table][item]) continue
-							const [result] = await this.#models[table].query(txn, { where: { id: item } })
-							if (result === undefined) throw new Error("expected a relation to be populated")
-							cache[table][item] = result
-						}
-					}
-				}
-
-				// Populate references and relations
-				for (const record of modelValues) {
-					for (const includeModel of Object.keys(include)) {
-						if (!Array.isArray(record[includeModel])) {
+				const populate = async (records: MergedModelValue[], include: any, visited = new Set<string>()) => {
+					for (const table of Object.keys(include)) {
+						cache[table] ||= {}
+						for (const record of records) {
+							const propertyValue = record[table]
 							// Reference type
-							assert(typeof record[includeModel] === "string", "expected reference to be a string")
-							record[includeModel] = cache[includeModel][record[includeModel]]
-						} else {
+							if (!Array.isArray(propertyValue)) {
+								assert(typeof propertyValue === "string", "include should only be used with references or relations")
+								if (cache[table][propertyValue] || visited.has(propertyValue)) continue
+								visited.add(propertyValue)
+								const [result] = await this.#models[table].query(txn, { where: { id: propertyValue } })
+								if (result === undefined) throw new Error("expected a reference to be populated")
+								cache[table][propertyValue] = result
+								// Recursively fetch nested includes
+								if (include[table]) {
+									await populate([result], include[table], visited)
+								}
+								continue
+							}
 							// Relation type
-							record[includeModel] = record[includeModel].map((pk) => {
-								assert(typeof pk === "string", "expected relation to be a string[]")
-								return cache[includeModel][pk]
-							})
+							for (const item of propertyValue) {
+								assert(typeof item === "string", "include should only be used with references or relations")
+								if (cache[table][item] || visited.has(item)) continue
+								visited.add(item)
+								const [result] = await this.#models[table].query(txn, { where: { id: item } })
+								if (result === undefined) throw new Error("expected a relation to be populated")
+								cache[table][item] = result
+								// Recursively fetch nested includes
+								if (include[table]) {
+									await populate([result], include[table], visited)
+								}
+							}
+						}
+					}
+
+					// Populate references and relations
+					for (const record of records) {
+						for (const includeModel of Object.keys(include)) {
+							if (!Array.isArray(record[includeModel])) {
+								// Reference type
+								assert(typeof record[includeModel] === "string", "expected reference to be a string")
+								record[includeModel] = cache[includeModel][record[includeModel]]
+							} else {
+								// Relation type
+								record[includeModel] = record[includeModel].map((pk) => {
+									assert(typeof pk === "string", "expected relation to be a string[]")
+									return cache[includeModel][pk]
+								})
+							}
 						}
 					}
 				}
 
+				await populate(modelValues, include)
 				return modelValues
 			},
 			modelNames.map((m: string) => this.#models[m].storeName),
 		)
-
 		return result as T[]
 	}
 
