@@ -11,10 +11,11 @@ import {
 	QueryParams,
 	WhereCondition,
 	parseConfig,
+	MergedModelValue,
 } from "@canvas-js/modeldb"
 
 import { ModelAPI } from "./api.js"
-import { getIndexName, checkForMissingObjectStores } from "./utils.js"
+import { getIndexName, checkForMissingObjectStores, flattenKeys } from "./utils.js"
 
 export interface ModelDBOptions {
 	name: string
@@ -57,7 +58,10 @@ export class ModelDB extends AbstractModelDB {
 
 	readonly #models: Record<string, ModelAPI> = {}
 
-	private constructor(public readonly db: IDBPDatabase, config: Config) {
+	private constructor(
+		public readonly db: IDBPDatabase,
+		config: Config,
+	) {
 		super(config)
 
 		for (const model of config.models) {
@@ -141,9 +145,85 @@ export class ModelDB extends AbstractModelDB {
 	}
 
 	public async query<T extends ModelValue = ModelValue>(modelName: string, query: QueryParams = {}): Promise<T[]> {
+		if (query.include) {
+			return this.queryWithInclude<T>(modelName, query)
+		}
+
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
 		const result = await this.read((txn) => api.query(txn, query), [api.storeName])
+		return result as T[]
+	}
+
+	private async queryWithInclude<T extends ModelValue = ModelValue>(
+		modelName: string,
+		query: QueryParams = {},
+	): Promise<T[]> {
+		assert(query.include)
+		const include = query.include
+
+		const root = this.#models[modelName]
+		const modelNames = Array.from(new Set([...flattenKeys({ [modelName]: query.include })]))
+		for (const modelName of modelNames) {
+			assert(this.#models[modelName] !== undefined, `model ${modelName} not found`)
+		}
+
+		const result = await this.read(
+			async (txn) => {
+				const cache: Record<string, Record<string, ModelValue>> = {} // { [table]: { [id]: ModelValue } }
+
+				const rootQuery = { ...query }
+				delete rootQuery.include
+				const modelValues = (await root.query(txn, rootQuery)) as MergedModelValue[]
+
+				// Fetch references and relations in `query.include`
+				for (const table of Object.keys(include)) {
+					cache[table] ||= {}
+					for (const record of modelValues) {
+						const propertyValue = record[table]
+						// Reference type
+						if (!Array.isArray(propertyValue)) {
+							assert(typeof propertyValue === "string", "include should only be used with references or relations")
+							assert(typeof record[table] === "string", "references should not be populated yet")
+							if (cache[table][propertyValue]) continue
+							const [result] = await this.#models[table].query(txn, { where: { id: record[table] } })
+							if (result === undefined) throw new Error("expected a reference to be populated")
+							cache[table][propertyValue] = result
+							continue
+						}
+						// Relation type
+						for (const item of propertyValue) {
+							assert(typeof item === "string", "include should only be used with references or relations")
+							if (cache[table][item]) continue
+							const [result] = await this.#models[table].query(txn, { where: { id: item } })
+							if (result === undefined) throw new Error("expected a relation to be populated")
+							cache[table][item] = result
+						}
+					}
+				}
+
+				// Populate references and relations
+				for (const record of modelValues) {
+					for (const includeModel of Object.keys(include)) {
+						if (!Array.isArray(record[includeModel])) {
+							// Reference type
+							assert(typeof record[includeModel] === "string", "expected reference to be a string")
+							record[includeModel] = cache[includeModel][record[includeModel]]
+						} else {
+							// Relation type
+							record[includeModel] = record[includeModel].map((pk) => {
+								assert(typeof pk === "string", "expected relation to be a string[]")
+								return cache[includeModel][pk]
+							})
+						}
+					}
+				}
+
+				return modelValues
+			},
+			modelNames.map((m: string) => this.#models[m].storeName),
+		)
+
 		return result as T[]
 	}
 
