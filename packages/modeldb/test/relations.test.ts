@@ -229,7 +229,7 @@ testOnModelDB(
 			game: { id: "primary", player: "@player[]", city: "@city[]", unit: "@unit[]" },
 			player: { id: "primary", game: "@game", city: "@city[]", unit: "@unit[]" },
 			city: { id: "primary", player: "@player" },
-			unit: { id: "primary", player: "@player" },
+			unit: { id: "primary", player: "@player", city: "@city?" },
 		})
 
 		await db.set("game", { id: "game", player: [], city: [], unit: [] })
@@ -278,8 +278,8 @@ testOnModelDB(
 							game: "game",
 							city: ["london"],
 							unit: [
-								{ id: "unit1", player: { id: "alice", game: "game", city: ["london"], unit: ["unit1", "unit2"] } },
-								{ id: "unit2", player: { id: "alice", game: "game", city: ["london"], unit: ["unit1", "unit2"] } },
+								{ id: "unit1", city: "london", player: { id: "alice", game: "game", city: ["london"], unit: ["unit1", "unit2"] } },
+								{ id: "unit2", city: "london", player: { id: "alice", game: "game", city: ["london"], unit: ["unit1", "unit2"] } },
 							],
 						},
 						{
@@ -289,14 +289,17 @@ testOnModelDB(
 							unit: [
 								{
 									id: "unit3",
+									city: "paris",
 									player: { id: "bob", game: "game", city: ["paris"], unit: ["unit3", "unit4", "unit5"] },
 								},
 								{
 									id: "unit4",
+									city: "paris",
 									player: { id: "bob", game: "game", city: ["paris"], unit: ["unit3", "unit4", "unit5"] },
 								},
 								{
 									id: "unit5",
+									city: null,
 									player: { id: "bob", game: "game", city: ["paris"], unit: ["unit3", "unit4", "unit5"] },
 								},
 							],
@@ -318,7 +321,7 @@ testOnModelDB(
 								id: "bob",
 								game: "game",
 								city: ["paris"],
-								unit: ["unit3", "unit4"],
+								unit: ["unit3", "unit4", "unit5"],
 							},
 						},
 					],
