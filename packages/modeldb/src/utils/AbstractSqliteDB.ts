@@ -1,11 +1,6 @@
 import { SqlitePrimitiveValue } from "./encoding.js"
 
 export abstract class AbstractSqliteDB {
-	// exec ? or maybe always prepare
-	// i don't think we really need a separate Method class
-	// prepareMethod
-	// prepareQuery
-
 	public abstract prepareQuery<R>(sql: string): Query<R>
 	public abstract prepareMethod(sql: string): Method
 
