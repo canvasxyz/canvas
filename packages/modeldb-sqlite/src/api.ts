@@ -336,6 +336,11 @@ export class ModelAPI {
 			params.offset = query.offset
 		}
 
+		// JOIN (not supported)
+		if (query.include) {
+			throw new Error("cannot use 'include' in queries outside the browser/idb")
+		}
+
 		return [sql.join(" "), relations, params]
 	}
 

@@ -69,8 +69,11 @@ export type WhereCondition = Record<string, PropertyValue | NotExpression | Rang
 export type NotExpression = { neq: PropertyValue | undefined }
 export type RangeExpression = { gt?: PrimitiveValue; gte?: PrimitiveValue; lt?: PrimitiveValue; lte?: PrimitiveValue }
 
+export type IncludeExpression = { [key: string]: IncludeExpression }
+
 export type QueryParams = {
-	select?: Record<string, boolean> // TODO: add support for joining reference/relation values a la primsa
+	select?: Record<string, boolean>
+	include?: IncludeExpression
 	where?: WhereCondition
 	orderBy?: Record<string, "asc" | "desc">
 	limit?: number
