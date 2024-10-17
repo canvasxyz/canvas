@@ -1,6 +1,7 @@
 import { signalInvalidType, merge, update, JSONValue } from "@canvas-js/utils"
 
 import type {
+	IncludeExpression,
 	Model,
 	ModelValue,
 	PrimaryKeyValue,
@@ -22,6 +23,15 @@ export function updateModelValues(from: ModelValue | undefined, into: ModelValue
 
 export function mergeModelValues(from: ModelValue | undefined, into: ModelValue | undefined): ModelValue {
 	return merge(from, into) as ModelValue
+}
+
+export function* flattenKeys(obj: IncludeExpression): Generator<string> {
+	for (const key of Object.keys(obj)) {
+		yield key
+		for (const nestedKey of flattenKeys(obj[key])) {
+			yield nestedKey
+		}
+	}
 }
 
 export function isPrimitiveValue(
