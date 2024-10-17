@@ -505,9 +505,9 @@ export abstract class AbstractRuntime {
 				} else if (actionEffect.operation === "delete") {
 					value = null
 				} else if (actionEffect.operation === "merge") {
-					value = mergeModelValues(value || undefined, actionEffect.value as ModelValue)
+					value = mergeModelValues(actionEffect.value as ModelValue, value || undefined)
 				} else if (actionEffect.operation === "update") {
-					value = updateModelValues(value || undefined, actionEffect.value as ModelValue)
+					value = updateModelValues(actionEffect.value as ModelValue, value || undefined)
 				}
 			}
 		}
