@@ -273,13 +273,47 @@ testOnModelDB(
 				{
 					id: "game",
 					player: [
-						{ id: "alice", unit: [{ id: "unit1" }, { id: "unit2" }] },
-						{ id: "bob", unit: [{ id: "unit3" }, { id: "unit4" }, { id: "unit5" }] },
+						{
+							id: "alice",
+							game: "game",
+							city: ["london"],
+							unit: [
+								{ id: "unit1", player: "alice" },
+								{ id: "unit2", player: "alice" },
+							],
+						},
+						{
+							id: "bob",
+							game: "game",
+							city: ["paris"],
+							unit: [
+								{ id: "unit3", player: "bob" },
+								{ id: "unit4", player: "bob" },
+								{ id: "unit5", player: "bob" },
+							],
+						},
 					],
 					city: [
-						{ id: "london", unit: [{ id: "unit1" }, { id: "unit2" }] },
-						{ id: "paris", unit: [{ id: "unit3" }, { id: "unit4" }] },
+						{
+							id: "london",
+							player: {
+								id: "alice",
+								game: "game",
+								city: ["london"],
+								unit: ["unit1", "unit2"],
+							},
+						},
+						{
+							id: "paris",
+							player: {
+								id: "bob",
+								game: "game",
+								city: ["paris"],
+								unit: ["unit3", "unit4"],
+							},
+						},
 					],
+					unit: ["unit1", "unit2", "unit3", "unit4", "unit5"],
 				},
 			],
 		)
