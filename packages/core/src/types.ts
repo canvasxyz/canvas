@@ -26,8 +26,9 @@ export type ActionImplementationFunction<T extends Record<string, ModelValue>, A
 export type ModelAPI<M extends Record<string, ModelValue>> = {
 	get: <T extends keyof M & string>(model: T, key: string) => Awaitable<M[T] | null>
 	set: <T extends keyof M & string>(model: T, value: M[T]) => Awaitable<void>
-	merge: <T extends keyof M & string>(model: T, value: Partial<M[T]>) => Awaitable<void>
+	create: <T extends keyof M & string>(model: T, value: M[T]) => Awaitable<void>
 	update: <T extends keyof M & string>(model: T, value: Partial<M[T]>) => Awaitable<void>
+	merge: <T extends keyof M & string>(model: T, value: Partial<M[T]>) => Awaitable<void>
 	delete: <T extends keyof M & string>(model: T, key: string) => Awaitable<void>
 }
 

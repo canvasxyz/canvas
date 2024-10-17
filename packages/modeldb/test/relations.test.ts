@@ -160,3 +160,44 @@ testOnModelDB("query filtering on relation values", async (t, openDB) => {
 	t.deepEqual(await db.query("room", { where: { members: { neq: ["b", "c"] } } }), [])
 	t.deepEqual(await db.query("room", { where: { members: { neq: ["a", "c"] } } }), [])
 })
+
+testOnModelDB("select nested reference and relation values", async (t, openDB) => {
+	const db = await openDB(t, {
+		game: { id: "primary", player: "@player[]", city: "@city[]", unit: "@unit[]" },
+		player: { id: "primary", game: "@game", city: "@city[]", unit: "@unit[]" },
+		city: { id: "primary", player: "@player" },
+		unit: { id: "primary", player: "@player" },
+	})
+
+	await db.set("game", { id: "game", player: [], city: [], unit: [] })
+
+	await db.set("player", { id: "alice", game: "game", city: [], unit: [] })
+	await db.set("player", { id: "bob", game: "game", city: [], unit: [] })
+	await db.update("game", { id: "game", player: ["alice", "bob"], city: [], unit: [] })
+
+	await db.set("city", { id: "london", game: "game", player: "alice" })
+	await db.set("city", { id: "paris", game: "game", player: "bob" })
+	await db.update("game", { id: "game", city: ["london", "paris"] })
+	await db.update("player", { id: "alice", city: ["london"] })
+	await db.update("player", { id: "bob", city: ["paris"] })
+
+	await db.set("unit", { id: "unit1", game: "game", city: "london", player: "alice" })
+	await db.set("unit", { id: "unit2", game: "game", city: "london", player: "alice" })
+	await db.set("unit", { id: "unit3", game: "game", city: "paris", player: "bob" })
+	await db.set("unit", { id: "unit4", game: "game", city: "paris", player: "bob" })
+	await db.set("unit", { id: "unit5", game: "game", city: null, player: "bob" })
+	await db.update("player", { id: "alice", unit: ["unit1", "unit2"] })
+	await db.update("player", { id: "bob", unit: ["unit3", "unit4", "unit5"] })
+	await db.update("city", { id: "london", unit: ["unit1", "unit2"] })
+	await db.update("city", { id: "paris", unit: ["unit3", "unit4"] })
+	await db.update("game", { id: "game", unit: ["unit1", "unit2", "unit3", "unit4", "unit5"] })
+
+	t.deepEqual(await db.query("game", { select: { id: true, player: true, city: true, unit: true } }), [
+		{
+			id: 'game',
+			player: [ 'alice', 'bob' ],
+			city: [ 'london', 'paris' ],
+			unit: [ 'unit1', 'unit2', 'unit3', 'unit4', 'unit5' ]
+		}
+	])
+})

@@ -36,9 +36,9 @@ test("parse config", (t) => {
 				primaryKey: "id",
 				properties: [
 					{ name: "id", kind: "primary" },
-					{ name: "address", kind: "primitive", type: "string", optional: false },
-					{ name: "encryptionPublicKey", kind: "primitive", type: "bytes", optional: false },
-					{ name: "signingPublicKey", kind: "primitive", type: "bytes", optional: false },
+					{ name: "address", kind: "primitive", type: "string", nullable: false },
+					{ name: "encryptionPublicKey", kind: "primitive", type: "bytes", nullable: false },
+					{ name: "signingPublicKey", kind: "primitive", type: "bytes", nullable: false },
 				],
 			},
 			{
@@ -48,7 +48,7 @@ test("parse config", (t) => {
 				primaryKey: "id",
 				properties: [
 					{ name: "id", kind: "primary" },
-					{ name: "creator", kind: "reference", target: "user", optional: false },
+					{ name: "creator", kind: "reference", target: "user", nullable: false },
 					{ name: "members", kind: "relation", target: "user" },
 				],
 			},
@@ -59,10 +59,10 @@ test("parse config", (t) => {
 				primaryKey: "id",
 				properties: [
 					{ name: "id", kind: "primary" },
-					{ name: "room", kind: "reference", target: "room", optional: false },
-					{ name: "sender", kind: "reference", target: "user", optional: false },
-					{ name: "content", kind: "primitive", type: "string", optional: false },
-					{ name: "timestamp", kind: "primitive", type: "integer", optional: false },
+					{ name: "room", kind: "reference", target: "room", nullable: false },
+					{ name: "sender", kind: "reference", target: "user", nullable: false },
+					{ name: "content", kind: "primitive", type: "string", nullable: false },
+					{ name: "timestamp", kind: "primitive", type: "integer", nullable: false },
 				],
 			},
 		],

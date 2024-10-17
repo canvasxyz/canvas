@@ -49,9 +49,9 @@ function getPropertyColumnType(property: Property): string {
 		return "TEXT PRIMARY KEY"
 	} else if (property.kind === "primitive") {
 		const type = primitiveColumnTypes[property.type]
-		return property.optional ? type : `${type} NOT NULL`
+		return property.nullable ? type : `${type} NOT NULL`
 	} else if (property.kind === "reference") {
-		return property.optional ? "TEXT" : "TEXT NOT NULL"
+		return property.nullable ? "TEXT" : "TEXT NOT NULL"
 	} else if (property.kind === "relation") {
 		throw new Error("internal error - relation properties don't map to columns")
 	} else {
@@ -169,7 +169,7 @@ export class ModelAPI {
 
 			const rowRelations: Record<string, string[]> = {}
 			for (const relationName of Object.keys(this.#relations)) {
-				rowRelations[relationName] = relations[relationName][rowKey]
+				rowRelations[relationName] = relations[relationName][rowKey] ?? []
 			}
 
 			rowsByKey[rowKey] = {
@@ -536,7 +536,7 @@ export class ModelAPI {
 
 					const p = ++i
 					params[p - 1] = value instanceof Uint8Array ? Buffer.from(value) : value
-					if (property.optional) {
+					if (property.nullable) {
 						return [`("${name}" ISNULL OR "${name}" != $${p})`]
 					} else {
 						return [`"${name}" != $${p}`]

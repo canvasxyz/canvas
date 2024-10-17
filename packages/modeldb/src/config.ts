@@ -82,22 +82,22 @@ export function parseProperty(modelName: string, propertyName: string, propertyT
 
 	const primitiveResult = primitivePropertyPattern.exec(propertyType)
 	if (primitiveResult !== null) {
-		const [_, type, optional] = primitiveResult
+		const [_, type, nullable] = primitiveResult
 
-		// json field cannot be optional
-		if (type === "json" && optional === "?") {
+		// json field cannot be nullable
+		if (type === "json" && nullable === "?") {
 			throw new Error(
-				`error defining ${modelName}: field "${propertyName}" is invalid - json fields cannot be optional`,
+				`error defining ${modelName}: field "${propertyName}" is invalid - json fields cannot be nullable`,
 			)
 		}
 
-		return { name: propertyName, kind: "primitive", type: type as PrimitiveType, optional: optional === "?" }
+		return { name: propertyName, kind: "primitive", type: type as PrimitiveType, nullable: nullable === "?" }
 	}
 
 	const referenceResult = referencePropertyPattern.exec(propertyType)
 	if (referenceResult !== null) {
-		const [_, target, optional] = referenceResult
-		return { name: propertyName, kind: "reference", target, optional: optional === "?" }
+		const [_, target, nullable] = referenceResult
+		return { name: propertyName, kind: "reference", target, nullable: nullable === "?" }
 	}
 
 	const relationResult = relationPropertyPattern.exec(propertyType)
