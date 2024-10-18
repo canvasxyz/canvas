@@ -14,7 +14,7 @@ export const Messages: React.FC<MessagesProps> = ({ address }) => {
 	const { app } = useContext(AppContext)
 	const scrollboxRef = useRef<HTMLDivElement | null>(null)
 
-	const messages = useLiveQuery<Message>(app, "message", {
+	const messages = useLiveQuery(app, "message", {
 		orderBy: { timestamp: "asc" },
 	})
 

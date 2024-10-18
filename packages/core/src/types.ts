@@ -1,11 +1,13 @@
 import type { DeriveModelTypes, ModelSchema, ModelValue } from "@canvas-js/modeldb"
 import type { Awaitable } from "@canvas-js/interfaces"
+import type { JSValue } from "@canvas-js/utils"
 
-export type { ModelValue, ModelSchema, DeriveModelTypes } from "@canvas-js/modeldb"
+export type { ModelSchema, DeriveModelTypes } from "@canvas-js/modeldb"
 
 export type Contract<T extends ModelSchema = any> = {
 	models: T
 	actions: Record<string, ActionImplementation<DeriveModelTypes<T>>>
+	globals?: Record<string, ImportType>
 }
 
 export type ActionImplementation<T extends Record<string, ModelValue>, Args = any> =
@@ -21,7 +23,7 @@ export type ActionImplementationFunction<T extends Record<string, ModelValue>, A
 	db: ModelAPI<T>,
 	args: Args,
 	context: ActionContext,
-) => Awaitable<void>
+) => Awaitable<any>
 
 export type ModelAPI<M extends Record<string, ModelValue>> = {
 	get: <T extends keyof M & string>(model: T, key: string) => Awaitable<M[T] | null>
@@ -31,6 +33,9 @@ export type ModelAPI<M extends Record<string, ModelValue>> = {
 	merge: <T extends keyof M & string>(model: T, value: Partial<M[T]>) => Awaitable<void>
 	delete: <T extends keyof M & string>(model: T, key: string) => Awaitable<void>
 }
+
+export type ImportType = JSValue | Function
+export type CapturedImportType = { value: Uint8Array } | { fn: string }
 
 export type ActionContext = {
 	id: string
