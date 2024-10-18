@@ -12,8 +12,8 @@ import {
 } from "@canvas-js/modeldb"
 
 import { SqlStorage } from "@cloudflare/workers-types"
-
-import { ModelAPI } from "./api.js"
+import { ModelAPI } from "@canvas-js/modeldb/utils"
+import { SqliteDB } from "./SqliteDB.js"
 
 export interface ModelDBOptions {
 	db: SqlStorage
@@ -38,9 +38,10 @@ export class ModelDB extends AbstractModelDB {
 	constructor({ db, models }: ModelDBOptions) {
 		super(parseConfig(models))
 		this.db = db
+		const wrappedDb = new SqliteDB(db)
 
 		for (const model of Object.values(this.models)) {
-			this.#models[model.name] = new ModelAPI(this.db, model)
+			this.#models[model.name] = new ModelAPI(wrappedDb, model)
 		}
 	}
 
@@ -114,7 +115,7 @@ export class ModelDB extends AbstractModelDB {
 	): AsyncIterable<T> {
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
-		yield* api.iterate(query) as Iterable<T>
+		yield* api.iterate(query) as AsyncIterable<T>
 	}
 
 	public async count(modelName: string, where?: WhereCondition): Promise<number> {
