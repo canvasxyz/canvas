@@ -8,6 +8,7 @@ import {
 	ModelSchema,
 	QueryParams,
 	WhereCondition,
+	ModelValueWithIncludes,
 } from "@canvas-js/modeldb"
 
 import { SqlStorage } from "@cloudflare/workers-types"
@@ -23,7 +24,7 @@ type Subscription = {
 	model: string
 	query: QueryParams
 	filter: (effect: Effect) => boolean
-	callback: (results: ModelValue[]) => Awaitable<void>
+	callback: (results: ModelValue[] | ModelValueWithIncludes[]) => Awaitable<void>
 }
 
 export class ModelDB extends AbstractModelDB {
@@ -140,7 +141,7 @@ export class ModelDB extends AbstractModelDB {
 	public subscribe(
 		modelName: string,
 		query: QueryParams,
-		callback: (results: ModelValue[]) => Awaitable<void>,
+		callback: (results: ModelValue[] | ModelValueWithIncludes[]) => Awaitable<void>,
 	): { id: number; results: Promise<ModelValue[]> } {
 		const model = this.models[modelName]
 		assert(model !== undefined, `model ${modelName} not found`)

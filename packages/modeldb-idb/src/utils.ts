@@ -16,12 +16,3 @@ dbs.forEach(db => { window.indexedDB.deleteDatabase(db.name) })`)
 		}
 	}
 }
-
-export function* flattenKeys(obj: IncludeExpression): Generator<string> {
-	for (const key of Object.keys(obj)) {
-		yield key;
-		for (const nestedKey of flattenKeys(obj[key])) {
-			yield nestedKey;
-		}
-	}
-}
