@@ -143,7 +143,11 @@ export class ModelAPI {
 		return results
 	}
 
-	async queryWithInclude(txn: IDBPTransaction<any, any, IDBTransactionMode>, models: Record<string, ModelAPI>, query: QueryParams): Promise<ModelValueWithIncludes[]> {
+	async queryWithInclude(
+		txn: IDBPTransaction<any, any, IDBTransactionMode>,
+		models: Record<string, ModelAPI>,
+		query: QueryParams,
+	): Promise<ModelValueWithIncludes[]> {
 		const cache: Record<string, Record<string, ModelValue>> = {} // { [table]: { [id]: ModelValue } }
 
 		const { include, ...rootQuery } = query
@@ -167,7 +171,10 @@ export class ModelAPI {
 					if (!Array.isArray(includeValue)) {
 						assert(typeof includeValue === "string", "include should only be used with references or relations")
 						if (cache[includeKey][includeValue]) continue
-						const [result] = await models[includeKey].query(txn, { where: { id: includeValue } })
+
+						const [result] = await models[includeKey].query(txn, {
+							where: { [models[includeKey].model.primaryKey]: includeValue },
+						})
 						if (result === undefined) throw new Error("expected a reference to be populated")
 						cache[includeKey][includeValue] = { ...result }
 						if (include[includeKey]) {
@@ -179,7 +186,9 @@ export class ModelAPI {
 					for (const item of includeValue) {
 						assert(typeof item === "string", "include should only be used with references or relations")
 						if (cache[includeKey][item]) continue
-						const [result] = await models[includeKey].query(txn, { where: { id: item } })
+						const [result] = await models[includeKey].query(txn, {
+							where: { [models[includeKey].model.primaryKey]: item },
+						})
 						if (result === undefined) throw new Error("expected a relation to be populated")
 						cache[includeKey][item] = { ...result }
 						if (include[includeKey]) {
