@@ -144,8 +144,8 @@ export class ContractRuntime extends AbstractRuntime {
 					assert(typeof key === "string", "expected value[primaryKey] to be a string")
 					assert(primaryKey !== null && primaryKey !== undefined, `db.set(${model}): ${primaryKey} primary key`)
 
-					this.#context.modelActionEffects[model][key] ||= []
-					this.#context.modelActionEffects[model][key].push({
+					this.#context.temporaryEffects[model][key] ||= []
+					this.#context.temporaryEffects[model][key].push({
 						operation: "set",
 						value,
 					})
@@ -160,8 +160,8 @@ export class ContractRuntime extends AbstractRuntime {
 					assert(primaryKey in value, `db.update(${model}): missing primary key ${primaryKey}`)
 					assert(primaryKey !== null && primaryKey !== undefined, `db.set(${model}): ${primaryKey} primary key`)
 					const key = (value as ModelValue)[primaryKey] as string
-					this.#context.modelActionEffects[model][key] ||= []
-					this.#context.modelActionEffects[model][key].push({
+					this.#context.temporaryEffects[model][key] ||= []
+					this.#context.temporaryEffects[model][key].push({
 						operation: "create",
 						value,
 					})
@@ -175,8 +175,8 @@ export class ContractRuntime extends AbstractRuntime {
 					const key = value[primaryKey] as string
 					assert(typeof key === "string", "expected value[primaryKey] to be a string")
 
-					this.#context.modelActionEffects[model][key] ||= []
-					this.#context.modelActionEffects[model][key].push({
+					this.#context.temporaryEffects[model][key] ||= []
+					this.#context.temporaryEffects[model][key].push({
 						operation: "update",
 						value: value as any,
 					})
@@ -190,8 +190,8 @@ export class ContractRuntime extends AbstractRuntime {
 					const key = value[primaryKey] as string
 					assert(typeof key === "string", "expected value[primaryKey] to be a string")
 
-					this.#context.modelActionEffects[model][key] ||= []
-					this.#context.modelActionEffects[model][key].push({
+					this.#context.temporaryEffects[model][key] ||= []
+					this.#context.temporaryEffects[model][key].push({
 						operation: "merge",
 						value: value as any,
 					})
@@ -202,8 +202,8 @@ export class ContractRuntime extends AbstractRuntime {
 					const model = vm.context.getString(modelHandle)
 					assert(this.db.models[model] !== undefined, "model not found")
 					const key = vm.context.getString(keyHandle)
-					this.#context.modelActionEffects[model][key] ||= []
-					this.#context.modelActionEffects[model][key].push({
+					this.#context.temporaryEffects[model][key] ||= []
+					this.#context.temporaryEffects[model][key].push({
 						operation: "delete",
 					})
 				}),

@@ -76,8 +76,8 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 				assert(primaryKey !== null && primaryKey !== undefined, `db.set(${model}): ${primaryKey} primary key`)
 				const key = (value as ModelValue)[primaryKey] as string
 
-				this.#context.modelActionEffects[model][key] ||= []
-				this.#context.modelActionEffects[model][key].push({
+				this.#context.temporaryEffects[model][key] ||= []
+				this.#context.temporaryEffects[model][key].push({
 					operation: "set",
 					value,
 				})
@@ -89,8 +89,8 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 				assert(primaryKey in value, `db.update(${model}): missing primary key ${primaryKey}`)
 				assert(primaryKey !== null && primaryKey !== undefined, `db.set(${model}): ${primaryKey} primary key`)
 				const key = (value as ModelValue)[primaryKey] as string
-				this.#context.modelActionEffects[model][key] ||= []
-				this.#context.modelActionEffects[model][key].push({
+				this.#context.temporaryEffects[model][key] ||= []
+				this.#context.temporaryEffects[model][key].push({
 					operation: "create",
 					value,
 				})
@@ -102,8 +102,8 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 				assert(primaryKey !== null && primaryKey !== undefined, `db.set(${model}): ${primaryKey} primary key`)
 
 				const key = (value as ModelValue)[primaryKey] as string
-				this.#context.modelActionEffects[model][key] ||= []
-				this.#context.modelActionEffects[model][key].push({
+				this.#context.temporaryEffects[model][key] ||= []
+				this.#context.temporaryEffects[model][key].push({
 					operation: "update",
 					value: value as any,
 				})
@@ -114,16 +114,16 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 				assert(primaryKey in value, `db.merge(${model}): missing primary key ${primaryKey}`)
 				assert(primaryKey !== null && primaryKey !== undefined, `db.set(${model}): ${primaryKey} primary key`)
 				const key = (value as ModelValue)[primaryKey] as string
-				this.#context.modelActionEffects[model][key] ||= []
-				this.#context.modelActionEffects[model][key].push({
+				this.#context.temporaryEffects[model][key] ||= []
+				this.#context.temporaryEffects[model][key].push({
 					operation: "merge",
 					value: value as any,
 				})
 			},
 			delete: async (model: string, key: string) => {
 				assert(this.#context !== null, "expected this.#context !== null")
-				this.#context.modelActionEffects[model][key] ||= []
-				this.#context.modelActionEffects[model][key].push({
+				this.#context.temporaryEffects[model][key] ||= []
+				this.#context.temporaryEffects[model][key].push({
 					operation: "delete",
 				})
 			},

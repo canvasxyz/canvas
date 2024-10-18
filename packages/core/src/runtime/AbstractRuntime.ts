@@ -31,24 +31,28 @@ export type ExecutionContext = {
 	signature: Signature
 	message: Message<Action>
 	address: string
-	modelActionEffects: Record<string, Record<string, ActionEffect[]>>
+	temporaryEffects: Record<string, Record<string, TemporaryEffect[]>>
 	branch: number
 }
 
 export type EffectRecord = { key: string; value: Uint8Array | null; branch: number; clock: number }
 
-type CreateSetActionEffect = {
+// Applicable to all LWW types, JSON CRDTs
+type CreateSetTemporaryEffect = {
 	operation: "create" | "set"
 	value: ModelValue
 }
-type MergeUpdateActionEffect = {
+// Applicable to JSON CRDTs
+type MergeUpdateTemporaryEffect = {
 	operation: "merge" | "update"
 	value: Partial<ModelValue>
 }
-type DeleteActionEffect = {
+// Applicable to all LWW types, JSON CRDTs (following an Add/Update-wins policy)
+type DeleteTemporaryEffect = {
 	operation: "delete"
 }
-export type ActionEffect = CreateSetActionEffect | MergeUpdateActionEffect | DeleteActionEffect
+
+export type TemporaryEffect = CreateSetTemporaryEffect | MergeUpdateTemporaryEffect | DeleteTemporaryEffect
 
 export type SessionRecord = {
 	message_id: string
@@ -264,11 +268,9 @@ export abstract class AbstractRuntime {
 			throw new Error(`missing session ${signature.publicKey} for ${did}`)
 		}
 
-		// const modelActionEffects: Record<string, Record<string, ActionEffect[]>> =
-
 		const executionContext = {
 			messageLog,
-			modelActionEffects: mapValues(this.db.models, () => ({})) as Record<string, Record<string, ActionEffect[]>>,
+			temporaryEffects: mapValues(this.db.models, () => ({})) as Record<string, Record<string, TemporaryEffect[]>>,
 			id,
 			signature,
 			message,
@@ -280,7 +282,7 @@ export abstract class AbstractRuntime {
 		const actionRecord: ActionRecord = { message_id: id, did, name, timestamp: context.timestamp }
 		const effects: Effect[] = [{ operation: "set", model: "$actions", value: actionRecord }]
 
-		for (const [model, entries] of Object.entries(executionContext.modelActionEffects)) {
+		for (const [model, entries] of Object.entries(executionContext.temporaryEffects)) {
 			for (const key of Object.keys(entries)) {
 				const value = await this.getModelValue(executionContext, model, key)
 
@@ -498,8 +500,8 @@ export abstract class AbstractRuntime {
 		let value = await this.getModelValueFromDB(context, model, key)
 
 		// if there exist locally unapplied effects from this action, then apply them to the value
-		if (context.modelActionEffects[model][key] !== undefined) {
-			for (const actionEffect of context.modelActionEffects[model][key]) {
+		if (context.temporaryEffects[model][key] !== undefined) {
+			for (const actionEffect of context.temporaryEffects[model][key]) {
 				if (actionEffect.operation === "create" || actionEffect.operation === "set") {
 					value = actionEffect.value as T
 				} else if (actionEffect.operation === "delete") {
