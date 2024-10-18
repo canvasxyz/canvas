@@ -11,6 +11,7 @@ import {
 	QueryParams,
 	WhereCondition,
 	parseConfig,
+	getModelsFromInclude,
 } from "@canvas-js/modeldb"
 
 import { ModelAPI } from "./api.js"
@@ -57,7 +58,10 @@ export class ModelDB extends AbstractModelDB {
 
 	readonly #models: Record<string, ModelAPI> = {}
 
-	private constructor(public readonly db: IDBPDatabase, config: Config) {
+	private constructor(
+		public readonly db: IDBPDatabase,
+		config: Config,
+	) {
 		super(config)
 
 		for (const model of config.models) {
@@ -141,9 +145,34 @@ export class ModelDB extends AbstractModelDB {
 	}
 
 	public async query<T extends ModelValue = ModelValue>(modelName: string, query: QueryParams = {}): Promise<T[]> {
+		if (query.include) {
+			return this.queryWithInclude<T>(modelName, query)
+		}
+
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
 		const result = await this.read((txn) => api.query(txn, query), [api.storeName])
+		return result as T[]
+	}
+
+	private async queryWithInclude<T extends ModelValue = ModelValue>(
+		modelName: string,
+		query: QueryParams = {},
+	): Promise<T[]> {
+		assert(query.include)
+		const api = this.#models[modelName]
+		const modelNames = Array.from(
+			new Set([modelName, ...getModelsFromInclude(this.config.models, modelName, query.include)]),
+		)
+		for (const modelName of modelNames) {
+			assert(this.#models[modelName] !== undefined, `model ${modelName} not found`)
+		}
+
+		const result = await this.read(
+			async (txn) => api.queryWithInclude(txn, this.#models, query),
+			modelNames.map((m: string) => this.#models[m].storeName),
+		)
+
 		return result as T[]
 	}
 
@@ -181,7 +210,9 @@ export class ModelDB extends AbstractModelDB {
 					assert(api !== undefined, `model ${model} not found`)
 					if (effects.some((effect) => filter(effect))) {
 						try {
-							const results = await api.query(txn, query)
+							const results = query.include
+								? await api.queryWithInclude(txn, this.#models, query)
+								: await api.query(txn, query)
 							await callback(results)
 						} catch (err) {
 							this.log.error(err)

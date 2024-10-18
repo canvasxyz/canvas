@@ -1,6 +1,6 @@
 export default {
 	watchMode: {
-		ignoreChanges: [".wrangler/**/*"],
+		ignoreChanges: ["test/server/vite.config.js*", ".wrangler/**/*"],
 	},
 	files: ["./test/*.test.ts"],
 	concurrency: 1,
