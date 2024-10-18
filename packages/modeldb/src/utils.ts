@@ -1,8 +1,9 @@
-import { signalInvalidType, merge, update, JSONValue } from "@canvas-js/utils"
+import { signalInvalidType, merge, update, JSONValue, assert } from "@canvas-js/utils"
 
 import type {
 	IncludeExpression,
 	Model,
+	ModelSchema,
 	ModelValue,
 	PrimaryKeyValue,
 	PrimitiveValue,
@@ -25,11 +26,22 @@ export function mergeModelValues(from: ModelValue | undefined, into: ModelValue 
 	return merge(from, into) as ModelValue
 }
 
-export function* flattenKeys(obj: IncludeExpression): Generator<string> {
+export function* getModelsFromInclude(models: Model[], modelName: string, obj: IncludeExpression): Generator<string> {
+	const model = models.find((model) => model.name === modelName)
+	// this should never happen because modelName is taken from the outside ModelAPI
+	assert(model !== undefined, `include expression used a nonexistent model`)
+
 	for (const key of Object.keys(obj)) {
-		yield key
-		for (const nestedKey of flattenKeys(obj[key])) {
-			yield nestedKey
+		const prop = model.properties.find((prop) => prop.name === key)
+		assert(
+			prop && (prop.kind === "relation" || prop.kind === "reference"),
+			`include expression referenced ${modelName}.${key}, which was not a valid relation or reference`,
+		)
+		yield prop.target
+
+		// recursively found models
+		for (const model of getModelsFromInclude(models, prop.target, obj[key])) {
+			yield model
 		}
 	}
 }

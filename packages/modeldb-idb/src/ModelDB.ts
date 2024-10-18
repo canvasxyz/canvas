@@ -11,7 +11,7 @@ import {
 	QueryParams,
 	WhereCondition,
 	parseConfig,
-	flattenKeys,
+	getModelsFromInclude,
 } from "@canvas-js/modeldb"
 
 import { ModelAPI } from "./api.js"
@@ -161,13 +161,16 @@ export class ModelDB extends AbstractModelDB {
 	): Promise<T[]> {
 		assert(query.include)
 		const api = this.#models[modelName]
-		const modelNames = Array.from(new Set([...flattenKeys({ [modelName]: query.include })]))
+		const modelNames = Array.from(
+			new Set([modelName, ...getModelsFromInclude(this.config.models, modelName, query.include)]),
+		)
 		for (const modelName of modelNames) {
 			assert(this.#models[modelName] !== undefined, `model ${modelName} not found`)
 		}
 
 		const result = await this.read(
-			async (txn) => api.queryWithInclude(txn, this.#models, query), modelNames.map((m: string) => this.#models[m].storeName),
+			async (txn) => api.queryWithInclude(txn, this.#models, query),
+			modelNames.map((m: string) => this.#models[m].storeName),
 		)
 
 		return result as T[]
@@ -207,7 +210,9 @@ export class ModelDB extends AbstractModelDB {
 					assert(api !== undefined, `model ${model} not found`)
 					if (effects.some((effect) => filter(effect))) {
 						try {
-							const results = query.include ? await api.queryWithInclude(txn, this.#models, query) : await api.query(txn, query)
+							const results = query.include
+								? await api.queryWithInclude(txn, this.#models, query)
+								: await api.query(txn, query)
 							await callback(results)
 						} catch (err) {
 							this.log.error(err)

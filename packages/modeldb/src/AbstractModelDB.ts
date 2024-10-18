@@ -4,7 +4,7 @@ import { assert } from "@canvas-js/utils"
 
 import { Config, ModelValue, Effect, Model, QueryParams, WhereCondition, ModelValueWithIncludes } from "./types.js"
 import { getFilter } from "./query.js"
-import { Awaitable, flattenKeys, mergeModelValues, updateModelValues } from "./utils.js"
+import { Awaitable, getModelsFromInclude, mergeModelValues, updateModelValues } from "./utils.js"
 
 type Subscription = {
 	model: string
@@ -108,7 +108,9 @@ export abstract class AbstractModelDB {
 	protected getEffectFilter(model: Model, query: QueryParams): (effect: Effect) => boolean {
 		const filter = getFilter(model, query.where)
 
-		const includeModels = query.include ? Array.from(flattenKeys(query.include)) : []
+		const includeModels = query.include
+			? Array.from(getModelsFromInclude(this.config.models, model.name, query.include))
+			: []
 
 		return (effect) => {
 			// TODO: we should memoize the set of joined models returned the last time

@@ -75,7 +75,7 @@ testOnModelDB(
 	"subscriptions (with include query param)",
 	async (t, openDB) => {
 		const db = await openDB(t, {
-			game: { gameId: "primary", level: "@level[]", player: "@player[]" },
+			game: { gameId: "primary", levels: "@level[]", player: "@player[]" },
 			level: { levelId: "primary", item: "@item[]" },
 			item: { itemId: "primary", location: "json", content: "string", player: "@player" },
 			player: { id: "primary" },
@@ -86,7 +86,7 @@ testOnModelDB(
 			"game",
 			{
 				include: {
-					level: {
+					levels: {
 						item: {
 							player: {},
 						},
@@ -112,7 +112,7 @@ testOnModelDB(
 		await db.set("level", { levelId: "level-01", item: ["item-02"] })
 		await db.set("level", { levelId: "level-02", item: ["item-01", "item-03"] })
 
-		await db.set("game", { gameId: "0000-01", level: ["level-01", "level-02"], player: ["alice", "bob"] })
+		await db.set("game", { gameId: "0000-01", levels: ["level-01", "level-02"], player: ["alice", "bob"] })
 
 		await db.update("item", { itemId: "item-02", content: "tode" })
 
@@ -132,7 +132,7 @@ testOnModelDB(
 				results: [
 					{
 						gameId: "0000-01",
-						level: [
+						levels: [
 							{
 								levelId: "level-01",
 								item: [{ itemId: "item-02", location: {}, content: "frog", player: { id: "bob" } }],
@@ -153,7 +153,7 @@ testOnModelDB(
 				results: [
 					{
 						gameId: "0000-01",
-						level: [
+						levels: [
 							{
 								levelId: "level-01",
 								item: [{ itemId: "item-02", location: {}, content: "tode", player: { id: "bob" } }],
