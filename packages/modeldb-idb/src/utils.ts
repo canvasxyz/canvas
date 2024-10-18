@@ -1,3 +1,4 @@
+import { IncludeExpression } from "@canvas-js/modeldb"
 import type { IDBPDatabase } from "idb"
 
 export const getIndexName = (index: string[]) => index.join("/")

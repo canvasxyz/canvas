@@ -3,6 +3,7 @@ import {
 	Effect,
 	ModelSchema,
 	ModelValue,
+	ModelValueWithIncludes,
 	parseConfig,
 	QueryParams,
 	WhereCondition,
@@ -19,7 +20,7 @@ type Subscription = {
 	model: string
 	query: QueryParams
 	filter: (effect: Effect) => boolean
-	callback: (results: ModelValue[]) => Awaitable<void>
+	callback: (results: ModelValue[] | ModelValueWithIncludes[]) => Awaitable<void>
 }
 
 // A mock ModelDB that proxies requests to a Durable Objects via a ModelDBProxyWorker.
@@ -141,7 +142,7 @@ export class ModelDBProxy extends AbstractModelDB {
 	subscribe(
 		modelName: string,
 		query: QueryParams,
-		callback: (results: ModelValue[]) => Awaitable<void>,
+		callback: (results: ModelValue[] | ModelValueWithIncludes[]) => Awaitable<void>,
 	): { id: number; results: Promise<ModelValue[]> } {
 		const model = this.models[modelName]
 		assert(model !== undefined, `model ${modelName} not found`)

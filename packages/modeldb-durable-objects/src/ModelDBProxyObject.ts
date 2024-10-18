@@ -1,4 +1,4 @@
-import { ModelSchema, ModelValue, QueryParams } from "@canvas-js/modeldb"
+import { ModelSchema, ModelValue, ModelValueWithIncludes, QueryParams } from "@canvas-js/modeldb"
 import * as json from "@ipld/dag-json"
 
 import { Env } from "./ModelDBProxyWorker.js"
@@ -10,7 +10,7 @@ export class ModelDBProxyObject {
 	env: Env
 	db?: ModelDB
 
-	subscriptionResults: Array<{ subscriptionId: number; results: ModelValue[] }>
+	subscriptionResults: Array<{ subscriptionId: number; results: ModelValue[] | ModelValueWithIncludes[] }>
 
 	constructor(state: DurableObjectState, env: Env) {
 		this.state = state
@@ -53,7 +53,7 @@ export class ModelDBProxyObject {
 					query: QueryParams,
 					subscriptionId: number,
 				]
-				this.db.subscribe(modelName, query, (results: ModelValue[]) => {
+				this.db.subscribe(modelName, query, (results: ModelValue[] | ModelValueWithIncludes[]) => {
 					this.subscriptionResults.push({ subscriptionId, results })
 				})
 				return new Response(json.stringify(this.subscriptionResults))
