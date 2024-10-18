@@ -135,13 +135,13 @@ testOnModelDB(
 						level: [
 							{
 								levelId: "level-01",
-								item: [{ itemId: "item-02", location: {}, content: "frog", player: "bob" }],
+								item: [{ itemId: "item-02", location: {}, content: "frog", player: { id: "bob" } }],
 							},
 							{
 								levelId: "level-02",
 								item: [
-									{ itemId: "item-01", location: {}, content: "frog", player: "alice" },
-									{ itemId: "item-03", location: {}, content: "tode", player: "bob" },
+									{ itemId: "item-01", location: {}, content: "frog", player: { id: "alice" } },
+									{ itemId: "item-03", location: {}, content: "tode", player: { id: "bob" } },
 								],
 							},
 						],
@@ -156,13 +156,13 @@ testOnModelDB(
 						level: [
 							{
 								levelId: "level-01",
-								item: [{ itemId: "item-02", location: {}, content: "tode", player: "bob" }],
+								item: [{ itemId: "item-02", location: {}, content: "tode", player: { id: "bob" } }],
 							},
 							{
 								levelId: "level-02",
 								item: [
-									{ itemId: "item-01", location: {}, content: "frog", player: "alice" },
-									{ itemId: "item-03", location: {}, content: "tode", player: "bob" },
+									{ itemId: "item-01", location: {}, content: "frog", player: { id: "alice" } },
+									{ itemId: "item-03", location: {}, content: "tode", player: { id: "bob" } },
 								],
 							},
 						],
