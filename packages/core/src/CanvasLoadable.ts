@@ -33,7 +33,9 @@ export class CanvasLoadable<M extends ModelSchema = any, T extends Contract<M> =
 
 		return new Proxy(this, {
 			get: (target, prop) => {
-				if (prop === "initPromise" || prop === "ready") {
+				if (prop === "isProxy") {
+					return true
+				} else if (prop === "initPromise" || prop === "ready") {
 					return target[prop]
 				} else if (prop === "actions") {
 					return new Proxy(this, {

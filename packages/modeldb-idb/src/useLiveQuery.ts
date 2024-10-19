@@ -57,7 +57,7 @@ export function useLiveQuery<T extends ModelValue = ModelValue>(
 		modelRef.current = modelName
 		queryRef.current = query
 		subscriptionRef.current = id
-	}, [db, JSON.stringify(query)])
+	}, [db?.isProxy ? null : db, JSON.stringify(query)])
 
 	return results
 }
