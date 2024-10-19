@@ -223,9 +223,11 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 	public async append<T extends Payload = Payload>(
 		payload: T,
 		{ signer = this.signer }: { signer?: Signer<Payload> } = {},
-	): Promise<SignedMessage<T>> {
+	): Promise<SignedMessage<T> & { result: any }> {
 		let root: Node | null = null
 		let heads: string[] | null = null
+		let result: any = null
+
 		const signedMessage = await this.tree.write(async (txn) => {
 			const [clock, parents] = await this.getClock()
 
@@ -241,10 +243,11 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 			const signedMessage = this.encode(signature, message)
 			this.log("appending message %s at clock %d with parents %o", signedMessage.id, clock, parents)
 
-			const result = await this.apply(txn, signedMessage)
+			const applyResult = await this.apply(txn, signedMessage)
 
-			root = result.root
-			heads = result.heads
+			root = applyResult.root
+			heads = applyResult.heads
+			result = applyResult.result
 
 			return signedMessage
 		})
@@ -252,14 +255,14 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		assert(root !== null && heads !== null, "failed to commit transaction")
 		this.dispatchEvent(new CustomEvent("commit", { detail: { root, heads } }))
 
-		return signedMessage
+		return { ...signedMessage, result }
 	}
 
 	/**
 	 * Insert an existing signed message into the log (ie received via HTTP API).
 	 * If any of the parents are not present, throw an error.
 	 */
-	public async insert(signedMessage: SignedMessage<Payload>): Promise<{ id: string }> {
+	public async insert(signedMessage: SignedMessage<Payload>): Promise<{ id: string; result: any }> {
 		const { message, signature } = signedMessage
 
 		assert(message.topic === this.topic, `expected message.topic === this.topic`)
@@ -298,13 +301,13 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 			this.dispatchEvent(new CustomEvent("commit", { detail: result }))
 		}
 
-		return { id }
+		return { id, result }
 	}
 
 	private async apply(
 		txn: ReadWriteTransaction,
 		signedMessage: SignedMessage<Payload>,
-	): Promise<{ root: Node; heads: string[] }> {
+	): Promise<{ root: Node; heads: string[]; result: any }> {
 		const { id, signature, message, key, value } = signedMessage
 		this.log.trace("applying %s %O", id, message)
 
@@ -319,7 +322,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 		const branch = await this.getBranch(id, parentMessageRecords)
 		signedMessage.branch = branch
-		await this.#apply.apply(this, [signedMessage])
+		const result = await this.#apply.apply(this, [signedMessage])
 
 		const hash = toString(hashEntry(key, value), "hex")
 
@@ -357,7 +360,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		this.dispatchEvent(new CustomEvent("message", { detail: signedMessage }))
 
 		const root = txn.getRoot()
-		return { root, heads }
+		return { root, heads, result }
 	}
 
 	private async newBranch() {

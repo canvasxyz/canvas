@@ -214,6 +214,7 @@ test("create an app with an inline contract", async (t) => {
 				async createPost(db, { content }: { content: string }, { id, did, timestamp }) {
 					const postId = [did, id].join("/")
 					await db.set("posts", { id: postId, content, timestamp, address: did })
+					return content
 				},
 			},
 		},
@@ -222,7 +223,7 @@ test("create an app with an inline contract", async (t) => {
 
 	t.teardown(() => app.stop())
 
-	const { id, message } = await app.actions.createPost({ content: "hello world" })
+	const { id, message, result } = await app.actions.createPost({ content: "hello world" })
 
 	t.log(`applied action ${id}`)
 
@@ -230,6 +231,7 @@ test("create an app with an inline contract", async (t) => {
 	const value = await app.db.get("posts", postId)
 	t.is(value?.content, "hello world")
 	t.is(value?.address, `did:pkh:eip155:1:${wallet.address}`)
+	t.is(result, "hello world")
 })
 
 test("merge and update into a value set by another action", async (t) => {
