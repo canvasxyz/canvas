@@ -1,5 +1,6 @@
 import { TypeTransformerFunction, create } from "@ipld/schema/typed.js"
 import { fromDSL } from "@ipld/schema/from-dsl.js"
+import pDefer, { DeferredPromise } from "p-defer"
 
 import type { SignerCache } from "@canvas-js/interfaces"
 import {
@@ -62,6 +63,25 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 	#context: ExecutionContext | null = null
 	readonly #db: ModelAPI<DeriveModelTypes<M>>
 
+	#lock: DeferredPromise<void> | null = null
+	#concurrency: number = 0
+
+	private async acquireLock() {
+		while (this.#lock) {
+			await this.#lock.promise
+		}
+		this.#lock = pDefer<void>()
+		this.#concurrency++
+	}
+
+	private releaseLock() {
+		if (this.#lock) {
+			this.#lock.resolve()
+			this.#lock = null
+			this.#concurrency--
+		}
+	}
+
 	constructor(
 		public readonly topic: string,
 		public readonly signers: SignerCache,
@@ -75,53 +95,84 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 		super()
 
 		this.#db = {
-			get: async (model: string, key: string) => {
-				assert(this.#context !== null, "expected this.#context !== null")
-				return await this.getModelValue(this.#context, model, key)
+			get: async <T extends keyof DeriveModelTypes<M> & string>(model: T, key: string) => {
+				await this.acquireLock()
+				try {
+					assert(this.#context !== null, "expected this.#context !== null")
+					const result = await this.getModelValue(this.#context, model, key)
+					return result as DeriveModelTypes<M>[T]
+				} finally {
+					this.releaseLock()
+				}
 			},
-			set: (model, value) => {
-				assert(this.#context !== null, "expected this.#context !== null")
-				validateModelValue(this.db.models[model], value)
-				const { primaryKey } = this.db.models[model]
-				assert(primaryKey in value, `db.set(${model}): missing primary key ${primaryKey}`)
-				assert(primaryKey !== null && primaryKey !== undefined, `db.set(${model}): ${primaryKey} primary key`)
-				const key = (value as ModelValue)[primaryKey] as string
-				this.#context.modelEntries[model][key] = value
+			set: async (model, value) => {
+				await this.acquireLock()
+				try {
+					assert(this.#context !== null, "expected this.#context !== null")
+					validateModelValue(this.db.models[model], value)
+					const { primaryKey } = this.db.models[model]
+					assert(primaryKey in value, `db.set(${model}): missing primary key ${primaryKey}`)
+					assert(primaryKey !== null && primaryKey !== undefined, `db.set(${model}): ${primaryKey} primary key`)
+					const key = (value as ModelValue)[primaryKey] as string
+					this.#context.modelEntries[model][key] = value
+				} finally {
+					this.releaseLock()
+				}
 			},
-			create: (model, value) => {
-				assert(this.#context !== null, "expected this.#context !== null")
-				validateModelValue(this.db.models[model], value)
-				const { primaryKey } = this.db.models[model]
-				assert(primaryKey in value, `db.update(${model}): missing primary key ${primaryKey}`)
-				assert(primaryKey !== null && primaryKey !== undefined, `db.set(${model}): ${primaryKey} primary key`)
-				const key = (value as ModelValue)[primaryKey] as string
-				this.#context.modelEntries[model][key] = value
+			create: async (model, value) => {
+				await this.acquireLock()
+				try {
+					assert(this.#context !== null, "expected this.#context !== null")
+					validateModelValue(this.db.models[model], value)
+					const { primaryKey } = this.db.models[model]
+					assert(primaryKey in value, `db.update(${model}): missing primary key ${primaryKey}`)
+					assert(primaryKey !== null && primaryKey !== undefined, `db.set(${model}): ${primaryKey} primary key`)
+					const key = (value as ModelValue)[primaryKey] as string
+					this.#context.modelEntries[model][key] = value
+				} finally {
+					this.releaseLock()
+				}
 			},
 			update: async (model, value) => {
-				assert(this.#context !== null, "expected this.#context !== null")
-				const { primaryKey } = this.db.models[model]
-				assert(primaryKey in value, `db.update(${model}): missing primary key ${primaryKey}`)
-				assert(primaryKey !== null && primaryKey !== undefined, `db.set(${model}): ${primaryKey} primary key`)
-				const key = (value as ModelValue)[primaryKey] as string
-				const modelValue = await this.getModelValue(this.#context, model, key)
-				const mergedValue = updateModelValues(value as ModelValue, modelValue ?? {})
-				validateModelValue(this.db.models[model], mergedValue)
-				this.#context.modelEntries[model][key] = mergedValue
+				await this.acquireLock()
+				try {
+					assert(this.#context !== null, "expected this.#context !== null")
+					const { primaryKey } = this.db.models[model]
+					assert(primaryKey in value, `db.update(${model}): missing primary key ${primaryKey}`)
+					assert(primaryKey !== null && primaryKey !== undefined, `db.set(${model}): ${primaryKey} primary key`)
+					const key = (value as ModelValue)[primaryKey] as string
+					const modelValue = await this.getModelValue(this.#context, model, key)
+					const mergedValue = updateModelValues(value as ModelValue, modelValue ?? {})
+					validateModelValue(this.db.models[model], mergedValue)
+					this.#context.modelEntries[model][key] = mergedValue
+				} finally {
+					this.releaseLock()
+				}
 			},
 			merge: async (model, value) => {
-				assert(this.#context !== null, "expected this.#context !== null")
-				const { primaryKey } = this.db.models[model]
-				assert(primaryKey in value, `db.merge(${model}): missing primary key ${primaryKey}`)
-				assert(primaryKey !== null && primaryKey !== undefined, `db.set(${model}): ${primaryKey} primary key`)
-				const key = (value as ModelValue)[primaryKey] as string
-				const modelValue = await this.getModelValue(this.#context, model, key)
-				const mergedValue = mergeModelValues(value as ModelValue, modelValue ?? {})
-				validateModelValue(this.db.models[model], mergedValue)
-				this.#context.modelEntries[model][key] = mergedValue
+				await this.acquireLock()
+				try {
+					assert(this.#context !== null, "expected this.#context !== null")
+					const { primaryKey } = this.db.models[model]
+					assert(primaryKey in value, `db.merge(${model}): missing primary key ${primaryKey}`)
+					assert(primaryKey !== null && primaryKey !== undefined, `db.set(${model}): ${primaryKey} primary key`)
+					const key = (value as ModelValue)[primaryKey] as string
+					const modelValue = await this.getModelValue(this.#context, model, key)
+					const mergedValue = mergeModelValues(value as ModelValue, modelValue ?? {})
+					validateModelValue(this.db.models[model], mergedValue)
+					this.#context.modelEntries[model][key] = mergedValue
+				} finally {
+					this.releaseLock()
+				}
 			},
 			delete: async (model: string, key: string) => {
-				assert(this.#context !== null, "expected this.#context !== null")
-				this.#context.modelEntries[model][key] = null
+				await this.acquireLock()
+				try {
+					assert(this.#context !== null, "expected this.#context !== null")
+					this.#context.modelEntries[model][key] = null
+				} finally {
+					this.releaseLock()
+				}
 			},
 		}
 	}
@@ -152,7 +203,7 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 		this.#context = context
 
 		try {
-			return await action(this.#db, typedArgs, {
+			const result = await action(this.#db, typedArgs, {
 				id: context.id,
 				publicKey,
 				did,
@@ -160,6 +211,10 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 				blockhash: blockhash ?? null,
 				timestamp,
 			})
+			while (this.#concurrency > 0 || this.#lock) {
+				await new Promise((resolve) => setTimeout(resolve, 10))
+			}
+			return result
 		} finally {
 			this.#context = null
 		}
