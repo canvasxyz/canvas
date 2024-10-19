@@ -131,11 +131,11 @@ export abstract class AbstractRuntime {
 			assert(branch !== undefined, "internal error - expected branch !== undefined")
 
 			if (isSession(message)) {
-				await handleSession(id, signature, message)
+				return await handleSession(id, signature, message)
 			} else if (isAction(message)) {
-				await handleAction(id, signature, message, this, { branch })
+				return await handleAction(id, signature, message, this, { branch })
 			} else if (isSnapshot(message)) {
-				await handleSnapshot(id, signature, message, this)
+				return await handleSnapshot(id, signature, message, this)
 			} else {
 				throw new Error("invalid message payload type")
 			}

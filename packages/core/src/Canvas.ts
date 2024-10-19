@@ -50,7 +50,7 @@ export type ActionOptions = { signer?: SessionSigner }
 export type ActionAPI<Args = any> = (
 	args?: Args,
 	options?: ActionOptions,
-) => Promise<{ id: string; signature: Signature; message: Message<Action> }>
+) => Promise<{ id: string; signature: Signature; message: Message<Action>; result?: any }>
 
 export interface CanvasEvents extends GossipLogEvents<Action | Session | Snapshot> {
 	stop: Event
@@ -237,7 +237,7 @@ export class Canvas<
 				const argsRepresentation = args === undefined ? null : argsTransformer.toRepresentation(args)
 				assert(argsRepresentation !== undefined, "action args did not validate the provided schema type")
 
-				const { id, signature, message } = await this.messageLog.append<Action>(
+				const { id, signature, message, result } = await this.messageLog.append<Action>(
 					{
 						type: "action",
 						did: session.payload.did,
@@ -250,7 +250,7 @@ export class Canvas<
 
 				this.log("applied action %s", id)
 
-				return { id, signature, message }
+				return { id, signature, message, result }
 			}
 
 			Object.assign(this.actions, { [name]: action })
