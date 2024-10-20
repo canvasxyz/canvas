@@ -215,6 +215,10 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 				await new Promise((resolve) => setTimeout(resolve, 10))
 			}
 			return result
+		} catch (err) {
+			// don't use the libp2p logger in core when errors are expected to be exposed to users
+			console.error("error executing action", err)
+			throw err
 		} finally {
 			this.#context = null
 		}
