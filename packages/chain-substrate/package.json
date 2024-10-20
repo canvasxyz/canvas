@@ -1,6 +1,6 @@
 {
 	"name": "@canvas-js/chain-substrate",
-	"version": "0.13.0-next.11",
+	"version": "0.13.0-next.12",
 	"type": "module",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"main": "lib/index.js",
@@ -12,9 +12,9 @@
 		"test": "ava"
 	},
 	"dependencies": {
-		"@canvas-js/interfaces": "0.13.0-next.11",
-		"@canvas-js/signatures": "0.13.0-next.11",
-		"@canvas-js/utils": "0.13.0-next.11",
+		"@canvas-js/interfaces": "0.13.0-next.12",
+		"@canvas-js/signatures": "0.13.0-next.12",
+		"@canvas-js/utils": "0.13.0-next.12",
 		"@ipld/dag-json": "^10.2.2",
 		"@libp2p/logger": "^5.1.0",
 		"@noble/hashes": "^1.5.0",
