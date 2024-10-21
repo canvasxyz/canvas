@@ -10,20 +10,11 @@ export type Contract<T extends ModelSchema = any> = {
 	globals?: Record<string, ImportType>
 }
 
-export type ActionImplementation<T extends Record<string, ModelValue>, Args = any> =
-	| ActionImplementationFunction<T, Args>
-	| ActionImplementationObject<T, Args>
-
-export type ActionImplementationObject<T extends Record<string, ModelValue>, Args = any> = {
-	argsType?: { schema: string; name: string }
-	apply: ActionImplementationFunction<T, Args>
-}
-
-export type ActionImplementationFunction<T extends Record<string, ModelValue>, Args = any> = (
+export type ActionImplementation<T extends Record<string, ModelValue>, Args = any, Result = any> = (
 	db: ModelAPI<T>,
 	args: Args,
 	context: ActionContext,
-) => Awaitable<any>
+) => Awaitable<Result>
 
 export type ModelAPI<M extends Record<string, ModelValue>> = {
 	get: <T extends keyof M & string>(model: T, key: string) => Awaitable<M[T] | null>

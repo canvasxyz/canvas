@@ -153,7 +153,12 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 	): SignedMessage<T> {
 		assert(this.topic === message.topic, "expected this.topic === topic")
 		const preparedMessage = prepareMessage(message)
-		assert(this.validatePayload(preparedMessage.payload), "error encoding message (invalid payload)")
+		assert(
+			this.validatePayload(preparedMessage.payload),
+			"error encoding message (invalid payload)",
+			preparedMessage.payload,
+		)
+
 		return SignedMessage.encode(signature, preparedMessage, context)
 	}
 
