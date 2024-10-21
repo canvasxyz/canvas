@@ -26,3 +26,4 @@ docs-gossiplog/.vitepress/cache
 docs-gossiplog/.vitepress/.temp
 
 .vercel
+.wrangler
