@@ -1,5 +1,11 @@
-export function assert(condition: unknown, message?: string): asserts condition {
+export class AssertError extends Error {
+	constructor(public readonly message: string, public readonly props?: any) {
+		super(message)
+	}
+}
+
+export function assert(condition: unknown, message = "assertion failed", props?: any): asserts condition {
 	if (!condition) {
-		throw new Error(message ?? "assertion failed")
+		throw new AssertError(message, props)
 	}
 }
