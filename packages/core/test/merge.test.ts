@@ -1,4 +1,3 @@
-import assert from "node:assert"
 import test from "ava"
 import Prando from "prando"
 
@@ -93,8 +92,8 @@ async function createCanvasCounterApp() {
 				},
 				async incrementCounter(db, { id }: { id: string }, { did }) {
 					const counter = await db.get("counter", id)
-					assert(counter !== null)
-					assert(typeof counter.value === "string")
+					if (counter === null) throw new Error()
+					if (typeof counter.value !== "string") throw new Error()
 					const value = JSON.parse(counter.value)
 					if (!value[did]) {
 						value[did] = 0
@@ -104,7 +103,7 @@ async function createCanvasCounterApp() {
 				},
 				async nop(db, { id }: { id: string }, {}) {
 					const counter = await db.get("counter", id)
-					assert(counter !== null)
+					if (counter === null) throw new Error()
 					await db.set("counter", { id, value: counter.value })
 				},
 			},

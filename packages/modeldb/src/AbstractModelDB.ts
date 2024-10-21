@@ -15,6 +15,7 @@ type Subscription = {
 
 export abstract class AbstractModelDB {
 	public readonly models: Record<string, Model>
+	public readonly isProxy?: boolean
 
 	protected readonly log = logger("canvas:modeldb")
 	protected readonly subscriptions = new Map<number, Subscription>()

@@ -26,6 +26,11 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 		assert(contract.models !== undefined, "contract initialized without models")
 
 		const schema = AbstractRuntime.getModelSchema(contract.models)
+
+		if (contract.globals && Object.keys(contract.globals).length !== 0) {
+			throw new Error("cannot initialize FunctionRuntime with globals")
+		}
+
 		return new FunctionRuntime(topic, signers, schema, contract.actions)
 	}
 
@@ -176,6 +181,10 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 				await new Promise((resolve) => setTimeout(resolve, 10))
 			}
 			return result
+		} catch (err) {
+			// don't use the libp2p logger in core when errors are expected to be exposed to users
+			console.error("error executing action", err)
+			throw err
 		} finally {
 			this.#context = null
 		}
