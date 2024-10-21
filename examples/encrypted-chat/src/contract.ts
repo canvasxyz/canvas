@@ -1,24 +1,26 @@
-import type { Contract } from "@canvas-js/core"
+import type { Contract, ModelSchema } from "@canvas-js/core"
+
+const models = {
+	encryptionKeys: {
+		address: "primary",
+		key: "string",
+	},
+	encryptionGroups: {
+		id: "primary",
+		groupKeys: "string",
+		key: "string",
+	},
+	privateMessages: {
+		id: "primary",
+		ciphertext: "string",
+		group: "string",
+		timestamp: "integer",
+		$indexes: [["timestamp"]],
+	},
+} satisfies ModelSchema
 
 export const contract = {
-	models: {
-		encryptionKeys: {
-			address: "primary",
-			key: "string",
-		},
-		encryptionGroups: {
-			id: "primary",
-			groupKeys: "string",
-			key: "string",
-		},
-		privateMessages: {
-			id: "primary",
-			ciphertext: "string",
-			group: "string",
-			timestamp: "integer",
-			$indexes: [["timestamp"]],
-		},
-	},
+	models,
 	actions: {
 		registerEncryptionKey: (db, { key }, { address }) => {
 			db.set("encryptionKeys", { address, key })
@@ -39,4 +41,4 @@ export const contract = {
 			db.set("privateMessages", { id, ciphertext, group, timestamp })
 		},
 	},
-} satisfies Contract
+} satisfies Contract<typeof models>

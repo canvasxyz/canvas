@@ -13,7 +13,7 @@ import {
 } from "@canvas-js/modeldb"
 import { assert } from "@canvas-js/utils"
 
-import { ActionImplementation, Contract, ModelAPI } from "../types.js"
+import { ActionImpl, Contract, ModelAPI } from "../types.js"
 import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
 
 export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
@@ -55,7 +55,7 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 		public readonly topic: string,
 		public readonly signers: SignerCache,
 		public readonly schema: ModelSchema,
-		public readonly actions: Record<string, ActionImplementation<DeriveModelTypes<M>, any>>,
+		public readonly actions: Record<string, ActionImpl<M, any>>,
 	) {
 		super()
 
