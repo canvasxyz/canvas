@@ -228,7 +228,7 @@ export class Canvas<
 				}
 
 				const { id, signature, message, result } = await this.messageLog.append<Action>(
-					{ type: "action", did: session.payload.did, name, args, context: { timestamp } },
+					{ type: "action", did: session.payload.did, name, args: args ?? null, context: { timestamp } },
 					{ signer: session.signer },
 				)
 
