@@ -43,8 +43,8 @@
 		{ "path": "./examples/chat" },
 		{ "path": "./examples/chat-postgres" },
 		{ "path": "./examples/encrypted-chat" },
-		{ "path": "./examples/network-explorer" },
-		{ "path": "./examples/network-explorer/server" },
+		{ "path": "./examples/common-network-explorer" },
+		{ "path": "./examples/common-network-explorer/server" },
 		{ "path": "./examples/snake" }
 	]
 }

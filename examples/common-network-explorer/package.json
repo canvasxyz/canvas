@@ -1,5 +1,5 @@
 {
-	"name": "@canvas-js/network-explorer",
+	"name": "@canvas-js/common-network-explorer",
 	"private": true,
 	"type": "module",
 	"version": "0.11.0",
