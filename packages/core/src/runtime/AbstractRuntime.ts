@@ -284,10 +284,32 @@ export abstract class AbstractRuntime {
 
 		for (const [model, entries] of Object.entries(executionContext.temporaryEffects)) {
 			for (const key of Object.keys(entries)) {
-				const value = await this.getModelValue(executionContext, model, key)
+				let value = await this.getModelValue(executionContext, model, key)
+
+				const mergeFunction = this.db.models[model].merge
 
 				const keyHash = AbstractRuntime.getKeyHash(key)
 				const effectKey = `${model}/${keyHash}/${id}`
+				const results = await this.db.query<{ key: string }>("$effects", {
+					select: { key: true },
+					where: { key: { gt: effectKey, lte: `${model}/${keyHash}/${MAX_MESSAGE_ID}` } },
+					limit: 1,
+				})
+
+				if (mergeFunction) {
+					const existingValue = await this.db.get(model, key)
+					if (existingValue !== null && value !== null) {
+						value = mergeFunction(existingValue, value)
+					} else if (existingValue !== null) {
+						value = existingValue
+					}
+				} else {
+					if (results.length > 0) {
+						this.log("skipping effect %o because it is superceeded by effects %O", [key, value], results)
+						continue
+					}
+				}
+
 				effects.push({
 					model: "$effects",
 					operation: "set",
