@@ -4,7 +4,7 @@ import { logger } from "@libp2p/logger"
 import type pg from "pg"
 
 import { Signature, Action, Session, Message, Snapshot, SessionSigner, SignerCache } from "@canvas-js/interfaces"
-import { AbstractModelDB, Model, ModelSchema, Effect, DeriveModelTypes } from "@canvas-js/modeldb"
+import { AbstractModelDB, Model, ModelSchema, Effect } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { AbstractGossipLog, GossipLogEvents, SignedMessage } from "@canvas-js/gossiplog"
 import type { ServiceMap, NetworkConfig } from "@canvas-js/gossiplog/libp2p"
@@ -14,7 +14,7 @@ import { assert } from "@canvas-js/utils"
 
 import target from "#target"
 
-import type { Contract, ActionImplementationFunction, ActionImplementationObject } from "./types.js"
+import type { Contract, ActionImplementation } from "./types.js"
 import { Runtime, createRuntime } from "./runtime/index.js"
 import { ActionRecord } from "./runtime/AbstractRuntime.js"
 import { validatePayload } from "./schema.js"
@@ -170,11 +170,7 @@ export class Canvas<
 
 	public readonly db: AbstractModelDB
 	public readonly actions = {} as {
-		[K in keyof T["actions"]]: T["actions"][K] extends ActionImplementationFunction<any, infer Args>
-			? ActionAPI<Args>
-			: T["actions"][K] extends ActionImplementationObject<any, infer Args>
-				? ActionAPI<Args>
-				: never
+		[K in keyof T["actions"]]: T["actions"][K] extends ActionImplementation<any, infer Args> ? ActionAPI<Args> : never
 	}
 
 	private readonly controller = new AbortController()
@@ -231,20 +227,8 @@ export class Canvas<
 					await this.messageLog.append(session.payload, { signer: session.signer })
 				}
 
-				const argsTransformer = runtime.argsTransformers[name]
-				assert(argsTransformer !== undefined, "invalid action name")
-
-				const argsRepresentation = args === undefined ? null : argsTransformer.toRepresentation(args)
-				assert(argsRepresentation !== undefined, "action args did not validate the provided schema type")
-
 				const { id, signature, message, result } = await this.messageLog.append<Action>(
-					{
-						type: "action",
-						did: session.payload.did,
-						name,
-						args: argsRepresentation,
-						context: { timestamp },
-					},
+					{ type: "action", did: session.payload.did, name, args: args ?? null, context: { timestamp } },
 					{ signer: session.signer },
 				)
 
