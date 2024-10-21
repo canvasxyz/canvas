@@ -57,9 +57,13 @@ export const testPlatforms = (
 	name: string,
 	run: (
 		t: ExecutionContext<unknown>,
-		openGossipLog: <Payload>(t: ExecutionContext, init: GossipLogInit<Payload>) => Promise<AbstractGossipLog<Payload>>,
+		openGossipLog: <Payload, Result>(
+			t: ExecutionContext,
+			init: GossipLogInit<Payload, Result>,
+		) => Promise<AbstractGossipLog<Payload, Result>>,
 	) => void,
-	platforms: { sqlite?: boolean; idb?: boolean; pg?: boolean; do?: boolean } = {
+	platforms: { memory?: boolean; sqlite?: boolean; idb?: boolean; pg?: boolean; do?: boolean } = {
+		memory: true,
 		sqlite: true,
 		idb: true,
 		pg: true,
@@ -68,6 +72,14 @@ export const testPlatforms = (
 ) => {
 	const macro = test.macro(run)
 
+	if (platforms.memory) {
+		test(`Sqlite (in-memory) - ${name}`, macro, async (t, init) => {
+			const log = new GossipLogSqlite(init)
+			t.teardown(() => log.close())
+			return log
+		})
+	}
+
 	if (platforms.sqlite) {
 		test(`Sqlite (on-disk) - ${name}`, macro, async (t, init) => {
 			const log = new GossipLogSqlite({ ...init, directory: getDirectory(t) })
@@ -75,14 +87,6 @@ export const testPlatforms = (
 			return log
 		})
 	}
-
-	// if (platforms.sqlite) {
-	// 	test(`Sqlite (in-memory) - ${name}`, macro, async (t, init) => {
-	// 		const log = new GossipLogSqlite(init)
-	// 		t.teardown(() => log.close())
-	// 		return log
-	// 	})
-	// }
 
 	if (platforms.idb) {
 		test(`IndexedDB - ${name}`, macro, async (t, init) => {
