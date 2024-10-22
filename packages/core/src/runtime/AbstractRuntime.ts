@@ -121,10 +121,6 @@ export abstract class AbstractRuntime {
 	public abstract readonly signers: SignerCache
 	public abstract readonly schema: ModelSchema
 	public abstract readonly actionNames: string[]
-	public abstract readonly argsTransformers: Record<
-		string,
-		{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
-	>
 
 	protected readonly log = logger("canvas:runtime")
 	#db: AbstractModelDB | null = null

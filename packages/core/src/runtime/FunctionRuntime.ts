@@ -3,15 +3,12 @@ import { fromDSL } from "@ipld/schema/from-dsl.js"
 import pDefer, { DeferredPromise } from "p-defer"
 
 import type { SignerCache } from "@canvas-js/interfaces"
+
 import { ModelSchema, ModelValue, validateModelValue, DeriveModelTypes } from "@canvas-js/modeldb"
-import { assert, mapEntries } from "@canvas-js/utils"
+import { assert } from "@canvas-js/utils"
 
-import target from "#target"
-
-import { ActionImplementationFunction, Contract, ModelAPI } from "../types.js"
+import { ActionImplementation, Contract, ModelAPI } from "../types.js"
 import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
-
-const identity = (x: any) => x
 
 export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 	public static async init<M extends ModelSchema>(
@@ -23,30 +20,7 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 		assert(contract.models !== undefined, "contract initialized without models")
 
 		const schema = AbstractRuntime.getModelSchema(contract.models)
-		// const db = await target.openDB({ path, topic }, schema)
-
-		const argsTransformers: Record<
-			string,
-			{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
-		> = {}
-
-		const actions = mapEntries(contract.actions, ([actionName, action]) => {
-			if (typeof action === "function") {
-				argsTransformers[actionName] = { toTyped: identity, toRepresentation: identity }
-				return action as ActionImplementationFunction<DeriveModelTypes<M>, any>
-			}
-
-			if (action.argsType !== undefined) {
-				const { schema, name } = action.argsType
-				argsTransformers[actionName] = create(fromDSL(schema), name)
-			} else {
-				argsTransformers[actionName] = { toTyped: identity, toRepresentation: identity }
-			}
-
-			return action.apply
-		})
-
-		return new FunctionRuntime(topic, signers, schema, actions, argsTransformers)
+		return new FunctionRuntime(topic, signers, schema, contract.actions)
 	}
 
 	#context: ExecutionContext | null = null
@@ -75,11 +49,7 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 		public readonly topic: string,
 		public readonly signers: SignerCache,
 		public readonly schema: ModelSchema,
-		public readonly actions: Record<string, ActionImplementationFunction<DeriveModelTypes<M>, any>>,
-		public readonly argsTransformers: Record<
-			string,
-			{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
-		>,
+		public readonly actions: Record<string, ActionImplementation<DeriveModelTypes<M>, any>>,
 	) {
 		super()
 
@@ -170,19 +140,15 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 			context: { blockhash, timestamp },
 		} = context.message.payload
 
-		const argsTransformer = this.argsTransformers[name]
 		const action = this.actions[name]
-		if (action === undefined || argsTransformer === undefined) {
+		if (action === undefined) {
 			throw new Error(`invalid action name: ${name}`)
 		}
-
-		const typedArgs = argsTransformer.toTyped(args)
-		assert(typedArgs !== undefined, "action args did not validate the provided schema type")
 
 		this.#context = context
 
 		try {
-			const result = await action(this.#db, typedArgs, {
+			const result = await action(this.#db, args, {
 				id: context.id,
 				publicKey,
 				did,
