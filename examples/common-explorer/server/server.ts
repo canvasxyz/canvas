@@ -56,6 +56,18 @@ console.log(`peer id: ${libp2p.peerId}`)
 const canvasApiApp = createAPI(canvasApp)
 expressApp.use("/api/", canvasApiApp)
 
+expressApp.use(
+	express.static("dist", {
+		setHeaders: (res, path) => {
+			if (path.endsWith(".js") || path.endsWith(".js/")) {
+				res.setHeader("Content-Type", "application/javascript")
+			} else if (path.endsWith(".css") || path.endsWith(".css/")) {
+				res.setHeader("Content-Type", "text/css")
+			}
+		},
+	}),
+)
+
 expressApp.listen(PORT, HTTP_ADDR, () => {
 	console.log(`> Ready on http://${HTTP_ADDR}:${PORT}`)
 })
