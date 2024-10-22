@@ -111,7 +111,13 @@ export class ContractRuntime extends AbstractRuntime {
 					const { primaryKey } = this.db.models[model]
 					const key = value[primaryKey] as string
 					assert(typeof key === "string", "expected value[primaryKey] to be a string")
-					this.#context.modelEntries[model][key] = value
+					assert(primaryKey !== null && primaryKey !== undefined, `db.set(${model}): ${primaryKey} primary key`)
+
+					this.#context.temporaryEffects[model][key] ||= []
+					this.#context.temporaryEffects[model][key].push({
+						operation: "set",
+						value,
+					})
 				}),
 				create: vm.context.newFunction("create", (modelHandle, valueHandle) => {
 					assert(this.#context !== null, "expected this.#modelEntries !== null")
@@ -120,9 +126,14 @@ export class ContractRuntime extends AbstractRuntime {
 					const value = this.vm.unwrapValue(valueHandle) as ModelValue
 					validateModelValue(this.db.models[model], value)
 					const { primaryKey } = this.db.models[model]
-					const key = value[primaryKey] as string
-					assert(typeof key === "string", "expected value[primaryKey] to be a string")
-					this.#context.modelEntries[model][key] = value
+					assert(primaryKey in value, `db.update(${model}): missing primary key ${primaryKey}`)
+					assert(primaryKey !== null && primaryKey !== undefined, `db.set(${model}): ${primaryKey} primary key`)
+					const key = (value as ModelValue)[primaryKey] as string
+					this.#context.temporaryEffects[model][key] ||= []
+					this.#context.temporaryEffects[model][key].push({
+						operation: "create",
+						value,
+					})
 				}),
 				update: vm.context.newFunction("update", (modelHandle, valueHandle) => {
 					assert(this.#context !== null, "expected this.#modelEntries !== null")
@@ -132,24 +143,12 @@ export class ContractRuntime extends AbstractRuntime {
 					const value = this.vm.unwrapValue(valueHandle) as ModelValue
 					const key = value[primaryKey] as string
 					assert(typeof key === "string", "expected value[primaryKey] to be a string")
-					const promise = vm.context.newPromise()
 
-					// TODO: Ensure concurrent merges into the same value don't create a race condition
-					// if the user doesn't call db.update() with await.
-					this.getModelValue(this.#context, model, key)
-						.then((previousValue) => {
-							const mergedValue = updateModelValues(value, previousValue ?? {})
-							validateModelValue(this.db.models[model], mergedValue)
-							assert(this.#context !== null)
-							this.#context.modelEntries[model][key] = mergedValue
-							promise.resolve()
-						})
-						.catch((err) => {
-							promise.reject()
-						})
-
-					promise.settled.then(vm.runtime.executePendingJobs)
-					return promise.handle
+					this.#context.temporaryEffects[model][key] ||= []
+					this.#context.temporaryEffects[model][key].push({
+						operation: "update",
+						value: value as any,
+					})
 				}),
 				merge: vm.context.newFunction("merge", (modelHandle, valueHandle) => {
 					assert(this.#context !== null, "expected this.#modelEntries !== null")
@@ -159,24 +158,12 @@ export class ContractRuntime extends AbstractRuntime {
 					const value = this.vm.unwrapValue(valueHandle) as ModelValue
 					const key = value[primaryKey] as string
 					assert(typeof key === "string", "expected value[primaryKey] to be a string")
-					const promise = vm.context.newPromise()
 
-					// TODO: Ensure concurrent merges into the same value don't create a race condition
-					// if the user doesn't call db.merge() with await.
-					this.getModelValue(this.#context, model, key)
-						.then((previousValue) => {
-							const mergedValue = mergeModelValues(value, previousValue ?? {})
-							validateModelValue(this.db.models[model], mergedValue)
-							assert(this.#context !== null)
-							this.#context.modelEntries[model][key] = mergedValue
-							promise.resolve()
-						})
-						.catch((err) => {
-							promise.reject()
-						})
-
-					promise.settled.then(vm.runtime.executePendingJobs)
-					return promise.handle
+					this.#context.temporaryEffects[model][key] ||= []
+					this.#context.temporaryEffects[model][key].push({
+						operation: "merge",
+						value: value as any,
+					})
 				}),
 
 				delete: vm.context.newFunction("delete", (modelHandle, keyHandle) => {
@@ -184,7 +171,10 @@ export class ContractRuntime extends AbstractRuntime {
 					const model = vm.context.getString(modelHandle)
 					assert(this.db.models[model] !== undefined, "model not found")
 					const key = vm.context.getString(keyHandle)
-					this.#context.modelEntries[model][key] = null
+					this.#context.temporaryEffects[model][key] ||= []
+					this.#context.temporaryEffects[model][key].push({
+						operation: "delete",
+					})
 				}),
 			})
 			.consume(vm.cache)

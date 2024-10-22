@@ -6,7 +6,15 @@ import { TypeTransformerFunction } from "@ipld/schema/typed.js"
 
 import type { Signature, Action, Message, Session, Snapshot, SignerCache } from "@canvas-js/interfaces"
 
-import { AbstractModelDB, Effect, ModelValue, ModelSchema } from "@canvas-js/modeldb"
+import {
+	AbstractModelDB,
+	Effect,
+	ModelValue,
+	ModelSchema,
+	mergeModelValues,
+	updateModelValues,
+	validateModelValue,
+} from "@canvas-js/modeldb"
 import {
 	GossipLogConsumer,
 	MAX_MESSAGE_ID,
@@ -23,11 +31,28 @@ export type ExecutionContext = {
 	signature: Signature
 	message: Message<Action>
 	address: string
-	modelEntries: Record<string, Record<string, ModelValue | null>>
+	temporaryEffects: Record<string, Record<string, TemporaryEffect[]>>
 	branch: number
 }
 
 export type EffectRecord = { key: string; value: Uint8Array | null; branch: number; clock: number }
+
+// Applicable to all LWW types, JSON CRDTs
+type CreateSetTemporaryEffect = {
+	operation: "create" | "set"
+	value: ModelValue
+}
+// Applicable to JSON CRDTs
+type MergeUpdateTemporaryEffect = {
+	operation: "merge" | "update"
+	value: Partial<ModelValue>
+}
+// Applicable to all LWW types, JSON CRDTs (following an Add/Update-wins policy)
+type DeleteTemporaryEffect = {
+	operation: "delete"
+}
+
+export type TemporaryEffect = CreateSetTemporaryEffect | MergeUpdateTemporaryEffect | DeleteTemporaryEffect
 
 export type SessionRecord = {
 	message_id: string
@@ -239,20 +264,27 @@ export abstract class AbstractRuntime {
 			throw new Error(`missing session ${signature.publicKey} for ${did}`)
 		}
 
-		const modelEntries: Record<string, Record<string, ModelValue | null>> = mapValues(this.db.models, () => ({}))
-
-		const result = await this.execute({ messageLog, modelEntries, id, signature, message, address, branch })
+		const executionContext = {
+			messageLog,
+			temporaryEffects: mapValues(this.db.models, () => ({})) as Record<string, Record<string, TemporaryEffect[]>>,
+			id,
+			signature,
+			message,
+			address,
+			branch,
+		}
+		const result = await this.execute(executionContext)
 
 		const actionRecord: ActionRecord = { message_id: id, did, name, timestamp: context.timestamp }
 		const effects: Effect[] = [{ operation: "set", model: "$actions", value: actionRecord }]
 
-		for (const [model, entries] of Object.entries(modelEntries)) {
-			for (const [key, value_] of Object.entries(entries)) {
-				const keyHash = AbstractRuntime.getKeyHash(key)
-				let value = value_
+		for (const [model, entries] of Object.entries(executionContext.temporaryEffects)) {
+			for (const key of Object.keys(entries)) {
+				let value = await this.getModelValue(executionContext, model, key)
 
 				const mergeFunction = this.db.models[model].merge
 
+				const keyHash = AbstractRuntime.getKeyHash(key)
 				const effectKey = `${model}/${keyHash}/${id}`
 				const results = await this.db.query<{ key: string }>("$effects", {
 					select: { key: true },
@@ -413,15 +445,11 @@ export abstract class AbstractRuntime {
 		return Array.from(result)
 	}
 
-	protected async getModelValue<T extends ModelValue = ModelValue>(
+	private async getModelValueFromDB<T extends ModelValue = ModelValue>(
 		context: ExecutionContext,
 		model: string,
 		key: string,
 	): Promise<null | T> {
-		if (context.modelEntries[model][key] !== undefined) {
-			return context.modelEntries[model][key] as T
-		}
-
 		const { merge } = this.db.models[model]
 		if (merge !== undefined) {
 			const concurrentAncestors = await this.getConcurrentAncestors(context, model, key)
@@ -479,5 +507,31 @@ export abstract class AbstractRuntime {
 				upperBound = effect.key
 			}
 		}
+	}
+
+	protected async getModelValue<T extends ModelValue = ModelValue>(
+		context: ExecutionContext,
+		model: string,
+		key: string,
+	): Promise<null | T> {
+		// get the existing value from the database
+		let value = await this.getModelValueFromDB(context, model, key)
+
+		// if there exist locally unapplied effects from this action, then apply them to the value
+		if (context.temporaryEffects[model][key] !== undefined) {
+			for (const actionEffect of context.temporaryEffects[model][key]) {
+				if (actionEffect.operation === "create" || actionEffect.operation === "set") {
+					value = actionEffect.value as T
+				} else if (actionEffect.operation === "delete") {
+					value = null
+				} else if (actionEffect.operation === "merge") {
+					value = mergeModelValues(actionEffect.value as ModelValue, value || undefined)
+				} else if (actionEffect.operation === "update") {
+					value = updateModelValues(actionEffect.value as ModelValue, value || undefined)
+				}
+			}
+		}
+
+		return value as T | null
 	}
 }
