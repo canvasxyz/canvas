@@ -9,17 +9,23 @@ import { CosmosSigner } from "@canvas-js/chain-cosmos"
 import { SubstrateSigner } from "@canvas-js/chain-substrate"
 import { SolanaSigner } from "@canvas-js/chain-solana"
 
-const BOOTSTRAP_LIST =
-	process.env.BOOTSTRAP_LIST ||
-	"/dns4/canvas-chat.fly.dev/tcp/443/wss/p2p/12D3KooWRrJCTFxZZPWDkZJboAHBCmhZ5MK1fcixDybM8GAjJM2Q"
-const LIBP2P_PORT = parseInt(process.env.LIBP2P_PORT || "8889", 10)
-const HTTP_PORT = parseInt(process.env.PORT || "8888", 10)
+const topic = process.env.TOPIC || "chat-example.canvas.xyz"
+
+const BOOTSTRAP_LIST = process.env.BOOTSTRAP_LIST || [
+	"/dns4/canvas-chat-example-libp2p.p2p.app/tcp/443/wss/p2p/12D3KooWNCqJHo8BNdjTUmq51xudtrDPFTCKCD2Pf87FXHGXcSXD",
+]
+
+const HTTP_PORT = parseInt(process.env.PORT || "3333", 10)
+const LIBP2P_PORT = parseInt(process.env.LIBP2P_PORT || "3334", 10)
+const LIBP2P_ANNOUNCE_HOST = process.env.LIBP2P_ANNOUNCE_HOST || "my-example.p2p.app"
+const LIBP2P_ANNOUNCE_PORT = parseInt(process.env.LIBP2P_ANNOUNCE_PORT || "80", 10)
 const HTTP_ADDR = "0.0.0.0"
 const dev = process.env.NODE_ENV !== "production"
-const topic = process.env.TOPIC || "chat-example.canvas.xyz"
 
 console.log(`BOOTSTRAP_LIST: ${BOOTSTRAP_LIST}`)
 console.log(`LIBP2P_PORT: ${LIBP2P_PORT}`)
+console.log(`LIBP2P_ANNOUNCE_PORT: ${LIBP2P_ANNOUNCE_PORT}`)
+console.log(`LIBP2P_ANNOUNCE_HOST: ${LIBP2P_ANNOUNCE_HOST}`)
 console.log(`HTTP_PORT: ${HTTP_PORT}`)
 console.log(`HTTP_ADDR: ${HTTP_ADDR}`)
 console.log(`dev: ${dev}`)
@@ -34,8 +40,6 @@ expressApp.use(
 console.log(`initializing canvas for topic ${topic}`)
 
 const canvasApp = await Canvas.initialize({
-	// do we need a separate database url for each topic?
-	// path: process.env.DATABASE_URL,
 	contract: {
 		models: {},
 		actions: {
@@ -46,13 +50,13 @@ const canvasApp = await Canvas.initialize({
 	topic,
 })
 
-// await canvasApp.listen({
-// 	bootstrapList: [BOOTSTRAP_LIST],
-// 	listen: [`/ip4/0.0.0.0/tcp/${LIBP2P_PORT}/ws`],
-// })
+const libp2p = await canvasApp.startLibp2p({
+	listen: [`/ip4/0.0.0.0/tcp/${LIBP2P_PORT}/ws`],
+	announce: [`/dns4/${LIBP2P_ANNOUNCE_HOST}/tcp/${LIBP2P_ANNOUNCE_PORT}/wss`],
+	bootstrapList: typeof BOOTSTRAP_LIST === "string" ? [BOOTSTRAP_LIST] : BOOTSTRAP_LIST,
+})
 
-// await canvasApp.libp2p.start()
-// console.log(`peer id: ${canvasApp.libp2p.peerId}`)
+console.log(`peer id: ${libp2p.peerId}`)
 
 const canvasApiApp = createAPI(canvasApp)
 expressApp.use("/api/", canvasApiApp)

@@ -46,6 +46,7 @@ const canvasApp = await Canvas.initialize({
 const libp2p = await canvasApp.startLibp2p({
 	listen: [`/ip4/0.0.0.0/tcp/${LIBP2P_PORT}/ws`],
 	announce: [`/dns4/${LIBP2P_ANNOUNCE_HOST}/tcp/${LIBP2P_ANNOUNCE_PORT}/wss`],
+	bootstrapList: typeof BOOTSTRAP_LIST === "string" ? [BOOTSTRAP_LIST] : BOOTSTRAP_LIST,
 })
 
 console.log(`peer id: ${libp2p.peerId}`)
