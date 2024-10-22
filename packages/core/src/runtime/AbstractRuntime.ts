@@ -292,6 +292,12 @@ export abstract class AbstractRuntime {
 					limit: 1,
 				})
 
+				effects.push({
+					model: "$effects",
+					operation: "set",
+					value: { key: effectKey, value: value && cbor.encode(value), branch: branch, clock: message.clock },
+				})
+
 				if (mergeFunction) {
 					const existingValue = await this.db.get(model, key)
 					if (existingValue !== null && value !== null) {
@@ -305,12 +311,6 @@ export abstract class AbstractRuntime {
 						continue
 					}
 				}
-
-				effects.push({
-					model: "$effects",
-					operation: "set",
-					value: { key: effectKey, value: value && cbor.encode(value), branch: branch, clock: message.clock },
-				})
 
 				if (value === null) {
 					effects.push({ model, operation: "delete", key })
