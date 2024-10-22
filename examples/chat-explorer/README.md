@@ -29,7 +29,7 @@ Also create a Postgres database.
 For the main service:
 
 - Configure the build command to `npm run build`.
-- Configure the start command to `npm start:server --workspace=@canvas-js/network-explorer`.
+- Configure the start command to `npm start:server --workspace=@canvas-js/chat-explorer`.
 - Add the DATABASE_URL as a environment variable, pointed to the Postgres database.
 - To check the app is working, add Public Networking using a Railway provided domain to port 8080.
 - To use the network explorer, add two custom domains:
@@ -40,7 +40,7 @@ For the main service:
   and then provide the other services with a multiaddr of the form:
 
 ```
-/dns4/network-explorer-libp2p.mydomain.org/tcp/443/wss/p2p/12D3...
+/dns4/chat-explorer-libp2p.mydomain.org/tcp/443/wss/p2p/12D3...
 ```
 
 ## Deploying the frontend on Vercel
@@ -63,7 +63,7 @@ Use the lib2p address of the network explorer:
 
 ```
 npm install -g @canvas-js/cli
-canvas run example.contract.js --bootstrap="/dns4/network-explorer-libp2p.mydomain.org/tcp/443/wss/p2p/12D3..."
+canvas run example.contract.js --bootstrap="/dns4/chat-explorer-libp2p.mydomain.org/tcp/443/wss/p2p/12D3..."
 ```
 
 ## Configuration Options
