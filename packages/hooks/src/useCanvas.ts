@@ -6,12 +6,12 @@ import {
 	type Config,
 	type Snapshot,
 	hashContract,
-	ActionImpls,
+	ActionSchema,
 } from "@canvas-js/core"
 
 export const useCanvas = <
 	Models extends ModelSchema = ModelSchema,
-	Actions extends ActionImpls<Models> = ActionImpls<Models>,
+	Actions extends ActionSchema<Models> = ActionSchema<Models>,
 >(
 	url: string | null,
 	config: Config<Models, Actions>,

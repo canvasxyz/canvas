@@ -14,7 +14,7 @@ import { assert } from "@canvas-js/utils"
 
 import target from "#target"
 
-import type { Contract, ActionImpls, ActionImpl } from "./types.js"
+import type { Contract, ActionSchema, ActionImplementation } from "./types.js"
 import { Runtime, createRuntime } from "./runtime/index.js"
 import { ActionRecord } from "./runtime/AbstractRuntime.js"
 import { validatePayload } from "./schema.js"
@@ -24,7 +24,7 @@ import { topicPattern } from "./utils.js"
 export type { Model } from "@canvas-js/modeldb"
 export type { PeerId } from "@libp2p/interface"
 
-export type Config<Models extends ModelSchema = any, Actions extends ActionImpls<Models> = ActionImpls<Models>> = {
+export type Config<Models extends ModelSchema = any, Actions extends ActionSchema<Models> = ActionSchema<Models>> = {
 	topic: string
 	contract: string | Contract<Models, Actions>
 	signers?: SessionSigner[]
@@ -71,9 +71,9 @@ export type ApplicationData = {
 
 export class Canvas<
 	Models extends ModelSchema = ModelSchema,
-	Actions extends ActionImpls<Models> = ActionImpls<Models>,
+	Actions extends ActionSchema<Models> = ActionSchema<Models>,
 > extends TypedEventEmitter<CanvasEvents> {
-	public static async initialize<Models extends ModelSchema, Actions extends ActionImpls<Models> = ActionImpls<Models>>(
+	public static async initialize<Models extends ModelSchema, Actions extends ActionSchema<Models> = ActionSchema<Models>>(
 		config: Config<Models, Actions>,
 	): Promise<Canvas<Models, Actions>> {
 		const { topic, path = null, contract, signers: initSigners = [], runtimeMemoryLimit } = config
@@ -172,7 +172,7 @@ export class Canvas<
 
 	public readonly db: AbstractModelDB
 	public readonly actions = {} as {
-		[K in keyof Actions]: Actions[K] extends ActionImpl<Models, infer Args, infer Result>
+		[K in keyof Actions]: Actions[K] extends ActionImplementation<Models, infer Args, infer Result>
 			? ActionAPI<Args, Result>
 			: never
 	}

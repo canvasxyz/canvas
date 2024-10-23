@@ -5,15 +5,15 @@ export type { ModelValue, ModelSchema, DeriveModelTypes } from "@canvas-js/model
 
 export type Contract<
 	Models extends ModelSchema = ModelSchema,
-	Actions extends ActionImpls<Models> = ActionImpls<Models>,
+	Actions extends ActionSchema<Models> = ActionSchema<Models>,
 > = {
 	models: Models
 	actions: Actions
 }
 
-export type ActionImpls<Models extends ModelSchema> = Record<string, ActionImpl<Models>>
+export type ActionSchema<Models extends ModelSchema> = Record<string, ActionImplementation<Models>>
 
-export type ActionImpl<Models extends ModelSchema = ModelSchema, Args = any, Result = any> = (
+export type ActionImplementation<Models extends ModelSchema = ModelSchema, Args = any, Result = any> = (
 	db: ModelAPI<DeriveModelTypes<Models>>,
 	args: Args,
 	context: ActionContext,
