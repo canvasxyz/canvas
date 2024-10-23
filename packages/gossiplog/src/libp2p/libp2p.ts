@@ -1,5 +1,5 @@
 import { createLibp2p } from "libp2p"
-import { Libp2p, PeerId, PrivateKey, PubSub } from "@libp2p/interface"
+import { Libp2p, MultiaddrConnection, PeerId, PrivateKey, PubSub } from "@libp2p/interface"
 import { Identify, identify } from "@libp2p/identify"
 import { webSockets } from "@libp2p/websockets"
 import { all } from "@libp2p/websockets/filters"
@@ -25,6 +25,7 @@ import { GossipLogService, gossipLogService } from "./service.js"
 import { generateKeyPair } from "@libp2p/crypto/keys"
 
 export interface NetworkConfig {
+	/** start libp2p on initialization (default: true) */
 	start?: boolean
 	privateKey?: PrivateKey
 
@@ -35,6 +36,9 @@ export interface NetworkConfig {
 	announce?: string[]
 
 	bootstrapList?: string[]
+	denyDialMultiaddr?(multiaddr: Multiaddr): Promise<boolean> | boolean
+	denyInboundConnection?(maConn: MultiaddrConnection): Promise<boolean> | boolean
+
 	maxConnections?: number
 	registry?: Registry
 }
@@ -69,7 +73,8 @@ export async function getLibp2p<Payload>(
 		addresses: { listen, announce },
 		transports: [webSockets({ filter: all })],
 		connectionGater: {
-			denyDialMultiaddr: (addr: Multiaddr) => false,
+			denyDialMultiaddr: config.denyDialMultiaddr ?? ((addr: Multiaddr) => false),
+			denyInboundConnection: config.denyInboundConnection ?? ((maConn: MultiaddrConnection) => false),
 		},
 
 		connectionManager: {
