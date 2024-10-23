@@ -462,6 +462,7 @@ export abstract class AbstractRuntime {
 				}
 
 				if (results[0].clock === 0) {
+					if (results[0].value === null) return null
 					return cbor.decode<null | T>(results[0].value)
 				}
 
@@ -472,6 +473,7 @@ export abstract class AbstractRuntime {
 				for (const parent of context.message.parents) {
 					const isAncestor = await context.messageLog.isAncestor(parent, messageId, visited)
 					if (isAncestor) {
+						if (effect.value === null) return null
 						return cbor.decode<null | T>(effect.value)
 					}
 				}
