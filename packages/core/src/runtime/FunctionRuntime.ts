@@ -13,7 +13,7 @@ import {
 } from "@canvas-js/modeldb"
 import { assert } from "@canvas-js/utils"
 
-import { ActionImplementation, Contract, ModelAPI } from "../types.js"
+import { ActionImplementation, Contract, ModelAPI, Chainable } from "../types.js"
 import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
 
 export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntime {
@@ -58,6 +58,33 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 	) {
 		super()
 
+		// Extend return type of updater to make it chainable.
+		const chainable = <A, B, ModelTypes extends DeriveModelTypes<ModelsT>>(
+			updater: (model: A, value: B) => Promise<void>,
+		): (model: A, value: B) => Chainable<ModelTypes> => (model, value) => {
+			const promise = updater(model, value) as Chainable<ModelTypes>
+
+			// TODO: Create Chainable by extending Promise and proxying each method manually.
+			promise.link = async (table: string, key: string) => {
+				await this.acquireLock()
+				try {
+					console.log(this, 'this')
+					assert(this.#context !== null, "expected this.#context !== null")
+					throw `link: ${table}, ${key}`
+					// validateModelValue(this.db.models[model], value)
+					// const { primaryKey } = this.db.models[model]
+					// assert(primaryKey in value, `db.set(${model}): missing primary key ${primaryKey}`)
+					// assert(primaryKey !== null && primaryKey !== undefined, `db.set(${model}): ${primaryKey} primary key`)
+					// const key = (value as ModelValue)[primaryKey] as string
+					// this.#context.modelEntries[model][key] = value
+				} finally {
+					this.releaseLock()
+				}
+			}
+
+			return promise
+		}
+
 		this.#db = {
 			get: async <T extends keyof DeriveModelTypes<ModelsT> & string>(model: T, key: string) => {
 				await this.acquireLock()
@@ -69,7 +96,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 					this.releaseLock()
 				}
 			},
-			set: async (model, value) => {
+			set: chainable(async (model, value) => {
 				await this.acquireLock()
 				try {
 					assert(this.#context !== null, "expected this.#context !== null")
@@ -82,8 +109,8 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 				} finally {
 					this.releaseLock()
 				}
-			},
-			create: async (model, value) => {
+			}),
+			create: chainable(async (model, value) => {
 				await this.acquireLock()
 				try {
 					assert(this.#context !== null, "expected this.#context !== null")
@@ -96,8 +123,8 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 				} finally {
 					this.releaseLock()
 				}
-			},
-			update: async (model, value) => {
+			}),
+			update: chainable(async (model, value) => {
 				await this.acquireLock()
 				try {
 					assert(this.#context !== null, "expected this.#context !== null")
@@ -112,8 +139,8 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 				} finally {
 					this.releaseLock()
 				}
-			},
-			merge: async (model, value) => {
+			}),
+			merge: chainable(async (model, value) => {
 				await this.acquireLock()
 				try {
 					assert(this.#context !== null, "expected this.#context !== null")
@@ -128,7 +155,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 				} finally {
 					this.releaseLock()
 				}
-			},
+			}),
 			delete: async (model: string, key: string) => {
 				await this.acquireLock()
 				try {
