@@ -1,18 +1,19 @@
-import type { Contract } from "@canvas-js/core"
+import type { Actions, ModelSchema } from "@canvas-js/core"
 
-export const contract = {
-	models: {
-		message: {
-			id: "primary",
-			address: "string",
-			content: "string",
-			timestamp: "integer",
-			$indexes: ["address", "timestamp"],
-		},
+const models = {
+	message: {
+		id: "primary",
+		address: "string",
+		content: "string",
+		timestamp: "integer",
+		$indexes: ["address", "timestamp"],
 	},
-	actions: {
-		async createMessage(db, { content }, { id, address, timestamp }) {
-			await db.set("message", { id, address, content, timestamp })
-		},
+} satisfies ModelSchema
+
+export const actions = {
+	async createMessage(db, { content }, { id, address, timestamp }) {
+		await db.set("message", { id, address, content, timestamp })
 	},
-} satisfies Contract
+} satisfies Actions<typeof models>
+
+export const contract = { models, actions }
