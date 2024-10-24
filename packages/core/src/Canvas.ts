@@ -14,7 +14,7 @@ import { assert } from "@canvas-js/utils"
 
 import target from "#target"
 
-import type { Contract, ActionImpls, ActionImpl } from "./types.js"
+import type { Contract, Actions, ActionImplementation } from "./types.js"
 import { Runtime, createRuntime } from "./runtime/index.js"
 import { ActionRecord } from "./runtime/AbstractRuntime.js"
 import { validatePayload } from "./schema.js"
@@ -24,9 +24,9 @@ import { topicPattern } from "./utils.js"
 export type { Model } from "@canvas-js/modeldb"
 export type { PeerId } from "@libp2p/interface"
 
-export type Config<Models extends ModelSchema = any, Actions extends ActionImpls<Models> = ActionImpls<Models>> = {
+export type Config<ModelsT extends ModelSchema = any, ActionsT extends Actions<ModelsT> = Actions<ModelsT>> = {
 	topic: string
-	contract: string | Contract<Models, Actions>
+	contract: string | Contract<ModelsT, ActionsT>
 	signers?: SessionSigner[]
 
 	/** data directory path (NodeJS/sqlite), postgres connection config (NodeJS/pg), or storage backend (Cloudflare DO) */
@@ -70,12 +70,12 @@ export type ApplicationData = {
 }
 
 export class Canvas<
-	Models extends ModelSchema = ModelSchema,
-	Actions extends ActionImpls<Models> = ActionImpls<Models>,
+	ModelsT extends ModelSchema = ModelSchema,
+	ActionsT extends Actions<ModelsT> = Actions<ModelsT>,
 > extends TypedEventEmitter<CanvasEvents> {
-	public static async initialize<Models extends ModelSchema, Actions extends ActionImpls<Models> = ActionImpls<Models>>(
-		config: Config<Models, Actions>,
-	): Promise<Canvas<Models, Actions>> {
+	public static async initialize<ModelsT extends ModelSchema, ActionsT extends Actions<ModelsT> = Actions<ModelsT>>(
+		config: Config<ModelsT, ActionsT>,
+	): Promise<Canvas<ModelsT, ActionsT>> {
 		const { topic, path = null, contract, signers: initSigners = [], runtimeMemoryLimit } = config
 
 		assert(topicPattern.test(topic), "invalid topic (must match [a-zA-Z0-9\\.\\-])")
@@ -117,7 +117,7 @@ export class Canvas<
 			await messageLog.append(config.snapshot)
 		}
 
-		const app = new Canvas<Models, Actions>(signers, messageLog, runtime)
+		const app = new Canvas<ModelsT, ActionsT>(signers, messageLog, runtime)
 
 		// Check to see if the $actions table is empty and populate it if necessary
 		const messagesCount = await db.count("$messages")
@@ -172,7 +172,7 @@ export class Canvas<
 
 	public readonly db: AbstractModelDB
 	public readonly actions = {} as {
-		[K in keyof Actions]: Actions[K] extends ActionImpl<Models, infer Args, infer Result>
+		[K in keyof ActionsT]: ActionsT[K] extends ActionImplementation<ModelsT, infer Args, infer Result>
 			? ActionAPI<Args, Result>
 			: never
 	}

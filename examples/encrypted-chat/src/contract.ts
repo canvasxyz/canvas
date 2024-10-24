@@ -1,4 +1,4 @@
-import type { Contract, ModelSchema } from "@canvas-js/core"
+import type { ModelSchema, Actions } from "@canvas-js/core"
 
 const models = {
 	encryptionKeys: {
@@ -19,26 +19,25 @@ const models = {
 	},
 } satisfies ModelSchema
 
-export const contract = {
-	models,
-	actions: {
-		registerEncryptionKey: (db, { key }, { address }) => {
-			db.set("encryptionKeys", { address, key })
-		},
-		createEncryptionGroup: (db, { members, groupKeys, groupPublicKey }, { address }) => {
-			// TODO: enforce the encryption group is sorted correctly, and each groupKey is registered correctly
-			if (members.indexOf(address) === -1) throw new Error()
-			const id = members.join()
-
-			db.set("encryptionGroups", {
-				id,
-				groupKeys: JSON.stringify(groupKeys),
-				key: groupPublicKey,
-			})
-		},
-		sendPrivateMessage: (db, { group, ciphertext }, { timestamp, id }) => {
-			// TODO: check address is in group
-			db.set("privateMessages", { id, ciphertext, group, timestamp })
-		},
+export const actions = {
+	registerEncryptionKey: (db, { key }, { address }) => {
+		db.set("encryptionKeys", { address, key })
 	},
-} satisfies Contract<typeof models>
+	createEncryptionGroup: (db, { members, groupKeys, groupPublicKey }, { address }) => {
+		// TODO: enforce the encryption group is sorted correctly, and each groupKey is registered correctly
+		if (members.indexOf(address) === -1) throw new Error()
+		const id = members.join()
+
+		db.set("encryptionGroups", {
+			id,
+			groupKeys: JSON.stringify(groupKeys),
+			key: groupPublicKey,
+		})
+	},
+	sendPrivateMessage: (db, { group, ciphertext }, { timestamp, id }) => {
+		// TODO: check address is in group
+		db.set("privateMessages", { id, ciphertext, group, timestamp })
+	},
+} satisfies Actions<typeof models>
+
+export const contract = { models, actions }

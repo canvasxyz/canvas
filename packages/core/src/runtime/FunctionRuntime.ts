@@ -13,15 +13,15 @@ import {
 } from "@canvas-js/modeldb"
 import { assert } from "@canvas-js/utils"
 
-import { ActionImpl, Contract, ModelAPI } from "../types.js"
+import { ActionImplementation, Contract, ModelAPI } from "../types.js"
 import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
 
-export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
-	public static async init<M extends ModelSchema>(
+export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntime {
+	public static async init<ModelsT extends ModelSchema>(
 		topic: string,
 		signers: SignerCache,
-		contract: Contract<M>,
-	): Promise<FunctionRuntime<M>> {
+		contract: Contract<ModelsT>,
+	): Promise<FunctionRuntime<ModelsT>> {
 		assert(contract.actions !== undefined, "contract initialized without actions")
 		assert(contract.models !== undefined, "contract initialized without models")
 
@@ -30,7 +30,7 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 	}
 
 	#context: ExecutionContext | null = null
-	readonly #db: ModelAPI<DeriveModelTypes<M>>
+	readonly #db: ModelAPI<DeriveModelTypes<ModelsT>>
 
 	#lock: DeferredPromise<void> | null = null
 	#concurrency: number = 0
@@ -55,17 +55,17 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 		public readonly topic: string,
 		public readonly signers: SignerCache,
 		public readonly schema: ModelSchema,
-		public readonly actions: Record<string, ActionImpl<M, any>>,
+		public readonly actions: Record<string, ActionImplementation<ModelsT, any>>,
 	) {
 		super()
 
 		this.#db = {
-			get: async <T extends keyof DeriveModelTypes<M> & string>(model: T, key: string) => {
+			get: async <T extends keyof DeriveModelTypes<ModelsT> & string>(model: T, key: string) => {
 				await this.acquireLock()
 				try {
 					assert(this.#context !== null, "expected this.#context !== null")
 					const result = await this.getModelValue(this.#context, model, key)
-					return result as DeriveModelTypes<M>[T]
+					return result as DeriveModelTypes<ModelsT>[T]
 				} finally {
 					this.releaseLock()
 				}

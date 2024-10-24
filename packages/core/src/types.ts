@@ -4,17 +4,17 @@ import type { Awaitable } from "@canvas-js/interfaces"
 export type { ModelValue, ModelSchema, DeriveModelTypes } from "@canvas-js/modeldb"
 
 export type Contract<
-	Models extends ModelSchema = ModelSchema,
-	Actions extends ActionImpls<Models> = ActionImpls<Models>,
+	ModelsT extends ModelSchema = ModelSchema,
+	ActionsT extends Actions<ModelsT> = Actions<ModelsT>,
 > = {
-	models: Models
-	actions: Actions
+	models: ModelsT
+	actions: ActionsT
 }
 
-export type ActionImpls<Models extends ModelSchema> = Record<string, ActionImpl<Models>>
+export type Actions<ModelsT extends ModelSchema> = Record<string, ActionImplementation<ModelsT>>
 
-export type ActionImpl<Models extends ModelSchema = ModelSchema, Args = any, Result = any> = (
-	db: ModelAPI<DeriveModelTypes<Models>>,
+export type ActionImplementation<ModelsT extends ModelSchema = ModelSchema, Args = any, Result = any> = (
+	db: ModelAPI<DeriveModelTypes<ModelsT>>,
 	args: Args,
 	context: ActionContext,
 ) => Awaitable<Result>
