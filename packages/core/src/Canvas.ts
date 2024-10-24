@@ -47,9 +47,9 @@ export type Config<M extends ModelSchema = any, T extends Contract<M> = Contract
 
 export type ActionOptions = { signer?: SessionSigner }
 
-export type ActionAPI<Args = any> = (
-	args?: Args,
-	options?: ActionOptions,
+export type ActionAPI<Args extends Array<any> = any> = (
+	...args: Args
+	// options?: ActionOptions,
 ) => Promise<{ id: string; signature: Signature; message: Message<Action>; result?: any }>
 
 export interface CanvasEvents extends GossipLogEvents<Action | Session | Snapshot> {
