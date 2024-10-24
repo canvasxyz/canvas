@@ -1,4 +1,4 @@
-import type { ModelSchema, ActionSchema } from "@canvas-js/core"
+import type { ModelSchema, Actions } from "@canvas-js/core"
 
 export const contractTopic = "common.xyz"
 
@@ -140,6 +140,6 @@ export const actions = {
 		if (!r || !r.id) throw new Error("reaction does not exist")
 		await db.delete("comment_reactions", `${comment_id}/${did}`)
 	},
-} satisfies ActionSchema<typeof models>
+} satisfies Actions<typeof models>
 
 export const contract = { models, actions }

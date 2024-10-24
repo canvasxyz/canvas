@@ -1,4 +1,4 @@
-import type { ActionSchema, ModelSchema } from "@canvas-js/core"
+import type { Actions, ModelSchema } from "@canvas-js/core"
 
 const models = {
 	message: {
@@ -14,6 +14,6 @@ export const actions = {
 	async createMessage(db, { content }, { id, address, timestamp }) {
 		await db.set("message", { id, address, content, timestamp })
 	},
-} satisfies ActionSchema<typeof models>
+} satisfies Actions<typeof models>
 
 export const contract = { models, actions }

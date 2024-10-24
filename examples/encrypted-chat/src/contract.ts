@@ -1,4 +1,4 @@
-import type { ActionSchema, ModelSchema } from "@canvas-js/core"
+import type { ModelSchema, Actions } from "@canvas-js/core"
 
 const models = {
 	encryptionKeys: {
@@ -38,6 +38,6 @@ export const actions = {
 		// TODO: check address is in group
 		db.set("privateMessages", { id, ciphertext, group, timestamp })
 	},
-} satisfies ActionSchema<typeof models>
+} satisfies Actions<typeof models>
 
 export const contract = { models, actions }
