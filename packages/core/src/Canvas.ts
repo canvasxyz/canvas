@@ -191,11 +191,11 @@ export class Canvas<
 		this.messageLog.addEventListener("disconnect", (event) => this.safeDispatchEvent("disconnect", event))
 
 		for (const name of runtime.actionNames) {
-			const action: ActionAPI = async (args: any, options: ActionOptions = {}) => {
+			const action: ActionAPI = async (...args: any /*options: ActionOptions = {}*/) => {
 				this.log("executing action %s %o", name, args)
 				const timestamp = Date.now()
 
-				const sessionSigner = options.signer ?? signers.getFirst()
+				const sessionSigner = /*options.signer ?? */ signers.getFirst()
 				assert(sessionSigner !== undefined, "signer not found")
 
 				this.log("using session signer %s", sessionSigner.key)

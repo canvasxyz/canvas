@@ -8,10 +8,10 @@ export type Contract<T extends ModelSchema = any> = {
 	actions: Record<string, ActionImplementation<DeriveModelTypes<T>>>
 }
 
-export type ActionImplementation<T extends Record<string, ModelValue>, Args = any, Result = any> = (
+export type ActionImplementation<T extends Record<string, ModelValue>, Args extends Array<any> = any, Result = any> = (
+	this: ActionContext<T>,
 	db: ModelAPI<T>,
-	args: Args,
-	context: ActionContext,
+	...args: Args
 ) => Awaitable<Result>
 
 export type ModelAPI<M extends Record<string, ModelValue>> = {
@@ -23,7 +23,8 @@ export type ModelAPI<M extends Record<string, ModelValue>> = {
 	delete: <T extends keyof M & string>(model: T, key: string) => Awaitable<void>
 }
 
-export type ActionContext = {
+export type ActionContext<T extends Record<string, ModelValue>> = {
+	db: ModelAPI<T>
 	id: string
 	did: string
 	address: string

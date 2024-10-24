@@ -137,7 +137,7 @@ test("snapshot persists data with merge functions", async (t) => {
 			type: "action",
 			did: session.payload.did,
 			name: "createPost",
-			args: { id: "a", content: "foo" },
+			args: [{ id: "a", content: "foo" }],
 			context: { timestamp: new Date().getTime() },
 		},
 	}
@@ -151,7 +151,7 @@ test("snapshot persists data with merge functions", async (t) => {
 			type: "action",
 			did: session.payload.did,
 			name: "createPost",
-			args: { id: "a", content: "foo" },
+			args: [{ id: "a", content: "foo" }],
 			context: { timestamp: new Date().getTime() },
 		},
 	}
@@ -215,7 +215,7 @@ test("snapshot persists data with merge functions and inline contract", async (t
 			type: "action",
 			did: session.payload.did,
 			name: "createPost",
-			args: { id: "a", content: "foo" },
+			args: [{ id: "a", content: "foo" }],
 			context: { timestamp: new Date().getTime() },
 		},
 	}
@@ -229,7 +229,7 @@ test("snapshot persists data with merge functions and inline contract", async (t
 			type: "action",
 			did: session.payload.did,
 			name: "createPost",
-			args: { id: "a", content: "foo" },
+			args: [{ id: "a", content: "foo" }],
 			context: { timestamp: new Date().getTime() },
 		},
 	}
