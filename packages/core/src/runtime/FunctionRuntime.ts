@@ -33,22 +33,21 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 	readonly #db: ModelAPI<DeriveModelTypes<ModelsT>>
 
 	#lock: DeferredPromise<void> | null = null
-	#concurrency: number = 0
+	#waiting: number = 0
 
 	private async acquireLock() {
+		this.#waiting++
 		while (this.#lock) {
 			await this.#lock.promise
 		}
 		this.#lock = pDefer<void>()
-		this.#concurrency++
 	}
 
 	private releaseLock() {
-		if (this.#lock) {
-			this.#lock.resolve()
-			this.#lock = null
-			this.#concurrency--
-		}
+		assert(this.#lock, "internal error")
+		this.#lock.resolve()
+		this.#lock = null
+		this.#waiting--
 	}
 
 	constructor(
@@ -172,7 +171,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 				blockhash: blockhash ?? null,
 				timestamp,
 			})
-			while (this.#concurrency > 0 || this.#lock) {
+			while (this.#waiting > 0) {
 				await new Promise((resolve) => setTimeout(resolve, 10))
 			}
 			return result
