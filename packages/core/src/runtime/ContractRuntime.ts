@@ -221,7 +221,6 @@ export class ContractRuntime extends AbstractRuntime {
 
 		this.#context = context
 
-		const argsHandle = this.vm.wrapValue(args)
 		const ctxHandle = this.vm.wrapValue({
 			id: context.id,
 			publicKey,
@@ -230,8 +229,9 @@ export class ContractRuntime extends AbstractRuntime {
 			blockhash: blockhash ?? null,
 			timestamp,
 		})
+		const argHandles = args.map(this.vm.wrapValue)
 		try {
-			const result = await this.vm.callAsync(actionHandle, actionHandle, [this.#databaseAPI, argsHandle, ctxHandle])
+			const result = await this.vm.callAsync(actionHandle, ctxHandle, [this.#databaseAPI, ...argHandles])
 
 			return result.consume((handle) => {
 				if (this.vm.context.typeof(handle) === "undefined") {
@@ -241,7 +241,7 @@ export class ContractRuntime extends AbstractRuntime {
 				}
 			})
 		} finally {
-			argsHandle.dispose()
+			argHandles.map((handle: QuickJSHandle) => handle.dispose())
 			ctxHandle.dispose()
 			this.#context = null
 		}

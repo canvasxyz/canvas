@@ -13,7 +13,7 @@ import {
 } from "@canvas-js/modeldb"
 import { assert } from "@canvas-js/utils"
 
-import { ActionImplementation, Contract, ModelAPI } from "../types.js"
+import { ActionContext, ActionImplementation, Contract, ModelAPI } from "../types.js"
 import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
 
 export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
@@ -164,14 +164,16 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 		this.#context = context
 
 		try {
-			const result = await action(this.#db, args, {
+			const actionContext: ActionContext<DeriveModelTypes<M>> = {
+				db: this.#db,
 				id: context.id,
 				publicKey,
 				did,
 				address,
 				blockhash: blockhash ?? null,
 				timestamp,
-			})
+			}
+			const result = await action.apply(actionContext, [this.#db, ...args])
 			while (this.#concurrency > 0 || this.#lock) {
 				await new Promise((resolve) => setTimeout(resolve, 10))
 			}
