@@ -83,7 +83,7 @@ export async function getLibp2p<Payload>(
 			inboundConnectionThreshold: 16,
 		},
 
-		connectionMonitor: { protocolPrefix: "canvas" },
+		connectionMonitor: { enabled: false, protocolPrefix: "canvas" },
 
 		peerDiscovery: bootstrapList.length > 0 ? [bootstrap({ list: bootstrapList })] : [],
 
