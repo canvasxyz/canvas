@@ -129,7 +129,9 @@ export function validatePropertyValue(modelName: string, property: Property, val
 		if (value === null) {
 			throw new TypeError(`write to db.${modelName}.${property.name}: expected an array of strings, not null`)
 		} else if (!Array.isArray(value)) {
-			throw new TypeError(`write to db.${modelName}.${property.name}: expected an array of strings, not an array`)
+			throw new TypeError(
+				`write to db.${modelName}.${property.name}: expected an array of strings, not a ${typeof value}`,
+			)
 		} else if (value.some((value) => typeof value !== "string")) {
 			throw new TypeError(`write to db.${modelName}.${property.name}: expected an array of strings`)
 		}

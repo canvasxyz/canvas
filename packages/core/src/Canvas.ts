@@ -14,7 +14,7 @@ import { assert } from "@canvas-js/utils"
 
 import target from "#target"
 
-import type { Contract, ActionImplementation } from "./types.js"
+import type { Contract, Actions, ActionImplementation } from "./types.js"
 import { Runtime, createRuntime } from "./runtime/index.js"
 import { ActionRecord } from "./runtime/AbstractRuntime.js"
 import { validatePayload } from "./schema.js"
@@ -24,9 +24,9 @@ import { topicPattern } from "./utils.js"
 export type { Model } from "@canvas-js/modeldb"
 export type { PeerId } from "@libp2p/interface"
 
-export type Config<M extends ModelSchema = any, T extends Contract<M> = Contract<M>> = {
+export type Config<ModelsT extends ModelSchema = any, ActionsT extends Actions<ModelsT> = Actions<ModelsT>> = {
 	topic: string
-	contract: string | T
+	contract: string | Contract<ModelsT, ActionsT>
 	signers?: SessionSigner[]
 
 	/** data directory path (NodeJS/sqlite), postgres connection config (NodeJS/pg), or storage backend (Cloudflare DO) */
@@ -47,10 +47,11 @@ export type Config<M extends ModelSchema = any, T extends Contract<M> = Contract
 
 export type ActionOptions = { signer?: SessionSigner }
 
-export type ActionAPI<Args extends Array<any> = any> = (
-	...args: Args
-	// options?: ActionOptions,
-) => Promise<{ id: string; signature: Signature; message: Message<Action>; result?: any }>
+export type ActionResult<Result = any> = { id: string; signature: Signature; message: Message<Action>; result: Result }
+
+export type ActionAPI<Args extends Array<any> = any, Result = any> = (
+	...args: Args /*options?: ActionOptions*/
+) => Promise<ActionResult<Result>>
 
 export interface CanvasEvents extends GossipLogEvents<Action | Session | Snapshot> {
 	stop: Event
@@ -69,10 +70,12 @@ export type ApplicationData = {
 }
 
 export class Canvas<
-	M extends ModelSchema = any,
-	T extends Contract<M> = Contract<M>,
+	ModelsT extends ModelSchema = ModelSchema,
+	ActionsT extends Actions<ModelsT> = Actions<ModelsT>,
 > extends TypedEventEmitter<CanvasEvents> {
-	public static async initialize<M extends ModelSchema>(config: Config<M>): Promise<Canvas<M>> {
+	public static async initialize<ModelsT extends ModelSchema, ActionsT extends Actions<ModelsT> = Actions<ModelsT>>(
+		config: Config<ModelsT, ActionsT>,
+	): Promise<Canvas<ModelsT, ActionsT>> {
 		const { topic, path = null, contract, signers: initSigners = [], runtimeMemoryLimit } = config
 
 		assert(topicPattern.test(topic), "invalid topic (must match [a-zA-Z0-9\\.\\-])")
@@ -114,8 +117,7 @@ export class Canvas<
 			await messageLog.append(config.snapshot)
 		}
 
-		type ContractType = typeof contract extends Contract<M> ? typeof contract : Contract<M>
-		const app = new Canvas<ContractType>(signers, messageLog, runtime)
+		const app = new Canvas<ModelsT, ActionsT>(signers, messageLog, runtime)
 
 		// Check to see if the $actions table is empty and populate it if necessary
 		const messagesCount = await db.count("$messages")
@@ -170,7 +172,9 @@ export class Canvas<
 
 	public readonly db: AbstractModelDB
 	public readonly actions = {} as {
-		[K in keyof T["actions"]]: T["actions"][K] extends ActionImplementation<any, infer Args> ? ActionAPI<Args> : never
+		[K in keyof ActionsT]: ActionsT[K] extends ActionImplementation<ModelsT, infer Args, infer Result>
+			? ActionAPI<Args, Result>
+			: never
 	}
 
 	private readonly controller = new AbortController()

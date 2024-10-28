@@ -213,8 +213,8 @@ test("create an app with an inline contract", async (t) => {
 				},
 			},
 			actions: {
-				async createPost(db, { content }: { content: string }) {
-					const { id, did, timestamp } = this
+				async createPost({ content }: { content: string }) {
+					const { db, id, did, timestamp } = this
 					const postId = [did, id].join("/")
 					await db.set("posts", { id: postId, content, timestamp, address: did })
 					return content
@@ -245,28 +245,28 @@ test("merge and update into a value set by another action", async (t) => {
 				game: { id: "primary", state: "json", label: "string" },
 			},
 			actions: {
-				async createGame(db) {
-					await db.set("game", {
+				async createGame() {
+					await this.db.set("game", {
 						id: "0",
 						state: { started: false, player1: "foo", player2: "bar" },
 						label: "foobar",
 					})
 				},
-				async updateGame(db) {
-					await db.merge("game", {
+				async updateGame() {
+					await this.db.merge("game", {
 						id: "0",
 						state: { started: true } as any,
 						label: "foosball",
 					})
 				},
-				async updateGameMultipleMerges(db) {
-					await db.merge("game", { id: "0", state: { extra1: { a: 1, b: 1 } } })
-					await db.merge("game", { id: "0", state: { extra2: "b" } })
-					await db.merge("game", { id: "0", state: { extra3: null, extra1: { b: 2, c: 3 } } })
+				async updateGameMultipleMerges() {
+					await this.db.merge("game", { id: "0", state: { extra1: { a: 1, b: 1 } } })
+					await this.db.merge("game", { id: "0", state: { extra2: "b" } })
+					await this.db.merge("game", { id: "0", state: { extra3: null, extra1: { b: 2, c: 3 } } })
 				},
-				async updateGameMultipleUpdates(db) {
-					await db.update("game", { id: "0", state: { extra1: { a: 1, b: 2 } } })
-					await db.update("game", { id: "0", state: { extra3: null, extra1: { b: 2, c: 3 } } })
+				async updateGameMultipleUpdates() {
+					await this.db.update("game", { id: "0", state: { extra1: { a: 1, b: 2 } } })
+					await this.db.update("game", { id: "0", state: { extra3: null, extra1: { b: 2, c: 3 } } })
 				},
 			},
 		},
@@ -310,6 +310,58 @@ test("merge and update into a value set by another action", async (t) => {
 			extra1: { b: 2, c: 3 },
 		},
 		label: "foosball",
+	})
+})
+
+test("merge and get execute in order, even without await", async (t) => {
+	const app = await Canvas.initialize({
+		topic: "com.example.app",
+		contract: {
+			models: {
+				test: { id: "primary", foo: "string?", bar: "string?", qux: "string?" },
+			},
+			actions: {
+				async testMerges() {
+					this.db.set("test", { id: "0", foo: null, bar: null, qux: "foo" })
+					this.db.merge("test", { id: "0", foo: "foo", qux: "qux" })
+					this.db.merge("test", { id: "0", bar: "bar" })
+					const result = await this.db.get("test", "0")
+					return result
+				},
+				async testGet(): Promise<any> {
+					this.db.set("test", { id: "1", foo: null, bar: null, qux: "foo" })
+					const resultPromise = this.db.get("test", "1")
+					this.db.merge("test", { id: "1", foo: "foo", qux: "qux" })
+					this.db.merge("test", { id: "1", bar: "bar" })
+					const result = await resultPromise
+					return result
+				},
+			},
+		},
+	})
+
+	t.teardown(() => app.stop())
+
+	await app.actions.testMerges()
+	t.deepEqual(await app.db.get("test", "0"), {
+		id: "0",
+		foo: "foo",
+		bar: "bar",
+		qux: "qux",
+	})
+
+	const { result } = await app.actions.testGet()
+	t.deepEqual(await app.db.get("test", "1"), {
+		id: "1",
+		foo: "foo",
+		bar: "bar",
+		qux: "qux",
+	})
+	t.deepEqual(result, {
+		id: "1",
+		foo: null,
+		bar: null,
+		qux: "foo",
 	})
 })
 

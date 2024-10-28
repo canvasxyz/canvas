@@ -13,15 +13,15 @@ import {
 } from "@canvas-js/modeldb"
 import { assert } from "@canvas-js/utils"
 
-import { ActionContext, ActionImplementation, Contract, ModelAPI } from "../types.js"
+import { ActionContext, ActionImplementation, Contract, ModelAPI, Chainable } from "../types.js"
 import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
 
-export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
-	public static async init<M extends ModelSchema>(
+export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntime {
+	public static async init<ModelsT extends ModelSchema>(
 		topic: string,
 		signers: SignerCache,
-		contract: Contract<M>,
-	): Promise<FunctionRuntime<M>> {
+		contract: Contract<ModelsT>,
+	): Promise<FunctionRuntime<ModelsT>> {
 		assert(contract.actions !== undefined, "contract initialized without actions")
 		assert(contract.models !== undefined, "contract initialized without models")
 
@@ -30,47 +30,92 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 	}
 
 	#context: ExecutionContext | null = null
-	readonly #db: ModelAPI<DeriveModelTypes<M>>
+	readonly #db: ModelAPI<DeriveModelTypes<ModelsT>>
 
 	#lock: DeferredPromise<void> | null = null
-	#concurrency: number = 0
+	#waiting: number = 0
 
 	private async acquireLock() {
+		this.#waiting++
 		while (this.#lock) {
 			await this.#lock.promise
 		}
 		this.#lock = pDefer<void>()
-		this.#concurrency++
 	}
 
 	private releaseLock() {
-		if (this.#lock) {
-			this.#lock.resolve()
-			this.#lock = null
-			this.#concurrency--
-		}
+		assert(this.#lock, "internal error")
+		this.#lock.resolve()
+		this.#lock = null
+		this.#waiting--
 	}
 
 	constructor(
 		public readonly topic: string,
 		public readonly signers: SignerCache,
 		public readonly schema: ModelSchema,
-		public readonly actions: Record<string, ActionImplementation<DeriveModelTypes<M>, any>>,
+		public readonly actions: Record<string, ActionImplementation<ModelsT, any>>,
 	) {
 		super()
 
+		// Extend the return type of set(), merge(), or update() to allow chaining a link() call.
+		const getChainableMethod =
+			<A extends string, B, ModelTypes extends DeriveModelTypes<ModelsT>>(
+				updater: (model: A, value: B) => Promise<void>,
+			): ((model: A, value: B) => Chainable<ModelTypes>) =>
+			(model, value) => {
+				const promise = updater(model, value) as Chainable<ModelTypes>
+
+				// Create a backlink from the model `linkModel` where pk=`linkPrimaryKey`
+				// to point at the model we just created or updated.
+				promise.link = async (linkModel: string, linkPrimaryKey: string, params?: { through: string }) => {
+					await this.acquireLock()
+					try {
+						assert(this.#context !== null, "expected this.#context !== null")
+						const { primaryKey } = this.db.models[model]
+						const target = (value as ModelValue)[primaryKey] as string
+						const modelValue = await this.getModelValue(this.#context, linkModel, linkPrimaryKey)
+						assert(
+							modelValue !== null,
+							`db.link(): tried to link from a nonexistent model ${linkModel}.get(${linkPrimaryKey})`,
+						)
+						const backlinkKey = params?.through ?? model
+						const backlinkProp = this.db.models[linkModel].properties.find((prop) => prop.name === backlinkKey)
+						assert(
+							backlinkProp !== undefined,
+							`db.link(): link from ${linkModel} used nonexistent property ${backlinkKey}`,
+						)
+						if (backlinkProp.kind === "relation") {
+							const current = modelValue[backlinkKey] ?? []
+							assert(Array.isArray(current), "expected relation value to be an array")
+							modelValue[backlinkKey] = current.includes(target) ? current : [...current, target]
+						} else if (backlinkProp.kind === "reference") {
+							modelValue[backlinkKey] = target
+						} else {
+							throw new Error(`db.link(): link from ${linkModel} ${backlinkKey} must be a relation or reference`)
+						}
+						validateModelValue(this.db.models[linkModel], modelValue)
+						this.#context.modelEntries[linkModel][linkPrimaryKey] = modelValue
+					} finally {
+						this.releaseLock()
+					}
+				}
+
+				return promise
+			}
+
 		this.#db = {
-			get: async <T extends keyof DeriveModelTypes<M> & string>(model: T, key: string) => {
+			get: async <T extends keyof DeriveModelTypes<ModelsT> & string>(model: T, key: string) => {
 				await this.acquireLock()
 				try {
 					assert(this.#context !== null, "expected this.#context !== null")
 					const result = await this.getModelValue(this.#context, model, key)
-					return result as DeriveModelTypes<M>[T]
+					return result as DeriveModelTypes<ModelsT>[T]
 				} finally {
 					this.releaseLock()
 				}
 			},
-			set: async (model, value) => {
+			set: getChainableMethod(async (model, value) => {
 				await this.acquireLock()
 				try {
 					assert(this.#context !== null, "expected this.#context !== null")
@@ -83,8 +128,8 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 				} finally {
 					this.releaseLock()
 				}
-			},
-			create: async (model, value) => {
+			}),
+			create: getChainableMethod(async (model, value) => {
 				await this.acquireLock()
 				try {
 					assert(this.#context !== null, "expected this.#context !== null")
@@ -97,8 +142,8 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 				} finally {
 					this.releaseLock()
 				}
-			},
-			update: async (model, value) => {
+			}),
+			update: getChainableMethod(async (model, value) => {
 				await this.acquireLock()
 				try {
 					assert(this.#context !== null, "expected this.#context !== null")
@@ -113,8 +158,8 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 				} finally {
 					this.releaseLock()
 				}
-			},
-			merge: async (model, value) => {
+			}),
+			merge: getChainableMethod(async (model, value) => {
 				await this.acquireLock()
 				try {
 					assert(this.#context !== null, "expected this.#context !== null")
@@ -129,7 +174,7 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 				} finally {
 					this.releaseLock()
 				}
-			},
+			}),
 			delete: async (model: string, key: string) => {
 				await this.acquireLock()
 				try {
@@ -164,7 +209,7 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 		this.#context = context
 
 		try {
-			const actionContext: ActionContext<DeriveModelTypes<M>> = {
+			const actionContext: ActionContext<DeriveModelTypes<ModelsT>> = {
 				db: this.#db,
 				id: context.id,
 				publicKey,
@@ -174,7 +219,7 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 				timestamp,
 			}
 			const result = await action.apply(actionContext, [this.#db, ...args])
-			while (this.#concurrency > 0 || this.#lock) {
+			while (this.#waiting > 0) {
 				await new Promise((resolve) => setTimeout(resolve, 10))
 			}
 			return result

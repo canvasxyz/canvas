@@ -39,7 +39,7 @@ export async function getLibp2p(config: Partial<Config> = {}) {
 		addresses: { listen, announce },
 		transports: [webSockets({ filter: all })],
 		connectionManager: { maxConnections },
-		connectionMonitor: { protocolPrefix: "canvas" },
+		connectionMonitor: { enabled: false, protocolPrefix: "canvas" },
 
 		streamMuxers: [yamux()],
 		connectionEncrypters: [noise({})],
