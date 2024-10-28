@@ -18,8 +18,12 @@ test("link database items", async (t) => {
 					const gameId = "0"
 					this.db.create("game", { id: gameId, player: [], manager: null, observers: [], status: "GAME_START" })
 					this.db.create("player", { id: "1", game: gameId, status: "ALIVE" }).link("game", gameId)
-					this.db.create("player", { id: "2", game: gameId, status: "ALIVE" }).link("game", gameId, { through: "manager" })
-					this.db.create("player", { id: "3", game: gameId, status: "ALIVE" }).link("game", gameId, { through: "observers" })
+					this.db
+						.create("player", { id: "2", game: gameId, status: "ALIVE" })
+						.link("game", gameId, { through: "manager" })
+					this.db
+						.create("player", { id: "3", game: gameId, status: "ALIVE" })
+						.link("game", gameId, { through: "observers" })
 				},
 			},
 		},

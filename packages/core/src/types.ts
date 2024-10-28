@@ -13,10 +13,11 @@ export type Contract<
 
 export type Actions<ModelsT extends ModelSchema> = Record<string, ActionImplementation<ModelsT>>
 
-export type ActionImplementation<ModelsT extends ModelSchema = ModelSchema, Args extends Array<any> = any, Result = any> = (
-	this: ActionContext<DeriveModelTypes<ModelsT>>,
-	...args: Args
-) => Awaitable<Result>
+export type ActionImplementation<
+	ModelsT extends ModelSchema = ModelSchema,
+	Args extends Array<any> = any,
+	Result = any,
+> = (this: ActionContext<DeriveModelTypes<ModelsT>>, ...args: Args) => Awaitable<Result>
 
 export type Chainable<ModelTypes extends Record<string, ModelValue>> = Promise<void> & {
 	link: <T extends keyof ModelTypes & string>(
