@@ -10,15 +10,16 @@ test("link database items", async (t) => {
 		topic: "com.example.app",
 		contract: {
 			models: {
-				game: { id: "primary", player: "@players[]", status: "json" },
+				game: { id: "primary", player: "@players[]", manager: "@player?", observers: "@player[]", status: "json" },
 				player: { id: "primary", game: "@game", status: "json" },
 			},
 			actions: {
 				async createGame(db: any) {
 					const gameId = "0"
-					const playerId = "1"
-					db.create("game", { id: gameId, player: [], status: "GAME_START" })
-					db.create("player", { id: playerId, game: gameId, status: "ALIVE" }).link("game", gameId)
+					db.create("game", { id: gameId, player: [], manager: null, observers: [], status: "GAME_START" })
+					db.create("player", { id: "1", game: gameId, status: "ALIVE" }).link("game", gameId)
+					db.create("player", { id: "2", game: gameId, status: "ALIVE" }).link("game", gameId, { through: "manager" })
+					db.create("player", { id: "3", game: gameId, status: "ALIVE" }).link("game", gameId, { through: "observers" })
 				},
 			},
 		},
@@ -31,6 +32,8 @@ test("link database items", async (t) => {
 	t.deepEqual(await app.db.get("game", "0"), {
 		id: "0",
 		player: ["1"],
+		manager: "2",
+		observers: ["3"],
 		status: "GAME_START",
 	})
 	t.deepEqual(await app.db.get("player", "1"), {
