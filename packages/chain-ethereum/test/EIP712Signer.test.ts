@@ -31,7 +31,7 @@ test("create and verify session and action", async (t) => {
 		type: "action",
 		did: session.did,
 		name: "foo",
-		args: { bar: 7 },
+		args: [7],
 		context: {
 			timestamp: session.context.timestamp,
 		},
