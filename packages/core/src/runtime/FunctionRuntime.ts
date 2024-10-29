@@ -181,6 +181,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 					assert(primaryKey !== null && primaryKey !== undefined, `db.update(${model}): ${primaryKey} primary key`)
 					const key = (value as ModelValue)[primaryKey] as string
 					const modelValue = await this.getModelValue(this.#context, model, key)
+					if (modelValue === null) throw new Error(`db.update(${model}, ${key}): no value found to update into`)
 					const mergedValue = updateModelValues(value as ModelValue, modelValue ?? {})
 					validateModelValue(this.db.models[model], mergedValue)
 					this.#context.modelEntries[model][key] = mergedValue
@@ -197,6 +198,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 					assert(primaryKey !== null && primaryKey !== undefined, `db.merge(${model}): ${primaryKey} primary key`)
 					const key = (value as ModelValue)[primaryKey] as string
 					const modelValue = await this.getModelValue(this.#context, model, key)
+					if (modelValue === null) throw new Error(`db.merge(${model}, ${key}): no value found to merge into`)
 					const mergedValue = mergeModelValues(value as ModelValue, modelValue ?? {})
 					validateModelValue(this.db.models[model], mergedValue)
 					this.#context.modelEntries[model][key] = mergedValue
@@ -250,6 +252,9 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 				await new Promise((resolve) => setTimeout(resolve, 10))
 			}
 			return result
+		} catch (err) {
+			console.log("dispatch action failed:", err)
+			throw err
 		} finally {
 			this.#context = null
 		}
