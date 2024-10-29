@@ -445,14 +445,15 @@ export abstract class AbstractRuntime {
 			}
 		} else {
 			const keyHash = AbstractRuntime.getKeyHash(key)
-			const lowerBound = `${model}/${keyHash}/${MIN_MESSAGE_ID}`
-			let upperBound = `${model}/${keyHash}/${MAX_MESSAGE_ID}`
+			const lowerBound = `${model}/${keyHash}/`
+
+			let upperBound = `${model}/${keyHash}/${context.id}`
 
 			// eslint-disable-next-line no-constant-condition
 			while (true) {
 				const results = await this.db.query<{ key: string; value: Uint8Array; clock: number }>("$effects", {
 					select: { key: true, value: true, clock: true },
-					where: { key: { gte: lowerBound, lt: upperBound } },
+					where: { key: { gt: lowerBound, lt: upperBound } },
 					orderBy: { key: "desc" },
 					limit: 1,
 				})

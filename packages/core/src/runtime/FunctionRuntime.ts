@@ -60,6 +60,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 		const getChainableMethod =
 			<A extends string, B, ModelTypes extends DeriveModelTypes<ModelsT>>(
 				updater: (model: A, value: B) => Promise<void>,
+				isSelect?: boolean
 			): ((model: A, value: B) => Chainable<ModelTypes>) =>
 			(model, value) => {
 				const promise = updater(model, value) as Chainable<ModelTypes>
@@ -71,7 +72,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 					try {
 						assert(this.#context !== null, "expected this.#context !== null")
 						const { primaryKey } = this.db.models[model]
-						const target = (value as ModelValue)[primaryKey] as string
+						const target = isSelect ? value as string : (value as ModelValue)[primaryKey] as string
 						const modelValue = await this.getModelValue(this.#context, linkModel, linkPrimaryKey)
 						assert(
 							modelValue !== null,
@@ -99,6 +100,39 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 					}
 				}
 
+				promise.unlink = async (linkModel: string, linkPrimaryKey: string, params?: { through: string }) => {
+					await this.acquireLock()
+					try {
+						assert(this.#context !== null, "expected this.#context !== null")
+						const { primaryKey } = this.db.models[model]
+						const target = isSelect ? value as string : (value as ModelValue)[primaryKey] as string
+						const modelValue = await this.getModelValue(this.#context, linkModel, linkPrimaryKey)
+						assert(
+							modelValue !== null,
+							`db.unlink(): called on a missing model ${linkModel}.get(${linkPrimaryKey})`,
+						)
+						const backlinkKey = params?.through ?? model
+						const backlinkProp = this.db.models[linkModel].properties.find((prop) => prop.name === backlinkKey)
+						assert(
+							backlinkProp !== undefined,
+							`db.unlink(): called on ${linkModel} used missing property ${backlinkKey}`,
+						)
+						if (backlinkProp.kind === "relation") {
+							const current = modelValue[backlinkKey] ?? []
+							assert(Array.isArray(current), "expected relation value to be an array")
+							modelValue[backlinkKey] = current.filter(item => item !== target)
+						} else if (backlinkProp.kind === "reference") {
+							throw new Error("db.unlink() not supported for references")
+						} else {
+							throw new Error(`db.unlink(): called on ${linkModel} ${backlinkKey} must be a relation`)
+						}
+						validateModelValue(this.db.models[linkModel], modelValue)
+						this.#context.modelEntries[linkModel][linkPrimaryKey] = modelValue
+					} finally {
+						this.releaseLock()
+					}
+				}
+
 				return promise
 			}
 
@@ -113,6 +147,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 					this.releaseLock()
 				}
 			},
+			select: getChainableMethod(async (model, key: string) => {}, true),
 			set: getChainableMethod(async (model, value) => {
 				await this.acquireLock()
 				try {
