@@ -88,10 +88,8 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 							const current = modelValue[backlinkKey] ?? []
 							assert(Array.isArray(current), "expected relation value to be an array")
 							modelValue[backlinkKey] = current.includes(target) ? current : [...current, target]
-						} else if (backlinkProp.kind === "reference") {
-							modelValue[backlinkKey] = target
 						} else {
-							throw new Error(`db.link(): link from ${linkModel} ${backlinkKey} must be a relation or reference`)
+							throw new Error(`db.link(): link from ${linkModel} ${backlinkKey} must be a relation`)
 						}
 						validateModelValue(this.db.models[linkModel], modelValue)
 						this.#context.modelEntries[linkModel][linkPrimaryKey] = modelValue
@@ -121,10 +119,8 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 							const current = modelValue[backlinkKey] ?? []
 							assert(Array.isArray(current), "expected relation value to be an array")
 							modelValue[backlinkKey] = current.filter(item => item !== target)
-						} else if (backlinkProp.kind === "reference") {
-							throw new Error("db.unlink() not supported for references")
 						} else {
-							throw new Error(`db.unlink(): called on ${linkModel} ${backlinkKey} must be a relation`)
+							throw new Error(`db.unlink(): link from ${linkModel} ${backlinkKey} must be a relation`)
 						}
 						validateModelValue(this.db.models[linkModel], modelValue)
 						this.#context.modelEntries[linkModel][linkPrimaryKey] = modelValue
