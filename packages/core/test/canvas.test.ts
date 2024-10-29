@@ -24,13 +24,13 @@ export const models = {
 };
 
 export const actions = {
-  async createPost(db, { content, isVisible, metadata }) {
+  async createPost(db, content, isVisible, metadata) {
     const { id, did, address, timestamp } = this
     const postId = [did, id].join("/")
     await db.set("posts", { id: postId, content, address, did, isVisible, timestamp, metadata });
   },
 
-  async updatePost(db, { postId, content, isVisible, metadata }) {
+  async updatePost(db, postId, content, isVisible, metadata) {
     const { id, did, address, timestamp } = this
     const post = await db.get("posts", postId)
     if (post.did !== did) throw new Error("can only update own posts")
@@ -65,27 +65,22 @@ const init = async (t: ExecutionContext) => {
 	return { app, signer }
 }
 
-// const initEIP712 = async (t: ExecutionContext) => {
-// 	const signer = new Eip712Signer()
-// 	const app = await Canvas.initialize({
-// 		contract,
-// 		topic: "com.example.app",
-// 		reset: true,
-// 		signers: [signer],
-// 	})
-// 	t.teardown(() => app.stop())
-// 	return { app, signer }
-// }
+const initEIP712 = async (t: ExecutionContext) => {
+	const signer = new Eip712Signer()
+	const app = await Canvas.initialize({
+		contract,
+		topic: "com.example.app",
+		reset: true,
+		signers: [signer],
+	})
+	t.teardown(() => app.stop())
+	return { app, signer }
+}
 
 test("apply an action and read a record from the database", async (t) => {
 	const { app } = await init(t)
 
-	const { id, message } = await app.actions.createPost({
-		content: "hello",
-		isVisible: true,
-		something: null,
-		metadata: {},
-	})
+	const { id, message } = await app.actions.createPost("hello", true, {})
 
 	t.log(`applied action ${id}`)
 	const postId = [message.payload.did, id].join("/")
@@ -95,23 +90,12 @@ test("apply an action and read a record from the database", async (t) => {
 	const clock = await app.messageLog.getClock()
 	t.is(clock[0], 3)
 
-	const { id: id2 } = await app.actions.createPost({
-		content: "bumping this thread again",
-		isVisible: true,
-		something: null,
-		metadata: {},
-	})
+	const { id: id2 } = await app.actions.createPost("bumping this thread again", true, {})
 	t.log(`applied action ${id2}`)
 	const clock2 = await app.messageLog.getClock()
 	t.is(clock2[0], 4)
 
-	const { id: id3 } = await app.actions.updatePost({
-		postId,
-		content: "update",
-		isVisible: false,
-		something: null,
-		metadata: {},
-	})
+	const { id: id3 } = await app.actions.updatePost(postId, "update", false, {})
 	const clock3 = await app.messageLog.getClock()
 	t.is(clock3[0], 5)
 })
@@ -119,11 +103,7 @@ test("apply an action and read a record from the database", async (t) => {
 test("create and delete a post", async (t) => {
 	const { app } = await init(t)
 
-	const { id, message } = await app.actions.createPost({
-		content: "hello world",
-		isVisible: true,
-		metadata: { author: "me" },
-	})
+	const { id, message } = await app.actions.createPost("hello world", true, { author: "me" })
 
 	const postId = [message.payload.did, id].join("/")
 	const value = await app.db.get("posts", postId)
@@ -138,7 +118,7 @@ test("create and delete a post", async (t) => {
 test("insert a message created by another app", async (t) => {
 	const [{ app: a }, { app: b }] = await Promise.all([init(t), init(t)])
 
-	await a.actions.createPost({ content: "hello world", isVisible: true, something: "bar", metadata: {} })
+	await a.actions.createPost("hello world", true, "bar", {})
 	const records = await a.messageLog.getMessages()
 	for (const { signature, message } of records) {
 		await t.notThrowsAsync(() => b.insert(signature, message))
@@ -424,53 +404,38 @@ test("get a value set by another action", async (t) => {
 	)
 })
 
-// test("apply an action and read a record from the database using eip712", async (t) => {
-// 	const { app } = await initEIP712(t)
+test("apply an action and read a record from the database using eip712", async (t) => {
+	const { app } = await initEIP712(t)
 
-// 	const { id, message } = await app.actions.createPost({
-// 		content: "hello world",
-// 		isVisible: true,
-// 		something: -1,
-// 		metadata: 0,
-// 	})
+	const { id, message } = await app.actions.createPost("hello world", true, -1, 0)
 
-// 	t.log(`applied action ${id}`)
+	t.log(`applied action ${id}`)
 
-// 	const postId = [message.payload.did, id].join("/")
-// 	const value = await app.db.get("posts", postId)
-// 	t.is(value?.content, "hello world")
+	const postId = [message.payload.did, id].join("/")
+	const value = await app.db.get("posts", postId)
+	t.is(value?.content, "hello world")
 
-// 	const { id: id2, message: message2 } = await app.actions.createPost({
-// 		content: "foo bar",
-// 		isVisible: true,
-// 		something: -1,
-// 		metadata: 0,
-// 	})
+	const { id: id2, message: message2 } = await app.actions.createPost("foo bar", true, -1, 0)
 
-// 	t.log(`applied action ${id2}`)
-// 	const postId2 = [message2.payload.did, id2].join("/")
-// 	const value2 = await app.db.get("posts", postId2)
-// 	t.is(value2?.content, "foo bar")
-// })
+	t.log(`applied action ${id2}`)
+	const postId2 = [message2.payload.did, id2].join("/")
+	const value2 = await app.db.get("posts", postId2)
+	t.is(value2?.content, "foo bar")
+})
 
-// test("call quickjs contract with did uri and wallet address", async (t) => {
-// 	const { app, signer } = await initEIP712(t)
-// 	const address = await signer._signer.getAddress()
+test("call quickjs contract with did uri and wallet address", async (t) => {
+	const { app, signer } = await initEIP712(t)
+	const address = await signer._signer.getAddress()
 
-// 	const { id, message } = await app.actions.createPost({
-// 		content: "hello world",
-// 		isVisible: true,
-// 		something: -1,
-// 		metadata: 0,
-// 	})
+	const { id, message } = await app.actions.createPost("hello world", true, -1, 0)
 
-// 	t.log(`applied action ${id}`)
+	t.log(`applied action ${id}`)
 
-// 	const postId = [message.payload.did, id].join("/")
-// 	const value = await app.db.get("posts", postId)
-// 	t.is(value?.address, address)
-// 	t.is(value?.did, `did:pkh:eip155:1:${address}`)
-// })
+	const postId = [message.payload.did, id].join("/")
+	const value = await app.db.get("posts", postId)
+	t.is(value?.address, address)
+	t.is(value?.did, `did:pkh:eip155:1:${address}`)
+})
 
 test("open custom modeldb tables", async (t) => {
 	const app = await Canvas.initialize({

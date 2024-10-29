@@ -139,28 +139,23 @@ export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712Se
 }
 
 /**
- * Encode an argument object `Record<string, any>` as an ABI-encoded bytestring.
+ * Encode an argument object `Array<any>` as an ABI-encoded bytestring.
  */
-export function getAbiString(args: Record<string, any>): string {
+export function getAbiString(args: Array<any>): string {
 	const { types, values } = getEIP712Args(args)
 	return new AbiCoder().encode(types, values)
 }
 
 /**
- * Convert an argument object `Record<string, any>` to EIP712-compatible types.
+ * Convert an argument object `Array<any>` to EIP712-compatible types.
  */
-export function getEIP712Args(args: Record<string, any>) {
-	const sortedArgs = Object.keys(args).sort()
-
+export function getEIP712Args(args: Array<any>) {
 	const types: string[] = []
 	const values: any[] = []
 
-	for (const key of sortedArgs) {
-		types.push("string")
-		values.push(key)
-
-		types.push(getAbiTypeForValue(args[key]))
-		values.push(args[key])
+	for (const value of args) {
+		types.push(getAbiTypeForValue(value))
+		values.push(value)
 	}
 	return { types, values }
 }
