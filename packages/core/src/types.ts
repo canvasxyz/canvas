@@ -24,11 +24,17 @@ export type Chainable<ModelTypes extends Record<string, ModelValue>> = Promise<v
 		model: T,
 		primaryKey: string,
 		through?: { through: string },
+	) => Promise<void>,
+	unlink: <T extends keyof ModelTypes & string>(
+		model: T,
+		primaryKey: string,
+		through?: { through: string },
 	) => Promise<void>
 }
 
 export type ModelAPI<ModelTypes extends Record<string, ModelValue>> = {
 	get: <T extends keyof ModelTypes & string>(model: T, key: string) => Promise<ModelTypes[T] | null>
+	select: <T extends keyof ModelTypes & string>(model: T, key: string) => Chainable<ModelTypes>
 	set: <T extends keyof ModelTypes & string>(model: T, value: ModelTypes[T]) => Chainable<ModelTypes>
 	create: <T extends keyof ModelTypes & string>(model: T, value: ModelTypes[T]) => Chainable<ModelTypes>
 	update: <T extends keyof ModelTypes & string>(model: T, value: Partial<ModelTypes[T]>) => Chainable<ModelTypes>
