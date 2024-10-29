@@ -60,7 +60,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({}) => {
 
 		for (let i = 0; i < 100; i++) {
 			const content = bytesToHex(randomBytes(8))
-			await app.actions.createMessage({ content }, { signer: sessionSigner })
+			await app.as(sessionSigner).createMessage(content)
 		}
 	}, [app, sessionSigner])
 
