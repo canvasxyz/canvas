@@ -17,7 +17,7 @@ export type ActionImplementation<
 	ModelsT extends ModelSchema = ModelSchema,
 	Args extends Array<any> = any,
 	Result = any,
-> = (this: ActionContext<DeriveModelTypes<ModelsT>>, ...args: Args) => Awaitable<Result>
+> = (this: ActionContext<DeriveModelTypes<ModelsT>>, db: ModelAPI<DeriveModelTypes<ModelsT>>, ...args: Args) => Awaitable<Result>
 
 export type Chainable<ModelTypes extends Record<string, ModelValue>> = Promise<void> & {
 	link: <T extends keyof ModelTypes & string>(

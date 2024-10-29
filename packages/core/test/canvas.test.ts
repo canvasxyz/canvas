@@ -145,42 +145,42 @@ test("insert a message created by another app", async (t) => {
 	}
 })
 
-// test("insert a message into an app with multiple signers", async (t) => {
-// 	const siweSigner = new SIWESigner()
-// 	const eipSigner = new Eip712Signer()
-// 	const cosmosSigner = new CosmosSigner()
+test("insert a message into an app with multiple signers", async (t) => {
+	const siweSigner = new SIWESigner()
+	const eipSigner = new Eip712Signer()
+	const cosmosSigner = new CosmosSigner()
 
-// 	const getApp = async () => {
-// 		const app = await Canvas.initialize({
-// 			topic: "test",
-// 			contract: {
-// 				models: {},
-// 				actions: { createPost() {} },
-// 			},
-// 			reset: true,
-// 			signers: [siweSigner, cosmosSigner],
-// 		})
-// 		t.teardown(() => app.stop())
-// 		return app
-// 	}
-// 	const a = await getApp()
-// 	const b = await getApp()
+	const getApp = async () => {
+		const app = await Canvas.initialize({
+			topic: "test",
+			contract: {
+				models: {},
+				actions: { createPost(db, { content }: { content: string }) {} },
+			},
+			reset: true,
+			signers: [siweSigner, cosmosSigner],
+		})
+		t.teardown(() => app.stop())
+		return app
+	}
+	const a = await getApp()
+	const b = await getApp()
 
-// 	await a.actions.createPost({ content: "hello siwe" }, { signer: siweSigner })
-// 	await a.actions.createPost({ content: "hello cosmos" }, { signer: cosmosSigner })
-// 	await t.throwsAsync(() => a.actions.createPost({ content: "hello eip712" }, { signer: eipSigner }))
+	await a.as(siweSigner).createPost({ content: "hello siwe" })
+	await a.as(cosmosSigner).createPost({ content: "hello cosmos" })
+	await t.throwsAsync(() => a.as(eipSigner).createPost({ content: "hello eip712" }))
 
-// 	const records = await a.messageLog.getMessages()
-// 	t.is(records.length, 4)
-// 	t.is(records[0].signature.codec, "dag-cbor")
-// 	t.is(records[1].signature.codec, "dag-cbor")
-// 	t.is(records[2].signature.codec, "dag-cbor")
-// 	t.is(records[3].signature.codec, "dag-cbor")
+	const records = await a.messageLog.getMessages()
+	t.is(records.length, 4)
+	t.is(records[0].signature.codec, "dag-cbor")
+	t.is(records[1].signature.codec, "dag-cbor")
+	t.is(records[2].signature.codec, "dag-cbor")
+	t.is(records[3].signature.codec, "dag-cbor")
 
-// 	for (const { signature, message } of records) {
-// 		await t.notThrowsAsync(() => b.insert(signature, message))
-// 	}
-// })
+	for (const { signature, message } of records) {
+		await t.notThrowsAsync(() => b.insert(signature, message))
+	}
+})
 
 test("reject an invalid message", async (t) => {
 	const { app } = await init(t)
@@ -213,8 +213,8 @@ test("create an app with an inline contract", async (t) => {
 				},
 			},
 			actions: {
-				async createPost({ content }: { content: string }) {
-					const { db, id, did, timestamp } = this
+				async createPost(db, { content }: { content: string }) {
+					const { id, did, timestamp } = this
 					const postId = [did, id].join("/")
 					await db.set("posts", { id: postId, content, timestamp, address: did })
 					return content

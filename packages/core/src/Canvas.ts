@@ -10,11 +10,11 @@ import { AbstractGossipLog, GossipLogEvents, SignedMessage } from "@canvas-js/go
 import type { ServiceMap, NetworkConfig } from "@canvas-js/gossiplog/libp2p"
 import type { SqlStorage } from "@cloudflare/workers-types"
 
-import { assert } from "@canvas-js/utils"
+import { assert, mapValues } from "@canvas-js/utils"
 
 import target from "#target"
 
-import type { Contract, Actions, ActionImplementation } from "./types.js"
+import type { Contract, Actions, ActionImplementation, ModelAPI, DeriveModelTypes } from "./types.js"
 import { Runtime, createRuntime } from "./runtime/index.js"
 import { ActionRecord } from "./runtime/AbstractRuntime.js"
 import { validatePayload } from "./schema.js"
@@ -45,13 +45,9 @@ export type Config<ModelsT extends ModelSchema = any, ActionsT extends Actions<M
 	snapshot?: Snapshot | null
 }
 
-export type ActionOptions = { signer?: SessionSigner }
-
 export type ActionResult<Result = any> = { id: string; signature: Signature; message: Message<Action>; result: Result }
 
-export type ActionAPI<Args extends Array<any> = any, Result = any> = (
-	...args: Args /*options?: ActionOptions*/
-) => Promise<ActionResult<Result>>
+export type ActionAPI<Args extends Array<any> = any, Result = any> = (...args: Args) => Promise<ActionResult<Result>>
 
 export interface CanvasEvents extends GossipLogEvents<Action | Session | Snapshot> {
 	stop: Event
@@ -176,7 +172,11 @@ export class Canvas<
 			? ActionAPI<Args, Result>
 			: never
 	}
-
+	public readonly as: (signer: SessionSigner<any>) => {
+		[K in keyof ActionsT]: ActionsT[K] extends ActionImplementation<ModelsT, infer Args, infer Result>
+			? ActionAPI<Args, Result>
+			: never
+	}
 	private readonly controller = new AbortController()
 	private readonly log = logger("canvas:core")
 
@@ -194,12 +194,16 @@ export class Canvas<
 		this.messageLog.addEventListener("connect", (event) => this.safeDispatchEvent("connect", event))
 		this.messageLog.addEventListener("disconnect", (event) => this.safeDispatchEvent("disconnect", event))
 
+		const actionCache = {} as {
+			[K in keyof ActionsT]: (signer: SessionSigner<any>, db: ModelAPI<DeriveModelTypes<ModelsT>>, ...args: any) => any
+		}
+
 		for (const name of runtime.actionNames) {
-			const action: ActionAPI = async (...args: any /*options: ActionOptions = {}*/) => {
+			const action = async (signer: SessionSigner<any> | null, ...args: any) => {
 				this.log("executing action %s %o", name, args)
 				const timestamp = Date.now()
 
-				const sessionSigner = /*options.signer ?? */ signers.getFirst()
+				const sessionSigner = signer ?? signers.getFirst()
 				assert(sessionSigner !== undefined, "signer not found")
 
 				this.log("using session signer %s", sessionSigner.key)
@@ -241,7 +245,16 @@ export class Canvas<
 				return { id, signature, message, result }
 			}
 
-			Object.assign(this.actions, { [name]: action })
+			Object.assign(actionCache, { [name]: action })
+			Object.assign(this.actions, { [name]: action.bind(this, null) })
+		}
+
+		this.as = (signer: SessionSigner<any>) => {
+			return mapValues(actionCache, (action) => action.bind(this, signer)) as {
+				[K in keyof ActionsT]: ActionsT[K] extends ActionImplementation<ModelsT, infer Args, infer Result>
+					? ActionAPI<Args, Result>
+					: never
+			}
 		}
 	}
 
