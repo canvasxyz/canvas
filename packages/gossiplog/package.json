@@ -46,7 +46,7 @@
 		"@canvas-js/interfaces": "0.12.3-next.0",
 		"@canvas-js/libp2p-rendezvous": "^0.2.0",
 		"@canvas-js/modeldb": "0.12.3-next.0",
-		"@canvas-js/modeldb-expo": "0.12.2",
+		"@canvas-js/modeldb-sqlite-expo": "0.12.3-next.0",
 		"@canvas-js/modeldb-idb": "0.12.3-next.0",
 		"@canvas-js/modeldb-pg": "0.12.3-next.0",
 		"@canvas-js/modeldb-sqlite": "0.12.3-next.0",
