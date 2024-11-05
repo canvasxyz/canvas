@@ -17,6 +17,7 @@ import { ModelDB as ModelDBSqlite } from "@canvas-js/modeldb-sqlite"
 import { ModelDB as ModelDBIdb } from "@canvas-js/modeldb-idb"
 import { ModelDB as ModelDBPostgres } from "@canvas-js/modeldb-pg"
 import { ModelDBProxy as ModelDBDurableObjectsProxy } from "@canvas-js/modeldb-durable-objects"
+import { ModelDB as ModelDBSqliteExpo } from "@canvas-js/modeldb-sqlite-expo"
 
 let browser: puppeteer.Browser
 let page: puppeteer.Page
@@ -87,7 +88,7 @@ export const testOnModelDBNoWasm = (
 		openDB: (t: ExecutionContext, models: ModelSchema) => Promise<AbstractModelDB>,
 	) => void,
 ) => {
-	return testOnModelDB(name, run, { sqliteWasm: false, sqlite: true, idb: true, pg: true, do: true })
+	return testOnModelDB(name, run, { sqliteWasm: false, sqlite: true, idb: true, pg: true, do: true, expo: true })
 }
 
 export const testOnModelDB = (
@@ -96,12 +97,13 @@ export const testOnModelDB = (
 		t: ExecutionContext<unknown>,
 		openDB: (t: ExecutionContext, models: ModelSchema) => Promise<AbstractModelDB>,
 	) => void,
-	platforms: { sqliteWasm: boolean; sqlite: boolean; idb: boolean; pg: boolean; do: boolean } = {
+	platforms: { sqliteWasm: boolean; sqlite: boolean; idb: boolean; pg: boolean; do: boolean; expo: boolean } = {
 		sqliteWasm: true,
 		sqlite: true,
 		idb: true,
 		pg: true,
 		do: true,
+		expo: true,
 	},
 ) => {
 	const macro = test.macro(run)
@@ -136,6 +138,14 @@ export const testOnModelDB = (
 		test.serial(`Durable Objects - ${name}`, macro, async (t, models) => {
 			const mdb = new ModelDBDurableObjectsProxy(worker, models)
 			await mdb.initialize()
+			return mdb
+		})
+	}
+
+	if (platforms.expo) {
+		test(`Expo - ${name}`, macro, async (t, models) => {
+			const mdb = new ModelDBSqliteExpo({ path: null, models })
+			t.teardown(() => mdb.close())
 			return mdb
 		})
 	}

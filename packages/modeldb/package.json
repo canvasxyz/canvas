@@ -16,6 +16,7 @@
 		"test": "ava --serial"
 	},
 	"devDependencies": {
+		"@canvas-js/modeldb-sqlite-expo": "0.12.2",
 		"@canvas-js/modeldb-sqlite-wasm": "0.12.2",
 		"@canvas-js/modeldb-durable-objects": "0.12.2",
 		"@cloudflare/workers-types": "^4.20240925.0",

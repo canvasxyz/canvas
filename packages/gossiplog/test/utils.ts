@@ -21,6 +21,7 @@ import { zip } from "@canvas-js/utils"
 
 import { AbstractGossipLog, GossipLogInit, encodeId, decodeClock } from "@canvas-js/gossiplog"
 import { GossipLog as GossipLogSqlite } from "@canvas-js/gossiplog/sqlite"
+import { GossipLog as GossipLogExpo } from "@canvas-js/gossiplog/expo"
 import { GossipLog as GossipLogIdb } from "@canvas-js/gossiplog/idb"
 import { GossipLog as GossipLogPostgres } from "@canvas-js/gossiplog/pg"
 import { GossipLog as GossipLogDurableObjects } from "@canvas-js/gossiplog/do"
@@ -62,9 +63,10 @@ export const testPlatforms = (
 			init: GossipLogInit<Payload, Result>,
 		) => Promise<AbstractGossipLog<Payload, Result>>,
 	) => void,
-	platforms: { memory?: boolean; sqlite?: boolean; idb?: boolean; pg?: boolean; do?: boolean } = {
+	platforms: { memory?: boolean; sqlite?: boolean; expo?: boolean; idb?: boolean; pg?: boolean; do?: boolean } = {
 		memory: true,
 		sqlite: true,
+		expo: true,
 		idb: true,
 		pg: true,
 		do: true,
@@ -83,6 +85,14 @@ export const testPlatforms = (
 	if (platforms.sqlite) {
 		test(`Sqlite (on-disk) - ${name}`, macro, async (t, init) => {
 			const log = new GossipLogSqlite({ ...init, directory: getDirectory(t) })
+			t.teardown(() => log.close())
+			return log
+		})
+	}
+
+	if (platforms.expo) {
+		test(`Sqlite (RN/Expo) - ${name}`, macro, async (t, init) => {
+			const log = new GossipLogExpo(init)
 			t.teardown(() => log.close())
 			return log
 		})

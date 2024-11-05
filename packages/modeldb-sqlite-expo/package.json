@@ -1,0 +1,26 @@
+{
+	"name": "@canvas-js/modeldb-sqlite-expo",
+	"version": "0.12.2",
+	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
+	"type": "module",
+	"engines": {
+		"node": ">=20.0.0"
+	},
+	"files": [
+		"lib"
+	],
+	"main": "./lib/index.js",
+	"types": "./lib/index.d.ts",
+	"sideEffects": false,
+	"scripts": {
+		"test": "ava --serial"
+	},
+	"dependencies": {
+		"@canvas-js/modeldb": "0.12.2",
+		"@canvas-js/utils": "0.12.2",
+		"@ipld/dag-json": "^10.2.2",
+		"@types/better-sqlite3": "^7.6.10",
+		"better-sqlite3": "^11.0.0",
+		"expo-sqlite": "^14.0.6"
+	}
+}

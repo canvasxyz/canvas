@@ -21,6 +21,7 @@
 		"#target": {
 			"browser": "./lib/targets/browser/index.js",
 			"node": "./lib/targets/node/index.js",
+			"ios": "./lib/targets/ios/index.js",
 			"worker": "./lib/targets/worker/index.js",
 			"default": "./lib/targets/default/index.js"
 		}
