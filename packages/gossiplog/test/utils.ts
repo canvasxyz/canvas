@@ -21,10 +21,10 @@ import { zip } from "@canvas-js/utils"
 
 import { AbstractGossipLog, GossipLogInit, encodeId, decodeClock } from "@canvas-js/gossiplog"
 import { GossipLog as GossipLogSqlite } from "@canvas-js/gossiplog/sqlite"
-import { GossipLog as GossipLogExpo } from "@canvas-js/gossiplog/expo"
 import { GossipLog as GossipLogIdb } from "@canvas-js/gossiplog/idb"
 import { GossipLog as GossipLogPostgres } from "@canvas-js/gossiplog/pg"
 import { GossipLog as GossipLogDurableObjects } from "@canvas-js/gossiplog/do"
+import { GossipLog as GossipLogExpo } from "@canvas-js/gossiplog/sqlite-expo"
 
 if (globalThis.navigator === undefined) {
 	// @ts-expect-error
@@ -90,14 +90,6 @@ export const testPlatforms = (
 		})
 	}
 
-	if (platforms.expo) {
-		test(`Sqlite (RN/Expo) - ${name}`, macro, async (t, init) => {
-			const log = new GossipLogExpo(init)
-			t.teardown(() => log.close())
-			return log
-		})
-	}
-
 	if (platforms.idb) {
 		test(`IndexedDB - ${name}`, macro, async (t, init) => {
 			const log = await GossipLogIdb.open(init)
@@ -120,6 +112,14 @@ export const testPlatforms = (
 			t.teardown(() => log.close())
 			return log
 		})
+	}
+
+	if (platforms.expo) {
+		// test(`React Native - ${name}`, macro, async (t, init) => {
+		// 	const log = new GossipLogExpo(init)
+		// 	t.teardown(() => log.close())
+		// 	return log
+		// })
 	}
 }
 

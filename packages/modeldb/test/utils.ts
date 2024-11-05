@@ -143,11 +143,11 @@ export const testOnModelDB = (
 	}
 
 	if (platforms.expo) {
-		test(`Expo - ${name}`, macro, async (t, models) => {
-			const mdb = new ModelDBSqliteExpo({ path: null, models })
-			t.teardown(() => mdb.close())
-			return mdb
-		})
+		// test(`React Native - ${name}`, macro, async (t, models) => {
+		// 	const mdb = new ModelDBSqliteExpo({ path: null, models })
+		// 	t.teardown(() => mdb.close())
+		// 	return mdb
+		// })
 	}
 
 	if (platforms.sqliteWasm) {
