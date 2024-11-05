@@ -20,7 +20,8 @@ import { assert, mapValues, signalInvalidType } from "@canvas-js/utils"
 type SqlitePrimitiveValue = string | number | Buffer | null
 
 export function encodeQueryParams(params: Record<string, PrimitiveValue>): Record<string, SqlitePrimitiveValue> {
-	return mapValues(params, (value) => {
+	const prefixedParams = Object.fromEntries(Object.entries(params).map(([k, v]) => [":" + k, v]))
+	return mapValues(prefixedParams, (value) => {
 		if (typeof value === "boolean") {
 			return value ? 1 : 0
 		} else if (value instanceof Uint8Array) {
