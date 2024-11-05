@@ -1,5 +1,3 @@
-import * as Application from "expo-application"
-
 import type { PlatformTarget } from "../index.js"
 
 const cache = new Map<string, string>()
@@ -21,6 +19,6 @@ export default {
 	},
 
 	getDomain() {
-		return Application.applicationId ?? "ios-application"
+		return "react-native-application"
 	},
 } satisfies PlatformTarget
