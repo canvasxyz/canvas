@@ -1,19 +1,20 @@
 import type { PlatformTarget } from "../index.js"
 
-const cache = new Map<string, string>()
+import { MMKV } from "react-native-mmkv"
+
+export const storage = new MMKV()
 
 export default {
 	get(key: string): string | null {
-		return cache.get(key) ?? null
+		return storage.getString(key) ?? null
 	},
-	set(key: string, value: any) {
-		cache.set(key, value)
+	set(key: string, value: string) {
+		storage.set(key, value)
 	},
-
 	clear(prefix: string = "") {
-		for (const key of cache.keys()) {
-			if (key.startsWith(prefix)) {
-				cache.delete(key)
+		for (const key of storage.getAllKeys()) {
+			if (key?.startsWith(prefix)) {
+				storage.delete(key)
 			}
 		}
 	},
