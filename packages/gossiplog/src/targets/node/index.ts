@@ -2,10 +2,8 @@ import http from "node:http"
 
 import express from "express"
 import cors from "cors"
+import { WebSocketServer } from "ws"
 import { anySignal } from "any-signal"
-
-import ws from "ws"
-const { WebSocketServer } = ws // avoid error when building for expo web because WebSocketServer is a CommonJS package
 
 import type { AbstractGossipLog } from "@canvas-js/gossiplog"
 import { NetworkClient } from "@canvas-js/gossiplog/client"
