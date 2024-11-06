@@ -182,7 +182,10 @@ export class ModelAPI {
 						const [result] = await models[includeModel].query(txn, {
 							where: { [models[includeModel].model.primaryKey]: includeValue },
 						})
-						if (result === undefined) throw new Error("expected a reference to be populated")
+						if (result === undefined) {
+							continue
+							// throw new Error("expected a reference to be populated")
+						}
 						cache[includeModel][includeValue] = { ...result }
 						if (include[includeKey]) {
 							await populateCache(includeModel, [result], include[includeKey])
@@ -196,7 +199,10 @@ export class ModelAPI {
 						const [result] = await models[includeModel].query(txn, {
 							where: { [models[includeModel].model.primaryKey]: item },
 						})
-						if (result === undefined) throw new Error("expected a relation to be populated")
+						if (result === undefined) {
+							continue
+							// throw new Error("expected a relation to be populated")
+						}
 						cache[includeModel][item] = { ...result }
 						if (include[includeKey]) {
 							await populateCache(includeModel, [result], include[includeKey])
@@ -229,6 +235,10 @@ export class ModelAPI {
 					const includeValue = record[includeKey]
 					if (!Array.isArray(includeValue)) {
 						// Reference type
+						if (includeValue === undefined) {
+							record[includeKey] = null
+							continue
+						}
 						assert(typeof includeValue === "string", "expected reference to be a string")
 						record[includeKey] = { ...cache[includeModel][includeValue] } // replace propertyValue
 						if (include[includeKey]) {
@@ -236,6 +246,10 @@ export class ModelAPI {
 						}
 					} else {
 						// Relation type
+						if (includeValue === undefined) {
+							record[includeKey] = []
+							continue
+						}
 						record[includeKey] = includeValue.map((pk) => {
 							assert(typeof pk === "string", "expected relation to be a string[]")
 							return { ...cache[includeModel][pk] }

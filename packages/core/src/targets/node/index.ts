@@ -5,7 +5,8 @@ import express from "express"
 import cors from "cors"
 
 import type pg from "pg"
-import { WebSocketServer } from "ws"
+import ws from "ws"
+const { WebSocketServer } = ws // avoid error when building for expo web because WebSocketServer is a CommonJS package
 
 import { NetworkServer } from "@canvas-js/gossiplog/server"
 import { assert } from "@canvas-js/utils"

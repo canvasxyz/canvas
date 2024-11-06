@@ -172,5 +172,5 @@ testOnModelDB(
 			},
 		])
 	},
-	{ sqliteWasm: false, sqlite: false, idb: true, pg: false, do: false },
+	{ sqliteWasm: false, sqlite: false, idb: true, pg: false, do: false, expo: true },
 )

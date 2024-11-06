@@ -24,6 +24,7 @@ import { GossipLog as GossipLogSqlite } from "@canvas-js/gossiplog/sqlite"
 import { GossipLog as GossipLogIdb } from "@canvas-js/gossiplog/idb"
 import { GossipLog as GossipLogPostgres } from "@canvas-js/gossiplog/pg"
 import { GossipLog as GossipLogDurableObjects } from "@canvas-js/gossiplog/do"
+import { GossipLog as GossipLogExpo } from "@canvas-js/gossiplog/sqlite-expo"
 
 if (globalThis.navigator === undefined) {
 	// @ts-expect-error
@@ -62,9 +63,10 @@ export const testPlatforms = (
 			init: GossipLogInit<Payload, Result>,
 		) => Promise<AbstractGossipLog<Payload, Result>>,
 	) => void,
-	platforms: { memory?: boolean; sqlite?: boolean; idb?: boolean; pg?: boolean; do?: boolean } = {
+	platforms: { memory?: boolean; sqlite?: boolean; expo?: boolean; idb?: boolean; pg?: boolean; do?: boolean } = {
 		memory: true,
 		sqlite: true,
+		expo: true,
 		idb: true,
 		pg: true,
 		do: true,
@@ -110,6 +112,14 @@ export const testPlatforms = (
 			t.teardown(() => log.close())
 			return log
 		})
+	}
+
+	if (platforms.expo) {
+		// test(`React Native - ${name}`, macro, async (t, init) => {
+		// 	const log = new GossipLogExpo(init)
+		// 	t.teardown(() => log.close())
+		// 	return log
+		// })
 	}
 }
 

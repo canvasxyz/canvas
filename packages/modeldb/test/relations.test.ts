@@ -219,7 +219,7 @@ testOnModelDB(
 			})
 		})
 	},
-	{ sqliteWasm: true, sqlite: true, idb: false, pg: true, do: true },
+	{ sqliteWasm: true, sqlite: true, idb: false, pg: true, do: true, expo: true },
 )
 
 testOnModelDB(
@@ -278,8 +278,16 @@ testOnModelDB(
 							game: "game",
 							city: ["london"],
 							unit: [
-								{ id: "unit1", city: "london", player: { id: "alice", game: "game", city: ["london"], unit: ["unit1", "unit2"] } },
-								{ id: "unit2", city: "london", player: { id: "alice", game: "game", city: ["london"], unit: ["unit1", "unit2"] } },
+								{
+									id: "unit1",
+									city: "london",
+									player: { id: "alice", game: "game", city: ["london"], unit: ["unit1", "unit2"] },
+								},
+								{
+									id: "unit2",
+									city: "london",
+									player: { id: "alice", game: "game", city: ["london"], unit: ["unit1", "unit2"] },
+								},
 							],
 						},
 						{
@@ -330,5 +338,5 @@ testOnModelDB(
 			],
 		)
 	},
-	{ sqliteWasm: false, sqlite: false, idb: true, pg: false, do: false },
+	{ sqliteWasm: false, sqlite: false, idb: true, pg: false, do: false, expo: true },
 )
