@@ -66,7 +66,7 @@ export type Action = {
   address: string
 
   name: string
-  args: any
+  args: Array<any>
 
   context: {
     timestamp: number

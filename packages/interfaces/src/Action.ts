@@ -5,7 +5,7 @@ export type Action = {
 	did: `did:${string}`
 
 	name: string
-	args: any
+	args: Array<any>
 
 	context: {
 		timestamp: number
