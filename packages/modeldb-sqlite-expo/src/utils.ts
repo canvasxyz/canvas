@@ -11,7 +11,7 @@ export class Query<P extends Record<string, SQLiteBindValue>, R> {
 	}
 
 	public get(params: P): R | null {
-		const result = this.statement.executeSync(params) as R | undefined
+		const result = this.statement.executeSync(params).getAllSync()[0] as R | undefined
 		return result ?? null
 	}
 
@@ -35,6 +35,7 @@ export class Method<P extends Record<string, SQLiteBindValue>> {
 	}
 
 	public run(params: P) {
-		this.statement.executeSync(params)
+		const prefixedParams = Object.fromEntries(Object.entries(params).map(([k, v]) => [":" + k, v]))
+		this.statement.executeSync(prefixedParams)
 	}
 }

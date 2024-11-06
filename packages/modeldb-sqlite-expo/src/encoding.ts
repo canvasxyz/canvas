@@ -104,7 +104,8 @@ function encodePrimitiveValue(
 		}
 	} else if (property.type === "bytes") {
 		if (value instanceof Uint8Array) {
-			return Buffer.isBuffer(value) ? value : Buffer.from(value.buffer, value.byteOffset, value.byteLength)
+			const buf = Buffer.isBuffer(value) ? value : Buffer.from(value.buffer, value.byteOffset, value.byteLength)
+			return buf.toString("hex")
 		} else {
 			throw new TypeError(`${modelName}/${property.name} must be a Uint8Array`)
 		}
@@ -203,8 +204,9 @@ export function decodePrimitiveValue(modelName: string, property: PrimitivePrope
 			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected string)`)
 		}
 	} else if (property.type === "bytes") {
-		if (Buffer.isBuffer(value)) {
-			return new Uint8Array(value.buffer, value.byteOffset, value.byteLength)
+		if (typeof value === "string") {
+			// TODO: check for hex
+			return Uint8Array.from(Buffer.from(value, "hex"))
 		} else {
 			console.error("expected Uint8Array, got", value)
 			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected Uint8Array)`)
