@@ -16,7 +16,7 @@ function SessionsTable() {
 	// if the length of the result is n + 1, then there is another page
 	const params = new URLSearchParams({ type: "session", limit: (entriesPerPage + 1).toString() })
 	if (currentCursor) {
-		params.append("before", currentCursor)
+		params.append("gt", currentCursor)
 	}
 
 	const { data: sessions, error } = useSWR(
@@ -70,7 +70,7 @@ function SessionsTable() {
 				<PaginationButton
 					text="Next"
 					enabled={hasMore}
-					onClick={() => pushCursor(sessionsToDisplay[entriesPerPage].id)}
+					onClick={() => pushCursor(sessionsToDisplay[sessionsToDisplay.length - 1].id)}
 				/>
 			</Flex>
 		</Flex>

@@ -36,7 +36,7 @@ function ActionsTable() {
 		limit: (entriesPerPage + 1).toString(),
 	})
 	if (currentCursor) {
-		params.append("before", currentCursor)
+		params.append("gt", currentCursor)
 	}
 
 	const { data: actions, error } = useSWR(
@@ -103,7 +103,7 @@ function ActionsTable() {
 				<PaginationButton
 					text="Next"
 					enabled={hasMore}
-					onClick={() => pushCursor(actionsToDisplay[entriesPerPage].id)}
+					onClick={() => pushCursor(actionsToDisplay[actionsToDisplay.length - 1].id)}
 				/>
 			</Flex>
 		</Flex>
