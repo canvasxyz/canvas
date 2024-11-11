@@ -65,7 +65,6 @@ export function createAPI(app: Canvas): express.Express {
 				select: { id: true, signature: true, message: true },
 				where: { id: range },
 				orderBy: { id: order },
-				limit,
 			})) {
 				if (isAction(message)) {
 					const count = results.push({ id, signature, message })
