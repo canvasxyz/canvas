@@ -39,41 +39,23 @@ export function createAPI(app: Canvas): express.Express {
 		type MessageRecord = { id: string; signature: Signature; message: Message<Action> }
 		const results: MessageRecord[] = []
 
-		if (did !== undefined || name !== undefined) {
-			const messageIds: string[] = []
+		const where = did !== undefined || name !== undefined ? { did, name } : { id: range }
 
-			for await (const { message_id } of app.db.iterate("$actions", { where: { did, name } })) {
-				const count = messageIds.push(message_id)
-				if (count >= limit) {
-					break
-				}
-			}
+		const messageIds: string[] = []
 
-			const signedMessages = await app.db.getMany<SignedMessage<Action>>("$messages", messageIds)
+		for await (const { message_id } of app.db.iterate("$actions", { where })) {
+			const count = messageIds.push(message_id)
+			if (count >= limit) {
+				break
+			}
+		}
 
-			for (const signedMessage of signedMessages) {
-				assert(signedMessage !== null, "internal error - missing record in $messages")
-				const { signature, message } = signedMessage
-				results.push({ id: signedMessage.id, signature, message })
-			}
-		} else {
-			for await (const { id, signature, message } of app.db.iterate<{
-				id: string
-				signature: Signature
-				message: Message<Action | Session>
-			}>("$messages", {
-				select: { id: true, signature: true, message: true },
-				where: { id: range },
-				orderBy: { id: order },
-				limit,
-			})) {
-				if (isAction(message)) {
-					const count = results.push({ id, signature, message })
-					if (count >= limit) {
-						break
-					}
-				}
-			}
+		const signedMessages = await app.db.getMany<SignedMessage<Action>>("$messages", messageIds)
+
+		for (const signedMessage of signedMessages) {
+			assert(signedMessage !== null, "internal error - missing record in $messages")
+			const { signature, message } = signedMessage
+			results.push({ id: signedMessage.id, signature, message })
 		}
 
 		res.writeHead(StatusCodes.OK, { "content-type": "application/json" })
