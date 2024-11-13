@@ -67,6 +67,8 @@ $ canvas run contract.ts --topic demo.canvas.xyz // [!code highlight]
 
 :::
 
+<CodeGroupOpener />
+
 ## Distributed Durable Execution
 
 Under the hood, each state container stores a compacted version of
