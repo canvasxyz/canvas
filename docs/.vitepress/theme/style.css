@@ -47,7 +47,7 @@
 }
 
 :root {
-  --space-font-family: "Space Mono", "Geist", -apple-system, BlinkMacSystemFont, Inter, sans-serif;
+  --space-font-family: "Geist Mono", -apple-system, BlinkMacSystemFont, Inter, sans-serif;
   --vp-font-family-base: "Geist", -apple-system, BlinkMacSystemFont, Inter, sans-serif;
   --vp-font-family-mono: "Geist Mono", ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
   --vp-code-line-height: 1.48;
