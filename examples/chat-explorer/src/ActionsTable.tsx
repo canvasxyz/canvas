@@ -34,9 +34,10 @@ function ActionsTable() {
 	// if the length of the result is n + 1, then there is another page
 	const params = new URLSearchParams({
 		limit: (entriesPerPage + 1).toString(),
+		order: "desc",
 	})
 	if (currentCursor) {
-		params.append("gt", currentCursor)
+		params.append("lt", currentCursor)
 	}
 
 	const { data: actions, error } = useSWR(
