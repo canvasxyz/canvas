@@ -39,7 +39,7 @@ export function createAPI(app: Canvas): express.Express {
 		type MessageRecord = { id: string; signature: Signature; message: Message<Action> }
 		const results: MessageRecord[] = []
 
-		const where = did !== undefined || name !== undefined ? { did, name } : { id: range }
+		const where = did !== undefined || name !== undefined ? { did, name } : { message_id: range }
 
 		const messageIds: string[] = []
 
