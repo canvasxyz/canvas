@@ -100,9 +100,9 @@ function ActionsTable() {
 			</Table.Root>
 			<Flex direction="row" gap="2">
 				<Box flexGrow="1" />
-				<PaginationButton text="Previous" enabled={currentCursor !== null} onClick={popCursor} />
+				<PaginationButton text="Newer" enabled={currentCursor !== null} onClick={popCursor} />
 				<PaginationButton
-					text="Next"
+					text="Older"
 					enabled={hasMore}
 					onClick={() => pushCursor(actionsToDisplay[actionsToDisplay.length - 1].id)}
 				/>
