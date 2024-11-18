@@ -4,17 +4,17 @@ import { JSONValue } from "@canvas-js/utils"
 
 export type PrimaryKeyType = "primary"
 export type PrimitiveType = "integer" | "float" | "number" | "string" | "bytes" | "boolean" | "json"
-export type OptionalPrimitiveType = `${PrimitiveType}?`
+export type NullablePrimitiveType = `${PrimitiveType}?`
 export type ReferenceType = `@${string}`
-export type OptionalReferenceType = `@${string}?`
+export type NullableReferenceType = `@${string}?`
 export type RelationType = `@${string}[]`
 
 export type PropertyType =
 	| PrimaryKeyType
 	| PrimitiveType
-	| OptionalPrimitiveType
+	| NullablePrimitiveType
 	| ReferenceType
-	| OptionalReferenceType
+	| NullableReferenceType
 	| RelationType
 
 export type IndexInit = string | string[]
@@ -30,8 +30,8 @@ export type ModelSchema = Record<
 // to work with at runtime
 
 export type PrimaryKeyProperty = { name: string; kind: "primary" }
-export type PrimitiveProperty = { name: string; kind: "primitive"; type: PrimitiveType; optional: boolean }
-export type ReferenceProperty = { name: string; kind: "reference"; target: string; optional: boolean }
+export type PrimitiveProperty = { name: string; kind: "primitive"; type: PrimitiveType; nullable: boolean }
+export type ReferenceProperty = { name: string; kind: "reference"; target: string; nullable: boolean }
 export type RelationProperty = { name: string; kind: "relation"; target: string }
 export type Property = PrimaryKeyProperty | PrimitiveProperty | ReferenceProperty | RelationProperty
 
@@ -63,14 +63,18 @@ export type RelationValue = string[]
 
 export type PropertyValue = PrimaryKeyValue | PrimitiveValue | ReferenceValue | RelationValue | JSONValue
 
-export type ModelValue<T = PropertyValue> = Record<string, T>
+export type ModelValue<T = PropertyValue> = { [key: string]: T }
+export type ModelValueWithIncludes<T = PropertyValue> = { [key: string]: T | ModelValueWithIncludes<T> | ModelValueWithIncludes<T>[] }
 
 export type WhereCondition = Record<string, PropertyValue | NotExpression | RangeExpression | undefined>
 export type NotExpression = { neq: PropertyValue | undefined }
 export type RangeExpression = { gt?: PrimitiveValue; gte?: PrimitiveValue; lt?: PrimitiveValue; lte?: PrimitiveValue }
 
+export type IncludeExpression = { [key: string]: IncludeExpression }
+
 export type QueryParams = {
-	select?: Record<string, boolean> // TODO: add support for joining reference/relation values a la primsa
+	select?: Record<string, boolean>
+	include?: IncludeExpression // TODO: only supported on modeldb-idb right now
 	where?: WhereCondition
 	orderBy?: Record<string, "asc" | "desc">
 	limit?: number
@@ -100,12 +104,12 @@ export type DerivePropertyType<T extends PropertyType> = T extends "primary"
 									? boolean | null
 									: T extends "json"
 										? JSONValue
-										: T extends `@${string}`
-											? ReferenceValue
+										: T extends `@${string}[]`
+											? RelationValue
 											: T extends `@${string}?`
 												? ReferenceValue | null
-												: T extends `@${string}[]`
-													? RelationValue
+												: T extends `@${string}`
+													? ReferenceValue
 													: never
 
 export type DeriveModelTypes<T extends ModelSchema> = {

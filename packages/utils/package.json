@@ -1,6 +1,6 @@
 {
 	"name": "@canvas-js/utils",
-	"version": "0.12.0",
+	"version": "0.12.5",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"type": "module",
 	"engines": {
@@ -16,6 +16,6 @@
 	"types": "./lib/index.d.ts",
 	"sideEffects": false,
 	"dependencies": {
-		"@canvas-js/interfaces": "0.12.0"
+		"@canvas-js/interfaces": "0.12.5"
 	}
 }

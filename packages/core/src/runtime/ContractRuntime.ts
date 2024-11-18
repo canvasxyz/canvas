@@ -1,11 +1,9 @@
 import { QuickJSHandle } from "quickjs-emscripten"
-import { TypeTransformerFunction, create } from "@ipld/schema/typed.js"
-import { fromDSL } from "@ipld/schema/from-dsl.js"
 
 import type { SignerCache } from "@canvas-js/interfaces"
 import { ModelValue, ModelSchema, validateModelValue, updateModelValues, mergeModelValues } from "@canvas-js/modeldb"
 import { VM } from "@canvas-js/vm"
-import { assert, mapEntries, JSValue } from "@canvas-js/utils"
+import { assert, mapEntries, JSValue, mapValues } from "@canvas-js/utils"
 
 import { AbstractRuntime, ExecutionContext, validateModelValueWithoutIndexedAt } from "./AbstractRuntime.js"
 
@@ -42,31 +40,9 @@ export class ContractRuntime extends AbstractRuntime {
 		const actionsUnwrap = (contractHandle ? contractUnwrap.actions : actionsHandle).consume(vm.unwrapObject)
 		const modelsUnwrap = (contractHandle ? contractUnwrap.models : modelsHandle).consume(vm.unwrapObject)
 
-		const argsTransformers: Record<
-			string,
-			{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
-		> = {}
-
-		const actions = mapEntries(actionsUnwrap, ([actionName, handle]) => {
-			if (vm.context.typeof(handle) === "function") {
-				argsTransformers[actionName] = { toTyped: (x: any) => x, toRepresentation: (x: any) => x }
-				return handle.consume(vm.cache)
-			}
-
-			const { apply, argsType } = handle.consume(vm.unwrapObject)
-			assert(vm.context.typeof(apply) === "function", "expected action[name].apply to be a function")
-
-			if (argsType !== undefined) {
-				const { schema, name } = argsType.consume(vm.unwrapObject)
-				argsTransformers[actionName] = create(
-					fromDSL(schema.consume(vm.context.getString)),
-					name.consume(vm.context.getString),
-				)
-			} else {
-				argsTransformers[actionName] = { toTyped: (x: any) => x, toRepresentation: (x: any) => x }
-			}
-
-			return apply.consume(vm.cache)
+		const actions = mapValues(actionsUnwrap, (handle) => {
+			assert(vm.context.typeof(handle) === "function", "expected action handle to be a function")
+			return handle.consume(vm.cache)
 		})
 
 		// TODO: Validate that models satisfies ModelSchema
@@ -102,7 +78,7 @@ export class ContractRuntime extends AbstractRuntime {
 		}
 
 		const schema = AbstractRuntime.getModelSchema(modelSchema)
-		return new ContractRuntime(topic, signers, schema, vm, actions, argsTransformers, cleanupSetupHandles)
+		return new ContractRuntime(topic, signers, schema, vm, actions, cleanupSetupHandles)
 	}
 
 	readonly #databaseAPI: QuickJSHandle
@@ -115,10 +91,6 @@ export class ContractRuntime extends AbstractRuntime {
 		public readonly schema: ModelSchema,
 		public readonly vm: VM,
 		public readonly actions: Record<string, QuickJSHandle>,
-		public readonly argsTransformers: Record<
-			string,
-			{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
-		>,
 		private disposeSetupHandles: () => void,
 	) {
 		super()
@@ -136,6 +108,17 @@ export class ContractRuntime extends AbstractRuntime {
 					assert(this.db.models[model] !== undefined, "model not found")
 					const value = this.vm.unwrapValue(valueHandle) as ModelValue
 					validateModelValueWithoutIndexedAt(this.db.models[model], value)
+					const { primaryKey } = this.db.models[model]
+					const key = value[primaryKey] as string
+					assert(typeof key === "string", "expected value[primaryKey] to be a string")
+					this.#context.modelEntries[model][key] = value
+				}),
+				create: vm.context.newFunction("create", (modelHandle, valueHandle) => {
+					assert(this.#context !== null, "expected this.#modelEntries !== null")
+					const model = vm.context.getString(modelHandle)
+					assert(this.db.models[model] !== undefined, "model not found")
+					const value = this.vm.unwrapValue(valueHandle) as ModelValue
+					validateModelValue(this.db.models[model], value)
 					const { primaryKey } = this.db.models[model]
 					const key = value[primaryKey] as string
 					assert(typeof key === "string", "expected value[primaryKey] to be a string")
@@ -231,18 +214,14 @@ export class ContractRuntime extends AbstractRuntime {
 		} = context.message.payload
 
 		const actionHandle = this.actions[name]
-		const argsTransformer = this.argsTransformers[name]
 
-		if (actionHandle === undefined || argsTransformer === undefined) {
+		if (actionHandle === undefined) {
 			throw new Error(`invalid action name: ${name}`)
 		}
 
-		const typedArgs = argsTransformer.toTyped(args)
-		assert(typedArgs !== undefined, "action args did not validate the provided schema type")
-
 		this.#context = context
 
-		const argsHandle = this.vm.wrapValue(typedArgs)
+		const argsHandle = this.vm.wrapValue(args)
 		const ctxHandle = this.vm.wrapValue({
 			id: context.id,
 			publicKey,

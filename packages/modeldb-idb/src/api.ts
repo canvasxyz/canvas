@@ -19,6 +19,8 @@ import {
 	isRangeExpression,
 	validateModelValue,
 	WhereCondition,
+	ModelValueWithIncludes,
+	IncludeExpression,
 } from "@canvas-js/modeldb"
 
 import { getIndexName } from "./utils.js"
@@ -130,14 +132,138 @@ export class ModelAPI {
 	}
 
 	async query(txn: IDBPTransaction<any, any, IDBTransactionMode>, query: QueryParams): Promise<ModelValue[]> {
-		// this.log("query %o", query)
-
 		const results: ModelValue[] = []
 		for await (const value of this.iterate(txn, query)) {
 			results.push(value)
 		}
-
 		return results
+	}
+
+	async queryWithInclude(
+		txn: IDBPTransaction<any, any, IDBTransactionMode>,
+		models: Record<string, ModelAPI>,
+		query: QueryParams,
+	): Promise<ModelValueWithIncludes[]> {
+		const cache: Record<string, Record<string, ModelValue>> = {} // { [table]: { [id]: ModelValue } }
+
+		const { include, ...rootQuery } = query
+		const modelValues = (await this.query(txn, rootQuery)) as ModelValueWithIncludes[]
+
+		// Two-pass recursive query to populate includes. The first pass populates
+		// the cache with all models in the response, but doesn't join any of them.
+		// The second pass makes joins on-copy for every reference/relation in
+		// `include` and updates the result record in-place to add the joins.
+		//
+		// This is necessary because making joins automatically in one recursive
+		// query would cause the same join to be applied everywhere, because the
+		// cache only maintains one instance for every record.
+		const populateCache = async (modelName: string, records: ModelValueWithIncludes[], include: IncludeExpression) => {
+			const thisModel = Object.values(models).find((api) => api.model.name === modelName)
+			assert(thisModel !== undefined)
+
+			for (const includeKey of Object.keys(include)) {
+				// look up the model corresponding to the { include: key }
+				const prop = thisModel.model.properties.find((prop) => prop.name === includeKey)
+				assert(prop, "include was used with a missing property")
+				assert(
+					prop.kind === "reference" || prop.kind === "relation",
+					"include should only be used with references or relations",
+				)
+				const includeModel = prop.target
+
+				cache[includeModel] ||= {}
+				for (const record of records) {
+					const includeValue = record[includeKey]
+					// Reference type
+					if (!Array.isArray(includeValue)) {
+						assert(typeof includeValue === "string", "include should only be used with references or relations")
+						if (cache[includeModel][includeValue]) continue
+
+						const [result] = await models[includeModel].query(txn, {
+							where: { [models[includeModel].model.primaryKey]: includeValue },
+						})
+						if (result === undefined) {
+							continue
+							// throw new Error("expected a reference to be populated")
+						}
+						cache[includeModel][includeValue] = { ...result }
+						if (include[includeKey]) {
+							await populateCache(includeModel, [result], include[includeKey])
+						}
+						continue
+					}
+					// Relation type
+					for (const item of includeValue) {
+						assert(typeof item === "string", "include should only be used with references or relations")
+						if (cache[includeModel][item]) continue
+						const [result] = await models[includeModel].query(txn, {
+							where: { [models[includeModel].model.primaryKey]: item },
+						})
+						if (result === undefined) {
+							continue
+							// throw new Error("expected a relation to be populated")
+						}
+						cache[includeModel][item] = { ...result }
+						if (include[includeKey]) {
+							await populateCache(includeModel, [result], include[includeKey])
+						}
+					}
+				}
+			}
+		}
+		const populateRecords = async (
+			modelName: string,
+			records: ModelValueWithIncludes[],
+			include: IncludeExpression,
+		) => {
+			if (Object.keys(include).length === 0) return
+
+			const thisModel = Object.values(models).find((api) => api.model.name === modelName)
+			assert(thisModel !== undefined)
+
+			for (const record of records) {
+				for (const includeKey of Object.keys(include)) {
+					// look up the model corresponding to the { include: key }
+					const prop = thisModel.model.properties.find((prop) => prop.name === includeKey)
+					assert(prop, "include was used with a missing property")
+					assert(
+						prop.kind === "reference" || prop.kind === "relation",
+						"include should only be used with references or relations",
+					)
+					const includeModel = prop.target
+
+					const includeValue = record[includeKey]
+					if (!Array.isArray(includeValue)) {
+						// Reference type
+						if (includeValue === undefined) {
+							record[includeKey] = null
+							continue
+						}
+						assert(typeof includeValue === "string", "expected reference to be a string")
+						record[includeKey] = { ...cache[includeModel][includeValue] } // replace propertyValue
+						if (include[includeKey]) {
+							await populateRecords(includeModel, [record[includeKey]], include[includeKey])
+						}
+					} else {
+						// Relation type
+						if (includeValue === undefined) {
+							record[includeKey] = []
+							continue
+						}
+						record[includeKey] = includeValue.map((pk) => {
+							assert(typeof pk === "string", "expected relation to be a string[]")
+							return { ...cache[includeModel][pk] }
+						}) // replace propertyValue
+						if (include[includeKey]) {
+							await populateRecords(includeModel, record[includeKey], include[includeKey])
+						}
+					}
+				}
+			}
+		}
+		await populateCache(this.model.name, modelValues, query.include ?? {})
+		await populateRecords(this.model.name, modelValues, query.include ?? {})
+		return modelValues
 	}
 
 	private getIndex(
@@ -176,8 +302,8 @@ export class ModelAPI {
 				expression.neq === undefined
 					? null
 					: expression.neq === null
-					? IDBKeyRange.lowerBound(encodePropertyValue(property, null), true)
-					: IDBKeyRange.upperBound(encodePropertyValue(property, expression.neq), true)
+						? IDBKeyRange.lowerBound(encodePropertyValue(property, null), true)
+						: IDBKeyRange.upperBound(encodePropertyValue(property, expression.neq), true)
 
 			return await storeIndex.count(keyRange)
 		} else if (isRangeExpression(expression)) {
@@ -224,8 +350,8 @@ export class ModelAPI {
 				expression.neq === undefined
 					? null
 					: expression.neq === null
-					? IDBKeyRange.lowerBound(encodePropertyValue(property, null), true)
-					: IDBKeyRange.upperBound(encodePropertyValue(property, expression.neq), true)
+						? IDBKeyRange.lowerBound(encodePropertyValue(property, null), true)
+						: IDBKeyRange.upperBound(encodePropertyValue(property, expression.neq), true)
 
 			for (
 				let cursor = await storeIndex.openCursor(keyRange, direction);
@@ -386,6 +512,10 @@ export class ModelAPI {
 	private decodeObject(object: ObjectValue): ModelValue {
 		const value: ModelValue = {}
 		for (const property of this.model.properties) {
+			if (object[property.name] === undefined || object[property.name] === null) {
+				value[property.name] = null
+				continue
+			}
 			value[property.name] = decodePropertyValue(property, object[property.name])
 		}
 
@@ -397,7 +527,7 @@ function encodePropertyValue(property: Property, propertyValue: PropertyValue): 
 	if (property.kind === "primary") {
 		return propertyValue
 	} else if (property.kind === "primitive") {
-		if (property.optional) {
+		if (property.nullable) {
 			assert(property.type !== "json")
 			return propertyValue === null ? [] : [propertyValue]
 		} else if (property.type === "json") {
@@ -406,7 +536,7 @@ function encodePropertyValue(property: Property, propertyValue: PropertyValue): 
 			return propertyValue
 		}
 	} else if (property.kind === "reference") {
-		if (property.optional) {
+		if (property.nullable) {
 			return propertyValue === null ? [] : [propertyValue]
 		} else {
 			return propertyValue
@@ -423,7 +553,7 @@ function decodePropertyValue(property: Property, objectPropertyValue: PropertyVa
 		assert(typeof objectPropertyValue === "string", 'expected objectPropertyValue === "string"')
 		return objectPropertyValue
 	} else if (property.kind === "primitive") {
-		if (property.optional) {
+		if (property.nullable) {
 			assert(property.type !== "json")
 			assert(Array.isArray(objectPropertyValue))
 			return objectPropertyValue.length === 0 ? null : objectPropertyValue[0]
@@ -435,7 +565,7 @@ function decodePropertyValue(property: Property, objectPropertyValue: PropertyVa
 			return objectPropertyValue
 		}
 	} else if (property.kind === "reference") {
-		if (property.optional) {
+		if (property.nullable) {
 			assert(Array.isArray(objectPropertyValue))
 			return objectPropertyValue.length === 0 ? null : objectPropertyValue[0]
 		} else {

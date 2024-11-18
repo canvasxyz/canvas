@@ -118,10 +118,6 @@ export abstract class AbstractRuntime {
 	public abstract readonly signers: SignerCache
 	public abstract readonly schema: ModelSchema
 	public abstract readonly actionNames: string[]
-	public abstract readonly argsTransformers: Record<
-		string,
-		{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
-	>
 
 	protected readonly log = logger("canvas:runtime")
 	#db: AbstractModelDB | null = null
@@ -153,11 +149,11 @@ export abstract class AbstractRuntime {
 			assert(branch !== undefined, "internal error - expected branch !== undefined")
 
 			if (isSession(message)) {
-				await handleSession(id, signature, message)
+				return await handleSession(id, signature, message)
 			} else if (isAction(message)) {
-				await handleAction(id, signature, message, this, { branch })
+				return await handleAction(id, signature, message, this, { branch })
 			} else if (isSnapshot(message)) {
-				await handleSnapshot(id, signature, message, this)
+				return await handleSnapshot(id, signature, message, this)
 			} else {
 				throw new Error("invalid message payload type")
 			}
@@ -472,14 +468,15 @@ export abstract class AbstractRuntime {
 			}
 		} else {
 			const keyHash = AbstractRuntime.getKeyHash(key)
-			const lowerBound = `${model}/${keyHash}/${MIN_MESSAGE_ID}`
-			let upperBound = `${model}/${keyHash}/${MAX_MESSAGE_ID}`
+			const lowerBound = `${model}/${keyHash}/`
+
+			let upperBound = `${model}/${keyHash}/${context.id}`
 
 			// eslint-disable-next-line no-constant-condition
 			while (true) {
 				const results = await this.db.query<{ key: string; value: Uint8Array; clock: number }>("$effects", {
 					select: { key: true, value: true, clock: true },
-					where: { key: { gte: lowerBound, lt: upperBound } },
+					where: { key: { gt: lowerBound, lt: upperBound } },
 					orderBy: { key: "desc" },
 					limit: 1,
 				})
@@ -489,6 +486,7 @@ export abstract class AbstractRuntime {
 				}
 
 				if (results[0].clock === 0) {
+					if (results[0].value === null) return null
 					return cbor.decode<null | T>(results[0].value)
 				}
 
@@ -499,6 +497,7 @@ export abstract class AbstractRuntime {
 				for (const parent of context.message.parents) {
 					const isAncestor = await context.messageLog.isAncestor(parent, messageId, visited)
 					if (isAncestor) {
+						if (effect.value === null) return null
 						return cbor.decode<null | T>(effect.value)
 					}
 				}

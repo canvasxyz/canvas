@@ -2,6 +2,7 @@
 import { h } from "vue"
 import type { Theme } from "vitepress"
 import DefaultTheme from "vitepress/theme"
+import CodeGroupOpener from "../components/CodeGroupOpener.vue"
 import BlogRedirect from "../components/BlogRedirect.vue"
 import HeroRow from "../components/HeroRow.vue"
 import HeroAction from "../components/HeroAction.vue"
@@ -25,6 +26,7 @@ export default {
 	enhanceApp({ app, router, siteData }) {
 		app.use(MotionPlugin)
 		app.component("BlogRedirect", BlogRedirect)
+		app.component("CodeGroupOpener", CodeGroupOpener)
 		app.component("HeroRow", HeroRow)
 		app.component("HeroAction", HeroAction)
 		app.component("DemoToggle", DemoToggle)
@@ -34,5 +36,5 @@ export default {
 		app.component("TextItem", TextItem)
 		app.component("TextRow", TextRow)
 		app.component("HomepageFooter", HomepageFooter)
-	}
+	},
 } satisfies Theme

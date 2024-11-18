@@ -1,6 +1,6 @@
 {
 	"name": "@canvas-js/core",
-	"version": "0.12.0",
+	"version": "0.12.5",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"type": "module",
 	"engines": {
@@ -21,6 +21,7 @@
 		"#target": {
 			"browser": "./lib/targets/browser/index.js",
 			"node": "./lib/targets/node/index.js",
+			"react-native": "./lib/targets/react-native/index.js",
 			"worker": "./lib/targets/worker/index.js",
 			"default": "./lib/targets/default/index.js"
 		}
@@ -29,17 +30,17 @@
 		"test": "ava"
 	},
 	"dependencies": {
-		"@canvas-js/chain-ethereum": "0.12.0",
-		"@canvas-js/gossiplog": "0.12.0",
-		"@canvas-js/interfaces": "0.12.0",
-		"@canvas-js/modeldb": "0.12.0",
-		"@canvas-js/modeldb-durable-objects": "0.12.0",
-		"@canvas-js/modeldb-idb": "0.12.0",
-		"@canvas-js/modeldb-pg": "0.12.0",
-		"@canvas-js/modeldb-sqlite": "0.12.0",
-		"@canvas-js/signatures": "0.12.0",
-		"@canvas-js/utils": "0.12.0",
-		"@canvas-js/vm": "0.12.0",
+		"@canvas-js/chain-ethereum": "0.12.5",
+		"@canvas-js/gossiplog": "0.12.5",
+		"@canvas-js/interfaces": "0.12.5",
+		"@canvas-js/modeldb": "0.12.5",
+		"@canvas-js/modeldb-durable-objects": "0.12.5",
+		"@canvas-js/modeldb-idb": "0.12.5",
+		"@canvas-js/modeldb-pg": "0.12.5",
+		"@canvas-js/modeldb-sqlite": "0.12.5",
+		"@canvas-js/signatures": "0.12.5",
+		"@canvas-js/utils": "0.12.5",
+		"@canvas-js/vm": "0.12.5",
 		"@ipld/dag-cbor": "^9.2.1",
 		"@ipld/dag-json": "^10.2.2",
 		"@ipld/schema": "^5.0.0",
@@ -62,6 +63,7 @@
 		"http-status-codes": "^2.3.0",
 		"it-length-prefixed": "^9.1.0",
 		"multiformats": "^13.3.0",
+		"p-defer": "^4.0.1",
 		"p-queue": "^8.0.1",
 		"pg": "^8.13.0",
 		"prom-client": "^15.1.2",
@@ -70,13 +72,12 @@
 		"uint8arrays": "^5.1.0"
 	},
 	"devDependencies": {
-		"@canvas-js/chain-cosmos": "0.12.0",
+		"@canvas-js/chain-cosmos": "0.12.5",
 		"@cloudflare/workers-types": "^4.20240925.0",
 		"@types/node": "^20.14.6",
 		"@types/pg": "^8.11.10",
 		"dotenv": "^16.4.5",
 		"nanoid": "^5.0.7",
-		"p-defer": "^4.0.1",
 		"prando": "^6.0.1"
 	}
 }

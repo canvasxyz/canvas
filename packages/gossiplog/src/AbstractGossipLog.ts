@@ -22,14 +22,14 @@ import { decodeId, encodeId, messageIdPattern } from "./ids.js"
 import { getNextClock } from "./schema.js"
 import { gossiplogTopicPattern } from "./utils.js"
 
-export type GossipLogConsumer<Payload = unknown> = (
-	this: AbstractGossipLog<Payload>,
-	signedMessage: SignedMessage<Payload>,
-) => Awaitable<void>
+export type GossipLogConsumer<Payload = unknown, Result = any> = (
+	this: AbstractGossipLog<Payload, Result>,
+	signedMessage: SignedMessage<Payload, Result>,
+) => Awaitable<Result>
 
-export interface GossipLogInit<Payload = unknown> {
+export interface GossipLogInit<Payload = unknown, Result = any> {
 	topic: string
-	apply: GossipLogConsumer<Payload>
+	apply: GossipLogConsumer<Payload, Result>
 	signer?: Signer<Payload>
 
 	/** validate that the IPLD `payload` is a `Payload` type */
@@ -40,7 +40,7 @@ export interface GossipLogInit<Payload = unknown> {
 	schema?: ModelSchema
 }
 
-export type GossipLogEvents<Payload = unknown> = {
+export type GossipLogEvents<Payload = unknown, Result = any> = {
 	message: CustomEvent<SignedMessage<Payload>>
 	commit: CustomEvent<{ root: Node; heads: string[] }>
 	sync: CustomEvent<{ duration: number; messageCount: number; peer?: string }>
@@ -57,7 +57,9 @@ export type MessageRecord<Payload> = {
 	clock: number
 }
 
-export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmitter<GossipLogEvents<Payload>> {
+export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends TypedEventEmitter<
+	GossipLogEvents<Payload, Result>
+> {
 	public static schema = {
 		$messages: {
 			id: "primary",
@@ -85,9 +87,9 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 	public readonly validatePayload: (payload: unknown) => payload is Payload
 	public readonly verifySignature: (signature: Signature, message: Message<Payload>) => Awaitable<void>
 
-	readonly #apply: GossipLogConsumer<Payload>
+	readonly #apply: GossipLogConsumer<Payload, Result>
 
-	protected constructor(init: GossipLogInit<Payload>) {
+	protected constructor(init: GossipLogInit<Payload, Result>) {
 		super()
 		assert(
 			gossiplogTopicPattern.test(init.topic),
@@ -150,15 +152,23 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		signature: Signature,
 		message: Message<T>,
 		context: { source?: MessageSource; branch?: number } = {},
-	): SignedMessage<T> {
+	): SignedMessage<T, Result> {
 		assert(this.topic === message.topic, "expected this.topic === topic")
 		const preparedMessage = prepareMessage(message)
-		assert(this.validatePayload(preparedMessage.payload), "error encoding message (invalid payload)")
+		assert(
+			this.validatePayload(preparedMessage.payload),
+			"error encoding message (invalid payload)",
+			preparedMessage.payload,
+		)
+
 		return SignedMessage.encode(signature, preparedMessage, context)
 	}
 
-	public decode(value: Uint8Array, context: { source?: MessageSource; branch?: number } = {}): SignedMessage<Payload> {
-		const signedMessage = SignedMessage.decode<Payload>(value, context)
+	public decode(
+		value: Uint8Array,
+		context: { source?: MessageSource; branch?: number } = {},
+	): SignedMessage<Payload, Result> {
+		const signedMessage = SignedMessage.decode<Payload, Result>(value, context)
 		assert(this.topic === signedMessage.message.topic, "expected this.topic === topic")
 		assert(this.validatePayload(signedMessage.message.payload), "error decoding message (invalid payload)")
 		return signedMessage
@@ -177,7 +187,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		return records.length > 0
 	}
 
-	public async get(id: string): Promise<SignedMessage<Payload> | null> {
+	public async get(id: string): Promise<SignedMessage<Payload, Result> | null> {
 		const record = await this.db.get<MessageRecord<Payload>>("$messages", id)
 		if (record === null) {
 			return null
@@ -201,7 +211,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 	public async *iterate(
 		range: { lt?: string; lte?: string; gt?: string; gte?: string; reverse?: boolean; limit?: number } = {},
-	): AsyncIterable<SignedMessage<Payload>> {
+	): AsyncIterable<SignedMessage<Payload, Result>> {
 		const { reverse = false, limit, ...where } = range
 		for await (const row of this.db.iterate<{ id: string; signature: Signature; message: Message<Payload> }>(
 			"$messages",
@@ -223,9 +233,11 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 	public async append<T extends Payload = Payload>(
 		payload: T,
 		{ signer = this.signer }: { signer?: Signer<Payload> } = {},
-	): Promise<SignedMessage<T>> {
+	): Promise<SignedMessage<T, Result> & { result: Result }> {
 		let root: Node | null = null
 		let heads: string[] | null = null
+		let result: Result | undefined = undefined
+
 		const signedMessage = await this.tree.write(async (txn) => {
 			const [clock, parents] = await this.getClock()
 
@@ -241,10 +253,11 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 			const signedMessage = this.encode(signature, message)
 			this.log("appending message %s at clock %d with parents %o", signedMessage.id, clock, parents)
 
-			const result = await this.apply(txn, signedMessage)
+			const applyResult = await this.apply(txn, signedMessage)
 
-			root = result.root
-			heads = result.heads
+			root = applyResult.root
+			heads = applyResult.heads
+			result = applyResult.result
 
 			return signedMessage
 		})
@@ -252,14 +265,15 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		assert(root !== null && heads !== null, "failed to commit transaction")
 		this.dispatchEvent(new CustomEvent("commit", { detail: { root, heads } }))
 
-		return signedMessage
+		signedMessage.result = result
+		return signedMessage as SignedMessage<T, Result> & { result: Result }
 	}
 
 	/**
 	 * Insert an existing signed message into the log (ie received via HTTP API).
 	 * If any of the parents are not present, throw an error.
 	 */
-	public async insert(signedMessage: SignedMessage<Payload>): Promise<{ id: string }> {
+	public async insert(signedMessage: SignedMessage<Payload, Result>): Promise<{ id: string }> {
 		const { message, signature } = signedMessage
 
 		assert(message.topic === this.topic, `expected message.topic === this.topic`)
@@ -268,30 +282,16 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 
 		const { clock, parents } = signedMessage.message
 
-		const signedMessageInstance =
-			signedMessage instanceof SignedMessage ? signedMessage : this.encode(signature, message)
-
-		const id = signedMessageInstance.id
+		const id = signedMessage.id
 
 		this.log("inserting message %s at clock %d with parents %o", id, clock, parents)
-
-		const parentKeys = message.parents.map(encodeId)
 
 		const result = await this.tree.write(async (txn) => {
 			if (txn.has(signedMessage.key)) {
 				return null
 			}
 
-			for (const parentKey of parentKeys) {
-				const leaf = txn.getNode(0, parentKey)
-				if (leaf === null) {
-					const parent = decodeId(parentKey)
-					this.log.error("missing parent %s of message %s: %O", parent, id, message)
-					throw new MissingParentError(parent, id)
-				}
-			}
-
-			return await this.apply(txn, signedMessageInstance)
+			return await this.apply(txn, signedMessage)
 		})
 
 		if (result !== null) {
@@ -304,22 +304,24 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 	private async apply(
 		txn: ReadWriteTransaction,
 		signedMessage: SignedMessage<Payload>,
-	): Promise<{ root: Node; heads: string[] }> {
+	): Promise<{ root: Node; heads: string[]; result: Result }> {
 		const { id, signature, message, key, value } = signedMessage
 		this.log.trace("applying %s %O", id, message)
 
 		const parentMessageRecords: MessageRecord<Payload>[] = []
-		for (const parentId of message.parents) {
-			const parentMessageRecord = await this.db.get<MessageRecord<Payload>>("$messages", parentId)
+		for (const parent of message.parents) {
+			const parentMessageRecord = await this.db.get<MessageRecord<Payload>>("$messages", parent)
 			if (parentMessageRecord === null) {
-				throw new Error(`missing parent ${parentId} of message ${id}`)
+				this.log.error("missing parent %s of message %s: %O", parent, id, message)
+				throw new MissingParentError(parent, id)
 			}
+
 			parentMessageRecords.push(parentMessageRecord)
 		}
 
 		const branch = await this.getBranch(id, parentMessageRecords)
 		signedMessage.branch = branch
-		await this.#apply.apply(this, [signedMessage])
+		const result = await this.#apply.apply(this, [signedMessage])
 
 		const hash = toString(hashEntry(key, value), "hex")
 
@@ -357,7 +359,7 @@ export abstract class AbstractGossipLog<Payload = unknown> extends TypedEventEmi
 		this.dispatchEvent(new CustomEvent("message", { detail: signedMessage }))
 
 		const root = txn.getRoot()
-		return { root, heads }
+		return { root, heads, result }
 	}
 
 	private async newBranch() {

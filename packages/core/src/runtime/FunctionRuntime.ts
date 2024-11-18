@@ -1,100 +1,211 @@
-import { TypeTransformerFunction, create } from "@ipld/schema/typed.js"
-import { fromDSL } from "@ipld/schema/from-dsl.js"
+import pDefer, { DeferredPromise } from "p-defer"
 
 import type { SignerCache } from "@canvas-js/interfaces"
 
-import { ModelSchema, ModelValue, mergeModelValues, updateModelValues, DeriveModelTypes } from "@canvas-js/modeldb"
-import { assert, mapEntries } from "@canvas-js/utils"
+import {
+	ModelSchema,
+	ModelValue,
+	validateModelValue,
+	mergeModelValues,
+	updateModelValues,
+	DeriveModelTypes,
+} from "@canvas-js/modeldb"
+import { assert } from "@canvas-js/utils"
 
-import { ActionImplementationFunction, Contract, ModelAPI } from "../types.js"
-import { AbstractRuntime, ExecutionContext, validateModelValueWithoutIndexedAt } from "./AbstractRuntime.js"
+import { ActionImplementation, Contract, ModelAPI, Chainable } from "../types.js"
+import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
 
-const identity = (x: any) => x
-
-export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
-	public static async init<M extends ModelSchema>(
+export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntime {
+	public static async init<ModelsT extends ModelSchema>(
 		topic: string,
 		signers: SignerCache,
-		contract: Contract<M>,
-	): Promise<FunctionRuntime<M>> {
+		contract: Contract<ModelsT>,
+	): Promise<FunctionRuntime<ModelsT>> {
 		assert(contract.actions !== undefined, "contract initialized without actions")
 		assert(contract.models !== undefined, "contract initialized without models")
 
 		const schema = AbstractRuntime.getModelSchema(contract.models)
-		// const db = await target.openDB({ path, topic }, schema)
-
-		const argsTransformers: Record<
-			string,
-			{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
-		> = {}
-
-		const actions = mapEntries(contract.actions, ([actionName, action]) => {
-			if (typeof action === "function") {
-				argsTransformers[actionName] = { toTyped: identity, toRepresentation: identity }
-				return action as ActionImplementationFunction<DeriveModelTypes<M>, any>
-			}
-
-			if (action.argsType !== undefined) {
-				const { schema, name } = action.argsType
-				argsTransformers[actionName] = create(fromDSL(schema), name)
-			} else {
-				argsTransformers[actionName] = { toTyped: identity, toRepresentation: identity }
-			}
-
-			return action.apply
-		})
-
-		return new FunctionRuntime(topic, signers, schema, actions, argsTransformers)
+		return new FunctionRuntime(topic, signers, schema, contract.actions)
 	}
 
 	#context: ExecutionContext | null = null
-	readonly #db: ModelAPI<DeriveModelTypes<M>>
+	readonly #db: ModelAPI<DeriveModelTypes<ModelsT>>
+
+	#lock: DeferredPromise<void> | null = null
+	#waiting: number = 0
+
+	private async acquireLock() {
+		this.#waiting++
+		while (this.#lock) {
+			await this.#lock.promise
+		}
+		this.#lock = pDefer<void>()
+	}
+
+	private releaseLock() {
+		assert(this.#lock, "internal error")
+		this.#lock.resolve()
+		this.#lock = null
+		this.#waiting--
+	}
 
 	constructor(
 		public readonly topic: string,
 		public readonly signers: SignerCache,
 		public readonly schema: ModelSchema,
-		public readonly actions: Record<string, ActionImplementationFunction<DeriveModelTypes<M>, any>>,
-		public readonly argsTransformers: Record<
-			string,
-			{ toTyped: TypeTransformerFunction; toRepresentation: TypeTransformerFunction }
-		>,
+		public readonly actions: Record<string, ActionImplementation<ModelsT, any>>,
 	) {
 		super()
 
+		// Extend the return type of set(), merge(), or update() to allow chaining a link() call.
+		const getChainableMethod =
+			<A extends string, B, ModelTypes extends DeriveModelTypes<ModelsT>>(
+				updater: (model: A, value: B) => Promise<void>,
+				isSelect?: boolean,
+			): ((model: A, value: B) => Chainable<ModelTypes>) =>
+			(model, value) => {
+				const promise = updater(model, value) as Chainable<ModelTypes>
+
+				// Create a backlink from the model `linkModel` where pk=`linkPrimaryKey`
+				// to point at the model we just created or updated.
+				promise.link = async (linkModel: string, linkPrimaryKey: string, params?: { through: string }) => {
+					await this.acquireLock()
+					try {
+						assert(this.#context !== null, "expected this.#context !== null")
+						const { primaryKey } = this.db.models[model]
+						const target = isSelect ? (value as string) : ((value as ModelValue)[primaryKey] as string)
+						const modelValue = await this.getModelValue(this.#context, linkModel, linkPrimaryKey)
+						assert(modelValue !== null, `db.link(): link from a missing model ${linkModel}.get(${linkPrimaryKey})`)
+						const backlinkKey = params?.through ?? model
+						const backlinkProp = this.db.models[linkModel].properties.find((prop) => prop.name === backlinkKey)
+						assert(backlinkProp !== undefined, `db.link(): link from ${linkModel} used missing property ${backlinkKey}`)
+						if (backlinkProp.kind === "relation") {
+							const current = modelValue[backlinkKey] ?? []
+							assert(Array.isArray(current), "expected relation value to be an array")
+							modelValue[backlinkKey] = current.includes(target) ? current : [...current, target]
+						} else {
+							throw new Error(`db.link(): link from ${linkModel} ${backlinkKey} must be a relation`)
+						}
+						validateModelValue(this.db.models[linkModel], modelValue)
+						this.#context.modelEntries[linkModel][linkPrimaryKey] = modelValue
+					} finally {
+						this.releaseLock()
+					}
+				}
+
+				promise.unlink = async (linkModel: string, linkPrimaryKey: string, params?: { through: string }) => {
+					await this.acquireLock()
+					try {
+						assert(this.#context !== null, "expected this.#context !== null")
+						const { primaryKey } = this.db.models[model]
+						const target = isSelect ? (value as string) : ((value as ModelValue)[primaryKey] as string)
+						const modelValue = await this.getModelValue(this.#context, linkModel, linkPrimaryKey)
+						assert(modelValue !== null, `db.unlink(): called on a missing model ${linkModel}.get(${linkPrimaryKey})`)
+						const backlinkKey = params?.through ?? model
+						const backlinkProp = this.db.models[linkModel].properties.find((prop) => prop.name === backlinkKey)
+						assert(
+							backlinkProp !== undefined,
+							`db.unlink(): called on ${linkModel} used missing property ${backlinkKey}`,
+						)
+						if (backlinkProp.kind === "relation") {
+							const current = modelValue[backlinkKey] ?? []
+							assert(Array.isArray(current), "expected relation value to be an array")
+							modelValue[backlinkKey] = current.filter((item) => item !== target)
+						} else {
+							throw new Error(`db.unlink(): link from ${linkModel} ${backlinkKey} must be a relation`)
+						}
+						validateModelValue(this.db.models[linkModel], modelValue)
+						this.#context.modelEntries[linkModel][linkPrimaryKey] = modelValue
+					} finally {
+						this.releaseLock()
+					}
+				}
+
+				return promise
+			}
+
 		this.#db = {
-			get: async (model: string, key: string) => {
-				assert(this.#context !== null, "expected this.#context !== null")
-				return await this.getModelValue(this.#context, model, key)
+			get: async <T extends keyof DeriveModelTypes<ModelsT> & string>(model: T, key: string) => {
+				await this.acquireLock()
+				try {
+					assert(this.#context !== null, "expected this.#context !== null")
+					const result = await this.getModelValue(this.#context, model, key)
+					return result as DeriveModelTypes<ModelsT>[T]
+				} finally {
+					this.releaseLock()
+				}
 			},
-			set: (model, value) => {
-				assert(this.#context !== null, "expected this.#context !== null")
-				validateModelValueWithoutIndexedAt(this.db.models[model], value)
-				const { primaryKey } = this.db.models[model]
-				const key = (value as ModelValue)[primaryKey] as string
-				this.#context.modelEntries[model][key] = value
-			},
-			update: async (model, value) => {
-				assert(this.#context !== null, "expected this.#context !== null")
-				const { primaryKey } = this.db.models[model]
-				const key = (value as ModelValue)[primaryKey] as string
-				const modelValue = await this.getModelValue(this.#context, model, key)
-				const mergedValue = updateModelValues(value as ModelValue, modelValue ?? {})
-				validateModelValueWithoutIndexedAt(this.db.models[model], mergedValue)
-				this.#context.modelEntries[model][key] = mergedValue
-			},
-			merge: async (model, value) => {
-				assert(this.#context !== null, "expected this.#context !== null")
-				const { primaryKey } = this.db.models[model]
-				const key = (value as ModelValue)[primaryKey] as string
-				const modelValue = await this.getModelValue(this.#context, model, key)
-				const mergedValue = mergeModelValues(value as ModelValue, modelValue ?? {})
-				validateModelValueWithoutIndexedAt(this.db.models[model], mergedValue)
-				this.#context.modelEntries[model][key] = mergedValue
-			},
+			select: getChainableMethod(async (model, key: string) => {}, true),
+			set: getChainableMethod(async (model, value) => {
+				await this.acquireLock()
+				try {
+					assert(this.#context !== null, "expected this.#context !== null")
+					validateModelValue(this.db.models[model], value)
+					const { primaryKey } = this.db.models[model]
+					assert(primaryKey in value, `db.set(${model}): missing primary key ${primaryKey}`)
+					assert(primaryKey !== null && primaryKey !== undefined, `db.set(${model}): ${primaryKey} primary key`)
+					const key = (value as ModelValue)[primaryKey] as string
+					this.#context.modelEntries[model][key] = value
+				} finally {
+					this.releaseLock()
+				}
+			}),
+			create: getChainableMethod(async (model, value) => {
+				await this.acquireLock()
+				try {
+					assert(this.#context !== null, "expected this.#context !== null")
+					validateModelValue(this.db.models[model], value)
+					const { primaryKey } = this.db.models[model]
+					assert(primaryKey in value, `db.create(${model}): missing primary key ${primaryKey}`)
+					assert(primaryKey !== null && primaryKey !== undefined, `db.create(${model}): ${primaryKey} primary key`)
+					const key = (value as ModelValue)[primaryKey] as string
+					this.#context.modelEntries[model][key] = value
+				} finally {
+					this.releaseLock()
+				}
+			}),
+			update: getChainableMethod(async (model, value) => {
+				await this.acquireLock()
+				try {
+					assert(this.#context !== null, "expected this.#context !== null")
+					const { primaryKey } = this.db.models[model]
+					assert(primaryKey in value, `db.update(${model}): missing primary key ${primaryKey}`)
+					assert(primaryKey !== null && primaryKey !== undefined, `db.update(${model}): ${primaryKey} primary key`)
+					const key = (value as ModelValue)[primaryKey] as string
+					const modelValue = await this.getModelValue(this.#context, model, key)
+					if (modelValue === null) throw new Error(`db.update(${model}, ${key}): no value found to update into`)
+					const mergedValue = updateModelValues(value as ModelValue, modelValue ?? {})
+					validateModelValue(this.db.models[model], mergedValue)
+					this.#context.modelEntries[model][key] = mergedValue
+				} finally {
+					this.releaseLock()
+				}
+			}),
+			merge: getChainableMethod(async (model, value) => {
+				await this.acquireLock()
+				try {
+					assert(this.#context !== null, "expected this.#context !== null")
+					const { primaryKey } = this.db.models[model]
+					assert(primaryKey in value, `db.merge(${model}): missing primary key ${primaryKey}`)
+					assert(primaryKey !== null && primaryKey !== undefined, `db.merge(${model}): ${primaryKey} primary key`)
+					const key = (value as ModelValue)[primaryKey] as string
+					const modelValue = await this.getModelValue(this.#context, model, key)
+					if (modelValue === null) throw new Error(`db.merge(${model}, ${key}): no value found to merge into`)
+					const mergedValue = mergeModelValues(value as ModelValue, modelValue ?? {})
+					validateModelValue(this.db.models[model], mergedValue)
+					this.#context.modelEntries[model][key] = mergedValue
+				} finally {
+					this.releaseLock()
+				}
+			}),
 			delete: async (model: string, key: string) => {
-				assert(this.#context !== null, "expected this.#context !== null")
-				this.#context.modelEntries[model][key] = null
+				await this.acquireLock()
+				try {
+					assert(this.#context !== null, "expected this.#context !== null")
+					this.#context.modelEntries[model][key] = null
+				} finally {
+					this.releaseLock()
+				}
 			},
 		}
 	}
@@ -113,19 +224,15 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 			context: { blockhash, timestamp },
 		} = context.message.payload
 
-		const argsTransformer = this.argsTransformers[name]
 		const action = this.actions[name]
-		if (action === undefined || argsTransformer === undefined) {
+		if (action === undefined) {
 			throw new Error(`invalid action name: ${name}`)
 		}
-
-		const typedArgs = argsTransformer.toTyped(args)
-		assert(typedArgs !== undefined, "action args did not validate the provided schema type")
 
 		this.#context = context
 
 		try {
-			return await action(this.#db, typedArgs, {
+			const result = await action(this.#db, args, {
 				id: context.id,
 				publicKey,
 				did,
@@ -133,6 +240,13 @@ export class FunctionRuntime<M extends ModelSchema> extends AbstractRuntime {
 				blockhash: blockhash ?? null,
 				timestamp,
 			})
+			while (this.#waiting > 0) {
+				await new Promise((resolve) => setTimeout(resolve, 10))
+			}
+			return result
+		} catch (err) {
+			console.log("dispatch action failed:", err)
+			throw err
 		} finally {
 			this.#context = null
 		}

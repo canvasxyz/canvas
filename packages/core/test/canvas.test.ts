@@ -29,6 +29,12 @@ export const actions = {
     await db.set("posts", { id: postId, content, address, did, isVisible, timestamp, metadata });
   },
 
+  async updatePost(db, { postId, content, isVisible, metadata }, { id, did, address, timestamp }) {
+    const post = await db.get("posts", postId)
+    if (post.did !== did) throw new Error("can only update own posts")
+    await db.update("posts", { id: postId, content, isVisible, metadata });
+  },
+
   async deletePost(db, key, { did }) {
 		if (!key.startsWith(did + "/")) {
 			throw new Error("unauthorized")
@@ -95,6 +101,16 @@ test("apply an action and read a record from the database", async (t) => {
 	t.log(`applied action ${id2}`)
 	const clock2 = await app.messageLog.getClock()
 	t.is(clock2[0], 4)
+
+	const { id: id3 } = await app.actions.updatePost({
+		postId,
+		content: "update",
+		isVisible: false,
+		something: null,
+		metadata: {},
+	})
+	const clock3 = await app.messageLog.getClock()
+	t.is(clock3[0], 5)
 })
 
 test("create and delete a post", async (t) => {
@@ -197,6 +213,7 @@ test("create an app with an inline contract", async (t) => {
 				async createPost(db, { content }: { content: string }, { id, did, timestamp }) {
 					const postId = [did, id].join("/")
 					await db.set("posts", { id: postId, content, timestamp, address: did })
+					return content
 				},
 			},
 		},
@@ -205,7 +222,7 @@ test("create an app with an inline contract", async (t) => {
 
 	t.teardown(() => app.stop())
 
-	const { id, message } = await app.actions.createPost({ content: "hello world" })
+	const { id, message, result } = await app.actions.createPost({ content: "hello world" })
 
 	t.log(`applied action ${id}`)
 
@@ -213,6 +230,7 @@ test("create an app with an inline contract", async (t) => {
 	const value = await app.db.get("posts", postId)
 	t.is(value?.content, "hello world")
 	t.is(value?.address, `did:pkh:eip155:1:${wallet.address}`)
+	t.is(result, "hello world")
 })
 
 test("merge and update into a value set by another action", async (t) => {
@@ -296,6 +314,58 @@ test("merge and update into a value set by another action", async (t) => {
 			extra1: { b: 2, c: 3 },
 		},
 		label: "foosball",
+	})
+})
+
+test("merge and get execute in order, even without await", async (t) => {
+	const app = await Canvas.initialize({
+		topic: "com.example.app",
+		contract: {
+			models: {
+				test: { id: "primary", foo: "string?", bar: "string?", qux: "string?" },
+			},
+			actions: {
+				async testMerges(db) {
+					db.set("test", { id: "0", foo: null, bar: null, qux: "foo" })
+					db.merge("test", { id: "0", foo: "foo", qux: "qux" })
+					db.merge("test", { id: "0", bar: "bar" })
+					const result = await db.get("test", "0")
+					return result
+				},
+				async testGet(db): Promise<any> {
+					db.set("test", { id: "1", foo: null, bar: null, qux: "foo" })
+					const resultPromise = db.get("test", "1")
+					db.merge("test", { id: "1", foo: "foo", qux: "qux" })
+					db.merge("test", { id: "1", bar: "bar" })
+					const result = await resultPromise
+					return result
+				},
+			},
+		},
+	})
+
+	t.teardown(() => app.stop())
+
+	await app.actions.testMerges()
+	t.deepEqual(await app.db.get("test", "0"), {
+		id: "0",
+		foo: "foo",
+		bar: "bar",
+		qux: "qux",
+	})
+
+	const { result } = await app.actions.testGet()
+	t.deepEqual(await app.db.get("test", "1"), {
+		id: "1",
+		foo: "foo",
+		bar: "bar",
+		qux: "qux",
+	})
+	t.deepEqual(result, {
+		id: "1",
+		foo: null,
+		bar: null,
+		qux: "foo",
 	})
 })
 

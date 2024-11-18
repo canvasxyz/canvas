@@ -5,14 +5,13 @@ import express from "express"
 import cors from "cors"
 
 import type pg from "pg"
-import { WebSocketServer } from "ws"
+import ws from "ws"
+const { WebSocketServer } = ws // avoid error when building for expo web because WebSocketServer is a CommonJS package
 
-import { GossipLog as SqliteGossipLog } from "@canvas-js/gossiplog/sqlite"
-import { GossipLog as PostgresGossipLog } from "@canvas-js/gossiplog/pg"
 import { NetworkServer } from "@canvas-js/gossiplog/server"
 import { assert } from "@canvas-js/utils"
 import { createAPI } from "@canvas-js/core/api"
-import { SqlStorage } from "@cloudflare/workers-types"
+import type { SqlStorage } from "@cloudflare/workers-types"
 
 import type { PlatformTarget } from "../interface.js"
 import { anySignal } from "any-signal"
@@ -36,14 +35,17 @@ const target: PlatformTarget = {
 		init,
 	) {
 		if (location.path === null) {
+			const { GossipLog: SqliteGossipLog } = await import("@canvas-js/gossiplog/sqlite")
 			return new SqliteGossipLog(init)
 		} else if (isPostgres(location.path)) {
+			const { GossipLog: PostgresGossipLog } = await import("@canvas-js/gossiplog/pg")
 			return await PostgresGossipLog.open(location.path as string | pg.ConnectionConfig, {
 				...init,
 				clear: location.clear,
 			})
 		} else {
 			assert(typeof location.path === "string", 'expected typeof location.path === "string"')
+			const { GossipLog: SqliteGossipLog } = await import("@canvas-js/gossiplog/sqlite")
 			const gossipLog = new SqliteGossipLog({ directory: location.path, ...init })
 
 			const manifestPath = path.resolve(location.path, "canvas.json")

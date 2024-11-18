@@ -7,7 +7,7 @@ const contract = {
 		posts: {
 			id: "primary",
 			content: "string",
-		},
+		} satisfies ModelSchema,
 	},
 	actions: {
 		createPost: async (db, { content }, { id }) => {
@@ -19,7 +19,7 @@ const contract = {
 				throw new Error("Post not found")
 			}
 
-			if (post["$indexed_at"]) {
+			if ((post as any)["$indexed_at"]) {
 				throw new Error("indexed_at should not be accessible from inside a contract")
 			}
 		},

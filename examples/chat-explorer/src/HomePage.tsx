@@ -62,7 +62,7 @@ function HomePage() {
 			</TabNav.Root>
 
 			<Routes>
-				<Route path="/" element={<Navigate to="./actions" replace={true} />} />
+				<Route path="/" element={<Navigate to="actions" replace={true} />} />
 				<Route path="network" element={<NetworkPlot />} />
 				<Route path="actions" element={<ActionsTable />} />
 				<Route path="sessions" element={<SessionsTable />} />

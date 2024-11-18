@@ -34,9 +34,10 @@ function ActionsTable() {
 	// if the length of the result is n + 1, then there is another page
 	const params = new URLSearchParams({
 		limit: (entriesPerPage + 1).toString(),
+		order: "desc",
 	})
 	if (currentCursor) {
-		params.append("before", currentCursor)
+		params.append("lt", currentCursor)
 	}
 
 	const { data: actions, error } = useSWR(
@@ -99,11 +100,11 @@ function ActionsTable() {
 			</Table.Root>
 			<Flex direction="row" gap="2">
 				<Box flexGrow="1" />
-				<PaginationButton text="Previous" enabled={currentCursor !== null} onClick={popCursor} />
+				<PaginationButton text="Newer" enabled={currentCursor !== null} onClick={popCursor} />
 				<PaginationButton
-					text="Next"
+					text="Older"
 					enabled={hasMore}
-					onClick={() => pushCursor(actionsToDisplay[entriesPerPage].id)}
+					onClick={() => pushCursor(actionsToDisplay[actionsToDisplay.length - 1].id)}
 				/>
 			</Flex>
 		</Flex>

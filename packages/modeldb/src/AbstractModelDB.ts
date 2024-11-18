@@ -2,15 +2,15 @@ import { logger } from "@libp2p/logger"
 
 import { assert } from "@canvas-js/utils"
 
-import { Config, ModelValue, Effect, Model, QueryParams, WhereCondition } from "./types.js"
+import { Config, ModelValue, Effect, Model, QueryParams, WhereCondition, ModelValueWithIncludes } from "./types.js"
 import { getFilter } from "./query.js"
-import { Awaitable } from "./utils.js"
+import { Awaitable, getModelsFromInclude, mergeModelValues, updateModelValues } from "./utils.js"
 
 type Subscription = {
 	model: string
 	query: QueryParams
 	filter: (effect: Effect) => boolean
-	callback: (results: ModelValue[]) => Awaitable<void>
+	callback: (results: ModelValue[] | ModelValueWithIncludes[]) => Awaitable<void>
 }
 
 export abstract class AbstractModelDB {
@@ -61,10 +61,24 @@ export abstract class AbstractModelDB {
 		await this.apply([{ operation: "delete", model: modelName, key }])
 	}
 
+	public async update<T extends ModelValue<any> = ModelValue<any>>(modelName: string, value: T) {
+		const key = this.models[modelName].primaryKey
+		const existingValue = await this.get<T>(modelName, value[key])
+		const updatedValue = updateModelValues(value, existingValue ?? {})
+		await this.apply([{ operation: "set", model: modelName, value: updatedValue }])
+	}
+
+	public async merge<T extends ModelValue<any> = ModelValue<any>>(modelName: string, value: T) {
+		const key = this.models[modelName].primaryKey
+		const existingValue = await this.get<T>(modelName, value[key])
+		const mergedValue = mergeModelValues(value, existingValue ?? {})
+		await this.apply([{ operation: "set", model: modelName, value: mergedValue }])
+	}
+
 	public subscribe(
 		modelName: string,
 		query: QueryParams,
-		callback: (results: ModelValue[]) => Awaitable<void>,
+		callback: (results: ModelValue[] | ModelValueWithIncludes[]) => Awaitable<void>,
 	): { id: number; results: Promise<ModelValue[]> } {
 		const model = this.models[modelName]
 		assert(model !== undefined, `model ${modelName} not found`)
@@ -94,7 +108,17 @@ export abstract class AbstractModelDB {
 	protected getEffectFilter(model: Model, query: QueryParams): (effect: Effect) => boolean {
 		const filter = getFilter(model, query.where)
 
+		const includeModels = query.include
+			? Array.from(getModelsFromInclude(this.config.models, model.name, query.include))
+			: []
+
 		return (effect) => {
+			// TODO: we should memoize the set of joined models returned the last time
+			// subscribe() triggered a callback, and check for inclusion in that set
+			if (query.include && includeModels.includes(effect.model)) {
+				return true
+			}
+
 			if (effect.model !== model.name) {
 				return false
 			}

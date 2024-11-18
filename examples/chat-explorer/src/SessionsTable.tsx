@@ -14,9 +14,9 @@ function SessionsTable() {
 
 	// in order to determine if another page exists, we retrieve n + 1 entries
 	// if the length of the result is n + 1, then there is another page
-	const params = new URLSearchParams({ type: "session", limit: (entriesPerPage + 1).toString() })
+	const params = new URLSearchParams({ limit: (entriesPerPage + 1).toString(), order: "desc" })
 	if (currentCursor) {
-		params.append("before", currentCursor)
+		params.append("lt", currentCursor)
 	}
 
 	const { data: sessions, error } = useSWR(
@@ -66,11 +66,11 @@ function SessionsTable() {
 			</Table.Root>
 			<Flex direction="row" gap="2">
 				<Box flexGrow="1" />
-				<PaginationButton text="Previous" enabled={currentCursor !== null} onClick={popCursor} />
+				<PaginationButton text="Newer" enabled={currentCursor !== null} onClick={popCursor} />
 				<PaginationButton
-					text="Next"
+					text="Older"
 					enabled={hasMore}
-					onClick={() => pushCursor(sessionsToDisplay[entriesPerPage].id)}
+					onClick={() => pushCursor(sessionsToDisplay[sessionsToDisplay.length - 1].id)}
 				/>
 			</Flex>
 		</Flex>

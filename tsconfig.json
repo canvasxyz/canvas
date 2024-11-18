@@ -23,6 +23,7 @@
 		{ "path": "./packages/modeldb-idb" },
 		{ "path": "./packages/modeldb-pg" },
 		{ "path": "./packages/modeldb-sqlite" },
+		{ "path": "./packages/modeldb-sqlite-expo" },
 		{ "path": "./packages/modeldb-sqlite-wasm" },
 		{ "path": "./packages/chain-atp" },
 		{ "path": "./packages/chain-atp/test" },
@@ -44,8 +45,10 @@
 		{ "path": "./examples/chat" },
 		{ "path": "./examples/chat-postgres" },
 		{ "path": "./examples/encrypted-chat" },
-		{ "path": "./examples/network-explorer" },
-		{ "path": "./examples/network-explorer/server" },
+		{ "path": "./examples/chat-explorer" },
+		{ "path": "./examples/chat-explorer/server" },
+		{ "path": "./examples/common-explorer" },
+		{ "path": "./examples/common-explorer/server" },
 		{ "path": "./examples/snake" }
 	]
 }
