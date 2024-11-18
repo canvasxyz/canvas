@@ -64,6 +64,11 @@ export type CanvasLogEvent = CustomEvent<{
 }>
 
 export type ApplicationData = {
+	networkConfig: {
+		bootstrapList?: string[]
+		listen?: string[]
+		announce?: string[]
+	}
 	topic: string
 	models: Record<string, Model>
 	actions: string[]
@@ -180,6 +185,8 @@ export class Canvas<
 	private readonly controller = new AbortController()
 	private readonly log = logger("canvas:core")
 
+	private networkConfig: NetworkConfig | null = null
+
 	private constructor(
 		public readonly signers: SignerCache,
 		public readonly messageLog: AbstractGossipLog<Action | Session | Snapshot>,
@@ -254,6 +261,7 @@ export class Canvas<
 	}
 
 	public async startLibp2p(config: NetworkConfig): Promise<Libp2p<ServiceMap<Action | Session | Snapshot>>> {
+		this.networkConfig = config
 		return await this.messageLog.startLibp2p(config)
 	}
 
@@ -311,6 +319,11 @@ export class Canvas<
 	public getApplicationData(): ApplicationData {
 		const models = Object.fromEntries(Object.entries(this.db.models).filter(([name]) => !name.startsWith("$")))
 		return {
+			networkConfig: {
+				bootstrapList: this.networkConfig?.bootstrapList,
+				listen: this.networkConfig?.listen,
+				announce: this.networkConfig?.announce,
+			},
 			topic: this.topic,
 			models: models,
 			actions: Object.keys(this.actions),
