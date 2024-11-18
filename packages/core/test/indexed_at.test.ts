@@ -1,35 +1,33 @@
 import test from "ava"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
-import { Canvas, Contract } from "@canvas-js/core"
-
-const contract = {
-	models: {
-		posts: {
-			id: "primary",
-			content: "string",
-		} satisfies ModelSchema,
-	},
-	actions: {
-		createPost: async (db, { content }, { id }) => {
-			await db.set("posts", { id, content })
-		},
-		checkIndexedAt: async (db, { id }) => {
-			const post = await db.get("posts", id)
-			if (!post) {
-				throw new Error("Post not found")
-			}
-
-			if ((post as any)["$indexed_at"]) {
-				throw new Error("indexed_at should not be accessible from inside a contract")
-			}
-		},
-	},
-} satisfies Contract
+import { Canvas } from "@canvas-js/core"
 
 test("$indexed_at should not be accessible from inside a contract", async (t) => {
 	const app = await Canvas.initialize({
 		topic: "com.example.app",
-		contract,
+		contract: {
+			models: {
+				posts: {
+					id: "primary",
+					content: "string",
+				},
+			},
+			actions: {
+				createPost: async (db, { content }, { id }) => {
+					await db.set("posts", { id, content })
+				},
+				checkIndexedAt: async (db, { id }) => {
+					const post = await db.get("posts", id)
+					if (!post) {
+						throw new Error("Post not found")
+					}
+
+					if ((post as any)["$indexed_at"]) {
+						throw new Error("indexed_at should not be accessible from inside a contract")
+					}
+				},
+			},
+		},
 		signers: [new SIWESigner()],
 	})
 
@@ -44,7 +42,29 @@ test("$indexed_at should not be accessible from inside a contract", async (t) =>
 test("$indexed_at should be accessible from outside a contract", async (t) => {
 	const app = await Canvas.initialize({
 		topic: "com.example.app",
-		contract,
+		contract: {
+			models: {
+				posts: {
+					id: "primary",
+					content: "string",
+				},
+			},
+			actions: {
+				createPost: async (db, { content }, { id }) => {
+					await db.set("posts", { id, content })
+				},
+				checkIndexedAt: async (db, { id }) => {
+					const post = await db.get("posts", id)
+					if (!post) {
+						throw new Error("Post not found")
+					}
+
+					if ((post as any)["$indexed_at"]) {
+						throw new Error("indexed_at should not be accessible from inside a contract")
+					}
+				},
+			},
+		},
 		signers: [new SIWESigner()],
 	})
 
