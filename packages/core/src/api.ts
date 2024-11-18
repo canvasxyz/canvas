@@ -12,6 +12,7 @@ import { assert } from "@canvas-js/utils"
 import { Canvas } from "./Canvas.js"
 import { isAction, isSession } from "./utils.js"
 import { SignedMessage } from "@canvas-js/gossiplog"
+import { WhereCondition } from "@canvas-js/modeldb"
 
 export interface APIOptions {}
 
@@ -39,17 +40,11 @@ export function createAPI(app: Canvas): express.Express {
 		type MessageRecord = { id: string; signature: Signature; message: Message<Action> }
 		const results: MessageRecord[] = []
 
-		const where = did !== undefined || name !== undefined ? { did, name } : { id: range }
+		const where = did !== undefined || name !== undefined ? { did, name } : { message_id: range }
 
-		const messageIds: string[] = []
-
-		for await (const { message_id } of app.db.iterate("$actions", { where })) {
-			const count = messageIds.push(message_id)
-			if (count >= limit) {
-				break
-			}
-		}
-
+		const messageIds: string[] = (
+			await app.db.query("$actions", { select: { message_id: true }, where, limit, orderBy: { message_id: order } })
+		).map(({ message_id }) => message_id)
 		const signedMessages = await app.db.getMany<SignedMessage<Action>>("$messages", messageIds)
 
 		for (const signedMessage of signedMessages) {
@@ -105,9 +100,20 @@ export function createAPI(app: Canvas): express.Express {
 		type MessageRecord = { id: string; signature: Signature; message: Message<Session> }
 		const results: MessageRecord[] = []
 
-		if (did !== undefined || publicKey !== undefined) {
-			const messageIds: string[] = []
+		const where: WhereCondition = { message_id: range }
+		if (did !== undefined) {
+			where.did = did
+		}
 
+		if (publicKey !== undefined) {
+			where.public_key = publicKey
+		}
+
+		let messageIds: string[] = []
+		if (minExpiration !== undefined) {
+			// we have to iterate over $sessions
+			// because we can't construct a query that filters the $sessions table
+			// based on the expiration field
 			for await (const { message_id, expiration } of app.db.iterate<{
 				message_id: string
 				expiration: number | null
@@ -116,40 +122,31 @@ export function createAPI(app: Canvas): express.Express {
 				where: { message_id: range, did, public_key: publicKey },
 				orderBy: { message_id: order },
 			})) {
-				if (minExpiration === undefined || expiration === null || minExpiration <= expiration) {
+				if (expiration === null || minExpiration <= expiration) {
 					const count = messageIds.push(message_id)
 					if (count >= limit) {
 						break
 					}
 				}
 			}
-
-			for (const id of messageIds) {
-				const signedMessage = await app.db.get<MessageRecord>("$messages", id)
-				assert(signedMessage !== null, "internal error - missing record in $messages")
-				const { signature, message } = signedMessage
-				results.push({ id, signature, message })
-			}
 		} else {
-			for await (const { id, signature, message } of app.db.iterate<{
-				id: string
-				signature: Signature
-				message: Message<Action | Session>
-			}>("$messages", {
-				select: { id: true, signature: true, message: true },
-				where: { id: range },
-				orderBy: { id: order },
-			})) {
-				if (isSession(message)) {
-					const { timestamp, duration } = message.payload.context
-					if (minExpiration === undefined || duration === undefined || minExpiration < timestamp + duration) {
-						const count = results.push({ id, signature, message })
-						if (count >= limit) {
-							break
-						}
-					}
-				}
-			}
+			messageIds = (
+				await app.db.query<{
+					message_id: string
+				}>("$sessions", {
+					select: { message_id: true },
+					where: { message_id: range, did, public_key: publicKey },
+					orderBy: { message_id: order },
+					limit,
+				})
+			).map(({ message_id }) => message_id)
+		}
+
+		for (const id of messageIds) {
+			const signedMessage = await app.db.get<MessageRecord>("$messages", id)
+			assert(signedMessage !== null, "internal error - missing record in $messages")
+			const { signature, message } = signedMessage
+			results.push({ id, signature, message })
 		}
 
 		res.writeHead(StatusCodes.OK, { "content-type": "application/json" })
