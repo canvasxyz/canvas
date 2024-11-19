@@ -35,21 +35,27 @@ test("link and unlink database items", async (t) => {
 
 	await app.actions.createGame()
 
-	t.deepEqual(await app.db.get("game", "0"), {
+	const game_0 = await app.db.get("game", "0")
+	delete game_0!["$indexed_at"]
+	t.deepEqual(game_0, {
 		id: "0",
 		player: ["1"],
 		manager: ["2"],
 		observers: ["3", "4"],
 		status: "GAME_START",
 	})
-	t.deepEqual(await app.db.get("player", "1"), {
+	const player_1 = await app.db.get("player", "1")
+	delete player_1!["$indexed_at"]
+	t.deepEqual(player_1, {
 		id: "1",
 		game: "0",
 		status: "ALIVE",
 	})
 
 	await app.actions.unlinkGame()
-	t.deepEqual(await app.db.get("game", "0"), {
+	const game_0_after = await app.db.get("game", "0")
+	delete game_0_after!["$indexed_at"]
+	t.deepEqual(game_0_after, {
 		id: "0",
 		player: ["1"],
 		manager: ["2"],

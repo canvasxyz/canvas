@@ -347,7 +347,9 @@ test("merge and get execute in order, even without await", async (t) => {
 	t.teardown(() => app.stop())
 
 	await app.actions.testMerges()
-	t.deepEqual(await app.db.get("test", "0"), {
+	const test_0 = await app.db.get("test", "0")
+	delete test_0!["$indexed_at"]
+	t.deepEqual(test_0, {
 		id: "0",
 		foo: "foo",
 		bar: "bar",
@@ -355,7 +357,9 @@ test("merge and get execute in order, even without await", async (t) => {
 	})
 
 	const { result } = await app.actions.testGet()
-	t.deepEqual(await app.db.get("test", "1"), {
+	const test_1 = await app.db.get("test", "1")
+	delete test_1!["$indexed_at"]
+	t.deepEqual(test_1, {
 		id: "1",
 		foo: "foo",
 		bar: "bar",

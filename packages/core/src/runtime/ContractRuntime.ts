@@ -1,7 +1,7 @@
 import { QuickJSHandle } from "quickjs-emscripten"
 
 import type { SignerCache } from "@canvas-js/interfaces"
-import { ModelValue, ModelSchema, validateModelValue, updateModelValues, mergeModelValues } from "@canvas-js/modeldb"
+import { ModelValue, ModelSchema, updateModelValues, mergeModelValues } from "@canvas-js/modeldb"
 import { VM } from "@canvas-js/vm"
 import { assert, mapEntries, JSValue, mapValues } from "@canvas-js/utils"
 
@@ -118,7 +118,7 @@ export class ContractRuntime extends AbstractRuntime {
 					const model = vm.context.getString(modelHandle)
 					assert(this.db.models[model] !== undefined, "model not found")
 					const value = this.vm.unwrapValue(valueHandle) as ModelValue
-					validateModelValue(this.db.models[model], value)
+					validateModelValueWithoutIndexedAt(this.db.models[model], value)
 					const { primaryKey } = this.db.models[model]
 					const key = value[primaryKey] as string
 					assert(typeof key === "string", "expected value[primaryKey] to be a string")
@@ -139,7 +139,7 @@ export class ContractRuntime extends AbstractRuntime {
 					this.getModelValue(this.#context, model, key)
 						.then((previousValue) => {
 							const mergedValue = updateModelValues(value, previousValue ?? {})
-							validateModelValue(this.db.models[model], mergedValue)
+							validateModelValueWithoutIndexedAt(this.db.models[model], mergedValue)
 							assert(this.#context !== null)
 							this.#context.modelEntries[model][key] = mergedValue
 							promise.resolve()

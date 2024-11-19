@@ -2,18 +2,11 @@ import pDefer, { DeferredPromise } from "p-defer"
 
 import type { SignerCache } from "@canvas-js/interfaces"
 
-import {
-	ModelSchema,
-	ModelValue,
-	validateModelValue,
-	mergeModelValues,
-	updateModelValues,
-	DeriveModelTypes,
-} from "@canvas-js/modeldb"
+import { ModelSchema, ModelValue, mergeModelValues, updateModelValues, DeriveModelTypes } from "@canvas-js/modeldb"
 import { assert } from "@canvas-js/utils"
 
 import { ActionImplementation, Contract, ModelAPI, Chainable } from "../types.js"
-import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
+import { AbstractRuntime, ExecutionContext, validateModelValueWithoutIndexedAt } from "./AbstractRuntime.js"
 
 export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntime {
 	public static async init<ModelsT extends ModelSchema>(
@@ -86,7 +79,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 						} else {
 							throw new Error(`db.link(): link from ${linkModel} ${backlinkKey} must be a relation`)
 						}
-						validateModelValue(this.db.models[linkModel], modelValue)
+						validateModelValueWithoutIndexedAt(this.db.models[linkModel], modelValue)
 						this.#context.modelEntries[linkModel][linkPrimaryKey] = modelValue
 					} finally {
 						this.releaseLock()
@@ -114,7 +107,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 						} else {
 							throw new Error(`db.unlink(): link from ${linkModel} ${backlinkKey} must be a relation`)
 						}
-						validateModelValue(this.db.models[linkModel], modelValue)
+						validateModelValueWithoutIndexedAt(this.db.models[linkModel], modelValue)
 						this.#context.modelEntries[linkModel][linkPrimaryKey] = modelValue
 					} finally {
 						this.releaseLock()
@@ -140,7 +133,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 				await this.acquireLock()
 				try {
 					assert(this.#context !== null, "expected this.#context !== null")
-					validateModelValue(this.db.models[model], value)
+					validateModelValueWithoutIndexedAt(this.db.models[model], value)
 					const { primaryKey } = this.db.models[model]
 					assert(primaryKey in value, `db.set(${model}): missing primary key ${primaryKey}`)
 					assert(primaryKey !== null && primaryKey !== undefined, `db.set(${model}): ${primaryKey} primary key`)
@@ -154,7 +147,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 				await this.acquireLock()
 				try {
 					assert(this.#context !== null, "expected this.#context !== null")
-					validateModelValue(this.db.models[model], value)
+					validateModelValueWithoutIndexedAt(this.db.models[model], value)
 					const { primaryKey } = this.db.models[model]
 					assert(primaryKey in value, `db.create(${model}): missing primary key ${primaryKey}`)
 					assert(primaryKey !== null && primaryKey !== undefined, `db.create(${model}): ${primaryKey} primary key`)
@@ -175,7 +168,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 					const modelValue = await this.getModelValue(this.#context, model, key)
 					if (modelValue === null) throw new Error(`db.update(${model}, ${key}): no value found to update into`)
 					const mergedValue = updateModelValues(value as ModelValue, modelValue ?? {})
-					validateModelValue(this.db.models[model], mergedValue)
+					validateModelValueWithoutIndexedAt(this.db.models[model], mergedValue)
 					this.#context.modelEntries[model][key] = mergedValue
 				} finally {
 					this.releaseLock()
@@ -192,7 +185,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 					const modelValue = await this.getModelValue(this.#context, model, key)
 					if (modelValue === null) throw new Error(`db.merge(${model}, ${key}): no value found to merge into`)
 					const mergedValue = mergeModelValues(value as ModelValue, modelValue ?? {})
-					validateModelValue(this.db.models[model], mergedValue)
+					validateModelValueWithoutIndexedAt(this.db.models[model], mergedValue)
 					this.#context.modelEntries[model][key] = mergedValue
 				} finally {
 					this.releaseLock()
