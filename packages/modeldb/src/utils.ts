@@ -69,9 +69,27 @@ export function validateModelValue(model: Model, value: ModelValue) {
 }
 
 export function validatePropertyValue(modelName: string, property: Property, value: PropertyValue) {
+	const formatValue = () => {
+		let valueFormat
+		if (value === null) {
+			valueFormat = "null"
+		} else if (value === undefined) {
+			valueFormat = "undefined"
+		} else if (typeof value !== "object") {
+			valueFormat = value.toString()
+		} else {
+			try {
+				valueFormat = JSON.stringify(value)
+			} catch (err) {
+				valueFormat = value.toString()
+			}
+		}
+		return `${typeof value}: ${valueFormat}`
+	}
+
 	if (property.kind === "primary") {
 		if (typeof value !== "string") {
-			throw new TypeError(`write to db.${modelName}.${property.name}: expected a string, received a ${typeof value}`)
+			throw new TypeError(`write to db.${modelName}.${property.name}: expected a string, received a ${formatValue()}`)
 		}
 	} else if (property.kind === "primitive") {
 		if (property.nullable && value === null) {
@@ -79,30 +97,32 @@ export function validatePropertyValue(modelName: string, property: Property, val
 		} else if (property.type === "integer") {
 			if (typeof value !== "number") {
 				throw new TypeError(
-					`write to db.${modelName}.${property.name}: expected an integer, received a ${typeof value}`,
+					`write to db.${modelName}.${property.name}: expected an integer, received a ${formatValue()}`,
 				)
 			} else if (!Number.isSafeInteger(value)) {
 				throw new TypeError(`write to db.${modelName}.${property.name}: must be a valid Number.isSafeInteger()`)
 			}
 		} else if (property.type === "number" || property.type === "float") {
 			if (typeof value !== "number") {
-				throw new TypeError(`write to db.${modelName}.${property.name}: expected a number, received a ${typeof value}`)
+				throw new TypeError(`write to db.${modelName}.${property.name}: expected a number, received a ${formatValue()}`)
 			}
 		} else if (property.type === "string") {
 			if (typeof value !== "string") {
-				throw new TypeError(`write to db.${modelName}.${property.name}: expected a string, received a ${typeof value}`)
+				throw new TypeError(`write to db.${modelName}.${property.name}: expected a string, received a ${formatValue()}`)
 			}
 		} else if (property.type === "bytes") {
 			if (value instanceof Uint8Array) {
 				return
 			} else {
 				throw new TypeError(
-					`write to db.${modelName}.${property.name}: expected a Uint8Array, received a ${typeof value}`,
+					`write to db.${modelName}.${property.name}: expected a Uint8Array, received a ${formatValue()}`,
 				)
 			}
 		} else if (property.type === "boolean") {
 			if (typeof value !== "boolean") {
-				throw new TypeError(`write to db.${modelName}.${property.name}: expected a boolean, received a ${typeof value}`)
+				throw new TypeError(
+					`write to db.${modelName}.${property.name}: expected a boolean, received a ${formatValue()}`,
+				)
 			}
 		} else if (property.type === "json") {
 			if (value === null) {
@@ -123,17 +143,19 @@ export function validatePropertyValue(modelName: string, property: Property, val
 		if (property.nullable && value === null) {
 			return
 		} else if (typeof value !== "string") {
-			throw new TypeError(`write to db.${modelName}.${property.name}: expected a string, received a ${typeof value}`)
+			throw new TypeError(`write to db.${modelName}.${property.name}: expected a string, received a ${formatValue()}`)
 		}
 	} else if (property.kind === "relation") {
 		if (value === null) {
 			throw new TypeError(`write to db.${modelName}.${property.name}: expected an array of strings, not null`)
 		} else if (!Array.isArray(value)) {
 			throw new TypeError(
-				`write to db.${modelName}.${property.name}: expected an array of strings, not a ${typeof value}`,
+				`write to db.${modelName}.${property.name}: expected an array of strings, received a ${formatValue()}`,
 			)
 		} else if (value.some((value) => typeof value !== "string")) {
-			throw new TypeError(`write to db.${modelName}.${property.name}: expected an array of strings`)
+			throw new TypeError(
+				`write to db.${modelName}.${property.name}: expected an array of strings, received ${formatValue()}`,
+			)
 		}
 	} else {
 		signalInvalidType(property)
