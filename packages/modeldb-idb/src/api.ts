@@ -151,12 +151,12 @@ export class ModelAPI {
 
 		// Two-pass recursive query to populate includes. The first pass populates
 		// the cache with all models in the response, but doesn't join any of them.
-		// The second pass makes joins on-copy for every reference/relation in
-		// `include` and updates the result record in-place to add the joins.
-		//
-		// This is necessary because making joins automatically in one recursive
-		// query would cause the same join to be applied everywhere, because the
-		// cache only maintains one instance for every record.
+		// The second pass populates includes for every reference/relation, 
+		// updating the result record in-place.
+		// 
+		// This is necessary because making joins in the first pass would cause the
+		// the `include` to be applied everywhere that model appears in the query, 
+		// but we only want it in the exact places the user has asked for it.
 		const populateCache = async (modelName: string, records: ModelValueWithIncludes[], include: IncludeExpression) => {
 			const thisModel = Object.values(models).find((api) => api.model.name === modelName)
 			assert(thisModel !== undefined)
