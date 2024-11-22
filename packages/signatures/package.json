@@ -1,6 +1,6 @@
 {
 	"name": "@canvas-js/signatures",
-	"version": "0.13.0-next.16",
+	"version": "0.12.5",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"type": "module",
 	"engines": {
@@ -15,6 +15,7 @@
 		"#target": {
 			"node": "./lib/targets/node/index.js",
 			"browser": "./lib/targets/browser/index.js",
+			"react-native": "./lib/targets/react-native/index.js",
 			"default": "./lib/targets/default/index.js"
 		}
 	},
@@ -23,13 +24,16 @@
 		"test": "ava"
 	},
 	"dependencies": {
-		"@canvas-js/interfaces": "0.13.0-next.16",
-		"@canvas-js/utils": "0.13.0-next.16",
+		"@canvas-js/interfaces": "0.12.5",
+		"@canvas-js/utils": "0.12.5",
 		"@ipld/dag-cbor": "^9.2.1",
 		"@ipld/dag-json": "^10.2.2",
 		"@libp2p/logger": "^5.1.0",
 		"@noble/curves": "^1.6.0",
 		"@noble/hashes": "^1.5.0",
 		"multiformats": "^13.3.0"
+	},
+	"devDependencies": {
+		"react-native-mmkv": "^3.1.0"
 	}
 }

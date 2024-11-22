@@ -2,13 +2,13 @@ import { Container, Separator, Theme } from "@radix-ui/themes"
 import "@radix-ui/themes/styles.css"
 import React from "react"
 import ReactDOM from "react-dom/client"
-import { createBrowserRouter, Route, RouterProvider, Routes } from "react-router-dom"
+import { createHashRouter, Route, RouterProvider, Routes } from "react-router-dom"
 
 import "./index.css"
 import HomePage from "./HomePage.js"
 import Navbar from "./components/Navbar.js"
 
-const router = createBrowserRouter([
+const router = createHashRouter([
 	{
 		path: "/*",
 		element: (
