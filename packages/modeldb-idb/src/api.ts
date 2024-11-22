@@ -151,11 +151,11 @@ export class ModelAPI {
 
 		// Two-pass recursive query to populate includes. The first pass populates
 		// the cache with all models in the response, but doesn't join any of them.
-		// The second pass populates includes for every reference/relation, 
+		// The second pass populates includes for every reference/relation,
 		// updating the result record in-place.
-		// 
+		//
 		// This is necessary because making joins in the first pass would cause the
-		// the `include` to be applied everywhere that model appears in the query, 
+		// the `include` to be applied everywhere that model appears in the query,
 		// but we only want it in the exact places the user has asked for it.
 		const populateCache = async (modelName: string, records: ModelValueWithIncludes[], include: IncludeExpression) => {
 			const thisModel = Object.values(models).find((api) => api.model.name === modelName)
@@ -183,8 +183,10 @@ export class ModelAPI {
 							where: { [models[includeModel].model.primaryKey]: includeValue },
 						})
 						if (result === undefined) {
+							console.error(
+								`expected reference to be populated while looking up ${modelName}.${includeKey}: ${includeModel} = ${includeValue}`,
+							)
 							continue
-							// throw new Error("expected a reference to be populated")
 						}
 						cache[includeModel][includeValue] = { ...result }
 						if (include[includeKey]) {
@@ -200,8 +202,10 @@ export class ModelAPI {
 							where: { [models[includeModel].model.primaryKey]: item },
 						})
 						if (result === undefined) {
+							console.error(
+								`expected relation to be populated while looking up ${modelName}.${includeKey}: ${includeModel} = ${includeValue}`,
+							)
 							continue
-							// throw new Error("expected a relation to be populated")
 						}
 						cache[includeModel][item] = { ...result }
 						if (include[includeKey]) {
