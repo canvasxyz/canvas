@@ -96,7 +96,7 @@ jobs:
         run: npm run test --workspace=@canvas-js/signatures
 
   test-build:
-    name: Build test (pnpm)
+    name: Build test (pnpm, no lockfile)
     runs-on: ubuntu-latest
 
     steps:
