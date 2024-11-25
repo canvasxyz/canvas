@@ -16,11 +16,13 @@ const dev = process.env.NODE_ENV !== "production"
 const PORT = parseInt(process.env.PORT || "3333", 10)
 const HTTP_ADDR = "0.0.0.0"
 
+const DATABASE_URL = process.env.DATABASE_URL
 const LIBP2P_PORT = parseInt(process.env.LIBP2P_PORT || "3334", 10)
 const LIBP2P_ANNOUNCE_HOST = process.env.LIBP2P_ANNOUNCE_HOST || "my-example.p2p.app"
 const LIBP2P_ANNOUNCE_PORT = parseInt(process.env.LIBP2P_ANNOUNCE_PORT || "80", 10)
 const BOOTSTRAP_LIST = process.env.BOOTSTRAP_LIST || []
 
+console.log(`DATABASE_URL: ${DATABASE_URL}`)
 console.log(`dev: ${dev}`)
 console.log(`PORT: ${PORT}`)
 console.log(`HTTP_ADDR: ${HTTP_ADDR}`)
@@ -40,6 +42,7 @@ expressApp.use(
 console.log(`initializing canvas for topic ${contractTopic}`)
 
 const canvasApp = await Canvas.initialize({
+	path: DATABASE_URL,
 	contract,
 	signers: [new SIWESigner(), new ATPSigner(), new CosmosSigner(), new SubstrateSigner({}), new SolanaSigner()],
 	topic: contractTopic,
