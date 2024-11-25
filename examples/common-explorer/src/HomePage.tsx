@@ -1,4 +1,4 @@
-import { version } from "../package.json"
+import * as pkg from "../package.json"
 import { BASE_URL, fetchAndIpldParseJson } from "./utils.js"
 import { Card, Flex, Grid, TabNav, Text } from "@radix-ui/themes"
 import ActionsTable from "./ActionsTable.js"
@@ -35,7 +35,7 @@ function HomePage() {
 					<Flex direction="column">
 						<Flex gap="2">
 							<Text weight="bold">Status:</Text>
-							<Text weight="medium">Online, running v{version}</Text>
+							<Text weight="medium">Online, running v{pkg.default.version}</Text>
 						</Flex>
 						<Flex gap="2">
 							<Text weight="bold">URL:</Text>
