@@ -60,7 +60,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 		const getChainableMethod =
 			<A extends string, B, ModelTypes extends DeriveModelTypes<ModelsT>>(
 				updater: (model: A, value: B) => Promise<void>,
-				isSelect?: boolean
+				isSelect?: boolean,
 			): ((model: A, value: B) => Chainable<ModelTypes>) =>
 			(model, value) => {
 				const promise = updater(model, value) as Chainable<ModelTypes>
@@ -72,18 +72,12 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 					try {
 						assert(this.#context !== null, "expected this.#context !== null")
 						const { primaryKey } = this.db.models[model]
-						const target = isSelect ? value as string : (value as ModelValue)[primaryKey] as string
+						const target = isSelect ? (value as string) : ((value as ModelValue)[primaryKey] as string)
 						const modelValue = await this.getModelValue(this.#context, linkModel, linkPrimaryKey)
-						assert(
-							modelValue !== null,
-							`db.link(): link from a missing model ${linkModel}.get(${linkPrimaryKey})`,
-						)
+						assert(modelValue !== null, `db.link(): link from a missing model ${linkModel}.get(${linkPrimaryKey})`)
 						const backlinkKey = params?.through ?? model
 						const backlinkProp = this.db.models[linkModel].properties.find((prop) => prop.name === backlinkKey)
-						assert(
-							backlinkProp !== undefined,
-							`db.link(): link from ${linkModel} used missing property ${backlinkKey}`,
-						)
+						assert(backlinkProp !== undefined, `db.link(): link from ${linkModel} used missing property ${backlinkKey}`)
 						if (backlinkProp.kind === "relation") {
 							const current = modelValue[backlinkKey] ?? []
 							assert(Array.isArray(current), "expected relation value to be an array")
@@ -103,12 +97,9 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 					try {
 						assert(this.#context !== null, "expected this.#context !== null")
 						const { primaryKey } = this.db.models[model]
-						const target = isSelect ? value as string : (value as ModelValue)[primaryKey] as string
+						const target = isSelect ? (value as string) : ((value as ModelValue)[primaryKey] as string)
 						const modelValue = await this.getModelValue(this.#context, linkModel, linkPrimaryKey)
-						assert(
-							modelValue !== null,
-							`db.unlink(): called on a missing model ${linkModel}.get(${linkPrimaryKey})`,
-						)
+						assert(modelValue !== null, `db.unlink(): called on a missing model ${linkModel}.get(${linkPrimaryKey})`)
 						const backlinkKey = params?.through ?? model
 						const backlinkProp = this.db.models[linkModel].properties.find((prop) => prop.name === backlinkKey)
 						assert(
@@ -118,7 +109,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 						if (backlinkProp.kind === "relation") {
 							const current = modelValue[backlinkKey] ?? []
 							assert(Array.isArray(current), "expected relation value to be an array")
-							modelValue[backlinkKey] = current.filter(item => item !== target)
+							modelValue[backlinkKey] = current.filter((item) => item !== target)
 						} else {
 							throw new Error(`db.unlink(): link from ${linkModel} ${backlinkKey} must be a relation`)
 						}
@@ -181,7 +172,10 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 					assert(primaryKey !== null && primaryKey !== undefined, `db.update(${model}): ${primaryKey} primary key`)
 					const key = (value as ModelValue)[primaryKey] as string
 					const modelValue = await this.getModelValue(this.#context, model, key)
-					if (modelValue === null) throw new Error(`db.update(${model}, ${key}): no value found to update into`)
+					if (modelValue === null) {
+						console.log(`db.update(${model}, ${key}): attempted to update a nonexistent value`)
+						return
+					}
 					const mergedValue = updateModelValues(value as ModelValue, modelValue ?? {})
 					validateModelValue(this.db.models[model], mergedValue)
 					this.#context.modelEntries[model][key] = mergedValue
@@ -198,7 +192,10 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 					assert(primaryKey !== null && primaryKey !== undefined, `db.merge(${model}): ${primaryKey} primary key`)
 					const key = (value as ModelValue)[primaryKey] as string
 					const modelValue = await this.getModelValue(this.#context, model, key)
-					if (modelValue === null) throw new Error(`db.merge(${model}, ${key}): no value found to merge into`)
+					if (modelValue === null) {
+						console.log(`db.merge(${model}, ${key}): attempted to merge into a nonexistent value`)
+						return
+					}
 					const mergedValue = mergeModelValues(value as ModelValue, modelValue ?? {})
 					validateModelValue(this.db.models[model], mergedValue)
 					this.#context.modelEntries[model][key] = mergedValue
