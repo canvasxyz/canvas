@@ -24,27 +24,31 @@ export const models = {
 };
 
 export const actions = {
-  async createPost(content, isVisible, metadata) {
+  async createPost(db, content, isVisible, metadata) {
     const { id, did, address, timestamp } = this
     const postId = [did, id].join("/")
-    await this.db.set("posts", { id: postId, content, address, did, isVisible, timestamp, metadata });
+    await db.set("posts", { id: postId, content, address, did, isVisible, timestamp, metadata });
   },
 
-  async updatePost(postId, content, isVisible, metadata) {
+  async updatePost(db, postId, content, isVisible, metadata) {
     const { id, did, address, timestamp } = this
-    const post = await this.db.get("posts", postId)
+    const post = await db.get("posts", postId)
     if (post.did !== did) throw new Error("can only update own posts")
-    await this.db.update("posts", { id: postId, content, isVisible, metadata });
+    await db.update("posts", { id: postId, content, isVisible, metadata });
   },
 
-  async deletePost(key) {
-	const { did } = this
-	if (!key.startsWith(did + "/")) {
-		throw new Error("unauthorized")
+  async deletePost(db, key) {
+		const { did } = this
+		if (!key.startsWith(did + "/")) {
+			throw new Error("unauthorized")
+		}
+
+		await db.delete("posts", key)
+  },
+
+	async hello() {
+		console.log("hello")
 	}
-
-	await this.db.delete("posts", key)
-  },
 };
 `.trim()
 
@@ -131,7 +135,7 @@ test("insert a message into an app with multiple signers", async (t) => {
 			topic: "test",
 			contract: {
 				models: {},
-				actions: { createPost({ content }: { content: string }) {} },
+				actions: { createPost(db, { content }: { content: string }) {} },
 			},
 			reset: true,
 			signers: [siweSigner, cosmosSigner],
@@ -183,11 +187,11 @@ test("accept a manually encoded session/action with a legacy-style object arg", 
 	const app = await Canvas.initialize({
 		contract: {
 			actions: {
-				createMessage(arg) {
-					t.deepEqual(arg, { objectArg: "1" })
-				},
+				createMessage(db, arg) {
+					t.deepEqual(arg, { objectArg: '1' })
+				}
 			},
-			models: {},
+			models: {}
 		},
 		topic: "com.example.app",
 		reset: true,
@@ -215,8 +219,8 @@ test("accept a manually encoded session/action with a legacy-style object arg", 
 			type: "action",
 			did: sessionMessage.payload.did,
 			name: "createMessage",
-			args: { objectArg: "1" },
-			context: { timestamp: 0 },
+			args: { objectArg: '1' },
+			context: { timestamp: 0 }
 		},
 	}
 	const actionSignature = await session.signer.sign(actionMessage)
@@ -238,10 +242,10 @@ test("create an app with an inline contract", async (t) => {
 				},
 			},
 			actions: {
-				async createPost({ content }: { content: string }) {
+				async createPost(db, { content }: { content: string }) {
 					const { id, did, timestamp } = this
 					const postId = [did, id].join("/")
-					await this.db.set("posts", { id: postId, content, timestamp, address: did })
+					await db.set("posts", { id: postId, content, timestamp, address: did })
 					return content
 				},
 			},
@@ -405,22 +409,22 @@ test("get a value set by another action", async (t) => {
 				post: { id: "primary", from: "@user", content: "string" },
 			},
 			actions: {
-				async createUser({ name }: { name: string }) {
+				async createUser(db, { name }: { name: string }) {
 					const { did } = this
-					await this.db.set("user", { id: did, name })
+					await db.set("user", { id: did, name })
 				},
-				async createPost({ content }: { content: string }) {
+				async createPost(db, { content }: { content: string }) {
 					const { id, did } = this
-					const user = await this.db.get("user", did)
+					const user = await db.get("user", did)
 					assert(user !== null)
-					await this.db.set("post", { id, from: did, content })
+					await db.set("post", { id, from: did, content })
 				},
-				async deletePost({ id }: { id: string }) {
+				async deletePost(db, { id }: { id: string }) {
 					const { did } = this
-					const post = await this.db.get("post", id)
+					const post = await db.get("post", id)
 					if (post !== null) {
 						assert(post.from === did, "cannot delete others' posts")
-						await this.db.delete("post", id)
+						await db.delete("post", id)
 					}
 				},
 			},

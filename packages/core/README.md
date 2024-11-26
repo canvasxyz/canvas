@@ -37,13 +37,11 @@ const app = await Canvas.initialize({
       },
     },
     actions: {
-      async createPost({ content }) {
-        const { db, id, chain, address, timestamp } = this
+      async createPost(db, { content }, { id, chain, address, timestamp }) {
         const user = [chain, address].join(":")
         await db.posts.set({ id, user, content, updated_at: timestamp })
       },
-      async deletePost({ postId }) {
-        const { db, chain, address } = this
+      async deletePost(db, { postId }, { chain, address }) {
         const post = await db.posts.get(postId)
         if (post === null) {
           return

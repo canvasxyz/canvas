@@ -21,34 +21,33 @@ const models = {
 } satisfies ModelSchema
 
 export const actions = {
-	registerEncryptionKey({ key }: { key: string }) {
+	registerEncryptionKey(db, { key }: { key: string }) {
 		const { address } = this
-		this.db.set("encryptionKeys", { address, key })
+		db.set("encryptionKeys", { address, key })
 	},
-	createEncryptionGroup({
-		members,
-		groupKeys,
-		groupPublicKey,
-	}: {
-		members: string[]
-		groupKeys: EthEncryptedData[]
-		groupPublicKey: string
-	}) {
+	createEncryptionGroup(
+		db,
+		{
+			members,
+			groupKeys,
+			groupPublicKey,
+		}: { members: string[]; groupKeys: EthEncryptedData[]; groupPublicKey: string },
+	) {
 		const { address } = this
 		// TODO: enforce the encryption group is sorted correctly, and each groupKey is registered correctly
 		if (members.indexOf(address) === -1) throw new Error()
 		const id = members.join()
 
-		this.db.set("encryptionGroups", {
+		db.set("encryptionGroups", {
 			id,
 			groupKeys: JSON.stringify(groupKeys),
 			key: groupPublicKey,
 		})
 	},
-	sendPrivateMessage({ group, ciphertext }: { group: string; ciphertext: string }) {
+	sendPrivateMessage(db, { group, ciphertext }: { group: string; ciphertext: string }) {
 		// TODO: check address is in group
 		const { timestamp, id } = this
-		this.db.set("privateMessages", { id, ciphertext, group, timestamp })
+		db.set("privateMessages", { id, ciphertext, group, timestamp })
 	},
 } satisfies Actions<typeof models>
 

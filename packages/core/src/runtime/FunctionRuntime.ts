@@ -246,7 +246,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 				blockhash: blockhash ?? null,
 				timestamp,
 			}
-			const result = await action.apply(actionContext, Array.isArray(args) ? args : [args])
+			const result = await action.apply(actionContext, Array.isArray(args) ? [this.#db, ...args] : [this.#db, args])
 			while (this.#waiting > 0) {
 				await new Promise((resolve) => setTimeout(resolve, 10))
 			}
