@@ -5,7 +5,15 @@ import { logger } from "@libp2p/logger"
 
 import type { Signature, Action, Message, Session, Snapshot, SignerCache } from "@canvas-js/interfaces"
 
-import { AbstractModelDB, Effect, ModelValue, ModelSchema } from "@canvas-js/modeldb"
+import {
+	AbstractModelDB,
+	Effect,
+	ModelValue,
+	ModelSchema,
+	mergeModelValues,
+	validateModelValue,
+	updateModelValues,
+} from "@canvas-js/modeldb"
 import {
 	GossipLogConsumer,
 	MAX_MESSAGE_ID,
@@ -291,115 +299,6 @@ export abstract class AbstractRuntime {
 
 	protected static getKeyHash = (key: string) => bytesToHex(blake3(key, { dkLen: 16 }))
 
-	private async getConcurrentAncestors(context: ExecutionContext, model: string, key: string) {
-		const keyHash = AbstractRuntime.getKeyHash(key)
-		const lowerBound = `${model}/${keyHash}/${MIN_MESSAGE_ID}`
-		const upperBound = `${model}/${keyHash}/${MAX_MESSAGE_ID}`
-
-		const result = new Set<string>()
-
-		type Position = { branch: number; clock: number }
-		const stack: Position[] = []
-
-		const parentMessageRecords = await context.messageLog.db.getMany("$messages", context.message.parents)
-
-		for (let i = 0; i < parentMessageRecords.length; i++) {
-			const parentMessageRecord = parentMessageRecords[i]
-			const parentMessageId = context.message.parents[i]
-			if (parentMessageRecord == null) {
-				throw new Error(`message ${parentMessageId} not found`)
-			}
-			stack.push({ branch: parentMessageRecord.branch, clock: parentMessageRecord.message.clock })
-		}
-
-		const visited = new Set()
-
-		// eslint-disable-next-line no-constant-condition
-		while (true) {
-			const currentMessagePosition = stack.pop()
-			// no more messages to visit
-			if (!currentMessagePosition) {
-				break
-			}
-			visited.add(`${currentMessagePosition.branch}/${currentMessagePosition.clock}`)
-
-			const effectsOnThisBranch = await this.db.query<{
-				key: string
-				value: Uint8Array | undefined
-				branch: number
-				clock: number
-			}>("$effects", {
-				where: {
-					key: { gte: lowerBound, lt: upperBound },
-					branch: currentMessagePosition.branch,
-					clock: { lte: currentMessagePosition.clock },
-				},
-				orderBy: { clock: "desc" },
-				limit: 1,
-			})
-
-			const parentPositions: Position[] = []
-			const matchingEffectOnThisBranch = effectsOnThisBranch[0]
-			if (matchingEffectOnThisBranch) {
-				if (matchingEffectOnThisBranch.clock === currentMessagePosition.clock) {
-					// the current message is the latest effect on this branch
-					result.add(matchingEffectOnThisBranch.key)
-					// don't explore this message's parents
-					continue
-				} else {
-					parentPositions.push({ branch: matchingEffectOnThisBranch.branch, clock: matchingEffectOnThisBranch.clock })
-				}
-			}
-
-			// check for branches that merge into this branch
-			const branchMergeQuery = {
-				where: {
-					target_branch: currentMessagePosition.branch,
-					target_clock: { lte: currentMessagePosition.clock },
-				},
-			}
-			if (matchingEffectOnThisBranch) {
-				// @ts-ignore
-				branchMergeQuery.where.target_clock.gt = matchingEffectOnThisBranch.clock
-			}
-			for (const branchMerge of await context.messageLog.db.query<BranchMergeRecord>(
-				"$branch_merges",
-				branchMergeQuery,
-			)) {
-				parentPositions.push({
-					branch: branchMerge.source_branch,
-					clock: branchMerge.source_clock,
-				})
-			}
-
-			for (const parentPosition of parentPositions) {
-				if (!visited.has(`${parentPosition.branch}/${parentPosition.clock}`)) {
-					stack.push(parentPosition)
-				}
-			}
-		}
-
-		// remove messages that are parents of each other
-		const messagesToRemove = new Set<string>()
-		for (const parentEffectId of result) {
-			const parentMessageId = parentEffectId.split("/")[2]
-			for (const otherEffectId of result) {
-				const otherMessageId = otherEffectId.split("/")[2]
-				if (parentMessageId !== otherMessageId) {
-					if (await context.messageLog.isAncestor(parentMessageId, otherMessageId)) {
-						messagesToRemove.add(parentMessageId)
-					}
-				}
-			}
-		}
-
-		for (const m of messagesToRemove) {
-			result.delete(m)
-		}
-
-		return Array.from(result)
-	}
-
 	protected async getModelValue<T extends ModelValue = ModelValue>(
 		context: ExecutionContext,
 		model: string,
@@ -409,42 +308,51 @@ export abstract class AbstractRuntime {
 			return context.modelEntries[model][key] as T
 		}
 
-		const keyHash = AbstractRuntime.getKeyHash(key)
-		const lowerBound = `${model}/${keyHash}/`
+		return await this.db.get(model, key)
+	}
 
-		let upperBound = `${model}/${keyHash}/${context.id}`
+	protected async setModelValue(
+		context: ExecutionContext,
+		model: string,
+		key: string,
+		value: ModelValue,
+	): Promise<void> {
+		context.modelEntries[model][key] = value
+	}
 
-		// eslint-disable-next-line no-constant-condition
-		while (true) {
-			const results = await this.db.query<{ key: string; value: Uint8Array; clock: number }>("$effects", {
-				select: { key: true, value: true, clock: true },
-				where: { key: { gt: lowerBound, lt: upperBound } },
-				orderBy: { key: "desc" },
-				limit: 1,
-			})
+	protected async deleteModelValue(context: ExecutionContext, model: string, key: string): Promise<void> {
+		context.modelEntries[model][key] = null
+	}
 
-			if (results.length === 0) {
-				return null
-			}
-
-			if (results[0].clock === 0) {
-				if (results[0].value === null) return null
-				return cbor.decode<null | T>(results[0].value)
-			}
-
-			const [effect] = results
-			const [{}, {}, messageId] = effect.key.split("/")
-
-			const visited = new Set<string>()
-			for (const parent of context.message.parents) {
-				const isAncestor = await context.messageLog.isAncestor(parent, messageId, visited)
-				if (isAncestor) {
-					if (effect.value === null) return null
-					return cbor.decode<null | T>(effect.value)
-				}
-			}
-
-			upperBound = effect.key
+	protected async updateModelValue(
+		context: ExecutionContext,
+		model: string,
+		key: string,
+		value: ModelValue,
+	): Promise<void> {
+		const modelValue = await this.getModelValue(context, model, key)
+		if (modelValue === null) {
+			throw new Error(`db.update(${model}, ${key}): attempted to update a nonexistent value`)
 		}
+
+		const mergedValue = updateModelValues(value as ModelValue, modelValue ?? {})
+		validateModelValue(this.db.models[model], mergedValue)
+		context.modelEntries[model][key] = mergedValue
+	}
+
+	protected async mergeModelValue(
+		context: ExecutionContext,
+		model: string,
+		key: string,
+		value: ModelValue,
+	): Promise<void> {
+		const modelValue = await this.getModelValue(context, model, key)
+		if (modelValue === null) {
+			throw new Error(`db.merge(${model}, ${key}): attempted to merge into a nonexistent value`)
+		}
+
+		const mergedValue = mergeModelValues(value as ModelValue, modelValue ?? {})
+		validateModelValue(this.db.models[model], mergedValue)
+		context.modelEntries[model][key] = mergedValue
 	}
 }

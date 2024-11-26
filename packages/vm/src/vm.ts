@@ -7,6 +7,7 @@ import { assert, mapValues } from "@canvas-js/utils"
 import { JSFunction, JSFunctionAsync, JSValue } from "@canvas-js/utils"
 
 import { VMError } from "./error.js"
+import { Awaitable } from "@canvas-js/interfaces"
 
 export interface VMOptions {
 	log?: (...args: JSValue[]) => void
@@ -319,7 +320,7 @@ export class VM {
 		}
 	}
 
-	public wrapFunction = (fn: JSFunction | JSFunctionAsync): QuickJSHandle => {
+	public wrapFunction = (fn: (...args: JSValue[]) => Awaitable<void | JSValue>): QuickJSHandle => {
 		const wrap = (value: void | JSValue) => (value === undefined ? this.context.undefined : this.wrapValue(value))
 		return this.context.newFunction(fn.name, (...args) => {
 			let result: ReturnType<typeof fn> | undefined = undefined

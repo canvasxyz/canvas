@@ -17,28 +17,18 @@ export type ActionImplementation<
 	ModelsT extends ModelSchema = ModelSchema,
 	Args extends Array<any> = any,
 	Result = any,
-> = (this: ActionContext<DeriveModelTypes<ModelsT>>, db: ModelAPI<DeriveModelTypes<ModelsT>>, ...args: Args) => Awaitable<Result>
-
-export type Chainable<ModelTypes extends Record<string, ModelValue>> = Promise<void> & {
-	link: <T extends keyof ModelTypes & string>(
-		model: T,
-		primaryKey: string,
-		through?: { through: string },
-	) => Promise<void>,
-	unlink: <T extends keyof ModelTypes & string>(
-		model: T,
-		primaryKey: string,
-		through?: { through: string },
-	) => Promise<void>
-}
+> = (
+	this: ActionContext<DeriveModelTypes<ModelsT>>,
+	db: ModelAPI<DeriveModelTypes<ModelsT>>,
+	...args: Args
+) => Awaitable<Result>
 
 export type ModelAPI<ModelTypes extends Record<string, ModelValue>> = {
 	get: <T extends keyof ModelTypes & string>(model: T, key: string) => Promise<ModelTypes[T] | null>
-	select: <T extends keyof ModelTypes & string>(model: T, key: string) => Chainable<ModelTypes>
-	set: <T extends keyof ModelTypes & string>(model: T, value: ModelTypes[T]) => Chainable<ModelTypes>
-	create: <T extends keyof ModelTypes & string>(model: T, value: ModelTypes[T]) => Chainable<ModelTypes>
-	update: <T extends keyof ModelTypes & string>(model: T, value: Partial<ModelTypes[T]>) => Chainable<ModelTypes>
-	merge: <T extends keyof ModelTypes & string>(model: T, value: Partial<ModelTypes[T]>) => Chainable<ModelTypes>
+	set: <T extends keyof ModelTypes & string>(model: T, value: ModelTypes[T]) => Promise<void>
+	create: <T extends keyof ModelTypes & string>(model: T, value: ModelTypes[T]) => Promise<void>
+	update: <T extends keyof ModelTypes & string>(model: T, value: Partial<ModelTypes[T]>) => Promise<void>
+	merge: <T extends keyof ModelTypes & string>(model: T, value: Partial<ModelTypes[T]>) => Promise<void>
 	delete: <T extends keyof ModelTypes & string>(model: T, key: string) => Promise<void>
 }
 

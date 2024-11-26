@@ -1,9 +1,9 @@
 import { QuickJSHandle } from "quickjs-emscripten"
 
 import type { SignerCache } from "@canvas-js/interfaces"
-import { ModelValue, ModelSchema, validateModelValue, updateModelValues, mergeModelValues } from "@canvas-js/modeldb"
+import { ModelValue, ModelSchema, validateModelValue } from "@canvas-js/modeldb"
 import { VM } from "@canvas-js/vm"
-import { assert, mapEntries, mapValues, JSValue } from "@canvas-js/utils"
+import { assert, mapValues } from "@canvas-js/utils"
 
 import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
 
@@ -45,40 +45,10 @@ export class ContractRuntime extends AbstractRuntime {
 			return handle.consume(vm.cache)
 		})
 
-		// TODO: Validate that models satisfies ModelSchema
-		const mergeHandles: Record<string, QuickJSHandle> = {}
-
-		const modelSchema = mapEntries(modelsUnwrap, ([name, handle]) => {
-			// Extract the $merge handle, which is not included in `fields`
-			// because vm.context.dump only passes on JSON-able fields.
-			const mergeHandle = vm.unwrapObject(handle)["$merge"]
-			const fields = handle.consume(vm.context.dump)
-			if (mergeHandle) {
-				mergeHandles[name] = mergeHandle
-				fields.$merge = (merge1: JSValue, merge2: JSValue) => {
-					const merge1Handle = vm.wrapValue(merge1)
-					const merge2Handle = vm.wrapValue(merge2)
-					const callResult = vm.context.callFunction(mergeHandle, vm.context.null, merge1Handle, merge2Handle)
-					merge1Handle.dispose()
-					merge2Handle.dispose()
-					if (callResult.error) {
-						callResult.error.dispose() // do we need this?
-						throw new Error(`error in ${name}.$merge`)
-					}
-					return callResult.value.consume(vm.context.dump)
-				}
-			}
-			return fields
-		}) as ModelSchema
-
-		const cleanupSetupHandles = () => {
-			for (const handle of Object.values(mergeHandles)) {
-				handle.dispose()
-			}
-		}
+		const modelSchema = mapValues(modelsUnwrap, (handle) => handle.consume(vm.context.dump)) as ModelSchema
 
 		const schema = AbstractRuntime.getModelSchema(modelSchema)
-		return new ContractRuntime(topic, signers, schema, vm, actions, cleanupSetupHandles)
+		return new ContractRuntime(topic, signers, schema, vm, actions)
 	}
 
 	readonly #databaseAPI: QuickJSHandle
@@ -91,100 +61,62 @@ export class ContractRuntime extends AbstractRuntime {
 		public readonly schema: ModelSchema,
 		public readonly vm: VM,
 		public readonly actions: Record<string, QuickJSHandle>,
-		private disposeSetupHandles: () => void,
 	) {
 		super()
 		this.#databaseAPI = vm
 			.wrapObject({
-				get: vm.wrapFunction((model, key) => {
+				get: vm.wrapFunction(async (model, key) => {
 					assert(this.#context !== null, "expected this.#context !== null")
 					assert(typeof model === "string", 'expected typeof model === "string"')
 					assert(typeof key === "string", 'expected typeof key === "string"')
-					return this.getModelValue(this.#context, model, key)
+					return await this.getModelValue(this.#context, model, key)
 				}),
-				set: vm.context.newFunction("set", (modelHandle, valueHandle) => {
-					assert(this.#context !== null, "expected this.#modelEntries !== null")
-					const model = vm.context.getString(modelHandle)
-					assert(this.db.models[model] !== undefined, "model not found")
-					const value = this.vm.unwrapValue(valueHandle) as ModelValue
-					validateModelValue(this.db.models[model], value)
+				set: vm.wrapFunction(async (model, value) => {
+					assert(this.#context !== null, "expected this.#context !== null")
+					assert(typeof model === "string", 'expected typeof model === "string"')
 					const { primaryKey } = this.db.models[model]
-					const key = value[primaryKey] as string
+					const { [primaryKey]: key } = value as ModelValue
 					assert(typeof key === "string", "expected value[primaryKey] to be a string")
-					this.#context.modelEntries[model][key] = value
-				}),
-				create: vm.context.newFunction("create", (modelHandle, valueHandle) => {
-					assert(this.#context !== null, "expected this.#modelEntries !== null")
-					const model = vm.context.getString(modelHandle)
 					assert(this.db.models[model] !== undefined, "model not found")
-					const value = this.vm.unwrapValue(valueHandle) as ModelValue
-					validateModelValue(this.db.models[model], value)
+					validateModelValue(this.db.models[model], value as ModelValue)
+					await this.setModelValue(this.#context, model, key, value as ModelValue)
+				}),
+				create: vm.wrapFunction(async (model, value) => {
+					assert(this.#context !== null, "expected this.#context !== null")
+					assert(typeof model === "string", 'expected typeof model === "string"')
 					const { primaryKey } = this.db.models[model]
-					const key = value[primaryKey] as string
+					const { [primaryKey]: key } = value as ModelValue
 					assert(typeof key === "string", "expected value[primaryKey] to be a string")
-					this.#context.modelEntries[model][key] = value
-				}),
-				update: vm.context.newFunction("update", (modelHandle, valueHandle) => {
-					assert(this.#context !== null, "expected this.#modelEntries !== null")
-					const model = vm.context.getString(modelHandle)
 					assert(this.db.models[model] !== undefined, "model not found")
+					validateModelValue(this.db.models[model], value as ModelValue)
+					await this.setModelValue(this.#context, model, key, value as ModelValue)
+				}),
+				update: vm.wrapFunction(async (model, value) => {
+					assert(this.#context !== null, "expected this.#context !== null")
+					assert(typeof model === "string", 'expected typeof model === "string"')
 					const { primaryKey } = this.db.models[model]
-					const value = this.vm.unwrapValue(valueHandle) as ModelValue
-					const key = value[primaryKey] as string
+					const { [primaryKey]: key } = value as ModelValue
 					assert(typeof key === "string", "expected value[primaryKey] to be a string")
-					const promise = vm.context.newPromise()
-
-					// TODO: Ensure concurrent merges into the same value don't create a race condition
-					// if the user doesn't call db.update() with await.
-					this.getModelValue(this.#context, model, key)
-						.then((previousValue) => {
-							const mergedValue = updateModelValues(value, previousValue ?? {})
-							validateModelValue(this.db.models[model], mergedValue)
-							assert(this.#context !== null)
-							this.#context.modelEntries[model][key] = mergedValue
-							promise.resolve()
-						})
-						.catch((err) => {
-							promise.reject()
-						})
-
-					promise.settled.then(vm.runtime.executePendingJobs)
-					return promise.handle
-				}),
-				merge: vm.context.newFunction("merge", (modelHandle, valueHandle) => {
-					assert(this.#context !== null, "expected this.#modelEntries !== null")
-					const model = vm.context.getString(modelHandle)
 					assert(this.db.models[model] !== undefined, "model not found")
+					validateModelValue(this.db.models[model], value as ModelValue)
+					await this.updateModelValue(this.#context, model, key, value as ModelValue)
+				}),
+				merge: vm.wrapFunction(async (model, value) => {
+					assert(this.#context !== null, "expected this.#context !== null")
+					assert(typeof model === "string", 'expected typeof model === "string"')
 					const { primaryKey } = this.db.models[model]
-					const value = this.vm.unwrapValue(valueHandle) as ModelValue
-					const key = value[primaryKey] as string
+					const { [primaryKey]: key } = value as ModelValue
 					assert(typeof key === "string", "expected value[primaryKey] to be a string")
-					const promise = vm.context.newPromise()
-
-					// TODO: Ensure concurrent merges into the same value don't create a race condition
-					// if the user doesn't call db.merge() with await.
-					this.getModelValue(this.#context, model, key)
-						.then((previousValue) => {
-							const mergedValue = mergeModelValues(value, previousValue ?? {})
-							validateModelValue(this.db.models[model], mergedValue)
-							assert(this.#context !== null)
-							this.#context.modelEntries[model][key] = mergedValue
-							promise.resolve()
-						})
-						.catch((err) => {
-							promise.reject()
-						})
-
-					promise.settled.then(vm.runtime.executePendingJobs)
-					return promise.handle
+					assert(this.db.models[model] !== undefined, "model not found")
+					validateModelValue(this.db.models[model], value as ModelValue)
+					await this.mergeModelValue(this.#context, model, key, value as ModelValue)
 				}),
 
-				delete: vm.context.newFunction("delete", (modelHandle, keyHandle) => {
-					assert(this.#context !== null, "expected this.#modelEntries !== null")
-					const model = vm.context.getString(modelHandle)
-					assert(this.db.models[model] !== undefined, "model not found")
-					const key = vm.context.getString(keyHandle)
-					this.#context.modelEntries[model][key] = null
+				delete: vm.wrapFunction(async (model, key) => {
+					assert(this.#context !== null, "expected this.#context !== null")
+					assert(typeof model === "string", 'expected typeof model === "string"')
+					assert(typeof key === "string", 'expected typeof key === "string"')
+					await this.deleteModelValue(this.#context, model, key)
 				}),
 			})
 			.consume(vm.cache)
@@ -194,7 +126,6 @@ export class ContractRuntime extends AbstractRuntime {
 		try {
 			await super.close()
 		} finally {
-			this.disposeSetupHandles()
 			this.vm.dispose()
 		}
 	}
