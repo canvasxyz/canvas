@@ -6,7 +6,8 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 
-PACKAGES=$(npm ls $1 --depth 0 | grep -E '@canvas-js/[a-z-]+' -o)
+# PACKAGES=$(npm ls $1 --depth 0 | grep -E '@canvas-js/[a-z-]+' -o)
+PACKAGES=$(npm ls $1 --depth 0 | grep -E '@canvas-js/[a-z-]+(@|$| )' | grep -E '@canvas-js/[a-z-]+' -o | sort -u)
 PACKAGE_COUNT=$(echo "$PACKAGES" | wc -l | tr -d ' ')
 echo "$1 is a dependency of ${PACKAGE_COUNT} packages:"
 echo "$PACKAGES"
