@@ -3,7 +3,7 @@ import test, { ExecutionContext } from "ava"
 
 import { ethers } from "ethers"
 
-import type { Message } from "@canvas-js/interfaces"
+import type { Action, Message, Session } from "@canvas-js/interfaces"
 import { ed25519 } from "@canvas-js/signatures"
 import { SIWESigner, Eip712Signer } from "@canvas-js/chain-ethereum"
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
@@ -177,6 +177,55 @@ test("reject an invalid message", async (t) => {
 	await t.throwsAsync(() => app.insert(signature, invalidMessage as any), {
 		message: "error encoding message (invalid payload)",
 	})
+})
+
+test("accept a manually encoded session/action with a legacy-style object arg", async (t) => {
+	t.plan(1)
+
+	const signer = new SIWESigner()
+
+	const app = await Canvas.initialize({
+		contract: {
+			actions: {
+				createMessage(db, arg) {
+					t.deepEqual(arg, { objectArg: '1' })
+				}
+			},
+			models: {}
+		},
+		topic: "com.example.app",
+		reset: true,
+		signers: [signer],
+	})
+	t.teardown(() => app.stop())
+
+	const session = await signer.newSession(app.topic)
+
+	const sessionMessage: Message<Session> = {
+		topic: app.topic,
+		clock: 1,
+		parents: [],
+		payload: session?.payload,
+	}
+	const sessionSignature = await session.signer.sign(sessionMessage)
+
+	const { id: sessionId } = await app.insert(sessionSignature, sessionMessage)
+
+	const actionMessage: Message<Action> = {
+		topic: app.topic,
+		clock: 2,
+		parents: [sessionId],
+		payload: {
+			type: "action",
+			did: sessionMessage.payload.did,
+			name: "createMessage",
+			args: { objectArg: '1' },
+			context: { timestamp: 0 }
+		},
+	}
+	const actionSignature = await session.signer.sign(actionMessage)
+
+	const { id: actionId } = await app.insert(actionSignature, actionMessage)
 })
 
 test("create an app with an inline contract", async (t) => {
