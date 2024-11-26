@@ -2,7 +2,6 @@ import * as cbor from "@ipld/dag-cbor"
 import { blake3 } from "@noble/hashes/blake3"
 import { bytesToHex } from "@noble/hashes/utils"
 import { logger } from "@libp2p/logger"
-import { TypeTransformerFunction } from "@ipld/schema/typed.js"
 
 import type { Signature, Action, Message, Session, Snapshot, SignerCache } from "@canvas-js/interfaces"
 
