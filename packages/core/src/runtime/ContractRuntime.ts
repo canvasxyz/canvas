@@ -229,9 +229,12 @@ export class ContractRuntime extends AbstractRuntime {
 			blockhash: blockhash ?? null,
 			timestamp,
 		})
+		this.vm.context.setProp(ctxHandle, "db", this.#databaseAPI)
+
 		const argHandles = args.map(this.vm.wrapValue)
 		try {
-			const result = await this.vm.callAsync(actionHandle, ctxHandle, [this.#databaseAPI, ...argHandles])
+			// TODO: args may not be an array; in FunctionRuntime we automatically wrap it as an array if so.
+			const result = await this.vm.callAsync(actionHandle, ctxHandle, argHandles)
 
 			return result.consume((handle) => {
 				if (this.vm.context.typeof(handle) === "undefined") {

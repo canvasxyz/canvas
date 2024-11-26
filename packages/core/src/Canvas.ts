@@ -202,7 +202,7 @@ export class Canvas<
 		this.messageLog.addEventListener("disconnect", (event) => this.safeDispatchEvent("disconnect", event))
 
 		const actionCache = {} as {
-			[K in keyof ActionsT]: (signer: SessionSigner<any>, db: ModelAPI<DeriveModelTypes<ModelsT>>, ...args: any) => any
+			[K in keyof ActionsT]: (signer: SessionSigner<any>, ...args: any) => any
 		}
 
 		for (const name of runtime.actionNames) {

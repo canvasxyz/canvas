@@ -88,13 +88,13 @@ async function createCanvasCounterApp() {
 				},
 			},
 			actions: {
-				async createCounter(db, {}) {
+				async createCounter({}) {
 					const { id } = this
-					await db.set("counter", { id, value: "{}" })
+					await this.db.set("counter", { id, value: "{}" })
 				},
-				async incrementCounter(db, { id }: { id: string }) {
+				async incrementCounter({ id }: { id: string }) {
 					const { did } = this
-					const counter = await db.get("counter", id)
+					const counter = await this.db.get("counter", id)
 					assert(counter !== null)
 					assert(typeof counter.value === "string")
 					const value = JSON.parse(counter.value)
@@ -102,12 +102,12 @@ async function createCanvasCounterApp() {
 						value[did] = 0
 					}
 					value[did] += 1
-					await db.set("counter", { id, value: JSON.stringify(value) })
+					await this.db.set("counter", { id, value: JSON.stringify(value) })
 				},
-				async nop(db, { id }: { id: string }) {
-					const counter = await db.get("counter", id)
+				async nop({ id }: { id: string }) {
+					const counter = await this.db.get("counter", id)
 					assert(counter !== null)
-					await db.set("counter", { id, value: counter.value })
+					await this.db.set("counter", { id, value: counter.value })
 				},
 			},
 		},

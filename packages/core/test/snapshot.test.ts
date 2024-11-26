@@ -15,11 +15,11 @@ test("snapshot persists data across apps", async (t) => {
 				},
 			},
 			actions: {
-				async createPost(db, { id, content }: { id: string; content: string }) {
-					await db.set("posts", { id, content })
+				async createPost({ id, content }: { id: string; content: string }) {
+					await this.db.set("posts", { id, content })
 				},
-				async deletePost(db, { id }: { id: string }) {
-					await db.delete("posts", id)
+				async deletePost({ id }: { id: string }) {
+					await this.db.delete("posts", id)
 				},
 			},
 		},
@@ -90,8 +90,8 @@ test("snapshot persists data across apps", async (t) => {
 test("snapshot persists data with merge functions", async (t) => {
 	const config: Config<{
 		posts: {
-			id: "primary",
-			content: "string",
+			id: "primary"
+			content: "string"
 			$merge: MergeFunction<any>
 		}
 	}> = {
@@ -107,14 +107,14 @@ test("snapshot persists data with merge functions", async (t) => {
 				},
 			},
 			actions: {
-				async createPost(db, { id, content }: { id: string; content: string }) {
-					await db.set("posts", { id, content })
+				async createPost({ id, content }: { id: string; content: string }) {
+					await this.db.set("posts", { id, content })
 				},
-				async deletePost(db, { id }: { id: string }) {
-					await db.delete("posts", id)
+				async deletePost({ id }: { id: string }) {
+					await this.db.delete("posts", id)
 				},
 			},
-		}
+		},
 	}
 
 	const app = await Canvas.initialize(config)
@@ -181,11 +181,11 @@ test("snapshot persists data with merge functions and inline contract", async (t
 			},
 		},
 		actions: {
-			async createPost(db, { id, content }) {
-				await db.set("posts", { id, content })
+			async createPost({ id, content }) {
+				await this.db.set("posts", { id, content })
 			},
-			async deletePost(db, { id }) {
-				await db.delete("posts", id)
+			async deletePost({ id }) {
+				await this.db.delete("posts", id)
 			},
 		},
 	}`
