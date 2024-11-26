@@ -19,7 +19,7 @@
 		"@canvas-js/interfaces": "0.12.6",
 		"@canvas-js/modeldb": "0.12.6",
 		"@canvas-js/utils": "0.12.6",
-		"@ipld/dag-json": "^10.2.2",
+		"@ipld/dag-json": "^10.2.3",
 		"@libp2p/logger": "^5.1.0",
 		"@sqlite.org/sqlite-wasm": "^3.46.0-build2",
 		"comlink": "^4.4.1"

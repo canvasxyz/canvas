@@ -14,7 +14,7 @@
 		"@canvas-js/client": "0.12.6",
 		"@canvas-js/core": "0.12.6",
 		"@canvas-js/utils": "0.12.6",
-		"@ipld/dag-json": "^10.2.2",
+		"@ipld/dag-json": "^10.2.3",
 		"express": "^4.19.2",
 		"next": "14.1.4",
 		"react": "^18.3.1",

@@ -46,7 +46,7 @@
 		"@libp2p/crypto": "^5.0.4",
 		"@libp2p/interface": "^2.1.2",
 		"@libp2p/peer-id": "^5.0.4",
-		"@multiformats/multiaddr": "^12.3.1",
+		"@multiformats/multiaddr": "^12.3.3",
 		"@noble/hashes": "^1.5.0",
 		"@types/cors": "^2.8.17",
 		"@types/d3": "^7.4.3",
