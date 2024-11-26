@@ -22,7 +22,7 @@
 		"@ipld/dag-json": "^10.2.3",
 		"@libp2p/peer-id": "^5.0.4",
 		"@multiformats/multiaddr": "^12.3.3",
-		"@multiformats/multiaddr-matcher": "^1.2.6",
+		"@multiformats/multiaddr-matcher": "^1.6.0",
 		"@noble/hashes": "^1.6.1",
 		"@types/websocket": "^1.0.10",
 		"@types/ws": "^8.5.12",
