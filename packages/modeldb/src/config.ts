@@ -7,7 +7,7 @@ export function parseConfig(init: ModelSchema): Config {
 	const relations: Relation[] = []
 	const models: Model[] = []
 
-	for (const [modelName, { $indexes, $merge, ...rest }] of Object.entries(init)) {
+	for (const [modelName, { $indexes, ...rest }] of Object.entries(init)) {
 		assert(
 			namePattern.test(modelName),
 			`error defining ${modelName}: expected model name to match /^[a-zA-Z0-9$:_\\-\\.]+$/`,
@@ -56,11 +56,7 @@ export function parseConfig(init: ModelSchema): Config {
 			}
 		}
 
-		if ($merge !== undefined) {
-			assert(typeof $merge === "function", `error defining ${modelName}: expected $merge to be a function`)
-		}
-
-		models.push({ name: modelName, primaryKey, properties, indexes, merge: $merge })
+		models.push({ name: modelName, primaryKey, properties, indexes })
 	}
 
 	return { relations, models }

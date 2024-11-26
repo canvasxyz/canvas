@@ -9,8 +9,6 @@ import type {
 	PrimitiveValue,
 	Property,
 	PropertyValue,
-	ReferenceValue,
-	RelationValue,
 } from "./types.js"
 
 export type Awaitable<T> = T | Promise<T>

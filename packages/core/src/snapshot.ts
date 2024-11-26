@@ -4,16 +4,13 @@ import * as cbor from "@ipld/dag-cbor"
 
 import { MIN_MESSAGE_ID } from "@canvas-js/gossiplog"
 import { Snapshot, SnapshotEffect } from "@canvas-js/interfaces"
-import { assert } from "@canvas-js/utils"
-import type { ModelSchema, IndexInit, PropertyType } from "@canvas-js/modeldb"
+import type { IndexInit, PropertyType } from "@canvas-js/modeldb"
 
 import { Canvas } from "./Canvas.js"
 import { Contract } from "./types.js"
 import { EffectRecord } from "./runtime/AbstractRuntime.js"
 
 // typeguards
-export const isMergeFunction = (value: unknown): value is ModelSchema["$merge"] =>
-	typeof value === "function" || value === undefined
 export const isIndexInit = (value: unknown): value is IndexInit[] => typeof value === "string" || Array.isArray(value)
 export const isPropertyTypish = (value: unknown): value is PropertyType => typeof value === "string"
 
