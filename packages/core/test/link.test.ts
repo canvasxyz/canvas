@@ -14,18 +14,22 @@ test("link and unlink database items", async (t) => {
 				player: { id: "primary", game: "@game", status: "json" },
 			},
 			actions: {
-				async createGame(db: any) {
+				async createGame() {
 					const gameId = "0"
-					db.create("game", { id: gameId, player: [], manager: [], observers: [], status: "GAME_START" })
-					db.create("player", { id: "1", game: gameId, status: "ALIVE" }).link("game", gameId)
-					db.create("player", { id: "2", game: gameId, status: "ALIVE" }).link("game", gameId, { through: "manager" })
-					db.create("player", { id: "3", game: gameId, status: "ALIVE" }).link("game", gameId, { through: "observers" })
-					db.create("player", { id: "4", game: gameId, status: "ALIVE" })
-					db.select("player", "4").link("game", gameId, { through: "observers" })
+					this.db.create("game", { id: gameId, player: [], manager: [], observers: [], status: "GAME_START" })
+					this.db.create("player", { id: "1", game: gameId, status: "ALIVE" }).link("game", gameId)
+					this.db
+						.create("player", { id: "2", game: gameId, status: "ALIVE" })
+						.link("game", gameId, { through: "manager" })
+					this.db
+						.create("player", { id: "3", game: gameId, status: "ALIVE" })
+						.link("game", gameId, { through: "observers" })
+					this.db.create("player", { id: "4", game: gameId, status: "ALIVE" })
+					this.db.select("player", "4").link("game", gameId, { through: "observers" })
 				},
-				async unlinkGame(db: any) {
+				async unlinkGame() {
 					const gameId = "0"
-					db.select("player", "4").unlink("game", gameId, { through: "observers" })
+					this.db.select("player", "4").unlink("game", gameId, { through: "observers" })
 				},
 			},
 		},

@@ -48,7 +48,6 @@ const useChat = (topic: string, wallet: ethers.Wallet) => {
 			if (!recipientKey) throw new Error("Recipient has not registered an encryption key")
 
 			const members = [wallet.address, recipient]
-			const group = getGroupId(wallet.address, recipient)
 
 			const groupPrivateKey = ethers.Wallet.createRandom().privateKey
 			const groupPublicKey = getEncryptionPublicKey(groupPrivateKey.slice(2))
@@ -58,7 +57,7 @@ const useChat = (topic: string, wallet: ethers.Wallet) => {
 					return encryptSafely({ publicKey: key as string, data: groupPrivateKey, version: "x25519-xsalsa20-poly1305" })
 				})
 
-			await app.actions.createEncryptionGroup({ id: group, members, groupKeys, groupPublicKey })
+			await app.actions.createEncryptionGroup({ members, groupKeys, groupPublicKey })
 		},
 		sendPrivateMessage: async (recipient: string, message: string) => {
 			if (!app) throw new Error()

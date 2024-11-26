@@ -13,11 +13,11 @@ export type Contract<
 
 export type Actions<ModelsT extends ModelSchema> = Record<string, ActionImplementation<ModelsT>>
 
-export type ActionImplementation<ModelsT extends ModelSchema = ModelSchema, Args = any, Result = any> = (
-	db: ModelAPI<DeriveModelTypes<ModelsT>>,
-	args: Args,
-	context: ActionContext,
-) => Awaitable<Result>
+export type ActionImplementation<
+	ModelsT extends ModelSchema = ModelSchema,
+	Args extends Array<any> = any,
+	Result = any,
+> = (this: ActionContext<DeriveModelTypes<ModelsT>>, db: ModelAPI<DeriveModelTypes<ModelsT>>, ...args: Args) => Awaitable<Result>
 
 export type Chainable<ModelTypes extends Record<string, ModelValue>> = Promise<void> & {
 	link: <T extends keyof ModelTypes & string>(
@@ -42,7 +42,8 @@ export type ModelAPI<ModelTypes extends Record<string, ModelValue>> = {
 	delete: <T extends keyof ModelTypes & string>(model: T, key: string) => Promise<void>
 }
 
-export type ActionContext = {
+export type ActionContext<T extends Record<string, ModelValue>> = {
+	db: ModelAPI<T>
 	id: string
 	did: string
 	address: string

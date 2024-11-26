@@ -177,7 +177,7 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 			type: "action",
 			did: session.did,
 			name: "foo",
-			args: { bar: 7 },
+			args: [7],
 			context: {
 				timestamp: session.context.timestamp,
 			},

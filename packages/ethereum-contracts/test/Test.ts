@@ -207,7 +207,7 @@ describe("Contract_Test", function () {
 				type: "action" as const,
 				did: session.did,
 				name: "foo",
-				args: { bar: 7 },
+				args: [7],
 				context: {
 					timestamp: session.context.timestamp,
 					blockhash: session.context.blockhash,

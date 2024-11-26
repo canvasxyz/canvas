@@ -24,18 +24,21 @@ export const models = {
 };
 
 export const actions = {
-  async createPost(db, { content, isVisible, metadata }, { id, did, address, timestamp }) {
+  async createPost(db, content, isVisible, metadata) {
+    const { id, did, address, timestamp } = this
     const postId = [did, id].join("/")
     await db.set("posts", { id: postId, content, address, did, isVisible, timestamp, metadata });
   },
 
-  async updatePost(db, { postId, content, isVisible, metadata }, { id, did, address, timestamp }) {
+  async updatePost(db, postId, content, isVisible, metadata) {
+    const { id, did, address, timestamp } = this
     const post = await db.get("posts", postId)
     if (post.did !== did) throw new Error("can only update own posts")
     await db.update("posts", { id: postId, content, isVisible, metadata });
   },
 
-  async deletePost(db, key, { did }) {
+  async deletePost(db, key) {
+		const { did } = this
 		if (!key.startsWith(did + "/")) {
 			throw new Error("unauthorized")
 		}
@@ -77,12 +80,7 @@ const initEIP712 = async (t: ExecutionContext) => {
 test("apply an action and read a record from the database", async (t) => {
 	const { app } = await init(t)
 
-	const { id, message } = await app.actions.createPost({
-		content: "hello",
-		isVisible: true,
-		something: null,
-		metadata: {},
-	})
+	const { id, message } = await app.actions.createPost("hello", true, {})
 
 	t.log(`applied action ${id}`)
 	const postId = [message.payload.did, id].join("/")
@@ -92,23 +90,12 @@ test("apply an action and read a record from the database", async (t) => {
 	const clock = await app.messageLog.getClock()
 	t.is(clock[0], 3)
 
-	const { id: id2 } = await app.actions.createPost({
-		content: "bumping this thread again",
-		isVisible: true,
-		something: null,
-		metadata: {},
-	})
+	const { id: id2 } = await app.actions.createPost("bumping this thread again", true, {})
 	t.log(`applied action ${id2}`)
 	const clock2 = await app.messageLog.getClock()
 	t.is(clock2[0], 4)
 
-	const { id: id3 } = await app.actions.updatePost({
-		postId,
-		content: "update",
-		isVisible: false,
-		something: null,
-		metadata: {},
-	})
+	const { id: id3 } = await app.actions.updatePost(postId, "update", false, {})
 	const clock3 = await app.messageLog.getClock()
 	t.is(clock3[0], 5)
 })
@@ -116,11 +103,7 @@ test("apply an action and read a record from the database", async (t) => {
 test("create and delete a post", async (t) => {
 	const { app } = await init(t)
 
-	const { id, message } = await app.actions.createPost({
-		content: "hello world",
-		isVisible: true,
-		metadata: { author: "me" },
-	})
+	const { id, message } = await app.actions.createPost("hello world", true, { author: "me" })
 
 	const postId = [message.payload.did, id].join("/")
 	const value = await app.db.get("posts", postId)
@@ -135,7 +118,7 @@ test("create and delete a post", async (t) => {
 test("insert a message created by another app", async (t) => {
 	const [{ app: a }, { app: b }] = await Promise.all([init(t), init(t)])
 
-	await a.actions.createPost({ content: "hello world", isVisible: true, something: "bar", metadata: {} })
+	await a.actions.createPost("hello world", true, "bar", {})
 	const records = await a.messageLog.getMessages()
 	for (const { signature, message } of records) {
 		await t.notThrowsAsync(() => b.insert(signature, message))
@@ -152,7 +135,7 @@ test("insert a message into an app with multiple signers", async (t) => {
 			topic: "test",
 			contract: {
 				models: {},
-				actions: { createPost() {} },
+				actions: { createPost(db, { content }: { content: string }) {} },
 			},
 			reset: true,
 			signers: [siweSigner, cosmosSigner],
@@ -163,9 +146,9 @@ test("insert a message into an app with multiple signers", async (t) => {
 	const a = await getApp()
 	const b = await getApp()
 
-	await a.actions.createPost({ content: "hello siwe" }, { signer: siweSigner })
-	await a.actions.createPost({ content: "hello cosmos" }, { signer: cosmosSigner })
-	await t.throwsAsync(() => a.actions.createPost({ content: "hello eip712" }, { signer: eipSigner }))
+	await a.as(siweSigner).createPost({ content: "hello siwe" })
+	await a.as(cosmosSigner).createPost({ content: "hello cosmos" })
+	await t.throwsAsync(() => a.as(eipSigner).createPost({ content: "hello eip712" }))
 
 	const records = await a.messageLog.getMessages()
 	t.is(records.length, 4)
@@ -210,7 +193,8 @@ test("create an app with an inline contract", async (t) => {
 				},
 			},
 			actions: {
-				async createPost(db, { content }: { content: string }, { id, did, timestamp }) {
+				async createPost(db, { content }: { content: string }) {
+					const { id, did, timestamp } = this
 					const postId = [did, id].join("/")
 					await db.set("posts", { id: postId, content, timestamp, address: did })
 					return content
@@ -241,28 +225,28 @@ test("merge and update into a value set by another action", async (t) => {
 				game: { id: "primary", state: "json", label: "string" },
 			},
 			actions: {
-				async createGame(db) {
-					await db.set("game", {
+				async createGame() {
+					await this.db.set("game", {
 						id: "0",
 						state: { started: false, player1: "foo", player2: "bar" },
 						label: "foobar",
 					})
 				},
-				async updateGame(db) {
-					await db.merge("game", {
+				async updateGame() {
+					await this.db.merge("game", {
 						id: "0",
 						state: { started: true } as any,
 						label: "foosball",
 					})
 				},
-				async updateGameMultipleMerges(db) {
-					await db.merge("game", { id: "0", state: { extra1: { a: 1, b: 1 } } })
-					await db.merge("game", { id: "0", state: { extra2: "b" } })
-					await db.merge("game", { id: "0", state: { extra3: null, extra1: { b: 2, c: 3 } } })
+				async updateGameMultipleMerges() {
+					await this.db.merge("game", { id: "0", state: { extra1: { a: 1, b: 1 } } })
+					await this.db.merge("game", { id: "0", state: { extra2: "b" } })
+					await this.db.merge("game", { id: "0", state: { extra3: null, extra1: { b: 2, c: 3 } } })
 				},
-				async updateGameMultipleUpdates(db) {
-					await db.update("game", { id: "0", state: { extra1: { a: 1, b: 2 } } })
-					await db.update("game", { id: "0", state: { extra3: null, extra1: { b: 2, c: 3 } } })
+				async updateGameMultipleUpdates() {
+					await this.db.update("game", { id: "0", state: { extra1: { a: 1, b: 2 } } })
+					await this.db.update("game", { id: "0", state: { extra3: null, extra1: { b: 2, c: 3 } } })
 				},
 			},
 		},
@@ -317,18 +301,18 @@ test("merge and get execute in order, even without await", async (t) => {
 				test: { id: "primary", foo: "string?", bar: "string?", qux: "string?" },
 			},
 			actions: {
-				async testMerges(db) {
-					db.set("test", { id: "0", foo: null, bar: null, qux: "foo" })
-					db.merge("test", { id: "0", foo: "foo", qux: "qux" })
-					db.merge("test", { id: "0", bar: "bar" })
-					const result = await db.get("test", "0")
+				async testMerges() {
+					this.db.set("test", { id: "0", foo: null, bar: null, qux: "foo" })
+					this.db.merge("test", { id: "0", foo: "foo", qux: "qux" })
+					this.db.merge("test", { id: "0", bar: "bar" })
+					const result = await this.db.get("test", "0")
 					return result
 				},
-				async testGet(db): Promise<any> {
-					db.set("test", { id: "1", foo: null, bar: null, qux: "foo" })
-					const resultPromise = db.get("test", "1")
-					db.merge("test", { id: "1", foo: "foo", qux: "qux" })
-					db.merge("test", { id: "1", bar: "bar" })
+				async testGet(): Promise<any> {
+					this.db.set("test", { id: "1", foo: null, bar: null, qux: "foo" })
+					const resultPromise = this.db.get("test", "1")
+					this.db.merge("test", { id: "1", foo: "foo", qux: "qux" })
+					this.db.merge("test", { id: "1", bar: "bar" })
 					const result = await resultPromise
 					return result
 				},
@@ -376,15 +360,18 @@ test("get a value set by another action", async (t) => {
 				post: { id: "primary", from: "@user", content: "string" },
 			},
 			actions: {
-				async createUser(db, { name }: { name: string }, { did }) {
+				async createUser(db, { name }: { name: string }) {
+					const { did } = this
 					await db.set("user", { id: did, name })
 				},
-				async createPost(db, { content }: { content: string }, { id, did }) {
+				async createPost(db, { content }: { content: string }) {
+					const { id, did } = this
 					const user = await db.get("user", did)
 					assert(user !== null)
 					await db.set("post", { id, from: did, content })
 				},
-				async deletePost(db, { id }: { id: string }, { did }) {
+				async deletePost(db, { id }: { id: string }) {
+					const { did } = this
 					const post = await db.get("post", id)
 					if (post !== null) {
 						assert(post.from === did, "cannot delete others' posts")
@@ -420,12 +407,7 @@ test("get a value set by another action", async (t) => {
 test("apply an action and read a record from the database using eip712", async (t) => {
 	const { app } = await initEIP712(t)
 
-	const { id, message } = await app.actions.createPost({
-		content: "hello world",
-		isVisible: true,
-		something: -1,
-		metadata: 0,
-	})
+	const { id, message } = await app.actions.createPost("hello world", true, -1, 0)
 
 	t.log(`applied action ${id}`)
 
@@ -433,12 +415,7 @@ test("apply an action and read a record from the database using eip712", async (
 	const value = await app.db.get("posts", postId)
 	t.is(value?.content, "hello world")
 
-	const { id: id2, message: message2 } = await app.actions.createPost({
-		content: "foo bar",
-		isVisible: true,
-		something: -1,
-		metadata: 0,
-	})
+	const { id: id2, message: message2 } = await app.actions.createPost("foo bar", true, -1, 0)
 
 	t.log(`applied action ${id2}`)
 	const postId2 = [message2.payload.did, id2].join("/")
@@ -450,12 +427,7 @@ test("call quickjs contract with did uri and wallet address", async (t) => {
 	const { app, signer } = await initEIP712(t)
 	const address = await signer._signer.getAddress()
 
-	const { id, message } = await app.actions.createPost({
-		content: "hello world",
-		isVisible: true,
-		something: -1,
-		metadata: 0,
-	})
+	const { id, message } = await app.actions.createPost("hello world", true, -1, 0)
 
 	t.log(`applied action ${id}`)
 

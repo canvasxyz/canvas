@@ -13,7 +13,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({}) => {
 		async (event: React.KeyboardEvent<HTMLInputElement>) => {
 			if (event.key === "Enter" && app !== null && signer !== null) {
 				try {
-					const { id } = await app.actions.createMessage({ content: value }, { signer })
+					const { id } = await app.as(signer).createMessage(value)
 					setValue("")
 				} catch (err) {
 					console.log(err)
