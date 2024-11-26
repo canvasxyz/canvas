@@ -204,7 +204,7 @@ export class VM {
 	 * `unwrapArray` does NOT dispose of the original handle.
 	 */
 	public unwrapArray = <T = QuickJSHandle>(handle: QuickJSHandle, map?: (elementHandle: QuickJSHandle) => T): T[] => {
-		const length = this.context.getProp(handle, "length").consume(this.context.getNumber)
+		const length = this.context.getLength(handle) ?? 0
 		const array = new Array<T>(length)
 		for (let index = 0; index < length; index++) {
 			const elementHandle = this.context
@@ -299,13 +299,18 @@ export class VM {
 			throw new Error("cannot unwrap `undefined`")
 		} else if (this.is(handle, this.context.null)) {
 			return null
-		} else if (this.context.typeof(handle) === "boolean") {
-			return this.getBoolean(handle)
-		} else if (this.context.typeof(handle) === "number") {
-			return this.context.getNumber(handle)
-		} else if (this.context.typeof(handle) === "string") {
-			return this.context.getString(handle)
-		} else if (this.isUint8Array(handle)) {
+		}
+
+		switch (this.context.typeof(handle)) {
+			case "boolean":
+				return this.getBoolean(handle)
+			case "number":
+				return this.context.getNumber(handle)
+			case "string":
+				return this.context.getString(handle)
+		}
+
+		if (this.isUint8Array(handle)) {
 			return this.getUint8Array(handle)
 		} else if (this.isArray(handle)) {
 			return this.unwrapArray(handle, (elementHandle) => elementHandle.consume(this.unwrapValue))
