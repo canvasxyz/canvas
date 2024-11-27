@@ -72,7 +72,7 @@ export function createAPI<Payload>(gossipLog: AbstractGossipLog<Payload>): expre
 	gossipLog.addEventListener("connect", ({ detail: { peer } }) => connectionURLs.add(peer))
 	gossipLog.addEventListener("disconnect", ({ detail: { peer } }) => connectionURLs.delete(peer))
 
-	api.get("/connections", (req, res) => res.json([...connectionURLs]))
+	api.get("/connections", (req, res) => res.json(Array.from(connectionURLs).map((peer) => ({ peer }))))
 
 	return api
 }
