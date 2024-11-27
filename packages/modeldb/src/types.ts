@@ -64,7 +64,9 @@ export type RelationValue = string[]
 export type PropertyValue = PrimaryKeyValue | PrimitiveValue | ReferenceValue | RelationValue | JSONValue
 
 export type ModelValue<T = PropertyValue> = { [key: string]: T }
-export type ModelValueWithIncludes<T = PropertyValue> = { [key: string]: T | ModelValueWithIncludes<T> | ModelValueWithIncludes<T>[] }
+export type ModelValueWithIncludes<T = PropertyValue> = {
+	[key: string]: T | ModelValueWithIncludes<T> | ModelValueWithIncludes<T>[]
+}
 
 export type WhereCondition = Record<string, PropertyValue | NotExpression | RangeExpression | undefined>
 export type NotExpression = { neq: PropertyValue | undefined }
@@ -104,13 +106,15 @@ export type DerivePropertyType<T extends PropertyType> = T extends "primary"
 									? boolean | null
 									: T extends "json"
 										? JSONValue
-										: T extends `@${string}[]`
-											? RelationValue
-											: T extends `@${string}?`
-												? ReferenceValue | null
-												: T extends `@${string}`
-													? ReferenceValue
-													: never
+										: T extends "json?"
+											? JSONValue | null
+											: T extends `@${string}[]`
+												? RelationValue
+												: T extends `@${string}?`
+													? ReferenceValue | null
+													: T extends `@${string}`
+														? ReferenceValue
+														: never
 
 export type DeriveModelTypes<T extends ModelSchema> = {
 	[K in keyof T as Exclude<K, "$merge" | "$indexes">]: {

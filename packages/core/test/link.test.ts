@@ -11,12 +11,12 @@ test("link and unlink database items", async (t) => {
 		contract: {
 			models: {
 				game: { id: "primary", player: "@players[]", manager: "@player[]", observers: "@player[]", status: "json" },
-				player: { id: "primary", game: "@game", status: "json" },
+				player: { id: "primary", game: "@game", status: "json?" },
 			},
 			actions: {
 				async createGame() {
 					const gameId = "0"
-					this.db.create("game", { id: gameId, player: [], manager: [], observers: [], status: "GAME_START" })
+					this.db.create("game", { id: gameId, player: [], manager: [], observers: [], status: null })
 					this.db.create("player", { id: "1", game: gameId, status: "ALIVE" }).link("game", gameId)
 					this.db
 						.create("player", { id: "2", game: gameId, status: "ALIVE" })
@@ -44,7 +44,7 @@ test("link and unlink database items", async (t) => {
 		player: ["1"],
 		manager: ["2"],
 		observers: ["3", "4"],
-		status: "GAME_START",
+		status: null,
 	})
 	t.deepEqual(await app.db.get("player", "1"), {
 		id: "1",
@@ -58,6 +58,6 @@ test("link and unlink database items", async (t) => {
 		player: ["1"],
 		manager: ["2"],
 		observers: ["3"],
-		status: "GAME_START",
+		status: null,
 	})
 })

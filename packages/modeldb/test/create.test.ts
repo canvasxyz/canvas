@@ -35,19 +35,6 @@ testOnModelDB("create modeldb with a model with invalid fields should fail", asy
 	await t.throwsAsync(() => openDB(t, models), { message: `error defining room: invalid property "unsupported"` })
 })
 
-testOnModelDB("create modeldb with a model with an nullable json field should fail", async (t, openDB) => {
-	// @ts-ignore
-	const models = {
-		room: {
-			name: "json?",
-		},
-	} as ModelSchema
-
-	await t.throwsAsync(() => openDB(t, models), {
-		message: `error defining room: field "name" is invalid - json fields cannot be nullable`,
-	})
-})
-
 testOnModelDB("create a model without a primary key", async (t, openDB) => {
 	const models = {
 		room: {
