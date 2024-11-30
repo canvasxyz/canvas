@@ -106,15 +106,13 @@ export type DerivePropertyType<T extends PropertyType> = T extends "primary"
 									? boolean | null
 									: T extends "json"
 										? JSONValue
-										: T extends "json?"
-											? JSONValue | null
-											: T extends `@${string}[]`
-												? RelationValue
-												: T extends `@${string}?`
-													? ReferenceValue | null
-													: T extends `@${string}`
-														? ReferenceValue
-														: never
+										: T extends `@${string}[]`
+											? RelationValue
+											: T extends `@${string}?`
+												? ReferenceValue | null
+												: T extends `@${string}`
+													? ReferenceValue
+													: never
 
 export type DeriveModelTypes<T extends ModelSchema> = {
 	[K in keyof T as Exclude<K, "$merge" | "$indexes">]: {

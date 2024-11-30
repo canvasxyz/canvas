@@ -11,7 +11,7 @@ test("link and unlink database items", async (t) => {
 		contract: {
 			models: {
 				game: { id: "primary", player: "@players[]", manager: "@player[]", observers: "@player[]", status: "json" },
-				player: { id: "primary", game: "@game", status: "json?" },
+				player: { id: "primary", game: "@game", status: "json" },
 			},
 			actions: {
 				async createGame() {
