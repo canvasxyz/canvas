@@ -111,13 +111,21 @@ export const builder = (yargs: Argv) =>
 			desc: "Start an action REPL",
 			default: false,
 		})
+		.option("network-explorer", {
+			type: "string",
+			desc: "The path of the network explorer static files",
+		})
 
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
-	const { topic, contract, location } = getContractLocation(args)
+	const { topic, contract, location: location_ } = getContractLocation(args)
+	let location = location_
 
-	if (location === null) {
+	if (process.env.DATABASE_URL) {
+		location = process.env.DATABASE_URL
+		console.log(`[canvas] Using database at ${process.env.DATABASE_URL}`)
+	} else if (location === null) {
 		console.log(chalk.yellow(`✦ ${chalk.bold("Running app in-memory only.")} No data will be persisted.`))
 		console.log("")
 	}
@@ -232,6 +240,15 @@ export async function handler(args: Args) {
 			assert(/^(.\/)?\w[\w-_/]*$/.test(args.static), "Invalid directory for static files")
 			assert(fs.existsSync(args.static), "Invalid directory for static files (path not found)")
 			api.use(express.static(args.static))
+		}
+
+		if (args["network-explorer"] !== undefined) {
+			assert(/^(.\/)?\w[\w-_/]*$/.test(args["network-explorer"]), "Invalid directory for network explorer static files")
+			assert(
+				fs.existsSync(args["network-explorer"]),
+				"Invalid directory for network explorer static files (path not found)",
+			)
+			api.use("/explorer", express.static(args["network-explorer"]))
 		}
 
 		const server = stoppable(http.createServer(api))

@@ -35,6 +35,7 @@
 		"@canvas-js/chain-ethereum-viem": "0.13.3",
 		"@canvas-js/chain-solana": "0.13.3",
 		"@canvas-js/chain-substrate": "0.13.3",
+		"@canvas-js/cli": "0.13.3",
 		"@canvas-js/hooks": "0.13.3",
 		"@canvas-js/interfaces": "0.13.3",
 		"@canvas-js/modeldb": "0.13.3",
