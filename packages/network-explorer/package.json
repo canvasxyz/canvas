@@ -23,6 +23,7 @@
 		"vite": "^5.4.8"
 	},
 	"devDependencies": {
+		"@types/d3": "^7.4.3",
 		"@types/react": "^18.3.3",
 		"@types/react-dom": "^18.3.0"
 	}
