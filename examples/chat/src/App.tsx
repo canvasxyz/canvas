@@ -49,7 +49,7 @@ export const App: React.FC<{}> = ({}) => {
 							</div>
 							<MessageComposer />
 						</div>
-						<div className="flex flex-col gap-4">
+						<div className="flex flex-col gap-4 w-[480px] break-all">
 							<Connect />
 							<SessionStatus />
 							<ConnectionStatus topic={topicRef.current} />
@@ -59,7 +59,7 @@ export const App: React.FC<{}> = ({}) => {
 					</div>
 				</main>
 			) : (
-				<></>
+				<div className="text-center my-20">Connecting to {wsURL}...</div>
 			)}
 		</AppContext.Provider>
 	)

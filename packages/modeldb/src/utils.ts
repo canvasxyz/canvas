@@ -123,12 +123,7 @@ export function validatePropertyValue(modelName: string, property: Property, val
 				)
 			}
 		} else if (property.type === "json") {
-			if (value === null) {
-				throw new TypeError(`write to db.${modelName}.${property.name}: must not be null`)
-			}
-
 			// TODO: validate IPLD value
-
 			// try {
 			// 	json.encode(value)
 			// } catch (e) {

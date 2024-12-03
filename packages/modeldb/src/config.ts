@@ -80,10 +80,10 @@ export function parseProperty(modelName: string, propertyName: string, propertyT
 	if (primitiveResult !== null) {
 		const [_, type, nullable] = primitiveResult
 
-		// json field cannot be nullable
+		// json fields are already nullable
 		if (type === "json" && nullable === "?") {
 			throw new Error(
-				`error defining ${modelName}: field "${propertyName}" is invalid - json fields cannot be nullable`,
+				`error defining ${modelName}.${propertyName}: json fields already accept null, and should not be declared as nullable`,
 			)
 		}
 
