@@ -119,9 +119,13 @@ export const builder = (yargs: Argv) =>
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
-	const { topic, contract, location } = getContractLocation(args)
+	const { topic, contract, location: location_ } = getContractLocation(args)
+	let location = location_
 
-	if (location === null) {
+	if (process.env.DATABASE_URL) {
+		location = process.env.DATABASE_URL
+		console.log(`[canvas] Using database at ${process.env.DATABASE_URL}`)
+	} else if (location === null) {
 		console.log(chalk.yellow(`✦ ${chalk.bold("Running app in-memory only.")} No data will be persisted.`))
 		console.log("")
 	}
