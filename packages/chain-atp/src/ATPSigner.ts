@@ -1,8 +1,4 @@
-import * as ATP from "@atproto/api"
-
-// Unfortunately this is necessary until the BlueSky team decides
-// to publish ESM modules (please, it's been ten years since ES6)
-const BskyAgent = ATP.BskyAgent ?? ATP["default"].BskyAgent
+import { AtpAgent, AtpSessionData } from "@atproto/api"
 
 import type { Session, AbstractSessionData, DidIdentifier } from "@canvas-js/interfaces"
 import { AbstractSessionSigner, ed25519 } from "@canvas-js/signatures"
@@ -12,7 +8,7 @@ import { unpackArchive } from "./mst.js"
 import { verifyCommit } from "./commit.js"
 import { Operation, verifyLog } from "./operation.js"
 
-const service = "bsky.social"
+const defaultService = "bsky.social"
 
 type PostRecord = { $type: "app.bsky.feed.post"; text: string; createdAt: string }
 
@@ -24,6 +20,7 @@ export type ATPSessionData = {
 }
 
 export interface ATPSignerOptions {
+	service?: string
 	login?: () => Promise<{ identifier: string; password: string }>
 }
 
@@ -32,11 +29,14 @@ export class ATPSigner extends AbstractSessionSigner<ATPSessionData> {
 		return `Authorizing ${publicKey} to sign actions for ${topic} on behalf of ${address}`
 	}
 
-	#agent = new BskyAgent({ service: `https://${service}` })
-	#session: ATP.AtpSessionData | null = null
+	#agent: AtpAgent
+	#session: AtpSessionData | null = null
 
 	public constructor(private readonly options: ATPSignerOptions = {}) {
 		super("chain-atp", ed25519, {})
+		const service = options.service ?? defaultService
+		const serviceUrl = service.startsWith("https://") ? service : `https://${service}`
+		this.#agent = new AtpAgent({ service: serviceUrl })
 	}
 
 	public readonly match = (address: string) => address.startsWith("did:plc:") || address.startsWith("did:web:")
@@ -88,7 +88,7 @@ export class ATPSigner extends AbstractSessionSigner<ATPSessionData> {
 		return did
 	}
 
-	private loadJWTSession(): ATP.AtpSessionData | null {
+	private loadJWTSession(): AtpSessionData | null {
 		const value = this.target.get("canvas-chain-atp/jwt")
 		if (value === null) {
 			return null
@@ -97,7 +97,7 @@ export class ATPSigner extends AbstractSessionSigner<ATPSessionData> {
 		}
 	}
 
-	private saveJWTSession(data: ATP.AtpSessionData) {
+	private saveJWTSession(data: AtpSessionData) {
 		this.target.set("canvas-chain-atp/jwt", JSON.stringify(data))
 	}
 

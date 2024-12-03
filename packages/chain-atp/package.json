@@ -13,8 +13,8 @@
 		"generate-test-data": "node test/lib/generateTestData.js"
 	},
 	"dependencies": {
-		"@atproto/api": "^0.12.21",
-		"@atproto/crypto": "^0.4.0",
+		"@atproto/api": "^0.13.18",
+		"@atproto/crypto": "^0.4.2",
 		"@canvas-js/interfaces": "0.13.3",
 		"@canvas-js/signatures": "0.13.3",
 		"@canvas-js/utils": "0.13.3",
