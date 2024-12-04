@@ -5,6 +5,6 @@ export type Snapshot = {
 }
 
 export type SnapshotEffect = {
-	key: string // `${model}/${hash(key)}/${version}
+	key: string // `${hash(model, key)}/${version}
 	value: Uint8Array | null // cbor.encode(value)
 }

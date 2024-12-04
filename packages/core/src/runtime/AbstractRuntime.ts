@@ -34,12 +34,15 @@ export type ExecutionContext = {
 	branch: number
 }
 
-export type EffectRecord = {
+export type WriteRecord = {
 	key: string
 	value: Uint8Array | null
-	clock: number
-	branch: number
+	version: string | null
 	reverted: boolean
+}
+
+export type ReadRecord = {
+	key: string
 }
 
 export type SessionRecord = {
@@ -59,12 +62,15 @@ export type ActionRecord = {
 
 export abstract class AbstractRuntime {
 	protected static effectsModel: ModelSchema = {
-		$effects: {
-			key: "primary", // `${model}/${hash(key)}/${version}
+		$writes: {
+			key: "primary", // `${hash(model, key)}/${version}`
+			version: "string?",
 			value: "bytes?",
-			clock: "integer",
-			branch: "integer",
 			reverted: "boolean",
+			$indexes: ["version"],
+		},
+		$reads: {
+			key: "primary", // `${hash(model, key)}/${version}/${by}
 		},
 	} satisfies ModelSchema
 
@@ -161,7 +167,7 @@ export abstract class AbstractRuntime {
 		assert(messages.length === 0, "snapshot must be first entry on log")
 
 		for (const { key, value } of effects) {
-			await this.db.set("$effects", { key, value, branch: 0, clock: 0, reverted: false })
+			await this.db.set("$writes", { key, value, version: null, reverted: false })
 		}
 
 		for (const [model, rows] of Object.entries(models)) {
@@ -253,34 +259,33 @@ export abstract class AbstractRuntime {
 
 		for (const [model, entries] of Object.entries(modelEntries)) {
 			for (const [key, value] of Object.entries(entries)) {
-				const keyHash = AbstractRuntime.getKeyHash(key)
+				const keyHash = AbstractRuntime.getKeyHash(model, key)
 
-				const effectKey = `${model}/${keyHash}/${id}`
-				const results = await this.db.query<{ key: string }>("$effects", {
-					select: { key: true },
-					where: { key: { gt: effectKey, lte: `${model}/${keyHash}/${MAX_MESSAGE_ID}` } },
-					limit: 1,
-				})
+				const effectKey = `${keyHash}/${id}`
 
-				const effectRecord: EffectRecord = {
+				const effectRecord: WriteRecord = {
 					key: effectKey,
 					value: value && cbor.encode(value),
-					clock: message.clock,
-					branch: branch,
+					version: id,
 					reverted: false,
 				}
 
-				effects.push({ model: "$effects", operation: "set", value: effectRecord })
+				effects.push({ model: "$writes", operation: "set", value: effectRecord })
 
-				if (results.length > 0) {
-					this.log("skipping effect %o because it is superceeded by effects %O", [key, value], results)
-					continue
-				}
+				const results = await this.db.query<{ key: string }>("$writes", {
+					select: { key: true },
+					where: { key: { gt: effectKey, lte: `${keyHash}/${MAX_MESSAGE_ID}` } },
+					limit: 1,
+				})
 
-				if (value === null) {
-					effects.push({ model, operation: "delete", key })
+				if (results.length === 0) {
+					if (value === null) {
+						effects.push({ model, operation: "delete", key })
+					} else {
+						effects.push({ model, operation: "set", value })
+					}
 				} else {
-					effects.push({ model, operation: "set", value })
+					this.log("skipping effect %o because it is superceeded by effects %O", [key, value], results)
 				}
 			}
 		}
@@ -299,7 +304,7 @@ export abstract class AbstractRuntime {
 		return result
 	}
 
-	protected static getKeyHash = (key: string) => bytesToHex(blake3(key, { dkLen: 16 }))
+	private static getKeyHash = (model: string, key: string) => bytesToHex(blake3(`${model}/${key}`, { dkLen: 16 }))
 
 	protected async getModelValue<T extends ModelValue = ModelValue>(
 		context: ExecutionContext,
@@ -310,15 +315,15 @@ export abstract class AbstractRuntime {
 			return context.modelEntries[model][key] as T
 		}
 
-		const keyHash = AbstractRuntime.getKeyHash(key)
-		const lowerBound = `${model}/${keyHash}/${MIN_MESSAGE_ID}`
+		const keyHash = AbstractRuntime.getKeyHash(model, key)
+		const lowerBound = `${keyHash}/${MIN_MESSAGE_ID}`
 
-		let upperBound = `${model}/${keyHash}/${context.id}`
+		let upperBound = `${keyHash}/${context.id}`
 
 		// eslint-disable-next-line no-constant-condition
 		while (true) {
-			const results = await this.db.query<{ key: string; value: Uint8Array; clock: number }>("$effects", {
-				select: { key: true, value: true, clock: true },
+			const results = await this.db.query<{ key: string; value: Uint8Array; version: string }>("$writes", {
+				select: { key: true, value: true, version: true },
 				where: { key: { gte: lowerBound, lt: upperBound }, reverted: false },
 				orderBy: { key: "desc" },
 				limit: 1,
@@ -328,13 +333,17 @@ export abstract class AbstractRuntime {
 				return null
 			}
 
-			if (results[0].clock === 0) {
-				if (results[0].value === null) return null
-				return cbor.decode<null | T>(results[0].value)
+			const [effect] = results
+
+			if (effect.version === null) {
+				if (effect.value === null) {
+					return null
+				} else {
+					return cbor.decode<null | T>(effect.value)
+				}
 			}
 
-			const [effect] = results
-			const [{}, {}, messageId] = effect.key.split("/")
+			const [effectKey, messageId] = effect.key.split("/")
 
 			const visited = new Set<string>()
 			for (const parent of context.message.parents) {

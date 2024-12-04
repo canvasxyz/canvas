@@ -8,7 +8,7 @@ import type { IndexInit, PropertyType } from "@canvas-js/modeldb"
 
 import { Canvas } from "./Canvas.js"
 import { Contract } from "./types.js"
-import { EffectRecord } from "./runtime/AbstractRuntime.js"
+import { WriteRecord, ReadRecord } from "./runtime/AbstractRuntime.js"
 
 // typeguards
 export const isIndexInit = (value: unknown): value is IndexInit[] => typeof value === "string" || Array.isArray(value)
@@ -34,43 +34,51 @@ export function hashSnapshot(snapshot: Snapshot): string {
 	return bytesToHex(hash).slice(0, 16)
 }
 
-export async function createSnapshot<T extends Contract<any>>(app: Canvas): Promise<Snapshot> {
+export async function createSnapshot(app: Canvas): Promise<Snapshot> {
 	// flatten models
 	const modelData: Record<string, Uint8Array[]> = {}
 	for (const [modelName, modelSchema] of Object.entries(app.db.models)) {
 		if (modelName.startsWith("$")) {
 			continue
 		}
+
 		modelData[modelName] = []
 		for await (const row of app.db.iterate(modelName)) {
 			modelData[modelName].push(cbor.encode(row))
 		}
 	}
+
 	const models = modelData
 
-	// flatten $effects table
-	const effectsMap = new Map<string, EffectRecord>()
-	for await (const row of app.db.iterate<EffectRecord>("$effects", { where: { reverted: false } })) {
-		const { key, value, branch, clock } = row
-		const [table, keyhash, msgid] = key.split("/")
-		const existingEffect = effectsMap.get(keyhash)
-		if (!existingEffect || clock > existingEffect.clock) {
-			const effectRecord: EffectRecord = {
-				key: `${table}/${keyhash}/${MIN_MESSAGE_ID}`,
+	// flatten $writes table
+	const writesMap = new Map<string, WriteRecord>()
+	for await (const row of app.db.iterate<WriteRecord>("$writes", { where: { reverted: false } })) {
+		const { key, value, version } = row
+		const effectKey = key.slice(0, key.indexOf("/"))
+		const existingEffect = writesMap.get(effectKey)
+		if (existingEffect === undefined || lessThan(existingEffect.version, version)) {
+			writesMap.set(effectKey, {
+				key: `${effectKey}/${MIN_MESSAGE_ID}`,
 				value,
-				branch,
-				clock,
+				version: null,
 				reverted: false,
-			}
-
-			effectsMap.set(keyhash, effectRecord)
+			})
 		}
 	}
-	const effects = Array.from(effectsMap.values()).map(({ key, value }: SnapshotEffect) => ({ key, value }))
 
-	return {
-		type: "snapshot",
-		models,
-		effects,
+	const effects = Array.from(writesMap.values()).map(({ key, value }: SnapshotEffect) => ({ key, value }))
+
+	return { type: "snapshot", models, effects }
+}
+
+function lessThan(a: string | null, b: string | null) {
+	if (a === null && b === null) {
+		return false
+	} else if (a === null) {
+		return true
+	} else if (b === null) {
+		return false
+	} else {
+		return a < b
 	}
 }
