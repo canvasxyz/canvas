@@ -34,7 +34,13 @@ export type ExecutionContext = {
 	branch: number
 }
 
-export type EffectRecord = { key: string; value: Uint8Array | null; branch: number; clock: number }
+export type EffectRecord = {
+	key: string
+	value: Uint8Array | null
+	clock: number
+	branch: number
+	reverted: boolean
+}
 
 export type SessionRecord = {
 	message_id: string
@@ -56,8 +62,9 @@ export abstract class AbstractRuntime {
 		$effects: {
 			key: "primary", // `${model}/${hash(key)}/${version}
 			value: "bytes?",
-			branch: "integer",
 			clock: "integer",
+			branch: "integer",
+			reverted: "boolean",
 		},
 	} satisfies ModelSchema
 
@@ -157,8 +164,9 @@ export abstract class AbstractRuntime {
 		assert(messages.length === 0, "snapshot must be first entry on log")
 
 		for (const { key, value } of effects) {
-			await this.db.set("$effects", { key, value, branch: 0, clock: 0 })
+			await this.db.set("$effects", { key, value, branch: 0, clock: 0, reverted: false })
 		}
+
 		for (const [model, rows] of Object.entries(models)) {
 			for (const row of rows) {
 				await this.db.set(model, cbor.decode(row) as any)
@@ -184,25 +192,18 @@ export abstract class AbstractRuntime {
 		await signer.verifySession(this.topic, message.payload)
 		const address = signer.getAddressFromDid(did)
 
-		const effects: Effect[] = [
-			{
-				model: "$sessions",
-				operation: "set",
-				value: {
-					message_id: id,
-					public_key: publicKey,
-					did,
-					address,
-					expiration: duration === undefined ? null : timestamp + duration,
-				},
-			},
-			{
-				model: "$dids",
-				operation: "set",
-				value: { did },
-			},
-		]
-		await this.db.apply(effects)
+		const sessionRecord: SessionRecord = {
+			message_id: id,
+			public_key: publicKey,
+			did,
+			address,
+			expiration: duration === undefined ? null : timestamp + duration,
+		}
+
+		await this.db.apply([
+			{ model: "$sessions", operation: "set", value: sessionRecord },
+			{ model: "$dids", operation: "set", value: { did } },
+		])
 	}
 
 	private async handleAction(
@@ -264,11 +265,15 @@ export abstract class AbstractRuntime {
 					limit: 1,
 				})
 
-				effects.push({
-					model: "$effects",
-					operation: "set",
-					value: { key: effectKey, value: value && cbor.encode(value), branch: branch, clock: message.clock },
-				})
+				const effectRecord: EffectRecord = {
+					key: effectKey,
+					value: value && cbor.encode(value),
+					clock: message.clock,
+					branch: branch,
+					reverted: false,
+				}
+
+				effects.push({ model: "$effects", operation: "set", value: effectRecord })
 
 				if (results.length > 0) {
 					this.log("skipping effect %o because it is superceeded by effects %O", [key, value], results)
@@ -308,7 +313,43 @@ export abstract class AbstractRuntime {
 			return context.modelEntries[model][key] as T
 		}
 
-		return await this.db.get(model, key)
+		const keyHash = AbstractRuntime.getKeyHash(key)
+		const lowerBound = `${model}/${keyHash}/${MIN_MESSAGE_ID}`
+
+		let upperBound = `${model}/${keyHash}/${context.id}`
+
+		// eslint-disable-next-line no-constant-condition
+		while (true) {
+			const results = await this.db.query<{ key: string; value: Uint8Array; clock: number }>("$effects", {
+				select: { key: true, value: true, clock: true },
+				where: { key: { gte: lowerBound, lt: upperBound }, reverted: false },
+				orderBy: { key: "desc" },
+				limit: 1,
+			})
+
+			if (results.length === 0) {
+				return null
+			}
+
+			if (results[0].clock === 0) {
+				if (results[0].value === null) return null
+				return cbor.decode<null | T>(results[0].value)
+			}
+
+			const [effect] = results
+			const [{}, {}, messageId] = effect.key.split("/")
+
+			const visited = new Set<string>()
+			for (const parent of context.message.parents) {
+				const isAncestor = await context.messageLog.isAncestor(parent, messageId, visited)
+				if (isAncestor) {
+					if (effect.value === null) return null
+					return cbor.decode<null | T>(effect.value)
+				}
+			}
+
+			upperBound = effect.key
+		}
 	}
 
 	protected async setModelValue(
@@ -317,6 +358,7 @@ export abstract class AbstractRuntime {
 		key: string,
 		value: ModelValue,
 	): Promise<void> {
+		validateModelValue(this.db.models[model], value)
 		context.modelEntries[model][key] = value
 	}
 

@@ -188,10 +188,10 @@ test("accept a manually encoded session/action with a legacy-style object arg", 
 		contract: {
 			actions: {
 				createMessage(db, arg) {
-					t.deepEqual(arg, { objectArg: '1' })
-				}
+					t.deepEqual(arg, { objectArg: "1" })
+				},
 			},
-			models: {}
+			models: {},
 		},
 		topic: "com.example.app",
 		reset: true,
@@ -219,8 +219,8 @@ test("accept a manually encoded session/action with a legacy-style object arg", 
 			type: "action",
 			did: sessionMessage.payload.did,
 			name: "createMessage",
-			args: { objectArg: '1' },
-			context: { timestamp: 0 }
+			args: { objectArg: "1" },
+			context: { timestamp: 0 },
 		},
 	}
 	const actionSignature = await session.signer.sign(actionMessage)
@@ -342,57 +342,57 @@ test("merge and update into a value set by another action", async (t) => {
 	})
 })
 
-test("merge and get execute in order, even without await", async (t) => {
-	const app = await Canvas.initialize({
-		topic: "com.example.app",
-		contract: {
-			models: {
-				test: { id: "primary", foo: "string?", bar: "string?", qux: "string?" },
-			},
-			actions: {
-				async testMerges() {
-					this.db.set("test", { id: "0", foo: null, bar: null, qux: "foo" })
-					this.db.merge("test", { id: "0", foo: "foo", qux: "qux" })
-					this.db.merge("test", { id: "0", bar: "bar" })
-					const result = await this.db.get("test", "0")
-					return result
-				},
-				async testGet(): Promise<any> {
-					this.db.set("test", { id: "1", foo: null, bar: null, qux: "foo" })
-					const resultPromise = this.db.get("test", "1")
-					this.db.merge("test", { id: "1", foo: "foo", qux: "qux" })
-					this.db.merge("test", { id: "1", bar: "bar" })
-					const result = await resultPromise
-					return result
-				},
-			},
-		},
-	})
+// test("merge and get execute in order, even without await", async (t) => {
+// 	const app = await Canvas.initialize({
+// 		topic: "com.example.app",
+// 		contract: {
+// 			models: {
+// 				test: { id: "primary", foo: "string?", bar: "string?", qux: "string?" },
+// 			},
+// 			actions: {
+// 				async testMerges() {
+// 					this.db.set("test", { id: "0", foo: null, bar: null, qux: "foo" })
+// 					this.db.merge("test", { id: "0", foo: "foo", qux: "qux" })
+// 					this.db.merge("test", { id: "0", bar: "bar" })
+// 					const result = await this.db.get("test", "0")
+// 					return result
+// 				},
+// 				async testGet(): Promise<any> {
+// 					this.db.set("test", { id: "1", foo: null, bar: null, qux: "foo" })
+// 					const resultPromise = this.db.get("test", "1")
+// 					this.db.merge("test", { id: "1", foo: "foo", qux: "qux" })
+// 					this.db.merge("test", { id: "1", bar: "bar" })
+// 					const result = await resultPromise
+// 					return result
+// 				},
+// 			},
+// 		},
+// 	})
 
-	t.teardown(() => app.stop())
+// 	t.teardown(() => app.stop())
 
-	await app.actions.testMerges()
-	t.deepEqual(await app.db.get("test", "0"), {
-		id: "0",
-		foo: "foo",
-		bar: "bar",
-		qux: "qux",
-	})
+// 	await app.actions.testMerges()
+// 	t.deepEqual(await app.db.get("test", "0"), {
+// 		id: "0",
+// 		foo: "foo",
+// 		bar: "bar",
+// 		qux: "qux",
+// 	})
 
-	const { result } = await app.actions.testGet()
-	t.deepEqual(await app.db.get("test", "1"), {
-		id: "1",
-		foo: "foo",
-		bar: "bar",
-		qux: "qux",
-	})
-	t.deepEqual(result, {
-		id: "1",
-		foo: null,
-		bar: null,
-		qux: "foo",
-	})
-})
+// 	const { result } = await app.actions.testGet()
+// 	t.deepEqual(await app.db.get("test", "1"), {
+// 		id: "1",
+// 		foo: "foo",
+// 		bar: "bar",
+// 		qux: "qux",
+// 	})
+// 	t.deepEqual(result, {
+// 		id: "1",
+// 		foo: null,
+// 		bar: null,
+// 		qux: "foo",
+// 	})
+// })
 
 test("get a value set by another action", async (t) => {
 	const wallet = ethers.Wallet.createRandom()

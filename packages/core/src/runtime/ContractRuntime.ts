@@ -74,11 +74,10 @@ export class ContractRuntime extends AbstractRuntime {
 				set: vm.wrapFunction(async (model, value) => {
 					assert(this.#context !== null, "expected this.#context !== null")
 					assert(typeof model === "string", 'expected typeof model === "string"')
+					assert(this.db.models[model] !== undefined, "model not found")
 					const { primaryKey } = this.db.models[model]
 					const { [primaryKey]: key } = value as ModelValue
 					assert(typeof key === "string", "expected value[primaryKey] to be a string")
-					assert(this.db.models[model] !== undefined, "model not found")
-					validateModelValue(this.db.models[model], value as ModelValue)
 					await this.setModelValue(this.#context, model, key, value as ModelValue)
 				}),
 				create: vm.wrapFunction(async (model, value) => {
@@ -88,27 +87,24 @@ export class ContractRuntime extends AbstractRuntime {
 					const { [primaryKey]: key } = value as ModelValue
 					assert(typeof key === "string", "expected value[primaryKey] to be a string")
 					assert(this.db.models[model] !== undefined, "model not found")
-					validateModelValue(this.db.models[model], value as ModelValue)
 					await this.setModelValue(this.#context, model, key, value as ModelValue)
 				}),
 				update: vm.wrapFunction(async (model, value) => {
 					assert(this.#context !== null, "expected this.#context !== null")
 					assert(typeof model === "string", 'expected typeof model === "string"')
+					assert(this.db.models[model] !== undefined, "model not found")
 					const { primaryKey } = this.db.models[model]
 					const { [primaryKey]: key } = value as ModelValue
 					assert(typeof key === "string", "expected value[primaryKey] to be a string")
-					assert(this.db.models[model] !== undefined, "model not found")
-					validateModelValue(this.db.models[model], value as ModelValue)
 					await this.updateModelValue(this.#context, model, key, value as ModelValue)
 				}),
 				merge: vm.wrapFunction(async (model, value) => {
 					assert(this.#context !== null, "expected this.#context !== null")
 					assert(typeof model === "string", 'expected typeof model === "string"')
+					assert(this.db.models[model] !== undefined, "model not found")
 					const { primaryKey } = this.db.models[model]
 					const { [primaryKey]: key } = value as ModelValue
 					assert(typeof key === "string", "expected value[primaryKey] to be a string")
-					assert(this.db.models[model] !== undefined, "model not found")
-					validateModelValue(this.db.models[model], value as ModelValue)
 					await this.mergeModelValue(this.#context, model, key, value as ModelValue)
 				}),
 
