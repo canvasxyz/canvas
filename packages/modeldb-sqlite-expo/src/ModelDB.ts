@@ -33,9 +33,13 @@ export class ModelDB extends AbstractModelDB {
 
 		if (clear) {
 			this.db.withTransactionSync(() => {
-				const tables = this.db.getAllSync("SELECT name FROM sqlite_master WHERE type='table'")
-				for (const table in tables) {
-					this.db.runSync("DROP TABLE IF EXISTS ?", [table.name])
+				const tables = this.db.getAllSync<{ name: string }>("SELECT name FROM sqlite_master WHERE type='table'")
+				for (const table of tables) {
+					// execSync works inconsistently in expo, use runSync instead
+					if (table.name.includes("\\") || table.name.includes('"')) {
+						throw new Error("unexpected table name, try clearing your database using Expo/Drizzle")
+					}
+					this.db.runSync(`DROP TABLE IF EXISTS "${table.name}"`)
 				}
 			})
 		}
