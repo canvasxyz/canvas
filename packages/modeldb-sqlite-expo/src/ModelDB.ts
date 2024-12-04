@@ -29,11 +29,16 @@ export class ModelDB extends AbstractModelDB {
 	constructor({ path, models, clear }: { clear?: boolean } & ModelDBOptions) {
 		super(parseConfig(models))
 
-		if (clear) {
-			SQLite.deleteDatabaseSync(path ?? ":memory:")
-		}
-
 		this.db = SQLite.openDatabaseSync(path ?? ":memory:")
+
+		if (clear) {
+			this.db.withTransactionSync(() => {
+				const tables = this.db.getAllSync("SELECT name FROM sqlite_master WHERE type='table'")
+				for (const table in tables) {
+					this.db.runSync("DROP TABLE IF EXISTS ?", [table.name])
+				}
+			})
+		}
 
 		for (const model of Object.values(this.models)) {
 			this.#models[model.name] = new ModelAPI(this.db, model)
