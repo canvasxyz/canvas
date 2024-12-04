@@ -114,10 +114,8 @@ export type DeriveModelTypes<T extends ModelSchema> = {
 	}
 }
 
-export type DeriveModelType<T extends { $merge?: MergeFunction<any>; $indexes?: IndexInit[] } | Record<string, PropertyType>> = {
-    [P in keyof T as Exclude<P, "$merge" | "$indexes">]: T[P] extends PropertyType
-        ? DerivePropertyType<T[P]>
-        : never
+export type DeriveModelType<T extends { $indexes?: IndexInit[] } | Record<string, PropertyType>> = {
+	[P in keyof T as Exclude<P, "$indexes">]: T[P] extends PropertyType ? DerivePropertyType<T[P]> : never
 }
 
 export type Contract<T extends ModelSchema = ModelSchema> = {
