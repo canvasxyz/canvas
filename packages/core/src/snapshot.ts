@@ -55,15 +55,12 @@ export async function createSnapshot<T extends Contract<any>>(app: Canvas): Prom
 	const effectsMap = new Map<string, EffectRecord>()
 	for await (const row of app.db.iterate<EffectRecord>("$effects")) {
 		const { key, value, branch, clock } = row
-		const [table, keyhash, id] = key.split("/")
-		const existingEffect = effectsMap.get(keyhash)
+		const [table, keyhash, msgid] = key.split("/")
+		const recordId = [table, keyhash].join("/")
+		const existingEffect = effectsMap.get(recordId)
 		if (!existingEffect || clock > existingEffect.clock) {
-			effectsMap.set(keyhash, {
-				key: `${table}/${keyhash}/${MIN_MESSAGE_ID}`,
-				value,
-				branch,
-				clock,
-			})
+			const effectKey = `${recordId}/${MIN_MESSAGE_ID}`
+			effectsMap.set(recordId, { key: effectKey, value, branch, clock })
 		}
 	}
 	const effects = Array.from(effectsMap.values()).map(({ key, value }: SnapshotEffect) => ({ key, value }))
