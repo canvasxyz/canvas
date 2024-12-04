@@ -306,8 +306,8 @@ export class ModelAPI {
 				expression.neq === undefined
 					? null
 					: expression.neq === null
-						? IDBKeyRange.lowerBound(encodePropertyValue(property, null), true)
-						: IDBKeyRange.upperBound(encodePropertyValue(property, expression.neq), true)
+					? IDBKeyRange.lowerBound(encodePropertyValue(property, null), true)
+					: IDBKeyRange.upperBound(encodePropertyValue(property, expression.neq), true)
 
 			return await storeIndex.count(keyRange)
 		} else if (isRangeExpression(expression)) {
@@ -354,8 +354,8 @@ export class ModelAPI {
 				expression.neq === undefined
 					? null
 					: expression.neq === null
-						? IDBKeyRange.lowerBound(encodePropertyValue(property, null), true)
-						: IDBKeyRange.upperBound(encodePropertyValue(property, expression.neq), true)
+					? IDBKeyRange.lowerBound(encodePropertyValue(property, null), true)
+					: IDBKeyRange.upperBound(encodePropertyValue(property, expression.neq), true)
 
 			for (
 				let cursor = await storeIndex.openCursor(keyRange, direction);
