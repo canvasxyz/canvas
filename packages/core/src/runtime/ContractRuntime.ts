@@ -74,40 +74,27 @@ export class ContractRuntime extends AbstractRuntime {
 				set: vm.wrapFunction(async (model, value) => {
 					assert(this.#context !== null, "expected this.#context !== null")
 					assert(typeof model === "string", 'expected typeof model === "string"')
-					assert(this.db.models[model] !== undefined, "model not found")
-					const { primaryKey } = this.db.models[model]
-					const { [primaryKey]: key } = value as ModelValue
-					assert(typeof key === "string", "expected value[primaryKey] to be a string")
-					await this.setModelValue(this.#context, model, key, value as ModelValue)
+					assert(typeof value === "object", 'expected typeof value === "object"')
+					await this.setModelValue(this.#context, model, value as ModelValue)
 				}),
 				create: vm.wrapFunction(async (model, value) => {
 					assert(this.#context !== null, "expected this.#context !== null")
 					assert(typeof model === "string", 'expected typeof model === "string"')
-					const { primaryKey } = this.db.models[model]
-					const { [primaryKey]: key } = value as ModelValue
-					assert(typeof key === "string", "expected value[primaryKey] to be a string")
-					assert(this.db.models[model] !== undefined, "model not found")
-					await this.setModelValue(this.#context, model, key, value as ModelValue)
+					assert(typeof value === "object", 'expected typeof value === "object"')
+					await this.setModelValue(this.#context, model, value as ModelValue)
 				}),
 				update: vm.wrapFunction(async (model, value) => {
 					assert(this.#context !== null, "expected this.#context !== null")
 					assert(typeof model === "string", 'expected typeof model === "string"')
-					assert(this.db.models[model] !== undefined, "model not found")
-					const { primaryKey } = this.db.models[model]
-					const { [primaryKey]: key } = value as ModelValue
-					assert(typeof key === "string", "expected value[primaryKey] to be a string")
-					await this.updateModelValue(this.#context, model, key, value as ModelValue)
+					assert(typeof value === "object", 'expected typeof value === "object"')
+					await this.updateModelValue(this.#context, model, value as ModelValue)
 				}),
 				merge: vm.wrapFunction(async (model, value) => {
 					assert(this.#context !== null, "expected this.#context !== null")
 					assert(typeof model === "string", 'expected typeof model === "string"')
-					assert(this.db.models[model] !== undefined, "model not found")
-					const { primaryKey } = this.db.models[model]
-					const { [primaryKey]: key } = value as ModelValue
-					assert(typeof key === "string", "expected value[primaryKey] to be a string")
-					await this.mergeModelValue(this.#context, model, key, value as ModelValue)
+					assert(typeof value === "object", 'expected typeof value === "object"')
+					await this.mergeModelValue(this.#context, model, value as ModelValue)
 				}),
-
 				delete: vm.wrapFunction(async (model, key) => {
 					assert(this.#context !== null, "expected this.#context !== null")
 					assert(typeof model === "string", 'expected typeof model === "string"')

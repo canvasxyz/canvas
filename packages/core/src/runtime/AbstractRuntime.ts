@@ -23,6 +23,7 @@ import {
 } from "@canvas-js/gossiplog"
 import { assert, mapValues } from "@canvas-js/utils"
 import { isAction, isSession, isSnapshot } from "../utils.js"
+import { unzip } from "zlib"
 
 export type ExecutionContext = {
 	messageLog: AbstractGossipLog<Action | Session | Snapshot>
@@ -30,8 +31,12 @@ export type ExecutionContext = {
 	signature: Signature
 	message: Message<Action>
 	address: string
-	modelEntries: Record<string, Record<string, ModelValue | null>>
-	branch: number
+
+	// recordId -> version
+	reads: Record<string, string>
+
+	// recordId -> effect
+	writes: Record<string, Effect>
 }
 
 export type WriteRecord = {
@@ -146,7 +151,7 @@ export abstract class AbstractRuntime {
 			if (isSession(message)) {
 				return await handleSession(id, signature, message)
 			} else if (isAction(message)) {
-				return await handleAction(id, signature, message, this, { branch })
+				return await handleAction(id, signature, message, this)
 			} else if (isSnapshot(message)) {
 				return await handleSnapshot(id, signature, message, this)
 			} else {
@@ -214,7 +219,6 @@ export abstract class AbstractRuntime {
 		signature: Signature,
 		message: Message<Action>,
 		messageLog: AbstractGossipLog<Action | Session | Snapshot>,
-		{ branch }: { branch: number },
 	) {
 		const { did, name, context } = message.payload
 
@@ -250,43 +254,35 @@ export abstract class AbstractRuntime {
 			throw new Error(`missing session ${signature.publicKey} for ${did}`)
 		}
 
-		const modelEntries: Record<string, Record<string, ModelValue | null>> = mapValues(this.db.models, () => ({}))
-
-		const result = await this.execute({ messageLog, modelEntries, id, signature, message, address, branch })
+		const writes: Record<string, Effect> = {}
+		const reads: Record<string, string> = {}
+		const result = await this.execute({ messageLog, id, signature, message, address, reads, writes })
 
 		const actionRecord: ActionRecord = { message_id: id, did, name, timestamp: context.timestamp }
 		const effects: Effect[] = [{ operation: "set", model: "$actions", value: actionRecord }]
 
-		for (const [model, entries] of Object.entries(modelEntries)) {
-			for (const [key, value] of Object.entries(entries)) {
-				const recordId = AbstractRuntime.getRecordId(model, key)
+		for (const [recordId, effect] of Object.entries(writes)) {
+			const effectKey = `${recordId}/${id}`
 
-				const effectKey = `${recordId}/${id}`
+			const writeRecord: WriteRecord = {
+				key: effectKey,
+				value: effect.operation === "set" ? cbor.encode(effect.value) : null,
+				version: id,
+				reverted: false,
+			}
 
-				const writeRecord: WriteRecord = {
-					key: effectKey,
-					value: value && cbor.encode(value),
-					version: id,
-					reverted: false,
-				}
+			effects.push({ model: "$writes", operation: "set", value: writeRecord })
 
-				effects.push({ model: "$writes", operation: "set", value: writeRecord })
+			const results = await this.db.query<{ key: string }>("$writes", {
+				select: { key: true },
+				where: { key: { gt: effectKey, lte: `${recordId}/${MAX_MESSAGE_ID}` } },
+				limit: 1,
+			})
 
-				const results = await this.db.query<{ key: string }>("$writes", {
-					select: { key: true },
-					where: { key: { gt: effectKey, lte: `${recordId}/${MAX_MESSAGE_ID}` } },
-					limit: 1,
-				})
-
-				if (results.length === 0) {
-					if (value === null) {
-						effects.push({ model, operation: "delete", key })
-					} else {
-						effects.push({ model, operation: "set", value })
-					}
-				} else {
-					this.log("skipping effect %o because it is superceeded by effects %O", [key, value], results)
-				}
+			if (results.length === 0) {
+				effects.push(effect)
+			} else {
+				this.log("skipping effect %s because it is superceeded by effects %O", effectKey, results)
 			}
 		}
 
@@ -298,6 +294,7 @@ export abstract class AbstractRuntime {
 			if (err instanceof Error) {
 				err.message = `${name}: ${err.message}`
 			}
+
 			throw err
 		}
 
@@ -311,11 +308,16 @@ export abstract class AbstractRuntime {
 		model: string,
 		key: string,
 	): Promise<null | T> {
-		if (context.modelEntries[model][key] !== undefined) {
-			return context.modelEntries[model][key] as T
+		const recordId = AbstractRuntime.getRecordId(model, key)
+
+		if (context.writes[recordId] !== undefined) {
+			if (context.writes[recordId].operation === "set") {
+				return context.writes[recordId].value as T
+			} else {
+				return null
+			}
 		}
 
-		const recordId = AbstractRuntime.getRecordId(model, key)
 		const lowerBound = `${recordId}/${MIN_MESSAGE_ID}`
 
 		let upperBound = `${recordId}/${context.id}`
@@ -358,42 +360,45 @@ export abstract class AbstractRuntime {
 		}
 	}
 
-	protected async setModelValue(
-		context: ExecutionContext,
-		model: string,
-		key: string,
-		value: ModelValue,
-	): Promise<void> {
+	protected async setModelValue(context: ExecutionContext, model: string, value: ModelValue): Promise<void> {
+		assert(this.db.models[model] !== undefined, "model not found")
 		validateModelValue(this.db.models[model], value)
-		context.modelEntries[model][key] = value
+		const { primaryKey } = this.db.models[model]
+		const { [primaryKey]: key } = value as ModelValue
+		assert(typeof key === "string", "expected value[primaryKey] to be a string")
+		const recordId = AbstractRuntime.getRecordId(model, key)
+		context.writes[recordId] = { operation: "set", model, value }
 	}
 
 	protected async deleteModelValue(context: ExecutionContext, model: string, key: string): Promise<void> {
-		context.modelEntries[model][key] = null
+		const recordId = AbstractRuntime.getRecordId(model, key)
+		context.writes[recordId] = { operation: "delete", model, key }
 	}
 
-	protected async updateModelValue(
-		context: ExecutionContext,
-		model: string,
-		key: string,
-		value: ModelValue,
-	): Promise<void> {
+	protected async updateModelValue(context: ExecutionContext, model: string, value: ModelValue): Promise<void> {
+		assert(this.db.models[model] !== undefined, "model not found")
+		const { primaryKey } = this.db.models[model]
+		const { [primaryKey]: key } = value as ModelValue
+		assert(typeof key === "string", "expected value[primaryKey] to be a string")
+
 		const modelValue = await this.getModelValue(context, model, key)
 		if (modelValue === null) {
 			throw new Error(`db.update(${model}, ${key}): attempted to update a nonexistent value`)
 		}
 
-		const mergedValue = updateModelValues(value as ModelValue, modelValue ?? {})
-		validateModelValue(this.db.models[model], mergedValue)
-		context.modelEntries[model][key] = mergedValue
+		const updatedValue = updateModelValues(value as ModelValue, modelValue ?? {})
+		validateModelValue(this.db.models[model], updatedValue)
+
+		const recordId = AbstractRuntime.getRecordId(model, key)
+		context.writes[recordId] = { operation: "set", model, value: updatedValue }
 	}
 
-	protected async mergeModelValue(
-		context: ExecutionContext,
-		model: string,
-		key: string,
-		value: ModelValue,
-	): Promise<void> {
+	protected async mergeModelValue(context: ExecutionContext, model: string, value: ModelValue): Promise<void> {
+		assert(this.db.models[model] !== undefined, "model not found")
+		const { primaryKey } = this.db.models[model]
+		const { [primaryKey]: key } = value as ModelValue
+		assert(typeof key === "string", "expected value[primaryKey] to be a string")
+
 		const modelValue = await this.getModelValue(context, model, key)
 		if (modelValue === null) {
 			throw new Error(`db.merge(${model}, ${key}): attempted to merge into a nonexistent value`)
@@ -401,6 +406,8 @@ export abstract class AbstractRuntime {
 
 		const mergedValue = mergeModelValues(value as ModelValue, modelValue ?? {})
 		validateModelValue(this.db.models[model], mergedValue)
-		context.modelEntries[model][key] = mergedValue
+
+		const recordId = AbstractRuntime.getRecordId(model, key)
+		context.writes[recordId] = { operation: "set", model, value: mergedValue }
 	}
 }

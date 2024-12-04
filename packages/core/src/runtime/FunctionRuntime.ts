@@ -38,40 +38,26 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 			set: async (model, value) => {
 				assert(this.#context !== null, "expected this.#context !== null")
 				assert(typeof model === "string", 'expected typeof model === "string"')
-				assert(this.db.models[model] !== undefined, "model not found")
-				const { primaryKey } = this.db.models[model]
-				const { [primaryKey]: key } = value as ModelValue
-				assert(typeof key === "string", "expected value[primaryKey] to be a string")
-				validateModelValue(this.db.models[model], value)
-				this.#context.modelEntries[model][key] = value
+				assert(typeof value === "object", 'expected typeof value === "object"')
+				await this.setModelValue(this.#context, model, value)
 			},
 			create: async (model, value) => {
 				assert(this.#context !== null, "expected this.#context !== null")
 				assert(typeof model === "string", 'expected typeof model === "string"')
-				assert(this.db.models[model] !== undefined, "model not found")
-				const { primaryKey } = this.db.models[model]
-				const { [primaryKey]: key } = value as ModelValue
-				assert(typeof key === "string", "expected value[primaryKey] to be a string")
-				validateModelValue(this.db.models[model], value)
-				this.#context.modelEntries[model][key] = value
+				assert(typeof value === "object", 'expected typeof value === "object"')
+				await this.setModelValue(this.#context, model, value)
 			},
 			update: async (model, value) => {
 				assert(this.#context !== null, "expected this.#context !== null")
 				assert(typeof model === "string", 'expected typeof model === "string"')
-				assert(this.db.models[model] !== undefined, "model not found")
-				const { primaryKey } = this.db.models[model]
-				const { [primaryKey]: key } = value as ModelValue
-				assert(typeof key === "string", "expected value[primaryKey] to be a string")
-				await this.updateModelValue(this.#context, model, key, value as ModelValue)
+				assert(typeof value === "object", 'expected typeof value === "object"')
+				await this.updateModelValue(this.#context, model, value as ModelValue)
 			},
 			merge: async (model, value) => {
 				assert(this.#context !== null, "expected this.#context !== null")
 				assert(typeof model === "string", 'expected typeof model === "string"')
-				assert(this.db.models[model] !== undefined, "model not found")
-				const { primaryKey } = this.db.models[model]
-				const { [primaryKey]: key } = value as ModelValue
-				assert(typeof key === "string", "expected value[primaryKey] to be a string")
-				await this.mergeModelValue(this.#context, model, key, value as ModelValue)
+				assert(typeof value === "object", 'expected typeof value === "object"')
+				await this.mergeModelValue(this.#context, model, value as ModelValue)
 			},
 			delete: async (model: string, key: string) => {
 				assert(this.#context !== null, "expected this.#context !== null")
