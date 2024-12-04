@@ -259,22 +259,22 @@ export abstract class AbstractRuntime {
 
 		for (const [model, entries] of Object.entries(modelEntries)) {
 			for (const [key, value] of Object.entries(entries)) {
-				const keyHash = AbstractRuntime.getKeyHash(model, key)
+				const recordId = AbstractRuntime.getRecordId(model, key)
 
-				const effectKey = `${keyHash}/${id}`
+				const effectKey = `${recordId}/${id}`
 
-				const effectRecord: WriteRecord = {
+				const writeRecord: WriteRecord = {
 					key: effectKey,
 					value: value && cbor.encode(value),
 					version: id,
 					reverted: false,
 				}
 
-				effects.push({ model: "$writes", operation: "set", value: effectRecord })
+				effects.push({ model: "$writes", operation: "set", value: writeRecord })
 
 				const results = await this.db.query<{ key: string }>("$writes", {
 					select: { key: true },
-					where: { key: { gt: effectKey, lte: `${keyHash}/${MAX_MESSAGE_ID}` } },
+					where: { key: { gt: effectKey, lte: `${recordId}/${MAX_MESSAGE_ID}` } },
 					limit: 1,
 				})
 
@@ -304,7 +304,7 @@ export abstract class AbstractRuntime {
 		return result
 	}
 
-	private static getKeyHash = (model: string, key: string) => bytesToHex(blake3(`${model}/${key}`, { dkLen: 16 }))
+	private static getRecordId = (model: string, key: string) => bytesToHex(blake3(`${model}/${key}`, { dkLen: 16 }))
 
 	protected async getModelValue<T extends ModelValue = ModelValue>(
 		context: ExecutionContext,
@@ -315,10 +315,10 @@ export abstract class AbstractRuntime {
 			return context.modelEntries[model][key] as T
 		}
 
-		const keyHash = AbstractRuntime.getKeyHash(model, key)
-		const lowerBound = `${keyHash}/${MIN_MESSAGE_ID}`
+		const recordId = AbstractRuntime.getRecordId(model, key)
+		const lowerBound = `${recordId}/${MIN_MESSAGE_ID}`
 
-		let upperBound = `${keyHash}/${context.id}`
+		let upperBound = `${recordId}/${context.id}`
 
 		// eslint-disable-next-line no-constant-condition
 		while (true) {
@@ -343,7 +343,7 @@ export abstract class AbstractRuntime {
 				}
 			}
 
-			const [effectKey, messageId] = effect.key.split("/")
+			const [recordId, messageId] = effect.key.split("/")
 
 			const visited = new Set<string>()
 			for (const parent of context.message.parents) {
