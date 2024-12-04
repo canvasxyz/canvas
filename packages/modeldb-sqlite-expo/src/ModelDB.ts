@@ -26,28 +26,33 @@ export class ModelDB extends AbstractModelDB {
 	#models: Record<string, ModelAPI> = {}
 	#transaction: (effects: Effect[]) => void
 
-	constructor({ path, models }: ModelDBOptions) {
+	constructor({ path, models, clear }: { clear?: boolean } & ModelDBOptions) {
 		super(parseConfig(models))
 
-		this.db = SQLite.openDatabaseSync(path ?? ':memory:')
+		if (clear) {
+			SQLite.deleteDatabaseSync(path ?? ":memory:")
+		}
+
+		this.db = SQLite.openDatabaseSync(path ?? ":memory:")
 
 		for (const model of Object.values(this.models)) {
 			this.#models[model.name] = new ModelAPI(this.db, model)
 		}
 
-		this.#transaction = (effects: Effect[]) => this.db.withTransactionSync(() => {
-			for (const effect of effects) {
-				const model = this.models[effect.model]
-				assert(model !== undefined, `model ${effect.model} not found`)
-				if (effect.operation === "set") {
-					this.#models[effect.model].set(effect.value)
-				} else if (effect.operation === "delete") {
-					this.#models[effect.model].delete(effect.key)
-				} else {
-					signalInvalidType(effect)
+		this.#transaction = (effects: Effect[]) =>
+			this.db.withTransactionSync(() => {
+				for (const effect of effects) {
+					const model = this.models[effect.model]
+					assert(model !== undefined, `model ${effect.model} not found`)
+					if (effect.operation === "set") {
+						this.#models[effect.model].set(effect.value)
+					} else if (effect.operation === "delete") {
+						this.#models[effect.model].delete(effect.key)
+					} else {
+						signalInvalidType(effect)
+					}
 				}
-			}
-		})
+			})
 	}
 
 	public async close() {

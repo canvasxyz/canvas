@@ -92,7 +92,7 @@ export class Canvas<
 		const runtime = await createRuntime(topic, signers, contract, { runtimeMemoryLimit })
 		const gossipTopic = config.snapshot ? `topic#${hashSnapshot(config.snapshot)}` : topic // topic for peering
 		const messageLog = await target.openGossipLog(
-			{ topic: gossipTopic, path },
+			{ topic: gossipTopic, path, clear: config.reset },
 			{
 				topic, // topic for signing and execution, in runtime consumer
 				apply: runtime.getConsumer(),

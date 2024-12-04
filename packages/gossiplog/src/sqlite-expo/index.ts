@@ -8,7 +8,10 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 	public readonly db: ModelDB
 	public readonly tree: Tree
 
-	public constructor({ directory = null, ...init }: { directory?: string | null } & GossipLogInit<Payload>) {
+	public constructor({
+		directory = null,
+		...init
+	}: { directory?: string | null; clear?: boolean } & GossipLogInit<Payload>) {
 		super(init)
 
 		// if (directory === null) {
@@ -16,6 +19,7 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 		this.db = new ModelDB({
 			path: null,
 			models: { ...init.schema, ...AbstractGossipLog.schema },
+			clear: init.clear,
 		})
 		// } else {
 		// 	if (!fs.existsSync(directory)) {
