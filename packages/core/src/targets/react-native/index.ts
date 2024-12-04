@@ -10,7 +10,7 @@ const target: PlatformTarget = {
 	) {
 		if (location.path === null) {
 			const { GossipLog: SqliteGossipLog } = await import("@canvas-js/gossiplog/sqlite-expo")
-			return new SqliteGossipLog(init)
+			return new SqliteGossipLog({ ...init, clear: location.clear })
 		} else {
 			throw new Error("Unimplemented named sqlite dbs")
 		}
