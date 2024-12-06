@@ -260,7 +260,8 @@ export abstract class AbstractRuntime {
 
 		const writes: Record<string, Effect> = {}
 		const reads: Record<string, string> = {}
-		const result = await this.execute({ messageLog, id, signature, message, address, reads, writes })
+		const executionContext: ExecutionContext = { messageLog, id, signature, message, address, reads, writes }
+		const result = await this.execute(executionContext)
 
 		const actionRecord: ActionRecord = { message_id: id, did, name, timestamp: context.timestamp }
 		const effects: Effect[] = [{ operation: "set", model: "$actions", value: actionRecord }]
@@ -274,6 +275,8 @@ export abstract class AbstractRuntime {
 			effects.push({ model: "$reads", operation: "set", value: readRecord })
 		}
 
+		const writeConflicts = new Set<string>()
+
 		for (const [recordId, effect] of Object.entries(writes)) {
 			const writeRecord: WriteRecord = {
 				key: `${recordId}/${id}`,
@@ -284,17 +287,27 @@ export abstract class AbstractRuntime {
 
 			effects.push({ model: "$writes", operation: "set", value: writeRecord })
 
-			// const results = await this.db.query<{ key: string }>("$writes", {
-			// 	select: { key: true },
-			// 	where: { key: { gt: effectKey, lte: `${recordId}/${MAX_MESSAGE_ID}` } },
-			// 	limit: 1,
-			// })
+			const { primaryKey } = this.db.models[effect.model]
+			const key = effect.operation === "delete" ? effect.key : (effect.value[primaryKey] as string)
+			const writeConflict = await this.findWriteConflict(executionContext, effect.model, key)
+			if (writeConflict !== null) {
+				writeConflicts.add(writeConflict)
+			}
+		}
 
-			// if (results.length === 0) {
-			// 	effects.push(effect)
-			// } else {
-			// 	this.log("skipping effect %s because it is superceeded by effects %O", effectKey, results)
-			// }
+		const superiorConflicts = Array.from(writeConflicts).filter((messageId) => messageId < executionContext.id)
+		if (superiorConflicts.length > 0) {
+			this.log("ignoring message %s because it is in conflict with %o", executionContext.id, superiorConflicts)
+		} else {
+			// revert the conflicts, apply the effects
+			for (const conflictId of writeConflicts) {
+				// await this.revert(conflictId)
+				throw new Error("not implemented")
+			}
+
+			for (const effect of Object.values(writes)) {
+				effects.push(effect)
+			}
 		}
 
 		this.log("applying effects %O", effects)
@@ -426,7 +439,7 @@ export abstract class AbstractRuntime {
 			// this is just for sanity checking; can remove this if everything works right
 			await context.messageLog
 				.isAncestor(readId, prevId)
-				.then((is) => assert(is, "expected isAncestor(readId, prevId)"))
+				.then((is) => assert(is || prevId === MIN_MESSAGE_ID, "expected isAncestor(readId, prevId)"))
 
 			const isAncestor = await this.isAncestor(context, readId)
 			if (!isAncestor) {
@@ -468,6 +481,10 @@ export abstract class AbstractRuntime {
 	 * exist in the database yet.
 	 */
 	private async isAncestor(context: ExecutionContext, msgId: string): Promise<boolean> {
+		if (msgId === MIN_MESSAGE_ID) {
+			return true
+		}
+
 		const visited = new Set<string>()
 		for (const parent of context.message.parents) {
 			const isAncestor = await context.messageLog.isAncestor(parent, msgId, visited)
