@@ -80,6 +80,8 @@ export class ModelAPI {
 	#count: Query<{}, { count: number }>
 
 	readonly #relations: Record<string, RelationAPI> = {}
+	readonly #backlinks: Record<string, Record<string, RelationAPI>> = {}
+
 	readonly #primaryKeyName: string
 	readonly #primaryKeyParam: `p${string}`
 
@@ -88,6 +90,7 @@ export class ModelAPI {
 	public constructor(
 		readonly db: SQLiteDatabase,
 		readonly model: Model,
+		readonly models: Model[],
 	) {
 		const columns: string[] = []
 		this.columnNames = [] // quoted column names for non-relation properties
@@ -114,6 +117,20 @@ export class ModelAPI {
 				})
 			} else {
 				signalInvalidType(property)
+			}
+		}
+		for (const backlink of models) {
+			if (backlink.name === model.name) continue
+			for (const property of backlink.properties.values()) {
+				if (property.kind === "relation" && property.target === model.name) {
+					this.#backlinks[backlink.name] ||= {}
+					this.#backlinks[backlink.name][property.name] = new RelationAPI(db, {
+						source: backlink.name,
+						property: property.name,
+						target: property.target,
+						indexed: false,
+					})
+				}
 			}
 		}
 
@@ -208,6 +225,12 @@ export class ModelAPI {
 		for (const relation of Object.values(this.#relations)) {
 			relation.delete(key)
 		}
+
+		for (const relations of Object.values(this.#backlinks)) {
+			for (const relation of Object.values(relations)) {
+				relation.deleteByTarget(key)
+			}
+		}
 	}
 
 	public clear() {
@@ -217,9 +240,14 @@ export class ModelAPI {
 
 		for (const record of existingRecords) {
 			const key = record[this.#primaryKeyParam]
+			if (!key || typeof key !== "string") continue
 			for (const relation of Object.values(this.#relations)) {
-				if (!key || typeof key !== "string") continue
 				relation.delete(key)
+			}
+			for (const relations of Object.values(this.#backlinks)) {
+				for (const relation of Object.values(relations)) {
+					relation.deleteByTarget(key)
+				}
 			}
 		}
 	}
@@ -587,6 +615,7 @@ export class RelationAPI {
 	readonly #select: Query<{ _source: string }, { _target: string }>
 	readonly #insert: Method<{ _source: string; _target: string }>
 	readonly #delete: Method<{ _source: string }>
+	readonly #deleteByTarget: Method<{ _target: string }>
 
 	public constructor(
 		readonly db: SQLiteDatabase,
@@ -608,6 +637,8 @@ export class RelationAPI {
 		)
 
 		this.#delete = new Method<{ _source: string }>(this.db, `DELETE FROM "${this.table}" WHERE _source = :_source`)
+
+		this.#deleteByTarget = new Method<{ _target: string }>(this.db, `DELETE FROM "${this.table}" WHERE _target = :_target`)
 
 		// Prepare queries
 		this.#select = new Query<{ _source: string }, { _target: string }>(
@@ -631,5 +662,9 @@ export class RelationAPI {
 
 	public delete(source: string) {
 		this.#delete.run({ _source: source })
+	}
+
+	public deleteByTarget(target: string) {
+		this.#deleteByTarget.run({ _target: target })
 	}
 }

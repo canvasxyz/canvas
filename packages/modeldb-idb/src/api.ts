@@ -34,10 +34,17 @@ export class ModelAPI {
 
 	private readonly log = logger(`canvas:modeldb:[${this.model.name}]`)
 
-	constructor(readonly model: Model) {}
+	constructor(
+		readonly model: Model,
+		readonly models: Model[],
+	) {}
 
 	private getStore<Mode extends IDBTransactionMode>(txn: IDBPTransaction<any, any, Mode>) {
 		return txn.objectStore(this.storeName)
+	}
+
+	private getOtherStore<Mode extends IDBTransactionMode>(txn: IDBPTransaction<any, any, Mode>, storeName: string) {
+		return txn.objectStore(storeName)
 	}
 
 	public async get<Mode extends IDBTransactionMode>(
@@ -72,6 +79,28 @@ export class ModelAPI {
 
 	async delete(txn: IDBPTransaction<any, any, "readwrite">, key: string): Promise<void> {
 		await this.getStore(txn).delete(key)
+
+		for (const model of this.models) {
+			if (model.name === this.model.name) continue
+			for (const property of model.properties) {
+				if (property.kind === "relation" && property.target === this.model.name) {
+					// Use index to find all records where the relation includes our key
+					
+					// TODO: We can't do this because relations would just be indexed on the entire set of related keys
+					// TODO: We need to create a relation table in IDB too
+					
+					const otherStore = this.getOtherStore(txn, model.name)
+					const index = otherStore.index(getIndexName([property.name]))
+					const range = IDBKeyRange.only(key)
+					
+					// Delete all matching records
+					for await (const cursor of index.iterate(range)) {
+						console.log('record')
+						await otherStore.delete(cursor.primaryKey)
+					}
+				}
+			}
+		}
 	}
 
 	async clear(txn: IDBPTransaction<any, any, "readwrite">) {
@@ -306,8 +335,8 @@ export class ModelAPI {
 				expression.neq === undefined
 					? null
 					: expression.neq === null
-					? IDBKeyRange.lowerBound(encodePropertyValue(property, null), true)
-					: IDBKeyRange.upperBound(encodePropertyValue(property, expression.neq), true)
+						? IDBKeyRange.lowerBound(encodePropertyValue(property, null), true)
+						: IDBKeyRange.upperBound(encodePropertyValue(property, expression.neq), true)
 
 			return await storeIndex.count(keyRange)
 		} else if (isRangeExpression(expression)) {
@@ -354,8 +383,8 @@ export class ModelAPI {
 				expression.neq === undefined
 					? null
 					: expression.neq === null
-					? IDBKeyRange.lowerBound(encodePropertyValue(property, null), true)
-					: IDBKeyRange.upperBound(encodePropertyValue(property, expression.neq), true)
+						? IDBKeyRange.lowerBound(encodePropertyValue(property, null), true)
+						: IDBKeyRange.upperBound(encodePropertyValue(property, expression.neq), true)
 
 			for (
 				let cursor = await storeIndex.openCursor(keyRange, direction);

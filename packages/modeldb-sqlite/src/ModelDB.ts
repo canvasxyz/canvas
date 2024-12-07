@@ -31,7 +31,7 @@ export class ModelDB extends AbstractModelDB {
 		this.db = new Database(path ?? ":memory:")
 
 		for (const model of Object.values(this.models)) {
-			this.#models[model.name] = new ModelAPI(this.db, model)
+			this.#models[model.name] = new ModelAPI(this.db, model, Object.values(this.models))
 		}
 
 		this.#transaction = this.db.transaction((effects) => {

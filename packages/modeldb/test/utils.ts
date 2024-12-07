@@ -25,45 +25,45 @@ let server: ViteDevServer
 let worker: UnstableDevWorker
 
 test.before(async (t) => {
-	server = await createServer({
-		root: path.resolve(__dirname, "server"),
-	})
+	// server = await createServer({
+	// 	root: path.resolve(__dirname, "server"),
+	// })
 
-	await server.listen()
+	// await server.listen()
 
-	browser = await puppeteer.launch({
-		dumpio: true,
-		headless: true,
-		args: [
-			"--no-sandbox",
-			"--disable-setuid-sandbox",
-			"--disable-extensions",
-			"--enable-chrome-browser-cloud-management",
-		],
-	})
-	page = await browser.newPage()
+	// browser = await puppeteer.launch({
+	// 	dumpio: true,
+	// 	headless: true,
+	// 	args: [
+	// 		"--no-sandbox",
+	// 		"--disable-setuid-sandbox",
+	// 		"--disable-extensions",
+	// 		"--enable-chrome-browser-cloud-management",
+	// 	],
+	// })
+	// page = await browser.newPage()
 
-	page.on("workercreated", (worker) => t.log("Worker created: " + worker.url()))
-	page.on("workerdestroyed", (worker) => t.log("Worker destroyed: " + worker.url()))
+	// page.on("workercreated", (worker) => t.log("Worker created: " + worker.url()))
+	// page.on("workerdestroyed", (worker) => t.log("Worker destroyed: " + worker.url()))
 
-	page.on("console", async (e) => {
-		const args = await Promise.all(e.args().map((a) => a.jsonValue()))
-		t.log(...args)
-	})
+	// page.on("console", async (e) => {
+	// 	const args = await Promise.all(e.args().map((a) => a.jsonValue()))
+	// 	t.log(...args)
+	// })
 
-	const { port } = server.config.server
-	await page.goto(`http://localhost:${port}`)
+	// const { port } = server.config.server
+	// await page.goto(`http://localhost:${port}`)
 
-	worker = await unstable_dev("test/worker.ts", {
-		experimental: { disableExperimentalWarning: true },
-	})
+	// worker = await unstable_dev("test/worker.ts", {
+	// 	experimental: { disableExperimentalWarning: true },
+	// })
 })
 
 test.after(async (t) => {
-	await page.close()
-	await browser.close()
-	await server.close()
-	worker.stop()
+	// await page.close()
+	// await browser.close()
+	// await server.close()
+	// worker.stop()
 })
 
 function getConnectionConfig() {

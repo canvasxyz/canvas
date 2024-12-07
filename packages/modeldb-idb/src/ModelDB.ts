@@ -65,7 +65,7 @@ export class ModelDB extends AbstractModelDB {
 		super(config)
 
 		for (const model of config.models) {
-			this.#models[model.name] = new ModelAPI(model)
+			this.#models[model.name] = new ModelAPI(model, config.models)
 		}
 
 		db.addEventListener("error", (event) => this.log("db: error", event))

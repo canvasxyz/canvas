@@ -36,7 +36,7 @@ export class ModelDB extends AbstractModelDB {
 
 			const modelDBAPIs: Record<string, ModelAPI> = {}
 			for (const model of Object.values(modelDBConfig.models)) {
-				modelDBAPIs[model.name] = await ModelAPI.initialize(client, model, clear)
+				modelDBAPIs[model.name] = await ModelAPI.initialize(client, model, Object.values(modelDBConfig.models), clear)
 			}
 
 			return new ModelDB(client, modelDBConfig, modelDBAPIs)

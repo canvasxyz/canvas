@@ -68,23 +68,27 @@ export class ModelAPI {
 	readonly #columns: string[]
 	readonly #columnNames: `"${string}"`[]
 	readonly #relations: Record<string, RelationAPI> = {}
+	readonly #backlinks: Record<string, Record<string, RelationAPI>> = {}
 	readonly #primaryKeyName: string
 
 	constructor(
 		readonly client: pg.Client,
 		readonly model: Model,
+		readonly models: Model[],
 		columns: string[],
 		columnNames: `"${string}"`[],
 		relations: Record<string, RelationAPI> = {},
+		backlinks: Record<string, Record<string, RelationAPI>> = {},
 		primaryKeyName: string,
 	) {
 		this.#columns = columns
 		this.#columnNames = columnNames // quoted column names for non-relation properties
 		this.#relations = relations
+		this.#backlinks = backlinks
 		this.#primaryKeyName = primaryKeyName
 	}
 
-	public static async initialize(client: pg.Client, model: Model, clear: boolean = false) {
+	public static async initialize(client: pg.Client, model: Model, models: Model[], clear: boolean = false) {
 		let primaryKeyIndex: number | null = null
 		let primaryKey: PrimaryKeyProperty | null = null
 		let primaryKeyName: string | null
@@ -92,6 +96,7 @@ export class ModelAPI {
 		const columns: string[] = []
 		const columnNames: `"${string}"`[] = []
 		const relations: Record<string, RelationAPI> = {}
+		const backlinks: Record<string, Record<string, RelationAPI>> = {}
 
 		for (const [i, property] of model.properties.entries()) {
 			if (property.kind === "primary" || property.kind === "primitive" || property.kind === "reference") {
@@ -117,11 +122,25 @@ export class ModelAPI {
 				signalInvalidType(property)
 			}
 		}
+		for (const backlink of models) {
+			if (backlink.name === model.name) continue
+			for (const property of backlink.properties.values()) {
+				if (property.kind === "relation" && property.target === model.name) {
+					backlinks[backlink.name] ||= {}
+					backlinks[backlink.name][property.name] = await RelationAPI.initialize(client, {
+						source: backlink.name,
+						property: property.name,
+						target: property.target,
+						indexed: false,
+					}, clear)
+				}
+			}
+		}
 
 		assert(primaryKey !== null, "expected primaryKey !== null")
 		assert(primaryKeyIndex !== null, "expected primaryKeyIndex !== null")
 
-		const api = new ModelAPI(client, model, columns, columnNames, relations, primaryKey.name)
+		const api = new ModelAPI(client, model, models, columns, columnNames, relations, backlinks, primaryKey.name)
 
 		const queries = []
 
@@ -254,6 +273,12 @@ export class ModelAPI {
 		for (const relation of Object.values(this.#relations)) {
 			await relation.delete(key)
 		}
+
+		for (const relations of Object.values(this.#backlinks)) {
+			for (const relation of Object.values(relations)) {
+				relation.deleteByTarget(key)
+			}
+		}
 	}
 
 	public async count(where?: WhereCondition): Promise<number> {
@@ -276,9 +301,16 @@ export class ModelAPI {
 		const results = await this.client.query(`DELETE FROM "${this.#table}" RETURNING "${this.#primaryKeyName}"`)
 
 		for (const row of results.rows) {
+
 			const key = row[this.#primaryKeyName].id
+			if (!key || typeof key !== "string") continue
 			for (const relation of Object.values(this.#relations)) {
-				await relation.delete(key)
+				relation.delete(key)
+			}
+			for (const relations of Object.values(this.#backlinks)) {
+				for (const relation of Object.values(relations)) {
+					relation.deleteByTarget(key)
+				}
 			}
 		}
 	}
@@ -726,5 +758,9 @@ export class RelationAPI {
 
 	public async delete(source: string) {
 		await this.client.query(`DELETE FROM "${this.table}" WHERE _source = $1`, [source])
+	}
+
+	public async deleteByTarget(target: string) {
+		await this.client.query(`DELETE FROM "${this.table}" WHERE _target = $1`, [target])
 	}
 }
