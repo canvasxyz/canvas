@@ -2,9 +2,10 @@ import { IDBPIndex, IDBPObjectStore, IDBPTransaction } from "idb"
 import { logger } from "@libp2p/logger"
 import * as json from "@ipld/dag-json"
 
-import { assert, signalInvalidType } from "@canvas-js/utils"
+import { assert, signalInvalidType, mapValues, mapValuesAsync } from "@canvas-js/utils"
 
 import {
+	Relation,
 	Model,
 	ModelValue,
 	NotExpression,
@@ -34,10 +35,51 @@ export class ModelAPI {
 
 	private readonly log = logger(`canvas:modeldb:[${this.model.name}]`)
 
+	readonly #primaryKeyName: string
+	readonly #relations: Record<string, RelationAPI> = {}
+	readonly #backlinks: Record<string, Record<string, RelationAPI>> = {}
+
 	constructor(
 		readonly model: Model,
 		readonly models: Model[],
-	) {}
+	) {
+		let primaryKeyName: string | null = null
+
+		for (const property of model.properties) {
+			if (property.kind === "primary") {
+				primaryKeyName = property.name
+			}
+
+			if (property.kind === "relation") {
+				this.#relations[property.name] = new RelationAPI({
+					source: model.name,
+					property: property.name,
+					target: property.target,
+					indexed: false,
+				})
+			}
+		}
+
+		for (const backlink of models) {
+			if (backlink.name === model.name) continue
+			for (const property of backlink.properties.values()) {
+				if (property.kind === "relation" && property.target === model.name) {
+					this.#backlinks[backlink.name] ||= {}
+					this.#backlinks[backlink.name][property.name] = new RelationAPI({
+						source: backlink.name,
+						property: property.name,
+						target: property.target,
+						indexed: false,
+					})
+				}
+			}
+		}
+
+		if (primaryKeyName === null) {
+			throw new Error(`${model.name} was initialized without a primary key`)
+		}
+		this.#primaryKeyName = primaryKeyName
+	}
 
 	private getStore<Mode extends IDBTransactionMode>(txn: IDBPTransaction<any, any, Mode>) {
 		return txn.objectStore(this.storeName)
@@ -55,7 +97,11 @@ export class ModelAPI {
 		if (value === undefined) {
 			return null
 		} else {
-			return this.decodeObject(value)
+			const relations = await mapValuesAsync(this.#relations, (api) => api.get(txn, key))
+			return {
+				...this.decodeObject(value),
+				...relations,
+			}
 		}
 	}
 
@@ -73,38 +119,49 @@ export class ModelAPI {
 
 	async set(txn: IDBPTransaction<any, any, "readwrite">, value: ModelValue): Promise<void> {
 		validateModelValue(this.model, value)
+
+		const key = value[this.#primaryKeyName]
+		assert(typeof key === "string", 'expected typeof primaryKey === "string"')
+		const existingRecord: ObjectValue | undefined = await this.getStore(txn).get(key)
+
 		const object = this.encodeObject(value)
 		await this.getStore(txn).put(object)
+
+		for (const [name, relation] of Object.entries(this.#relations)) {
+			if (existingRecord !== null) {
+				await relation.delete(txn, key)
+			}
+
+			await relation.add(txn, key, value[name])
+		}
 	}
 
 	async delete(txn: IDBPTransaction<any, any, "readwrite">, key: string): Promise<void> {
 		await this.getStore(txn).delete(key)
 
-		for (const model of this.models) {
-			if (model.name === this.model.name) continue
-			for (const property of model.properties) {
-				if (property.kind === "relation" && property.target === this.model.name) {
-					// Use index to find all records where the relation includes our key
-					
-					// TODO: We can't do this because relations would just be indexed on the entire set of related keys
-					// TODO: We need to create a relation table in IDB too
-					
-					const otherStore = this.getOtherStore(txn, model.name)
-					const index = otherStore.index(getIndexName([property.name]))
-					const range = IDBKeyRange.only(key)
-					
-					// Delete all matching records
-					for await (const cursor of index.iterate(range)) {
-						console.log('record')
-						await otherStore.delete(cursor.primaryKey)
-					}
-				}
+		for (const relation of Object.values(this.#relations)) {
+			await relation.delete(txn, key)
+		}
+
+		for (const relations of Object.values(this.#backlinks)) {
+			for (const relation of Object.values(relations)) {
+				await relation.deleteByTarget(txn, key)
 			}
 		}
 	}
 
 	async clear(txn: IDBPTransaction<any, any, "readwrite">) {
 		await this.getStore(txn).clear()
+
+		for (const relation of Object.values(this.#relations)) {
+			await relation.deleteAll(txn)
+		}
+
+		for (const relations of Object.values(this.#backlinks)) {
+			for (const relation of Object.values(relations)) {
+				await relation.deleteAllByTarget(txn)
+			}
+		}
 	}
 
 	async count(txn: IDBPTransaction<any, any, IDBTransactionMode>, where: WhereCondition = {}): Promise<number> {
@@ -160,6 +217,7 @@ export class ModelAPI {
 		return count
 	}
 
+	// TODO: add relations
 	async query(txn: IDBPTransaction<any, any, IDBTransactionMode>, query: QueryParams): Promise<ModelValue[]> {
 		const results: ModelValue[] = []
 		for await (const value of this.iterate(txn, query)) {
@@ -168,6 +226,7 @@ export class ModelAPI {
 		return results
 	}
 
+	// TODO: add relations
 	async queryWithInclude(
 		txn: IDBPTransaction<any, any, IDBTransactionMode>,
 		models: Record<string, ModelAPI>,
@@ -299,6 +358,7 @@ export class ModelAPI {
 		return modelValues
 	}
 
+	// TODO: can relations be indexed?
 	private getIndex(
 		store: IDBPObjectStore<any, any, string, "readonly">,
 		property: Property,
@@ -407,6 +467,7 @@ export class ModelAPI {
 		}
 	}
 
+	// TODO: add relations
 	private getSelect(select: Record<string, boolean> | undefined): (value: ModelValue) => ModelValue {
 		if (select === undefined) {
 			return (value) => value
@@ -416,6 +477,7 @@ export class ModelAPI {
 		return (value) => Object.fromEntries(keys.map((key) => [key, value[key]]))
 	}
 
+	// TODO: add relations
 	public async *iterate(
 		txn: IDBPTransaction<any, any, IDBTransactionMode>,
 		query: QueryParams = {},
@@ -636,5 +698,63 @@ function isEmpty(expr: PropertyValue | NotExpression | RangeExpression): boolean
 		return expr.neq === undefined
 	} else {
 		return expr.gte === undefined && expr.gt !== undefined && expr.lte !== undefined && expr.lt !== undefined
+	}
+}
+
+export class RelationAPI {
+	public readonly storeName = `${this.relation.source}/${this.relation.property}`
+
+	public constructor(readonly relation: Relation) {}
+
+	public async get<Mode extends IDBTransactionMode>(
+		txn: IDBPTransaction<any, any, Mode>,
+		source: string,
+	): Promise<string[]> {
+		const result = []
+
+		for (
+			let cursor = await txn.objectStore(this.storeName).index("source").openCursor(IDBKeyRange.only(source));
+			cursor !== null;
+			cursor = await cursor.continue()
+		) {
+			result.push(cursor.value)
+		}
+
+		return result
+	}
+
+	public add(
+		txn: IDBPTransaction<any, any, "readwrite">,
+		source: string,
+		targets: PropertyValue,
+	) {
+		assert(Array.isArray(targets), "expected string[]")
+		for (const target of targets) {
+			assert(typeof target === "string", "expected string[]")
+			txn.objectStore(this.storeName).put({ source, target })
+		}
+	}
+
+	public async delete(txn: IDBPTransaction<any, any, "readwrite">, source: string) {
+		for (
+			let cursor = await txn.objectStore(this.storeName).index("source").openCursor(IDBKeyRange.only(source));
+			cursor !== null;
+			cursor = await cursor.continue()
+		) {
+			// TODO: is this correct?
+			txn.objectStore(this.storeName).delete(cursor.value)
+		}
+	}
+
+	public async deleteAll(txn: IDBPTransaction<any, any, "readwrite">) {
+		// TODO
+	}
+
+	public async deleteByTarget(txn: IDBPTransaction<any, any, "readwrite">, target: string) {
+		// TODO
+	}
+
+	public async deleteAllByTarget(txn: IDBPTransaction<any, any, "readwrite">) {
+		// TODO: dont need this...
 	}
 }

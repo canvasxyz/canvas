@@ -30,24 +30,41 @@ export class ModelDB extends AbstractModelDB {
 			upgrade(db: IDBPDatabase<unknown>, oldVersion: number, newVersion: number | null) {
 				// create missing object stores
 				const storeNames = new Set(db.objectStoreNames)
+				const relationStoreNames = new Set<string>()
+
+				for (const model of config.models) {
+					for (const property of model.properties) {
+						if (property.kind === "relation") {
+							relationStoreNames.add(`${model.name}/${property.name}`)
+						}
+					}
+				}
+
 				for (const model of config.models) {
 					const primaryKey = model.properties.find((property) => property.kind === "primary")
 					assert(primaryKey !== undefined, "expected primaryKey !== undefined")
 
-					if (storeNames.has(model.name)) {
-						continue
+					if (!storeNames.has(model.name)) {
+						const recordObjectStore = db.createObjectStore(model.name, { keyPath: primaryKey.name })
+
+						for (const index of model.indexes) {
+							if (index.length > 1) {
+								// TODO: we can support these by adding synthetic array values to every object
+								throw new Error("multi-property indexes not supported yet")
+							}
+
+							const [property] = index
+							recordObjectStore.createIndex(getIndexName(index), property)
+						}
 					}
 
-					const recordObjectStore = db.createObjectStore(model.name, { keyPath: primaryKey.name })
-
-					for (const index of model.indexes) {
-						if (index.length > 1) {
-							// TODO: we can support these by adding synthetic array values to every object
-							throw new Error("multi-property indexes not supported yet")
+					for (const relationStoreName of relationStoreNames) {
+						if (!relationStoreNames.has(relationStoreName)) {
+							// TODO: refactor as RelationAPI.createObjectStore()
+							const relationObjectStore = db.createObjectStore(relationStoreName) // , { keyPath: primaryKey.name })
+							const sourceIndex = relationObjectStore.createIndex("source", "source", { unique: false })
+							const targetIndex = relationObjectStore.createIndex("target", "target", { unique: false })
 						}
-
-						const [property] = index
-						recordObjectStore.createIndex(getIndexName(index), property)
 					}
 				}
 			},
