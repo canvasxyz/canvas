@@ -151,6 +151,7 @@ export class ModelAPI {
 	}
 
 	async clear(txn: IDBPTransaction<any, any, "readwrite">) {
+		// select all
 		await this.getStore(txn).clear()
 
 		for (const relation of Object.values(this.#relations)) {
@@ -159,7 +160,7 @@ export class ModelAPI {
 
 		for (const relations of Object.values(this.#backlinks)) {
 			for (const relation of Object.values(relations)) {
-				await relation.deleteAllByTarget(txn)
+				await relation.deleteAll(txn)
 			}
 		}
 	}
@@ -217,7 +218,6 @@ export class ModelAPI {
 		return count
 	}
 
-	// TODO: add relations
 	async query(txn: IDBPTransaction<any, any, IDBTransactionMode>, query: QueryParams): Promise<ModelValue[]> {
 		const results: ModelValue[] = []
 		for await (const value of this.iterate(txn, query)) {
@@ -467,7 +467,6 @@ export class ModelAPI {
 		}
 	}
 
-	// TODO: add relations
 	private getSelect(select: Record<string, boolean> | undefined): (value: ModelValue) => ModelValue {
 		if (select === undefined) {
 			return (value) => value
@@ -741,20 +740,22 @@ export class RelationAPI {
 			cursor !== null;
 			cursor = await cursor.continue()
 		) {
-			// TODO: is this correct?
-			txn.objectStore(this.storeName).delete(cursor.value)
+			const { source } = cursor.value
+			txn.objectStore(this.storeName).delete(source)
 		}
 	}
 
 	public async deleteAll(txn: IDBPTransaction<any, any, "readwrite">) {
-		// TODO
+		await txn.objectStore(this.storeName).clear()
 	}
 
 	public async deleteByTarget(txn: IDBPTransaction<any, any, "readwrite">, target: string) {
-		// TODO
-	}
-
-	public async deleteAllByTarget(txn: IDBPTransaction<any, any, "readwrite">) {
-		// TODO: dont need this...
+		for (
+			let cursor = await txn.objectStore(this.storeName).index("target").openCursor(IDBKeyRange.only(target));
+			cursor !== null;
+			cursor = await cursor.continue()
+		) {
+			await cursor.delete()
+		}
 	}
 }
