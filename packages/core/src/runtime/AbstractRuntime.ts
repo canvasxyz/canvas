@@ -267,16 +267,12 @@ export abstract class AbstractRuntime {
 		const effects: Effect[] = [{ operation: "set", model: "$actions", value: actionRecord }]
 
 		for (const [recordId, version] of Object.entries(reads)) {
-			const readRecord: ReadRecord = {
-				key: `${recordId}/${id}`,
-				version,
-			}
-
+			const readRecord: ReadRecord = { key: `${recordId}/${id}`, version }
 			effects.push({ model: "$reads", operation: "set", value: readRecord })
 		}
 
+		// Step 1a: identify write-write conflicts
 		const writeConflicts = new Set<string>()
-
 		for (const [recordId, effect] of Object.entries(writes)) {
 			const writeRecord: WriteRecord = {
 				key: `${recordId}/${id}`,
@@ -287,31 +283,83 @@ export abstract class AbstractRuntime {
 
 			effects.push({ model: "$writes", operation: "set", value: writeRecord })
 
-			const { primaryKey } = this.db.models[effect.model]
-			const key = effect.operation === "delete" ? effect.key : (effect.value[primaryKey] as string)
-			const writeConflict = await this.findWriteConflict(executionContext, effect.model, key)
+			const writeConflict = await this.findWriteConflict(executionContext, recordId, { reverted: false })
 			if (writeConflict !== null) {
 				writeConflicts.add(writeConflict)
 			}
 		}
 
-		const superiorConflicts = Array.from(writeConflicts).filter((messageId) => messageId < executionContext.id)
-		if (superiorConflicts.length > 0) {
-			this.log("ignoring message %s because it is in conflict with %o", executionContext.id, superiorConflicts)
-		} else {
-			// revert the conflicts, apply the effects
-			for (const conflictId of writeConflicts) {
-				// await this.revert(conflictId)
-				throw new Error("not implemented")
-			}
+		/** These messages are superior to the current action */
+		const superiorWrites: string[] = []
 
-			for (const effect of Object.values(writes)) {
-				effects.push(effect)
+		/** These messages are inferior to the current action */
+		const inferiorWrites: string[] = []
+
+		for (const messageId of writeConflicts) {
+			assert(messageId !== executionContext.id, "expected messageId !== executionContext.id")
+			if (messageId < executionContext.id) {
+				superiorWrites.push(messageId)
+			} else {
+				inferiorWrites.push(messageId)
 			}
 		}
 
-		this.log("applying effects %O", effects)
+		// Step 1b: revert inferior write-write conflicts
+		for (const messageId of inferiorWrites) {
+			this.log("reverting inferior write conflict %s", messageId)
+			// await this.revert(messageId)
+			throw new Error("not implemented")
+		}
 
+		// n.b. there's an open question here of whether we can safely
+		// remove any superior conflicts that were descendants of
+		// inferior conflicts and thus already reverted.
+		// To err on the side of safety we *don't* assume this now,
+		// but could prove/test for this and enable it in the future.
+
+		// Step 2: identify read-write conflicts
+		// When checking for conflicts between new reads and existing writes, we have to search over
+		// *all* writes, both reverted and non-reverted.
+		// Safe restrictions on this search may exist but they have not yet been identified.
+
+		/** IDs of concurrent reads that conflict with the current action's writes */
+		const inferiorReads = new Set<string>()
+		for (const recordId of Object.keys(writes)) {
+			const conflicts = await this.getReadConflicts(executionContext, recordId)
+			for (const conflict of conflicts) {
+				inferiorReads.add(conflict)
+			}
+		}
+
+		/** IDs of concurrent writes that conflict with the current action's reads */
+		const superiorReads = new Set<string>()
+		for (const [recordId, version] of Object.entries(reads)) {
+			const conflictId = await this.findWriteConflict(executionContext, recordId)
+			if (conflictId !== null) {
+				superiorReads.add(conflictId)
+			}
+		}
+
+		// n.b. unlike writes, inferiorReads and superiorReads may have non-empty intersection
+
+		// Step 2b: revert conflicting reads
+		for (const messageId of inferiorReads) {
+			this.log("reverting inferior read conflict %s", messageId)
+			// await this.revert(messageId)
+			throw new Error("not implemented")
+		}
+
+		if (superiorWrites.length === 0 && superiorReads.size === 0) {
+			for (const effect of Object.values(writes)) {
+				effects.push(effect)
+			}
+		} else {
+			this.log("skipping action effects")
+			this.log("write conflicts: %o", superiorWrites)
+			this.log("read conflicts: %o", superiorReads)
+		}
+
+		this.log("applying db effects %O", effects)
 		try {
 			await this.db.apply(effects)
 		} catch (err) {
@@ -410,8 +458,8 @@ export abstract class AbstractRuntime {
 		context.writes[recordId] = { operation: "set", model, value: mergedValue }
 	}
 
-	private async getReadConflicts(context: ExecutionContext, model: string, key: string): Promise<string[]> {
-		const recordId = AbstractRuntime.getRecordId(model, key)
+	/** Returns set of concurrent read conflicts for the provided record ID */
+	private async getReadConflicts(context: ExecutionContext, recordId: string): Promise<string[]> {
 		const minKey = `${recordId}/${MIN_MESSAGE_ID}`
 		const maxKey = `${recordId}/${MAX_MESSAGE_ID}`
 
@@ -450,16 +498,21 @@ export abstract class AbstractRuntime {
 		return conflicts
 	}
 
-	private async findWriteConflict(context: ExecutionContext, model: string, key: string): Promise<null | string> {
-		const recordId = AbstractRuntime.getRecordId(model, key)
-
+	/** Returns the earliest concurrent write conflict for the provided record ID */
+	private async findWriteConflict(
+		context: ExecutionContext,
+		recordId: string,
+		options: { reverted?: boolean } = {},
+	): Promise<null | string> {
 		const minKey = `${recordId}/${MIN_MESSAGE_ID}`
 		const maxKey = `${recordId}/${MAX_MESSAGE_ID}`
+
 		let lastVersion: string | null = null
+
 		for await (const { key } of this.db.iterate<{ key: string }>("$writes", {
 			select: { key: true },
 			orderBy: { key: "desc" },
-			where: { key: { gte: minKey, lte: maxKey }, reverted: false },
+			where: { key: { gte: minKey, lte: maxKey }, reverted: options.reverted },
 		})) {
 			const [_, msgId] = key.split("/")
 
