@@ -82,7 +82,6 @@ export abstract class AbstractRuntime {
 		$reads: {
 			key: "primary", // `${hash(model, key)}/${msgid}`
 			version: "string", // NOT the same as the last component of primary key
-			reverted: "boolean",
 			$indexes: ["version"],
 		},
 	} satisfies ModelSchema
@@ -549,10 +548,15 @@ export abstract class AbstractRuntime {
 		messageId: string,
 		effects: Effect[],
 		revertWrites: Record<string, Effect>,
-		callback?: (messageId: string) => void,
+		reverted = new Set<string>(),
 	): Promise<void> {
-		// we are guaranteed a "linear version history" invariant
+		if (reverted.has(messageId)) {
+			return
+		} else {
+			reverted.add(messageId)
+		}
 
+		// we are guaranteed a "linear version history" invariant
 		const writes = await this.db.query<WriteRecord>("$writes", {
 			where: { version: messageId },
 		})
@@ -581,6 +585,17 @@ export abstract class AbstractRuntime {
 				assert(value !== null, "expected value !== null")
 				revertWrites[recordId] = { operation: "set", model, value }
 			}
+		}
+
+		// now revert actions that read from the reads.
+		// this has potential to be a large query.
+		const readers = await this.db.query<ReadRecord>("$reads", {
+			where: { version: messageId },
+		})
+
+		for (const { key } of readers) {
+			const [recordId, readerId] = key.split("/")
+			await this.revert(readerId, effects, revertWrites, reverted)
 		}
 	}
 
