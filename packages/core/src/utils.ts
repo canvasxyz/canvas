@@ -1,5 +1,7 @@
 import AggregateError from "aggregate-error"
 import { anySignal } from "any-signal"
+import { bytesToHex } from "@noble/hashes/utils"
+import { blake3 } from "@noble/hashes/blake3"
 import { Action, Message, Session, Snapshot } from "@canvas-js/interfaces"
 
 export const isAction = (message: Message<Action | Session | Snapshot>): message is Message<Action> =>
@@ -34,3 +36,5 @@ export async function wait(interval: number, options: { signal: AbortSignal }) {
 		signal.addEventListener("abort", resolve, { once: true })
 	}).finally(() => signal.clear())
 }
+
+export const getRecordId = (model: string, key: string) => bytesToHex(blake3(`${model}/${key}`, { dkLen: 16 }))

@@ -22,7 +22,7 @@ import {
 	BranchMergeRecord,
 } from "@canvas-js/gossiplog"
 import { assert, mapValues, signalInvalidType } from "@canvas-js/utils"
-import { isAction, isSession, isSnapshot } from "../utils.js"
+import { getRecordId, isAction, isSession, isSnapshot } from "../utils.js"
 import { unzip } from "zlib"
 
 export type ExecutionContext = {
@@ -179,7 +179,7 @@ export abstract class AbstractRuntime {
 		assert(messages.length === 0, "snapshot must be first entry on log")
 
 		for (const { model, key, value } of effects) {
-			const recordId = AbstractRuntime.getRecordId(model, key)
+			const recordId = getRecordId(model, key)
 			await this.db.set("$writes", {
 				key: `${recordId}/${MIN_MESSAGE_ID}`,
 				record_model: model,
@@ -393,14 +393,12 @@ export abstract class AbstractRuntime {
 		return result
 	}
 
-	private static getRecordId = (model: string, key: string) => bytesToHex(blake3(`${model}/${key}`, { dkLen: 16 }))
-
 	protected async getModelValue<T extends ModelValue = ModelValue>(
 		context: ExecutionContext,
 		model: string,
 		key: string,
 	): Promise<T | null> {
-		const recordId = AbstractRuntime.getRecordId(model, key)
+		const recordId = getRecordId(model, key)
 
 		if (context.writes[recordId] !== undefined) {
 			if (context.writes[recordId].operation === "set") {
@@ -435,12 +433,12 @@ export abstract class AbstractRuntime {
 		const { primaryKey } = this.db.models[model]
 		const { [primaryKey]: key } = value as ModelValue
 		assert(typeof key === "string", "expected value[primaryKey] to be a string")
-		const recordId = AbstractRuntime.getRecordId(model, key)
+		const recordId = getRecordId(model, key)
 		context.writes[recordId] = { operation: "set", model, value }
 	}
 
 	protected async deleteModelValue(context: ExecutionContext, model: string, key: string): Promise<void> {
-		const recordId = AbstractRuntime.getRecordId(model, key)
+		const recordId = getRecordId(model, key)
 		context.writes[recordId] = { operation: "delete", model, key }
 	}
 
@@ -458,7 +456,7 @@ export abstract class AbstractRuntime {
 		const updatedValue = updateModelValues(value as ModelValue, modelValue ?? {})
 		validateModelValue(this.db.models[model], updatedValue)
 
-		const recordId = AbstractRuntime.getRecordId(model, key)
+		const recordId = getRecordId(model, key)
 		context.writes[recordId] = { operation: "set", model, value: updatedValue }
 	}
 
@@ -476,7 +474,7 @@ export abstract class AbstractRuntime {
 		const mergedValue = mergeModelValues(value as ModelValue, modelValue ?? {})
 		validateModelValue(this.db.models[model], mergedValue)
 
-		const recordId = AbstractRuntime.getRecordId(model, key)
+		const recordId = getRecordId(model, key)
 		context.writes[recordId] = { operation: "set", model, value: mergedValue }
 	}
 
@@ -501,7 +499,7 @@ export abstract class AbstractRuntime {
 		const conflicts: string[] = []
 		for await (const { key } of this.db.iterate<{ key: string }>("$reads", {
 			orderBy: { key: "asc" },
-			where: { reverted: false, key: { gt: prevKey, lte: maxKey } },
+			where: { key: { gt: prevKey, lte: maxKey } },
 		})) {
 			const [_, readId] = key.split("/")
 
