@@ -30,6 +30,7 @@ type Session struct {
 }
 
 type SnapshotEffect struct {
+  model     String
   key       String
   value     nullable Bytes
 }

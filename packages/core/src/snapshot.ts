@@ -53,16 +53,24 @@ export async function createSnapshot(app: Canvas): Promise<Snapshot> {
 	// flatten $writes table
 	const writesMap = new Map<string, WriteRecord>()
 	for await (const row of app.db.iterate<WriteRecord>("$writes", { where: { reverted: false } })) {
-		const { key, value, version } = row
-		const recordId = key.slice(0, key.indexOf("/"))
+		const { key, record_model, record_key, record_version, value } = row
+		const [recordId, _] = key.split("/")
 		const existingEffect = writesMap.get(recordId)
-		if (existingEffect === undefined || lessThan(existingEffect.version, version)) {
-			const effectKey = `${recordId}/${MIN_MESSAGE_ID}`
-			writesMap.set(recordId, { key: effectKey, value, version: null, reverted: false })
+		if (existingEffect === undefined || lessThan(existingEffect.record_version, record_version)) {
+			writesMap.set(recordId, {
+				key: `${recordId}/${MIN_MESSAGE_ID}`,
+				record_model,
+				record_key,
+				value,
+				record_version: null,
+				reverted: false,
+			})
 		}
 	}
 
-	const effects = Array.from(writesMap.values()).map(({ key, value }: SnapshotEffect) => ({ key, value }))
+	const effects = Array.from(writesMap.values()).map(
+		({ record_model: model, record_key: key, value }: WriteRecord): SnapshotEffect => ({ model, key, value }),
+	)
 
 	return { type: "snapshot", models, effects }
 }
