@@ -553,35 +553,33 @@ export abstract class AbstractRuntime {
 	): Promise<void> {
 		// we are guaranteed a "linear version history" invariant
 
-		const writes = await this.db.query<{
-			key: string
-			record_model: string
-			record_key: string
-		}>("$writes", {
-			select: { key: true, record_model: true, record_key: true },
+		const writes = await this.db.query<WriteRecord>("$writes", {
 			where: { version: messageId },
 		})
 
-		for (const { key, record_model, record_key } of writes) {
-			const [recordId, _] = key.split("/")
+		for (const writeRecord of writes) {
+			effects.push({
+				operation: "set",
+				model: "$writes",
+				value: { ...writeRecord, reverted: true },
+			})
+
+			const [recordId, _] = writeRecord.key.split("/")
 			const minKey = `${recordId}/${MIN_MESSAGE_ID}`
 
 			const [prev] = await this.db.query<WriteRecord>("$writes", {
 				orderBy: { key: "desc" },
-				where: { key: { gte: minKey, lt: key }, reverted: false },
+				where: { key: { gte: minKey, lt: writeRecord.key }, reverted: false },
 				limit: 1,
 			})
 
+			const { record_model: model, record_key: key } = writeRecord
 			if (prev === undefined || prev.value === null) {
-				revertWrites[recordId] = { operation: "delete", model: record_model, key: record_key }
+				revertWrites[recordId] = { operation: "delete", model, key }
 			} else {
 				const value = cbor.decode<ModelValue>(prev.value)
 				assert(value !== null, "expected value !== null")
-
-				revertWrites[recordId] =
-					value == null
-						? { operation: "delete", model: record_model, key: record_key }
-						: { operation: "set", model: record_model, value }
+				revertWrites[recordId] = { operation: "set", model, value }
 			}
 		}
 	}
