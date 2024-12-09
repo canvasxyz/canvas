@@ -318,12 +318,13 @@ export abstract class AbstractRuntime {
 			}
 		}
 
-		const revertWrites: Record<string, Effect> = {}
+		const revertEffects: Record<string, Effect> = {}
+		const reverted = new Set<string>()
 
 		// Step 1b: revert inferior write-write conflicts
 		for (const messageId of inferiorWrites) {
 			this.log("reverting inferior write conflict %s", messageId)
-			await this.revert(messageId, effects, revertWrites)
+			await this.revert(messageId, effects, revertEffects, reverted)
 		}
 
 		// n.b. there's an open question here of whether we can safely
@@ -360,15 +361,19 @@ export abstract class AbstractRuntime {
 		// Step 2b: revert conflicting reads
 		for (const messageId of inferiorReads) {
 			this.log("reverting inferior read conflict %s", messageId)
-			// await this.revert(messageId)
-			throw new Error("not implemented")
+			await this.revert(messageId, effects, revertEffects, reverted)
 		}
 
 		if (superiorWrites.length === 0 && superiorReads.size === 0) {
-			for (const effect of Object.values(writes)) {
+			for (const effect of Object.values({ ...revertEffects, ...writes })) {
 				effects.push(effect)
 			}
 		} else {
+			// still need to apply revert effects
+			for (const effect of Object.values(revertEffects)) {
+				effects.push(effect)
+			}
+
 			this.log("skipping action effects")
 			this.log("write conflicts: %o", superiorWrites)
 			this.log("read conflicts: %o", superiorReads)
@@ -547,7 +552,7 @@ export abstract class AbstractRuntime {
 	private async revert(
 		messageId: string,
 		effects: Effect[],
-		revertWrites: Record<string, Effect>,
+		revertEffects: Record<string, Effect>,
 		reverted = new Set<string>(),
 	): Promise<void> {
 		if (reverted.has(messageId)) {
@@ -579,11 +584,11 @@ export abstract class AbstractRuntime {
 
 			const { record_model: model, record_key: key } = writeRecord
 			if (prev === undefined || prev.value === null) {
-				revertWrites[recordId] = { operation: "delete", model, key }
+				revertEffects[recordId] = { operation: "delete", model, key }
 			} else {
 				const value = cbor.decode<ModelValue>(prev.value)
 				assert(value !== null, "expected value !== null")
-				revertWrites[recordId] = { operation: "set", model, value }
+				revertEffects[recordId] = { operation: "set", model, value }
 			}
 		}
 
@@ -595,7 +600,7 @@ export abstract class AbstractRuntime {
 
 		for (const { key } of readers) {
 			const [recordId, readerId] = key.split("/")
-			await this.revert(readerId, effects, revertWrites, reverted)
+			await this.revert(readerId, effects, revertEffects, reverted)
 		}
 	}
 
