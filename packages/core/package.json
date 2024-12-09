@@ -15,6 +15,7 @@
 	"exports": {
 		".": "./lib/index.js",
 		"./api": "./lib/api.js",
+		"./utils": "./lib/utils.js",
 		"./constants": "./lib/constants.js"
 	},
 	"imports": {
