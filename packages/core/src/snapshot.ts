@@ -2,14 +2,13 @@ import { sha256 } from "@noble/hashes/sha256"
 import { bytesToHex } from "@noble/hashes/utils"
 import * as cbor from "@ipld/dag-cbor"
 
-import { MIN_MESSAGE_ID } from "@canvas-js/gossiplog"
 import { Snapshot, SnapshotEffect } from "@canvas-js/interfaces"
 import type { IndexInit, PropertyType } from "@canvas-js/modeldb"
 import { assert } from "@canvas-js/utils"
 
 import { Canvas } from "./Canvas.js"
 import { Contract } from "./types.js"
-import { WriteRecord, ReadRecord } from "./runtime/AbstractRuntime.js"
+import { WriteRecord } from "./runtime/AbstractRuntime.js"
 
 // typeguards
 export const isIndexInit = (value: unknown): value is IndexInit[] => typeof value === "string" || Array.isArray(value)
