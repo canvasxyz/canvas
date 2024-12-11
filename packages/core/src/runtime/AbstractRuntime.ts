@@ -77,7 +77,11 @@ export abstract class AbstractRuntime {
 		$writes: {
 			/** `${recordId}:${writerMsgId}` */
 			key: "primary",
-			/** a `null` version means the value came from an initial snapshot */
+			/**
+			 * `version` duplicates writerMsgId, the last component of the write key.
+			 * write records initialized from a snapshot have a null version but use
+			 * MIN_MESSAGE_ID for writerMsgId in the key.
+			 */
 			version: "string?",
 			value: "bytes?",
 			reverted: "boolean",
@@ -86,7 +90,7 @@ export abstract class AbstractRuntime {
 		$reads: {
 			/** `${recordId}:${readerMsgId}` */
 			key: "primary",
-			/** a `null` version means the value came from an initial snapshot, OR was not never set */
+			/** a `null` version means the value came from an initial snapshot, OR was never set */
 			version: "string?",
 			$indexes: ["version"],
 		},
