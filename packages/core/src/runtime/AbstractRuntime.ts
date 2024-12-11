@@ -33,7 +33,7 @@ export type ExecutionContext = {
 	address: string
 
 	// recordId -> version
-	reads: Record<string, string>
+	reads: Record<string, string | null>
 
 	// recordId -> effect
 	writes: Record<string, Effect>
@@ -50,7 +50,7 @@ export type WriteRecord = {
 
 export type ReadRecord = {
 	key: string
-	version: string
+	version: string | null
 }
 
 export type SessionRecord = {
@@ -71,7 +71,7 @@ export type ActionRecord = {
 export abstract class AbstractRuntime {
 	protected static effectsModel: ModelSchema = {
 		$writes: {
-			key: "primary", // `${hash(model, key)}/${msgid}`
+			key: "primary", // `${hash(model, key)}/${msgId}`
 			record_model: "string",
 			record_key: "string",
 			record_version: "string?", // same as the last component of primary key
@@ -80,8 +80,8 @@ export abstract class AbstractRuntime {
 			$indexes: ["record_version"],
 		},
 		$reads: {
-			key: "primary", // `${hash(model, key)}/${msgid}`
-			version: "string", // NOT the same as the last component of primary key
+			key: "primary", // `${hash(model, key)}/${readerMsgId}`
+			version: "string?", // NOT the same as the last component of primary key
 			$indexes: ["version"],
 		},
 	} satisfies ModelSchema
@@ -270,7 +270,7 @@ export abstract class AbstractRuntime {
 		}
 
 		const writes: Record<string, Effect> = {}
-		const reads: Record<string, string> = {}
+		const reads: Record<string, string | null> = {}
 		const executionContext: ExecutionContext = { messageLog, id, signature, message, address, reads, writes }
 		const result = await this.execute(executionContext)
 
@@ -411,14 +411,19 @@ export abstract class AbstractRuntime {
 		const minKey = `${recordId}/${MIN_MESSAGE_ID}`
 		const maxKey = `${recordId}/${MAX_MESSAGE_ID}`
 
-		const [record] = await this.db.query<{ key: string; value: Uint8Array | null }>("$writes", {
-			select: { key: true, value: true },
-			orderBy: { key: "desc" },
-			where: { key: { gte: minKey, lte: maxKey } },
-			limit: 1,
-		})
+		const [record = null] = await this.db.query<{ key: string; record_version: string; value: Uint8Array | null }>(
+			"$writes",
+			{
+				select: { key: true, record_version: true, value: true },
+				orderBy: { key: "desc" },
+				where: { key: { gte: minKey, lte: maxKey } },
+				limit: 1,
+			},
+		)
 
-		if (record === undefined || record.value === null) {
+		context.reads[recordId] = record?.record_version ?? null
+
+		if (record === null || record.value === null) {
 			return null
 		} else {
 			const value = cbor.decode<T>(record.value)
@@ -498,20 +503,21 @@ export abstract class AbstractRuntime {
 
 		const conflicts: string[] = []
 		for await (const { key } of this.db.iterate<{ key: string }>("$reads", {
+			select: { key: true },
 			orderBy: { key: "asc" },
 			where: { key: { gt: prevKey, lte: maxKey } },
 		})) {
-			const [_, readId] = key.split("/")
+			const [_, readerMsgId] = key.split("/")
 
 			// assert that prevId is an ancestor of readId.
 			// this is just for sanity checking; can remove this if everything works right
 			await context.messageLog
-				.isAncestor(readId, prevId)
+				.isAncestor(readerMsgId, prevId)
 				.then((is) => assert(is || prevId === MIN_MESSAGE_ID, "expected isAncestor(readId, prevId)"))
 
-			const isAncestor = await this.isAncestor(context, readId)
+			const isAncestor = await this.isAncestor(context, readerMsgId)
 			if (!isAncestor) {
-				conflicts.push(readId)
+				conflicts.push(readerMsgId)
 			}
 		}
 
@@ -597,8 +603,8 @@ export abstract class AbstractRuntime {
 		})
 
 		for (const { key } of readers) {
-			const [recordId, readerId] = key.split("/")
-			await this.revert(readerId, effects, revertEffects, reverted)
+			const [recordId, readerMsgId] = key.split("/")
+			await this.revert(readerMsgId, effects, revertEffects, reverted)
 		}
 	}
 
