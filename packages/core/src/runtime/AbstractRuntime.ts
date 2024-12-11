@@ -1,6 +1,4 @@
 import * as cbor from "@ipld/dag-cbor"
-import { blake3 } from "@noble/hashes/blake3"
-import { bytesToHex } from "@noble/hashes/utils"
 import { logger } from "@libp2p/logger"
 
 import type { Signature, Action, Message, Session, Snapshot, SignerCache } from "@canvas-js/interfaces"
@@ -14,13 +12,7 @@ import {
 	validateModelValue,
 	updateModelValues,
 } from "@canvas-js/modeldb"
-import {
-	GossipLogConsumer,
-	MAX_MESSAGE_ID,
-	MIN_MESSAGE_ID,
-	AbstractGossipLog,
-	BranchMergeRecord,
-} from "@canvas-js/gossiplog"
+import { GossipLogConsumer, MAX_MESSAGE_ID, MIN_MESSAGE_ID, AbstractGossipLog } from "@canvas-js/gossiplog"
 import { assert, mapValues, signalInvalidType } from "@canvas-js/utils"
 import { getRecordId, isAction, isSession, isSnapshot } from "../utils.js"
 
@@ -432,18 +424,7 @@ export abstract class AbstractRuntime {
 			return context.reads[recordId].value as T
 		}
 
-		const minKey = `${recordId}:${MIN_MESSAGE_ID}`
-		const maxKey = `${recordId}:${MAX_MESSAGE_ID}`
-
-		const [record = null] = await this.db.query<{ key: string; version: string | null; value: Uint8Array | null }>(
-			"$writes",
-			{
-				select: { key: true, version: true, value: true },
-				orderBy: { key: "desc" },
-				where: { key: { gte: minKey, lte: maxKey } },
-				limit: 1,
-			},
-		)
+		const record = await this.getLatestAncestorWrite(context, recordId)
 
 		if (record === null) {
 			context.reads[recordId] = { version: null, value: null }
@@ -459,6 +440,30 @@ export abstract class AbstractRuntime {
 			context.reads[recordId] = { version: record.version, value }
 			return value
 		}
+	}
+
+	private async getLatestAncestorWrite(context: ExecutionContext, recordId: string): Promise<WriteRecord | null> {
+		// TODO: what we really need is to find a min-ID winner of the most recent set of mutually concurrent
+		// writes *WITHIN* the transitive ancestor set of the current execution context,
+		// is actually a new kind of search that we havne't done before.
+
+		// For now we just find the max-ID ancestor write which is deterministic but not quite correct.
+
+		const minKey = `${recordId}:${MIN_MESSAGE_ID}`
+		const maxKey = `${recordId}:${context.id}`
+
+		for await (const record of this.db.iterate<WriteRecord>("$writes", {
+			orderBy: { key: "desc" },
+			where: { key: { gte: minKey, lt: maxKey } },
+		})) {
+			const [_, writerMsgId] = record.key.split(":")
+			const isAncestor = await this.isAncestor(context, writerMsgId)
+			if (isAncestor) {
+				return record
+			}
+		}
+
+		return null
 	}
 
 	protected async setModelValue(context: ExecutionContext, model: string, value: ModelValue): Promise<void> {
