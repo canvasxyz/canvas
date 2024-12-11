@@ -49,8 +49,9 @@ test("create a record", async (t) => {
 	t.log(`applied createRoom ${createRoom.id}`)
 	const roomId = createRoom.result
 	const adminDid = createRoom.message.payload.did
-	const room = await app.db.get("rooms", roomId)
-	t.is(room?.admin_did, adminDid)
+	const membershipId = `${roomId}/${adminDid}`
+	Promise.resolve(app.db.get("rooms", roomId)).then((room) => t.is(room?.admin_did, adminDid))
+	Promise.resolve(app.db.get("memberships", membershipId)).then((membership) => t.not(membership, null))
 
 	const createPost1 = await app.actions.createPost(roomId, "hello")
 	t.log(`applied createPost1 ${createPost1.id}`)
@@ -60,8 +61,7 @@ test("create a record", async (t) => {
 	t.is(value?.content, "hello")
 
 	const roomRecordId = getRecordId("rooms", roomId)
-	const membershipRecordKey = `${roomId}/${adminDid}`
-	const membershipRecordId = getRecordId("memberships", membershipRecordKey)
+	const membershipRecordId = getRecordId("memberships", membershipId)
 	const postRecordId = getRecordId("posts", postId)
 
 	t.log("roomRecordId", roomRecordId)
@@ -72,26 +72,20 @@ test("create a record", async (t) => {
 		await app.db.query("$writes", { orderBy: { key: "asc" } }),
 		[
 			{
-				key: `${roomRecordId}/${createRoom.id}`,
-				record_model: "rooms",
-				record_key: roomId,
-				record_version: createRoom.id,
+				key: `${roomRecordId}:${createRoom.id}`,
+				version: createRoom.id,
 				value: new Uint8Array(cbor.encode({ id: createRoom.id, admin_did: createRoom.message.payload.did })),
 				reverted: false,
 			},
 			{
-				key: `${membershipRecordId}/${createRoom.id}`,
-				record_model: "memberships",
-				record_key: membershipRecordKey,
-				record_version: createRoom.id,
+				key: `${membershipRecordId}:${createRoom.id}`,
+				version: createRoom.id,
 				value: new Uint8Array(cbor.encode({ id: `${roomId}/${adminDid}` })),
 				reverted: false,
 			},
 			{
-				key: `${postRecordId}/${createPost1.id}`,
-				record_model: "posts",
-				record_key: postId,
-				record_version: createPost1.id,
+				key: `${postRecordId}:${createPost1.id}`,
+				version: createPost1.id,
 				value: new Uint8Array(cbor.encode({ id: postId, room_id: roomId, content: "hello" })),
 				reverted: false,
 			},
@@ -100,8 +94,17 @@ test("create a record", async (t) => {
 
 	t.deepEqual(await app.db.query("$reads"), [
 		{
-			key: `${membershipRecordId}/${createPost1.id}`,
+			key: `${membershipRecordId}:${createPost1.id}`,
 			version: createRoom.id,
 		},
 	])
+
+	t.deepEqual(
+		await app.db.query("$records", { orderBy: { id: "asc" } }),
+		[
+			{ id: roomRecordId, model: "rooms", key: roomId },
+			{ id: membershipRecordId, model: "memberships", key: membershipId },
+			{ id: postRecordId, model: "posts", key: postId },
+		].sort((a, b) => (a.id < b.id ? -1 : 1)),
+	)
 })

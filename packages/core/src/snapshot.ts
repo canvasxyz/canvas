@@ -5,6 +5,7 @@ import * as cbor from "@ipld/dag-cbor"
 import { MIN_MESSAGE_ID } from "@canvas-js/gossiplog"
 import { Snapshot, SnapshotEffect } from "@canvas-js/interfaces"
 import type { IndexInit, PropertyType } from "@canvas-js/modeldb"
+import { assert } from "@canvas-js/utils"
 
 import { Canvas } from "./Canvas.js"
 import { Contract } from "./types.js"
@@ -50,27 +51,21 @@ export async function createSnapshot(app: Canvas): Promise<Snapshot> {
 
 	const models = modelData
 
+	const effects: SnapshotEffect[] = []
+
 	// flatten $writes table
-	const writesMap = new Map<string, WriteRecord>()
-	for await (const row of app.db.iterate<WriteRecord>("$writes", { where: { reverted: false } })) {
-		const { key, record_model, record_key, record_version, value } = row
-		const [recordId, _] = key.split("/")
-		const existingEffect = writesMap.get(recordId)
-		if (existingEffect === undefined || lessThan(existingEffect.record_version, record_version)) {
-			writesMap.set(recordId, {
-				key: `${recordId}/${MIN_MESSAGE_ID}`,
-				record_model,
-				record_key,
-				value,
-				record_version: null,
-				reverted: false,
-			})
-		}
+	const writesMap = new Map<string, Uint8Array | null>()
+	for await (const writeRecord of app.db.iterate<WriteRecord>("$writes", { where: { reverted: false } })) {
+		const [recordId, _] = writeRecord.key.split(":")
+		writesMap.set(recordId, writeRecord.value)
 	}
 
-	const effects = Array.from(writesMap.values()).map(
-		({ record_model: model, record_key: key, value }: WriteRecord): SnapshotEffect => ({ model, key, value }),
-	)
+	for (const [recordId, value] of writesMap) {
+		const record = await app.db.get("$records", recordId)
+		assert(record !== null, "expected record !== null", { recordId })
+		const { model, key } = record
+		effects.push({ model, key, value })
+	}
 
 	return { type: "snapshot", models, effects }
 }

@@ -23,7 +23,6 @@ import {
 } from "@canvas-js/gossiplog"
 import { assert, mapValues, signalInvalidType } from "@canvas-js/utils"
 import { getRecordId, isAction, isSession, isSnapshot } from "../utils.js"
-import { unzip } from "zlib"
 
 export type ExecutionContext = {
 	messageLog: AbstractGossipLog<Action | Session | Snapshot>
@@ -32,24 +31,29 @@ export type ExecutionContext = {
 	message: Message<Action>
 	address: string
 
-	// recordId -> version
-	reads: Record<string, string | null>
+	// recordId -> { version }
+	reads: Record<string, { version: string | null; value: ModelValue | null }>
 
 	// recordId -> effect
 	writes: Record<string, Effect>
 }
 
 export type WriteRecord = {
+	/** `${recordId}:${writerMsgId}` */
 	key: string
-	record_model: string
-	record_key: string
-	record_version: string | null
+
+	/** a `null` version means the value came from an initial snapshot */
+	version: string | null
+
 	value: Uint8Array | null
 	reverted: boolean
 }
 
 export type ReadRecord = {
+	/** `${recordId}:${readerMsgId}` */
 	key: string
+
+	/** a `null` version means the value came from an initial snapshot, OR was not never set */
 	version: string | null
 }
 
@@ -71,20 +75,26 @@ export type ActionRecord = {
 export abstract class AbstractRuntime {
 	protected static effectsModel: ModelSchema = {
 		$writes: {
-			key: "primary", // `${recordId}/${msgId}`
-			record_model: "string",
-			record_key: "string",
-			record_version: "string?", // same as the last component of primary key
+			/** `${recordId}:${writerMsgId}` */
+			key: "primary",
+			/** a `null` version means the value came from an initial snapshot */
+			version: "string?",
 			value: "bytes?",
 			reverted: "boolean",
-			$indexes: ["record_version"],
+			$indexes: ["version"],
 		},
 		$reads: {
-			key: "primary", // `${recordId}/${readerMsgId}`
-			version: "string?", // NOT the same as the last component of primary key
+			/** `${recordId}:${readerMsgId}` */
+			key: "primary",
+			/** a `null` version means the value came from an initial snapshot, OR was not never set */
+			version: "string?",
 			$indexes: ["version"],
 		},
 		$records: {
+			/**
+			 * currently record ids are base64(blake3([model, key].join("/"), 18)),
+			 * but we could just as well make then random bytes or auto-incrementing integers
+			 */
 			id: "primary",
 			model: "string",
 			key: "string",
@@ -180,19 +190,22 @@ export abstract class AbstractRuntime {
 	) {
 		const { models, effects } = message.payload
 
-		const messages = await messageLog.getMessages()
-		assert(messages.length === 0, "snapshot must be first entry on log")
+		const messageCount = await messageLog.db.count("$messages")
+		assert(messageCount === 0, "snapshot must be first entry on log")
 
 		for (const { model, key, value } of effects) {
 			const recordId = getRecordId(model, key)
+			await this.db.set("$records", { id: recordId, key, model })
 			await this.db.set("$writes", {
-				key: `${recordId}/${MIN_MESSAGE_ID}`,
-				record_model: model,
-				record_key: key,
-				record_version: null,
+				key: `${recordId}:${MIN_MESSAGE_ID}`,
+				version: null,
 				value,
 				reverted: false,
 			})
+
+			// if (value !== null) {
+			// 	await this.db.set(model, cbor.decode<ModelValue>(value))
+			// }
 		}
 
 		for (const [model, rows] of Object.entries(models)) {
@@ -275,15 +288,15 @@ export abstract class AbstractRuntime {
 		}
 
 		const writes: Record<string, Effect> = {}
-		const reads: Record<string, string | null> = {}
+		const reads: Record<string, { version: string | null; value: ModelValue | null }> = {}
 		const executionContext: ExecutionContext = { messageLog, id, signature, message, address, reads, writes }
 		const result = await this.execute(executionContext)
 
 		const actionRecord: ActionRecord = { message_id: id, did, name, timestamp: context.timestamp }
 		const effects: Effect[] = [{ operation: "set", model: "$actions", value: actionRecord }]
 
-		for (const [recordId, version] of Object.entries(reads)) {
-			const readRecord: ReadRecord = { key: `${recordId}/${id}`, version }
+		for (const [recordId, { version }] of Object.entries(reads)) {
+			const readRecord: ReadRecord = { key: `${recordId}:${id}`, version }
 			effects.push({ model: "$reads", operation: "set", value: readRecord })
 		}
 
@@ -292,15 +305,14 @@ export abstract class AbstractRuntime {
 		for (const [recordId, effect] of Object.entries(writes)) {
 			const [model, key, value] = this.parseEffect(effect)
 			const writeRecord: WriteRecord = {
-				key: `${recordId}/${id}`,
-				record_model: model,
-				record_key: key,
-				record_version: id,
+				key: `${recordId}:${id}`,
+				version: id,
 				value: value && cbor.encode(value),
 				reverted: false,
 			}
 
 			effects.push({ model: "$writes", operation: "set", value: writeRecord })
+			effects.push({ model: "$records", operation: "set", value: { id: recordId, model, key } })
 
 			const writeConflict = await this.findWriteConflict(executionContext, recordId, { reverted: false })
 			if (writeConflict !== null) {
@@ -413,26 +425,35 @@ export abstract class AbstractRuntime {
 			}
 		}
 
-		const minKey = `${recordId}/${MIN_MESSAGE_ID}`
-		const maxKey = `${recordId}/${MAX_MESSAGE_ID}`
+		if (context.reads[recordId] !== undefined) {
+			return context.reads[recordId].value as T
+		}
 
-		const [record = null] = await this.db.query<{ key: string; record_version: string; value: Uint8Array | null }>(
+		const minKey = `${recordId}:${MIN_MESSAGE_ID}`
+		const maxKey = `${recordId}:${MAX_MESSAGE_ID}`
+
+		const [record = null] = await this.db.query<{ key: string; version: string | null; value: Uint8Array | null }>(
 			"$writes",
 			{
-				select: { key: true, record_version: true, value: true },
+				select: { key: true, version: true, value: true },
 				orderBy: { key: "desc" },
 				where: { key: { gte: minKey, lte: maxKey } },
 				limit: 1,
 			},
 		)
 
-		context.reads[recordId] = record?.record_version ?? null
+		if (record === null) {
+			context.reads[recordId] = { version: null, value: null }
+			return null
+		}
 
-		if (record === null || record.value === null) {
+		if (record.value === null) {
+			context.reads[recordId] = { version: record.version, value: null }
 			return null
 		} else {
 			const value = cbor.decode<T>(record.value)
 			assert(value !== null, "expected value !== null")
+			context.reads[recordId] = { version: record.version, value }
 			return value
 		}
 	}
@@ -490,8 +511,8 @@ export abstract class AbstractRuntime {
 
 	/** Returns set of concurrent read conflicts for the provided record ID */
 	private async getReadConflicts(context: ExecutionContext, recordId: string): Promise<string[]> {
-		const minKey = `${recordId}/${MIN_MESSAGE_ID}`
-		const maxKey = `${recordId}/${MAX_MESSAGE_ID}`
+		const minKey = `${recordId}:${MIN_MESSAGE_ID}`
+		const maxKey = `${recordId}:${MAX_MESSAGE_ID}`
 
 		const [{ key: prevKey } = {}] = await this.db.query<{ key: string }>("$writes", {
 			select: { key: true },
@@ -504,7 +525,7 @@ export abstract class AbstractRuntime {
 			return []
 		}
 
-		const [_, prevId] = prevKey.split("/")
+		const [_, prevId] = prevKey.split(":")
 
 		const conflicts: string[] = []
 		for await (const { key } of this.db.iterate<{ key: string }>("$reads", {
@@ -512,7 +533,7 @@ export abstract class AbstractRuntime {
 			orderBy: { key: "asc" },
 			where: { key: { gt: prevKey, lte: maxKey } },
 		})) {
-			const [_, readerMsgId] = key.split("/")
+			const [_, readerMsgId] = key.split(":")
 
 			// assert that prevId is an ancestor of readId.
 			// this is just for sanity checking; can remove this if everything works right
@@ -535,8 +556,8 @@ export abstract class AbstractRuntime {
 		recordId: string,
 		options: { reverted?: boolean } = {},
 	): Promise<null | string> {
-		const minKey = `${recordId}/${MIN_MESSAGE_ID}`
-		const maxKey = `${recordId}/${MAX_MESSAGE_ID}`
+		const minKey = `${recordId}:${MIN_MESSAGE_ID}`
+		const maxKey = `${recordId}:${MAX_MESSAGE_ID}`
 
 		let lastVersion: string | null = null
 
@@ -545,7 +566,7 @@ export abstract class AbstractRuntime {
 			orderBy: { key: "desc" },
 			where: { key: { gte: minKey, lte: maxKey }, reverted: options.reverted },
 		})) {
-			const [_, msgId] = key.split("/")
+			const [_, msgId] = key.split(":")
 
 			const isAncestor = await this.isAncestor(context, msgId)
 			if (isAncestor) {
@@ -572,7 +593,7 @@ export abstract class AbstractRuntime {
 
 		// we are guaranteed a "linear version history" invariant
 		const writes = await this.db.query<WriteRecord>("$writes", {
-			where: { record_version: messageId },
+			where: { version: messageId },
 		})
 
 		for (const writeRecord of writes) {
@@ -582,8 +603,12 @@ export abstract class AbstractRuntime {
 				value: { ...writeRecord, reverted: true },
 			})
 
-			const [recordId, _] = writeRecord.key.split("/")
-			const minKey = `${recordId}/${MIN_MESSAGE_ID}`
+			const [recordId, _] = writeRecord.key.split(":")
+			const minKey = `${recordId}:${MIN_MESSAGE_ID}`
+
+			const record = await this.db.get<{ model: string; key: string }>("$records", recordId)
+			assert(record !== null, "expected record !== null", { recordId })
+			const { model, key } = record
 
 			const [prev] = await this.db.query<WriteRecord>("$writes", {
 				orderBy: { key: "desc" },
@@ -591,7 +616,6 @@ export abstract class AbstractRuntime {
 				limit: 1,
 			})
 
-			const { record_model: model, record_key: key } = writeRecord
 			if (prev === undefined || prev.value === null) {
 				revertEffects[recordId] = { operation: "delete", model, key }
 			} else {
@@ -608,7 +632,7 @@ export abstract class AbstractRuntime {
 		})
 
 		for (const { key } of readers) {
-			const [recordId, readerMsgId] = key.split("/")
+			const [recordId, readerMsgId] = key.split(":")
 			await this.revert(readerMsgId, effects, revertEffects, reverted)
 		}
 	}
