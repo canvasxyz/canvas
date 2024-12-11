@@ -207,14 +207,8 @@ export abstract class AbstractRuntime {
 				reverted: false,
 			})
 
-			// if (value !== null) {
-			// 	await this.db.set(model, cbor.decode<ModelValue>(value))
-			// }
-		}
-
-		for (const [model, rows] of Object.entries(models)) {
-			for (const row of rows) {
-				await this.db.set(model, cbor.decode(row) as any)
+			if (value !== null) {
+				await this.db.set(model, cbor.decode<ModelValue>(value))
 			}
 		}
 	}
@@ -339,6 +333,9 @@ export abstract class AbstractRuntime {
 			}
 		}
 
+		this.log("superior writes: %o", superiorWrites)
+		this.log("inferior writes: %o", inferiorWrites)
+
 		const revertEffects: Record<string, Effect> = {}
 		const reverted = new Set<string>()
 
@@ -385,6 +382,8 @@ export abstract class AbstractRuntime {
 			await this.revert(messageId, effects, revertEffects, reverted)
 		}
 
+		this.log("got revertEffects: %O", revertEffects)
+
 		if (superiorWrites.length === 0 && superiorReads.size === 0) {
 			for (const effect of Object.values({ ...revertEffects, ...writes })) {
 				effects.push(effect)
@@ -400,7 +399,7 @@ export abstract class AbstractRuntime {
 			this.log("read conflicts: %o", superiorReads)
 		}
 
-		this.log("applying db effects %O", effects)
+		this.log.trace("applying db effects %O", effects)
 		try {
 			await this.db.apply(effects)
 		} catch (err) {
@@ -594,6 +593,8 @@ export abstract class AbstractRuntime {
 		} else {
 			reverted.add(messageId)
 		}
+
+		this.log("revert(%s)", messageId)
 
 		// we are guaranteed a "linear version history" invariant
 		const writes = await this.db.query<WriteRecord>("$writes", {
