@@ -71,7 +71,7 @@ export type ActionRecord = {
 export abstract class AbstractRuntime {
 	protected static effectsModel: ModelSchema = {
 		$writes: {
-			key: "primary", // `${hash(model, key)}/${msgId}`
+			key: "primary", // `${recordId}/${msgId}`
 			record_model: "string",
 			record_key: "string",
 			record_version: "string?", // same as the last component of primary key
@@ -80,9 +80,14 @@ export abstract class AbstractRuntime {
 			$indexes: ["record_version"],
 		},
 		$reads: {
-			key: "primary", // `${hash(model, key)}/${readerMsgId}`
+			key: "primary", // `${recordId}/${readerMsgId}`
 			version: "string?", // NOT the same as the last component of primary key
 			$indexes: ["version"],
+		},
+		$records: {
+			id: "primary",
+			model: "string",
+			key: "string",
 		},
 	} satisfies ModelSchema
 
@@ -567,7 +572,7 @@ export abstract class AbstractRuntime {
 
 		// we are guaranteed a "linear version history" invariant
 		const writes = await this.db.query<WriteRecord>("$writes", {
-			where: { version: messageId },
+			where: { record_version: messageId },
 		})
 
 		for (const writeRecord of writes) {

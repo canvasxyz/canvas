@@ -64,6 +64,10 @@ test("create a record", async (t) => {
 	const membershipRecordId = getRecordId("memberships", membershipRecordKey)
 	const postRecordId = getRecordId("posts", postId)
 
+	t.log("roomRecordId", roomRecordId)
+	t.log("membershipRecordId", membershipRecordId)
+	t.log("postRecordId", postRecordId)
+
 	t.deepEqual(
 		await app.db.query("$writes", { orderBy: { key: "asc" } }),
 		[

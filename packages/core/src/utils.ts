@@ -3,6 +3,7 @@ import { anySignal } from "any-signal"
 import { bytesToHex } from "@noble/hashes/utils"
 import { blake3 } from "@noble/hashes/blake3"
 import { Action, Message, Session, Snapshot } from "@canvas-js/interfaces"
+import { base64 } from "multiformats/bases/base64"
 
 export const isAction = (message: Message<Action | Session | Snapshot>): message is Message<Action> =>
 	message.payload.type === "action"
@@ -37,4 +38,8 @@ export async function wait(interval: number, options: { signal: AbortSignal }) {
 	}).finally(() => signal.clear())
 }
 
-export const getRecordId = (model: string, key: string) => bytesToHex(blake3(`${model}/${key}`, { dkLen: 16 }))
+export function getRecordId(model: string, key: string) {
+	const hash = blake3(`${model}/${key}`, { dkLen: 18 })
+	return base64.baseEncode(hash)
+	// return bytesToHex(hash)
+}
