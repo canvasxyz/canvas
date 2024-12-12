@@ -1,6 +1,6 @@
 {
 	"name": "@canvas-js/modeldb-durable-objects",
-	"version": "0.13.6",
+	"version": "0.13.7",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"type": "module",
 	"engines": {
@@ -13,8 +13,8 @@
 	"types": "./lib/index.d.ts",
 	"sideEffects": false,
 	"dependencies": {
-		"@canvas-js/modeldb": "0.13.6",
-		"@canvas-js/utils": "0.13.6",
+		"@canvas-js/modeldb": "0.13.7",
+		"@canvas-js/utils": "0.13.7",
 		"@cloudflare/workers-types": "^4.20240925.0",
 		"@ipld/dag-json": "^10.2.3",
 		"@types/better-sqlite3": "^7.6.10",
