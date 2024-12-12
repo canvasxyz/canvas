@@ -39,16 +39,13 @@
 		{ "path": "./packages/chain-substrate/test" },
 		{ "path": "./packages/ethereum-contracts" },
 		{ "path": "./packages/hooks" },
+		{ "path": "./packages/network-explorer" },
 		{ "path": "./packages/test-network" },
 		{ "path": "./packages/utils" },
 		{ "path": "./packages/utils/test" },
 		{ "path": "./examples/chat" },
 		{ "path": "./examples/chat-postgres" },
 		{ "path": "./examples/encrypted-chat" },
-		{ "path": "./examples/chat-explorer" },
-		{ "path": "./examples/chat-explorer/server" },
-		{ "path": "./examples/common-explorer" },
-		{ "path": "./examples/common-explorer/server" },
 		{ "path": "./examples/snake" }
 	]
 }
