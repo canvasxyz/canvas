@@ -1,6 +1,5 @@
 {
 	"name": "@canvas-js/network-explorer",
-	"private": true,
 	"type": "module",
 	"version": "0.13.6",
 	"scripts": {
