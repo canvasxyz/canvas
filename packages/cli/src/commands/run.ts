@@ -3,6 +3,10 @@ import http from "node:http"
 import assert from "node:assert"
 import process from "node:process"
 
+import { fileURLToPath } from "url"
+import path, { dirname } from "path"
+import { packageDirectorySync } from "pkg-dir"
+
 import type { Argv } from "yargs"
 import chalk from "chalk"
 import express from "express"
@@ -112,8 +116,8 @@ export const builder = (yargs: Argv) =>
 			default: false,
 		})
 		.option("network-explorer", {
-			type: "string",
-			desc: "The path of the network explorer static files",
+			type: "boolean",
+			desc: "Serve the network explorer web interface",
 		})
 
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
@@ -243,12 +247,17 @@ export async function handler(args: Args) {
 		}
 
 		if (args["network-explorer"] !== undefined) {
-			assert(/^(.\/)?\w[\w-_/]*$/.test(args["network-explorer"]), "Invalid directory for network explorer static files")
-			assert(
-				fs.existsSync(args["network-explorer"]),
-				"Invalid directory for network explorer static files (path not found)",
-			)
-			api.use("/explorer", express.static(args["network-explorer"]))
+			const currentDirectory = dirname(fileURLToPath(import.meta.url)) // packages/cli/src/commands
+			const pkg = packageDirectorySync({ cwd: currentDirectory }) // packages/cli
+			assert(pkg !== undefined, "Invalid directory for network explorer static files (build not found)")
+
+			const root = packageDirectorySync({ cwd: path.resolve(pkg || ".", "..") })
+			assert(root !== undefined, "Invalid directory for network explorer static files (build not found)")
+
+			const build = path.resolve(root, "node_modules/@canvas-js/network-explorer/dist")
+			assert(fs.existsSync(build), "Invalid directory for network explorer static files (build not found)")
+
+			api.use("/explorer", express.static(build))
 		}
 
 		const server = stoppable(http.createServer(api))
