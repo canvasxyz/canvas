@@ -7,7 +7,7 @@ import { Tree as MemoryTree } from "@canvas-js/okra-memory"
 
 import { ModelDB, ModelDBProxy } from "@canvas-js/modeldb-durable-objects"
 
-import { UnstableDevWorker } from "wrangler"
+import { Unstable_DevWorker } from "wrangler"
 import { SqlStorage } from "@cloudflare/workers-types"
 
 import { AbstractGossipLog, GossipLogInit } from "../AbstractGossipLog.js"
@@ -22,7 +22,7 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 		...init
 	}: {
 		db?: SqlStorage
-		worker?: UnstableDevWorker
+		worker?: Unstable_DevWorker
 		useTestProxy?: boolean
 		clear?: boolean
 	} & GossipLogInit<Payload>) {

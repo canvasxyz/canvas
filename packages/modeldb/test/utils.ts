@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url"
 import { createServer, ViteDevServer } from "vite"
 
 import { unstable_dev } from "wrangler"
-import type { UnstableDevWorker } from "wrangler"
+import type { Unstable_DevWorker } from "wrangler"
 
 const __dirname = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "..")
 
@@ -22,7 +22,7 @@ import { ModelDB as ModelDBSqliteExpo } from "@canvas-js/modeldb-sqlite-expo"
 let browser: puppeteer.Browser
 let page: puppeteer.Page
 let server: ViteDevServer
-let worker: UnstableDevWorker
+let worker: Unstable_DevWorker
 
 test.before(async (t) => {
 	server = await createServer({
