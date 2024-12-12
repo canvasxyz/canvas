@@ -2,7 +2,7 @@
 	"name": "@canvas-js/network-explorer",
 	"private": true,
 	"type": "module",
-	"version": "0.13.3",
+	"version": "0.13.6",
 	"scripts": {
 		"dev": "vite",
 		"build": "vite build",

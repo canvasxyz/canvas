@@ -75,10 +75,7 @@ export abstract class AbstractRuntime {
 	} satisfies ModelSchema
 
 	protected static usersModel = {
-		$dids: {
-			did: "primary",
-			$indexes: [["did"]],
-		},
+		$dids: { did: "primary" },
 	} satisfies ModelSchema
 
 	protected static getModelSchema(schema: ModelSchema): ModelSchema {
