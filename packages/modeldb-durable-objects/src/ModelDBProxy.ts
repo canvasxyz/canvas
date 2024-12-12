@@ -14,7 +14,7 @@ import * as json from "@ipld/dag-json"
 
 import { ModelDB } from "./ModelDB.js"
 import { randomUUID } from "./utils.js"
-import { UnstableDevWorker } from "wrangler"
+import { Unstable_DevWorker } from "wrangler"
 
 type Subscription = {
 	model: string
@@ -26,14 +26,14 @@ type Subscription = {
 // A mock ModelDB that proxies requests to a Durable Objects via a ModelDBProxyWorker.
 // Use this for testing only, it makes extra requests to fetch subscriptions.
 export class ModelDBProxy extends AbstractModelDB {
-	worker: UnstableDevWorker
+	worker: Unstable_DevWorker
 	baseUrl: string
 	initialized: boolean
 	uuid: string
 
 	subscriptions: Map<number, Subscription>
 
-	constructor(worker: UnstableDevWorker, models: ModelSchema, baseUrl?: string, uuid?: string) {
+	constructor(worker: Unstable_DevWorker, models: ModelSchema, baseUrl?: string, uuid?: string) {
 		super(parseConfig(models))
 
 		this.worker = worker

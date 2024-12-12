@@ -168,6 +168,13 @@ export class Canvas<
 			} while (resultCount > 0)
 		}
 
+		app.addEventListener("message", (event) =>{
+			const message = event.detail
+			if (message.message.payload.type !== "action") {
+				return
+			}
+		})
+
 		return app
 	}
 

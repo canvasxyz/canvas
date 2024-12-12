@@ -11,7 +11,6 @@ import { toString } from "uint8arrays"
 import { PoolConfig } from "pg"
 
 import { unstable_dev } from "wrangler"
-import type { UnstableDevWorker } from "wrangler"
 
 import { Key, Node } from "@canvas-js/okra"
 

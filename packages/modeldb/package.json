@@ -24,7 +24,7 @@
 		"nanoid": "^5.0.7",
 		"puppeteer": "^23.4.1",
 		"vite": "^5.4.8",
-		"wrangler": "^3.78.12"
+		"wrangler": "^3.95.0"
 	},
 	"dependencies": {
 		"@canvas-js/utils": "0.13.6",

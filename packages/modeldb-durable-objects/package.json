@@ -19,6 +19,6 @@
 		"@ipld/dag-json": "^10.2.3",
 		"@types/better-sqlite3": "^7.6.10",
 		"better-sqlite3": "^11.0.0",
-		"wrangler": "^3.78.12"
+		"wrangler": "^3.95.0"
 	}
 }
