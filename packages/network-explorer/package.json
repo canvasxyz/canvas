@@ -1,7 +1,7 @@
 {
 	"name": "@canvas-js/network-explorer",
 	"type": "module",
-	"version": "0.13.7",
+	"version": "0.13.8-next.0",
 	"scripts": {
 		"dev": "npx vite",
 		"build": "npx vite build",
