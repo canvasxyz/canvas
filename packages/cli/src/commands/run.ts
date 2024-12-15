@@ -256,14 +256,14 @@ export async function handler(args: Args) {
 				// development package
 				const build = path.resolve(root, "node_modules/@canvas-js/network-explorer/dist")
 				assert(fs.existsSync(build), "Invalid directory for network explorer static files (build not found)")
-				api.use("/explorer", express.static(build))
+				api.use(args.static !== undefined ? "/explorer" : "/", express.static(build))
 			} else {
 				// installed package
 				const networkExplorer = path.resolve(packageDirectory, "node_modules/@canvas-js/network-explorer")
 				assert(fs.existsSync(networkExplorer), "Could not find network explorer package")
 				const build = path.resolve(networkExplorer, "dist")
 				assert(fs.existsSync(build), "Invalid directory for network explorer static files (build not found)")
-				api.use("/explorer", express.static(build))
+				api.use(args.static !== undefined ? "/explorer" : "/", express.static(build))
 			}
 		}
 
@@ -285,6 +285,11 @@ export async function handler(args: Args) {
 		const origin = `http://localhost:${args.port}`
 		if (args.static) {
 			console.log(`Serving static bundle: ${chalk.bold(origin)}`)
+		}
+		if (args.static && args["network-explorer"] !== undefined) {
+			console.log(`Serving network explorer: ${chalk.bold(origin)}/explorer`)
+		} else if (args["network-explorer"] !== undefined) {
+			console.log(`Serving network explorer: ${chalk.bold(origin)}`)
 		}
 
 		const wsAPI = `ws://localhost:${args.port}`
