@@ -1,5 +1,6 @@
 import {
 	AbstractModelDB,
+	ModelDBBackend,
 	Effect,
 	ModelSchema,
 	ModelValue,
@@ -58,6 +59,10 @@ export class ModelDBProxy extends AbstractModelDB {
 				}
 			})
 		})
+	}
+
+	public getType(): ModelDBBackend {
+		return "sqlite-durable-objects"
 	}
 
 	async proxyFetch<T>(call: string, args: any[]): Promise<T> {

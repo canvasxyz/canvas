@@ -4,6 +4,7 @@ import { assert, signalInvalidType } from "@canvas-js/utils"
 
 import {
 	AbstractModelDB,
+	ModelDBBackend,
 	Config,
 	Effect,
 	ModelValue,
@@ -57,6 +58,10 @@ export class ModelDB extends AbstractModelDB {
 	}
 
 	readonly #models: Record<string, ModelAPI> = {}
+
+	public getType(): ModelDBBackend {
+		return "idb"
+	}
 
 	private constructor(
 		public readonly db: IDBPDatabase,
