@@ -8,30 +8,30 @@ const tables = [
 		label: "$actions",
 		to: "/actions",
 	},
-	{
-		label: "$ancestors",
-		to: "/ancestors",
-	},
-	{
-		label: "$branch_merges",
-		to: "/branch_merges",
-	},
-	{
-		label: "$dids",
-		to: "/dids",
-	},
-	{
-		label: "$effects",
-		to: "/effects",
-	},
-	{
-		label: "$heads",
-		to: "/heads",
-	},
-	{
-		label: "$messages",
-		to: "/messages",
-	},
+	// {
+	// 	label: "$ancestors",
+	// 	to: "/ancestors",
+	// },
+	// {
+	// 	label: "$branch_merges",
+	// 	to: "/branch_merges",
+	// },
+	// {
+	// 	label: "$dids",
+	// 	to: "/dids",
+	// },
+	// {
+	// 	label: "$effects",
+	// 	to: "/effects",
+	// },
+	// {
+	// 	label: "$heads",
+	// 	to: "/heads",
+	// },
+	// {
+	// 	label: "$messages",
+	// 	to: "/messages",
+	// },
 	{
 		label: "$sessions",
 		to: "/sessions",

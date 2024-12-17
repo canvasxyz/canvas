@@ -3,7 +3,7 @@ import { BiChevronLeft, BiChevronRight, BiFilter, BiSidebar } from "react-icons/
 import { FaClockRotateLeft } from "react-icons/fa6"
 import { LuDownload, LuRefreshCw, LuSlidersHorizontal } from "react-icons/lu"
 
-export const TableToolbar = () => {
+export const TableToolbar = ({ responseTime }: { responseTime?: number }) => {
 	return (
 		<Flex style={{ borderBottom: "1px solid var(--gray-3)" }} align="center" gap="2" p="2">
 			<Button color="gray" variant="outline">
@@ -38,7 +38,7 @@ export const TableToolbar = () => {
 			</Button>
 
 			<Box ml="auto">
-				<Text>0 rows &bull; 8ms</Text>
+				<Text>0 rows &bull; {responseTime ? `${responseTime}ms` : "-"}</Text>
 			</Box>
 
 			<Flex>

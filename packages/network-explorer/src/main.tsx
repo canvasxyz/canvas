@@ -6,7 +6,7 @@ import { createHashRouter, RouterProvider } from "react-router-dom"
 
 import "./index.css"
 import { Sidebar } from "./Sidebar.js"
-import { Tables } from "./Tables.js"
+import { ActionsTable } from "./ActionsTable.js"
 
 const router = createHashRouter([
 	{
@@ -15,7 +15,7 @@ const router = createHashRouter([
 			<Theme>
 				<Flex height="calc(100vh - 1px)" direction="row">
 					<Sidebar />
-					<Tables />
+					<ActionsTable />
 				</Flex>
 			</Theme>
 		),
