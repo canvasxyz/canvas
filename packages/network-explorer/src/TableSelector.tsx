@@ -6,32 +6,37 @@ import { Flex, Link, Text } from "@radix-ui/themes"
 export const TableSelector = ({ iconType, label, to }: { iconType: IconType; label: string; to: string }) => {
 	const [isHovered, setIsHovered] = useState(false)
 
+	const fontSize = "2"
+
 	return (
 		<Link underline="none" asChild>
 			<NavLink to={to}>
 				{({ isActive }) => (
 					<Flex
-						mx="2"
-						my="2px"
 						p="2"
 						align="center"
-						gap="8px"
+						gap="2"
 						style={{
 							borderRadius: "8px",
 							cursor: "pointer",
 							userSelect: "none",
-							color: isActive ? "#006BCA" : "#60646C",
-							backgroundColor: isActive ? "#D5EFFF" : isHovered ? "#f2f0e9" : "transparent",
-							fontSize: "94%",
+							color: isActive ? "var(--gray-12)" : "var(--gray-11)",
+							backgroundColor: isActive ? "var(--gray-3)" : isHovered ? "var(--gray-2)" : "transparent",
 						}}
 						onMouseEnter={() => setIsHovered(true)}
 						onMouseLeave={() => setIsHovered(false)}
 					>
 						{iconType({
-							size: "1.5em",
-							style: { position: "relative", top: 0, marginLeft: "3px", opacity: isActive ? 1 : 0.8 },
+							style: {
+								fontSize: `var(--font-size-${fontSize})`,
+								position: "relative",
+								marginLeft: "3px",
+								opacity: isActive ? 1 : 0.8,
+							},
 						})}
-						<Text weight={isActive ? "bold" : "regular"}>{label}</Text>
+						<Text size={`${fontSize}`} weight="medium">
+							{label}
+						</Text>
 					</Flex>
 				)}
 			</NavLink>

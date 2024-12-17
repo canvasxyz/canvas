@@ -1,6 +1,7 @@
-import { Button, Flex, Grid, Text, TextArea } from "@radix-ui/themes"
-import { BiBug, BiCog, BiTable } from "react-icons/bi"
+import { Button, Flex, Grid, Text, TextField } from "@radix-ui/themes"
+import { BiBug, BiCog } from "react-icons/bi"
 import { TableSelector } from "./TableSelector.js"
+import { LuTable2 } from "react-icons/lu"
 
 const tables = [
 	{
@@ -39,12 +40,22 @@ const tables = [
 
 export const Sidebar = () => {
 	return (
-		<Flex width="340px" minWidth="340px" height="100%" overflow="hidden" position="relative" direction="column">
+		<Flex
+			width="340px"
+			minWidth="340px"
+			height="100%"
+			overflow="hidden"
+			position="relative"
+			direction="column"
+			p="2"
+			gap="2"
+			style={{ borderRight: "1px solid var(--gray-3)" }}
+		>
 			Network Explorer
-			<TextArea placeholder="Search tables" />
-			<Flex direction="column">
+			<TextField.Root size="2" placeholder="Search tables" />
+			<Flex direction="column" gap="1">
 				{tables.map(({ label, to }, key) => (
-					<TableSelector key={key} iconType={BiTable} label={label} to={to} />
+					<TableSelector key={key} iconType={LuTable2} label={label} to={to} />
 				))}
 			</Flex>
 			<Grid mt="auto" columns="2">
@@ -57,11 +68,11 @@ export const Sidebar = () => {
 				<Text weight="bold">Client Sync</Text>
 				<Text color="gray">0 connections</Text>
 			</Grid>
-			<Flex direction="row">
-				<Button>
+			<Flex direction="row" gap="2">
+				<Button color="gray" variant="outline">
 					<BiCog />
 				</Button>
-				<Button>
+				<Button color="gray" variant="outline">
 					<BiBug />
 				</Button>
 			</Flex>
