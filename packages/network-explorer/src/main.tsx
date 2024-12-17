@@ -1,25 +1,22 @@
-import { Container, Separator, Theme } from "@radix-ui/themes"
+import { Flex, Theme } from "@radix-ui/themes"
 import "@radix-ui/themes/styles.css"
 import React from "react"
 import ReactDOM from "react-dom/client"
-import { createHashRouter, Route, RouterProvider, Routes } from "react-router-dom"
+import { createHashRouter, RouterProvider } from "react-router-dom"
 
 import "./index.css"
-import HomePage from "./HomePage.js"
-import Navbar from "./components/Navbar.js"
+import { Sidebar } from "./Sidebar.js"
+import { Tables } from "./Tables.js"
 
 const router = createHashRouter([
 	{
 		path: "/*",
 		element: (
 			<Theme>
-				<Container>
-					<Navbar />
-					<Separator size="4" />
-					<Routes>
-						<Route path="/*" element={<HomePage />} />
-					</Routes>
-				</Container>
+				<Flex height="calc(100vh - 1px)" direction="row">
+					<Sidebar />
+					<Tables />
+				</Flex>
 			</Theme>
 		),
 	},
