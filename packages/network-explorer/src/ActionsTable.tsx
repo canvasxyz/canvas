@@ -1,35 +1,27 @@
 import useSWR from "swr"
 import { fetchAndIpldParseJson, Result } from "./utils.js"
 import { Action } from "@canvas-js/interfaces"
-import { Column, Table } from "./Table.js"
+import { Table } from "./Table.js"
+import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
 
-const ACTION_COLUMNS: Column[] = [
+const ACTION_COLUMNS = [
 	{
-		name: "did",
-		type: "string",
+		header: "did",
+		accessorKey: "message.payload.did",
 	},
 	{
-		name: "name",
-		type: "string",
+		header: "name",
+		accessorKey: "message.payload.name",
 	},
 	{
-		name: "type",
-		type: "string",
+		header: "type",
+		accessorKey: "message.payload.type",
 	},
 	{
-		name: "timestamp",
-		type: "number",
+		header: "timestamp",
+		accessorKey: "message.payload.context.timestamp",
 	},
 ]
-
-function flattenActions(data: Result<Action>[]) {
-	return data.map((action) => ({
-		did: action.message.payload.did,
-		name: action.message.payload.name,
-		type: action.message.payload.type,
-		timestamp: action.message.payload.context.timestamp,
-	}))
-}
 
 export const ActionsTable = () => {
 	// TODO: filters, sorting, pagination
@@ -38,7 +30,11 @@ export const ActionsTable = () => {
 		refreshInterval: 1000,
 	})
 
-	const rows = data ? flattenActions(data.content) : []
+	const tanStackTable = useReactTable({
+		columns: ACTION_COLUMNS,
+		data: data ? data.content : [],
+		getCoreRowModel: getCoreRowModel(),
+	})
 
-	return <Table rows={rows} columns={ACTION_COLUMNS} responseTime={data?.responseTime} />
+	return <Table tanStackTable={tanStackTable} responseTime={data?.responseTime} />
 }

@@ -1,13 +1,20 @@
 import { Box, Button, Checkbox, Flex, Text } from "@radix-ui/themes"
 import { TableToolbar } from "./TableToolbar.js"
 import { LuChevronsUpDown } from "react-icons/lu"
+import { flexRender, Table as TanStackTable } from "@tanstack/react-table"
 
 export type Column = {
 	name: string
 	type: "string" | "number"
 }
 
-export const Table = ({ rows, columns, responseTime }: { rows: any[]; columns: Column[]; responseTime?: number }) => {
+export const Table = ({
+	tanStackTable,
+	responseTime,
+}: {
+	tanStackTable: TanStackTable<any>
+	responseTime?: number
+}) => {
 	return (
 		<Flex direction="column" height="100%" flexGrow="1">
 			<TableToolbar responseTime={responseTime} />
@@ -15,45 +22,49 @@ export const Table = ({ rows, columns, responseTime }: { rows: any[]; columns: C
 			<Box flexGrow="1">
 				<table style={{ borderCollapse: "collapse" }}>
 					<thead>
-						<tr>
-							<th
-								style={{
-									borderWidth: "1px",
-									borderTopWidth: "0px",
-									borderLeftWidth: "0px",
-									borderColor: "var(--accent-3)",
-									borderStyle: "solid",
-								}}
-							>
-								<Flex align="center" p="1">
-									<Checkbox color="gray" />
-								</Flex>
-							</th>
-							{columns.map((column, index) => (
+						{tanStackTable.getHeaderGroups().map((headerGroup) => (
+							<tr>
 								<th
-									key={index}
 									style={{
 										borderWidth: "1px",
 										borderTopWidth: "0px",
+										borderLeftWidth: "0px",
 										borderColor: "var(--accent-3)",
 										borderStyle: "solid",
 									}}
 								>
-									<Flex gap="2" p="1">
-										<Text weight="medium">{column.name}</Text>
-										<Flex ml="auto" align="center">
-											<Button variant="soft" color="gray" size="1" style={{ padding: "4px" }}>
-												<LuChevronsUpDown style={{ fontSize: "var(--font-size-3)" }} />
-											</Button>
-										</Flex>
+									<Flex align="center" p="1">
+										<Checkbox color="gray" />
 									</Flex>
 								</th>
-							))}
-						</tr>
+								{headerGroup.headers.map((header) => (
+									<th
+										key={header.id}
+										style={{
+											borderWidth: "1px",
+											borderTopWidth: "0px",
+											borderColor: "var(--accent-3)",
+											borderStyle: "solid",
+										}}
+									>
+										<Flex gap="2" p="1">
+											<Text weight="medium">
+												{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+											</Text>
+											<Flex ml="auto" align="center">
+												<Button variant="soft" color="gray" size="1" style={{ padding: "4px" }}>
+													<LuChevronsUpDown style={{ fontSize: "var(--font-size-3)" }} />
+												</Button>
+											</Flex>
+										</Flex>
+									</th>
+								))}
+							</tr>
+						))}
 					</thead>
 					<tbody>
-						{(rows || []).map((action, index) => (
-							<tr key={index}>
+						{tanStackTable.getRowModel().rows.map((row) => (
+							<tr key={row.id}>
 								<td
 									style={{
 										borderWidth: "1px",
@@ -67,9 +78,9 @@ export const Table = ({ rows, columns, responseTime }: { rows: any[]; columns: C
 										<Checkbox color="gray" />
 									</Flex>
 								</td>
-								{columns.map((column, index) => (
+								{row.getVisibleCells().map((cell) => (
 									<td
-										key={index}
+										key={cell.id}
 										style={{
 											borderWidth: "1px",
 											borderTopWidth: "0px",
@@ -78,7 +89,7 @@ export const Table = ({ rows, columns, responseTime }: { rows: any[]; columns: C
 										}}
 									>
 										<Flex gap="2" p="1">
-											<Text>{(action as any)[column.name]}</Text>
+											{flexRender(cell.column.columnDef.cell, cell.getContext())}
 										</Flex>
 									</td>
 								))}
