@@ -2,6 +2,7 @@ import { assert, signalInvalidType } from "@canvas-js/utils"
 import { Awaitable } from "@canvas-js/interfaces"
 import {
 	AbstractModelDB,
+	ModelDBBackend,
 	parseConfig,
 	Effect,
 	ModelValue,
@@ -42,6 +43,10 @@ export class ModelDB extends AbstractModelDB {
 		for (const model of Object.values(this.models)) {
 			this.#models[model.name] = new ModelAPI(this.db, model)
 		}
+	}
+
+	public getType(): ModelDBBackend {
+		return "sqlite-durable-objects"
 	}
 
 	public async close() {

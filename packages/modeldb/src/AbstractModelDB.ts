@@ -13,6 +13,9 @@ type Subscription = {
 	callback: (results: ModelValue[] | ModelValueWithIncludes[]) => Awaitable<void>
 }
 
+export type ModelDBBackend =
+	"idb" | "postgres" | "sqlite-disk" | "sqlite-memory" | "sqlite-wasm" | "sqlite-expo" | "sqlite-durable-objects"
+
 export abstract class AbstractModelDB {
 	public readonly models: Record<string, Model>
 
@@ -26,6 +29,8 @@ export abstract class AbstractModelDB {
 			this.models[model.name] = model
 		}
 	}
+
+	abstract getType(): ModelDBBackend
 
 	abstract close(): Promise<void>
 

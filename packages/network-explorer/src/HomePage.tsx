@@ -1,5 +1,5 @@
 import { version } from "../package.json"
-import { BASE_URL, fetchAndIpldParseJson } from "./utils.js"
+import { fetchAndIpldParseJson } from "./utils.js"
 import { Card, Flex, Grid, TabNav, Text } from "@radix-ui/themes"
 import ActionsTable from "./ActionsTable.js"
 import SessionsTable from "./SessionsTable.js"
@@ -8,7 +8,7 @@ import { Link, Navigate, Route, Routes, useLocation, useResolvedPath } from "rea
 import useSWR from "swr"
 
 function HomePage() {
-	const { data: appInfoData } = useSWR(`/api/`, fetchAndIpldParseJson<{ topic: string }>)
+	const { data: appInfoData } = useSWR(`/api/`, fetchAndIpldParseJson<{ topic: string; database: string }>)
 	const { data: actionCountData } = useSWR(`/api/actions/count`, fetchAndIpldParseJson<{ count: number }>, {
 		refreshInterval: 1000,
 	})
@@ -38,12 +38,12 @@ function HomePage() {
 							<Text weight="medium">Online, running v{version}</Text>
 						</Flex>
 						<Flex gap="2">
-							<Text weight="bold">URL:</Text>
-							<Text weight="medium">{BASE_URL}</Text>
-						</Flex>
-						<Flex gap="2">
 							<Text weight="bold">Unique addresses:</Text>
 							<Text weight="medium">{userCountData ? userCountData.count : "-"}</Text>
+						</Flex>
+						<Flex gap="2">
+							<Text weight="bold">Database:</Text>
+							<Text weight="medium">{appInfoData ? appInfoData.database : "-"}</Text>
 						</Flex>
 					</Flex>
 				</Grid>

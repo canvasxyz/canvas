@@ -33,7 +33,7 @@ if (globalThis.navigator === undefined) {
 	globalThis.navigator.locks = locks
 }
 
-const { POSTGRES_HOST, POSTGRES_PORT } = process.env
+const { POSTGRES_HOST, POSTGRES_PORT, CF_WORKER } = process.env
 
 function getPgConfig(): string | PoolConfig {
 	if (POSTGRES_HOST && POSTGRES_PORT) {
@@ -49,9 +49,11 @@ function getPgConfig(): string | PoolConfig {
 	}
 }
 
-const worker = await unstable_dev("test/worker.ts", {
-	experimental: { disableExperimentalWarning: true },
-})
+const worker = CF_WORKER
+	? await unstable_dev("test/worker.ts", {
+			experimental: { disableExperimentalWarning: true },
+		})
+	: null
 
 export const testPlatforms = (
 	name: string,
@@ -105,7 +107,7 @@ export const testPlatforms = (
 		})
 	}
 
-	if (platforms.do) {
+	if (platforms.do && worker !== null) {
 		test(`Durable Objects - ${name}`, macro, async (t, init) => {
 			const log = await GossipLogDurableObjects.open({ ...init, worker, useTestProxy: true })
 			t.teardown(() => log.close())
@@ -122,7 +124,7 @@ export const testPlatforms = (
 	}
 }
 
-test.after.always(() => worker.stop())
+test.after.always(() => worker?.stop())
 
 export async function expectLogEntries<T>(
 	t: ExecutionContext<unknown>,

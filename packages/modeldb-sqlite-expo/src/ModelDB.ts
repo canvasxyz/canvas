@@ -5,6 +5,7 @@ import { assert, signalInvalidType } from "@canvas-js/utils"
 
 import {
 	AbstractModelDB,
+	ModelDBBackend,
 	parseConfig,
 	Effect,
 	ModelValue,
@@ -62,6 +63,10 @@ export class ModelDB extends AbstractModelDB {
 					}
 				}
 			})
+	}
+
+	public getType(): ModelDBBackend {
+		return "sqlite-expo"
 	}
 
 	public async close() {

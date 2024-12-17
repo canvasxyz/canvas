@@ -4,6 +4,7 @@ import { assert, signalInvalidType } from "@canvas-js/utils"
 
 import {
 	AbstractModelDB,
+	ModelDBBackend,
 	parseConfig,
 	Effect,
 	ModelValue,
@@ -48,6 +49,10 @@ export class ModelDB extends AbstractModelDB {
 			}
 		})
 	}
+
+	public getType(): ModelDBBackend {
+		return this.db.memory ? "sqlite-memory" : "sqlite-disk"
+	}	
 
 	public async close() {
 		this.log("closing")

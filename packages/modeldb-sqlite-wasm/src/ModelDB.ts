@@ -3,6 +3,7 @@ import * as Comlink from "comlink"
 import sqlite3InitModule from "@sqlite.org/sqlite-wasm"
 import {
 	AbstractModelDB,
+	ModelDBBackend,
 	parseConfig,
 	Effect,
 	ModelValue,
@@ -54,6 +55,10 @@ export class ModelDB extends AbstractModelDB {
 		super(config)
 		this.worker = worker
 		this.wrappedDB = wrappedDB
+	}
+
+	public getType(): ModelDBBackend {
+		return "sqlite-wasm"
 	}
 
 	public async close() {

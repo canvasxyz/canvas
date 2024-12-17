@@ -65,6 +65,7 @@ export type ApplicationData = {
 		listen?: string[]
 		announce?: string[]
 	}
+	database: string
 	topic: string
 	models: Record<string, Model>
 	actions: string[]
@@ -168,7 +169,7 @@ export class Canvas<
 			} while (resultCount > 0)
 		}
 
-		app.addEventListener("message", (event) =>{
+		app.addEventListener("message", (event) => {
 			const message = event.detail
 			if (message.message.payload.type !== "action") {
 				return
@@ -344,6 +345,7 @@ export class Canvas<
 				listen: this.networkConfig?.listen,
 				announce: this.networkConfig?.announce,
 			},
+			database: this.db.getType(),
 			topic: this.topic,
 			models: models,
 			actions: Object.keys(this.actions),

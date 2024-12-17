@@ -4,6 +4,7 @@ import { assert, signalInvalidType } from "@canvas-js/utils"
 
 import {
 	AbstractModelDB,
+	ModelDBBackend,
 	Config,
 	Effect,
 	ModelValue,
@@ -74,6 +75,10 @@ export class ModelDB extends AbstractModelDB {
 				throw e
 			}
 		}
+	}
+
+	public getType(): ModelDBBackend {
+		return "postgres"
 	}
 
 	public async close() {
