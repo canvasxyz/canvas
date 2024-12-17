@@ -1,7 +1,8 @@
-import { Button, Flex, Grid, Text, TextField } from "@radix-ui/themes"
+import { Button, Flex, TextField } from "@radix-ui/themes"
 import { BiBug, BiCog } from "react-icons/bi"
 import { TableSelector } from "./TableSelector.js"
 import { LuTable2 } from "react-icons/lu"
+import { ApplicationInfo } from "./ApplicationInfo.js"
 
 const tables = [
 	{
@@ -58,16 +59,7 @@ export const Sidebar = () => {
 					<TableSelector key={key} iconType={LuTable2} label={label} to={to} />
 				))}
 			</Flex>
-			<Grid mt="auto" columns="2">
-				<Text weight="bold">Topic</Text>
-				<Text color="gray">common.xyz</Text>
-				<Text weight="bold">Canvas Node</Text>
-				<Text color="gray">v0.12.6</Text>
-				<Text weight="bold">Server Sync</Text>
-				<Text color="gray">3 connections</Text>
-				<Text weight="bold">Client Sync</Text>
-				<Text color="gray">0 connections</Text>
-			</Grid>
+			<ApplicationInfo />
 			<Flex direction="row" gap="2">
 				<Button color="gray" variant="outline">
 					<BiCog />
