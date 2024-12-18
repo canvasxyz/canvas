@@ -23,7 +23,7 @@ export const Table = ({
 				<table style={{ borderCollapse: "collapse" }}>
 					<thead>
 						{tanStackTable.getHeaderGroups().map((headerGroup) => (
-							<tr>
+							<tr key={headerGroup.id}>
 								<th
 									style={{
 										borderWidth: "1px",
