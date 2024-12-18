@@ -90,8 +90,8 @@ export class Canvas<
 			return signer.scheme.verify(signature, message)
 		}
 
-		const runtime = await createRuntime(topic, signers, contract, { runtimeMemoryLimit })
-		const gossipTopic = config.snapshot ? `topic#${hashSnapshot(config.snapshot)}` : topic // topic for peering
+		const runtime = createRuntime(topic, signers, contract, { runtimeMemoryLimit })
+		const gossipTopic = config.snapshot ? `${topic}#${hashSnapshot(config.snapshot)}` : topic // topic for peering
 		const messageLog = await target.openGossipLog(
 			{ topic: gossipTopic, path, clear: config.reset },
 			{
@@ -102,6 +102,14 @@ export class Canvas<
 				schema: { ...config.schema, ...runtime.schema },
 			},
 		)
+
+		// TODO: query existing entries in $models to determine if migrations are necessary
+		for (const model of runtime.models) {
+			const existingModel = await messageLog.db.get<{ name: string; model: Model }>("$models", model.name)
+			if (existingModel === null) {
+				await messageLog.db.set("$models", { name: model.name, model })
+			}
+		}
 
 		const db = messageLog.db
 		runtime.db = db

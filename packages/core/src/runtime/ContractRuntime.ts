@@ -8,15 +8,15 @@ import { assert, mapValues } from "@canvas-js/utils"
 import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
 
 export class ContractRuntime extends AbstractRuntime {
-	public static async init(
+	public static init(
 		topic: string,
 		signers: SignerCache,
 		contract: string,
 		options: { runtimeMemoryLimit?: number } = {},
-	): Promise<ContractRuntime> {
+	): ContractRuntime {
 		const { runtimeMemoryLimit } = options
 
-		const vm = await VM.initialize({ runtimeMemoryLimit })
+		const vm = new VM({ runtimeMemoryLimit })
 
 		const {
 			contract: contractHandle,
@@ -45,10 +45,8 @@ export class ContractRuntime extends AbstractRuntime {
 			return handle.consume(vm.cache)
 		})
 
-		const modelSchema = mapValues(modelsUnwrap, (handle) => handle.consume(vm.context.dump)) as ModelSchema
-
-		const schema = AbstractRuntime.getModelSchema(modelSchema)
-		return new ContractRuntime(topic, signers, schema, vm, actions)
+		const models = mapValues(modelsUnwrap, (handle) => handle.consume(vm.context.dump)) as ModelSchema
+		return new ContractRuntime(topic, signers, vm, models, actions)
 	}
 
 	readonly #databaseAPI: QuickJSHandle
@@ -58,11 +56,11 @@ export class ContractRuntime extends AbstractRuntime {
 	constructor(
 		public readonly topic: string,
 		public readonly signers: SignerCache,
-		public readonly schema: ModelSchema,
 		public readonly vm: VM,
+		models: ModelSchema,
 		public readonly actions: Record<string, QuickJSHandle>,
 	) {
-		super()
+		super(models)
 		this.#databaseAPI = vm
 			.wrapObject({
 				get: vm.wrapFunction(async (model, key) => {

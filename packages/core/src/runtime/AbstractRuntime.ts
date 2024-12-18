@@ -11,6 +11,8 @@ import {
 	mergeModelValues,
 	validateModelValue,
 	updateModelValues,
+	Model,
+	parseConfig,
 } from "@canvas-js/modeldb"
 import { GossipLogConsumer, MAX_MESSAGE_ID, MIN_MESSAGE_ID, AbstractGossipLog } from "@canvas-js/gossiplog"
 import { assert, mapValues, signalInvalidType } from "@canvas-js/utils"
@@ -122,6 +124,10 @@ export abstract class AbstractRuntime {
 		$dids: { did: "primary" },
 	} satisfies ModelSchema
 
+	protected static schemaModel = {
+		$models: { name: "primary", model: "json" },
+	} satisfies ModelSchema
+
 	protected static getModelSchema(schema: ModelSchema): ModelSchema {
 		return {
 			...schema,
@@ -129,18 +135,25 @@ export abstract class AbstractRuntime {
 			...AbstractRuntime.actionsModel,
 			...AbstractRuntime.effectsModel,
 			...AbstractRuntime.usersModel,
+			...AbstractRuntime.schemaModel,
 		}
 	}
 
 	public abstract readonly topic: string
 	public abstract readonly signers: SignerCache
-	public abstract readonly schema: ModelSchema
 	public abstract readonly actionNames: string[]
+
+	public readonly models: Model[]
+	public readonly schema: ModelSchema
 
 	protected readonly log = logger("canvas:runtime")
 	#db: AbstractModelDB | null = null
 
-	protected constructor() {}
+	protected constructor(modelSchema: ModelSchema) {
+		const { models } = parseConfig(modelSchema)
+		this.models = models
+		this.schema = AbstractRuntime.getModelSchema(modelSchema)
+	}
 
 	protected abstract execute(context: ExecutionContext): Promise<void | any>
 
@@ -444,10 +457,10 @@ export abstract class AbstractRuntime {
 
 	private async getLatestAncestorWrite(context: ExecutionContext, recordId: string): Promise<WriteRecord | null> {
 		// TODO: what we really need is to find a min-ID winner of the most recent set of mutually concurrent
-		// writes *WITHIN* the transitive ancestor set of the current execution context,
-		// is actually a new kind of search that we havne't done before.
+		// writes *WITHIN* the transitive ancestor set of the current execution context.
+		// this is actually a new kind of search that we havne't done before.
 
-		// For now we just find the max-ID ancestor write which is deterministic but not quite correct.
+		// for now we just find the max-ID ancestor write which is deterministic but not quite correct.
 
 		const minKey = `${recordId}:${MIN_MESSAGE_ID}`
 		const maxKey = `${recordId}:${context.id}`

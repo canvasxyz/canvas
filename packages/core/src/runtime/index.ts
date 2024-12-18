@@ -7,12 +7,12 @@ import { FunctionRuntime } from "./FunctionRuntime.js"
 
 export { AbstractRuntime as Runtime } from "./AbstractRuntime.js"
 
-export async function createRuntime(
+export function createRuntime(
 	topic: string,
 	signers: SignerCache,
 	contract: string | Contract<any>,
 	options: { runtimeMemoryLimit?: number } = {},
-): Promise<AbstractRuntime> {
+): AbstractRuntime {
 	if (typeof contract === "string") {
 		return ContractRuntime.init(topic, signers, contract, options)
 	} else {

@@ -6,16 +6,15 @@ import { ActionContext, ActionImplementation, Contract, ModelAPI } from "../type
 import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
 
 export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntime {
-	public static async init<ModelsT extends ModelSchema>(
+	public static init<ModelsT extends ModelSchema>(
 		topic: string,
 		signers: SignerCache,
 		contract: Contract<ModelsT>,
-	): Promise<FunctionRuntime<ModelsT>> {
+	): FunctionRuntime<ModelsT> {
 		assert(contract.actions !== undefined, "contract initialized without actions")
 		assert(contract.models !== undefined, "contract initialized without models")
 
-		const schema = AbstractRuntime.getModelSchema(contract.models)
-		return new FunctionRuntime(topic, signers, schema, contract.actions)
+		return new FunctionRuntime(topic, signers, contract.models, contract.actions)
 	}
 
 	#context: ExecutionContext | null = null
@@ -24,11 +23,10 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 	constructor(
 		public readonly topic: string,
 		public readonly signers: SignerCache,
-		public readonly schema: ModelSchema,
+		models: ModelSchema,
 		public readonly actions: Record<string, ActionImplementation<ModelsT, any>>,
 	) {
-		super()
-
+		super(models)
 		this.#db = {
 			get: async <T extends keyof DeriveModelTypes<ModelsT> & string>(model: T, key: string) => {
 				assert(this.#context !== null, "expected this.#context !== null")
