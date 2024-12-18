@@ -3,7 +3,15 @@ import { BiChevronLeft, BiChevronRight, BiFilter, BiSidebar } from "react-icons/
 import { FaClockRotateLeft } from "react-icons/fa6"
 import { LuDownload, LuRefreshCw, LuSlidersHorizontal } from "react-icons/lu"
 
-export const TableToolbar = ({ responseTime }: { responseTime?: number }) => {
+export const TableToolbar = ({
+	responseTime,
+	entriesPerPage,
+	setEntriesPerPage,
+}: {
+	responseTime?: number
+	entriesPerPage: number
+	setEntriesPerPage: (entriesPerPage: number) => void
+}) => {
 	return (
 		<Flex style={{ borderBottom: "1px solid var(--gray-3)" }} align="center" gap="2" p="2">
 			<Button color="gray" variant="outline">
@@ -45,8 +53,18 @@ export const TableToolbar = ({ responseTime }: { responseTime?: number }) => {
 				<Button color="gray" variant="outline" style={{ borderTopRightRadius: "0px", borderBottomRightRadius: "0px" }}>
 					<BiChevronLeft />
 				</Button>
-				<TextField.Root style={{ borderRadius: "0px", width: "40px" }} />
-				<TextField.Root style={{ borderRadius: "0px", width: "40px" }} />
+				<TextField.Root
+					value={entriesPerPage}
+					onChange={(e) => {
+						setEntriesPerPage(Number(e.target.value))
+					}}
+					style={{ borderRadius: "0px", width: "40px" }}
+				/>
+				{/* TODO: display page offset? */}
+				{/* <TextField.Root
+					value={}
+					style={{ borderRadius: "0px", width: "40px" }}
+				/> */}
 				<Button color="gray" variant="outline" style={{ borderTopLeftRadius: "0px", borderBottomLeftRadius: "0px" }}>
 					<BiChevronRight />
 				</Button>

@@ -11,13 +11,17 @@ export type Column = {
 export const Table = ({
 	tanStackTable,
 	responseTime,
+	entriesPerPage,
+	setEntriesPerPage,
 }: {
 	tanStackTable: TanStackTable<any>
 	responseTime?: number
+	entriesPerPage: number
+	setEntriesPerPage: (entriesPerPage: number) => void
 }) => {
 	return (
 		<Flex direction="column" height="100%" flexGrow="1">
-			<TableToolbar responseTime={responseTime} />
+			<TableToolbar entriesPerPage={entriesPerPage} setEntriesPerPage={setEntriesPerPage} responseTime={responseTime} />
 
 			<Box flexGrow="1">
 				<table style={{ borderCollapse: "collapse" }}>

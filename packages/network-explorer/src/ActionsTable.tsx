@@ -1,3 +1,4 @@
+import { useState } from "react"
 import useSWR from "swr"
 import { fetchAndIpldParseJson, Result } from "./utils.js"
 import { Action } from "@canvas-js/interfaces"
@@ -20,17 +21,35 @@ const ACTION_COLUMNS = [
 ]
 
 export const ActionsTable = () => {
-	// TODO: filters, sorting, pagination
-	const params = ""
+	const [entriesPerPage, setEntriesPerPage] = useState(10)
+	const params = new URLSearchParams({
+		limit: (entriesPerPage + 1).toString(),
+		order: "desc",
+	})
+	// TODO: cursor pagination
+
 	const { data } = useSWR(`/api/actions?${params.toString()}`, fetchAndIpldParseJson<Result<Action>[]>, {
+		refreshInterval: 1000,
+	})
+
+	const { data: countData } = useSWR(`/api/actions/count`, fetchAndIpldParseJson<{ count: number }>, {
 		refreshInterval: 1000,
 	})
 
 	const tanStackTable = useReactTable({
 		columns: ACTION_COLUMNS,
-		data: data ? data.content : [],
+		data: data ? data.content.slice(0, entriesPerPage) : [],
 		getCoreRowModel: getCoreRowModel(),
+		manualPagination: true,
+		rowCount: countData ? countData.content.count : 0,
 	})
 
-	return <Table tanStackTable={tanStackTable} responseTime={data?.responseTime} />
+	return (
+		<Table
+			entriesPerPage={entriesPerPage}
+			setEntriesPerPage={setEntriesPerPage}
+			tanStackTable={tanStackTable}
+			responseTime={data?.responseTime}
+		/>
+	)
 }
