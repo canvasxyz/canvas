@@ -9,8 +9,6 @@ export const ApplicationInfo = () => {
 		refreshInterval: 1000,
 	})
 
-	console.log(data)
-
 	return (
 		<Grid mt="auto" columns="2">
 			<Text weight="bold">Topic</Text>
