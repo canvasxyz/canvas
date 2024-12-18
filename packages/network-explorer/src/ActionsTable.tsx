@@ -3,9 +3,9 @@ import useSWR from "swr"
 import { fetchAndIpldParseJson, Result } from "./utils.js"
 import { Action } from "@canvas-js/interfaces"
 import { Table } from "./Table.js"
-import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
+import { ColumnDef, getCoreRowModel, useReactTable } from "@tanstack/react-table"
 
-const ACTION_COLUMNS = [
+const defaultColumns: ColumnDef<Result<Action>>[] = [
 	{
 		header: "did",
 		accessorKey: "message.payload.did",
@@ -36,12 +36,19 @@ export const ActionsTable = () => {
 		refreshInterval: 1000,
 	})
 
+	const [columns] = useState<typeof defaultColumns>(() => [...defaultColumns])
+	const [columnVisibility, setColumnVisibility] = useState({})
+
 	const tanStackTable = useReactTable({
-		columns: ACTION_COLUMNS,
+		columns,
 		data: data ? data.content.slice(0, entriesPerPage) : [],
 		getCoreRowModel: getCoreRowModel(),
 		manualPagination: true,
 		rowCount: countData ? countData.content.count : 0,
+		state: {
+			columnVisibility,
+		},
+		onColumnVisibilityChange: setColumnVisibility,
 	})
 
 	return (

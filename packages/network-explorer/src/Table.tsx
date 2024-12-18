@@ -21,7 +21,12 @@ export const Table = ({
 }) => {
 	return (
 		<Flex direction="column" height="100%" flexGrow="1">
-			<TableToolbar entriesPerPage={entriesPerPage} setEntriesPerPage={setEntriesPerPage} responseTime={responseTime} />
+			<TableToolbar
+				tanStackTable={tanStackTable}
+				entriesPerPage={entriesPerPage}
+				setEntriesPerPage={setEntriesPerPage}
+				responseTime={responseTime}
+			/>
 
 			<Box flexGrow="1">
 				<table style={{ borderCollapse: "collapse" }}>

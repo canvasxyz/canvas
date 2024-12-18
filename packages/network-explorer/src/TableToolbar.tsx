@@ -1,13 +1,17 @@
-import { Box, Button, Flex, Text, TextField } from "@radix-ui/themes"
+import { Box, Button, DropdownMenu, Flex, Text, TextField } from "@radix-ui/themes"
+import { Table as TanStackTable } from "@tanstack/react-table"
 import { BiChevronLeft, BiChevronRight, BiFilter, BiSidebar } from "react-icons/bi"
 import { FaClockRotateLeft } from "react-icons/fa6"
 import { LuDownload, LuRefreshCw, LuSlidersHorizontal } from "react-icons/lu"
+import { ClickableChecklistItem } from "./ClickableChecklistItem.js"
 
 export const TableToolbar = ({
+	tanStackTable,
 	responseTime,
 	entriesPerPage,
 	setEntriesPerPage,
 }: {
+	tanStackTable: TanStackTable<any>
 	responseTime?: number
 	entriesPerPage: number
 	setEntriesPerPage: (entriesPerPage: number) => void
@@ -36,10 +40,26 @@ export const TableToolbar = ({
 				Filters
 			</Button>
 
-			<Button color="gray" variant="outline">
-				<LuSlidersHorizontal />
-				Columns
-			</Button>
+			<DropdownMenu.Root>
+				<DropdownMenu.Trigger>
+					<Button color="gray" variant="outline">
+						<LuSlidersHorizontal />
+						Columns
+					</Button>
+				</DropdownMenu.Trigger>
+				<DropdownMenu.Content>
+					{" "}
+					{tanStackTable.getAllLeafColumns().map((column) => (
+						<ClickableChecklistItem
+							key={column.id}
+							checked={column.getIsVisible()}
+							onCheckedChange={column.toggleVisibility}
+						>
+							{column.columnDef.header?.toString()}
+						</ClickableChecklistItem>
+					))}
+				</DropdownMenu.Content>
+			</DropdownMenu.Root>
 
 			<Button color="gray" variant="outline">
 				Add record
