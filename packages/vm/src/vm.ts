@@ -7,7 +7,6 @@ import { Awaitable } from "@canvas-js/interfaces"
 import { JSFunction, JSFunctionAsync, JSValue, assert, mapValues } from "@canvas-js/utils"
 
 import { VMError } from "./error.js"
-import { Awaitable } from "@canvas-js/interfaces"
 
 const quickJS = await getQuickJS()
 
