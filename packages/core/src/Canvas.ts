@@ -103,12 +103,13 @@ export class Canvas<
 			},
 		)
 
-		// TODO: query existing entries in $models to determine if migrations are necessary
 		for (const model of runtime.models) {
 			const existingModel = await messageLog.db.get<{ name: string; model: Model }>("$models", model.name)
 			if (existingModel === null) {
 				await messageLog.db.set("$models", { name: model.name, model })
 			}
+
+			// TODO: check for missing properties and alter the database schema if necessary
 		}
 
 		const db = messageLog.db
@@ -340,7 +341,7 @@ export class Canvas<
 	public async stop() {
 		this.controller.abort()
 		await this.messageLog.close()
-		await this.runtime.close()
+		this.runtime.close()
 		this.log("stopped")
 		this.dispatchEvent(new Event("stop"))
 	}

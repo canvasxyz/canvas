@@ -166,9 +166,7 @@ export abstract class AbstractRuntime {
 		this.#db = db
 	}
 
-	public async close() {
-		await this.db.close()
-	}
+	public abstract close(): void
 
 	public getConsumer(): GossipLogConsumer<Action | Session | Snapshot> {
 		const handleSession = this.handleSession.bind(this)

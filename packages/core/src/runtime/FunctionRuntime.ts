@@ -64,6 +64,8 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 		}
 	}
 
+	public close() {}
+
 	public get actionNames() {
 		return Object.keys(this.actions)
 	}

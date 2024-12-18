@@ -103,12 +103,8 @@ export class ContractRuntime extends AbstractRuntime {
 			.consume(vm.cache)
 	}
 
-	public async close() {
-		try {
-			await super.close()
-		} finally {
-			this.vm.dispose()
-		}
+	public close() {
+		this.vm.dispose()
 	}
 
 	public get actionNames() {
