@@ -14,10 +14,6 @@ const ACTION_COLUMNS = [
 		accessorKey: "message.payload.name",
 	},
 	{
-		header: "type",
-		accessorKey: "message.payload.type",
-	},
-	{
 		header: "timestamp",
 		accessorKey: "message.payload.context.timestamp",
 	},
