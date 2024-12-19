@@ -16,6 +16,7 @@ export const Table = <T,>({
 	responseTime,
 	entriesPerPage,
 	setEntriesPerPage,
+	doRefresh,
 }: {
 	data: T[]
 	rowCount: number
@@ -23,6 +24,7 @@ export const Table = <T,>({
 	responseTime?: number
 	entriesPerPage: number
 	setEntriesPerPage: (entriesPerPage: number) => void
+	doRefresh: () => void
 }) => {
 	const [columns] = useState<typeof defaultColumns>(() => [...defaultColumns])
 	const [columnVisibility, setColumnVisibility] = useState({})
@@ -46,6 +48,7 @@ export const Table = <T,>({
 				entriesPerPage={entriesPerPage}
 				setEntriesPerPage={setEntriesPerPage}
 				responseTime={responseTime}
+				doRefresh={doRefresh}
 			/>
 			<Box overflowX="scroll">
 				<table style={{ borderCollapse: "collapse", display: "grid" }}>

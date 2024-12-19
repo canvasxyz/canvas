@@ -7,11 +7,13 @@ import { ClickableChecklistItem } from "./ClickableChecklistItem.js"
 
 export const TableToolbar = ({
 	tanStackTable,
+	doRefresh,
 	responseTime,
 	entriesPerPage,
 	setEntriesPerPage,
 }: {
 	tanStackTable: TanStackTable<any>
+	doRefresh: () => void
 	responseTime?: number
 	entriesPerPage: number
 	setEntriesPerPage: (entriesPerPage: number) => void
@@ -117,7 +119,7 @@ export const TableToolbar = ({
 				</Button>
 			</Flex>
 
-			<Button color="gray" variant="outline">
+			<Button color="gray" variant="outline" onClick={() => doRefresh()}>
 				<LuRefreshCw />
 			</Button>
 

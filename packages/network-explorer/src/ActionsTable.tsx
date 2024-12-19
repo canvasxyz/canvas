@@ -30,9 +30,13 @@ export const ActionsTable = () => {
 	})
 	// TODO: cursor pagination
 
-	const { data } = useSWR(`/api/actions?${params.toString()}`, fetchAndIpldParseJson<Result<Action>[]>, {
-		refreshInterval: 1000,
-	})
+	const { data, mutate: doRefresh } = useSWR(
+		`/api/actions?${params.toString()}`,
+		fetchAndIpldParseJson<Result<Action>[]>,
+		{
+			refreshInterval: 1000,
+		},
+	)
 
 	const { data: countData } = useSWR(`/api/actions/count`, fetchAndIpldParseJson<{ count: number }>, {
 		refreshInterval: 1000,
@@ -46,6 +50,7 @@ export const ActionsTable = () => {
 			entriesPerPage={entriesPerPage}
 			setEntriesPerPage={setEntriesPerPage}
 			responseTime={data?.responseTime}
+			doRefresh={doRefresh}
 		/>
 	)
 }

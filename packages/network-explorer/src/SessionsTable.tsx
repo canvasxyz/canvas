@@ -31,9 +31,13 @@ export const SessionsTable = () => {
 	})
 	// TODO: cursor pagination
 
-	const { data } = useSWR(`/api/sessions?${params.toString()}`, fetchAndIpldParseJson<Result<Action>[]>, {
-		refreshInterval: 1000,
-	})
+	const { data, mutate: doRefresh } = useSWR(
+		`/api/sessions?${params.toString()}`,
+		fetchAndIpldParseJson<Result<Action>[]>,
+		{
+			refreshInterval: 1000,
+		},
+	)
 
 	const { data: countData } = useSWR(`/api/sessions/count`, fetchAndIpldParseJson<{ count: number }>, {
 		refreshInterval: 1000,
@@ -47,6 +51,7 @@ export const SessionsTable = () => {
 			entriesPerPage={entriesPerPage}
 			setEntriesPerPage={setEntriesPerPage}
 			responseTime={data?.responseTime}
+			doRefresh={doRefresh}
 		/>
 	)
 }
