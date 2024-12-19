@@ -10,29 +10,30 @@ const defaultColumns: ColumnDef<Result<Action>>[] = [
 		header: "did",
 		accessorKey: "message.payload.did",
 		size: 580,
+		enableSorting: false,
 	},
 	{
 		header: "publicKey",
 		accessorKey: "message.payload.publicKey",
 		size: 580,
+		enableSorting: false,
 	},
 
 	{
 		header: "timestamp",
 		accessorKey: "message.payload.context.timestamp",
+		enableSorting: false,
 	},
 ]
 
 export const SessionsTable = () => {
 	const [entriesPerPage, setEntriesPerPage] = useState(20)
-	const params = new URLSearchParams({
+	const params: Record<string, string> = {
 		limit: (entriesPerPage + 1).toString(),
-		order: "desc",
-	})
-	// TODO: cursor pagination
+	}
 
 	const { data, mutate: doRefresh } = useSWR(
-		`/api/sessions?${params.toString()}`,
+		`/api/sessions?${new URLSearchParams(params).toString()}`,
 		fetchAndIpldParseJson<Result<Action>[]>,
 		{
 			refreshInterval: 1000,

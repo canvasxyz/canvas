@@ -8,6 +8,7 @@ import "./index.css"
 import { Sidebar } from "./Sidebar.js"
 import { ActionsTable } from "./ActionsTable.js"
 import { SessionsTable } from "./SessionsTable.js"
+import { MessagesTable } from "./MessagesTable.js"
 
 const router = createHashRouter([
 	{
@@ -31,6 +32,14 @@ const router = createHashRouter([
 							element={
 								<Suspense>
 									<SessionsTable />
+								</Suspense>
+							}
+						/>
+						<Route
+							path="/messages"
+							element={
+								<Suspense>
+									<MessagesTable />
 								</Suspense>
 							}
 						/>

@@ -29,10 +29,10 @@ const tables = [
 	// 	label: "$heads",
 	// 	to: "/heads",
 	// },
-	// {
-	// 	label: "$messages",
-	// 	to: "/messages",
-	// },
+	{
+		label: "$messages",
+		to: "/messages",
+	},
 	{
 		label: "$sessions",
 		to: "/sessions",
