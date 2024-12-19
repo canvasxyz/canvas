@@ -74,11 +74,12 @@ export const Table = <T,>({
 											width: header.getSize(),
 											borderWidth: "1px",
 											borderTopWidth: "0px",
+											borderLeftWidth: "0px",
 											borderColor: "var(--accent-3)",
 											borderStyle: "solid",
 										}}
 									>
-										<Flex gap="2" p="1">
+										<Flex width="100%" gap="2" p="1">
 											<Text weight="medium">
 												{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
 											</Text>
@@ -124,6 +125,7 @@ export const Table = <T,>({
 											style={{
 												borderWidth: "1px",
 												borderTopWidth: "0px",
+												borderLeftWidth: "0px",
 												borderColor: "var(--accent-3)",
 												borderStyle: "solid",
 												display: "flex",

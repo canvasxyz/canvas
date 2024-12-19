@@ -23,10 +23,30 @@ export const TableToolbar = ({
 			</Button>
 
 			<Flex>
-				<Button color="gray" variant="outline" style={{ borderTopRightRadius: "0px", borderBottomRightRadius: "0px" }}>
+				<Button
+					color="gray"
+					variant="outline"
+					style={{
+						boxShadow: "none",
+						borderTop: "1px solid var(--accent-a8)",
+						borderBottom: "1px solid var(--accent-a8)",
+						borderLeft: "1px solid var(--accent-a8)",
+						borderTopRightRadius: "0px",
+						borderBottomRightRadius: "0px",
+					}}
+				>
 					<BiChevronLeft />
 				</Button>
-				<Button color="gray" variant="outline" style={{ borderTopLeftRadius: "0px", borderBottomLeftRadius: "0px" }}>
+				<Button
+					color="gray"
+					variant="outline"
+					style={{
+						boxShadow: "none",
+						border: "1px solid var(--accent-a8)",
+						borderTopLeftRadius: "0px",
+						borderBottomLeftRadius: "0px",
+					}}
+				>
 					<BiChevronRight />
 				</Button>
 			</Flex>
@@ -78,7 +98,14 @@ export const TableToolbar = ({
 					onChange={(e) => {
 						setEntriesPerPage(Number(e.target.value))
 					}}
-					style={{ borderRadius: "0px", width: "40px" }}
+					color="gray"
+					style={{
+						borderRadius: "0px",
+						width: "40px",
+						boxShadow: "none",
+						borderTop: "1px solid var(--accent-a8)",
+						borderBottom: "1px solid var(--accent-a8)",
+					}}
 				/>
 				{/* TODO: display page offset? */}
 				{/* <TextField.Root
