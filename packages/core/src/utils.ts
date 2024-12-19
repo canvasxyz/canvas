@@ -45,5 +45,4 @@ export async function wait(interval: number, options: { signal: AbortSignal }) {
 export function getRecordId(model: string, key: string) {
 	const hash = blake3(`${model}/${key}`, { dkLen: 18 })
 	return base64.baseEncode(hash)
-	// return bytesToHex(hash)
 }
