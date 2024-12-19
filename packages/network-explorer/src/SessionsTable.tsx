@@ -9,10 +9,12 @@ const defaultColumns: ColumnDef<Result<Action>>[] = [
 	{
 		header: "did",
 		accessorKey: "message.payload.did",
+		size: 580,
 	},
 	{
 		header: "publicKey",
 		accessorKey: "message.payload.publicKey",
+		size: 580,
 	},
 
 	{
@@ -22,7 +24,7 @@ const defaultColumns: ColumnDef<Result<Action>>[] = [
 ]
 
 export const SessionsTable = () => {
-	const [entriesPerPage, setEntriesPerPage] = useState(10)
+	const [entriesPerPage, setEntriesPerPage] = useState(20)
 	const params = new URLSearchParams({
 		limit: (entriesPerPage + 1).toString(),
 		order: "desc",

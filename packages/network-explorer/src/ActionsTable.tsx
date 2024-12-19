@@ -9,10 +9,12 @@ const defaultColumns: ColumnDef<Result<Action>>[] = [
 	{
 		header: "did",
 		accessorKey: "message.payload.did",
+		size: 580,
 	},
 	{
 		header: "name",
 		accessorKey: "message.payload.name",
+		size: 200,
 	},
 	{
 		header: "timestamp",
@@ -21,7 +23,7 @@ const defaultColumns: ColumnDef<Result<Action>>[] = [
 ]
 
 export const ActionsTable = () => {
-	const [entriesPerPage, setEntriesPerPage] = useState(10)
+	const [entriesPerPage, setEntriesPerPage] = useState(20)
 	const params = new URLSearchParams({
 		limit: (entriesPerPage + 1).toString(),
 		order: "desc",

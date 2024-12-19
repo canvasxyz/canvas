@@ -40,19 +40,18 @@ export const Table = <T,>({
 	})
 
 	return (
-		<Flex direction="column" height="100%" flexGrow="1">
+		<Flex direction="column" maxWidth="calc(100vw - 340px)" flexGrow="1">
 			<TableToolbar
 				tanStackTable={tanStackTable}
 				entriesPerPage={entriesPerPage}
 				setEntriesPerPage={setEntriesPerPage}
 				responseTime={responseTime}
 			/>
-
-			<Box flexGrow="1">
-				<table style={{ borderCollapse: "collapse" }}>
-					<thead>
+			<Box overflowX="scroll">
+				<table style={{ borderCollapse: "collapse", display: "grid" }}>
+					<thead style={{ display: "grid", position: "sticky", top: 0, zIndex: 1, backgroundColor: "white" }}>
 						{tanStackTable.getHeaderGroups().map((headerGroup) => (
-							<tr key={headerGroup.id}>
+							<tr key={headerGroup.id} style={{ display: "flex", width: "100%" }}>
 								<th
 									style={{
 										borderWidth: "1px",
@@ -60,6 +59,7 @@ export const Table = <T,>({
 										borderLeftWidth: "0px",
 										borderColor: "var(--accent-3)",
 										borderStyle: "solid",
+										display: "flex",
 									}}
 								>
 									<Flex align="center" p="1">
@@ -70,6 +70,8 @@ export const Table = <T,>({
 									<th
 										key={header.id}
 										style={{
+											display: "flex",
+											width: header.getSize(),
 											borderWidth: "1px",
 											borderTopWidth: "0px",
 											borderColor: "var(--accent-3)",
@@ -91,9 +93,15 @@ export const Table = <T,>({
 							</tr>
 						))}
 					</thead>
-					<tbody>
+					<tbody
+						style={{
+							display: "grid",
+							overflowY: "scroll",
+							position: "relative",
+						}}
+					>
 						{tanStackTable.getRowModel().rows.map((row) => (
-							<tr key={row.id}>
+							<tr key={row.id} style={{ display: "flex" }}>
 								<td
 									style={{
 										borderWidth: "1px",
@@ -101,27 +109,33 @@ export const Table = <T,>({
 										borderLeftWidth: "0px",
 										borderColor: "var(--accent-3)",
 										borderStyle: "solid",
+										display: "flex",
 									}}
 								>
 									<Flex align="center" p="1">
 										<Checkbox color="gray" />
 									</Flex>
 								</td>
-								{row.getVisibleCells().map((cell) => (
-									<td
-										key={cell.id}
-										style={{
-											borderWidth: "1px",
-											borderTopWidth: "0px",
-											borderColor: "var(--accent-3)",
-											borderStyle: "solid",
-										}}
-									>
-										<Flex gap="2" p="1">
-											{flexRender(cell.column.columnDef.cell, cell.getContext())}
-										</Flex>
-									</td>
-								))}
+								{row.getVisibleCells().map((cell) => {
+									console.log(cell.column.getSize())
+									return (
+										<td
+											key={cell.id}
+											style={{
+												borderWidth: "1px",
+												borderTopWidth: "0px",
+												borderColor: "var(--accent-3)",
+												borderStyle: "solid",
+												display: "flex",
+												width: cell.column.getSize(),
+											}}
+										>
+											<Flex gap="2" p="1">
+												{flexRender(cell.column.columnDef.cell, cell.getContext())}
+											</Flex>
+										</td>
+									)
+								})}
 							</tr>
 						))}
 					</tbody>
