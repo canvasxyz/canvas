@@ -8,15 +8,15 @@ import { assert, mapValues } from "@canvas-js/utils"
 import { AbstractRuntime, Transaction } from "./AbstractRuntime.js"
 
 export class ContractRuntime extends AbstractRuntime {
-	public static init(
+	public static async init(
 		topic: string,
 		signers: SignerCache,
 		contract: string,
 		options: { runtimeMemoryLimit?: number } = {},
-	): ContractRuntime {
+	): Promise<ContractRuntime> {
 		const { runtimeMemoryLimit } = options
 
-		const vm = new VM({ runtimeMemoryLimit })
+		const vm = await VM.initialize({ runtimeMemoryLimit })
 
 		const {
 			contract: contractHandle,
@@ -49,8 +49,7 @@ export class ContractRuntime extends AbstractRuntime {
 		return new ContractRuntime(topic, signers, vm, models, actions)
 	}
 
-	readonly #databaseAPI: QuickJSHandle
-
+	#databaseAPI: QuickJSHandle
 	#txn: Transaction | null = null
 
 	protected get txn() {

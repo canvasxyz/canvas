@@ -6,11 +6,11 @@ import { ActionContext, ActionImplementation, Contract, ModelAPI } from "../type
 import { AbstractRuntime, Transaction } from "./AbstractRuntime.js"
 
 export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntime {
-	public static init<ModelsT extends ModelSchema>(
+	public static async init<ModelsT extends ModelSchema>(
 		topic: string,
 		signers: SignerCache,
 		contract: Contract<ModelsT>,
-	): FunctionRuntime<ModelsT> {
+	): Promise<FunctionRuntime<ModelsT>> {
 		assert(contract.actions !== undefined, "contract initialized without actions")
 		assert(contract.models !== undefined, "contract initialized without models")
 

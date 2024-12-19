@@ -92,7 +92,7 @@ export class Canvas<
 			return signer.scheme.verify(signature, message)
 		}
 
-		const runtime = createRuntime(topic, signers, contract, { runtimeMemoryLimit })
+		const runtime = await createRuntime(topic, signers, contract, { runtimeMemoryLimit })
 		const gossipTopic = config.snapshot ? `${topic}#${hashSnapshot(config.snapshot)}` : topic // topic for peering
 		const messageLog = await target.openGossipLog(
 			{ topic: gossipTopic, path, clear: config.reset },
