@@ -120,27 +120,24 @@ export const Table = <T,>({
 										<Checkbox color="gray" />
 									</Flex>
 								</td>
-								{row.getVisibleCells().map((cell) => {
-									console.log(cell.column.getSize())
-									return (
-										<td
-											key={cell.id}
-											style={{
-												borderWidth: "1px",
-												borderTopWidth: "0px",
-												borderLeftWidth: "0px",
-												borderColor: "var(--accent-3)",
-												borderStyle: "solid",
-												display: "flex",
-												width: cell.column.getSize(),
-											}}
-										>
-											<Flex gap="2" p="1">
-												{flexRender(cell.column.columnDef.cell, cell.getContext())}
-											</Flex>
-										</td>
-									)
-								})}
+								{row.getVisibleCells().map((cell) => (
+									<td
+										key={cell.id}
+										style={{
+											borderWidth: "1px",
+											borderTopWidth: "0px",
+											borderLeftWidth: "0px",
+											borderColor: "var(--accent-3)",
+											borderStyle: "solid",
+											display: "flex",
+											width: cell.column.getSize(),
+										}}
+									>
+										<Flex gap="2" p="1">
+											{flexRender(cell.column.columnDef.cell, cell.getContext())}
+										</Flex>
+									</td>
+								))}
 							</tr>
 						))}
 					</tbody>
