@@ -1,7 +1,7 @@
 import * as cbor from "@ipld/dag-cbor"
 import { logger } from "@libp2p/logger"
 
-import type { Signature, Action, Message, Session, Snapshot, SignerCache } from "@canvas-js/interfaces"
+import type { Action, Session, Snapshot, SignerCache } from "@canvas-js/interfaces"
 
 import {
 	AbstractModelDB,
@@ -14,22 +14,46 @@ import {
 	Model,
 	parseConfig,
 } from "@canvas-js/modeldb"
-import { GossipLogConsumer, MAX_MESSAGE_ID, MIN_MESSAGE_ID, AbstractGossipLog } from "@canvas-js/gossiplog"
-import { assert, mapValues, signalInvalidType } from "@canvas-js/utils"
+
+import {
+	GossipLogConsumer,
+	MAX_MESSAGE_ID,
+	MIN_MESSAGE_ID,
+	AbstractGossipLog,
+	SignedMessage,
+} from "@canvas-js/gossiplog"
+
+import { assert, signalInvalidType } from "@canvas-js/utils"
 import { getRecordId, isAction, isSession, isSnapshot } from "../utils.js"
 
-export type ExecutionContext = {
-	messageLog: AbstractGossipLog<Action | Session | Snapshot>
-	id: string
-	signature: Signature
-	message: Message<Action>
-	address: string
-
+export class Transaction {
 	// recordId -> { version }
-	reads: Record<string, { version: string | null; value: ModelValue | null }>
+	public readonly reads: Record<string, { version: string | null; value: ModelValue | null }> = {}
 
 	// recordId -> effect
-	writes: Record<string, Effect>
+	public readonly writes: Record<string, Effect> = {}
+
+	constructor(
+		public readonly messageLog: AbstractGossipLog<Action | Session | Snapshot>,
+		public readonly signedMessage: SignedMessage<Action>,
+		public readonly address: string,
+	) {}
+
+	public get id() {
+		return this.signedMessage.id
+	}
+
+	public get signature() {
+		return this.signedMessage.signature
+	}
+
+	public get message() {
+		return this.signedMessage.message
+	}
+
+	public get db() {
+		return this.messageLog.db
+	}
 }
 
 export type WriteRecord = {
@@ -155,16 +179,7 @@ export abstract class AbstractRuntime {
 		this.schema = AbstractRuntime.getModelSchema(modelSchema)
 	}
 
-	protected abstract execute(context: ExecutionContext): Promise<void | any>
-
-	public get db() {
-		assert(this.#db !== null, "internal error - expected this.#db !== null")
-		return this.#db
-	}
-
-	public set db(db: AbstractModelDB) {
-		this.#db = db
-	}
+	protected abstract execute(txn: Transaction): Promise<void | any>
 
 	public abstract close(): void
 
@@ -174,15 +189,14 @@ export abstract class AbstractRuntime {
 		const handleSnapshot = this.handleSnapshot.bind(this)
 
 		return async function (this: AbstractGossipLog<Action | Session | Snapshot>, signedMessage) {
-			const { id, signature, message, branch } = signedMessage
-			assert(branch !== undefined, "internal error - expected branch !== undefined")
+			assert(signedMessage.branch !== undefined, "internal error - expected signedMessage.branch !== undefined")
 
-			if (isSession(message)) {
-				return await handleSession(id, signature, message)
-			} else if (isAction(message)) {
-				return await handleAction(id, signature, message, this)
-			} else if (isSnapshot(message)) {
-				return await handleSnapshot(id, signature, message, this)
+			if (isSession(signedMessage)) {
+				return await handleSession(this, signedMessage)
+			} else if (isAction(signedMessage)) {
+				return await handleAction(this, signedMessage)
+			} else if (isSnapshot(signedMessage)) {
+				return await handleSnapshot(this, signedMessage)
 			} else {
 				throw new Error("invalid message payload type")
 			}
@@ -190,10 +204,8 @@ export abstract class AbstractRuntime {
 	}
 
 	private async handleSnapshot(
-		id: string,
-		signature: Signature,
-		message: Message<Snapshot>,
 		messageLog: AbstractGossipLog<Action | Session | Snapshot>,
+		{ message }: SignedMessage<Snapshot>,
 	) {
 		const { models, effects } = message.payload
 
@@ -202,8 +214,8 @@ export abstract class AbstractRuntime {
 
 		for (const { model, key, value } of effects) {
 			const recordId = getRecordId(model, key)
-			await this.db.set("$records", { id: recordId, key, model })
-			await this.db.set("$writes", {
+			await messageLog.db.set("$records", { id: recordId, key, model })
+			await messageLog.db.set("$writes", {
 				key: `${recordId}:${MIN_MESSAGE_ID}`,
 				version: null,
 				value,
@@ -211,12 +223,15 @@ export abstract class AbstractRuntime {
 			})
 
 			if (value !== null) {
-				await this.db.set(model, cbor.decode<ModelValue>(value))
+				await messageLog.db.set(model, cbor.decode<ModelValue>(value))
 			}
 		}
 	}
 
-	private async handleSession(id: string, signature: Signature, message: Message<Session>) {
+	private async handleSession(
+		messageLog: AbstractGossipLog<Action | Session | Snapshot>,
+		{ id, signature, message }: SignedMessage<Session>,
+	) {
 		const {
 			publicKey,
 			did,
@@ -242,23 +257,21 @@ export abstract class AbstractRuntime {
 			expiration: duration === undefined ? null : timestamp + duration,
 		}
 
-		await this.db.apply([
+		await messageLog.db.apply([
 			{ model: "$sessions", operation: "set", value: sessionRecord },
 			{ model: "$dids", operation: "set", value: { did } },
 		])
 	}
 
 	private async handleAction(
-		id: string,
-		signature: Signature,
-		message: Message<Action>,
 		messageLog: AbstractGossipLog<Action | Session | Snapshot>,
+		signedMessage: SignedMessage<Action>,
 	) {
-		const { did, name, context } = message.payload
+		const { did, name, context } = signedMessage.message.payload
 
 		const signer = this.signers
 			.getAll()
-			.find((signer) => signer.scheme.codecs.includes(signature.codec) && signer.match(did))
+			.find((signer) => signer.scheme.codecs.includes(signedMessage.signature.codec) && signer.match(did))
 
 		if (!signer) {
 			throw new Error("unexpected missing signer")
@@ -266,8 +279,8 @@ export abstract class AbstractRuntime {
 
 		const address = signer.getAddressFromDid(did)
 
-		const sessions = await this.db.query<{ message_id: string; expiration: number | null }>("$sessions", {
-			where: { public_key: signature.publicKey, did: did },
+		const sessions = await messageLog.db.query<SessionRecord>("$sessions", {
+			where: { public_key: signedMessage.signature.publicKey, did: did },
 		})
 
 		const activeSessions = sessions.filter(({ expiration }) => expiration === null || expiration > context.timestamp)
@@ -275,7 +288,7 @@ export abstract class AbstractRuntime {
 		let sessionId: string | null = null
 		for (const { message_id } of activeSessions) {
 			const visited = new Set<string>()
-			for (const parentId of message.parents) {
+			for (const parentId of signedMessage.message.parents) {
 				const isAncestor = await messageLog.isAncestor(parentId, message_id, visited)
 				if (isAncestor) {
 					sessionId = message_id
@@ -285,29 +298,27 @@ export abstract class AbstractRuntime {
 		}
 
 		if (sessionId === null) {
-			throw new Error(`missing session ${signature.publicKey} for ${did}`)
+			throw new Error(`missing session ${signedMessage.signature.publicKey} for ${did}`)
 		}
 
-		const writes: Record<string, Effect> = {}
-		const reads: Record<string, { version: string | null; value: ModelValue | null }> = {}
-		const executionContext: ExecutionContext = { messageLog, id, signature, message, address, reads, writes }
-		const result = await this.execute(executionContext)
+		const txn = new Transaction(messageLog, signedMessage, address)
+		const result = await this.execute(txn)
 
-		const actionRecord: ActionRecord = { message_id: id, did, name, timestamp: context.timestamp }
+		const actionRecord: ActionRecord = { message_id: signedMessage.id, did, name, timestamp: context.timestamp }
 		const effects: Effect[] = [{ operation: "set", model: "$actions", value: actionRecord }]
 
-		for (const [recordId, { version }] of Object.entries(reads)) {
-			const readRecord: ReadRecord = { key: `${recordId}:${id}`, version }
+		for (const [recordId, { version }] of Object.entries(txn.reads)) {
+			const readRecord: ReadRecord = { key: `${recordId}:${signedMessage.id}`, version }
 			effects.push({ model: "$reads", operation: "set", value: readRecord })
 		}
 
 		// Step 1a: identify write-write conflicts
 		const writeConflicts = new Set<string>()
-		for (const [recordId, effect] of Object.entries(writes)) {
-			const [model, key, value] = this.parseEffect(effect)
+		for (const [recordId, effect] of Object.entries(txn.writes)) {
+			const [model, key, value] = this.parseEffect(txn, effect)
 			const writeRecord: WriteRecord = {
-				key: `${recordId}:${id}`,
-				version: id,
+				key: `${recordId}:${signedMessage.id}`,
+				version: signedMessage.id,
 				value: value && cbor.encode(value),
 				reverted: false,
 			}
@@ -315,7 +326,7 @@ export abstract class AbstractRuntime {
 			effects.push({ model: "$writes", operation: "set", value: writeRecord })
 			effects.push({ model: "$records", operation: "set", value: { id: recordId, model, key } })
 
-			const writeConflict = await this.findWriteConflict(executionContext, recordId, { reverted: false })
+			const writeConflict = await this.findWriteConflict(txn, recordId, { reverted: false })
 			if (writeConflict !== null) {
 				writeConflicts.add(writeConflict)
 			}
@@ -328,8 +339,8 @@ export abstract class AbstractRuntime {
 		const inferiorWrites: string[] = []
 
 		for (const messageId of writeConflicts) {
-			assert(messageId !== executionContext.id, "expected messageId !== executionContext.id")
-			if (messageId < executionContext.id) {
+			assert(messageId !== signedMessage.id, "expected messageId !== signedMessage.id")
+			if (messageId < signedMessage.id) {
 				superiorWrites.push(messageId)
 			} else {
 				inferiorWrites.push(messageId)
@@ -345,7 +356,7 @@ export abstract class AbstractRuntime {
 		// Step 1b: revert inferior write-write conflicts
 		for (const messageId of inferiorWrites) {
 			this.log("reverting inferior write conflict %s", messageId)
-			await this.revert(messageId, effects, revertEffects, reverted)
+			await this.revert(txn, messageId, effects, revertEffects, reverted)
 		}
 
 		// n.b. there's an open question here of whether we can safely
@@ -361,8 +372,8 @@ export abstract class AbstractRuntime {
 
 		/** IDs of concurrent reads that conflict with the current action's writes */
 		const inferiorReads = new Set<string>()
-		for (const recordId of Object.keys(writes)) {
-			const conflicts = await this.getReadConflicts(executionContext, recordId)
+		for (const recordId of Object.keys(txn.writes)) {
+			const conflicts = await this.getReadConflicts(txn, recordId)
 			for (const conflict of conflicts) {
 				inferiorReads.add(conflict)
 			}
@@ -370,8 +381,8 @@ export abstract class AbstractRuntime {
 
 		/** IDs of concurrent writes that conflict with the current action's reads */
 		const superiorReads = new Set<string>()
-		for (const [recordId, version] of Object.entries(reads)) {
-			const conflictId = await this.findWriteConflict(executionContext, recordId)
+		for (const [recordId, version] of Object.entries(txn.reads)) {
+			const conflictId = await this.findWriteConflict(txn, recordId)
 			if (conflictId !== null) {
 				superiorReads.add(conflictId)
 			}
@@ -382,13 +393,13 @@ export abstract class AbstractRuntime {
 		// Step 2b: revert conflicting reads
 		for (const messageId of inferiorReads) {
 			this.log("reverting inferior read conflict %s", messageId)
-			await this.revert(messageId, effects, revertEffects, reverted)
+			await this.revert(txn, messageId, effects, revertEffects, reverted)
 		}
 
 		this.log("got revertEffects: %O", revertEffects)
 
 		if (superiorWrites.length === 0 && superiorReads.size === 0) {
-			for (const effect of Object.values({ ...revertEffects, ...writes })) {
+			for (const effect of Object.values({ ...revertEffects, ...txn.writes })) {
 				effects.push(effect)
 			}
 		} else {
@@ -404,7 +415,7 @@ export abstract class AbstractRuntime {
 
 		this.log.trace("applying db effects %O", effects)
 		try {
-			await this.db.apply(effects)
+			await messageLog.db.apply(effects)
 		} catch (err) {
 			if (err instanceof Error) {
 				err.message = `${name}: ${err.message}`
@@ -417,58 +428,58 @@ export abstract class AbstractRuntime {
 	}
 
 	protected async getModelValue<T extends ModelValue = ModelValue>(
-		context: ExecutionContext,
+		txn: Transaction,
 		model: string,
 		key: string,
 	): Promise<T | null> {
 		const recordId = getRecordId(model, key)
 
-		if (context.writes[recordId] !== undefined) {
-			if (context.writes[recordId].operation === "set") {
-				return context.writes[recordId].value as T
+		if (txn.writes[recordId] !== undefined) {
+			if (txn.writes[recordId].operation === "set") {
+				return txn.writes[recordId].value as T
 			} else {
 				return null
 			}
 		}
 
-		if (context.reads[recordId] !== undefined) {
-			return context.reads[recordId].value as T
+		if (txn.reads[recordId] !== undefined) {
+			return txn.reads[recordId].value as T
 		}
 
-		const record = await this.getLatestAncestorWrite(context, recordId)
+		const record = await this.getLatestAncestorWrite(txn, recordId)
 
 		if (record === null) {
-			context.reads[recordId] = { version: null, value: null }
+			txn.reads[recordId] = { version: null, value: null }
 			return null
 		}
 
 		if (record.value === null) {
-			context.reads[recordId] = { version: record.version, value: null }
+			txn.reads[recordId] = { version: record.version, value: null }
 			return null
 		} else {
 			const value = cbor.decode<T>(record.value)
 			assert(value !== null, "expected value !== null")
-			context.reads[recordId] = { version: record.version, value }
+			txn.reads[recordId] = { version: record.version, value }
 			return value
 		}
 	}
 
-	private async getLatestAncestorWrite(context: ExecutionContext, recordId: string): Promise<WriteRecord | null> {
+	private async getLatestAncestorWrite(txn: Transaction, recordId: string): Promise<WriteRecord | null> {
 		// TODO: what we really need is to find a min-ID winner of the most recent set of mutually concurrent
-		// writes *WITHIN* the transitive ancestor set of the current execution context.
+		// writes *WITHIN* the transitive ancestor set of the current transaction.
 		// this is actually a new kind of search that we havne't done before.
 
 		// for now we just find the max-ID ancestor write which is deterministic but not quite correct.
 
 		const minKey = `${recordId}:${MIN_MESSAGE_ID}`
-		const maxKey = `${recordId}:${context.id}`
+		const maxKey = `${recordId}:${txn.id}`
 
-		for await (const record of this.db.iterate<WriteRecord>("$writes", {
+		for await (const record of txn.db.iterate<WriteRecord>("$writes", {
 			orderBy: { key: "desc" },
 			where: { key: { gte: minKey, lt: maxKey } },
 		})) {
 			const [_, writerMsgId] = record.key.split(":")
-			const isAncestor = await this.isAncestor(context, writerMsgId)
+			const isAncestor = await this.isAncestor(txn, writerMsgId)
 			if (isAncestor) {
 				return record
 			}
@@ -477,63 +488,63 @@ export abstract class AbstractRuntime {
 		return null
 	}
 
-	protected async setModelValue(context: ExecutionContext, model: string, value: ModelValue): Promise<void> {
-		assert(this.db.models[model] !== undefined, "model not found")
-		validateModelValue(this.db.models[model], value)
-		const { primaryKey } = this.db.models[model]
+	protected async setModelValue(txn: Transaction, model: string, value: ModelValue): Promise<void> {
+		assert(txn.db.models[model] !== undefined, "model not found")
+		validateModelValue(txn.db.models[model], value)
+		const { primaryKey } = txn.db.models[model]
 		const { [primaryKey]: key } = value as ModelValue
 		assert(typeof key === "string", "expected value[primaryKey] to be a string")
 		const recordId = getRecordId(model, key)
-		context.writes[recordId] = { operation: "set", model, value }
+		txn.writes[recordId] = { operation: "set", model, value }
 	}
 
-	protected async deleteModelValue(context: ExecutionContext, model: string, key: string): Promise<void> {
+	protected async deleteModelValue(txn: Transaction, model: string, key: string): Promise<void> {
 		const recordId = getRecordId(model, key)
-		context.writes[recordId] = { operation: "delete", model, key }
+		txn.writes[recordId] = { operation: "delete", model, key }
 	}
 
-	protected async updateModelValue(context: ExecutionContext, model: string, value: ModelValue): Promise<void> {
-		assert(this.db.models[model] !== undefined, "model not found")
-		const { primaryKey } = this.db.models[model]
+	protected async updateModelValue(txn: Transaction, model: string, value: ModelValue): Promise<void> {
+		assert(txn.db.models[model] !== undefined, "model not found")
+		const { primaryKey } = txn.db.models[model]
 		const { [primaryKey]: key } = value as ModelValue
 		assert(typeof key === "string", "expected value[primaryKey] to be a string")
 
-		const modelValue = await this.getModelValue(context, model, key)
+		const modelValue = await this.getModelValue(txn, model, key)
 		if (modelValue === null) {
 			throw new Error(`db.update(${model}, ${key}): attempted to update a nonexistent value`)
 		}
 
 		const updatedValue = updateModelValues(value as ModelValue, modelValue ?? {})
-		validateModelValue(this.db.models[model], updatedValue)
+		validateModelValue(txn.db.models[model], updatedValue)
 
 		const recordId = getRecordId(model, key)
-		context.writes[recordId] = { operation: "set", model, value: updatedValue }
+		txn.writes[recordId] = { operation: "set", model, value: updatedValue }
 	}
 
-	protected async mergeModelValue(context: ExecutionContext, model: string, value: ModelValue): Promise<void> {
-		assert(this.db.models[model] !== undefined, "model not found")
-		const { primaryKey } = this.db.models[model]
+	protected async mergeModelValue(txn: Transaction, model: string, value: ModelValue): Promise<void> {
+		assert(txn.db.models[model] !== undefined, "model not found")
+		const { primaryKey } = txn.db.models[model]
 		const { [primaryKey]: key } = value as ModelValue
 		assert(typeof key === "string", "expected value[primaryKey] to be a string")
 
-		const modelValue = await this.getModelValue(context, model, key)
+		const modelValue = await this.getModelValue(txn, model, key)
 		if (modelValue === null) {
 			throw new Error(`db.merge(${model}, ${key}): attempted to merge into a nonexistent value`)
 		}
 
 		const mergedValue = mergeModelValues(value as ModelValue, modelValue ?? {})
-		validateModelValue(this.db.models[model], mergedValue)
+		validateModelValue(txn.db.models[model], mergedValue)
 
 		const recordId = getRecordId(model, key)
-		context.writes[recordId] = { operation: "set", model, value: mergedValue }
+		txn.writes[recordId] = { operation: "set", model, value: mergedValue }
 	}
 
 	/** Returns set of concurrent read conflicts for the provided record ID */
-	private async getReadConflicts(context: ExecutionContext, recordId: string): Promise<string[]> {
+	private async getReadConflicts(txn: Transaction, recordId: string): Promise<string[]> {
 		const minKey = `${recordId}:${MIN_MESSAGE_ID}`
 		const maxKey = `${recordId}:${MAX_MESSAGE_ID}`
 
-		const [{ key: prevKey } = {}] = await this.db.query<{ key: string }>("$writes", {
+		const [{ key: prevKey } = {}] = await txn.db.query<{ key: string }>("$writes", {
 			select: { key: true },
 			orderBy: { key: "desc" },
 			where: { key: { gte: minKey, lte: maxKey } },
@@ -547,7 +558,7 @@ export abstract class AbstractRuntime {
 		const [_, prevId] = prevKey.split(":")
 
 		const conflicts: string[] = []
-		for await (const { key } of this.db.iterate<{ key: string }>("$reads", {
+		for await (const { key } of txn.db.iterate<{ key: string }>("$reads", {
 			select: { key: true },
 			orderBy: { key: "asc" },
 			where: { key: { gt: prevKey, lte: maxKey } },
@@ -556,11 +567,11 @@ export abstract class AbstractRuntime {
 
 			// assert that prevId is an ancestor of readId.
 			// this is just for sanity checking; can remove this if everything works right
-			await context.messageLog
+			await txn.messageLog
 				.isAncestor(readerMsgId, prevId)
 				.then((is) => assert(is || prevId === MIN_MESSAGE_ID, "expected isAncestor(readId, prevId)"))
 
-			const isAncestor = await this.isAncestor(context, readerMsgId)
+			const isAncestor = await this.isAncestor(txn, readerMsgId)
 			if (!isAncestor) {
 				conflicts.push(readerMsgId)
 			}
@@ -571,7 +582,7 @@ export abstract class AbstractRuntime {
 
 	/** Returns the earliest concurrent write conflict for the provided record ID */
 	private async findWriteConflict(
-		context: ExecutionContext,
+		txn: Transaction,
 		recordId: string,
 		options: { reverted?: boolean } = {},
 	): Promise<null | string> {
@@ -580,14 +591,14 @@ export abstract class AbstractRuntime {
 
 		let lastVersion: string | null = null
 
-		for await (const { key } of this.db.iterate<{ key: string }>("$writes", {
+		for await (const { key } of txn.db.iterate<{ key: string }>("$writes", {
 			select: { key: true },
 			orderBy: { key: "desc" },
 			where: { key: { gte: minKey, lte: maxKey }, reverted: options.reverted },
 		})) {
 			const [_, msgId] = key.split(":")
 
-			const isAncestor = await this.isAncestor(context, msgId)
+			const isAncestor = await this.isAncestor(txn, msgId)
 			if (isAncestor) {
 				break
 			} else {
@@ -599,6 +610,7 @@ export abstract class AbstractRuntime {
 	}
 
 	private async revert(
+		txn: Transaction,
 		messageId: string,
 		effects: Effect[],
 		revertEffects: Record<string, Effect>,
@@ -613,7 +625,7 @@ export abstract class AbstractRuntime {
 		this.log("revert(%s)", messageId)
 
 		// we are guaranteed a "linear version history" invariant
-		const writes = await this.db.query<WriteRecord>("$writes", {
+		const writes = await txn.db.query<WriteRecord>("$writes", {
 			where: { version: messageId },
 		})
 
@@ -627,11 +639,11 @@ export abstract class AbstractRuntime {
 			const [recordId, _] = writeRecord.key.split(":")
 			const minKey = `${recordId}:${MIN_MESSAGE_ID}`
 
-			const record = await this.db.get<{ model: string; key: string }>("$records", recordId)
+			const record = await txn.db.get<{ model: string; key: string }>("$records", recordId)
 			assert(record !== null, "expected record !== null", { recordId })
 			const { model, key } = record
 
-			const [prev] = await this.db.query<WriteRecord>("$writes", {
+			const [prev] = await txn.db.query<WriteRecord>("$writes", {
 				orderBy: { key: "desc" },
 				where: { key: { gte: minKey, lt: writeRecord.key }, reverted: false },
 				limit: 1,
@@ -648,31 +660,31 @@ export abstract class AbstractRuntime {
 
 		// now revert actions that read from the reads.
 		// this has potential to be a large query.
-		const readers = await this.db.query<ReadRecord>("$reads", {
+		const readers = await txn.db.query<ReadRecord>("$reads", {
 			where: { version: messageId },
 		})
 
 		for (const { key } of readers) {
 			const [recordId, readerMsgId] = key.split(":")
-			await this.revert(readerMsgId, effects, revertEffects, reverted)
+			await this.revert(txn, readerMsgId, effects, revertEffects, reverted)
 		}
 	}
 
 	/**
 	 * This is a utility method for finding if msgId is an ancestor of the
-	 * current execution context. This loops over context.message.parents,
-	 * since the action has not been committed yet so context.id doesn't
+	 * current transaction. This loops over txn.message.parents,
+	 * since the action has not been committed yet so txn.id doesn't
 	 * exist in the database yet.
 	 */
-	private async isAncestor(context: ExecutionContext, msgId: string): Promise<boolean> {
+	private async isAncestor(txn: Transaction, msgId: string): Promise<boolean> {
 		// TODO: handle this in a more elegant way
 		if (msgId === MIN_MESSAGE_ID) {
 			return true
 		}
 
 		const visited = new Set<string>()
-		for (const parent of context.message.parents) {
-			const isAncestor = await context.messageLog.isAncestor(parent, msgId, visited)
+		for (const parent of txn.message.parents) {
+			const isAncestor = await txn.messageLog.isAncestor(parent, msgId, visited)
 			if (isAncestor) {
 				return true
 			}
@@ -681,10 +693,10 @@ export abstract class AbstractRuntime {
 		return false
 	}
 
-	private parseEffect(effect: Effect): [string, string, ModelValue | null] {
+	private parseEffect(txn: Transaction, effect: Effect): [string, string, ModelValue | null] {
 		if (effect.operation === "set") {
-			assert(this.db.models[effect.model] !== undefined)
-			const { primaryKey } = this.db.models[effect.model]
+			assert(txn.db.models[effect.model] !== undefined)
+			const { primaryKey } = txn.db.models[effect.model]
 			return [effect.model, effect.value[primaryKey], effect.value]
 		} else if (effect.operation === "delete") {
 			return [effect.model, effect.key, null]

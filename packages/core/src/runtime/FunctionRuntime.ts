@@ -3,7 +3,7 @@ import { ModelSchema, ModelValue, validateModelValue, DeriveModelTypes } from "@
 import { assert } from "@canvas-js/utils"
 
 import { ActionContext, ActionImplementation, Contract, ModelAPI } from "../types.js"
-import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
+import { AbstractRuntime, Transaction } from "./AbstractRuntime.js"
 
 export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntime {
 	public static init<ModelsT extends ModelSchema>(
@@ -17,8 +17,14 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 		return new FunctionRuntime(topic, signers, contract.models, contract.actions)
 	}
 
-	#context: ExecutionContext | null = null
 	readonly #db: ModelAPI<DeriveModelTypes<ModelsT>>
+
+	#txn: Transaction | null = null
+
+	protected get txn() {
+		assert(this.#txn !== null, "expected this.#txn !== null")
+		return this.#txn
+	}
 
 	constructor(
 		public readonly topic: string,
@@ -29,37 +35,31 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 		super(models)
 		this.#db = {
 			get: async <T extends keyof DeriveModelTypes<ModelsT> & string>(model: T, key: string) => {
-				assert(this.#context !== null, "expected this.#context !== null")
-				const result = await this.getModelValue(this.#context, model, key)
+				const result = await this.getModelValue(this.txn, model, key)
 				return result as DeriveModelTypes<ModelsT>[T]
 			},
 			set: async (model, value) => {
-				assert(this.#context !== null, "expected this.#context !== null")
 				assert(typeof model === "string", 'expected typeof model === "string"')
 				assert(typeof value === "object", 'expected typeof value === "object"')
-				await this.setModelValue(this.#context, model, value)
+				await this.setModelValue(this.txn, model, value)
 			},
 			create: async (model, value) => {
-				assert(this.#context !== null, "expected this.#context !== null")
 				assert(typeof model === "string", 'expected typeof model === "string"')
 				assert(typeof value === "object", 'expected typeof value === "object"')
-				await this.setModelValue(this.#context, model, value)
+				await this.setModelValue(this.txn, model, value)
 			},
 			update: async (model, value) => {
-				assert(this.#context !== null, "expected this.#context !== null")
 				assert(typeof model === "string", 'expected typeof model === "string"')
 				assert(typeof value === "object", 'expected typeof value === "object"')
-				await this.updateModelValue(this.#context, model, value as ModelValue)
+				await this.updateModelValue(this.txn, model, value as ModelValue)
 			},
 			merge: async (model, value) => {
-				assert(this.#context !== null, "expected this.#context !== null")
 				assert(typeof model === "string", 'expected typeof model === "string"')
 				assert(typeof value === "object", 'expected typeof value === "object"')
-				await this.mergeModelValue(this.#context, model, value as ModelValue)
+				await this.mergeModelValue(this.txn, model, value as ModelValue)
 			},
 			delete: async (model: string, key: string) => {
-				assert(this.#context !== null, "expected this.#context !== null")
-				await this.deleteModelValue(this.#context, model, key)
+				await this.deleteModelValue(this.txn, model, key)
 			},
 		}
 	}
@@ -70,27 +70,27 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 		return Object.keys(this.actions)
 	}
 
-	protected async execute(context: ExecutionContext): Promise<void | any> {
-		const { publicKey } = context.signature
-		const { address } = context
+	protected async execute(txn: Transaction): Promise<void | any> {
+		const { publicKey } = txn.signature
+		const { address } = txn
 		const {
 			did,
 			name,
 			args,
 			context: { blockhash, timestamp },
-		} = context.message.payload
+		} = txn.message.payload
 
 		const action = this.actions[name]
 		if (action === undefined) {
 			throw new Error(`invalid action name: ${name}`)
 		}
 
-		this.#context = context
+		this.#txn = txn
 
 		try {
 			const actionContext: ActionContext<DeriveModelTypes<ModelsT>> = {
 				db: this.#db,
-				id: context.id,
+				id: txn.id,
 				publicKey,
 				did,
 				address,
@@ -102,7 +102,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 			console.log("dispatch action failed:", err)
 			throw err
 		} finally {
-			this.#context = null
+			this.#txn = null
 		}
 	}
 }

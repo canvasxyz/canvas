@@ -2,17 +2,21 @@ import AggregateError from "aggregate-error"
 import { anySignal } from "any-signal"
 import { bytesToHex } from "@noble/hashes/utils"
 import { blake3 } from "@noble/hashes/blake3"
-import { Action, Message, Session, Snapshot } from "@canvas-js/interfaces"
+import { Message, Action, Session, Snapshot } from "@canvas-js/interfaces"
+import { SignedMessage } from "@canvas-js/gossiplog"
 import { base64 } from "multiformats/bases/base64"
 
-export const isAction = (message: Message<Action | Session | Snapshot>): message is Message<Action> =>
-	message.payload.type === "action"
+export const isAction = (
+	signedMessage: SignedMessage<Action | Session | Snapshot>,
+): signedMessage is SignedMessage<Action> => signedMessage.message.payload.type === "action"
 
-export const isSession = (message: Message<Action | Session | Snapshot>): message is Message<Session> =>
-	message.payload.type === "session"
+export const isSession = (
+	signedMessage: SignedMessage<Action | Session | Snapshot>,
+): signedMessage is SignedMessage<Session> => signedMessage.message.payload.type === "session"
 
-export const isSnapshot = (message: Message<Action | Session | Snapshot>): message is Message<Snapshot> =>
-	message.payload.type === "snapshot"
+export const isSnapshot = (
+	signedMessage: SignedMessage<Action | Session | Snapshot>,
+): signedMessage is SignedMessage<Snapshot> => signedMessage.message.payload.type === "snapshot"
 
 export const topicPattern = /^[a-zA-Z0-9.-]+$/
 

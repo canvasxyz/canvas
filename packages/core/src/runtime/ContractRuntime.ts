@@ -5,7 +5,7 @@ import { ModelValue, ModelSchema, validateModelValue } from "@canvas-js/modeldb"
 import { VM } from "@canvas-js/vm"
 import { assert, mapValues } from "@canvas-js/utils"
 
-import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
+import { AbstractRuntime, Transaction } from "./AbstractRuntime.js"
 
 export class ContractRuntime extends AbstractRuntime {
 	public static init(
@@ -51,7 +51,12 @@ export class ContractRuntime extends AbstractRuntime {
 
 	readonly #databaseAPI: QuickJSHandle
 
-	#context: ExecutionContext | null = null
+	#txn: Transaction | null = null
+
+	protected get txn() {
+		assert(this.#txn !== null, "expected this.#txn !== null")
+		return this.#txn
+	}
 
 	constructor(
 		public readonly topic: string,
@@ -64,40 +69,34 @@ export class ContractRuntime extends AbstractRuntime {
 		this.#databaseAPI = vm
 			.wrapObject({
 				get: vm.wrapFunction(async (model, key) => {
-					assert(this.#context !== null, "expected this.#context !== null")
 					assert(typeof model === "string", 'expected typeof model === "string"')
 					assert(typeof key === "string", 'expected typeof key === "string"')
-					return await this.getModelValue(this.#context, model, key)
+					return await this.getModelValue(this.txn, model, key)
 				}),
 				set: vm.wrapFunction(async (model, value) => {
-					assert(this.#context !== null, "expected this.#context !== null")
 					assert(typeof model === "string", 'expected typeof model === "string"')
 					assert(typeof value === "object", 'expected typeof value === "object"')
-					await this.setModelValue(this.#context, model, value as ModelValue)
+					await this.setModelValue(this.txn, model, value as ModelValue)
 				}),
 				create: vm.wrapFunction(async (model, value) => {
-					assert(this.#context !== null, "expected this.#context !== null")
 					assert(typeof model === "string", 'expected typeof model === "string"')
 					assert(typeof value === "object", 'expected typeof value === "object"')
-					await this.setModelValue(this.#context, model, value as ModelValue)
+					await this.setModelValue(this.txn, model, value as ModelValue)
 				}),
 				update: vm.wrapFunction(async (model, value) => {
-					assert(this.#context !== null, "expected this.#context !== null")
 					assert(typeof model === "string", 'expected typeof model === "string"')
 					assert(typeof value === "object", 'expected typeof value === "object"')
-					await this.updateModelValue(this.#context, model, value as ModelValue)
+					await this.updateModelValue(this.txn, model, value as ModelValue)
 				}),
 				merge: vm.wrapFunction(async (model, value) => {
-					assert(this.#context !== null, "expected this.#context !== null")
 					assert(typeof model === "string", 'expected typeof model === "string"')
 					assert(typeof value === "object", 'expected typeof value === "object"')
-					await this.mergeModelValue(this.#context, model, value as ModelValue)
+					await this.mergeModelValue(this.txn, model, value as ModelValue)
 				}),
 				delete: vm.wrapFunction(async (model, key) => {
-					assert(this.#context !== null, "expected this.#context !== null")
 					assert(typeof model === "string", 'expected typeof model === "string"')
 					assert(typeof key === "string", 'expected typeof key === "string"')
-					await this.deleteModelValue(this.#context, model, key)
+					await this.deleteModelValue(this.txn, model, key)
 				}),
 			})
 			.consume(vm.cache)
@@ -111,15 +110,15 @@ export class ContractRuntime extends AbstractRuntime {
 		return Object.keys(this.actions)
 	}
 
-	protected async execute(context: ExecutionContext): Promise<void | any> {
-		const { publicKey } = context.signature
-		const { address } = context
+	protected async execute(txn: Transaction): Promise<void | any> {
+		const { publicKey } = txn.signature
+		const { address } = txn
 		const {
 			did,
 			name,
 			args,
 			context: { blockhash, timestamp },
-		} = context.message.payload
+		} = txn.message.payload
 
 		const actionHandle = this.actions[name]
 
@@ -127,10 +126,10 @@ export class ContractRuntime extends AbstractRuntime {
 			throw new Error(`invalid action name: ${name}`)
 		}
 
-		this.#context = context
+		this.#txn = txn
 
 		const ctxHandle = this.vm.wrapValue({
-			id: context.id,
+			id: txn.id,
 			publicKey,
 			did,
 			address,
@@ -151,7 +150,7 @@ export class ContractRuntime extends AbstractRuntime {
 		} finally {
 			argHandles.map((handle: QuickJSHandle) => handle.dispose())
 			ctxHandle.dispose()
-			this.#context = null
+			this.#txn = null
 		}
 	}
 }

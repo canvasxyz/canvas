@@ -45,6 +45,8 @@ export type Config<ModelsT extends ModelSchema = any, ActionsT extends Actions<M
 	snapshot?: Snapshot | null
 }
 
+export type ModelRecord = { id: string; message: Message<Action | Session> }
+
 export type ActionResult<Result = any> = { id: string; signature: Signature; message: Message<Action>; result: Result }
 
 export type ActionAPI<Args extends Array<any> = any, Result = any> = (...args: Args) => Promise<ActionResult<Result>>
@@ -103,21 +105,24 @@ export class Canvas<
 			},
 		)
 
+		// we need a `models: Models[]` array that is *persistent*
+		// w/r/t property order
+		const models: Model[] = []
 		for (const model of runtime.models) {
-			const existingModel = await messageLog.db.get<{ name: string; model: Model }>("$models", model.name)
-			if (existingModel === null) {
-				await messageLog.db.set("$models", { name: model.name, model })
+			type ModelRecord = { name: string; model: Model }
+			const existingRecord = await messageLog.db.get<ModelRecord>("$models", model.name)
+			if (existingRecord === null) {
+				await messageLog.db.set<ModelRecord>("$models", { name: model.name, model })
+				models.push(model)
+			} else {
+				// TODO: check for missing properties and alter the database schema if necessary
+				models.push(existingRecord.model)
 			}
-
-			// TODO: check for missing properties and alter the database schema if necessary
 		}
-
-		const db = messageLog.db
-		runtime.db = db
 
 		if (config.reset) {
 			for (const modelName of Object.keys({ ...config.schema, ...runtime.schema, ...AbstractGossipLog.schema })) {
-				await db.clear(modelName)
+				await messageLog.db.clear(modelName)
 			}
 		}
 
@@ -128,23 +133,20 @@ export class Canvas<
 			await messageLog.append(config.snapshot)
 		}
 
-		const app = new Canvas<ModelsT, ActionsT>(signers, messageLog, runtime)
+		const app = new Canvas<ModelsT, ActionsT>(signers, messageLog, runtime, models)
 
 		// Check to see if the $actions table is empty and populate it if necessary
-		const messagesCount = await db.count("$messages")
+		const messagesCount = await messageLog.db.count("$messages")
 		// const sessionsCount = await db.count("$sessions")
-		const actionsCount = await db.count("$actions")
-		const usersCount = await db.count("$dids")
+		const actionsCount = await messageLog.db.count("$actions")
+		const usersCount = await messageLog.db.count("$dids")
 		if (messagesCount > 0 && (actionsCount === 0 || usersCount === 0)) {
 			app.log("indexing $actions and $dids table")
 			const limit = 4096
 			let resultCount: number
 			let start: string | undefined = undefined
 			do {
-				const results: { id: string; message: Message<Action | Session> }[] = await db.query<{
-					id: string
-					message: Message<Action | Session>
-				}>("$messages", {
+				const results: ModelRecord[] = await messageLog.db.query<ModelRecord>("$messages", {
 					limit,
 					select: { id: true, message: true },
 					where: { id: { gt: start } },
@@ -173,7 +175,7 @@ export class Canvas<
 				}
 
 				if (effects.length > 0) {
-					await db.apply(effects)
+					await messageLog.db.apply(effects)
 				}
 			} while (resultCount > 0)
 		}
@@ -208,9 +210,10 @@ export class Canvas<
 		public readonly signers: SignerCache,
 		public readonly messageLog: AbstractGossipLog<Action | Session | Snapshot>,
 		private readonly runtime: Runtime,
+		private readonly models: Model[],
 	) {
 		super()
-		this.db = runtime.db
+		this.db = messageLog.db
 
 		this.messageLog.addEventListener("message", (event) => this.safeDispatchEvent("message", event))
 		this.messageLog.addEventListener("commit", (event) => this.safeDispatchEvent("commit", event))
