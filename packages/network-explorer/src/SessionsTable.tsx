@@ -11,16 +11,17 @@ const defaultColumns: ColumnDef<Result<Action>>[] = [
 		accessorKey: "message.payload.did",
 	},
 	{
-		header: "name",
-		accessorKey: "message.payload.name",
+		header: "publicKey",
+		accessorKey: "message.payload.publicKey",
 	},
+
 	{
 		header: "timestamp",
 		accessorKey: "message.payload.context.timestamp",
 	},
 ]
 
-export const ActionsTable = () => {
+export const SessionsTable = () => {
 	const [entriesPerPage, setEntriesPerPage] = useState(10)
 	const params = new URLSearchParams({
 		limit: (entriesPerPage + 1).toString(),
@@ -28,11 +29,11 @@ export const ActionsTable = () => {
 	})
 	// TODO: cursor pagination
 
-	const { data } = useSWR(`/api/actions?${params.toString()}`, fetchAndIpldParseJson<Result<Action>[]>, {
+	const { data } = useSWR(`/api/sessions?${params.toString()}`, fetchAndIpldParseJson<Result<Action>[]>, {
 		refreshInterval: 1000,
 	})
 
-	const { data: countData } = useSWR(`/api/actions/count`, fetchAndIpldParseJson<{ count: number }>, {
+	const { data: countData } = useSWR(`/api/sessions/count`, fetchAndIpldParseJson<{ count: number }>, {
 		refreshInterval: 1000,
 	})
 

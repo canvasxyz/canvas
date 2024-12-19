@@ -1,24 +1,44 @@
 import { Box, Button, Checkbox, Flex, Text } from "@radix-ui/themes"
 import { TableToolbar } from "./TableToolbar.js"
 import { LuChevronsUpDown } from "react-icons/lu"
-import { flexRender, Table as TanStackTable } from "@tanstack/react-table"
+import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table"
+import { useState } from "react"
 
 export type Column = {
 	name: string
 	type: "string" | "number"
 }
 
-export const Table = ({
-	tanStackTable,
+export const Table = <T,>({
+	data,
+	rowCount,
+	defaultColumns,
 	responseTime,
 	entriesPerPage,
 	setEntriesPerPage,
 }: {
-	tanStackTable: TanStackTable<any>
+	data: T[]
+	rowCount: number
+	defaultColumns: ColumnDef<T>[]
 	responseTime?: number
 	entriesPerPage: number
 	setEntriesPerPage: (entriesPerPage: number) => void
 }) => {
+	const [columns] = useState<typeof defaultColumns>(() => [...defaultColumns])
+	const [columnVisibility, setColumnVisibility] = useState({})
+
+	const tanStackTable = useReactTable({
+		columns,
+		data,
+		getCoreRowModel: getCoreRowModel(),
+		manualPagination: true,
+		rowCount,
+		state: {
+			columnVisibility,
+		},
+		onColumnVisibilityChange: setColumnVisibility,
+	})
+
 	return (
 		<Flex direction="column" height="100%" flexGrow="1">
 			<TableToolbar
