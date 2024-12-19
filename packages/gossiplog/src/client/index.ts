@@ -3,7 +3,6 @@ import { logger } from "@libp2p/logger"
 import { yamux } from "@chainsafe/libp2p-yamux"
 import { ProtocolStream, select, handle } from "@libp2p/multistream-select"
 
-import WebSocket from "it-ws/web-socket"
 import { connect } from "it-ws/client"
 import { pipe } from "it-pipe"
 import { pushable } from "it-pushable"
@@ -88,6 +87,7 @@ export class NetworkClient<Payload> {
 	}
 
 	public async close() {
+		this.log("closing")
 		this.gossipLog.removeEventListener("message", this.handleMessage)
 		await this.muxer.close()
 		await this.duplex.close()

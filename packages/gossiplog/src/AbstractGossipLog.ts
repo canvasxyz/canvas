@@ -422,7 +422,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 
 		let complete = true
 
-		const root = await this.tree.read(async (txn) => {
+		await this.tree.read(async (txn) => {
 			const driver = new sync.Driver(this.topic, snapshot, txn)
 			try {
 				for await (const keys of driver.sync()) {
@@ -445,8 +445,6 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 					throw err
 				}
 			}
-
-			return txn.getRoot()
 		})
 
 		const duration = Math.ceil(performance.now() - start)
