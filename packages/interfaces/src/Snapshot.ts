@@ -7,5 +7,5 @@ export type Snapshot = {
 export type SnapshotEffect = {
 	model: string
 	key: string
-	value: Uint8Array | null // cbor.encode(value)
+	value: Uint8Array | null // cbor.encode(value) | null
 }
