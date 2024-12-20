@@ -1,3 +1,4 @@
+import useSWR from "swr"
 import { Box, Button, Checkbox, Flex, Text } from "@radix-ui/themes"
 import { TableToolbar } from "./TableToolbar.js"
 import { LuChevronDown, LuChevronsUpDown, LuChevronUp } from "react-icons/lu"
@@ -6,53 +7,57 @@ import {
 	ColumnFiltersState,
 	flexRender,
 	getCoreRowModel,
-	OnChangeFn,
 	SortingState,
 	useReactTable,
 } from "@tanstack/react-table"
 import { useState } from "react"
+import { fetchAndIpldParseJson } from "./utils.js"
 
 export type Column = {
 	name: string
 	type: "string" | "number"
 }
 
-export const Table = <T,>({
-	data,
-	rowCount,
-	defaultColumns,
-	responseTime,
-	entriesPerPage,
-	setEntriesPerPage,
-	doRefresh,
-	sorting,
-	setSorting,
-	columnFilters,
-	setColumnFilters,
-}: {
-	data: T[]
-	rowCount: number
-	defaultColumns: ColumnDef<T>[]
-	responseTime?: number
-	entriesPerPage: number
-	setEntriesPerPage: (entriesPerPage: number) => void
-	doRefresh: () => void
-	sorting?: SortingState
-	setSorting?: OnChangeFn<SortingState>
-	columnFilters?: ColumnFiltersState
-	setColumnFilters?: OnChangeFn<ColumnFiltersState>
-}) => {
-	const [columns] = useState<typeof defaultColumns>(() => [...defaultColumns])
+export const Table = <T,>({ tableName, defaultColumns }: { tableName: string; defaultColumns: ColumnDef<T>[] }) => {
+	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]) // can set initial column filter state here
+
+	const [sorting, setSorting] = useState<SortingState>([])
+
+	const [entriesPerPage, setEntriesPerPage] = useState(20)
+	const params: Record<string, string> = {
+		limit: (entriesPerPage + 1).toString(),
+	}
+
+	// TODO: cursor pagination
+	if (sorting.length === 1) {
+		params.orderBy = JSON.stringify({
+			[sorting[0].id]: sorting[0].desc ? "desc" : "asc",
+		})
+	}
+
+	const { data, mutate: doRefresh } = useSWR(
+		`/api/models/${tableName}?${new URLSearchParams(params).toString()}`,
+		fetchAndIpldParseJson<T[]>,
+		{
+			refreshInterval: 1000,
+		},
+	)
+
+	// const { data: countData } = useSWR(`/api/messages/count`, fetchAndIpldParseJson<{ count: number }>, {
+	// 	refreshInterval: 1000,
+	// })
+
+	// const [columns] = useState<typeof defaultColumns>(defaultColumns)
 	const [columnVisibility, setColumnVisibility] = useState({})
 
-	const tanStackTable = useReactTable({
-		columns,
-		data,
+	const tanStackTable = useReactTable<T>({
+		columns: defaultColumns,
+		data: data ? data.content : [],
 		getCoreRowModel: getCoreRowModel(),
 		manualPagination: true,
 		manualSorting: true,
 		manualFiltering: true,
-		rowCount,
+		// rowCount,
 		state: {
 			columnVisibility,
 			sorting,
@@ -69,7 +74,7 @@ export const Table = <T,>({
 				tanStackTable={tanStackTable}
 				entriesPerPage={entriesPerPage}
 				setEntriesPerPage={setEntriesPerPage}
-				responseTime={responseTime}
+				responseTime={data ? data.responseTime : undefined}
 				doRefresh={doRefresh}
 				columnFilters={columnFilters}
 				setColumnFilters={setColumnFilters}
