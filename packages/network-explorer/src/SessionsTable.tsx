@@ -8,20 +8,20 @@ import { ColumnDef } from "@tanstack/react-table"
 const defaultColumns: ColumnDef<Result<Action>>[] = [
 	{
 		header: "did",
-		accessorKey: "message.payload.did",
+		accessorKey: "did",
 		size: 580,
 		enableSorting: false,
 	},
 	{
-		header: "publicKey",
-		accessorKey: "message.payload.publicKey",
+		header: "public_key",
+		accessorKey: "public_key",
 		size: 580,
 		enableSorting: false,
 	},
-
 	{
-		header: "timestamp",
-		accessorKey: "message.payload.context.timestamp",
+		header: "expiration",
+		accessorKey: "expiration",
+		size: 100,
 		enableSorting: false,
 	},
 ]
@@ -33,7 +33,7 @@ export const SessionsTable = () => {
 	}
 
 	const { data, mutate: doRefresh } = useSWR(
-		`/api/sessions?${new URLSearchParams(params).toString()}`,
+		`/api/models/$sessions?${new URLSearchParams(params).toString()}`,
 		fetchAndIpldParseJson<Result<Action>[]>,
 		{
 			refreshInterval: 1000,
