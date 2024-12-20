@@ -122,6 +122,7 @@ export const Table = <T,>({
 						style={{
 							display: "grid",
 							overflowY: "scroll",
+							scrollbarWidth: "none",
 							position: "relative",
 						}}
 					>
