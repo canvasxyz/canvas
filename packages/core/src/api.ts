@@ -178,8 +178,20 @@ export function createAPI(app: Canvas): express.Express {
 	})
 
 	api.get("/models/:model", async (req, res) => {
-		// TODO: start/limit/offset
-		return void res.status(StatusCodes.NOT_IMPLEMENTED).end()
+		try {
+			const { model } = req.params
+			const { where: where_, orderBy: orderBy_, limit: limit_ } = req.query
+
+			const where = typeof where_ === "string" ? JSON.parse(where_ as string) : undefined
+			const orderBy = typeof orderBy_ === "string" ? JSON.parse(orderBy_ as string) : undefined
+			const limit = typeof limit_ === "string" ? parseInt(limit_ as string) : undefined
+
+			const results = await app.db.query(model, { where, orderBy, limit })
+
+			return void res.end(json.encode(results))
+		} catch (e: any) {
+			return void res.end(json.encode({ error: e.toString() }))
+		}
 	})
 
 	return api
