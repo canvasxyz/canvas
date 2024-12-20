@@ -29,6 +29,34 @@ export const tables: TableDef[] = [
 		],
 	},
 	{
+		tableName: "$ancestors",
+		defaultColumns: [
+			{
+				header: "id",
+				accessorKey: "id",
+				size: 580,
+				enableSorting: true,
+			},
+			{
+				header: "links",
+				accessorKey: "links",
+				size: 580,
+				// enableSorting: true,
+			},
+		],
+	},
+	{
+		tableName: "$dids",
+		defaultColumns: [
+			{
+				header: "did",
+				accessorKey: "did",
+				size: 580,
+				enableSorting: true,
+			},
+		],
+	},
+	{
 		tableName: "$messages",
 		defaultColumns: [
 			{
