@@ -39,12 +39,6 @@ export const MessagesTable = () => {
 		limit: (entriesPerPage + 1).toString(),
 	}
 
-	// for (const filter of columnFilters) {
-	// 	if (filter.id === "message_payload_type") {
-	// 		params.type = filter.value as string
-	// 	}
-	// }
-
 	// TODO: cursor pagination
 	if (sorting.length === 1) {
 		params.orderBy = JSON.stringify({
