@@ -73,7 +73,7 @@ export const TableToolbar = ({
 						.getAllLeafColumns()
 						.filter((column) => column.getCanFilter())
 						.map((column) => (
-							<DropdownMenu.Sub>
+							<DropdownMenu.Sub key={column.id}>
 								<DropdownMenu.SubTrigger>{column.columnDef.header?.toString()}</DropdownMenu.SubTrigger>
 								<DropdownMenu.SubContent>
 									{(column.columnDef.meta?.filterOptions || []).map((filterOption) => (

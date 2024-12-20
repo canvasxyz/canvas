@@ -14,11 +14,18 @@ const defaultColumns: ColumnDef<Result<Message<Action | Session>>>[] = [
 		enableColumnFilter: false,
 	},
 	{
-		header: "type",
-		accessorKey: "message.payload.type",
-		enableSorting: false,
-		enableColumnFilter: true,
-		meta: { filterOptions: ["action", "session"] },
+		header: "branch",
+		accessorKey: "branch",
+		size: 100,
+		enableSorting: true,
+		enableColumnFilter: false,
+	},
+	{
+		header: "clock",
+		accessorKey: "clock",
+		size: 100,
+		enableSorting: true,
+		enableColumnFilter: false,
 	},
 ]
 
@@ -32,13 +39,21 @@ export const MessagesTable = () => {
 		limit: (entriesPerPage + 1).toString(),
 	}
 
+	// for (const filter of columnFilters) {
+	// 	if (filter.id === "message_payload_type") {
+	// 		params.type = filter.value as string
+	// 	}
+	// }
+
 	// TODO: cursor pagination
-	if (sorting.length === 1 && sorting[0].id === "id") {
-		params.order = sorting[0].desc ? "desc" : "asc"
+	if (sorting.length === 1) {
+		params.orderBy = JSON.stringify({
+			[sorting[0].id]: sorting[0].desc ? "desc" : "asc",
+		})
 	}
 
 	const { data, mutate: doRefresh } = useSWR(
-		`/api/messages?${new URLSearchParams(params).toString()}`,
+		`/api/models/$messages?${new URLSearchParams(params).toString()}`,
 		fetchAndIpldParseJson<Result<Message<Action | Session>>[]>,
 		{
 			refreshInterval: 1000,
