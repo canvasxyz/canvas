@@ -3,43 +3,9 @@ import { BiBug, BiCog } from "react-icons/bi"
 import { TableSelector } from "./TableSelector.js"
 import { LuTable2 } from "react-icons/lu"
 import { ApplicationInfo } from "./ApplicationInfo.js"
+import { TableDef } from "./tables.js"
 
-const tables = [
-	{
-		label: "$actions",
-		to: "/actions",
-	},
-	// {
-	// 	label: "$ancestors",
-	// 	to: "/ancestors",
-	// },
-	// {
-	// 	label: "$branch_merges",
-	// 	to: "/branch_merges",
-	// },
-	// {
-	// 	label: "$dids",
-	// 	to: "/dids",
-	// },
-	// {
-	// 	label: "$effects",
-	// 	to: "/effects",
-	// },
-	// {
-	// 	label: "$heads",
-	// 	to: "/heads",
-	// },
-	{
-		label: "$messages",
-		to: "/messages",
-	},
-	{
-		label: "$sessions",
-		to: "/sessions",
-	},
-]
-
-export const Sidebar = () => {
+export const Sidebar = ({ tables }: { tables: TableDef[] }) => {
 	return (
 		<Flex
 			width="340px"
@@ -55,8 +21,8 @@ export const Sidebar = () => {
 			Network Explorer
 			<TextField.Root size="2" placeholder="Search tables" />
 			<Flex direction="column" gap="1">
-				{tables.map(({ label, to }, key) => (
-					<TableSelector key={key} iconType={LuTable2} label={label} to={to} />
+				{tables.map(({ tableName }, key) => (
+					<TableSelector key={key} iconType={LuTable2} label={tableName} to={`/${tableName}`} />
 				))}
 			</Flex>
 			<ApplicationInfo />

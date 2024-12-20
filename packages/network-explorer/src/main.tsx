@@ -6,9 +6,8 @@ import { createHashRouter, Navigate, Route, RouterProvider, Routes } from "react
 
 import "./index.css"
 import { Sidebar } from "./Sidebar.js"
-import { ActionsTable } from "./ActionsTable.js"
-import { SessionsTable } from "./SessionsTable.js"
-import { MessagesTable } from "./MessagesTable.js"
+import { Table } from "./Table.js"
+import { tables } from "./tables.js"
 
 const router = createHashRouter([
 	{
@@ -16,33 +15,20 @@ const router = createHashRouter([
 		element: (
 			<Theme>
 				<Flex height="calc(100vh - 1px)" direction="row">
-					<Sidebar />
+					<Sidebar tables={tables} />
 					<Routes>
-						<Route path="*" element={<Navigate to="/actions" replace />} />
-						<Route
-							path="/actions"
-							element={
-								<Suspense>
-									<ActionsTable />
-								</Suspense>
-							}
-						/>
-						<Route
-							path="/sessions"
-							element={
-								<Suspense>
-									<SessionsTable />
-								</Suspense>
-							}
-						/>
-						<Route
-							path="/messages"
-							element={
-								<Suspense>
-									<MessagesTable />
-								</Suspense>
-							}
-						/>
+						<Route path="*" element={<Navigate to="/$actions" replace />} />
+						{tables.map(({ tableName, defaultColumns }, key) => (
+							<Route
+								key={key}
+								path={`/${tableName}`}
+								element={
+									<Suspense>
+										<Table tableName={tableName} defaultColumns={defaultColumns} />
+									</Suspense>
+								}
+							/>
+						))}
 					</Routes>
 				</Flex>
 			</Theme>

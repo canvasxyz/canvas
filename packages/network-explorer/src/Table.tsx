@@ -10,7 +10,7 @@ import {
 	SortingState,
 	useReactTable,
 } from "@tanstack/react-table"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { fetchAndIpldParseJson } from "./utils.js"
 
 export type Column = {
@@ -67,6 +67,13 @@ export const Table = <T,>({ tableName, defaultColumns }: { tableName: string; de
 		onColumnVisibilityChange: setColumnVisibility,
 		onColumnFiltersChange: setColumnFilters,
 	})
+
+	useEffect(() => {
+		// invalidate the settings
+		setColumnVisibility({})
+		setSorting([])
+		setColumnFilters([])
+	}, [tableName])
 
 	return (
 		<Flex direction="column" maxWidth="calc(100vw - 340px)" flexGrow="1">
