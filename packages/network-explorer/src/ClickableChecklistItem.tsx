@@ -22,7 +22,6 @@ export const ClickableChecklistItem = ({
 		<DropdownMenu.Item
 			onClick={(e) => {
 				e.preventDefault()
-				console.log(ref.current)
 				if (ref.current !== null) ref.current.click()
 			}}
 			className="contains-links-hover-white"

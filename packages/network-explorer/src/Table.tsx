@@ -1,7 +1,15 @@
 import { Box, Button, Checkbox, Flex, Text } from "@radix-ui/themes"
 import { TableToolbar } from "./TableToolbar.js"
 import { LuChevronDown, LuChevronsUpDown, LuChevronUp } from "react-icons/lu"
-import { ColumnDef, flexRender, getCoreRowModel, OnChangeFn, SortingState, useReactTable } from "@tanstack/react-table"
+import {
+	ColumnDef,
+	ColumnFiltersState,
+	flexRender,
+	getCoreRowModel,
+	OnChangeFn,
+	SortingState,
+	useReactTable,
+} from "@tanstack/react-table"
 import { useState } from "react"
 
 export type Column = {
@@ -19,6 +27,8 @@ export const Table = <T,>({
 	doRefresh,
 	sorting,
 	setSorting,
+	columnFilters,
+	setColumnFilters,
 }: {
 	data: T[]
 	rowCount: number
@@ -29,6 +39,8 @@ export const Table = <T,>({
 	doRefresh: () => void
 	sorting?: SortingState
 	setSorting?: OnChangeFn<SortingState>
+	columnFilters?: ColumnFiltersState
+	setColumnFilters?: OnChangeFn<ColumnFiltersState>
 }) => {
 	const [columns] = useState<typeof defaultColumns>(() => [...defaultColumns])
 	const [columnVisibility, setColumnVisibility] = useState({})
@@ -39,13 +51,16 @@ export const Table = <T,>({
 		getCoreRowModel: getCoreRowModel(),
 		manualPagination: true,
 		manualSorting: true,
+		manualFiltering: true,
 		rowCount,
 		state: {
 			columnVisibility,
 			sorting,
+			columnFilters,
 		},
 		onSortingChange: setSorting,
 		onColumnVisibilityChange: setColumnVisibility,
+		onColumnFiltersChange: setColumnFilters,
 	})
 
 	return (
@@ -56,6 +71,8 @@ export const Table = <T,>({
 				setEntriesPerPage={setEntriesPerPage}
 				responseTime={responseTime}
 				doRefresh={doRefresh}
+				columnFilters={columnFilters}
+				setColumnFilters={setColumnFilters}
 			/>
 			<Box overflowX="scroll">
 				<table style={{ borderCollapse: "collapse", display: "grid" }}>

@@ -1,5 +1,5 @@
 import { Box, Button, DropdownMenu, Flex, Text, TextField } from "@radix-ui/themes"
-import { Table as TanStackTable } from "@tanstack/react-table"
+import { ColumnFiltersState, OnChangeFn, Table as TanStackTable } from "@tanstack/react-table"
 import { BiChevronLeft, BiChevronRight, BiFilter, BiSidebar } from "react-icons/bi"
 import { FaClockRotateLeft } from "react-icons/fa6"
 import { LuDownload, LuRefreshCw, LuSlidersHorizontal } from "react-icons/lu"
@@ -11,12 +11,16 @@ export const TableToolbar = ({
 	responseTime,
 	entriesPerPage,
 	setEntriesPerPage,
+	columnFilters,
+	setColumnFilters,
 }: {
 	tanStackTable: TanStackTable<any>
 	doRefresh: () => void
 	responseTime?: number
 	entriesPerPage: number
 	setEntriesPerPage: (entriesPerPage: number) => void
+	columnFilters?: ColumnFiltersState
+	setColumnFilters?: OnChangeFn<ColumnFiltersState>
 }) => {
 	return (
 		<Flex style={{ borderBottom: "1px solid var(--gray-3)" }} align="center" gap="2" p="2">
@@ -57,10 +61,59 @@ export const TableToolbar = ({
 				<FaClockRotateLeft />
 			</Button>
 
-			<Button color="gray" variant="outline">
-				<BiFilter />
-				Filters
-			</Button>
+			<DropdownMenu.Root>
+				<DropdownMenu.Trigger>
+					<Button color="gray" variant="outline">
+						<BiFilter />
+						Filters
+					</Button>
+				</DropdownMenu.Trigger>
+				<DropdownMenu.Content>
+					{tanStackTable
+						.getAllLeafColumns()
+						.filter((column) => column.getCanFilter())
+						.map((column) => (
+							<DropdownMenu.Sub>
+								<DropdownMenu.SubTrigger>{column.columnDef.header?.toString()}</DropdownMenu.SubTrigger>
+								<DropdownMenu.SubContent>
+									{(column.columnDef.meta?.filterOptions || []).map((filterOption) => (
+										<ClickableChecklistItem
+											key={filterOption}
+											checked={
+												(columnFilters || []).filter((f) => f.id === column.id && f.value === filterOption).length > 0
+											}
+											onCheckedChange={(checked) => {
+												if (checked) {
+													if (setColumnFilters) {
+														setColumnFilters((columnFilters || []).concat({ id: column.id, value: filterOption }))
+													}
+												} else {
+													if (setColumnFilters) {
+														setColumnFilters(
+															(columnFilters || []).filter((f) => !(f.id === column.id && f.value === filterOption)),
+														)
+													}
+												}
+											}}
+										>
+											{filterOption}
+										</ClickableChecklistItem>
+									))}
+								</DropdownMenu.SubContent>
+							</DropdownMenu.Sub>
+						))}{" "}
+					{/* {tanStackTable.getFilter} */}
+					{/* {tanStackTable.getAllLeafColumns().map((column) => (
+						<ClickableChecklistItem
+							key={column.id}
+							checked={column.getIsVisible()}
+							onCheckedChange={column.toggleVisibility}
+						>
+							{column.columnDef.header?.toString()}
+						</ClickableChecklistItem>
+					))} */}
+				</DropdownMenu.Content>
+			</DropdownMenu.Root>
 
 			<DropdownMenu.Root>
 				<DropdownMenu.Trigger>

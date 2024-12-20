@@ -3,7 +3,7 @@ import useSWR from "swr"
 import { fetchAndIpldParseJson, Result } from "./utils.js"
 import { Action, Message, Session } from "@canvas-js/interfaces"
 import { Table } from "./Table.js"
-import { ColumnDef, SortingState } from "@tanstack/react-table"
+import { ColumnDef, ColumnFiltersState, SortingState } from "@tanstack/react-table"
 
 const defaultColumns: ColumnDef<Result<Message<Action | Session>>>[] = [
 	{
@@ -11,15 +11,20 @@ const defaultColumns: ColumnDef<Result<Message<Action | Session>>>[] = [
 		accessorKey: "id",
 		size: 580,
 		enableSorting: true,
+		enableColumnFilter: false,
 	},
 	{
 		header: "type",
 		accessorKey: "message.payload.type",
 		enableSorting: false,
+		enableColumnFilter: true,
+		meta: { filterOptions: ["action", "session"] },
 	},
 ]
 
 export const MessagesTable = () => {
+	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]) // can set initial column filter state here
+
 	const [sorting, setSorting] = useState<SortingState>([])
 
 	const [entriesPerPage, setEntriesPerPage] = useState(20)
@@ -55,6 +60,8 @@ export const MessagesTable = () => {
 			doRefresh={doRefresh}
 			sorting={sorting}
 			setSorting={setSorting}
+			columnFilters={columnFilters}
+			setColumnFilters={setColumnFilters}
 		/>
 	)
 }
