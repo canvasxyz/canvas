@@ -59,12 +59,13 @@ class Connection<Payload> {
 	readonly log = logger(`canvas:network:server:${this.id}`)
 	readonly muxer: StreamMuxer
 	readonly eventSource = pushable<Event>({ objectMode: true })
-	readonly pushProtocol = getPushProtocol(this.gossipLog.topic)
-	readonly syncProtocol = getSyncProtocol(this.gossipLog.topic)
+	readonly pushProtocol: string
+	readonly syncProtocol: string
 	readonly sourceURL: string
 
 	constructor(readonly gossipLog: AbstractGossipLog<Payload>, readonly socket: WebSocket, req: http.IncomingMessage) {
-		// TODO: validate socket.protocol
+		this.pushProtocol = getPushProtocol(gossipLog.topic)
+		this.syncProtocol = getSyncProtocol(gossipLog.topic)
 
 		const { remoteAddress, remotePort } = req.socket
 		assert(remoteAddress !== undefined, "expected remoteAddress !== undefined")
