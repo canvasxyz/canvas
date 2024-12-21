@@ -4,7 +4,7 @@
 		"strict": true,
 		"declaration": true,
 		"module": "node16",
-		"target": "es2020",
+		"target": "es2022",
 		"moduleResolution": "node16",
 		"allowSyntheticDefaultImports": true,
 		"useDefineForClassFields": true,

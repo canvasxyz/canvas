@@ -22,31 +22,31 @@ import { getPushProtocol, getSyncProtocol, chunk, encodeEvents, decodeEvents } f
 export const factory = yamux({})({ logger: { forComponent: logger } })
 
 export class NetworkClient<Payload> {
-	log = logger("canvas:network:client")
+	readonly log = logger("canvas:network:client")
+	readonly pushProtocol: string
+	readonly syncProtocol: string
+	readonly muxer: ReturnType<typeof factory.createStreamMuxer>
+	readonly duplex: ReturnType<typeof connect>
+	readonly sourceURL: string
+	readonly eventSource = pushable<Event>({ objectMode: true })
 
-	pushProtocol = getPushProtocol(this.gossipLog.topic)
-	syncProtocol = getSyncProtocol(this.gossipLog.topic)
+	constructor(readonly gossipLog: AbstractGossipLog<Payload>, readonly addr: string) {
+		this.pushProtocol = getPushProtocol(gossipLog.topic)
+		this.syncProtocol = getSyncProtocol(gossipLog.topic)
+		this.sourceURL = addr
+		this.duplex = connect(addr, {
+			// websocket: [this.gossipLog.topic],
+		})
+		this.muxer = factory.createStreamMuxer({
+			direction: "outbound",
+			onIncomingStream: (stream) => {
+				handle(stream, [this.pushProtocol, this.syncProtocol], {
+					log: this.log,
+				}).then(this.handleProtocolStream)
+			},
+			onStreamEnd: (stream) => this.log("stream %s closed (%s)", stream.id, stream.protocol),
+		})
 
-	muxer = factory.createStreamMuxer({
-		direction: "outbound",
-
-		onIncomingStream: (stream) => {
-			handle(stream, [this.pushProtocol, this.syncProtocol], {
-				log: this.log,
-			}).then(this.handleProtocolStream)
-		},
-
-		onStreamEnd: (stream) => this.log("stream %s closed (%s)", stream.id, stream.protocol),
-	})
-
-	duplex = connect(this.addr, {
-		// websocket: [this.gossipLog.topic],
-	})
-
-	sourceURL = this.addr
-	eventSource = pushable<Event>({ objectMode: true })
-
-	public constructor(readonly gossipLog: AbstractGossipLog<Payload>, readonly addr: string) {
 		this.gossipLog.addEventListener("message", this.handleMessage)
 
 		pipe(this.duplex, this.muxer, chunk, this.duplex).catch((err) => this.log.error(err))
