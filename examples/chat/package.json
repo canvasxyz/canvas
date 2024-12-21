@@ -4,8 +4,8 @@
 	"version": "0.13.9",
 	"type": "module",
 	"scripts": {
-		"build": "vite build",
-		"dev": "vite",
+		"build": "npx vite build",
+		"dev": "npx vite",
 		"dev:server": "canvas run --port 8080 --static dist --topic chat-example.canvas.xyz src/contract.ts"
 	},
 	"dependencies": {
