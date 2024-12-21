@@ -1,8 +1,25 @@
 import { defineConfig } from "vite"
-import react from "@vitejs/plugin-react"
+import wasm from "vite-plugin-wasm"
 import { nodePolyfills } from "vite-plugin-node-polyfills"
-
-// https://vitejs.dev/config/
 export default defineConfig({
-	plugins: [react(), nodePolyfills()],
+	// ...other config settings
+	plugins: [nodePolyfills({ globals: { Buffer: true } }), wasm()],
+	server: {
+		headers: {
+			"Cross-Origin-Opener-Policy": "same-origin",
+			"Cross-Origin-Embedder-Policy": "require-corp",
+		},
+	},
+	build: {
+		minify: false,
+	},
+	optimizeDeps: {
+		exclude: ["@sqlite.org/sqlite-wasm", "quickjs-emscripten"],
+		esbuildOptions: {
+			// Node.js global to browser globalThis
+			define: {
+				global: "globalThis",
+			},
+		},
+	},
 })

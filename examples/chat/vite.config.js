@@ -15,7 +15,7 @@ export default defineConfig({
 		minify: false,
 	},
 	optimizeDeps: {
-		exclude: ["@sqlite.org/sqlite-wasm"],
+		exclude: ["@sqlite.org/sqlite-wasm", "quickjs-emscripten"],
 		esbuildOptions: {
 			// Node.js global to browser globalThis
 			define: {
