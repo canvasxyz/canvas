@@ -147,7 +147,7 @@ This will cause `presence:join` events to be emitted for all peers that join the
 topic, even if they have a different app topic. Check the event's `topics` list to see
 which application(s) the peer is running.
 
-You can also see this on our [chat app](https://canvas-chat-example.p2p.app/). Try opening a few
+You can also see this on our [chat app](https://chat-example.canvas.xyz/). Try opening a few
 rooms on [this client](https://mud-example.vercel.app/), and those rooms will show up in the
 chat app's presence list.
 

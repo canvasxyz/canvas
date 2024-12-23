@@ -4,7 +4,7 @@
 	"type": "module",
 	"private": true,
 	"scripts": {
-		"dev": "tsx server.ts",
+		"dev": "npx tsx server.ts",
 		"build": "next build",
 		"start": "NODE_ENV=production tsx server.ts",
 		"lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
@@ -16,7 +16,7 @@
 		"@canvas-js/utils": "0.13.9",
 		"@ipld/dag-json": "^10.2.3",
 		"express": "^4.19.2",
-		"next": "14.1.4",
+		"next": "^14.1.4",
 		"react": "^18.3.1",
 		"react-dom": "^18.3.1"
 	},
@@ -27,7 +27,7 @@
 		"@types/react-dom": "^18.3.0",
 		"autoprefixer": "^10.4.19",
 		"eslint": "^8.57.0",
-		"eslint-config-next": "14.1.4",
+		"eslint-config-next": "^14.1.4",
 		"postcss": "^8.4.38",
 		"tailwindcss": "^3.4.4",
 		"ts-node": "^10.9.2",
