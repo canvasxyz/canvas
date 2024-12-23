@@ -99,8 +99,8 @@ export default defineConfig({
 				{
 					text: "Examples",
 					items: [
-						{ text: "Server-Side", link: "/examples-chat-postgres.md" },
-						{ text: "Client-Side", link: "/examples-chat.md" },
+						{ text: "Chat", link: "/examples-chat.md" },
+						{ text: "Server-Side Chat", link: "/examples-chat-next.md" },
 						{ text: "Encrypted Chat", link: "/examples-encrypted-chat.md" },
 						{ text: "Snake", link: "/examples-snake.md" },
 					],
