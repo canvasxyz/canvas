@@ -1,5 +1,5 @@
 {
-	"name": "@canvas-js/chat-postgres",
+	"name": "@canvas-js/chat-next",
 	"version": "0.13.9",
 	"type": "module",
 	"private": true,

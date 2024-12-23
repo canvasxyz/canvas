@@ -44,7 +44,7 @@
 		{ "path": "./packages/utils" },
 		{ "path": "./packages/utils/test" },
 		{ "path": "./examples/chat" },
-		{ "path": "./examples/chat-postgres" },
+		{ "path": "./examples/chat-next" },
 		{ "path": "./examples/encrypted-chat" },
 		{ "path": "./examples/snake" }
 	]
