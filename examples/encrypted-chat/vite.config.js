@@ -1,6 +1,7 @@
 import { defineConfig } from "vite"
 import wasm from "vite-plugin-wasm"
 import { nodePolyfills } from "vite-plugin-node-polyfills"
+
 export default defineConfig({
 	// ...other config settings
 	plugins: [nodePolyfills({ globals: { Buffer: true } }), wasm()],
@@ -12,6 +13,7 @@ export default defineConfig({
 	},
 	build: {
 		minify: false,
+		target: "es2022",
 	},
 	optimizeDeps: {
 		exclude: ["@sqlite.org/sqlite-wasm", "quickjs-emscripten"],

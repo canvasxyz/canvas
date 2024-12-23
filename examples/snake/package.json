@@ -4,10 +4,10 @@
 	"version": "0.13.9",
 	"type": "module",
 	"scripts": {
+		"build": "npx vite build",
 		"dev": "npx vite",
-		"build": "tsc && npx vite build",
 		"lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-		"preview": "vite preview"
+		"preview": "npx vite preview"
 	},
 	"dependencies": {
 		"@canvas-js/chain-ethereum": "0.13.9",
