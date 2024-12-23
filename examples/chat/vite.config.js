@@ -13,6 +13,7 @@ export default defineConfig({
 	},
 	build: {
 		minify: false,
+		target: "es2022",
 	},
 	optimizeDeps: {
 		exclude: ["@sqlite.org/sqlite-wasm", "quickjs-emscripten"],
