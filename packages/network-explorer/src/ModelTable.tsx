@@ -1,16 +1,14 @@
-import useSWR from "swr"
-import { fetchAndIpldParseJson } from "./utils.js"
-import type { Model } from "@canvas-js/modeldb"
 import { Navigate, useParams } from "react-router-dom"
 import { Table } from "./Table.js"
+import { useApplicationInfo } from "./useApplicationInfo.js"
 
 export const ModelTable = () => {
 	const params = useParams()
 	// request application info
-	const { data } = useSWR(`/api/`, fetchAndIpldParseJson<{ models: Record<string, Model> }>)
+	const content = useApplicationInfo()
 
-	if (data && data.content) {
-		const modelDefinition = data.content.models[params.model as string]
+	if (content !== null) {
+		const modelDefinition = content.models[params.model as string]
 		if (modelDefinition) {
 			const defaultColumns = modelDefinition.properties.map((property) => ({
 				header: property.name,
