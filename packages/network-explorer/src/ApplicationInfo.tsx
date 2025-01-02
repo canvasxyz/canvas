@@ -4,12 +4,12 @@ import { Grid, Text } from "@radix-ui/themes"
 import { useApplicationInfo } from "./useApplicationInfo.js"
 
 export const ApplicationInfo = () => {
-	const content = useApplicationInfo()
+	const applicationInfo = useApplicationInfo()
 
 	return (
 		<Grid mt="auto" columns="2">
 			<Text weight="bold">Topic</Text>
-			<Text color="gray">{content ? content.topic : "-"}</Text>
+			<Text color="gray">{applicationInfo ? applicationInfo.topic : "-"}</Text>
 			<Text weight="bold">Canvas Node</Text>
 			<Text color="gray">v{version}</Text>
 			<Text weight="bold">Server Sync</Text>

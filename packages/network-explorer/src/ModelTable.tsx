@@ -5,10 +5,10 @@ import { useApplicationInfo } from "./useApplicationInfo.js"
 export const ModelTable = () => {
 	const params = useParams()
 	// request application info
-	const content = useApplicationInfo()
+	const applicationInfo = useApplicationInfo()
 
-	if (content !== null) {
-		const modelDefinition = content.models[params.model as string]
+	if (applicationInfo !== null) {
+		const modelDefinition = applicationInfo.models[params.model as string]
 		if (modelDefinition) {
 			const defaultColumns = modelDefinition.properties.map((property) => ({
 				header: property.name,
