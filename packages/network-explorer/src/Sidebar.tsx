@@ -4,8 +4,14 @@ import { TableSelector } from "./TableSelector.js"
 import { LuTable2 } from "react-icons/lu"
 import { ApplicationInfo } from "./ApplicationInfo.js"
 import { TableDef } from "./tables.js"
+import { useApplicationInfo } from "./useApplicationInfo.js"
 
 export const Sidebar = ({ tables }: { tables: TableDef[] }) => {
+	const applicationInfo = useApplicationInfo()
+
+	const modelNames = applicationInfo ? Object.keys(applicationInfo.models) : []
+	modelNames.sort()
+
 	return (
 		<Flex
 			width="340px"
@@ -23,6 +29,10 @@ export const Sidebar = ({ tables }: { tables: TableDef[] }) => {
 			<Flex direction="column" gap="1">
 				{tables.map(({ tableName }, key) => (
 					<TableSelector key={key} iconType={LuTable2} label={tableName} to={`/${tableName}`} />
+				))}
+
+				{modelNames.map((modelName) => (
+					<TableSelector key={`model-${modelName}`} iconType={LuTable2} label={modelName} to={`/models/${modelName}`} />
 				))}
 			</Flex>
 			<ApplicationInfo />
