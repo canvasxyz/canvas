@@ -188,8 +188,10 @@ export function createAPI(app: Canvas): express.Express {
 
 			const results = await app.db.query(model, { where, orderBy, limit })
 
+			res.writeHead(StatusCodes.OK, { "content-type": "application/json" })
 			return void res.end(json.encode(results))
 		} catch (e: any) {
+			res.writeHead(StatusCodes.OK, { "content-type": "application/json" })
 			return void res.end(json.encode({ error: e.toString() }))
 		}
 	})
