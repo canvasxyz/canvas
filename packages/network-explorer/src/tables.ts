@@ -1,7 +1,5 @@
 import { ColumnDef } from "@tanstack/react-table"
-import * as cbor from "@ipld/dag-cbor"
-import * as json from "@ipld/dag-json"
-import { ContentPopover } from "./components/ContentPopover.js"
+import { BinaryCellData } from "./components/BinaryCellData.js"
 
 export type TableDef = {
 	tableName: string
@@ -83,28 +81,26 @@ export const tables: TableDef[] = [
 				header: "key",
 				accessorKey: "key",
 				size: 700,
-				enableSorting: true,
+				enableSorting: false,
 			},
 			{
 				header: "value",
 				accessorKey: "value",
-				size: 150,
-				cell: (props) => {
-					const decodedValue = cbor.decode(props.getValue() as Uint8Array)
-					return ContentPopover({ value: json.stringify(decodedValue) })
-				},
+				size: 100,
+				cell: BinaryCellData,
+				enableSorting: false,
 			},
 			{
 				header: "branch",
 				accessorKey: "branch",
-				size: 150,
-				// enableSorting: true,
+				size: 100,
+				enableSorting: false,
 			},
 			{
 				header: "clock",
 				accessorKey: "clock",
-				size: 150,
-				// enableSorting: true,
+				size: 100,
+				enableSorting: false,
 			},
 		],
 	},
