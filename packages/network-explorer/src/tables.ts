@@ -105,6 +105,17 @@ export const tables: TableDef[] = [
 		],
 	},
 	{
+		tableName: "$heads",
+		defaultColumns: [
+			{
+				header: "id",
+				accessorKey: "id",
+				size: 400,
+				enableSorting: true,
+			},
+		],
+	},
+	{
 		tableName: "$messages",
 		defaultColumns: [
 			{
