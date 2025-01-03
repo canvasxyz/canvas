@@ -5,8 +5,10 @@ import { LuTable2 } from "react-icons/lu"
 import { ApplicationInfo } from "./ApplicationInfo.js"
 import { TableDef } from "./tables.js"
 import { useApplicationInfo } from "./useApplicationInfo.js"
+import { useState } from "react"
 
 export const Sidebar = ({ tables }: { tables: TableDef[] }) => {
+	const [tableSearchTerm, setTableSearchTerm] = useState("")
 	const applicationInfo = useApplicationInfo()
 
 	const modelNames = applicationInfo ? Object.keys(applicationInfo.models) : []
@@ -25,15 +27,29 @@ export const Sidebar = ({ tables }: { tables: TableDef[] }) => {
 			style={{ borderRight: "1px solid var(--gray-3)" }}
 		>
 			Network Explorer
-			<TextField.Root size="2" placeholder="Search tables" />
+			<TextField.Root
+				value={tableSearchTerm}
+				onChange={(e) => setTableSearchTerm(e.target.value)}
+				size="2"
+				placeholder="Search tables"
+			/>
 			<Flex overflowY="scroll" direction="column" gap="1">
-				{tables.map(({ tableName }, key) => (
-					<TableSelector key={key} iconType={LuTable2} label={tableName} to={`/${tableName}`} />
-				))}
+				{tables
+					.filter(({ tableName }) => tableName.toLowerCase().includes(tableSearchTerm.toLowerCase()))
+					.map(({ tableName }, key) => (
+						<TableSelector key={key} iconType={LuTable2} label={tableName} to={`/${tableName}`} />
+					))}
 
-				{modelNames.map((modelName) => (
-					<TableSelector key={`model-${modelName}`} iconType={LuTable2} label={modelName} to={`/models/${modelName}`} />
-				))}
+				{modelNames
+					.filter((modelName) => modelName.toLowerCase().includes(tableSearchTerm.toLowerCase()))
+					.map((modelName) => (
+						<TableSelector
+							key={`model-${modelName}`}
+							iconType={LuTable2}
+							label={modelName}
+							to={`/models/${modelName}`}
+						/>
+					))}
 			</Flex>
 			<ApplicationInfo />
 			{/* <Flex direction="row" gap="2">
