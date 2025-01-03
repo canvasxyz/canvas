@@ -121,4 +121,4 @@ export const contract: Contract = {
 			})
 		},
 	},
-} satisfies Contract
+} as const // satisfies Contract

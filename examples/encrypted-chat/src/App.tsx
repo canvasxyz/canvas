@@ -26,7 +26,7 @@ const useChat = (topic: string, wallet: ethers.Wallet) => {
 		contract,
 	})
 
-	const people = useLiveQuery(app, "encryptionKeys", { orderBy: { address: "desc" } })
+	const people = useLiveQuery<typeof contract.models, "encryptionKeys">(app, "encryptionKeys", { orderBy: { address: "desc" } })
 
 	return {
 		wallet,
@@ -108,8 +108,8 @@ function App({ wallet1, wallet2 }: { wallet1: ethers.Wallet; wallet2: ethers.Wal
 
 	const { registerEncryptionKey: registerEncryptionKey2 } = useChat("chat-encrypted.canvas.xyz", wallet2)
 
-	const registration1 = useLiveQuery(app, "encryptionKeys", { where: { address: wallet1?.address } })
-	const registration2 = useLiveQuery(app, "encryptionKeys", { where: { address: wallet2?.address } })
+	const registration1 = useLiveQuery<typeof contract.models, "encryptionKeys">(app, "encryptionKeys", { where: { address: wallet1?.address } })
+	const registration2 = useLiveQuery<typeof contract.models, "encryptionKeys">(app, "encryptionKeys", { where: { address: wallet2?.address } })
 
 	const [conversationAddress, setConversationAddress] = useState<string>()
 
@@ -204,11 +204,11 @@ const Conversation = ({
 	createEncryptionGroup: (recipient: string) => Promise<void>
 	sendPrivateMessage: (recipient: string, message: string) => Promise<void>
 }) => {
-	const groups = useLiveQuery(app, "encryptionGroups", {
+	const groups = useLiveQuery<typeof contract.models, "encryptionGroups">(app, "encryptionGroups", {
 		where: { id: getGroupId(wallet.address, conversationAddress) },
 	})
 
-	const messages = useLiveQuery(app, "privateMessages", {
+	const messages = useLiveQuery<typeof contract.models, "privateMessages">(app, "privateMessages", {
 		where: { group: getGroupId(wallet.address, conversationAddress) },
 	})
 
