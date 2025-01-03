@@ -18,7 +18,17 @@ export type Column = {
 	type: "string" | "number"
 }
 
-export const Table = <T,>({ tableName, defaultColumns }: { tableName: string; defaultColumns: ColumnDef<T>[] }) => {
+export const Table = <T,>({
+	showSidebar,
+	setShowSidebar,
+	tableName,
+	defaultColumns,
+}: {
+	showSidebar: boolean
+	setShowSidebar: (show: boolean) => void
+	tableName: string
+	defaultColumns: ColumnDef<T>[]
+}) => {
 	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]) // can set initial column filter state here
 
 	const [sorting, setSorting] = useState<SortingState>([])
@@ -78,6 +88,8 @@ export const Table = <T,>({ tableName, defaultColumns }: { tableName: string; de
 	return (
 		<Flex direction="column" maxWidth="calc(100vw - 340px)" flexGrow="1">
 			<TableToolbar
+				showSidebar={showSidebar}
+				setShowSidebar={setShowSidebar}
 				tanStackTable={tanStackTable}
 				entriesPerPage={entriesPerPage}
 				setEntriesPerPage={setEntriesPerPage}

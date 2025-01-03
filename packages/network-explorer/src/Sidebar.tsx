@@ -26,7 +26,7 @@ export const Sidebar = ({ tables }: { tables: TableDef[] }) => {
 		>
 			Network Explorer
 			<TextField.Root size="2" placeholder="Search tables" />
-			<Flex direction="column" gap="1">
+			<Flex overflowY="scroll" direction="column" gap="1">
 				{tables.map(({ tableName }, key) => (
 					<TableSelector key={key} iconType={LuTable2} label={tableName} to={`/${tableName}`} />
 				))}

@@ -6,6 +6,8 @@ import { LuDownload, LuRefreshCw, LuSlidersHorizontal } from "react-icons/lu"
 import { ClickableChecklistItem } from "./ClickableChecklistItem.js"
 
 export const TableToolbar = ({
+	showSidebar,
+	setShowSidebar,
 	tanStackTable,
 	doRefresh,
 	responseTime,
@@ -14,6 +16,8 @@ export const TableToolbar = ({
 	columnFilters,
 	setColumnFilters,
 }: {
+	showSidebar: boolean
+	setShowSidebar: (show: boolean) => void
 	tanStackTable: TanStackTable<any>
 	doRefresh: () => void
 	responseTime?: number
@@ -24,7 +28,7 @@ export const TableToolbar = ({
 }) => {
 	return (
 		<Flex style={{ borderBottom: "1px solid var(--gray-3)" }} align="center" gap="2" p="2">
-			<Button color="gray" variant="outline">
+			<Button color="gray" variant={showSidebar ? "outline" : "solid"} onClick={() => setShowSidebar(!showSidebar)}>
 				<BiSidebar />
 			</Button>
 

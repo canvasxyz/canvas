@@ -2,7 +2,13 @@ import { Navigate, useParams } from "react-router-dom"
 import { Table } from "./Table.js"
 import { useApplicationInfo } from "./useApplicationInfo.js"
 
-export const ModelTable = () => {
+export const ModelTable = ({
+	showSidebar,
+	setShowSidebar,
+}: {
+	showSidebar: boolean
+	setShowSidebar: (show: boolean) => void
+}) => {
 	const params = useParams()
 	// request application info
 	const applicationInfo = useApplicationInfo()
@@ -17,7 +23,14 @@ export const ModelTable = () => {
 				enableColumnFilter: false,
 				size: 400,
 			}))
-			return <Table tableName={params.model as string} defaultColumns={defaultColumns} />
+			return (
+				<Table
+					showSidebar={showSidebar}
+					setShowSidebar={setShowSidebar}
+					tableName={params.model as string}
+					defaultColumns={defaultColumns}
+				/>
+			)
 		} else {
 			// not found
 			// redirect to homepage

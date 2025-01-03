@@ -3,13 +3,15 @@ import { Sidebar } from "./Sidebar.js"
 import { Table } from "./Table.js"
 import { Navigate, Route, Routes } from "react-router-dom"
 import { tables } from "./tables.js"
-import { Suspense } from "react"
+import { Suspense, useState } from "react"
 import { ModelTable } from "./ModelTable.js"
 
 export const App = () => {
+	const [showSidebar, setShowSidebar] = useState(true)
+
 	return (
 		<Flex height="calc(100vh - 1px)" direction="row">
-			<Sidebar tables={tables} />
+			{showSidebar && <Sidebar tables={tables} />}
 			<Routes>
 				<Route path="*" element={<Navigate to="/$actions" replace />} />
 				{tables.map(({ tableName, defaultColumns }, key) => (
@@ -18,7 +20,12 @@ export const App = () => {
 						path={`/${tableName}`}
 						element={
 							<Suspense>
-								<Table tableName={tableName} defaultColumns={defaultColumns} />
+								<Table
+									showSidebar={showSidebar}
+									setShowSidebar={setShowSidebar}
+									tableName={tableName}
+									defaultColumns={defaultColumns}
+								/>
 							</Suspense>
 						}
 					/>
@@ -28,7 +35,7 @@ export const App = () => {
 					path={`/models/:model`}
 					element={
 						<Suspense>
-							<ModelTable />
+							<ModelTable showSidebar={showSidebar} setShowSidebar={setShowSidebar} />
 						</Suspense>
 					}
 				/>
