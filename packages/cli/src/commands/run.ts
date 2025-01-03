@@ -119,6 +119,10 @@ export const builder = (yargs: Argv) =>
 			type: "boolean",
 			desc: "Serve the network explorer web interface",
 		})
+		.option("ws-url", {
+			type: "string",
+			desc: "WebSocket URL for GossipLog to connect to directly",
+		})
 
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
@@ -337,5 +341,9 @@ export async function handler(args: Args) {
 	if (args["repl"]) {
 		console.log("")
 		startActionPrompt(app)
+	}
+
+	if (args["ws-url"]) {
+		await app.connect(args["ws-url"])
 	}
 }
