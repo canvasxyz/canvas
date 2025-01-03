@@ -593,9 +593,9 @@ export class ModelAPI {
 }
 
 export class RelationAPI {
-	public readonly table = `${this.relation.source}/${this.relation.property}`
-	public readonly sourceIndex = `${this.relation.source}/${this.relation.property}/source`
-	public readonly targetIndex = `${this.relation.source}/${this.relation.property}/target`
+	public readonly table: string
+	public readonly sourceIndex: string
+	public readonly targetIndex: string
 
 	readonly #select: Query<{ _target: string }>
 	readonly #insert: Method<{ _source: string; _target: string }>
@@ -605,6 +605,10 @@ export class RelationAPI {
 		readonly db: SqlStorage,
 		readonly relation: Relation,
 	) {
+		this.table = `${relation.source}/${relation.property}`
+		this.sourceIndex = `${relation.source}/${relation.property}/source`
+		this.targetIndex = `${relation.source}/${relation.property}/target`
+		
 		const columns = [`_source TEXT NOT NULL`, `_target TEXT NOT NULL`]
 		db.exec(`CREATE TABLE IF NOT EXISTS "${this.table}" (${columns.join(", ")})`)
 

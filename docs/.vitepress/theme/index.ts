@@ -6,8 +6,6 @@ import CodeGroupOpener from "../components/CodeGroupOpener.vue"
 import BlogRedirect from "../components/BlogRedirect.vue"
 import HeroRow from "../components/HeroRow.vue"
 import HeroAction from "../components/HeroAction.vue"
-import DemoToggle from "../components/DemoToggle.vue"
-import DemoCell from "../components/DemoCell.vue"
 import FeatureCard from "../components/FeatureCard.vue"
 import FeatureRow from "../components/FeatureRow.vue"
 import TextItem from "../components/TextItem.vue"
@@ -29,8 +27,6 @@ export default {
 		app.component("CodeGroupOpener", CodeGroupOpener)
 		app.component("HeroRow", HeroRow)
 		app.component("HeroAction", HeroAction)
-		app.component("DemoToggle", DemoToggle)
-		app.component("DemoCell", DemoCell)
 		app.component("FeatureCard", FeatureCard)
 		app.component("FeatureRow", FeatureRow)
 		app.component("TextItem", TextItem)

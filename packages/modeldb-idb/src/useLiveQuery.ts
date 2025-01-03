@@ -1,19 +1,19 @@
 import { useEffect, useRef, useState } from "react"
 import equal from "fast-deep-equal/es6/index.js"
 
-import type { AbstractModelDB, ModelValue, QueryParams } from "@canvas-js/modeldb"
+import type { AbstractModelDB, ModelValue, QueryParams, ModelSchema, DeriveModelTypes } from "@canvas-js/modeldb"
 
-export function useLiveQuery<T extends ModelValue = ModelValue>(
-	db: AbstractModelDB | null | undefined,
+export function useLiveQuery<Schema extends ModelSchema, K extends keyof ModelSchema>(
+	db: AbstractModelDB<Schema> | null | undefined,
 	modelName: string | null | undefined,
 	query: QueryParams | null | undefined,
-): T[] | null {
-	const dbRef = useRef<AbstractModelDB | null>(db ?? null)
+): DeriveModelTypes<Schema>[K][] | null {
+	const dbRef = useRef<AbstractModelDB<Schema> | null>(db ?? null)
 	const modelRef = useRef<string | null>(modelName ?? null)
 	const queryRef = useRef<QueryParams | null>(query ?? null)
 	const subscriptionRef = useRef<number | null>(null)
 
-	const [results, setResults] = useState<null | T[]>(null)
+	const [results, setResults] = useState<null | DeriveModelTypes<Schema>[K][]>(null)
 
 	useEffect(() => {
 		// Unsubscribe from the cached database handle, if necessary
@@ -52,7 +52,7 @@ export function useLiveQuery<T extends ModelValue = ModelValue>(
 			db.unsubscribe(subscriptionRef.current)
 		}
 
-		const { id } = db.subscribe(modelName, query, (results) => setResults(results as T[]))
+		const { id } = db.subscribe(modelName, query, (results) => setResults(results as DeriveModelTypes<Schema>[K][]))
 		dbRef.current = db
 		modelRef.current = modelName
 		queryRef.current = query

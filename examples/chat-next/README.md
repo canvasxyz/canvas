@@ -1,19 +1,19 @@
 ## Server-side chat with Postgres and NextJS
 
-This app demonstrates how a hybrid client/server implementation of Canvas can work.
+This app demonstrates server-side rendered implementation of Canvas.
 
 1. All signer state is stored on the frontend. Only signatures and signed actions are passed to the server, which handles all other Canvas-related functionality
 2. Effects recieved on the server are persisted into a local or cloud Postgres database
-3. Integrates with NextJS's static generation and frontend tooling features
+3. Pages are served using NextJS for static generation
 
 ### Workspaces
 
-This project uses NPM workspaces, and all commands are assumed to be executed in the root of the workspace. For commands specific to this chat project, use `-w` to specify the project name `@canvas-js/chat-postgres`
+This project uses NPM workspaces, and all commands are assumed to be executed in the root of the workspace. For commands specific to this chat project, use `-w` to specify the project name `@canvas-js/chat-next`
 
 ```
 cd canvas/
 npm run build
-npm run build -w @canvas-js/chat-postgres
+npm run build -w @canvas-js/chat-next
 ```
 
 ### Setup
@@ -43,7 +43,7 @@ Run the development server for compiling Canvas runtime files:
 
 Finally, run the development server for this app:
 
-- `npm run dev -w @canvas-js/chat-postgres`
+- `npm run dev -w @canvas-js/chat-next`
 
 ### Build
 
@@ -55,12 +55,12 @@ Make sure you have a valid Postgres connection string passed as `DATABASE_URL`.
 
 - `npm run build`
 
-2. Build the NextJS-related files in the `chat-postgres` app:
+2. Build the NextJS-related files in the `chat-next` app:
 
-- `npm run build -w @canvas-js/chat-postgres`
+- `npm run build -w @canvas-js/chat-next`
 
 3. Run the production server:
 
-- `npm run start -w @canvas-js/chat-postgres`
+- `npm run start -w @canvas-js/chat-next`
 
 Open localhost:3000 with your browser to see the result

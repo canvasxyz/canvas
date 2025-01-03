@@ -1,18 +1,18 @@
 {
 	"name": "@canvas-js/example-snake",
 	"private": true,
-	"version": "0.13.8",
+	"version": "0.13.9",
 	"type": "module",
 	"scripts": {
-		"dev": "vite",
-		"build": "tsc && vite build",
+		"build": "npx vite build",
+		"dev": "npx vite",
 		"lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-		"preview": "vite preview"
+		"preview": "npx vite preview"
 	},
 	"dependencies": {
-		"@canvas-js/chain-ethereum": "0.13.8",
-		"@canvas-js/core": "0.13.8",
-		"@canvas-js/hooks": "0.13.8",
+		"@canvas-js/chain-ethereum": "0.13.9",
+		"@canvas-js/core": "0.13.9",
+		"@canvas-js/hooks": "0.13.9",
 		"ethers": "^6.13.2",
 		"react": "^18.3.1",
 		"react-dom": "^18.3.1"

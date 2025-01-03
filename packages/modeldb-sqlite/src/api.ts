@@ -64,9 +64,9 @@ function getPropertyColumnType(property: Property): string {
 const getPropertyColumn = (property: Property) => `'${property.name}' ${getPropertyColumnType(property)}`
 
 export class ModelAPI {
-	#table = this.model.name
-	#params: Record<string, `p${string}`> = {}
-	#properties = Object.fromEntries(this.model.properties.map((property) => [property.name, property]))
+	readonly #table: string
+	readonly #params: Record<string, `p${string}`>
+	readonly #properties: Record<string, Property>
 
 	// Methods
 	#insert: Method<Params>
@@ -89,6 +89,10 @@ export class ModelAPI {
 		readonly db: Database,
 		readonly model: Model,
 	) {
+		this.#table = model.name
+		this.#params = {}
+		this.#properties = Object.fromEntries(model.properties.map((property) => [property.name, property]))
+
 		const columns: string[] = []
 		this.columnNames = [] // quoted column names for non-relation properties
 		const columnParams: `:p${string}`[] = [] // query params for non-relation properties
@@ -578,9 +582,9 @@ export class ModelAPI {
 }
 
 export class RelationAPI {
-	public readonly table = `${this.relation.source}/${this.relation.property}`
-	public readonly sourceIndex = `${this.relation.source}/${this.relation.property}/source`
-	public readonly targetIndex = `${this.relation.source}/${this.relation.property}/target`
+	public readonly table: string
+	public readonly sourceIndex: string
+	public readonly targetIndex: string
 
 	readonly #select: Query<{ _source: string }, { _target: string }>
 	readonly #insert: Method<{ _source: string; _target: string }>
@@ -590,6 +594,10 @@ export class RelationAPI {
 		readonly db: Database,
 		readonly relation: Relation,
 	) {
+		this.table = `${relation.source}/${relation.property}`
+		this.sourceIndex = `${relation.source}/${relation.property}/source`
+		this.targetIndex = `${relation.source}/${relation.property}/target`
+
 		const columns = [`_source TEXT NOT NULL`, `_target TEXT NOT NULL`]
 		db.exec(`CREATE TABLE IF NOT EXISTS "${this.table}" (${columns.join(", ")})`)
 

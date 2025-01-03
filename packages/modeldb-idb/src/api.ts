@@ -30,11 +30,13 @@ type ObjectPropertyValue = PropertyValue | PropertyValue[]
 type ObjectValue = Record<string, ObjectPropertyValue>
 
 export class ModelAPI {
-	public readonly storeName = this.model.name
+	public readonly storeName: string
+	private readonly log: ReturnType<typeof logger>
 
-	private readonly log = logger(`canvas:modeldb:[${this.model.name}]`)
-
-	constructor(readonly model: Model) {}
+	constructor(readonly model: Model) {
+		this.storeName = model.name
+		this.log = logger(`canvas:modeldb:[${model.name}]`)
+	}
 
 	private getStore<Mode extends IDBTransactionMode>(txn: IDBPTransaction<any, any, Mode>) {
 		return txn.objectStore(this.storeName)

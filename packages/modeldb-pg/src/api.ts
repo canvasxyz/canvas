@@ -62,8 +62,8 @@ function getPropertyColumnType(property: Property): string {
 const getPropertyColumn = (property: Property) => `"${property.name}" ${getPropertyColumnType(property)}`
 
 export class ModelAPI {
-	#table = this.model.name
-	#properties = Object.fromEntries(this.model.properties.map((property) => [property.name, property]))
+	readonly #table: string
+	readonly #properties: Record<string, Property>
 
 	readonly #columns: string[]
 	readonly #columnNames: `"${string}"`[]
@@ -78,6 +78,8 @@ export class ModelAPI {
 		relations: Record<string, RelationAPI> = {},
 		primaryKeyName: string,
 	) {
+		this.#table = model.name
+		this.#properties = Object.fromEntries(model.properties.map((property) => [property.name, property]))
 		this.#columns = columns
 		this.#columnNames = columnNames // quoted column names for non-relation properties
 		this.#relations = relations
@@ -657,9 +659,18 @@ export class ModelAPI {
 }
 
 export class RelationAPI {
-	public readonly table = `${this.relation.source}/${this.relation.property}`
-	public readonly sourceIndex = `${this.relation.source}/${this.relation.property}/source`
-	public readonly targetIndex = `${this.relation.source}/${this.relation.property}/target`
+	public readonly table: string
+	public readonly sourceIndex: string
+	public readonly targetIndex: string
+
+	public constructor(
+		readonly client: pg.Client,
+		readonly relation: Relation,
+	) {
+		this.table = `${relation.source}/${relation.property}`
+		this.sourceIndex = `${relation.source}/${relation.property}/source`
+		this.targetIndex = `${relation.source}/${relation.property}/target`
+	}
 
 	public static async initialize(client: pg.Client, relation: Relation, clear: boolean) {
 		// Initialize tables
@@ -679,13 +690,6 @@ export class RelationAPI {
 		await client.query(queries.join(";\n"))
 
 		return relationApi
-	}
-
-	public constructor(
-		readonly client: pg.Client,
-		readonly relation: Relation,
-	) {
-		this.client = client
 	}
 
 	public async get(source: string): Promise<string[]> {

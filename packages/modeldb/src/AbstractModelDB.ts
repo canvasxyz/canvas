@@ -5,6 +5,7 @@ import { assert } from "@canvas-js/utils"
 import { Config, ModelValue, Effect, Model, QueryParams, WhereCondition, ModelValueWithIncludes } from "./types.js"
 import { getFilter } from "./query.js"
 import { Awaitable, getModelsFromInclude, mergeModelValues, updateModelValues } from "./utils.js"
+import { ModelSchema } from "./types.js"
 
 type Subscription = {
 	model: string
@@ -16,7 +17,7 @@ type Subscription = {
 export type ModelDBBackend =
 	"idb" | "postgres" | "sqlite-disk" | "sqlite-memory" | "sqlite-wasm" | "sqlite-expo" | "sqlite-durable-objects"
 
-export abstract class AbstractModelDB {
+export abstract class AbstractModelDB<Schema extends ModelSchema = ModelSchema> {
 	public readonly models: Record<string, Model>
 
 	protected readonly log = logger("canvas:modeldb")

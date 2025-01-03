@@ -1,8 +1,20 @@
 import React, { useContext, useMemo } from "react"
 import { useLiveQuery } from "@canvas-js/hooks"
+import { DeriveModelTypes } from "@canvas-js/modeldb"
 
 import { AppContext } from "./AppContext.js"
 import { AddressView } from "./components/AddressView.js"
+
+const sessionSchema = {
+	$sessions: {
+		message_id: "primary",
+		did: "string",
+		public_key: "string",
+		address: "string",
+		expiration: "integer?",
+		// $indexes: [["did"], ["public_key"]],
+	},
+} as const
 
 export interface SessionStatusProps {}
 
@@ -38,7 +50,7 @@ const SessionList: React.FC<SessionListProps> = ({ address }) => {
 
 	const timestamp = useMemo(() => Date.now(), [])
 
-	const results = useLiveQuery<{ public_key: string; expiration: number; message_id: string }>(app, "$sessions", {
+	const results = useLiveQuery<typeof sessionSchema, "$sessions">(app, "$sessions", {
 		where: { address, expiration: { gt: timestamp } },
 	})
 
@@ -55,7 +67,7 @@ const SessionList: React.FC<SessionListProps> = ({ address }) => {
 							<div>
 								<code className="text-sm">{session.public_key}</code>
 							</div>
-							{session.expiration < Number.MAX_SAFE_INTEGER ? (
+							{session.expiration && session.expiration < Number.MAX_SAFE_INTEGER ? (
 								<div>
 									<span className="text-sm">Expires {new Date(session.expiration).toLocaleString()}</span>
 								</div>
