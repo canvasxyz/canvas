@@ -188,7 +188,7 @@ export function createAPI(app: Canvas): express.Express {
 
 			const results = await app.db.query(model, { where, orderBy, limit })
 
-			const totalCount = await app.db.count(model, { where })
+			const totalCount = await app.db.count(model, where)
 
 			res.writeHead(StatusCodes.OK, { "content-type": "application/json" })
 			return void res.end(

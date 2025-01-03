@@ -47,22 +47,18 @@ export const Table = <T,>({
 
 	const { data, mutate: doRefresh } = useSWR(
 		`/api/models/${tableName}?${new URLSearchParams(params).toString()}`,
-		fetchAndIpldParseJson<T[]>,
+		fetchAndIpldParseJson<{ totalCount: number; results: T[] }>,
 		{
 			refreshInterval: 1000,
 		},
 	)
-
-	// const { data: countData } = useSWR(`/api/messages/count`, fetchAndIpldParseJson<{ count: number }>, {
-	// 	refreshInterval: 1000,
-	// })
 
 	// const [columns] = useState<typeof defaultColumns>(defaultColumns)
 	const [columnVisibility, setColumnVisibility] = useState({})
 
 	const tanStackTable = useReactTable<T>({
 		columns: defaultColumns,
-		data: data ? data.content : [],
+		data: data ? data.content.results : [],
 		getCoreRowModel: getCoreRowModel(),
 		manualPagination: true,
 		manualSorting: true,
@@ -88,6 +84,7 @@ export const Table = <T,>({
 	return (
 		<Flex direction="column" maxWidth="calc(100vw - 340px)" flexGrow="1">
 			<TableToolbar
+				totalCount={data?.content.totalCount}
 				showSidebar={showSidebar}
 				setShowSidebar={setShowSidebar}
 				tanStackTable={tanStackTable}

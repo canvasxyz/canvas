@@ -6,6 +6,7 @@ import { /*LuDownload,*/ LuRefreshCw, LuSlidersHorizontal } from "react-icons/lu
 import { ClickableChecklistItem } from "./ClickableChecklistItem.js"
 
 export const TableToolbar = ({
+	totalCount,
 	showSidebar,
 	setShowSidebar,
 	tanStackTable,
@@ -16,6 +17,7 @@ export const TableToolbar = ({
 	columnFilters,
 	setColumnFilters,
 }: {
+	totalCount?: number
 	showSidebar: boolean
 	setShowSidebar: (show: boolean) => void
 	tanStackTable: TanStackTable<any>
@@ -145,7 +147,9 @@ export const TableToolbar = ({
 			</Button> */}
 
 			<Box ml="auto">
-				<Text>0 rows &bull; {responseTime ? `${responseTime}ms` : "-"}</Text>
+				<Text>
+					{totalCount || "-"} rows &bull; {responseTime ? `${responseTime}ms` : "-"}
+				</Text>
 			</Box>
 
 			<Flex>
