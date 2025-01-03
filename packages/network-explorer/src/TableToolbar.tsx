@@ -1,8 +1,8 @@
 import { Box, Button, DropdownMenu, Flex, Text, TextField } from "@radix-ui/themes"
 import { ColumnFiltersState, OnChangeFn, Table as TanStackTable } from "@tanstack/react-table"
 import { BiChevronLeft, BiChevronRight, BiFilter, BiSidebar } from "react-icons/bi"
-import { FaClockRotateLeft } from "react-icons/fa6"
-import { LuDownload, LuRefreshCw, LuSlidersHorizontal } from "react-icons/lu"
+// import { FaClockRotateLeft } from "react-icons/fa6"
+import { /*LuDownload,*/ LuRefreshCw, LuSlidersHorizontal } from "react-icons/lu"
 import { ClickableChecklistItem } from "./ClickableChecklistItem.js"
 
 export const TableToolbar = ({
@@ -32,7 +32,7 @@ export const TableToolbar = ({
 				<BiSidebar />
 			</Button>
 
-			<Flex>
+			{/* <Flex>
 				<Button
 					color="gray"
 					variant="outline"
@@ -59,11 +59,11 @@ export const TableToolbar = ({
 				>
 					<BiChevronRight />
 				</Button>
-			</Flex>
+			</Flex> */}
 
-			<Button color="gray" variant="outline">
+			{/* <Button color="gray" variant="outline">
 				<FaClockRotateLeft />
-			</Button>
+			</Button> */}
 
 			<DropdownMenu.Root>
 				<DropdownMenu.Trigger>
@@ -140,9 +140,9 @@ export const TableToolbar = ({
 				</DropdownMenu.Content>
 			</DropdownMenu.Root>
 
-			<Button color="gray" variant="outline">
+			{/* <Button color="gray" variant="outline">
 				Add record
-			</Button>
+			</Button> */}
 
 			<Box ml="auto">
 				<Text>0 rows &bull; {responseTime ? `${responseTime}ms` : "-"}</Text>
@@ -180,9 +180,9 @@ export const TableToolbar = ({
 				<LuRefreshCw />
 			</Button>
 
-			<Button color="gray" variant="outline">
+			{/* <Button color="gray" variant="outline">
 				<LuDownload />
-			</Button>
+			</Button> */}
 		</Flex>
 	)
 }
