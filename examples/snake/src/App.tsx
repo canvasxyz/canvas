@@ -13,14 +13,8 @@ function App() {
 		contract,
 	})
 
-	const stateQuery = useLiveQuery<{
-		key: string
-		direction: string
-		tickCount: number
-		tiles: string
-		gameOver: string
-	}>(app, "state")
-	const state = stateQuery && stateQuery[0]
+	const stateQuery = useLiveQuery<typeof contract.models, "state">(app, "state")
+	const state = stateQuery && stateQuery[0] as { tiles: string, tickCount: number, gameOver: boolean }
 	const tiles = state?.tiles && (JSON.parse(state.tiles) as TilesList)
 	useTick(app, ticking, 400)
 
