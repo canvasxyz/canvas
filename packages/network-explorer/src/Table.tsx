@@ -53,7 +53,6 @@ export const Table = <T,>({
 		},
 	)
 
-	// const [columns] = useState<typeof defaultColumns>(defaultColumns)
 	const [columnVisibility, setColumnVisibility] = useState({})
 
 	const tanStackTable = useReactTable<T>({
