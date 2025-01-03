@@ -184,6 +184,7 @@ export const Table = <T,>({
 									<td
 										key={cell.id}
 										style={{
+											overflowX: "scroll",
 											borderWidth: "1px",
 											borderTopWidth: "0px",
 											borderLeftWidth: "0px",
