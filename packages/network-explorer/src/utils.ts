@@ -5,9 +5,13 @@ import { parse } from "@ipld/dag-json"
 export const BASE_URL = import.meta.env.VITE_API_BASE_URL || ""
 
 export const fetchAndIpldParseJson = async <T>(path: string) => {
+	const startTime = Date.now()
 	const response = await fetch(`${BASE_URL}${path}`)
+	const endTime = Date.now()
+	const responseTime = endTime - startTime
+
 	const json = await response.text()
-	return parse(json) as T
+	return { content: parse(json) as T, responseTime }
 }
 export type Result<T> = { id: string; signature: Signature; message: Message<T>; branch: number }
 
