@@ -47,14 +47,14 @@ export const tables: (TableDef & SortDef)[] = [
 			{
 				header: "id",
 				accessorKey: "id",
-				size: 580,
+				size: 350,
 				enableSorting: true,
 			},
 			{
 				header: "links",
 				accessorKey: "links",
-				size: 580,
-				// enableSorting: true,
+				size: 700,
+				enableSorting: false,
 			},
 		],
 	},
