@@ -119,9 +119,9 @@ export const builder = (yargs: Argv) =>
 			type: "boolean",
 			desc: "Serve the network explorer web interface",
 		})
-		.option("ws-url", {
+		.option("connect", {
 			type: "string",
-			desc: "WebSocket URL for GossipLog to connect to directly",
+			desc: "Connect GossipLog directly to this WebSocket URL. If this is enabled, libp2p is disabled.",
 		})
 
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
@@ -183,7 +183,9 @@ export async function handler(args: Args) {
 		)
 	})
 
-	if (!args.offline) {
+	if (args["connect"]) {
+		await app.connect(args["connect"])
+	} else if (!args.offline) {
 		let bootstrapList = defaultBootstrapList
 		if (args.offline) {
 			bootstrapList = []
@@ -341,9 +343,5 @@ export async function handler(args: Args) {
 	if (args["repl"]) {
 		console.log("")
 		startActionPrompt(app)
-	}
-
-	if (args["ws-url"]) {
-		await app.connect(args["ws-url"])
 	}
 }
