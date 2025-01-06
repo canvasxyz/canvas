@@ -188,7 +188,15 @@ export function createAPI(app: Canvas): express.Express {
 
 			const results = await app.db.query(model, { where, orderBy, limit })
 
-			const totalCount = await app.db.count(model, where)
+			const countWhere = { ...where }
+			// if orderBy is given, then exclude the column that is being sorted in the total count
+			// because we want to return the number of entries across all pages
+			if (orderBy) {
+				const orderByKey = Object.keys(orderBy)[0]
+				delete countWhere[orderByKey]
+			}
+
+			const totalCount = await app.db.count(model, countWhere)
 
 			res.writeHead(StatusCodes.OK, { "content-type": "application/json" })
 			return void res.end(
