@@ -36,6 +36,8 @@ export const TableToolbar = ({
 	hasNextPage: boolean
 	nextPage: () => void
 }) => {
+	const tableHasFilters = tanStackTable.getAllLeafColumns().filter((column) => column.getCanFilter()).length > 0
+
 	return (
 		<Flex style={{ borderBottom: "1px solid var(--gray-3)" }} align="center" gap="2" p="2">
 			<Button color="gray" variant={showSidebar ? "outline" : "solid"} onClick={() => setShowSidebar(!showSidebar)}>
@@ -75,49 +77,50 @@ export const TableToolbar = ({
 				<FaClockRotateLeft />
 			</Button> */}
 
-			<DropdownMenu.Root>
-				<DropdownMenu.Trigger>
-					<Button color="gray" variant="outline">
-						<BiFilter />
-						Filters
-					</Button>
-				</DropdownMenu.Trigger>
-				<DropdownMenu.Content>
-					{tanStackTable
-						.getAllLeafColumns()
-						.filter((column) => column.getCanFilter())
-						.map((column) => (
-							<DropdownMenu.Sub key={column.id}>
-								<DropdownMenu.SubTrigger>{column.columnDef.header?.toString()}</DropdownMenu.SubTrigger>
-								<DropdownMenu.SubContent>
-									{(column.columnDef.meta?.filterOptions || []).map((filterOption) => (
-										<ClickableChecklistItem
-											key={filterOption}
-											checked={
-												(columnFilters || []).filter((f) => f.id === column.id && f.value === filterOption).length > 0
-											}
-											onCheckedChange={(checked) => {
-												if (checked) {
-													if (setColumnFilters) {
-														setColumnFilters((columnFilters || []).concat({ id: column.id, value: filterOption }))
-													}
-												} else {
-													if (setColumnFilters) {
-														setColumnFilters(
-															(columnFilters || []).filter((f) => !(f.id === column.id && f.value === filterOption)),
-														)
-													}
+			{tableHasFilters && (
+				<DropdownMenu.Root>
+					<DropdownMenu.Trigger>
+						<Button color="gray" variant="outline">
+							<BiFilter />
+							Filters
+						</Button>
+					</DropdownMenu.Trigger>
+					<DropdownMenu.Content>
+						{tanStackTable
+							.getAllLeafColumns()
+							.filter((column) => column.getCanFilter())
+							.map((column) => (
+								<DropdownMenu.Sub key={column.id}>
+									<DropdownMenu.SubTrigger>{column.columnDef.header?.toString()}</DropdownMenu.SubTrigger>
+									<DropdownMenu.SubContent>
+										{(column.columnDef.meta?.filterOptions || []).map((filterOption) => (
+											<ClickableChecklistItem
+												key={filterOption}
+												checked={
+													(columnFilters || []).filter((f) => f.id === column.id && f.value === filterOption).length > 0
 												}
-											}}
-										>
-											{filterOption}
-										</ClickableChecklistItem>
-									))}
-								</DropdownMenu.SubContent>
-							</DropdownMenu.Sub>
-						))}{" "}
-					{/* {tanStackTable.getFilter} */}
-					{/* {tanStackTable.getAllLeafColumns().map((column) => (
+												onCheckedChange={(checked) => {
+													if (checked) {
+														if (setColumnFilters) {
+															setColumnFilters((columnFilters || []).concat({ id: column.id, value: filterOption }))
+														}
+													} else {
+														if (setColumnFilters) {
+															setColumnFilters(
+																(columnFilters || []).filter((f) => !(f.id === column.id && f.value === filterOption)),
+															)
+														}
+													}
+												}}
+											>
+												{filterOption}
+											</ClickableChecklistItem>
+										))}
+									</DropdownMenu.SubContent>
+								</DropdownMenu.Sub>
+							))}{" "}
+						{/* {tanStackTable.getFilter} */}
+						{/* {tanStackTable.getAllLeafColumns().map((column) => (
 						<ClickableChecklistItem
 							key={column.id}
 							checked={column.getIsVisible()}
@@ -126,9 +129,9 @@ export const TableToolbar = ({
 							{column.columnDef.header?.toString()}
 						</ClickableChecklistItem>
 					))} */}
-				</DropdownMenu.Content>
-			</DropdownMenu.Root>
-
+					</DropdownMenu.Content>
+				</DropdownMenu.Root>
+			)}
 			<DropdownMenu.Root>
 				<DropdownMenu.Trigger>
 					<Button color="gray" variant="outline">
