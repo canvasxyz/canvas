@@ -18,7 +18,7 @@ export const App = () => {
 
 				<Route
 					key={"$actions"}
-					path={`/\$actions`}
+					path={`/$actions`}
 					element={
 						<Suspense>
 							<ActionsTable setShowSidebar={setShowSidebar} showSidebar={showSidebar} />
