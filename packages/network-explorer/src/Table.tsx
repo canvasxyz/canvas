@@ -39,7 +39,7 @@ export const Table = <T,>({
 }) => {
 	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]) // can set initial column filter state here
 
-	const { currentCursor } = useCursorStack()
+	const { clearCursors, currentCursor, popCursor, pushCursor } = useCursorStack()
 
 	const [sorting, setSorting] = useState<SortingState>([])
 
@@ -77,9 +77,13 @@ export const Table = <T,>({
 
 	const [columnVisibility, setColumnVisibility] = useState({})
 
+	const rows = data ? data.content.results : []
+
+	const endCursor = rows.length > entriesPerPage ? (rows[rows.length - 1] as any)[sortColumn] : null
+
 	const tanStackTable = useReactTable<T>({
 		columns: defaultColumns,
-		data: data ? data.content.results : [],
+		data: rows,
 		getCoreRowModel: getCoreRowModel(),
 		manualPagination: true,
 		manualSorting: true,
@@ -90,9 +94,17 @@ export const Table = <T,>({
 			sorting,
 			columnFilters,
 		},
-		onSortingChange: setSorting,
+		onSortingChange: (sortingState) => {
+			setSorting(sortingState)
+			// reset pagination when sorting changes
+			clearCursors()
+		},
 		onColumnVisibilityChange: setColumnVisibility,
-		onColumnFiltersChange: setColumnFilters,
+		onColumnFiltersChange: (columnFilters) => {
+			setColumnFilters(columnFilters)
+			// reset pagination when filters change
+			clearCursors()
+		},
 	})
 
 	useEffect(() => {
@@ -100,6 +112,7 @@ export const Table = <T,>({
 		setColumnVisibility({})
 		setSorting([])
 		setColumnFilters([])
+		clearCursors()
 	}, [tableName])
 
 	return (
@@ -115,6 +128,10 @@ export const Table = <T,>({
 				doRefresh={doRefresh}
 				columnFilters={columnFilters}
 				setColumnFilters={setColumnFilters}
+				hasPrevPage={currentCursor !== null}
+				prevPage={() => popCursor()}
+				hasNextPage={endCursor !== null}
+				nextPage={() => pushCursor(endCursor)}
 			/>
 			<Box overflowX="scroll">
 				<table style={{ borderCollapse: "collapse", display: "grid" }}>

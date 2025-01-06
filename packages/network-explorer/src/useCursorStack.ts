@@ -3,6 +3,10 @@ import { useState } from "react"
 function useCursorStack<T>() {
 	const [cursors, setCursors] = useState<T[]>([])
 
+	const clearCursors = () => {
+		setCursors([])
+	}
+
 	const pushCursor = (cursor: T) => {
 		setCursors((cursors: T[]) => [...cursors, cursor])
 	}
@@ -13,7 +17,7 @@ function useCursorStack<T>() {
 
 	const currentCursor = cursors[cursors.length - 1] || null
 
-	return { currentCursor, pushCursor, popCursor }
+	return { clearCursors, currentCursor, pushCursor, popCursor }
 }
 
 export default useCursorStack

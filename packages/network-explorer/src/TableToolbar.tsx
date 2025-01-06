@@ -16,6 +16,10 @@ export const TableToolbar = ({
 	setEntriesPerPage,
 	columnFilters,
 	setColumnFilters,
+	hasPrevPage,
+	prevPage,
+	hasNextPage,
+	nextPage,
 }: {
 	totalCount?: number
 	showSidebar: boolean
@@ -27,6 +31,10 @@ export const TableToolbar = ({
 	setEntriesPerPage: (entriesPerPage: number) => void
 	columnFilters?: ColumnFiltersState
 	setColumnFilters?: OnChangeFn<ColumnFiltersState>
+	hasPrevPage: boolean
+	prevPage: () => void
+	hasNextPage: boolean
+	nextPage: () => void
 }) => {
 	return (
 		<Flex style={{ borderBottom: "1px solid var(--gray-3)" }} align="center" gap="2" p="2">
@@ -153,7 +161,13 @@ export const TableToolbar = ({
 			</Box>
 
 			<Flex>
-				<Button color="gray" variant="outline" style={{ borderTopRightRadius: "0px", borderBottomRightRadius: "0px" }}>
+				<Button
+					disabled={!hasPrevPage}
+					onClick={() => prevPage()}
+					color="gray"
+					variant="outline"
+					style={{ borderTopRightRadius: "0px", borderBottomRightRadius: "0px" }}
+				>
 					<BiChevronLeft />
 				</Button>
 				<TextField.Root
@@ -175,7 +189,13 @@ export const TableToolbar = ({
 					value={}
 					style={{ borderRadius: "0px", width: "40px" }}
 				/> */}
-				<Button color="gray" variant="outline" style={{ borderTopLeftRadius: "0px", borderBottomLeftRadius: "0px" }}>
+				<Button
+					disabled={!hasNextPage}
+					onClick={() => nextPage()}
+					color="gray"
+					variant="outline"
+					style={{ borderTopLeftRadius: "0px", borderBottomLeftRadius: "0px" }}
+				>
 					<BiChevronRight />
 				</Button>
 			</Flex>
