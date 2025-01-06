@@ -5,6 +5,7 @@ import { Navigate, Route, Routes } from "react-router-dom"
 import { tables } from "./tables.js"
 import { Suspense, useState } from "react"
 import { ModelTable } from "./ModelTable.js"
+import { ActionsTable } from "./ActionsTable.js"
 
 export const App = () => {
 	const [showSidebar, setShowSidebar] = useState(true)
@@ -14,6 +15,17 @@ export const App = () => {
 			{showSidebar && <Sidebar tables={tables} />}
 			<Routes>
 				<Route path="*" element={<Navigate to="/$actions" replace />} />
+
+				<Route
+					key={"$actions"}
+					path={`/\$actions`}
+					element={
+						<Suspense>
+							<ActionsTable setShowSidebar={setShowSidebar} showSidebar={showSidebar} />
+						</Suspense>
+					}
+				/>
+
 				{tables.map(({ tableName, defaultColumns, defaultSortColumn, defaultSortDirection }, key) => (
 					<Route
 						key={key}

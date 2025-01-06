@@ -1,10 +1,10 @@
 import { version } from "../package.json"
 
 import { Grid, Text } from "@radix-ui/themes"
-import { useApplicationInfo } from "./useApplicationInfo.js"
+import { useApplicationData } from "./useApplicationData.js"
 
-export const ApplicationInfo = () => {
-	const applicationInfo = useApplicationInfo()
+export const ApplicationData = () => {
+	const applicationInfo = useApplicationData()
 
 	return (
 		<Grid mt="auto" columns="2">

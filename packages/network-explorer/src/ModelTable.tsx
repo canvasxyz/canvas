@@ -1,6 +1,6 @@
 import { Navigate, useParams } from "react-router-dom"
 import { Table } from "./Table.js"
-import { useApplicationInfo } from "./useApplicationInfo.js"
+import { useApplicationData } from "./useApplicationData.js"
 
 export const ModelTable = ({
 	showSidebar,
@@ -10,11 +10,11 @@ export const ModelTable = ({
 	setShowSidebar: (show: boolean) => void
 }) => {
 	const params = useParams()
-	// request application info
-	const applicationInfo = useApplicationInfo()
+	// request application data
+	const applicationData = useApplicationData()
 
-	if (applicationInfo !== null) {
-		const modelDefinition = applicationInfo.models[params.model as string]
+	if (applicationData !== null) {
+		const modelDefinition = applicationData.models[params.model as string]
 		if (modelDefinition) {
 			const primaryProperty = modelDefinition.properties.filter((p) => p.kind === "primary")[0]
 			// use the property with type "primary" if it exists, otherwise just assume the first column is
