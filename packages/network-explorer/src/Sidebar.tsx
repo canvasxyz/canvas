@@ -34,6 +34,7 @@ export const Sidebar = ({ tables }: { tables: TableDef[] }) => {
 				placeholder="Search tables"
 			/>
 			<Flex overflowY="scroll" direction="column" gap="1">
+				<TableSelector key={"$actions"} iconType={LuTable2} label={"$actions"} to={`/$actions`} />
 				{tables
 					.filter(({ tableName }) => tableName.toLowerCase().includes(tableSearchTerm.toLowerCase()))
 					.map(({ tableName }, key) => (
