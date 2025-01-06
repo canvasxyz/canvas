@@ -20,6 +20,27 @@ export type Column = {
 	type: "string" | "number"
 }
 
+type SortDirection = "desc" | "asc"
+
+type RequestParams = {
+	limit: number
+	orderBy: {
+		[sortColumn: string]: SortDirection
+	}
+	where: WhereCondition
+}
+
+const stringifyRequestParams = ({ limit, orderBy, where }: RequestParams) => {
+	const params: Record<string, string> = {
+		limit: limit.toString(),
+		orderBy: JSON.stringify(orderBy),
+	}
+	if (Object.keys(where).length > 0) {
+		params.where = JSON.stringify(where)
+	}
+	return new URLSearchParams(params).toString()
+}
+
 export const Table = <T,>({
 	showSidebar,
 	setShowSidebar,
@@ -42,31 +63,25 @@ export const Table = <T,>({
 	const [sorting, setSorting] = useState<SortingState>([])
 
 	const [entriesPerPage, setEntriesPerPage] = useState(20)
-	const params: Record<string, string> = {
-		limit: (entriesPerPage + 1).toString(),
-	}
 
 	const sortColumn = sorting.length === 1 ? sorting[0].id : defaultSortColumn
 	const sortDirection = sorting.length === 1 ? (sorting[0].desc ? "desc" : "asc") : defaultSortDirection
 
-	params.orderBy = JSON.stringify({
-		[sortColumn]: sortDirection,
-	})
-
 	const where: WhereCondition = {}
-
 	if (currentCursor) {
 		where[sortColumn] = {
 			[sortDirection === "desc" ? "lt" : "gt"]: currentCursor,
 		}
 	}
 
-	if (Object.keys(where).length !== 0) {
-		params.where = JSON.stringify(where)
-	}
-
 	const { data, mutate: doRefresh } = useSWR(
-		`/api/models/${tableName}?${new URLSearchParams(params).toString()}`,
+		`/api/models/${tableName}?${stringifyRequestParams({
+			limit: entriesPerPage + 1,
+			orderBy: {
+				[sortColumn]: sortDirection,
+			},
+			where,
+		})}`,
 		fetchAndIpldParseJson<{ totalCount: number; results: T[] }>,
 		{
 			refreshInterval: 1000,
@@ -86,7 +101,6 @@ export const Table = <T,>({
 		manualPagination: true,
 		manualSorting: true,
 		manualFiltering: true,
-		// rowCount,
 		state: {
 			columnVisibility,
 			sorting,
