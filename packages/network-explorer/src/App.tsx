@@ -14,13 +14,15 @@ export const App = () => {
 			{showSidebar && <Sidebar tables={tables} />}
 			<Routes>
 				<Route path="*" element={<Navigate to="/$actions" replace />} />
-				{tables.map(({ tableName, defaultColumns }, key) => (
+				{tables.map(({ tableName, defaultColumns, defaultSortColumn, defaultSortDirection }, key) => (
 					<Route
 						key={key}
 						path={`/${tableName}`}
 						element={
 							<Suspense>
 								<Table
+									defaultSortColumn={defaultSortColumn}
+									defaultSortDirection={defaultSortDirection}
 									showSidebar={showSidebar}
 									setShowSidebar={setShowSidebar}
 									tableName={tableName}

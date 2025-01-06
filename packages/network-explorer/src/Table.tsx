@@ -12,24 +12,34 @@ import {
 } from "@tanstack/react-table"
 import { useEffect, useState } from "react"
 import { fetchAndIpldParseJson } from "./utils.js"
+import useCursorStack from "./useCursorStack.js"
+import { WhereCondition } from "@canvas-js/modeldb"
 
 export type Column = {
 	name: string
 	type: "string" | "number"
 }
 
+const formatDesc = (desc: boolean) => (desc ? "desc" : "asc")
+
 export const Table = <T,>({
 	showSidebar,
 	setShowSidebar,
 	tableName,
 	defaultColumns,
+	defaultSortColumn,
+	defaultSortDirection,
 }: {
 	showSidebar: boolean
 	setShowSidebar: (show: boolean) => void
 	tableName: string
 	defaultColumns: ColumnDef<T>[]
+	defaultSortColumn: string
+	defaultSortDirection: "desc" | "asc"
 }) => {
 	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]) // can set initial column filter state here
+
+	const { currentCursor } = useCursorStack()
 
 	const [sorting, setSorting] = useState<SortingState>([])
 
@@ -38,11 +48,23 @@ export const Table = <T,>({
 		limit: (entriesPerPage + 1).toString(),
 	}
 
-	// TODO: cursor pagination
-	if (sorting.length === 1) {
-		params.orderBy = JSON.stringify({
-			[sorting[0].id]: sorting[0].desc ? "desc" : "asc",
-		})
+	const sortColumn = sorting.length === 1 ? sorting[0].id : defaultSortColumn
+	const sortDirection = sorting.length === 1 ? formatDesc(sorting[0].desc) : defaultSortDirection
+
+	params.orderBy = JSON.stringify({
+		[sortColumn]: sortDirection,
+	})
+
+	const where: WhereCondition = {}
+
+	if (currentCursor) {
+		where[sortColumn] = {
+			[sortDirection === "desc" ? "lt" : "gt"]: currentCursor,
+		}
+	}
+
+	if (Object.keys(where).length !== 0) {
+		params.where = JSON.stringify(where)
 	}
 
 	const { data, mutate: doRefresh } = useSWR(

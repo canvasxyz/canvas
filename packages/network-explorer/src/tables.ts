@@ -6,9 +6,16 @@ export type TableDef = {
 	defaultColumns: ColumnDef<any>[]
 }
 
-export const tables: TableDef[] = [
+type SortDef = {
+	defaultSortColumn: string
+	defaultSortDirection: "desc" | "asc"
+}
+
+export const tables: (TableDef & SortDef)[] = [
 	{
 		tableName: "$actions",
+		defaultSortColumn: "message_id",
+		defaultSortDirection: "desc",
 		defaultColumns: [
 			{
 				header: "did",
@@ -34,6 +41,8 @@ export const tables: TableDef[] = [
 	},
 	{
 		tableName: "$ancestors",
+		defaultSortColumn: "id",
+		defaultSortDirection: "desc",
 		defaultColumns: [
 			{
 				header: "id",
@@ -51,6 +60,8 @@ export const tables: TableDef[] = [
 	},
 	{
 		tableName: "$branch_merges",
+		defaultSortColumn: "id",
+		defaultSortDirection: "asc",
 		defaultColumns: [
 			{
 				header: "id",
@@ -106,6 +117,8 @@ export const tables: TableDef[] = [
 	},
 	{
 		tableName: "$dids",
+		defaultSortColumn: "did",
+		defaultSortDirection: "asc",
 		defaultColumns: [
 			{
 				header: "did",
@@ -117,12 +130,14 @@ export const tables: TableDef[] = [
 	},
 	{
 		tableName: "$effects",
+		defaultSortColumn: "key",
+		defaultSortDirection: "asc",
 		defaultColumns: [
 			{
 				header: "key",
 				accessorKey: "key",
 				size: 700,
-				enableSorting: false,
+				enableSorting: true,
 			},
 			{
 				header: "value",
@@ -135,18 +150,20 @@ export const tables: TableDef[] = [
 				header: "branch",
 				accessorKey: "branch",
 				size: 100,
-				enableSorting: false,
+				enableSorting: true,
 			},
 			{
 				header: "clock",
 				accessorKey: "clock",
 				size: 100,
-				enableSorting: false,
+				enableSorting: true,
 			},
 		],
 	},
 	{
 		tableName: "$heads",
+		defaultSortColumn: "id",
+		defaultSortDirection: "asc",
 		defaultColumns: [
 			{
 				header: "id",
@@ -158,6 +175,8 @@ export const tables: TableDef[] = [
 	},
 	{
 		tableName: "$messages",
+		defaultSortColumn: "id",
+		defaultSortDirection: "desc",
 		defaultColumns: [
 			{
 				header: "id",
@@ -184,6 +203,8 @@ export const tables: TableDef[] = [
 	},
 	{
 		tableName: "$sessions",
+		defaultSortColumn: "message_id",
+		defaultSortDirection: "desc",
 		defaultColumns: [
 			{
 				header: "did",
