@@ -20,8 +20,6 @@ export type Column = {
 	type: "string" | "number"
 }
 
-const formatDesc = (desc: boolean) => (desc ? "desc" : "asc")
-
 export const Table = <T,>({
 	showSidebar,
 	setShowSidebar,
@@ -49,7 +47,7 @@ export const Table = <T,>({
 	}
 
 	const sortColumn = sorting.length === 1 ? sorting[0].id : defaultSortColumn
-	const sortDirection = sorting.length === 1 ? formatDesc(sorting[0].desc) : defaultSortDirection
+	const sortDirection = sorting.length === 1 ? (sorting[0].desc ? "desc" : "asc") : defaultSortDirection
 
 	params.orderBy = JSON.stringify({
 		[sortColumn]: sortDirection,
