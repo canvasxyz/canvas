@@ -1,18 +1,7 @@
 import { useState, useEffect, useRef } from "react"
-import {
-	Canvas,
-	Contract,
-	type ModelSchema as Models,
-	type Config,
-	type Snapshot,
-	hashContract,
-	Actions,
-} from "@canvas-js/core"
+import { Canvas, ModelSchema as Models, Config, Snapshot, Actions, hashContract } from "@canvas-js/core"
 
-export const useCanvas = <
-	ModelsT extends Models = Models,
-	ActionsT extends Actions<ModelsT> = Actions<ModelsT>,
->(
+export const useCanvas = <ModelsT extends Models = Models, ActionsT extends Actions<ModelsT> = Actions<ModelsT>>(
 	url: string | null,
 	config: Config<ModelsT, ActionsT>,
 ) => {
@@ -22,13 +11,13 @@ export const useCanvas = <
 	// TODO: ensure effect hook re-runs on signer change
 	const hashRef = useRef<string>()
 	const snapshotRef = useRef<Snapshot>()
-	// const renderedRef = useRef(false) // skip second render in React.StrictMode
+	const renderedRef = useRef(false) // skip second render in React.StrictMode
+
+	const contractHash = hashContract(config.contract)
 
 	useEffect(() => {
-		// if (renderedRef.current) return
-		// renderedRef.current = true
-
-		const contractHash = hashContract(config.contract)
+		if (renderedRef.current) return
+		renderedRef.current = true
 
 		function setupApp(appUrl: string | null, app: Canvas<ModelsT, ActionsT>) {
 			if (url) {
@@ -60,7 +49,7 @@ export const useCanvas = <
 		})
 
 		hashRef.current = contractHash
-	}, [url, hashContract(config.contract)])
+	}, [url, contractHash])
 
 	return { app, error }
 }
