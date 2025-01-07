@@ -1,11 +1,14 @@
+import Prando from "prando"
+
 import test, { ExecutionContext } from "ava"
 import * as cbor from "@ipld/dag-cbor"
 import { Wallet } from "ethers"
 
 import { SIWESigner } from "@canvas-js/chain-ethereum"
-import { Canvas } from "@canvas-js/core"
+import { Actions, Canvas, ModelSchema } from "@canvas-js/core"
 import { getRecordId } from "@canvas-js/core/utils"
 import { assert } from "@canvas-js/utils"
+import { getDirectory } from "./utils.js"
 
 const init = async (t: ExecutionContext) => {
 	const signer = new SIWESigner({ signer: Wallet.createRandom() })
@@ -44,7 +47,6 @@ const init = async (t: ExecutionContext) => {
 			},
 		},
 		topic: "com.example.app",
-		reset: true,
 		signers: [signer],
 	})
 
@@ -210,4 +212,95 @@ test("concurrently post and remove a member (read-write conflict)", async (t) =>
 	await app3.messageLog.serve((snapshot) => app2.messageLog.sync(snapshot))
 
 	t.pass()
+})
+
+test("ok", async (t) => {
+	// what we want to do here is create a pool of apps,
+	// make pseudo-random branches in psueod-random order,
+	// and sync random pairs of apps at random intervals.
+	//
+	// within each action, we should be reading and writing
+	// to a fixed set of records in a small number of models.
+	//
+	// all the while, we need to track the *expected* state
+	// of conflict/record/revert status.
+
+	const rng = new Prando.default()
+	const random = (n: number) => rng.nextInt(0, n - 1)
+
+	const topic = "com.example.app"
+
+	const models = {
+		records: { id: "primary" },
+	} satisfies ModelSchema
+
+	const actions = {
+		readRecord() {},
+		writeRecord() {},
+		readWriteRecord() {},
+	} satisfies Actions<typeof models>
+
+	const apps: Canvas[] = [
+		await Canvas.initialize({ topic, contract: { models, actions }, path: getDirectory(t) }),
+		await Canvas.initialize({ topic, contract: { models, actions }, path: getDirectory(t) }),
+		await Canvas.initialize({ topic, contract: { models, actions }, path: getDirectory(t) }),
+	]
+
+	const recordIds = ["a", "b", "c", "d"]
+
+	// const maxMessageCount = 2048
+	// const maxChainLength = 6
+	const maxMessageCount = 256
+	const maxChainLength = 5
+
+	const messageIDs: string[] = []
+	const messageIndices = new Map<string, { index: number; map: Uint8Array }>()
+
+	const bitMaps = apps.map(() => new Uint8Array(maxMessageCount / 8))
+
+	const setBit = (map: Uint8Array, i: number) => {
+		const bit = i % 8
+		const index = (i - bit) / 8
+		map[index] = map[index] | (1 << bit)
+	}
+
+	const getBit = (map: Uint8Array, i: number): boolean => {
+		const bit = i % 8
+		const index = (i - bit) / 8
+		return Boolean(map[index] & (1 << bit))
+	}
+
+	const merge = (self: Uint8Array, peer: Uint8Array) => {
+		for (let i = 0; i < maxMessageCount / 8; i++) {
+			self[i] |= peer[i]
+		}
+	}
+
+	const start = performance.now()
+	let messageCount = 0
+	while (messageCount < maxMessageCount) {
+		const selfIndex = random(apps.length)
+		const self = apps[selfIndex]
+
+		// sync with a random peer
+		const peerIndex = random(apps.length)
+		if (peerIndex !== selfIndex) {
+			const peer = apps[peerIndex]
+			await peer.messageLog.serve((source) => self.messageLog.sync(source))
+
+			merge(bitMaps[selfIndex], bitMaps[peerIndex])
+		}
+
+		// append a chain of messages
+		const chainLength = random(maxChainLength)
+		for (let j = 0; j < chainLength && messageCount < maxMessageCount; j++) {
+			// const { id } = await self.append(nanoid(), { signer: signers[selfIndex] })
+
+			const { id } = await self.actions.readRecord(rng.nextArrayItem(recordIds))
+			const index = messageCount++
+			messageIndices.set(id, { index, map: new Uint8Array(bitMaps[selfIndex]) })
+			messageIDs.push(id)
+			setBit(bitMaps[selfIndex], index)
+		}
+	}
 })
