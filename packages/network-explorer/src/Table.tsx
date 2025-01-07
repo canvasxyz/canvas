@@ -215,7 +215,7 @@ export const Table = <T,>({
 						}}
 					>
 						{tanStackTable.getRowModel().rows.map((row) => (
-							<tr key={row.id} style={{ display: "flex" }}>
+							<tr key={row.id} style={{ display: "flex", overflow: "hidden", scrollbarWidth: "none" }}>
 								{/* <td
 									style={{
 										borderWidth: "1px",

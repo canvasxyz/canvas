@@ -5,3 +5,9 @@ body {
 	background-color: white;
 	box-shadow: 1px 1px 1px rgb(0 0 0 / 0.05);
 }
+
+::-webkit-scrollbar {
+	display: none;
+	width: 0px;
+	background: transparent; /* make scrollbar transparent */
+}
