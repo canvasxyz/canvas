@@ -11,34 +11,6 @@ type SortDef = {
 	defaultSortDirection: "desc" | "asc"
 }
 
-export const actionsTable = {
-	tableName: "$actions",
-	defaultSortColumn: "message_id",
-	defaultSortDirection: "desc" as const,
-	defaultColumns: [
-		{
-			header: "did",
-			accessorKey: "did",
-			size: 580,
-			enableSorting: false,
-			enableColumnFilter: false,
-		},
-		{
-			header: "name",
-			accessorKey: "name",
-			size: 200,
-			enableSorting: false,
-			enableColumnFilter: true,
-		},
-		{
-			header: "timestamp",
-			accessorKey: "timestamp",
-			enableSorting: false,
-			enableColumnFilter: false,
-		},
-	],
-}
-
 export const tables: (TableDef & SortDef)[] = [
 	{
 		tableName: "$ancestors",
@@ -50,7 +22,10 @@ export const tables: (TableDef & SortDef)[] = [
 				accessorKey: "id",
 				size: 350,
 				enableSorting: true,
-				enableColumnFilter: false,
+				enableColumnFilter: true,
+				meta: {
+					textFilter: true,
+				},
 			},
 			{
 				header: "links",

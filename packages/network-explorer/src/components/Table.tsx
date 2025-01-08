@@ -74,6 +74,10 @@ export const Table = <T,>({
 		}
 	}
 
+	for (const f of columnFilters) {
+		where[f.id] = f.value as string | number
+	}
+
 	const { data, mutate: doRefresh } = useSWR(
 		`/api/models/${tableName}?${stringifyRequestParams({
 			limit: entriesPerPage + 1,
