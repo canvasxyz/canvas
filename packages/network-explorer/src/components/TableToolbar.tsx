@@ -1,8 +1,7 @@
 import { Box, Button, DropdownMenu, Flex, Text, TextField } from "@radix-ui/themes"
 import { ColumnFiltersState, OnChangeFn, Table as TanStackTable } from "@tanstack/react-table"
 import { BiChevronLeft, BiChevronRight, BiFilter, BiSidebar } from "react-icons/bi"
-// import { FaClockRotateLeft } from "react-icons/fa6"
-import { /*LuDownload,*/ LuRefreshCw, LuSlidersHorizontal } from "react-icons/lu"
+import { LuRefreshCw, LuSlidersHorizontal } from "react-icons/lu"
 import { ClickableChecklistItem } from "./ClickableChecklistItem.js"
 
 export const TableToolbar = ({
@@ -43,39 +42,6 @@ export const TableToolbar = ({
 			<Button color="gray" variant={showSidebar ? "outline" : "solid"} onClick={() => setShowSidebar(!showSidebar)}>
 				<BiSidebar />
 			</Button>
-
-			{/* <Flex>
-				<Button
-					color="gray"
-					variant="outline"
-					style={{
-						boxShadow: "none",
-						borderTop: "1px solid var(--accent-a8)",
-						borderBottom: "1px solid var(--accent-a8)",
-						borderLeft: "1px solid var(--accent-a8)",
-						borderTopRightRadius: "0px",
-						borderBottomRightRadius: "0px",
-					}}
-				>
-					<BiChevronLeft />
-				</Button>
-				<Button
-					color="gray"
-					variant="outline"
-					style={{
-						boxShadow: "none",
-						border: "1px solid var(--accent-a8)",
-						borderTopLeftRadius: "0px",
-						borderBottomLeftRadius: "0px",
-					}}
-				>
-					<BiChevronRight />
-				</Button>
-			</Flex> */}
-
-			{/* <Button color="gray" variant="outline">
-				<FaClockRotateLeft />
-			</Button> */}
 
 			{tableHasFilters && (
 				<DropdownMenu.Root>
@@ -119,16 +85,6 @@ export const TableToolbar = ({
 									</DropdownMenu.SubContent>
 								</DropdownMenu.Sub>
 							))}{" "}
-						{/* {tanStackTable.getFilter} */}
-						{/* {tanStackTable.getAllLeafColumns().map((column) => (
-						<ClickableChecklistItem
-							key={column.id}
-							checked={column.getIsVisible()}
-							onCheckedChange={column.toggleVisibility}
-						>
-							{column.columnDef.header?.toString()}
-						</ClickableChecklistItem>
-					))} */}
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>
 			)}
@@ -152,10 +108,6 @@ export const TableToolbar = ({
 					))}
 				</DropdownMenu.Content>
 			</DropdownMenu.Root>
-
-			{/* <Button color="gray" variant="outline">
-				Add record
-			</Button> */}
 
 			<Box ml="auto">
 				<Text>
@@ -187,11 +139,6 @@ export const TableToolbar = ({
 						borderBottom: "1px solid var(--accent-a8)",
 					}}
 				/>
-				{/* TODO: display page offset? */}
-				{/* <TextField.Root
-					value={}
-					style={{ borderRadius: "0px", width: "40px" }}
-				/> */}
 				<Button
 					disabled={!hasNextPage}
 					onClick={() => nextPage()}
@@ -206,10 +153,6 @@ export const TableToolbar = ({
 			<Button color="gray" variant="outline" onClick={() => doRefresh()}>
 				<LuRefreshCw />
 			</Button>
-
-			{/* <Button color="gray" variant="outline">
-				<LuDownload />
-			</Button> */}
 		</Flex>
 	)
 }

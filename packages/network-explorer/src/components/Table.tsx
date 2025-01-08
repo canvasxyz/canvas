@@ -1,5 +1,5 @@
 import useSWR from "swr"
-import { Box, Button, /* Checkbox, */ Flex, Text } from "@radix-ui/themes"
+import { Box, Button, Flex, Text } from "@radix-ui/themes"
 import { TableToolbar } from "./TableToolbar.js"
 import { LuChevronDown, LuChevronsUpDown, LuChevronUp } from "react-icons/lu"
 import {
@@ -150,20 +150,6 @@ export const Table = <T,>({
 					<thead style={{ display: "grid", position: "sticky", top: 0, zIndex: 1, backgroundColor: "white" }}>
 						{tanStackTable.getHeaderGroups().map((headerGroup) => (
 							<tr key={headerGroup.id} style={{ display: "flex", width: "100%" }}>
-								{/* <th
-									style={{
-										borderWidth: "1px",
-										borderTopWidth: "0px",
-										borderLeftWidth: "0px",
-										borderColor: "var(--accent-3)",
-										borderStyle: "solid",
-										display: "flex",
-									}}
-								>
-									<Flex align="center" p="1">
-										<Checkbox color="gray" />
-									</Flex>
-								</th> */}
 								{headerGroup.headers.map((header) => (
 									<th
 										key={header.id}
@@ -216,20 +202,6 @@ export const Table = <T,>({
 					>
 						{tanStackTable.getRowModel().rows.map((row) => (
 							<tr key={row.id} style={{ display: "flex", overflow: "hidden", scrollbarWidth: "none" }}>
-								{/* <td
-									style={{
-										borderWidth: "1px",
-										borderTopWidth: "0px",
-										borderLeftWidth: "0px",
-										borderColor: "var(--accent-3)",
-										borderStyle: "solid",
-										display: "flex",
-									}}
-								>
-									<Flex align="center" p="1">
-										<Checkbox color="gray" />
-									</Flex>
-								</td> */}
 								{row.getVisibleCells().map((cell) => (
 									<td
 										key={cell.id}

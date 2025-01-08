@@ -1,5 +1,4 @@
-import { /*Button,*/ Flex, TextField } from "@radix-ui/themes"
-// import { BiBug, BiCog } from "react-icons/bi"
+import { Flex, TextField } from "@radix-ui/themes"
 import { TableSelector } from "./TableSelector.js"
 import { LuTable2 } from "react-icons/lu"
 import { ApplicationDataBox } from "../ApplicationDataBox.js"
@@ -53,14 +52,6 @@ export const Sidebar = ({ tables }: { tables: TableDef[] }) => {
 					))}
 			</Flex>
 			<ApplicationDataBox />
-			{/* <Flex direction="row" gap="2">
-				<Button color="gray" variant="outline">
-					<BiCog />
-				</Button>
-				<Button color="gray" variant="outline">
-					<BiBug />
-				</Button>
-			</Flex> */}
 		</Flex>
 	)
 }
