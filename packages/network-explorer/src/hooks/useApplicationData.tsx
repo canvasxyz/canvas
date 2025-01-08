@@ -1,7 +1,7 @@
 import useSWR from "swr"
 
 import { fetchAndIpldParseJson } from "../utils.js"
-import { useEffect, useState } from "react"
+import React, { createContext, useContext, useEffect, useState } from "react"
 import { Model } from "@canvas-js/modeldb"
 
 export type ApplicationData = {
@@ -16,7 +16,9 @@ export type ApplicationData = {
 	actions: string[]
 }
 
-export const useApplicationData = () => {
+const ApplicationDataContext = createContext<ApplicationData | null>(null)
+
+export const ApplicationDataProvider = ({ children }: { children: React.ReactNode }) => {
 	const [content, setContent] = useState<ApplicationData | null>(null)
 	const { data } = useSWR(`/api/`, fetchAndIpldParseJson<ApplicationData>)
 
@@ -28,5 +30,7 @@ export const useApplicationData = () => {
 		}
 	}, [data])
 
-	return content
+	return <ApplicationDataContext.Provider value={content}>{children}</ApplicationDataContext.Provider>
 }
+
+export const useApplicationData = () => useContext(ApplicationDataContext)
