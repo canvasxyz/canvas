@@ -123,7 +123,7 @@ export const TableToolbar = ({
 			</DropdownMenu.Root>
 
 			<Box ml="auto" pr="2">
-				<Text size="2">
+				<Text size="2" wrap="nowrap">
 					{totalCount || "0"} rows {responseTime ? <>&bull; {`${responseTime}ms`}</> : ""}
 				</Text>
 			</Box>

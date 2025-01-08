@@ -1,4 +1,4 @@
-import { Button, Flex, TextField } from "@radix-ui/themes"
+import { Box, Text, Button, Flex, TextField } from "@radix-ui/themes"
 import { Column, ColumnFiltersState, OnChangeFn } from "@tanstack/react-table"
 import { useState } from "react"
 
@@ -24,7 +24,9 @@ export const TextFilterMenu = ({
 			}}
 			align="center"
 		>
-			{existingFilter.value as string}
+			<Box px="1">
+				<Text size="2">{existingFilter.value as string}</Text>
+			</Box>
 			<Button
 				ml="auto"
 				color="red"
