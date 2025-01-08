@@ -3,7 +3,7 @@ import packageJson from "../package.json"
 import { Grid, Text } from "@radix-ui/themes"
 import { useApplicationData } from "./hooks/useApplicationData.js"
 
-export const ApplicationData = () => {
+export const ApplicationDataBox = () => {
 	const applicationInfo = useApplicationData()
 
 	return (
