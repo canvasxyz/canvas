@@ -221,6 +221,9 @@ export const Table = <T,>({
 												borderColor: "var(--accent-3)",
 												borderStyle: "solid",
 												display: "flex",
+												paddingLeft: "6px",
+												paddingTop: "4px",
+												minHeight: "32px",
 												width: cell.column.getSize(),
 											}}
 										>

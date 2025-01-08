@@ -1,6 +1,6 @@
 import * as cbor from "@ipld/dag-cbor"
 import * as json from "@ipld/dag-json"
-import { Box, IconButton, Popover } from "@radix-ui/themes"
+import { Text, IconButton, Popover } from "@radix-ui/themes"
 import { CellContext } from "@tanstack/react-table"
 import { useMemo } from "react"
 import { LuBinary } from "react-icons/lu"
@@ -14,12 +14,12 @@ export function BinaryCellData(cellContext: CellContext<any, unknown>) {
 	return (
 		<Popover.Root>
 			<Popover.Trigger>
-				<IconButton color="gray" radius="full">
+				<IconButton color="gray" radius="full" size="1">
 					<LuBinary />
 				</IconButton>
 			</Popover.Trigger>
 			<Popover.Content>
-				<Box>{encodedJsonData}</Box>
+				<Text size="2">{encodedJsonData}</Text>
 			</Popover.Content>
 		</Popover.Root>
 	)

@@ -9,15 +9,21 @@ export const ApplicationDataBox = () => {
 	return (
 		<Box mt="auto">
 			<Text size="2">
-				<Grid columns="2" px="3" py="3" width="auto">
-					<Text weight="bold">Status</Text>{" "}
-					<Text color="gray">{applicationInfo ? "Connected" : "Offline"}</Text>
-					<Text weight="bold">Topic</Text>{" "}
-					<Text color="gray">{applicationInfo ? applicationInfo.topic : "-"}</Text>
+				<Grid 
+					columns="auto auto" 
+					px="3"
+					py="3" 
+					width="auto"
+					gapX="4"
+				>
+					<Text weight="bold">Status</Text> <Text color="gray">{applicationInfo ? "Connected" : "Offline"}</Text>
+					<Text weight="bold">Topic</Text> 
+					<Text color="gray" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+						{applicationInfo ? applicationInfo.topic : "-"}
+					</Text>
 					<Text weight="bold">Database</Text>{" "}
 					<Text color="gray">{applicationInfo ? applicationInfo.database : "-"}</Text>
-					<Text weight="bold">Explorer Version</Text>{" "}
-					<Text color="gray">v{packageJson.version}</Text>
+					<Text weight="bold">Version</Text> <Text color="gray">v{packageJson.version}</Text>
 				</Grid>
 			</Text>
 		</Box>
