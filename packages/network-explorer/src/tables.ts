@@ -50,7 +50,10 @@ export const tables: (TableDef & SortDef)[] = [
 				accessorKey: "id",
 				size: 350,
 				enableSorting: true,
-				enableColumnFilter: false,
+				enableColumnFilter: true,
+				meta: {
+					textFilter: true,
+				},
 			},
 			{
 				header: "links",

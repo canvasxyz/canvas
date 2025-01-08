@@ -3,6 +3,7 @@ import { ColumnFiltersState, OnChangeFn, Table as TanStackTable } from "@tanstac
 import { BiChevronLeft, BiChevronRight, BiFilter, BiSidebar } from "react-icons/bi"
 import { LuRefreshCw, LuSlidersHorizontal } from "react-icons/lu"
 import { ClickableChecklistItem } from "./ClickableChecklistItem.js"
+import { TextFilterMenu } from "./TextFilterMenu.js"
 
 export const TableToolbar = ({
 	totalCount,
@@ -59,29 +60,41 @@ export const TableToolbar = ({
 								<DropdownMenu.Sub key={column.id}>
 									<DropdownMenu.SubTrigger>{column.columnDef.header?.toString()}</DropdownMenu.SubTrigger>
 									<DropdownMenu.SubContent>
-										{(column.columnDef.meta?.filterOptions || []).map((filterOption) => (
-											<ClickableChecklistItem
-												key={filterOption}
-												checked={
-													(columnFilters || []).filter((f) => f.id === column.id && f.value === filterOption).length > 0
-												}
-												onCheckedChange={(checked) => {
-													if (checked) {
-														if (setColumnFilters) {
-															setColumnFilters((columnFilters || []).concat({ id: column.id, value: filterOption }))
-														}
-													} else {
-														if (setColumnFilters) {
-															setColumnFilters(
-																(columnFilters || []).filter((f) => !(f.id === column.id && f.value === filterOption)),
-															)
-														}
+										{column.columnDef.meta?.textFilter && columnFilters && setColumnFilters && (
+											<TextFilterMenu
+												column={column}
+												columnFilters={columnFilters}
+												setColumnFilters={setColumnFilters}
+											/>
+										)}
+
+										{column.columnDef.meta?.filterOptions &&
+											column.columnDef.meta?.filterOptions.map((filterOption) => (
+												<ClickableChecklistItem
+													key={filterOption}
+													checked={
+														(columnFilters || []).filter((f) => f.id === column.id && f.value === filterOption).length >
+														0
 													}
-												}}
-											>
-												{filterOption}
-											</ClickableChecklistItem>
-										))}
+													onCheckedChange={(checked) => {
+														if (checked) {
+															if (setColumnFilters) {
+																setColumnFilters((columnFilters || []).concat({ id: column.id, value: filterOption }))
+															}
+														} else {
+															if (setColumnFilters) {
+																setColumnFilters(
+																	(columnFilters || []).filter(
+																		(f) => !(f.id === column.id && f.value === filterOption),
+																	),
+																)
+															}
+														}
+													}}
+												>
+													{filterOption}
+												</ClickableChecklistItem>
+											))}
 									</DropdownMenu.SubContent>
 								</DropdownMenu.Sub>
 							))}{" "}
