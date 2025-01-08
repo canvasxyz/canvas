@@ -1,5 +1,4 @@
 import { Table } from "./components/Table.js"
-import { actionsTable } from "./tables.js"
 import { useApplicationData } from "./hooks/useApplicationData.js"
 
 // special case of Table where the name field options are based on data from the API
@@ -12,13 +11,20 @@ export const ActionsTable = ({
 }) => {
 	const applicationData = useApplicationData()
 
+	const tableName = "$actions"
+	const defaultSortColumn = "message_id"
+	const defaultSortDirection = "desc"
+
 	const columns = [
 		{
 			header: "did",
 			accessorKey: "did",
 			size: 580,
 			enableSorting: false,
-			enableColumnFilter: false,
+			enableColumnFilter: true,
+			meta: {
+				textFilter: true,
+			},
 		},
 		{
 			header: "name",
@@ -40,11 +46,11 @@ export const ActionsTable = ({
 
 	return (
 		<Table
-			defaultSortColumn={actionsTable.defaultSortColumn}
-			defaultSortDirection={actionsTable.defaultSortDirection}
+			defaultSortColumn={defaultSortColumn}
+			defaultSortDirection={defaultSortDirection}
 			showSidebar={showSidebar}
 			setShowSidebar={setShowSidebar}
-			tableName={actionsTable.tableName}
+			tableName={tableName}
 			defaultColumns={columns}
 		/>
 	)

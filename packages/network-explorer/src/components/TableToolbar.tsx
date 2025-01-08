@@ -60,10 +60,10 @@ export const TableToolbar = ({
 								<DropdownMenu.Sub key={column.id}>
 									<DropdownMenu.SubTrigger>{column.columnDef.header?.toString()}</DropdownMenu.SubTrigger>
 									<DropdownMenu.SubContent>
-										{column.columnDef.meta?.textFilter && columnFilters && setColumnFilters && (
+										{column.columnDef.meta?.textFilter && setColumnFilters && (
 											<TextFilterMenu
 												column={column}
-												columnFilters={columnFilters}
+												columnFilters={columnFilters || []}
 												setColumnFilters={setColumnFilters}
 											/>
 										)}
