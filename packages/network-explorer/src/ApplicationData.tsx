@@ -1,4 +1,4 @@
-import { version } from "../package.json"
+import packageJson from "../package.json" assert { type: "json" }
 
 import { Grid, Text } from "@radix-ui/themes"
 import { useApplicationData } from "./hooks/useApplicationData.js"
@@ -11,7 +11,7 @@ export const ApplicationData = () => {
 			<Text weight="bold">Topic</Text>
 			<Text color="gray">{applicationInfo ? applicationInfo.topic : "-"}</Text>
 			<Text weight="bold">Canvas Node</Text>
-			<Text color="gray">v{version}</Text>
+			<Text color="gray">v{packageJson.version}</Text>
 			{/* TODO: what live syncing information can we display from the server? */}
 			{/* merkle tree hash? */}
 			{/* <Text weight="bold">Server Sync</Text>
