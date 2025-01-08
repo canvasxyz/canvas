@@ -1,4 +1,4 @@
-import packageJson from "../package.json" assert { type: "json" }
+import packageJson from "../package.json"
 
 import { Grid, Text } from "@radix-ui/themes"
 import { useApplicationData } from "./hooks/useApplicationData.js"
