@@ -13,11 +13,12 @@ export const TableSelector = ({ iconType, label, to }: { iconType: IconType; lab
 			<NavLink to={to}>
 				{({ isActive }) => (
 					<Flex
-						p="2"
+						py="1"
+						px="2"
 						align="center"
 						gap="2"
 						style={{
-							borderRadius: "8px",
+							borderRadius: "4px",
 							cursor: "pointer",
 							userSelect: "none",
 							color: isActive ? "var(--gray-12)" : "var(--gray-11)",

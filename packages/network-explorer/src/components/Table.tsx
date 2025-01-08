@@ -132,7 +132,7 @@ export const Table = <T,>({
 	}, [tableName])
 
 	return (
-		<Flex direction="column" maxWidth="calc(100vw - 340px)" flexGrow="1">
+		<Flex direction="column" maxWidth={showSidebar ? "calc(100vw - 340px)" : "100%"} flexGrow="1">
 			<TableToolbar
 				totalCount={data?.content.totalCount}
 				showSidebar={showSidebar}
@@ -150,85 +150,90 @@ export const Table = <T,>({
 				nextPage={() => pushCursor(endCursor)}
 			/>
 			<Box overflowX="scroll">
-				<table style={{ borderCollapse: "collapse", display: "grid" }}>
-					<thead style={{ display: "grid", position: "sticky", top: 0, zIndex: 1, backgroundColor: "white" }}>
-						{tanStackTable.getHeaderGroups().map((headerGroup) => (
-							<tr key={headerGroup.id} style={{ display: "flex", width: "100%" }}>
-								{headerGroup.headers.map((header) => (
-									<th
-										key={header.id}
-										style={{
-											display: "flex",
-											width: header.getSize(),
-											borderWidth: "1px",
-											borderTopWidth: "0px",
-											borderLeftWidth: "0px",
-											borderColor: "var(--accent-3)",
-											borderStyle: "solid",
-										}}
-									>
-										<Flex width="100%" gap="2" p="1">
-											<Text weight="medium">
-												{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-											</Text>
-											{header.column.getCanSort() && (
-												<Flex ml="auto" align="center">
-													<Button
-														variant="soft"
-														color="gray"
-														size="1"
-														style={{ padding: "4px" }}
-														onClick={header.column.getToggleSortingHandler()}
-													>
-														{header.column.getIsSorted() === "asc" ? (
-															<LuChevronUp style={{ fontSize: "var(--font-size-3)" }} />
-														) : header.column.getIsSorted() === "desc" ? (
-															<LuChevronDown style={{ fontSize: "var(--font-size-3)" }} />
-														) : (
-															<LuChevronsUpDown style={{ fontSize: "var(--font-size-3)" }} />
-														)}
-													</Button>
-												</Flex>
-											)}
-										</Flex>
-									</th>
-								))}
-							</tr>
-						))}
-					</thead>
-					<tbody
-						style={{
-							display: "grid",
-							overflowY: "scroll",
-							scrollbarWidth: "none",
-							position: "relative",
-						}}
-					>
-						{tanStackTable.getRowModel().rows.map((row) => (
-							<tr key={row.id} style={{ display: "flex", overflow: "hidden", scrollbarWidth: "none" }}>
-								{row.getVisibleCells().map((cell) => (
-									<td
-										key={cell.id}
-										style={{
-											overflowX: "scroll",
-											borderWidth: "1px",
-											borderTopWidth: "0px",
-											borderLeftWidth: "0px",
-											borderColor: "var(--accent-3)",
-											borderStyle: "solid",
-											display: "flex",
-											width: cell.column.getSize(),
-										}}
-									>
-										<Flex gap="2" p="1">
-											{flexRender(cell.column.columnDef.cell, cell.getContext())}
-										</Flex>
-									</td>
-								))}
-							</tr>
-						))}
-					</tbody>
-				</table>
+				<Text size="2">
+					<table style={{ borderCollapse: "collapse", display: "grid" }}>
+						<thead style={{ display: "grid", position: "sticky", top: 0, zIndex: 1, backgroundColor: "white" }}>
+							{tanStackTable.getHeaderGroups().map((headerGroup) => (
+								<tr key={headerGroup.id} style={{ display: "flex", width: "100%" }}>
+									{headerGroup.headers.map((header) => (
+										<th
+											key={header.id}
+											style={{
+												display: "flex",
+												width: header.getSize(),
+												borderWidth: "1px",
+												borderTopWidth: "0px",
+												borderLeftWidth: "0px",
+												borderColor: "var(--accent-3)",
+												borderStyle: "solid",
+												paddingLeft: "6px",
+												paddingTop: "4px",
+												minHeight: "32px",
+											}}
+										>
+											<Flex width="100%" gap="2" p="1">
+												<Text weight="medium">
+													{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+												</Text>
+												{header.column.getCanSort() && (
+													<Flex ml="auto" align="center">
+														<Button
+															variant="soft"
+															color="gray"
+															size="1"
+															style={{ padding: "4px", position: "relative", top: "-1px" }}
+															onClick={header.column.getToggleSortingHandler()}
+														>
+															{header.column.getIsSorted() === "asc" ? (
+																<LuChevronUp style={{ fontSize: "var(--font-size-3)" }} />
+															) : header.column.getIsSorted() === "desc" ? (
+																<LuChevronDown style={{ fontSize: "var(--font-size-3)" }} />
+															) : (
+																<LuChevronsUpDown style={{ fontSize: "var(--font-size-3)", color: "var(--gray-8)" }} />
+															)}
+														</Button>
+													</Flex>
+												)}
+											</Flex>
+										</th>
+									))}
+								</tr>
+							))}
+						</thead>
+						<tbody
+							style={{
+								display: "grid",
+								overflowY: "scroll",
+								scrollbarWidth: "none",
+								position: "relative",
+							}}
+						>
+							{tanStackTable.getRowModel().rows.map((row) => (
+								<tr key={row.id} style={{ display: "flex", overflow: "hidden", scrollbarWidth: "none" }}>
+									{row.getVisibleCells().map((cell) => (
+										<td
+											key={cell.id}
+											style={{
+												overflowX: "scroll",
+												borderWidth: "1px",
+												borderTopWidth: "0px",
+												borderLeftWidth: "0px",
+												borderColor: "var(--accent-3)",
+												borderStyle: "solid",
+												display: "flex",
+												width: cell.column.getSize(),
+											}}
+										>
+											<Flex gap="2" p="1">
+												{flexRender(cell.column.columnDef.cell, cell.getContext())}
+											</Flex>
+										</td>
+									))}
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</Text>
 			</Box>
 		</Flex>
 	)

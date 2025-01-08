@@ -1,4 +1,4 @@
-import { Flex, TextField } from "@radix-ui/themes"
+import { Heading, Box, Flex, TextField } from "@radix-ui/themes"
 import { TableSelector } from "./TableSelector.js"
 import { LuTable2 } from "react-icons/lu"
 import { ApplicationDataBox } from "../ApplicationDataBox.js"
@@ -25,13 +25,19 @@ export const Sidebar = ({ tables }: { tables: TableDef[] }) => {
 			gap="2"
 			style={{ borderRight: "1px solid var(--gray-3)" }}
 		>
-			Network Explorer
-			<TextField.Root
-				value={tableSearchTerm}
-				onChange={(e) => setTableSearchTerm(e.target.value)}
-				size="2"
-				placeholder="Search tables"
-			/>
+			<Box px="2" pt="10px" pb="9px">
+				<Heading size="3">
+					Network Explorer
+				</Heading>
+			</Box>
+			<Box px="2" py="0.5" pb="2">
+				<TextField.Root
+					value={tableSearchTerm}
+					onChange={(e) => setTableSearchTerm(e.target.value)}
+					size="2"
+					placeholder="Search tables"
+				/>
+			</Box>
 			<Flex overflowY="scroll" direction="column" gap="1">
 				<TableSelector key={"$actions"} iconType={LuTable2} label={"$actions"} to={`/$actions`} />
 				{tables

@@ -1,6 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist+Mono&display=swap');
+
 body {
 	margin: 0;
 }
+
 .rt-Card {
 	background-color: white;
 	box-shadow: 1px 1px 1px rgb(0 0 0 / 0.05);
@@ -10,4 +13,13 @@ body {
 	display: none;
 	width: 0px;
 	background: transparent; /* make scrollbar transparent */
+}
+
+.radix-themes {
+  --cursor-button: pointer;
+  font-family: "Geist Mono", monospace;
+}
+
+.radix-themes input, .radix-themes button, .radix-themes h1, .radix-themes h2, .radix-themes h3 {
+	font-family: "Geist Mono", monospace;
 }

@@ -39,7 +39,7 @@ export const TableToolbar = ({
 	const tableHasFilters = tanStackTable.getAllLeafColumns().filter((column) => column.getCanFilter()).length > 0
 
 	return (
-		<Flex style={{ borderBottom: "1px solid var(--gray-3)" }} align="center" gap="2" p="2">
+		<Flex style={{ borderBottom: "1px solid var(--gray-3)" }} align="center" gap="2" p="2" py="3">
 			<Button color="gray" variant={showSidebar ? "outline" : "solid"} onClick={() => setShowSidebar(!showSidebar)}>
 				<BiSidebar />
 			</Button>
@@ -122,9 +122,9 @@ export const TableToolbar = ({
 				</DropdownMenu.Content>
 			</DropdownMenu.Root>
 
-			<Box ml="auto">
-				<Text>
-					{totalCount || "-"} rows &bull; {responseTime ? `${responseTime}ms` : "-"}
+			<Box ml="auto" pr="2">
+				<Text size="2">
+					{totalCount || "0"} rows {responseTime ? <>&bull; {`${responseTime}ms`}</> : ""}
 				</Text>
 			</Box>
 
