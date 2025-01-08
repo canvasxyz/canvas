@@ -1,6 +1,6 @@
 import useSWR from "swr"
 
-import { fetchAndIpldParseJson } from "./utils.js"
+import { fetchAndIpldParseJson } from "../utils.js"
 import { useEffect, useState } from "react"
 import { Model } from "@canvas-js/modeldb"
 

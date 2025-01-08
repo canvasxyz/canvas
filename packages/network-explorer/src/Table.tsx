@@ -12,7 +12,7 @@ import {
 } from "@tanstack/react-table"
 import { useEffect, useState } from "react"
 import { fetchAndIpldParseJson } from "./utils.js"
-import useCursorStack from "./useCursorStack.js"
+import useCursorStack from "./hooks/useCursorStack.js"
 import { WhereCondition } from "@canvas-js/modeldb"
 
 export type Column = {

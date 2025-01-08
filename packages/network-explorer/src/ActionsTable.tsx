@@ -1,6 +1,6 @@
 import { Table } from "./Table.js"
 import { actionsTable } from "./tables.js"
-import { useApplicationData } from "./useApplicationData.js"
+import { useApplicationData } from "./hooks/useApplicationData.js"
 
 // special case of Table where the name field options are based on data from the API
 export const ActionsTable = ({

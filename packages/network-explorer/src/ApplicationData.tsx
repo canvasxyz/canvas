@@ -1,7 +1,7 @@
 import { version } from "../package.json"
 
 import { Grid, Text } from "@radix-ui/themes"
-import { useApplicationData } from "./useApplicationData.js"
+import { useApplicationData } from "./hooks/useApplicationData.js"
 
 export const ApplicationData = () => {
 	const applicationInfo = useApplicationData()
