@@ -2,9 +2,9 @@ import { /*Button,*/ Flex, TextField } from "@radix-ui/themes"
 // import { BiBug, BiCog } from "react-icons/bi"
 import { TableSelector } from "./TableSelector.js"
 import { LuTable2 } from "react-icons/lu"
-import { ApplicationData } from "./ApplicationData.js"
-import { TableDef } from "./tables.js"
-import { useApplicationData } from "./hooks/useApplicationData.js"
+import { ApplicationData } from "../ApplicationData.js"
+import { TableDef } from "../tables.js"
+import { useApplicationData } from "../hooks/useApplicationData.js"
 import { useState } from "react"
 
 export const Sidebar = ({ tables }: { tables: TableDef[] }) => {

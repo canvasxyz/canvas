@@ -1,6 +1,6 @@
 import { Flex } from "@radix-ui/themes"
-import { Sidebar } from "./Sidebar.js"
-import { Table } from "./Table.js"
+import { Sidebar } from "./components/Sidebar.js"
+import { Table } from "./components/Table.js"
 import { Navigate, Route, Routes } from "react-router-dom"
 import { tables } from "./tables.js"
 import { Suspense, useState } from "react"

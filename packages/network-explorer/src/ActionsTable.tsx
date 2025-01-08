@@ -1,4 +1,4 @@
-import { Table } from "./Table.js"
+import { Table } from "./components/Table.js"
 import { actionsTable } from "./tables.js"
 import { useApplicationData } from "./hooks/useApplicationData.js"
 

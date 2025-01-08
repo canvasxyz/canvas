@@ -1,5 +1,5 @@
 import { Navigate, useParams } from "react-router-dom"
-import { Table } from "./Table.js"
+import { Table } from "./components/Table.js"
 import { useApplicationData } from "./hooks/useApplicationData.js"
 
 export const ModelTable = ({
