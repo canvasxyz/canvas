@@ -259,12 +259,25 @@ export async function handler(args: Args) {
 
 			const root = packageDirectorySync({ cwd: path.resolve(packageDirectory || ".", "..") })
 			if (root !== undefined) {
-				// development package
-				const build = path.resolve(root, "node_modules/@canvas-js/network-explorer/dist")
-				assert(fs.existsSync(build), "Invalid directory for network explorer static files (build not found)")
-				api.use(args.static !== undefined ? "/explorer" : "/", express.static(build))
+				// called from development workspace
+				const localBuild = path.resolve(root, "packages/network-explorer/dist")
+				if (fs.existsSync(localBuild)) {
+					console.log(
+						chalk.yellow("[canvas] Using development build for network explorer, run `npm run build` to rebuild."),
+					)
+					api.use(args.static !== undefined ? "/explorer" : "/", express.static(localBuild))
+				} else {
+					console.log(
+						chalk.yellow(
+							"[canvas] [dev] Could not find development build, try `npm run build`. Falling back to installed package...",
+						),
+					)
+					const build = path.resolve(root, "node_modules/@canvas-js/network-explorer/dist")
+					assert(fs.existsSync(build), "Invalid directory for network explorer static files (build not found)")
+					api.use(args.static !== undefined ? "/explorer" : "/", express.static(build))
+				}
 			} else {
-				// installed package
+				// called from installed package
 				const networkExplorer = path.resolve(packageDirectory, "node_modules/@canvas-js/network-explorer")
 				assert(fs.existsSync(networkExplorer), "Could not find network explorer package")
 				const build = path.resolve(networkExplorer, "dist")
