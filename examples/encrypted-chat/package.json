@@ -6,7 +6,7 @@
 	"scripts": {
 		"build": "npx vite build",
 		"dev": "npx vite",
-		"dev:server": "canvas run --offline --port 8080 --static dist --topic chat-encrypted.canvas.xyz src/contract.ts"
+		"dev:server": "canvas run --offline --port 8080 --static dist --network-explorer --topic chat-encrypted.canvas.xyz src/contract.ts"
 	},
 	"dependencies": {
 		"@canvas-js/chain-ethereum": "0.13.9",
