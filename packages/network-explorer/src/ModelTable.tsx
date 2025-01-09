@@ -33,6 +33,7 @@ export const ModelTable = ({
 				<Table
 					defaultSortColumn={defaultSortColumn}
 					defaultSortDirection={defaultSortDirection}
+					enableDownload={false}
 					showSidebar={showSidebar}
 					setShowSidebar={setShowSidebar}
 					tableName={params.model as string}
