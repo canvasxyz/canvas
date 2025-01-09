@@ -65,6 +65,10 @@ export type ApplicationData = {
 		listen?: string[]
 		announce?: string[]
 	}
+	wsConfig: {
+		listen?: number,
+		connect?: string,
+	}
 	database: string
 	topic: string
 	models: Record<string, Model>
@@ -194,6 +198,8 @@ export class Canvas<
 	private readonly log = logger("canvas:core")
 
 	private networkConfig: NetworkConfig | null = null
+	private wsListen: { port: number } | null = null
+	private wsConnect: { url: string } | null = null
 
 	private constructor(
 		public readonly signers: SignerCache,
@@ -274,10 +280,12 @@ export class Canvas<
 	}
 
 	public async connect(url: string, options: { signal?: AbortSignal } = {}): Promise<void> {
+		this.wsConnect = { url }
 		await this.messageLog.connect(url, options)
 	}
 
 	public async listen(port: number, options: { signal?: AbortSignal } = {}): Promise<void> {
+		this.wsListen = { port }
 		await target.listen(this, port, options)
 	}
 
@@ -344,6 +352,10 @@ export class Canvas<
 				bootstrapList: this.networkConfig?.bootstrapList,
 				listen: this.networkConfig?.listen,
 				announce: this.networkConfig?.announce,
+			},
+			wsConfig: {
+				connect: this.wsConnect?.url,
+				listen: this.wsListen?.port,
 			},
 			database: this.db.getType(),
 			topic: this.topic,
