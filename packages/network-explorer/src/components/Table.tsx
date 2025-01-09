@@ -149,7 +149,7 @@ export const Table = <T,>({
 				hasNextPage={endCursor !== null}
 				nextPage={() => pushCursor(endCursor)}
 			/>
-			<Box overflowX="scroll">
+			<Box overflowX="scroll" flexGrow="1">
 				<Text size="2">
 					<table style={{ borderCollapse: "collapse", display: "grid" }}>
 						<thead style={{ display: "grid", position: "sticky", top: 0, zIndex: 1, backgroundColor: "white" }}>
