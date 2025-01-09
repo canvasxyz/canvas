@@ -10,10 +10,11 @@ import {
 	SortingState,
 	useReactTable,
 } from "@tanstack/react-table"
-import { useEffect, useState } from "react"
-import { fetchAndIpldParseJson } from "../utils.js"
+import { useCallback, useEffect, useState } from "react"
+import { fetchAndIpldParseJson, fetchAsString } from "../utils.js"
 import useCursorStack from "../hooks/useCursorStack.js"
 import { WhereCondition } from "@canvas-js/modeldb"
+import { useApplicationData } from "../hooks/useApplicationData.js"
 
 export type Column = {
 	name: string
@@ -45,6 +46,7 @@ export const Table = <T,>({
 	showSidebar,
 	setShowSidebar,
 	tableName,
+	enableDownload,
 	defaultColumns,
 	defaultSortColumn,
 	defaultSortDirection,
@@ -52,10 +54,12 @@ export const Table = <T,>({
 	showSidebar: boolean
 	setShowSidebar: (show: boolean) => void
 	tableName: string
+	enableDownload: boolean
 	defaultColumns: ColumnDef<T>[]
 	defaultSortColumn: string
 	defaultSortDirection: "desc" | "asc"
 }) => {
+	const applicationData = useApplicationData()
 	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]) // can set initial column filter state here
 
 	const { clearCursors, currentCursor, popCursor, pushCursor } = useCursorStack()
@@ -131,6 +135,19 @@ export const Table = <T,>({
 		clearCursors()
 	}, [tableName])
 
+	const downloadTable = useCallback(async () => {
+		if (!applicationData?.topic) {
+			return
+		}
+		const content = await fetchAsString(`/api/models/${tableName}`)
+		const element = document.createElement("a")
+		const file = new Blob([content], { type: "text/plain" })
+		element.href = URL.createObjectURL(file)
+		element.download = `${applicationData?.topic}-${tableName.replace("$", "")}.json`
+		document.body.appendChild(element) // Required for this to work in FireFox
+		element.click()
+	}, [applicationData?.topic])
+
 	return (
 		<Flex direction="column" maxWidth={showSidebar ? "calc(100vw - 340px)" : "100%"} flexGrow="1">
 			<TableToolbar
@@ -148,6 +165,8 @@ export const Table = <T,>({
 				prevPage={() => popCursor()}
 				hasNextPage={endCursor !== null}
 				nextPage={() => pushCursor(endCursor)}
+				enableDownload={enableDownload}
+				downloadTable={downloadTable}
 			/>
 			<Box overflowX="scroll">
 				<Text size="2">
@@ -173,7 +192,9 @@ export const Table = <T,>({
 										>
 											<Flex width="100%" gap="2" p="1">
 												<Text weight="medium">
-													{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+													{header.isPlaceholder
+														? null
+														: flexRender(header.column.columnDef.header, header.getContext())}
 												</Text>
 												{header.column.getCanSort() && (
 													<Flex ml="auto" align="center">

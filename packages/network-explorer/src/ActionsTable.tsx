@@ -50,6 +50,7 @@ export const ActionsTable = ({
 			defaultSortDirection={defaultSortDirection}
 			showSidebar={showSidebar}
 			setShowSidebar={setShowSidebar}
+			enableDownload={false}
 			tableName={tableName}
 			defaultColumns={columns}
 		/>

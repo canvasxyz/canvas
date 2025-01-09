@@ -4,14 +4,12 @@ import { BinaryCellData } from "./components/BinaryCellData.js"
 export type TableDef = {
 	tableName: string
 	defaultColumns: ColumnDef<any>[]
-}
-
-type SortDef = {
 	defaultSortColumn: string
 	defaultSortDirection: "desc" | "asc"
+	enableDownload?: boolean
 }
 
-export const tables: (TableDef & SortDef)[] = [
+export const tables: TableDef[] = [
 	{
 		tableName: "$ancestors",
 		defaultSortColumn: "id",
@@ -161,6 +159,7 @@ export const tables: (TableDef & SortDef)[] = [
 		tableName: "$messages",
 		defaultSortColumn: "id",
 		defaultSortDirection: "desc",
+		enableDownload: true,
 		defaultColumns: [
 			{
 				header: "id",

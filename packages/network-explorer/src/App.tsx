@@ -26,7 +26,7 @@ export const App = () => {
 					}
 				/>
 
-				{tables.map(({ tableName, defaultColumns, defaultSortColumn, defaultSortDirection }, key) => (
+				{tables.map(({ tableName, defaultColumns, enableDownload, defaultSortColumn, defaultSortDirection }, key) => (
 					<Route
 						key={key}
 						path={`/${tableName}`}
@@ -37,6 +37,7 @@ export const App = () => {
 									defaultSortDirection={defaultSortDirection}
 									showSidebar={showSidebar}
 									setShowSidebar={setShowSidebar}
+									enableDownload={enableDownload || false}
 									tableName={tableName}
 									defaultColumns={defaultColumns}
 								/>

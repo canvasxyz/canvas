@@ -1,7 +1,7 @@
 import { Box, Button, DropdownMenu, Flex, Text, TextField } from "@radix-ui/themes"
 import { ColumnFiltersState, OnChangeFn, Table as TanStackTable } from "@tanstack/react-table"
 import { BiChevronLeft, BiChevronRight, BiFilter, BiSidebar } from "react-icons/bi"
-import { LuRefreshCw, LuSlidersHorizontal } from "react-icons/lu"
+import { LuDownload, LuRefreshCw, LuSlidersHorizontal } from "react-icons/lu"
 import { ClickableChecklistItem } from "./ClickableChecklistItem.js"
 import { TextFilterMenu } from "./TextFilterMenu.js"
 
@@ -20,6 +20,8 @@ export const TableToolbar = ({
 	prevPage,
 	hasNextPage,
 	nextPage,
+	enableDownload,
+	downloadTable,
 }: {
 	totalCount?: number
 	showSidebar: boolean
@@ -35,6 +37,8 @@ export const TableToolbar = ({
 	prevPage: () => void
 	hasNextPage: boolean
 	nextPage: () => void
+	enableDownload: boolean
+	downloadTable: () => void
 }) => {
 	const tableHasFilters = tanStackTable.getAllLeafColumns().filter((column) => column.getCanFilter()).length > 0
 
@@ -166,6 +170,11 @@ export const TableToolbar = ({
 			<Button color="gray" variant="outline" onClick={() => doRefresh()}>
 				<LuRefreshCw />
 			</Button>
+			{enableDownload && (
+				<Button color="gray" variant="outline" onClick={() => downloadTable()}>
+					<LuDownload />
+				</Button>
+			)}
 		</Flex>
 	)
 }

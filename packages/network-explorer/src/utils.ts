@@ -4,6 +4,11 @@ import { parse } from "@ipld/dag-json"
 
 export const BASE_URL = import.meta.env.VITE_API_BASE_URL || ""
 
+export const fetchAsString = async (path: string) => {
+	const response = await fetch(`${BASE_URL}${path}`)
+	return await response.text()
+}
+
 export const fetchAndIpldParseJson = async <T>(path: string) => {
 	const startTime = Date.now()
 	const response = await fetch(`${BASE_URL}${path}`)
