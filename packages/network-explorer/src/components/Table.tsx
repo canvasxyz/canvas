@@ -100,7 +100,7 @@ export const Table = <T,>({
 
 	const rows = data ? data.content.results : []
 
-	const endCursor = rows.length > entriesPerPage ? (rows[rows.length - 1] as any)[sortColumn] : null
+	const endCursor = (rows?.length || 0) > entriesPerPage ? (rows[rows.length - 1] as any)[sortColumn] : null
 
 	const tanStackTable = useReactTable<T>({
 		columns: defaultColumns,
