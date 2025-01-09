@@ -8,6 +8,7 @@
 		"lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
 	},
 	"dependencies": {
+		"@canvas-js/core": "0.13.10",
 		"@canvas-js/modeldb": "0.13.10",
 		"@canvas-js/interfaces": "0.13.10",
 		"@ipld/dag-cbor": "^9.2.2",
