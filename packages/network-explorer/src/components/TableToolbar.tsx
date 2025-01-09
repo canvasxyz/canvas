@@ -31,7 +31,7 @@ export const TableToolbar = ({
 	responseTime?: number
 	entriesPerPage: number
 	setEntriesPerPage: (entriesPerPage: number) => void
-	columnFilters?: ColumnFiltersState
+	columnFilters: ColumnFiltersState
 	setColumnFilters?: OnChangeFn<ColumnFiltersState>
 	hasPrevPage: boolean
 	prevPage: () => void
@@ -53,7 +53,7 @@ export const TableToolbar = ({
 					<DropdownMenu.Trigger>
 						<Button color="gray" variant="outline">
 							<BiFilter />
-							Filters
+							Filters {columnFilters && columnFilters.length > 0 && `(${columnFilters.length})`}
 						</Button>
 					</DropdownMenu.Trigger>
 					<DropdownMenu.Content>
@@ -67,7 +67,7 @@ export const TableToolbar = ({
 										{column.columnDef.meta?.textFilter && setColumnFilters && (
 											<TextFilterMenu
 												column={column}
-												columnFilters={columnFilters || []}
+												columnFilters={columnFilters}
 												setColumnFilters={setColumnFilters}
 											/>
 										)}
@@ -77,20 +77,17 @@ export const TableToolbar = ({
 												<ClickableChecklistItem
 													key={filterOption}
 													checked={
-														(columnFilters || []).filter((f) => f.id === column.id && f.value === filterOption).length >
-														0
+														columnFilters.filter((f) => f.id === column.id && f.value === filterOption).length > 0
 													}
 													onCheckedChange={(checked) => {
 														if (checked) {
 															if (setColumnFilters) {
-																setColumnFilters((columnFilters || []).concat({ id: column.id, value: filterOption }))
+																setColumnFilters(columnFilters.concat({ id: column.id, value: filterOption }))
 															}
 														} else {
 															if (setColumnFilters) {
 																setColumnFilters(
-																	(columnFilters || []).filter(
-																		(f) => !(f.id === column.id && f.value === filterOption),
-																	),
+																	columnFilters.filter((f) => !(f.id === column.id && f.value === filterOption)),
 																)
 															}
 														}

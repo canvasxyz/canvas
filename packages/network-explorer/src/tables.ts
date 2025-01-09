@@ -43,7 +43,7 @@ export const tables: TableDef[] = [
 				header: "id",
 				accessorKey: "id",
 				size: 150,
-				enableSorting: false,
+				enableSorting: true,
 				enableColumnFilter: false,
 			},
 			{
@@ -190,11 +190,21 @@ export const tables: TableDef[] = [
 		defaultSortDirection: "desc",
 		defaultColumns: [
 			{
+				header: "message_id",
+				accessorKey: "message_id",
+				size: 580,
+				enableSorting: true,
+				enableColumnFilter: false,
+			},
+			{
 				header: "did",
 				accessorKey: "did",
 				size: 580,
 				enableSorting: false,
-				enableColumnFilter: false,
+				enableColumnFilter: true,
+				meta: {
+					textFilter: true,
+				},
 			},
 			{
 				header: "public_key",

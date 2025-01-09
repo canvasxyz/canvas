@@ -13,7 +13,7 @@ export const TextFilterMenu = ({
 }) => {
 	const [newFilterText, setNewFilterText] = useState("")
 
-	const existingFilter = columnFilters.filter((f) => (f.id = column.id))[0]
+	const existingFilter = columnFilters.filter((f) => f.id === column.id)[0]
 
 	return existingFilter ? (
 		<Flex

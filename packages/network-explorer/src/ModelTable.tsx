@@ -16,16 +16,18 @@ export const ModelTable = ({
 	if (applicationData !== null) {
 		const modelDefinition = applicationData.models[params.model as string]
 		if (modelDefinition) {
-			const primaryProperty = modelDefinition.properties.filter((p) => p.kind === "primary")[0]
-			// use the property with type "primary" if it exists, otherwise just assume the first column is
-			// the sorting/index column
-			const defaultSortColumn = primaryProperty ? primaryProperty.name : modelDefinition.properties[0].name
+			// the primary property has kind 'primary' or is the first property in the model definition
+			const primaryProperty =
+				modelDefinition.properties.filter((p) => p.kind === "primary")[0] || modelDefinition.properties[0]
+			// use the primary property as the sorting column
+			const defaultSortColumn = primaryProperty.name
 			const defaultSortDirection = "asc"
 
 			const defaultColumns = modelDefinition.properties.map((property) => ({
 				header: property.name,
 				accessorKey: property.name,
-				enableSorting: false,
+				// enable sorting on the primary property
+				enableSorting: property.name === primaryProperty.name,
 				enableColumnFilter: false,
 				size: 400,
 			}))
