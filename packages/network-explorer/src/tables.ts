@@ -45,7 +45,7 @@ export const tables: (TableDef & SortDef)[] = [
 				header: "id",
 				accessorKey: "id",
 				size: 150,
-				enableSorting: false,
+				enableSorting: true,
 				enableColumnFilter: false,
 			},
 			{
