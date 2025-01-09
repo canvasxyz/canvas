@@ -142,15 +142,23 @@ export const TableToolbar = ({
 				<TextField.Root
 					value={entriesPerPage}
 					onChange={(e) => {
-						setEntriesPerPage(Number(e.target.value))
+						const value = parseInt(e.target.value, 10)
+						if (isNaN(value)) return
+						if (value === 0) {
+							setEntriesPerPage(10)
+						} else {
+							setEntriesPerPage(value)
+						}
 					}}
 					color="gray"
 					style={{
 						borderRadius: "0px",
-						width: "40px",
+						width: "44px",
 						boxShadow: "none",
 						borderTop: "1px solid var(--accent-a8)",
 						borderBottom: "1px solid var(--accent-a8)",
+						textAlign: "center",
+						paddingRight: "8px",
 					}}
 				/>
 				<Button

@@ -38,24 +38,27 @@ export const Sidebar = ({ tables }: { tables: TableDef[] }) => {
 					placeholder="Search tables"
 				/>
 			</Box>
-			<Flex overflowY="scroll" direction="column" gap="1">
-				<TableSelector key={"$actions"} iconType={LuTable2} label={"$actions"} to={`/$actions`} />
-				{tables
-					.filter(({ tableName }) => tableName.toLowerCase().includes(tableSearchTerm.toLowerCase()))
-					.map(({ tableName }, key) => (
-						<TableSelector key={key} iconType={LuTable2} label={tableName} to={`/${tableName}`} />
-					))}
-
-				{modelNames
-					.filter((modelName) => modelName.toLowerCase().includes(tableSearchTerm.toLowerCase()))
-					.map((modelName) => (
-						<TableSelector
-							key={`model-${modelName}`}
-							iconType={LuTable2}
-							label={modelName}
-							to={`/models/${modelName}`}
-						/>
-					))}
+			<Flex overflowY="scroll" direction="column" gap="2">
+				<Box>
+					{modelNames
+						.filter((modelName) => modelName.toLowerCase().includes(tableSearchTerm.toLowerCase()))
+						.map((modelName) => (
+							<TableSelector
+								key={`model-${modelName}`}
+								iconType={LuTable2}
+								label={modelName}
+								to={`/models/${modelName}`}
+							/>
+						))}
+				</Box>
+				<Box>
+					<TableSelector key={"$actions"} iconType={LuTable2} label={"$actions"} to={`/$actions`} />
+					{tables
+						.filter(({ tableName }) => tableName.toLowerCase().includes(tableSearchTerm.toLowerCase()))
+						.map(({ tableName }, key) => (
+							<TableSelector key={key} iconType={LuTable2} label={tableName} to={`/${tableName}`} />
+						))}
+				</Box>
 			</Flex>
 			<ApplicationDataBox />
 		</Flex>
