@@ -142,7 +142,7 @@ export const Table = <T,>({
 				setEntriesPerPage={setEntriesPerPage}
 				responseTime={data ? data.responseTime : undefined}
 				doRefresh={doRefresh}
-				columnFilters={columnFilters}
+				columnFilters={columnFilters || []}
 				setColumnFilters={setColumnFilters}
 				hasPrevPage={currentCursor !== null}
 				prevPage={() => popCursor()}
@@ -173,7 +173,9 @@ export const Table = <T,>({
 										>
 											<Flex width="100%" gap="2" p="1">
 												<Text weight="medium">
-													{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+													{header.isPlaceholder
+														? null
+														: flexRender(header.column.columnDef.header, header.getContext())}
 												</Text>
 												{header.column.getCanSort() && (
 													<Flex ml="auto" align="center">
