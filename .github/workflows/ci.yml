@@ -96,7 +96,7 @@ jobs:
         run: npm run test --workspace=@canvas-js/signatures
 
   test-build:
-    name: Build test (pnpm, no lockfile)
+    name: Missing dependencies between subpackages (pnpm)
     runs-on: ubuntu-latest
 
     steps:
