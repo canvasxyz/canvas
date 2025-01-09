@@ -2,19 +2,7 @@ import useSWR from "swr"
 
 import { fetchAndIpldParseJson } from "../utils.js"
 import React, { createContext, useContext, useEffect, useState } from "react"
-import { Model } from "@canvas-js/modeldb"
-
-export type ApplicationData = {
-	networkConfig: {
-		bootstrapList?: string[]
-		listen?: string[]
-		announce?: string[]
-	}
-	database: string
-	topic: string
-	models: Record<string, Model>
-	actions: string[]
-}
+import { ApplicationData } from "@canvas-js/core"
 
 const ApplicationDataContext = createContext<ApplicationData | null>(null)
 
