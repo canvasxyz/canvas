@@ -29,7 +29,7 @@ export const ModelTable = ({
 				// enable sorting on the primary property
 				enableSorting: property.name === primaryProperty.name,
 				enableColumnFilter: false,
-				size: 400,
+				size: 320,
 			}))
 			return (
 				<Table

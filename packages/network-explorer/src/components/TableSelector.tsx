@@ -13,7 +13,7 @@ export const TableSelector = ({ iconType, label, to }: { iconType: IconType; lab
 			<NavLink to={to}>
 				{({ isActive }) => (
 					<Flex
-						py="1"
+						py="5px"
 						px="2"
 						align="center"
 						gap="2"

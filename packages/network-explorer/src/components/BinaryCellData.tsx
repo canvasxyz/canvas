@@ -6,10 +6,13 @@ import { useMemo } from "react"
 import { LuBinary } from "react-icons/lu"
 
 export function BinaryCellData(cellContext: CellContext<any, unknown>) {
-	const encodedJsonData = useMemo(
-		() => json.stringify(cbor.decode(cellContext.getValue() as Uint8Array)),
-		[cellContext.getValue()],
-	)
+	const encodedJsonData = useMemo(() => {
+		try {
+			return json.stringify(cbor.decode(cellContext.getValue() as Uint8Array))
+		} catch (err) {
+			return json.stringify(cellContext.getValue())
+		}
+	}, [cellContext.getValue()])
 
 	return (
 		<Popover.Root>

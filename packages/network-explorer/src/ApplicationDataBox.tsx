@@ -34,7 +34,6 @@ export const ApplicationDataBox = () => {
 				<Grid columns="auto auto" px="3" py="3" width="auto" gapX="4">
 					<Text weight="bold">Upstream</Text>{" "}
 					<Text color="gray">
-						{!applicationInfo && <Text color="gray">Offline</Text>}
 						{Object.keys(applicationInfo?.networkConfig || {}).length > 0 && (
 							<Text color="gray">
 								libp2p{" "}
