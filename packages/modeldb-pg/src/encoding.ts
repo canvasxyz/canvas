@@ -183,6 +183,8 @@ export function decodePrimitiveValue(modelName: string, property: PrimitivePrope
 	} else if (property.type === "number" || property.type === "float") {
 		if (typeof value === "string") {
 			return parseFloat(value)
+		} else if (typeof value === "number") {
+			return value
 		} else {
 			console.error("expected float, got", value)
 			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected float)`)
