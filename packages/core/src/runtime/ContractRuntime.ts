@@ -229,7 +229,9 @@ export class ContractRuntime extends AbstractRuntime {
 			blockhash: blockhash ?? null,
 			timestamp,
 		})
-		const argHandles = args.map(this.vm.wrapValue)
+
+		const argHandles = Array.isArray(args) ? args.map(this.vm.wrapValue) : [this.vm.wrapValue(args)]
+
 		try {
 			const result = await this.vm.callAsync(actionHandle, ctxHandle, [this.#databaseAPI, ...argHandles])
 
