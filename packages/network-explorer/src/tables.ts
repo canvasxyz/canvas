@@ -28,7 +28,7 @@ export const tables: TableDef[] = [
 			{
 				header: "links",
 				accessorKey: "links",
-				size: 320,
+				size: 500,
 				enableSorting: false,
 				enableColumnFilter: false,
 			},
@@ -98,7 +98,7 @@ export const tables: TableDef[] = [
 			{
 				header: "did",
 				accessorKey: "did",
-				size: 320,
+				size: 700,
 				enableSorting: true,
 				enableColumnFilter: false,
 			},
