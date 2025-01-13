@@ -96,15 +96,18 @@ export const Table = <T,>({
 		},
 	)
 
+	let rows: T[] | undefined = undefined
+	let endCursor: any
+	if (data) {
+		rows = data.content.results
+		endCursor = (rows?.length || 0) > entriesPerPage ? (rows[rows.length - 1] as any)[sortColumn] : null
+	}
+
 	const [columnVisibility, setColumnVisibility] = useState({})
-
-	const rows = data ? data.content.results : []
-
-	const endCursor = (rows?.length || 0) > entriesPerPage ? (rows[rows.length - 1] as any)[sortColumn] : null
 
 	const tanStackTable = useReactTable<T>({
 		columns: defaultColumns,
-		data: rows,
+		data: rows || [],
 		getCoreRowModel: getCoreRowModel(),
 		manualPagination: true,
 		manualSorting: true,
