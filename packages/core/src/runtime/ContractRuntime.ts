@@ -3,7 +3,7 @@ import { QuickJSHandle } from "quickjs-emscripten"
 import type { SignerCache } from "@canvas-js/interfaces"
 import { ModelValue, ModelSchema, validateModelValue, updateModelValues, mergeModelValues } from "@canvas-js/modeldb"
 import { VM } from "@canvas-js/vm"
-import { assert, mapEntries, mapValues, JSValue } from "@canvas-js/utils"
+import { assert, mapValues } from "@canvas-js/utils"
 
 import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
 
@@ -48,28 +48,7 @@ export class ContractRuntime extends AbstractRuntime {
 		// TODO: Validate that models satisfies ModelSchema
 		const mergeHandles: Record<string, QuickJSHandle> = {}
 
-		const modelSchema = mapEntries(modelsUnwrap, ([name, handle]) => {
-			// Extract the $merge handle, which is not included in `fields`
-			// because vm.context.dump only passes on JSON-able fields.
-			const mergeHandle = vm.unwrapObject(handle)["$merge"]
-			const fields = handle.consume(vm.context.dump)
-			if (mergeHandle) {
-				mergeHandles[name] = mergeHandle
-				fields.$merge = (merge1: JSValue, merge2: JSValue) => {
-					const merge1Handle = vm.wrapValue(merge1)
-					const merge2Handle = vm.wrapValue(merge2)
-					const callResult = vm.context.callFunction(mergeHandle, vm.context.null, merge1Handle, merge2Handle)
-					merge1Handle.dispose()
-					merge2Handle.dispose()
-					if (callResult.error) {
-						callResult.error.dispose() // do we need this?
-						throw new Error(`error in ${name}.$merge`)
-					}
-					return callResult.value.consume(vm.context.dump)
-				}
-			}
-			return fields
-		}) as ModelSchema
+		const modelSchema: ModelSchema = mapValues(modelsUnwrap, (handle) => handle.consume(vm.context.dump))
 
 		const cleanupSetupHandles = () => {
 			for (const handle of Object.values(mergeHandles)) {

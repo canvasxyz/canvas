@@ -263,11 +263,8 @@ export abstract class AbstractRuntime {
 		const effects: Effect[] = [{ operation: "set", model: "$actions", value: actionRecord }]
 
 		for (const [model, entries] of Object.entries(executionContext.modelEntries)) {
-			for (const [key, value_] of Object.entries(entries)) {
+			for (const [key, value] of Object.entries(entries)) {
 				const keyHash = AbstractRuntime.getKeyHash(key)
-				let value = value_
-
-				const mergeFunction = this.db.models[model].merge
 
 				const effectKey = `${model}/${keyHash}/${id}`
 				const results = await this.db.query<{ key: string }>("$effects", {
@@ -282,18 +279,9 @@ export abstract class AbstractRuntime {
 					value: { key: effectKey, value: value && cbor.encode(value), branch, clock },
 				})
 
-				if (mergeFunction) {
-					const existingValue = await this.db.get(model, key)
-					if (existingValue !== null && value !== null) {
-						value = mergeFunction(existingValue, value)
-					} else if (existingValue !== null) {
-						value = existingValue
-					}
-				} else {
-					if (results.length > 0) {
-						this.log("skipping effect %o because it is superceeded by effects %O", [key, value], results)
-						continue
-					}
+				if (results.length > 0) {
+					this.log("skipping effect %o because it is superceeded by effects %O", [key, value], results)
+					continue
 				}
 
 				if (value === null) {
@@ -438,65 +426,42 @@ export abstract class AbstractRuntime {
 			return context.modelEntries[model][key] as T
 		}
 
-		const { merge } = this.db.models[model]
-		if (merge !== undefined) {
-			const concurrentAncestors = await this.getConcurrentAncestors(context, model, key)
-			const concurrentEffects: ModelValue<any>[] = []
+		const keyHash = AbstractRuntime.getKeyHash(key)
+		const lowerBound = `${model}/${keyHash}/`
 
-			for (const ancestor of concurrentAncestors) {
-				const effect = await this.db.get<EffectRecord>("$effects", ancestor)
-				if (effect === null) {
-					throw new Error(`missing concurrent effect ${ancestor}`)
-				} else if (effect.value === null) {
-					throw new Error(`encountered delete effect for merge table`)
-				}
+		let upperBound = `${model}/${keyHash}/${context.id}`
 
-				concurrentEffects.push(cbor.decode<ModelValue<any>>(effect.value))
-			}
+		// eslint-disable-next-line no-constant-condition
+		while (true) {
+			const results = await this.db.query<{ key: string; value: Uint8Array; clock: number }>("$effects", {
+				select: { key: true, value: true, clock: true },
+				where: { key: { gt: lowerBound, lt: upperBound } },
+				orderBy: { key: "desc" },
+				limit: 1,
+			})
 
-			if (concurrentEffects.length === 0) {
+			if (results.length === 0) {
 				return null
-			} else {
-				return concurrentEffects.reduce((a, b) => merge(a, b)) as T
 			}
-		} else {
-			const keyHash = AbstractRuntime.getKeyHash(key)
-			const lowerBound = `${model}/${keyHash}/`
 
-			let upperBound = `${model}/${keyHash}/${context.id}`
-
-			// eslint-disable-next-line no-constant-condition
-			while (true) {
-				const results = await this.db.query<{ key: string; value: Uint8Array; clock: number }>("$effects", {
-					select: { key: true, value: true, clock: true },
-					where: { key: { gt: lowerBound, lt: upperBound } },
-					orderBy: { key: "desc" },
-					limit: 1,
-				})
-
-				if (results.length === 0) {
-					return null
-				}
-
-				if (results[0].clock === 0) {
-					if (results[0].value === null) return null
-					return cbor.decode<null | T>(results[0].value)
-				}
-
-				const [effect] = results
-				const [{}, {}, messageId] = effect.key.split("/")
-
-				const visited = new Set<string>()
-				for (const parent of context.message.parents) {
-					const isAncestor = await context.messageLog.isAncestor(parent, messageId, visited)
-					if (isAncestor) {
-						if (effect.value === null) return null
-						return cbor.decode<null | T>(effect.value)
-					}
-				}
-
-				upperBound = effect.key
+			if (results[0].clock === 0) {
+				if (results[0].value === null) return null
+				return cbor.decode<null | T>(results[0].value)
 			}
+
+			const [effect] = results
+			const [{}, {}, messageId] = effect.key.split("/")
+
+			const visited = new Set<string>()
+			for (const parent of context.message.parents) {
+				const isAncestor = await context.messageLog.isAncestor(parent, messageId, visited)
+				if (isAncestor) {
+					if (effect.value === null) return null
+					return cbor.decode<null | T>(effect.value)
+				}
+			}
+
+			upperBound = effect.key
 		}
 	}
 }

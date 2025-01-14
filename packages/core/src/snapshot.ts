@@ -12,8 +12,6 @@ import { Contract } from "./types.js"
 import { EffectRecord } from "./runtime/AbstractRuntime.js"
 
 // typeguards
-export const isMergeFunction = (value: unknown): value is ModelSchema["$merge"] =>
-	typeof value === "function" || value === undefined
 export const isIndexInit = (value: unknown): value is IndexInit[] => typeof value === "string" || Array.isArray(value)
 export const isPropertyTypish = (value: unknown): value is PropertyType => typeof value === "string"
 

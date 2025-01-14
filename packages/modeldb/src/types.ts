@@ -19,12 +19,7 @@ export type PropertyType =
 
 export type IndexInit = string | string[]
 
-export type MergeFunction<T extends ModelValue<any>> = (value1: T, value2: T) => T
-
-export type ModelSchema = Record<
-	string,
-	{ $indexes?: IndexInit[]; $merge?: MergeFunction<any> } | Record<string, PropertyType>
->
+export type ModelSchema = Record<string, { $indexes?: IndexInit[] } | Record<string, PropertyType>>
 
 // These are more structured representations of the schema defined by ModelSchema that are easier
 // to work with at runtime
@@ -46,7 +41,6 @@ export type Model = {
 	primaryKey: string
 	properties: Property[]
 	indexes: string[][]
-	merge: MergeFunction<any> | undefined
 }
 
 export type Config = {
@@ -89,43 +83,39 @@ export type QueryParams = {
 export type DerivePropertyType<T extends PropertyType> = T extends "primary"
 	? PrimaryKeyValue
 	: T extends "integer" | "float" | "number"
-		? number
-		: T extends "integer?" | "float?" | "number?"
-			? number | null
-			: T extends "string"
-				? string
-				: T extends "string?"
-					? string | null
-					: T extends "bytes"
-						? Uint8Array
-						: T extends "bytes?"
-							? Uint8Array | null
-							: T extends "boolean"
-								? boolean
-								: T extends "boolean?"
-									? boolean | null
-									: T extends "json"
-										? JSONValue
-										: T extends `@${string}[]`
-											? RelationValue
-											: T extends `@${string}?`
-												? ReferenceValue | null
-												: T extends `@${string}`
-													? ReferenceValue
-													: never
+	? number
+	: T extends "integer?" | "float?" | "number?"
+	? number | null
+	: T extends "string"
+	? string
+	: T extends "string?"
+	? string | null
+	: T extends "bytes"
+	? Uint8Array
+	: T extends "bytes?"
+	? Uint8Array | null
+	: T extends "boolean"
+	? boolean
+	: T extends "boolean?"
+	? boolean | null
+	: T extends "json"
+	? JSONValue
+	: T extends `@${string}[]`
+	? RelationValue
+	: T extends `@${string}?`
+	? ReferenceValue | null
+	: T extends `@${string}`
+	? ReferenceValue
+	: never
 
 export type DeriveModelTypes<T extends ModelSchema> = {
-	[K in keyof T as Exclude<K, "$merge" | "$indexes">]: {
-		[P in keyof T[K] as Exclude<P, "$merge" | "$indexes">]: T[K][P] extends PropertyType
-			? DerivePropertyType<T[K][P]>
-			: never
+	[K in keyof T as Exclude<K, "$indexes">]: {
+		[P in keyof T[K] as Exclude<P, "$indexes">]: T[K][P] extends PropertyType ? DerivePropertyType<T[K][P]> : never
 	}
 }
 
-export type DeriveModelType<T extends { $merge?: MergeFunction<any>; $indexes?: IndexInit[] } | Record<string, PropertyType>> = {
-    [P in keyof T as Exclude<P, "$merge" | "$indexes">]: T[P] extends PropertyType
-        ? DerivePropertyType<T[P]>
-        : never
+export type DeriveModelType<T extends { $indexes?: IndexInit[] } | Record<string, PropertyType>> = {
+	[P in keyof T as Exclude<P, "$indexes">]: T[P] extends PropertyType ? DerivePropertyType<T[P]> : never
 }
 
 export type Contract<T extends ModelSchema = ModelSchema> = {
