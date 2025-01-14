@@ -66,8 +66,8 @@ export type ApplicationData = {
 		announce?: string[]
 	}
 	wsConfig: {
-		listen?: number,
-		connect?: string,
+		listen?: number
+		connect?: string
 	}
 	database: string
 	topic: string
@@ -95,7 +95,7 @@ export class Canvas<
 		}
 
 		const runtime = await createRuntime(topic, signers, contract, { runtimeMemoryLimit })
-		const gossipTopic = config.snapshot ? `topic#${hashSnapshot(config.snapshot)}` : topic // topic for peering
+		const gossipTopic = config.snapshot ? `${topic}#${hashSnapshot(config.snapshot)}` : topic // topic for peering
 		const messageLog = await target.openGossipLog(
 			{ topic: gossipTopic, path, clear: config.reset },
 			{
