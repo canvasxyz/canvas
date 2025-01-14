@@ -2,19 +2,13 @@ import useSWR from "swr"
 import { Box, Button, Flex, Text } from "@radix-ui/themes"
 import { TableToolbar } from "./TableToolbar.js"
 import { LuChevronDown, LuChevronsUpDown, LuChevronUp } from "react-icons/lu"
-import {
-	ColumnDef,
-	ColumnFiltersState,
-	flexRender,
-	getCoreRowModel,
-	SortingState,
-	useReactTable,
-} from "@tanstack/react-table"
+import { ColumnDef, flexRender, getCoreRowModel, SortingState, useReactTable } from "@tanstack/react-table"
 import { useCallback, useEffect, useState } from "react"
 import { fetchAndIpldParseJson, fetchAsString } from "../utils.js"
 import useCursorStack from "../hooks/useCursorStack.js"
 import { WhereCondition } from "@canvas-js/modeldb"
 import { useApplicationData } from "../hooks/useApplicationData.js"
+import { useSearchFilters } from "../hooks/useSearchFilters.js"
 
 export type Column = {
 	name: string
@@ -63,7 +57,10 @@ export const Table = <T,>({
 	defaultSortDirection: "desc" | "asc"
 }) => {
 	const applicationData = useApplicationData()
-	const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]) // can set initial column filter state here
+
+	const [columnFilters, setColumnFilters] = useSearchFilters(
+		defaultColumns.filter((col) => col.enableColumnFilter).map((col) => col.header as string),
+	)
 
 	const { clearCursors, currentCursor, popCursor, pushCursor } = useCursorStack()
 
