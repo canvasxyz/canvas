@@ -3,7 +3,7 @@ import { blake3 } from "@noble/hashes/blake3"
 import { bytesToHex } from "@noble/hashes/utils"
 import { logger } from "@libp2p/logger"
 
-import type { Signature, Action, Message, Session, Snapshot, SignerCache } from "@canvas-js/interfaces"
+import type { Action, Session, Snapshot, SignerCache } from "@canvas-js/interfaces"
 
 import { AbstractModelDB, Effect, ModelValue, ModelSchema } from "@canvas-js/modeldb"
 import {
@@ -17,14 +17,38 @@ import {
 import { assert, mapValues } from "@canvas-js/utils"
 import { isAction, isSession, isSnapshot } from "../utils.js"
 
-export type ExecutionContext = {
-	messageLog: AbstractGossipLog<Action | Session | Snapshot>
-	id: string
-	signature: Signature
-	message: Message<Action>
-	address: string
-	modelEntries: Record<string, Record<string, ModelValue | null>>
-	branch: number
+export class ExecutionContext {
+	// // recordId -> { version, value }
+	// public readonly reads: Record<string, { version: string | null; value: ModelValue | null }> = {}
+
+	// // recordId -> effect
+	// public readonly writes: Record<string, Effect> = {}
+
+	public readonly modelEntries: Record<string, Record<string, ModelValue | null>>
+
+	constructor(
+		public readonly messageLog: AbstractGossipLog<Action | Session | Snapshot>,
+		public readonly signedMessage: SignedMessage<Action>,
+		public readonly address: string,
+	) {
+		this.modelEntries = mapValues(messageLog.db.models, () => ({}))
+	}
+
+	public get id() {
+		return this.signedMessage.id
+	}
+
+	public get signature() {
+		return this.signedMessage.signature
+	}
+
+	public get message() {
+		return this.signedMessage.message
+	}
+
+	public get db() {
+		return this.messageLog.db
+	}
 }
 
 export type EffectRecord = { key: string; value: Uint8Array | null; branch: number; clock: number }
@@ -173,24 +197,19 @@ export abstract class AbstractRuntime {
 		await signer.verifySession(this.topic, message.payload)
 		const address = signer.getAddressFromDid(did)
 
+		const sessionRecord: SessionRecord = {
+			message_id: id,
+			public_key: publicKey,
+			did,
+			address,
+			expiration: duration === undefined ? null : timestamp + duration,
+		}
+
 		const effects: Effect[] = [
-			{
-				model: "$sessions",
-				operation: "set",
-				value: {
-					message_id: id,
-					public_key: publicKey,
-					did,
-					address,
-					expiration: duration === undefined ? null : timestamp + duration,
-				},
-			},
-			{
-				model: "$dids",
-				operation: "set",
-				value: { did },
-			},
+			{ model: "$sessions", operation: "set", value: sessionRecord },
+			{ model: "$dids", operation: "set", value: { did } },
 		]
+
 		await this.db.apply(effects)
 	}
 
@@ -237,14 +256,13 @@ export abstract class AbstractRuntime {
 		const branch = signedMessage.branch
 		assert(branch !== undefined, "expected branch !== undefined")
 
-		const modelEntries: Record<string, Record<string, ModelValue | null>> = mapValues(this.db.models, () => ({}))
-
-		const result = await this.execute({ messageLog, modelEntries, id, signature, message, address, branch })
+		const executionContext = new ExecutionContext(messageLog, signedMessage, address)
+		const result = await this.execute(executionContext)
 
 		const actionRecord: ActionRecord = { message_id: id, did, name, timestamp: context.timestamp }
 		const effects: Effect[] = [{ operation: "set", model: "$actions", value: actionRecord }]
 
-		for (const [model, entries] of Object.entries(modelEntries)) {
+		for (const [model, entries] of Object.entries(executionContext.modelEntries)) {
 			for (const [key, value_] of Object.entries(entries)) {
 				const keyHash = AbstractRuntime.getKeyHash(key)
 				let value = value_
