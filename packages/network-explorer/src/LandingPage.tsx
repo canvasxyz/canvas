@@ -22,7 +22,7 @@ export const LandingPage = () => {
 		})}`,
 		fetchAndIpldParseJson<{
 			totalCount: number
-			results: { message_id: string; name: string; timestamp: string; did: string }[]
+			results: { message_id: string; name: string; timestamp: number; did: string }[]
 		}>,
 		{
 			refreshInterval: 1000,
@@ -64,7 +64,7 @@ export const LandingPage = () => {
 								<tr key={index}>
 									<Td>{action.message_id.slice(0, 10)}</Td>
 									<Td>{action.name}</Td>
-									<Td>{action.timestamp}</Td>
+									<Td>{new Date(action.timestamp).toLocaleString()}</Td>
 									<Td>{action.did.slice(0, 30)}...</Td>
 								</tr>
 							))}
