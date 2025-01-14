@@ -10,7 +10,6 @@ import { createAPI as createBaseAPI, getLimit, getOrder, getRange } from "@canva
 import { assert } from "@canvas-js/utils"
 
 import { Canvas } from "./Canvas.js"
-import { isAction, isSession } from "./utils.js"
 import { SignedMessage } from "@canvas-js/gossiplog"
 import { WhereCondition } from "@canvas-js/modeldb"
 

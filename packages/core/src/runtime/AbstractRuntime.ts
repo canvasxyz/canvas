@@ -12,6 +12,7 @@ import {
 	MIN_MESSAGE_ID,
 	AbstractGossipLog,
 	BranchMergeRecord,
+	SignedMessage,
 } from "@canvas-js/gossiplog"
 import { assert, mapValues } from "@canvas-js/utils"
 import { isAction, isSession, isSnapshot } from "../utils.js"
@@ -122,12 +123,12 @@ export abstract class AbstractRuntime {
 			const { id, signature, message, branch } = signedMessage
 			assert(branch !== undefined, "internal error - expected branch !== undefined")
 
-			if (isSession(message)) {
-				return await handleSession(id, signature, message)
-			} else if (isAction(message)) {
-				return await handleAction(id, signature, message, this, { branch })
-			} else if (isSnapshot(message)) {
-				return await handleSnapshot(id, signature, message, this)
+			if (isSession(signedMessage)) {
+				return await handleSession(signedMessage)
+			} else if (isAction(signedMessage)) {
+				return await handleAction(signedMessage, this)
+			} else if (isSnapshot(signedMessage)) {
+				return await handleSnapshot(signedMessage, this)
 			} else {
 				throw new Error("invalid message payload type")
 			}
@@ -135,12 +136,10 @@ export abstract class AbstractRuntime {
 	}
 
 	private async handleSnapshot(
-		id: string,
-		signature: Signature,
-		message: Message<Snapshot>,
+		signedMessage: SignedMessage<Snapshot>,
 		messageLog: AbstractGossipLog<Action | Session | Snapshot>,
 	) {
-		const { models, effects } = message.payload
+		const { models, effects } = signedMessage.message.payload
 
 		const messages = await messageLog.getMessages()
 		assert(messages.length === 0, "snapshot must be first entry on log")
@@ -155,7 +154,8 @@ export abstract class AbstractRuntime {
 		}
 	}
 
-	private async handleSession(id: string, signature: Signature, message: Message<Session>) {
+	private async handleSession(signedMessage: SignedMessage<Session>) {
+		const { id, signature, message } = signedMessage
 		const {
 			publicKey,
 			did,
@@ -195,12 +195,10 @@ export abstract class AbstractRuntime {
 	}
 
 	private async handleAction(
-		id: string,
-		signature: Signature,
-		message: Message<Action>,
+		signedMessage: SignedMessage<Action>,
 		messageLog: AbstractGossipLog<Action | Session | Snapshot>,
-		{ branch }: { branch: number },
 	) {
+		const { id, signature, message } = signedMessage
 		const { did, name, context } = message.payload
 
 		const signer = this.signers
@@ -235,6 +233,10 @@ export abstract class AbstractRuntime {
 			throw new Error(`missing session ${signature.publicKey} for ${did}`)
 		}
 
+		const clock = message.clock
+		const branch = signedMessage.branch
+		assert(branch !== undefined, "expected branch !== undefined")
+
 		const modelEntries: Record<string, Record<string, ModelValue | null>> = mapValues(this.db.models, () => ({}))
 
 		const result = await this.execute({ messageLog, modelEntries, id, signature, message, address, branch })
@@ -259,7 +261,7 @@ export abstract class AbstractRuntime {
 				effects.push({
 					model: "$effects",
 					operation: "set",
-					value: { key: effectKey, value: value && cbor.encode(value), branch: branch, clock: message.clock },
+					value: { key: effectKey, value: value && cbor.encode(value), branch, clock },
 				})
 
 				if (mergeFunction) {
