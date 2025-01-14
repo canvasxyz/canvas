@@ -1,3 +1,4 @@
+import { ColumnDef } from "@tanstack/react-table"
 import { Table } from "./components/Table.js"
 import { useApplicationData } from "./hooks/useApplicationData.js"
 
@@ -15,11 +16,11 @@ export const ActionsTable = ({
 	const defaultSortColumn = "message_id"
 	const defaultSortDirection = "desc"
 
-	const columns = [
+	const columns: ColumnDef<any>[] = [
 		{
 			header: "did",
 			accessorKey: "did",
-			size: 320,
+			size: 400,
 			enableSorting: false,
 			enableColumnFilter: true,
 			meta: {
@@ -38,7 +39,8 @@ export const ActionsTable = ({
 		},
 		{
 			header: "timestamp",
-			accessorKey: "timestamp",
+			accessorFn: (row) => new Date(row.timestamp).toLocaleString(),
+			size: 200,
 			enableSorting: false,
 			enableColumnFilter: false,
 		},

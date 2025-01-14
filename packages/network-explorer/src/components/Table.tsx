@@ -25,18 +25,21 @@ type SortDirection = "desc" | "asc"
 
 type RequestParams = {
 	limit: number
-	orderBy: {
+	orderBy?: {
 		[sortColumn: string]: SortDirection
 	}
-	where: WhereCondition
+	where?: WhereCondition
 }
 
-const stringifyRequestParams = ({ limit, orderBy, where }: RequestParams) => {
-	const params: Record<string, string> = {
-		limit: limit.toString(),
-		orderBy: JSON.stringify(orderBy),
+export const stringifyRequestParams = ({ limit, orderBy, where }: RequestParams) => {
+	const params: Record<string, string> = {}
+	if (limit) {
+		params.limit = limit.toString()
 	}
-	if (Object.keys(where).length > 0) {
+	if (orderBy) {
+		params.orderBy = JSON.stringify(orderBy)
+	}
+	if (where && Object.keys(where).length > 0) {
 		params.where = JSON.stringify(where)
 	}
 	return new URLSearchParams(params).toString()
