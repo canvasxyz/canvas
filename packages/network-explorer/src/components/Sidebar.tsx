@@ -1,4 +1,4 @@
-import { Heading, Box, Flex, TextField } from "@radix-ui/themes"
+import { Box, Flex, TextField, Link } from "@radix-ui/themes"
 import { TableSelector } from "./TableSelector.js"
 import { LuTable2 } from "react-icons/lu"
 import { ApplicationDataBox } from "../ApplicationDataBox.js"
@@ -26,9 +26,9 @@ export const Sidebar = ({ tables }: { tables: TableDef[] }) => {
 			style={{ borderRight: "1px solid var(--gray-3)" }}
 		>
 			<Box px="2" pt="10px" pb="9px">
-				<Heading size="3">
+				<Link href="#/" size="3" highContrast color="gray" underline="none" weight="bold">
 					Network Explorer
-				</Heading>
+				</Link>
 			</Box>
 			<Box px="2" py="0.5" pb="2">
 				<TextField.Root
