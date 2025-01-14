@@ -1,11 +1,12 @@
 import { Flex } from "@radix-ui/themes"
 import { Sidebar } from "./components/Sidebar.js"
 import { Table } from "./components/Table.js"
-import { Navigate, Route, Routes } from "react-router-dom"
+import { Route, Routes } from "react-router-dom"
 import { tables } from "./tables.js"
 import { Suspense, useState } from "react"
 import { ModelTable } from "./ModelTable.js"
 import { ActionsTable } from "./ActionsTable.js"
+import { LandingPage } from "./LandingPage.js"
 
 export const App = () => {
 	const [showSidebar, setShowSidebar] = useState(true)
@@ -14,7 +15,7 @@ export const App = () => {
 		<Flex height="calc(100vh - 1px)" direction="row">
 			{showSidebar && <Sidebar tables={tables} />}
 			<Routes>
-				<Route path="*" element={<Navigate to="/$actions" replace />} />
+				<Route path="/" element={<LandingPage />} />
 
 				<Route
 					key={"$actions"}
