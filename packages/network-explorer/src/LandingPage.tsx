@@ -5,12 +5,12 @@ import { fetchAndIpldParseJson } from "./utils.js"
 import { ReactNode } from "react"
 
 const Th = ({ children }: { children: ReactNode }) => (
-	<th style={{ padding: "10px", textAlign: "left" }}>
+	<th style={{ padding: "8px 6px 8px 14px", textAlign: "left" }}>
 		<Text size="2">{children}</Text>
 	</th>
 )
-const Td = ({ children }: { children: ReactNode }) => (
-	<td style={{ padding: "10px" }}>
+const Td = ({ children, first }: { children: ReactNode; first: boolean }) => (
+	<td style={{ padding: first ? "12px 14px 8px" : "8px 14px" }}>
 		<Text size="2">{children}</Text>
 	</td>
 )
@@ -45,14 +45,14 @@ export const LandingPage = () => {
 	const sessions = sessionData && sessionData.content.results
 
 	return (
-		<Container size="2">
-			<Flex direction="column" gap="4" pt="9">
-				<Heading>Recent actions</Heading>
+		<Container size="3">
+			<Flex direction="column" gap="4" pt="9" mx="3">
+				<Heading size="5">Recent actions</Heading>
 
-				<Box style={{ border: "solid var(--gray-6) 1px" }} mb="4">
+				<Box style={{ border: "solid var(--gray-4) 1px", lineHeight: 1.25 }} mb="4">
 					<table style={{ borderCollapse: "collapse", width: "100%" }}>
 						<thead style={{ backgroundColor: "white" }}>
-							<tr style={{ width: "100%", borderBottom: "solid var(--gray-6) 1px" }}>
+							<tr style={{ width: "100%", borderBottom: "solid var(--gray-4) 1px" }}>
 								<Th>id</Th>
 								<Th>name</Th>
 								<Th>timestamp</Th>
@@ -62,26 +62,28 @@ export const LandingPage = () => {
 						<tbody style={{ backgroundColor: "white" }}>
 							{(actions || []).map((action, index) => (
 								<tr key={index}>
-									<Td>{action.message_id.slice(0, 10)}</Td>
-									<Td>{action.name}</Td>
-									<Td>{new Date(action.timestamp).toLocaleString()}</Td>
-									<Td>{action.did.slice(0, 30)}...</Td>
+									<Td first={index === 0}>{action.message_id.slice(0, 10)}</Td>
+									<Td first={index === 0}>{action.name}</Td>
+									<Td first={index === 0}>{new Date(action.timestamp).toLocaleString()}</Td>
+									<Td first={index === 0}>{action.did.slice(0, 30)}...</Td>
 								</tr>
 							))}
 						</tbody>
 					</table>
-					<Flex direction="row" justify="center" py="2" style={{ borderTop: "solid var(--gray-6) 1px" }}>
-						<Link href="#/$actions" color="gray">
-							See more
-						</Link>
+					<Flex direction="row" justify="center" py="2" mt="2" style={{ borderTop: "solid var(--gray-4) 1px" }}>
+						<Text size="2">
+							<Link href="#/$actions" color="gray" underline="none">
+								See more
+							</Link>
+						</Text>
 					</Flex>
 				</Box>
 
-				<Heading>Recent sessions</Heading>
-				<Box style={{ border: "solid var(--gray-6) 1px" }} mb="4">
+				<Heading size="5">Recent sessions</Heading>
+				<Box style={{ border: "solid var(--gray-4) 1px", lineHeight: 1.25 }} mb="4">
 					<table style={{ borderCollapse: "collapse", width: "100%" }}>
 						<thead style={{ backgroundColor: "white" }}>
-							<tr style={{ width: "100%", borderBottom: "solid var(--gray-6) 1px" }}>
+							<tr style={{ width: "100%", borderBottom: "solid var(--gray-4) 1px" }}>
 								<Th>did</Th>
 								<Th>public_key</Th>
 							</tr>
@@ -89,16 +91,18 @@ export const LandingPage = () => {
 						<tbody style={{ backgroundColor: "white" }}>
 							{(sessions || []).map((session, index) => (
 								<tr key={index}>
-									<Td>{session.did.slice(0, 30)}...</Td>
-									<Td>{session.public_key.slice(0, 30)}...</Td>
+									<Td first={index === 0}>{session.did.slice(0, 30)}...</Td>
+									<Td first={index === 0}>{session.public_key.slice(0, 30)}...</Td>
 								</tr>
 							))}
 						</tbody>
 					</table>
-					<Flex direction="row" justify="center" py="2" style={{ borderTop: "solid var(--gray-6) 1px" }}>
-						<Link href="#/$sessions" color="gray">
-							See more
-						</Link>
+					<Flex direction="row" justify="center" py="2" mt="2" style={{ borderTop: "solid var(--gray-4) 1px" }}>
+						<Text size="2">
+							<Link href="#/$sessions" color="gray" underline="none">
+								See more
+							</Link>
+						</Text>
 					</Flex>
 				</Box>
 			</Flex>

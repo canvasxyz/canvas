@@ -2,6 +2,7 @@ import packageJson from "../package.json"
 
 import { Box, Grid, Text, Popover, IconButton } from "@radix-ui/themes"
 import { useApplicationData } from "./hooks/useApplicationData.js"
+import { BASE_URL } from "./utils.js"
 import { LuUnplug } from "react-icons/lu"
 
 const ConnectionPopover = ({ children }: { children: React.ReactNode }) => {
@@ -58,7 +59,18 @@ export const ApplicationDataBox = () => {
 						)}
 						{Object.keys(applicationInfo?.networkConfig || {}).length === 0 &&
 							!applicationInfo?.wsConfig.listen &&
-							!applicationInfo?.wsConfig.connect && <Text color="gray">No connection</Text>}
+							!applicationInfo?.wsConfig.connect && (
+								<Text color="gray">
+									No connection
+									{(window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") &&
+										!BASE_URL && (
+											<>
+												<br />
+												Missing VITE_API_BASE_URL
+											</>
+										)}
+								</Text>
+							)}
 					</Text>
 					<Text weight="bold">Topic</Text>
 					<Text color="gray" wrap="nowrap">

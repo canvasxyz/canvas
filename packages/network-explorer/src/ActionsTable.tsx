@@ -18,6 +18,13 @@ export const ActionsTable = ({
 
 	const columns: ColumnDef<any>[] = [
 		{
+			header: "message_id",
+			accessorKey: "message_id",
+			size: 280,
+			enableSorting: true,
+			enableColumnFilter: true,
+		},
+		{
 			header: "did",
 			accessorKey: "did",
 			size: 400,
