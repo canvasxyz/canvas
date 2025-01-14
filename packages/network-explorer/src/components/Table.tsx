@@ -55,7 +55,9 @@ export const Table = <T,>({
 }) => {
 	const applicationData = useApplicationData()
 
-	const [columnFilters, setColumnFilters] = useSearchFilters([])
+	const [columnFilters, setColumnFilters] = useSearchFilters(
+		defaultColumns.filter((col) => col.enableColumnFilter).map((col) => col.header as string),
+	)
 
 	const { clearCursors, currentCursor, popCursor, pushCursor } = useCursorStack()
 

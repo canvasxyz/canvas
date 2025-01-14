@@ -1,34 +1,42 @@
 import { ColumnFiltersState } from "@tanstack/react-table"
-import { Dispatch, SetStateAction } from "react"
-import { useSearchParams } from "react-router-dom"
+import { Dispatch, SetStateAction, useMemo } from "react"
+import { URLSearchParamsInit, useSearchParams } from "react-router-dom"
+
+const fromSearchParams = (searchParams: URLSearchParams, fields: string[]) => {
+	const result: ColumnFiltersState = []
+	for (const field of fields) {
+		const value = searchParams.get(field)
+		if (value) {
+			result.push({ id: field, value })
+		}
+	}
+	return result
+}
+
+const toSearchParams = (columnsState: ColumnFiltersState) => {
+	const params: URLSearchParamsInit = {}
+	for (const { id, value } of columnsState) {
+		params[id] = value as string
+	}
+	return params
+}
 
 export const useSearchFilters = (
-	defaultValue: ColumnFiltersState,
+	fields: string[],
 ): [ColumnFiltersState, Dispatch<SetStateAction<ColumnFiltersState>>] => {
 	const [searchParams, setSearchParams] = useSearchParams()
 
-	const searchParamsFilterString = searchParams.get("filter")
-	let columnFilters = defaultValue
-	if (searchParamsFilterString) {
-		try {
-			columnFilters = JSON.parse(searchParamsFilterString)
-		} catch {}
-	}
+	const columnFilters = useMemo(() => fromSearchParams(searchParams, fields), [searchParams])
 
 	const setColumnFilters = (updater: SetStateAction<ColumnFiltersState>) => {
 		if (Array.isArray(updater)) {
-			setSearchParams(new URLSearchParams({ filter: JSON.stringify(updater) }))
+			setSearchParams(toSearchParams(updater))
 		} else {
 			setSearchParams((oldParams) => {
-				const searchParamsFilterString = oldParams.get("filter")
-				let columnFilters = defaultValue
-				if (searchParamsFilterString) {
-					try {
-						columnFilters = JSON.parse(searchParamsFilterString)
-					} catch {}
-				}
-
-				return { filter: JSON.stringify(updater(columnFilters)) }
+				const oldColumnState = fromSearchParams(oldParams, fields)
+				const newColumnState = updater(oldColumnState)
+				const newSearchParams = toSearchParams(newColumnState)
+				return newSearchParams
 			})
 		}
 	}
