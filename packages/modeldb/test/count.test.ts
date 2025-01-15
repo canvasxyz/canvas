@@ -2,7 +2,6 @@ import test from "ava"
 
 // test for the `count` function in the ModelDB class
 
-import { ModelDB as ModelDBSqlite } from "@canvas-js/modeldb-sqlite"
 import { nanoid } from "nanoid"
 import { testOnModelDB } from "./utils.js"
 
@@ -45,7 +44,7 @@ testOnModelDB("count entries in a modeldb table with a where condition", async (
 			address: "string",
 			age: "number",
 			type: "string",
-			$indexes: [["age"]],
+			$indexes: ["age"],
 		},
 	})
 

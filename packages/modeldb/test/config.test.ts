@@ -15,7 +15,7 @@ test("parse config", (t) => {
 			id: "primary",
 			creator: "@user",
 			members: "@user[]",
-			$indexes: ["members"],
+			$indexes: ["members", "id/creator"],
 		},
 
 		message: {
@@ -42,7 +42,7 @@ test("parse config", (t) => {
 			},
 			{
 				name: "room",
-				indexes: [],
+				indexes: [["id", "creator"]],
 				primaryKey: "id",
 				properties: [
 					{ name: "id", kind: "primary" },

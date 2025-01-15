@@ -17,7 +17,8 @@ export type PropertyType =
 	| NullableReferenceType
 	| RelationType
 
-export type IndexInit = string | string[]
+/** property name, or property names joined by slashes */
+export type IndexInit = string
 
 export type ModelSchema = Record<string, { $indexes?: IndexInit[] } | Record<string, PropertyType>>
 

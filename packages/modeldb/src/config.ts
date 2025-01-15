@@ -51,7 +51,12 @@ export function parseConfig(init: ModelSchema): Config {
 				if (relations.some((relation) => relation.source === modelName && relation.property === index)) {
 					continue
 				} else {
-					indexes.push(Array.isArray(index) ? index : [index])
+					const propertyNames = index.split("/")
+					for (const propertyName of propertyNames) {
+						assert(propertyName in rest, "invalid index property", { propertyName })
+					}
+
+					indexes.push(propertyNames)
 				}
 			}
 		}
