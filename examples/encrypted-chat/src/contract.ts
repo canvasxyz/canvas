@@ -16,7 +16,7 @@ const models = {
 		ciphertext: "string",
 		group: "string",
 		timestamp: "integer",
-		$indexes: [["timestamp"]],
+		$indexes: ["timestamp"],
 	},
 } satisfies ModelSchema
 
