@@ -97,7 +97,7 @@ export const testOnModelDB = (
 		t: ExecutionContext<unknown>,
 		openDB: (t: ExecutionContext, models: ModelSchema) => Promise<AbstractModelDB>,
 	) => void,
-	platforms: { sqliteWasm: boolean; sqlite: boolean; idb: boolean; pg: boolean; do: boolean; expo: boolean } = {
+	platforms: { sqliteWasm?: boolean; sqlite?: boolean; idb?: boolean; pg?: boolean; do?: boolean; expo?: boolean } = {
 		sqliteWasm: true,
 		sqlite: true,
 		idb: true,
