@@ -85,7 +85,7 @@ export abstract class AbstractRuntime {
 			public_key: "string",
 			address: "string",
 			expiration: "integer?",
-			$indexes: [["did"], ["public_key"]],
+			$indexes: ["did", "public_key"],
 		},
 	} satisfies ModelSchema
 
@@ -95,7 +95,7 @@ export abstract class AbstractRuntime {
 			did: "string",
 			name: "string",
 			timestamp: "integer",
-			$indexes: [["did"], ["name"]],
+			$indexes: ["did", "name"],
 		},
 	} satisfies ModelSchema
 
