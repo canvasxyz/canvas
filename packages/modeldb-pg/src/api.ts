@@ -388,18 +388,18 @@ export class ModelAPI {
 		if (query.orderBy !== undefined) {
 			const orders = Object.entries(query.orderBy)
 			assert(orders.length === 1, "cannot order by multiple properties at once")
-			const [[name, direction]] = orders
-			const property = this.#properties[name]
-			assert(property !== undefined, "property not found")
-			assert(
-				property.kind === "primary" || property.kind === "primitive" || property.kind === "reference",
-				"cannot order by relation properties",
-			)
+
+			const [[indexName, direction]] = orders
+			const index = indexName.split("/")
+
+			assert(!index.some((name) => this.#properties[name]?.kind === "relation"), "cannot order by relation properties")
 
 			if (direction === "asc") {
-				sql.push(`ORDER BY "${name}" ASC NULLS FIRST`)
+				const orders = index.map((name) => `"${name}" ASC NULLS FIRST`).join(", ")
+				sql.push(`ORDER BY ${orders}`)
 			} else if (direction === "desc") {
-				sql.push(`ORDER BY "${name}" DESC NULLS LAST`)
+				const orders = index.map((name) => `"${name}" DESC NULLS LAST`).join(", ")
+				sql.push(`ORDER BY ${orders}`)
 			} else {
 				throw new Error("invalid orderBy direction")
 			}
@@ -663,10 +663,7 @@ export class RelationAPI {
 	public readonly sourceIndex: string
 	public readonly targetIndex: string
 
-	public constructor(
-		readonly client: pg.Client,
-		readonly relation: Relation,
-	) {
+	public constructor(readonly client: pg.Client, readonly relation: Relation) {
 		this.table = `${relation.source}/${relation.property}`
 		this.sourceIndex = `${relation.source}/${relation.property}/source`
 		this.targetIndex = `${relation.source}/${relation.property}/target`

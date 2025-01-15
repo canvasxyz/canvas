@@ -91,44 +91,48 @@ testOnModelDB("query (indexed order by)", async (t, openDB) => {
 	])
 })
 
-testOnModelDB("composite index", async (t, openDB) => {
-	const db = await openDB(t, {
-		user: {
-			id: "primary",
-			value: "integer",
-			$indexes: ["value/id"],
-		},
-	})
+testOnModelDB(
+	"composite index",
+	async (t, openDB) => {
+		const db = await openDB(t, {
+			user: {
+				id: "primary",
+				value: "integer",
+				$indexes: ["value/id"],
+			},
+		})
 
-	await db.set("user", { id: "a", value: 0 })
-	await db.set("user", { id: "b", value: 1 })
-	await db.set("user", { id: "c", value: 1 })
-	await db.set("user", { id: "d", value: 1 })
-	await db.set("user", { id: "e", value: 1 })
-	await db.set("user", { id: "f", value: 4 })
+		await db.set("user", { id: "a", value: 0 })
+		await db.set("user", { id: "b", value: 1 })
+		await db.set("user", { id: "c", value: 1 })
+		await db.set("user", { id: "d", value: 1 })
+		await db.set("user", { id: "e", value: 1 })
+		await db.set("user", { id: "f", value: 4 })
 
-	t.deepEqual(
-		await db.query("user", {
-			orderBy: { "value/id": "asc" },
-			where: { value: 1 },
-		}),
-		[
-			{ id: "b", value: 1 },
-			{ id: "c", value: 1 },
-			{ id: "d", value: 1 },
-			{ id: "e", value: 1 },
-		],
-	)
+		t.deepEqual(
+			await db.query("user", {
+				orderBy: { "value/id": "asc" },
+				where: { value: 1 },
+			}),
+			[
+				{ id: "b", value: 1 },
+				{ id: "c", value: 1 },
+				{ id: "d", value: 1 },
+				{ id: "e", value: 1 },
+			],
+		)
 
-	t.deepEqual(
-		await db.query("user", {
-			orderBy: { "value/id": "asc" },
-			where: { value: 1, id: { gt: "a", lte: "d" } },
-		}),
-		[
-			{ id: "b", value: 1 },
-			{ id: "c", value: 1 },
-			{ id: "d", value: 1 },
-		],
-	)
-})
+		t.deepEqual(
+			await db.query("user", {
+				orderBy: { "value/id": "asc" },
+				where: { value: 1, id: { gt: "a", lte: "d" } },
+			}),
+			[
+				{ id: "b", value: 1 },
+				{ id: "c", value: 1 },
+				{ id: "d", value: 1 },
+			],
+		)
+	},
+	// { sqlite: true },
+)

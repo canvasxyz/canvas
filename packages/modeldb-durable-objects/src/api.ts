@@ -84,10 +84,7 @@ export class ModelAPI {
 	readonly #primaryKeyName: string
 	columnNames: `"${string}"`[]
 
-	public constructor(
-		readonly db: SqlStorage,
-		readonly model: Model,
-	) {
+	public constructor(readonly db: SqlStorage, readonly model: Model) {
 		// in the cloudflare runtime, `this` cannot be used when assigning default values to private properties
 		this.#table = model.name
 		this.#properties = Object.fromEntries(model.properties.map((property) => [property.name, property]))
@@ -336,18 +333,17 @@ export class ModelAPI {
 		if (query.orderBy !== undefined) {
 			const orders = Object.entries(query.orderBy)
 			assert(orders.length === 1, "cannot order by multiple properties at once")
-			const [[name, direction]] = orders
-			const property = this.#properties[name]
-			assert(property !== undefined, "property not found")
-			assert(
-				property.kind === "primary" || property.kind === "primitive" || property.kind === "reference",
-				"cannot order by relation properties",
-			)
+			const [[indexName, direction]] = orders
+			const index = indexName.split("/")
+
+			assert(!index.some((name) => this.#properties[name]?.kind === "relation"), "cannot order by relation properties")
 
 			if (direction === "asc") {
-				sql.push(`ORDER BY "${name}" ASC`)
+				const orders = index.map((name) => `"${name}" ASC`).join(", ")
+				sql.push(`ORDER BY ${orders}`)
 			} else if (direction === "desc") {
-				sql.push(`ORDER BY "${name}" DESC`)
+				const orders = index.map((name) => `"${name}" DESC`).join(", ")
+				sql.push(`ORDER BY ${orders}`)
 			} else {
 				throw new Error("invalid orderBy direction")
 			}
@@ -601,14 +597,11 @@ export class RelationAPI {
 	readonly #insert: Method<{ _source: string; _target: string }>
 	readonly #delete: Method<{ _source: string }>
 
-	public constructor(
-		readonly db: SqlStorage,
-		readonly relation: Relation,
-	) {
+	public constructor(readonly db: SqlStorage, readonly relation: Relation) {
 		this.table = `${relation.source}/${relation.property}`
 		this.sourceIndex = `${relation.source}/${relation.property}/source`
 		this.targetIndex = `${relation.source}/${relation.property}/target`
-		
+
 		const columns = [`_source TEXT NOT NULL`, `_target TEXT NOT NULL`]
 		db.exec(`CREATE TABLE IF NOT EXISTS "${this.table}" (${columns.join(", ")})`)
 
