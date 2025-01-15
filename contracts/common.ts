@@ -12,7 +12,7 @@ export const models = {
 		link: "string",
 		topic: "number",
 		updated_at: "integer",
-		$indexes: [["author"]],
+		$indexes: ["author"],
 	},
 	comments: {
 		id: "primary",
@@ -21,7 +21,7 @@ export const models = {
 		body: "string",
 		parent_comment_id: "@comments.id?",
 		updated_at: "integer",
-		$indexes: [["thread_id", "author"]],
+		$indexes: ["thread_id/author"],
 	},
 	thread_reactions: {
 		id: "primary",
@@ -29,7 +29,7 @@ export const models = {
 		author: "string",
 		value: "string?",
 		updated_at: "integer",
-		$indexes: [["thread_id", "author"]],
+		$indexes: ["thread_id/author"],
 	},
 	comment_reactions: {
 		id: "primary",
@@ -37,7 +37,7 @@ export const models = {
 		author: "string",
 		value: "string?",
 		updated_at: "integer",
-		$indexes: [["comment_id", "author"]],
+		$indexes: ["comment_id/author"],
 	},
 } satisfies ModelSchema
 
