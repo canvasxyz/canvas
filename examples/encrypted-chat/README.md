@@ -21,7 +21,7 @@ const models = {
     ciphertext: "string",
     group: "string",
     timestamp: "integer",
-    $indexes: [["timestamp"]], // ["group", "timestamp"]
+    $indexes: ["timestamp"], // ["group", "timestamp"]
   },
 }
 
