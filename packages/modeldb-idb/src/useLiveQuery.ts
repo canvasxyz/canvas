@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from "react"
 import equal from "fast-deep-equal/es6/index.js"
 
-import type { AbstractModelDB, ModelValue, QueryParams, ModelSchema, DeriveModelTypes } from "@canvas-js/modeldb"
+import type { AbstractModelDB, QueryParams, ModelSchema, DeriveModelTypes } from "@canvas-js/modeldb"
 
 export function useLiveQuery<Schema extends ModelSchema, K extends keyof ModelSchema>(
-	db: AbstractModelDB<Schema> | null | undefined,
+	db: AbstractModelDB | null | undefined,
 	modelName: string | null | undefined,
 	query: QueryParams | null | undefined,
 ): DeriveModelTypes<Schema>[K][] | null {
-	const dbRef = useRef<AbstractModelDB<Schema> | null>(db ?? null)
+	const dbRef = useRef<AbstractModelDB | null>(db ?? null)
 	const modelRef = useRef<string | null>(modelName ?? null)
 	const queryRef = useRef<QueryParams | null>(query ?? null)
 	const subscriptionRef = useRef<number | null>(null)

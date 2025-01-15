@@ -43,12 +43,10 @@ export class ModelDB extends AbstractModelDB {
 
 					for (const index of model.indexes) {
 						if (index.length > 1) {
-							// TODO: we can support these by adding synthetic array values to every object
 							throw new Error("multi-property indexes not supported yet")
 						}
 
-						const [property] = index
-						recordObjectStore.createIndex(getIndexName(index), property)
+						recordObjectStore.createIndex(getIndexName(index), index)
 					}
 				}
 			},
@@ -63,10 +61,7 @@ export class ModelDB extends AbstractModelDB {
 		return "idb"
 	}
 
-	private constructor(
-		public readonly db: IDBPDatabase,
-		config: Config,
-	) {
+	private constructor(public readonly db: IDBPDatabase, config: Config) {
 		super(config)
 
 		for (const model of config.models) {

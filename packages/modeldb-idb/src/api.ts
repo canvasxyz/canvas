@@ -21,6 +21,7 @@ import {
 	WhereCondition,
 	ModelValueWithIncludes,
 	IncludeExpression,
+	PrimitiveValue,
 } from "@canvas-js/modeldb"
 
 import { getIndexName } from "./utils.js"
@@ -28,6 +29,19 @@ import { getIndexName } from "./utils.js"
 type ObjectPropertyValue = PropertyValue | PropertyValue[]
 
 type ObjectValue = Record<string, ObjectPropertyValue>
+
+type IndexExpression = PropertyValue | NotExpression | RangeExpression
+
+type CompositePropertyValue = PropertyValue[]
+type CompositeNotExpression = { neq: PropertyValue[] | undefined }
+type CompositeRangeExpression = {
+	gt?: PrimitiveValue[]
+	gte?: PrimitiveValue[]
+	lt?: PrimitiveValue[]
+	lte?: PrimitiveValue[]
+}
+
+type CompositeIndexExpression = CompositePropertyValue | CompositeNotExpression | CompositeRangeExpression
 
 export class ModelAPI {
 	public readonly storeName: string
@@ -321,12 +335,12 @@ export class ModelAPI {
 	}
 
 	private async *queryIndex(
-		propertyName: string,
+		index: string | string[],
 		storeIndex: IDBPObjectStore<any, any, string, "readonly"> | IDBPIndex<any, any, string, string, "readonly">,
-		expression: PropertyValue | NotExpression | RangeExpression | null,
+		expression: IndexExpression,
 		direction: IDBCursorDirection = "next",
 	): AsyncIterable<ModelValue> {
-		const property = this.model.properties.find((property) => property.name === propertyName)
+		const property = this.model.properties.find((property) => property.name === index)
 		assert(property !== undefined, "property not found")
 
 		if (expression === null) {
@@ -431,6 +445,7 @@ export class ModelAPI {
 
 			return
 		}
+
 		// try to find an index over one of the properties in the where clause
 		// we can use this to "pre-filter" the results before performing a "table scan"
 		// choose the index that has the fewest matching entries
