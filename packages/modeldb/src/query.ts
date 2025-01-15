@@ -6,6 +6,7 @@ import {
 	Model,
 	ModelValue,
 	NotExpression,
+	PrimaryKeyProperty,
 	PrimitiveProperty,
 	PrimitiveType,
 	PropertyValue,
@@ -216,16 +217,17 @@ export function getCompare(
 
 export function getFilter(model: Model, where: WhereCondition = {}): (value: ModelValue) => boolean {
 	const filters: { property: string; filter: (value: PropertyValue) => boolean }[] = []
-	for (const [property, expression] of Object.entries(where)) {
+	for (const [propertyName, expression] of Object.entries(where)) {
 		if (expression === undefined) {
 			continue
 		}
+
 		if (Array.isArray(expression) && expression.every((value) => value === undefined)) {
 			continue
 		}
 
-		const filter = getPropertyFilter(model, property, expression)
-		filters.push({ property, filter })
+		const filter = getPropertyFilter(model, propertyName, expression)
+		filters.push({ property: propertyName, filter })
 	}
 
 	return (value) => filters.every(({ filter, property }) => filter(value[property]))
@@ -246,6 +248,7 @@ function getPropertyFilter(
 			expression,
 		)
 	} else if (property.kind === "primitive") {
+		assert(property.type !== "json", "cannot query json values")
 		return getPrimitiveFilter(model.name, property, expression)
 	} else if (property.kind === "reference") {
 		return getReferenceFilter(model.name, property, expression)
@@ -263,11 +266,17 @@ function getReferenceFilter(
 ): (value: PropertyValue) => boolean {
 	if (isLiteralExpression(expression)) {
 		const reference = expression
-		assert(reference === null || typeof reference === "string", `error filtering ${modelName}.${property.name}: invalid reference value expression`)
+		assert(
+			reference === null || typeof reference === "string",
+			`error filtering ${modelName}.${property.name}: invalid reference value expression`,
+		)
 		return (value) => value === reference
 	} else if (isNotExpression(expression)) {
 		const reference = expression.neq
-		assert(reference === null || typeof reference === "string", `error filtering ${modelName}.${property.name}: invalid reference value expression`)
+		assert(
+			reference === null || typeof reference === "string",
+			`error filtering ${modelName}.${property.name}: invalid reference value expression`,
+		)
 		return (value) => value !== reference
 	} else if (isRangeExpression(expression)) {
 		// idk there's no real reason not to allow this

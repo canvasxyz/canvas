@@ -12,7 +12,6 @@ import {
 	PropertyValue,
 	QueryParams,
 	RangeExpression,
-	getCompare,
 	getFilter,
 	isNotExpression,
 	isLiteralExpression,
@@ -29,13 +28,17 @@ type ObjectPropertyValue = PropertyValue | PropertyValue[]
 
 type ObjectValue = Record<string, ObjectPropertyValue>
 
+type StoreIndex = IDBPObjectStore<any, any, string, "readonly"> | IDBPIndex<any, any, string, string, "readonly">
+
 export class ModelAPI {
 	public readonly storeName: string
 	private readonly log: ReturnType<typeof logger>
+	private readonly properties: Record<string, Property>
 
 	constructor(readonly model: Model) {
 		this.storeName = model.name
 		this.log = logger(`canvas:modeldb:[${model.name}]`)
+		this.properties = Object.fromEntries(model.properties.map((property) => [property.name, property]))
 	}
 
 	private getStore<Mode extends IDBTransactionMode>(txn: IDBPTransaction<any, any, Mode>) {
@@ -87,47 +90,15 @@ export class ModelAPI {
 			return store.count()
 		}
 
-		// try to find an index over one of the properties in the where clause
-		// we can use this to "pre-filter" the results before performing a "table scan"
-		// choose the index that has the fewest matching entries
-		let bestIndex = null
-		let bestIndexCount = Infinity
-		for (const [propertyName, expression] of Object.entries(where)) {
-			const property = this.model.properties.find((property) => property.name === propertyName)
-			assert(property !== undefined, "model property does not exist")
-
-			if (property.kind === "primitive" && property.type === "json") {
-				throw new Error("json properties are not supported in where clauses")
-			}
-
-			if (expression === undefined) {
-				continue
-			}
-
-			const index = this.getStoreIndex(store, [propertyName])
-			if (index === null) {
-				continue
-			}
-
-			const indexCount = await this.countStoreIndex(propertyName, index, expression)
-			if (indexCount < bestIndexCount) {
-				bestIndex = index
-				bestIndexCount = indexCount
-			}
-		}
-
-		// if our where clause has only one condition and it has an index, then just return the
-		// count from that index
-		if (Object.keys(where).length === 1 && bestIndex) {
+		const [bestIndex, bestIndexRange, bestIndexCount, exact] = await this.getBestIndex(store, where)
+		if (exact) {
 			return bestIndexCount
 		}
 
-		// otherwise iterate over all of the entries and count the ones that match the other conditions
-		const entriesToScan = bestIndex ? bestIndex.iterate() : store.iterate()
 		const filter = getFilter(this.model, where)
 		let count = 0
-		for await (const { value } of entriesToScan) {
-			if (filter(value)) count++
+		for await (const {} of this.queryIndex(bestIndex, bestIndexRange, directions.asc, filter)) {
+			count++
 		}
 
 		return count
@@ -165,7 +136,7 @@ export class ModelAPI {
 
 			for (const includeKey of Object.keys(include)) {
 				// look up the model corresponding to the { include: key }
-				const prop = thisModel.model.properties.find((prop) => prop.name === includeKey)
+				const prop = thisModel.properties[includeKey]
 				assert(prop, "include was used with a missing property")
 				assert(
 					prop.kind === "reference" || prop.kind === "relation",
@@ -230,7 +201,7 @@ export class ModelAPI {
 			for (const record of records) {
 				for (const includeKey of Object.keys(include)) {
 					// look up the model corresponding to the { include: key }
-					const prop = thisModel.model.properties.find((prop) => prop.name === includeKey)
+					const prop = thisModel.properties[includeKey]
 					assert(prop, "include was used with a missing property")
 					assert(
 						prop.kind === "reference" || prop.kind === "relation",
@@ -272,10 +243,7 @@ export class ModelAPI {
 		return modelValues
 	}
 
-	private getStoreIndex(
-		store: IDBPObjectStore<any, any, string, "readonly">,
-		index: string[],
-	): IDBPObjectStore<any, any, string, "readonly"> | IDBPIndex<any, any, string, string, "readonly"> | null {
+	private getStoreIndex(store: IDBPObjectStore<any, any, string, "readonly">, index: string[]): StoreIndex | null {
 		if (index.length === 1 && this.model.primaryKey === index[0]) {
 			return store
 		}
@@ -287,95 +255,22 @@ export class ModelAPI {
 		return null
 	}
 
-	private async countStoreIndex(
-		propertyName: string,
-		storeIndex: IDBPObjectStore<any, any, string, "readonly"> | IDBPIndex<any, any, string, string, "readonly">,
-		expression: PropertyValue | NotExpression | RangeExpression | null,
-	): Promise<number> {
-		const property = this.model.properties.find((property) => property.name === propertyName)
-		assert(property !== undefined, "property not found")
-
-		if (isLiteralExpression(expression)) {
-			// Here we iterate over the index using an `only` key range
-			const range = IDBKeyRange.only(encodePropertyValue(property, expression))
-			return await storeIndex.count(range)
-		} else if (isNotExpression(expression)) {
-			// Here we iterate over the undex using an open `upperBound` key range
-			// followed by an open `lowerBound` key range. Unnecessary if expression.neq === null.
-
-			const keyRange =
-				expression.neq === undefined
-					? null
-					: expression.neq === null
-					? IDBKeyRange.lowerBound(encodePropertyValue(property, null), true)
-					: IDBKeyRange.upperBound(encodePropertyValue(property, expression.neq), true)
-
-			return await storeIndex.count(keyRange)
-		} else if (isRangeExpression(expression)) {
-			const range = getRange(property, expression)
-			return await storeIndex.count(range)
-		} else {
-			signalInvalidType(expression)
-		}
-	}
-
 	private async *queryIndex(
-		propertyName: string,
-		storeIndex: IDBPObjectStore<any, any, string, "readonly"> | IDBPIndex<any, any, string, string, "readonly">,
-		expression: PropertyValue | NotExpression | RangeExpression | null,
+		storeIndex: StoreIndex,
+		range: IDBKeyRange | null,
 		direction: IDBCursorDirection = "next",
+		filter?: (value: ModelValue) => boolean,
 	): AsyncIterable<ModelValue> {
-		const property = this.model.properties.find((property) => property.name === propertyName)
-		assert(property !== undefined, "property not found")
-
-		if (expression === null) {
-			// Here we iterate over the entire index
-			for (
-				let cursor = await storeIndex.openCursor(null, direction);
-				cursor !== null;
-				cursor = await cursor.continue()
-			) {
-				yield this.decodeObject(cursor.value)
+		this.log.trace("querying %s: %o %s", storeIndex.name, range, direction)
+		for (
+			let cursor = await storeIndex.openCursor(range, direction);
+			cursor !== null;
+			cursor = await cursor.continue()
+		) {
+			const value = this.decodeObject(cursor.value)
+			if (filter === undefined || filter(value)) {
+				yield value
 			}
-		} else if (isLiteralExpression(expression)) {
-			// Here we iterate over the index using an `only` key range
-			const range = IDBKeyRange.only(encodePropertyValue(property, expression))
-			for (
-				let cursor = await storeIndex.openCursor(range, direction);
-				cursor !== null;
-				cursor = await cursor.continue()
-			) {
-				yield this.decodeObject(cursor.value)
-			}
-		} else if (isNotExpression(expression)) {
-			// Here we iterate over the undex using an open `upperBound` key range
-			// followed by an open `lowerBound` key range. Unnecessary if expression.neq === null.
-
-			const keyRange =
-				expression.neq === undefined
-					? null
-					: expression.neq === null
-					? IDBKeyRange.lowerBound(encodePropertyValue(property, null), true)
-					: IDBKeyRange.upperBound(encodePropertyValue(property, expression.neq), true)
-
-			for (
-				let cursor = await storeIndex.openCursor(keyRange, direction);
-				cursor !== null;
-				cursor = await cursor.continue()
-			) {
-				yield this.decodeObject(cursor.value)
-			}
-		} else if (isRangeExpression(expression)) {
-			const range = getRange(property, expression)
-			for (
-				let cursor = await storeIndex.openCursor(range, direction);
-				cursor !== null;
-				cursor = await cursor.continue()
-			) {
-				yield this.decodeObject(cursor.value)
-			}
-		} else {
-			signalInvalidType(expression)
 		}
 	}
 
@@ -386,6 +281,113 @@ export class ModelAPI {
 
 		const keys = Object.keys(select).filter((key) => select[key])
 		return (value) => Object.fromEntries(keys.map((key) => [key, value[key]]))
+	}
+
+	private getIndexRange(index: string[], where: WhereCondition): [range: IDBKeyRange | null, exact: boolean] {
+		const whereKeys = Object.entries(where)
+			.filter(([_, expression]) => expression !== undefined && !isEmpty(expression))
+			.map(([propertyName]) => propertyName)
+
+		if (whereKeys.length === 0) {
+			return [null, true]
+		}
+
+		if (index.length === 1) {
+			const exact = whereKeys.length === 1 && whereKeys[0] === index[0]
+
+			const [propertyName] = index
+			const property = this.properties[propertyName]
+
+			const expression = where[propertyName]
+			if (expression === undefined || isEmpty(expression)) {
+				return [null, exact]
+			} else if (isLiteralExpression(expression)) {
+				return [IDBKeyRange.only(encodePropertyValue(property, expression)), true]
+			} else if (isNotExpression(expression)) {
+				if (expression.neq === undefined) {
+					return [null, exact]
+				} else if (expression.neq === null) {
+					const range = IDBKeyRange.lowerBound(encodePropertyValue(property, null), true)
+					return [range, exact]
+				} else {
+					// don't use the index; the record filter will still filter out the appropriate records
+					return [null, false]
+				}
+			} else if (isRangeExpression(expression)) {
+				const range = getRange(property, expression)
+				return [range, exact]
+			} else {
+				signalInvalidType(expression)
+			}
+		}
+
+		const exact = whereKeys.length === index.length && whereKeys.every((key) => index.includes(key))
+
+		// For now, we do a simplified version of composite index matching,
+		// requiring every index component to have an expression in the where condition.
+		// Additionally, only the last component can be a  range expression.
+		const prefix = index.slice(0, index.length - 1)
+		const tail = index[index.length - 1]
+
+		const values: PropertyValue[] = []
+
+		for (const name of prefix) {
+			const expression = where[name]
+			if (expression === undefined || isEmpty(expression)) {
+				return [null, false]
+			} else if (isLiteralExpression(expression)) {
+				values.push(expression)
+			} else {
+				return [null, false]
+			}
+		}
+
+		const expression = where[tail]
+		if (expression === undefined || isEmpty(expression)) {
+			return [null, false]
+		} else if (isLiteralExpression(expression)) {
+			values.push(expression)
+			const range = IDBKeyRange.only(values.map((value, i) => encodePropertyValue(this.properties[index[i]], value)))
+			return [range, exact]
+		} else if (isNotExpression(expression)) {
+			return [null, false]
+		} else if (isRangeExpression(expression)) {
+			const { gt, gte, lt, lte } = expression
+			let lowerBound: PropertyValue[]
+			let lowerBoundOpen: boolean
+			if (gt !== undefined) {
+				lowerBound = [...values, gt]
+				lowerBoundOpen = true
+			} else if (gte !== undefined) {
+				lowerBound = [...values, gte]
+				lowerBoundOpen = false
+			} else {
+				return [null, false]
+			}
+
+			let upperBound: PropertyValue[]
+			let upperBoundOpen: boolean
+			if (lt !== undefined) {
+				upperBound = [...values, lt]
+				upperBoundOpen = true
+			} else if (lte !== undefined) {
+				upperBound = [...values, lte]
+				upperBoundOpen = false
+			} else {
+				return [null, false]
+			}
+
+			const range = IDBKeyRange.bound(
+				lowerBound.map((value, i) => encodePropertyValue(this.properties[index[i]], value)),
+				upperBound.map((value, i) => encodePropertyValue(this.properties[index[i]], value)),
+				lowerBoundOpen,
+				upperBoundOpen,
+			)
+
+			return [range, exact]
+		} else {
+			signalInvalidType(expression)
+		}
 	}
 
 	public async *iterate(
@@ -405,98 +407,17 @@ export class ModelAPI {
 		if (query.orderBy !== undefined) {
 			const entries = Object.entries(query.orderBy)
 			assert(entries.length === 1, "expected exactly one entry in query.orderBy")
-			const [[propertyName, direction]] = entries
-			const property = this.model.properties.find((modelProperty) => modelProperty.name === propertyName)
-			assert(property !== undefined, "model property does not exist")
+			const [[indexName, direction]] = entries
+			const index = indexName.split("/")
 
-			const index = this.getStoreIndex(store, [propertyName])
-			assert(index !== null, "orderBy property must be indexed")
+			const storeIndex = this.getStoreIndex(store, index)
+			assert(storeIndex !== null, "orderBy properties must be indexed")
 
-			let seen = 0
-			let count = 0
-			for await (const value of this.queryIndex(
-				propertyName,
-				index,
-				where[propertyName] ?? null,
-				directions[direction],
-			)) {
-				if (filter(value)) {
-					if (seen < offset) {
-						seen++
-						continue
-					}
-
-					yield select(value)
-					if (++count >= limit) {
-						break
-					}
-				}
-			}
-
-			return
-		}
-		// try to find an index over one of the properties in the where clause
-		// we can use this to "pre-filter" the results before performing a "table scan"
-		// choose the index that has the fewest matching entries
-		let bestIndex = null
-		let bestIndexProperty = null
-		let bestIndexCount = Infinity
-		for (const [propertyName, expression] of Object.entries(where)) {
-			const property = this.model.properties.find((modelProperty) => modelProperty.name === propertyName)
-			assert(property !== undefined, "model property does not exist")
-
-			if (property.kind === "primitive" && property.type === "json") {
-				throw new Error("json properties are not supported in where clauses")
-			}
-
-			if (expression === undefined || isEmpty(expression)) {
-				continue
-			}
-
-			const storeIndex = this.getStoreIndex(store, [propertyName])
-			if (storeIndex === null) {
-				continue
-			}
-
-			const indexCount = await this.countStoreIndex(propertyName, storeIndex, expression)
-			if (indexCount < bestIndexCount) {
-				bestIndex = storeIndex
-				bestIndexProperty = propertyName
-				bestIndexCount = indexCount
-			}
-		}
-
-		if (bestIndex !== null && bestIndexProperty !== null) {
-			const expression = where[bestIndexProperty]!
-
-			// TODO: we could be smarter about this if `orderBy` & `limit` are both provided.
+			const [range] = this.getIndexRange(index, where)
 
 			let seen = 0
 			let count = 0
-			for await (const value of this.queryIndex(bestIndexProperty, bestIndex, expression)) {
-				if (filter(value)) {
-					if (seen < offset) {
-						seen++
-						continue
-					}
-
-					yield select(value)
-					if (++count >= limit) {
-						break
-					}
-				}
-			}
-
-			return
-		}
-
-		let seen = 0
-		let count = 0
-		for (let cursor = await store.openCursor(); cursor !== null; cursor = await cursor.continue()) {
-			const key = cursor.key
-			assert(typeof key === "string", "internal error - unexpected cursor key")
-			const value = this.decodeObject(cursor.value)
-			if (filter(value)) {
+			for await (const value of this.queryIndex(storeIndex, range, directions[direction], filter)) {
 				if (seen < offset) {
 					seen++
 					continue
@@ -507,7 +428,64 @@ export class ModelAPI {
 					break
 				}
 			}
+
+			return
 		}
+
+		const [bestIndex, bestIndexRange] = await this.getBestIndex(store, where)
+
+		let seen = 0
+		let count = 0
+		for await (const value of this.queryIndex(bestIndex, bestIndexRange, directions.asc, filter)) {
+			if (seen < offset) {
+				seen++
+				continue
+			}
+
+			yield select(value)
+			if (++count >= limit) {
+				break
+			}
+		}
+	}
+
+	/**
+	 * use to pre-filter results before performing a table scan
+	 * by choosing the index that has the fewest matching entries
+	 */
+	private async getBestIndex(
+		store: IDBPObjectStore<any, any, string, "readonly">,
+		where: WhereCondition,
+	): Promise<[storeIndex: StoreIndex, indexRange: IDBKeyRange | null, indexCount: number, exact: boolean]> {
+		let bestIndex: StoreIndex = store
+		let bestIndexRange: IDBKeyRange | null = null
+		let bestIndexCount = Infinity
+		let bestIndexExact: boolean
+
+		{
+			const [indexRange, exact] = this.getIndexRange([this.model.primaryKey], where)
+			bestIndexRange = indexRange
+			bestIndexExact = exact
+			bestIndexCount = await bestIndex.count(bestIndexRange)
+		}
+
+		for (const index of this.model.indexes) {
+			const [indexRange, exact] = this.getIndexRange(index, where)
+			if (indexRange === null) {
+				continue
+			}
+
+			const storeIndex = this.getStoreIndex(store, index)!
+			const indexCount = await storeIndex.count(indexRange)
+			if (indexCount < bestIndexCount) {
+				bestIndex = storeIndex
+				bestIndexRange = indexRange
+				bestIndexCount = indexCount
+				bestIndexExact = exact
+			}
+		}
+
+		return [bestIndex, bestIndexRange, bestIndexCount, bestIndexExact]
 	}
 
 	private encodeObject(value: ModelValue): ObjectValue {
