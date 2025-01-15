@@ -91,21 +91,25 @@ testOnModelDB("query (indexed order by)", async (t, openDB) => {
 	])
 })
 
-testOnModelDB("multi-property index", async (t, openDB) => {
-	const db = await openDB(t, {
-		user: {
-			address: "primary",
-			name: "string",
-			$indexes: ["address/name"],
-		},
-	})
+testOnModelDB(
+	"multi-property index",
+	async (t, openDB) => {
+		const db = await openDB(t, {
+			user: {
+				address: "primary",
+				name: "string",
+				$indexes: ["address/name"],
+			},
+		})
 
-	await db.set("user", { address: "a", name: "John Doe" })
-	await db.set("user", { address: "c", name: "Jane Doe" })
+		await db.set("user", { address: "a", name: "John Doe" })
+		await db.set("user", { address: "c", name: "Jane Doe" })
 
-	// Ascending
-	t.deepEqual(await db.query("user", { orderBy: { address: "asc" } }), [
-		{ address: "a", name: "John Doe" },
-		{ address: "c", name: "Jane Doe" },
-	])
-})
+		// Ascending
+		t.deepEqual(await db.query("user", { orderBy: { address: "asc" } }), [
+			{ address: "a", name: "John Doe" },
+			{ address: "c", name: "Jane Doe" },
+		])
+	},
+	{ sqlite: true, pg: true, do: true },
+)
