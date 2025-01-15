@@ -23,7 +23,7 @@ import {
 	IncludeExpression,
 } from "@canvas-js/modeldb"
 
-import { getIndexName } from "./utils.js"
+import { equalIndex, getIndexName } from "./utils.js"
 
 type ObjectPropertyValue = PropertyValue | PropertyValue[]
 
@@ -92,11 +92,11 @@ export class ModelAPI {
 		// choose the index that has the fewest matching entries
 		let bestIndex = null
 		let bestIndexCount = Infinity
-		for (const [property, expression] of Object.entries(where)) {
-			const modelProperty = this.model.properties.find((modelProperty) => modelProperty.name === property)
-			assert(modelProperty !== undefined, "model property does not exist")
+		for (const [propertyName, expression] of Object.entries(where)) {
+			const property = this.model.properties.find((property) => property.name === propertyName)
+			assert(property !== undefined, "model property does not exist")
 
-			if (modelProperty.kind === "primitive" && modelProperty.type === "json") {
+			if (property.kind === "primitive" && property.type === "json") {
 				throw new Error("json properties are not supported in where clauses")
 			}
 
@@ -104,12 +104,12 @@ export class ModelAPI {
 				continue
 			}
 
-			const index = this.getIndex(store, modelProperty)
+			const index = this.getStoreIndex(store, [propertyName])
 			if (index === null) {
 				continue
 			}
 
-			const indexCount = await this.countIndex(property, index, expression)
+			const indexCount = await this.countStoreIndex(propertyName, index, expression)
 			if (indexCount < bestIndexCount) {
 				bestIndex = index
 				bestIndexCount = indexCount
@@ -272,23 +272,22 @@ export class ModelAPI {
 		return modelValues
 	}
 
-	private getIndex(
+	private getStoreIndex(
 		store: IDBPObjectStore<any, any, string, "readonly">,
-		property: Property,
+		index: string[],
 	): IDBPObjectStore<any, any, string, "readonly"> | IDBPIndex<any, any, string, string, "readonly"> | null {
-		if (property.kind === "primary") {
+		if (index.length === 1 && this.model.primaryKey === index[0]) {
 			return store
 		}
 
-		const index = this.model.indexes.find((index) => index[0] === property.name)
-		if (index === undefined) {
-			return null
+		if (this.model.indexes.some((i) => equalIndex(index, i))) {
+			return store.index(getIndexName(index))
 		}
 
-		return store.index(getIndexName(index))
+		return null
 	}
 
-	private async countIndex(
+	private async countStoreIndex(
 		propertyName: string,
 		storeIndex: IDBPObjectStore<any, any, string, "readonly"> | IDBPIndex<any, any, string, string, "readonly">,
 		expression: PropertyValue | NotExpression | RangeExpression | null,
@@ -406,16 +405,21 @@ export class ModelAPI {
 		if (query.orderBy !== undefined) {
 			const entries = Object.entries(query.orderBy)
 			assert(entries.length === 1, "expected exactly one entry in query.orderBy")
-			const [[property, direction]] = entries
-			const modelProperty = this.model.properties.find((modelProperty) => modelProperty.name === property)
-			assert(modelProperty !== undefined, "model property does not exist")
+			const [[propertyName, direction]] = entries
+			const property = this.model.properties.find((modelProperty) => modelProperty.name === propertyName)
+			assert(property !== undefined, "model property does not exist")
 
-			const index = this.getIndex(store, modelProperty)
+			const index = this.getStoreIndex(store, [propertyName])
 			assert(index !== null, "orderBy property must be indexed")
 
 			let seen = 0
 			let count = 0
-			for await (const value of this.queryIndex(property, index, where[property] ?? null, directions[direction])) {
+			for await (const value of this.queryIndex(
+				propertyName,
+				index,
+				where[propertyName] ?? null,
+				directions[direction],
+			)) {
 				if (filter(value)) {
 					if (seen < offset) {
 						seen++
@@ -437,11 +441,11 @@ export class ModelAPI {
 		let bestIndex = null
 		let bestIndexProperty = null
 		let bestIndexCount = Infinity
-		for (const [property, expression] of Object.entries(where)) {
-			const modelProperty = this.model.properties.find((modelProperty) => modelProperty.name === property)
-			assert(modelProperty !== undefined, "model property does not exist")
+		for (const [propertyName, expression] of Object.entries(where)) {
+			const property = this.model.properties.find((modelProperty) => modelProperty.name === propertyName)
+			assert(property !== undefined, "model property does not exist")
 
-			if (modelProperty.kind === "primitive" && modelProperty.type === "json") {
+			if (property.kind === "primitive" && property.type === "json") {
 				throw new Error("json properties are not supported in where clauses")
 			}
 
@@ -449,15 +453,15 @@ export class ModelAPI {
 				continue
 			}
 
-			const index = this.getIndex(store, modelProperty)
-			if (index === null) {
+			const storeIndex = this.getStoreIndex(store, [propertyName])
+			if (storeIndex === null) {
 				continue
 			}
 
-			const indexCount = await this.countIndex(property, index, expression)
+			const indexCount = await this.countStoreIndex(propertyName, storeIndex, expression)
 			if (indexCount < bestIndexCount) {
-				bestIndex = index
-				bestIndexProperty = property
+				bestIndex = storeIndex
+				bestIndexProperty = propertyName
 				bestIndexCount = indexCount
 			}
 		}
