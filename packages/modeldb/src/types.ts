@@ -20,7 +20,7 @@ export type PropertyType =
 /** property name, or property names joined by slashes */
 export type IndexInit = string
 
-export type ModelSchema = Record<string, { $indexes?: IndexInit[] } | Record<string, PropertyType>>
+export type ModelSchema = Record<string, { $indexes?: IndexInit[]; $primary?: string } | Record<string, PropertyType>>
 
 // These are more structured representations of the schema defined by ModelSchema that are easier
 // to work with at runtime
@@ -76,7 +76,7 @@ export type QueryParams = {
 	offset?: number
 }
 
-// Derives typed PropertyValue = PrimaryKeyValue | PrimitiveValue | ReferenceValue | RelationValue | JSONValue
+// Derives typed PropertyValue = PrimitiveValue | ReferenceValue | RelationValue | JSONValue
 // from a given PropertyType
 
 export type DerivePropertyType<T extends PropertyType> = T extends "primary"
@@ -108,13 +108,15 @@ export type DerivePropertyType<T extends PropertyType> = T extends "primary"
 	: never
 
 export type DeriveModelTypes<T extends ModelSchema> = {
-	[K in keyof T as Exclude<K, "$indexes">]: {
-		[P in keyof T[K] as Exclude<P, "$indexes">]: T[K][P] extends PropertyType ? DerivePropertyType<T[K][P]> : never
+	[K in keyof T as Exclude<K, "$indexes" | "$primary">]: {
+		[P in keyof T[K] as Exclude<P, "$indexes" | "$primary">]: T[K][P] extends PropertyType
+			? DerivePropertyType<T[K][P]>
+			: never
 	}
 }
 
 export type DeriveModelType<T extends { $indexes?: IndexInit[] } | Record<string, PropertyType>> = {
-	[P in keyof T as Exclude<P, "$indexes">]: T[P] extends PropertyType ? DerivePropertyType<T[P]> : never
+	[P in keyof T as Exclude<P, "$indexes" | "$primary">]: T[P] extends PropertyType ? DerivePropertyType<T[P]> : never
 }
 
 export type Contract<T extends ModelSchema = ModelSchema> = {

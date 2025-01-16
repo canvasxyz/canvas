@@ -7,28 +7,22 @@ export function parseConfig(init: ModelSchema): Config {
 	const relations: Relation[] = []
 	const models: Model[] = []
 
-	for (const [modelName, { $indexes, ...rest }] of Object.entries(init)) {
-		assert(
-			namePattern.test(modelName),
-			`error defining ${modelName}: expected model name to match /^[a-zA-Z0-9$:_\\-\\.]+$/`,
-		)
+	for (const [modelName, { $indexes, $primary, ...rest }] of Object.entries(init)) {
+		if (!namePattern.test(modelName)) {
+			throw new Error(`error defining ${modelName}: expected model name to match /^[a-zA-Z0-9$:_\\-\\.]+$/`)
+		}
 
 		const primaryKeys: string[] = []
 		const indexes: string[][] = []
 		const properties: Record<string, Property> = {}
 
 		for (const [propertyName, propertyType] of Object.entries(rest)) {
-			assert(
-				!Array.isArray(propertyType),
-				`error defining ${modelName}: invalid property type for ${propertyName}: ${propertyType}`,
-			)
-			assert(
-				typeof propertyType !== "function",
-				`error defining ${modelName}: invalid property type for ${propertyName}`,
-			)
-
 			const [property, primary] = parseProperty(modelName, propertyName, propertyType)
-			if (primary) {
+			if (primary || $primary === property.name) {
+				assert(property.kind === "primitive", "primary keys must have type string")
+				assert(property.type === "string", "primary keys must have type string")
+				assert(property.nullable === false, "primary keys canont be nullable")
+
 				primaryKeys.push(propertyName)
 			}
 

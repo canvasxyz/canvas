@@ -12,6 +12,7 @@ test("parse config", (t) => {
 		},
 
 		room: {
+			$primary: "id",
 			id: "primary",
 			creator: "@user",
 			members: "@user[]",
@@ -19,7 +20,8 @@ test("parse config", (t) => {
 		},
 
 		message: {
-			id: "primary",
+			$primary: "id",
+			id: "string",
 			room: "@room",
 			sender: "@user",
 			content: "string",
