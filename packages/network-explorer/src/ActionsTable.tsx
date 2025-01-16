@@ -25,14 +25,11 @@ export const ActionsTable = ({
 			enableColumnFilter: true,
 		},
 		{
-			header: "did",
-			accessorKey: "did",
-			size: 400,
+			header: "timestamp",
+			accessorFn: (row) => new Date(row.timestamp).toLocaleString(),
+			size: 200,
 			enableSorting: false,
-			enableColumnFilter: true,
-			meta: {
-				textFilter: true,
-			},
+			enableColumnFilter: false,
 		},
 		{
 			header: "name",
@@ -45,11 +42,14 @@ export const ActionsTable = ({
 			},
 		},
 		{
-			header: "timestamp",
-			accessorFn: (row) => new Date(row.timestamp).toLocaleString(),
-			size: 200,
+			header: "did",
+			accessorKey: "did",
+			size: 400,
 			enableSorting: false,
-			enableColumnFilter: false,
+			enableColumnFilter: true,
+			meta: {
+				textFilter: true,
+			},
 		},
 	]
 

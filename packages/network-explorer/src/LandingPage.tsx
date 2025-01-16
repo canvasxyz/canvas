@@ -19,6 +19,9 @@ export const LandingPage = () => {
 	const { data: actionData } = useSWR(
 		`/api/models/$actions?${stringifyRequestParams({
 			limit: 3,
+			orderBy: {
+				message_id: "desc",
+			},
 		})}`,
 		fetchAndIpldParseJson<{
 			totalCount: number
@@ -53,7 +56,7 @@ export const LandingPage = () => {
 					<table style={{ borderCollapse: "collapse", width: "100%" }}>
 						<thead style={{ backgroundColor: "white" }}>
 							<tr style={{ width: "100%", borderBottom: "solid var(--gray-4) 1px" }}>
-								<Th>id</Th>
+								<Th>message_id</Th>
 								<Th>name</Th>
 								<Th>timestamp</Th>
 								<Th>user</Th>
@@ -62,7 +65,7 @@ export const LandingPage = () => {
 						<tbody style={{ backgroundColor: "white" }}>
 							{(actions || []).map((action, index) => (
 								<tr key={index}>
-									<Td first={index === 0}>{action.message_id.slice(0, 10)}</Td>
+									<Td first={index === 0}>{action.message_id.slice(0, 10)}...</Td>
 									<Td first={index === 0}>{action.name}</Td>
 									<Td first={index === 0}>{new Date(action.timestamp).toLocaleString()}</Td>
 									<Td first={index === 0}>{action.did.slice(0, 30)}...</Td>
