@@ -5,7 +5,6 @@ import type {
 	Model,
 	ModelSchema,
 	ModelValue,
-	PrimaryKeyValue,
 	PrimitiveValue,
 	Property,
 	PropertyValue,
@@ -46,14 +45,12 @@ export function* getModelsFromInclude(models: Model[], modelName: string, obj: I
 	}
 }
 
-export function isPrimitiveValue(
-	value: PrimaryKeyValue | PrimitiveValue | JSONValue,
-): value is PrimaryKeyValue | PrimitiveValue {
+export function isPrimitiveValue(value: unknown): value is PrimitiveValue {
 	return (
-		typeof value === "string" ||
-		typeof value === "number" ||
 		value === null ||
 		typeof value === "boolean" ||
+		typeof value === "number" ||
+		typeof value === "string" ||
 		value instanceof Uint8Array
 	)
 }
@@ -87,11 +84,7 @@ export function validatePropertyValue(modelName: string, property: Property, val
 		return `${typeof value}: ${valueFormat}`
 	}
 
-	if (property.kind === "primary") {
-		if (typeof value !== "string") {
-			throw new TypeError(`write to db.${modelName}.${property.name}: expected a string, received a ${formatValue()}`)
-		}
-	} else if (property.kind === "primitive") {
+	if (property.kind === "primitive") {
 		if (property.nullable && value === null) {
 			return
 		} else if (property.type === "integer") {

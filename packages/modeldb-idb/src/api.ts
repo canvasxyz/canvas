@@ -512,9 +512,7 @@ export class ModelAPI {
 }
 
 function encodePropertyValue(property: Property, propertyValue: PropertyValue): PropertyValue | PropertyValue[] {
-	if (property.kind === "primary") {
-		return propertyValue
-	} else if (property.kind === "primitive") {
+	if (property.kind === "primitive") {
 		if (property.nullable) {
 			assert(property.type !== "json")
 			return propertyValue === null ? [] : [propertyValue]
@@ -537,10 +535,7 @@ function encodePropertyValue(property: Property, propertyValue: PropertyValue): 
 }
 
 function decodePropertyValue(property: Property, objectPropertyValue: PropertyValue | PropertyValue[]): PropertyValue {
-	if (property.kind === "primary") {
-		assert(typeof objectPropertyValue === "string", 'expected objectPropertyValue === "string"')
-		return objectPropertyValue
-	} else if (property.kind === "primitive") {
+	if (property.kind === "primitive") {
 		if (property.nullable) {
 			assert(property.type !== "json")
 			assert(Array.isArray(objectPropertyValue))

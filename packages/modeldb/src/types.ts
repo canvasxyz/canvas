@@ -25,11 +25,10 @@ export type ModelSchema = Record<string, { $indexes?: IndexInit[] } | Record<str
 // These are more structured representations of the schema defined by ModelSchema that are easier
 // to work with at runtime
 
-export type PrimaryKeyProperty = { name: string; kind: "primary" }
 export type PrimitiveProperty = { name: string; kind: "primitive"; type: PrimitiveType; nullable: boolean }
 export type ReferenceProperty = { name: string; kind: "reference"; target: string; nullable: boolean }
 export type RelationProperty = { name: string; kind: "relation"; target: string }
-export type Property = PrimaryKeyProperty | PrimitiveProperty | ReferenceProperty | RelationProperty
+export type Property = PrimitiveProperty | ReferenceProperty | RelationProperty
 
 // one-to-many relations have a source model and a target model.
 // one-to-many relation sources are always indexed, but targets are only indexed
@@ -51,12 +50,11 @@ export type Config = {
 
 // These are types for the runtime model record values
 
-export type PrimaryKeyValue = string
 export type PrimitiveValue = number | string | Uint8Array | null | boolean
 export type ReferenceValue = string | null
 export type RelationValue = string[]
 
-export type PropertyValue = PrimaryKeyValue | PrimitiveValue | ReferenceValue | RelationValue | JSONValue
+export type PropertyValue = PrimitiveValue | ReferenceValue | RelationValue | JSONValue
 
 export type ModelValue<T = PropertyValue> = { [key: string]: T }
 export type ModelValueWithIncludes<T = PropertyValue> = {
@@ -82,7 +80,7 @@ export type QueryParams = {
 // from a given PropertyType
 
 export type DerivePropertyType<T extends PropertyType> = T extends "primary"
-	? PrimaryKeyValue
+	? string
 	: T extends "integer" | "float" | "number"
 	? number
 	: T extends "integer?" | "float?" | "number?"

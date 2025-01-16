@@ -11,18 +11,15 @@ import {
 	WhereCondition,
 	PrimitiveValue,
 	RangeExpression,
-	PrimaryKeyProperty,
 	isNotExpression,
 	isLiteralExpression,
 	isRangeExpression,
 	isPrimitiveValue,
 	validateModelValue,
+	PrimitiveProperty,
 } from "@canvas-js/modeldb"
 
-import { zip } from "@canvas-js/utils"
-
 import {
-	decodePrimaryKeyValue,
 	decodePrimitiveValue,
 	decodeRecord,
 	decodeReferenceValue,
@@ -45,10 +42,13 @@ const primitiveColumnTypes = {
 	json: "TEXT",
 } satisfies Record<PrimitiveType, string>
 
-function getPropertyColumnType(property: Property): string {
-	if (property.kind === "primary") {
-		return "TEXT PRIMARY KEY NOT NULL"
-	} else if (property.kind === "primitive") {
+function getPropertyColumnType(model: Model, property: Property): string {
+	if (property.kind === "primitive") {
+		if (property.name === model.primaryKey) {
+			assert(property.type === "string")
+			assert(property.nullable === false)
+			return "TEXT PRIMARY KEY NOT NULL"
+		}
 		const type = primitiveColumnTypes[property.type]
 		return property.nullable ? type : `${type} NOT NULL`
 	} else if (property.kind === "reference") {
@@ -60,7 +60,8 @@ function getPropertyColumnType(property: Property): string {
 	}
 }
 
-const getPropertyColumn = (property: Property) => `'${property.name}' ${getPropertyColumnType(property)}`
+const getPropertyColumn = (model: Model, property: Property) =>
+	`'${property.name}' ${getPropertyColumnType(model, property)}`
 
 export class ModelAPI {
 	// #table = this.model.name
@@ -92,13 +93,14 @@ export class ModelAPI {
 		const columns: string[] = []
 		this.columnNames = [] // quoted column names for non-relation properties
 		let primaryKeyIndex: number | null = null
-		let primaryKey: PrimaryKeyProperty | null = null
+		let primaryKey: PrimitiveProperty | null = null
 		for (const [i, property] of model.properties.entries()) {
-			if (property.kind === "primary" || property.kind === "primitive" || property.kind === "reference") {
-				columns.push(getPropertyColumn(property))
+			if (property.kind === "primitive" || property.kind === "reference") {
+				columns.push(getPropertyColumn(model, property))
 				this.columnNames.push(`"${property.name}"`)
 
-				if (property.kind === "primary") {
+				if (property.name === model.primaryKey) {
+					assert(property.kind === "primitive")
 					primaryKeyIndex = i
 					primaryKey = property
 				}
@@ -292,9 +294,7 @@ export class ModelAPI {
 		const value: ModelValue = {}
 		for (const [propertyName, propertyValue] of Object.entries(record)) {
 			const property = this.#properties[propertyName]
-			if (property.kind === "primary") {
-				value[propertyName] = decodePrimaryKeyValue(this.model.name, property, propertyValue)
-			} else if (property.kind === "primitive") {
+			if (property.kind === "primitive") {
 				value[propertyName] = decodePrimitiveValue(this.model.name, property, propertyValue)
 			} else if (property.kind === "reference") {
 				value[propertyName] = decodeReferenceValue(this.model.name, property, propertyValue)
@@ -382,7 +382,7 @@ export class ModelAPI {
 
 			const property = this.#properties[name]
 			assert(property !== undefined, "property not found")
-			if (property.kind === "primary" || property.kind === "primitive" || property.kind === "reference") {
+			if (property.kind === "primitive" || property.kind === "reference") {
 				columns.push(`"${name}"`)
 			} else if (property.kind === "relation") {
 				relations.push({
@@ -411,52 +411,9 @@ export class ModelAPI {
 				return []
 			}
 
-			if (property.kind === "primary") {
-				if (isLiteralExpression(expression)) {
-					if (typeof expression !== "string") {
-						throw new TypeError("invalid primary key value (expected string)")
-					}
+			if (property.kind === "primitive") {
+				assert(property.type !== "json", "json properties are not supported in where clauses")
 
-					params.push(expression)
-					return [`"${name}" = ?`]
-				} else if (isNotExpression(expression)) {
-					const { neq: value } = expression
-					if (typeof value !== "string") {
-						throw new TypeError("invalid primary key value (expected string)")
-					}
-
-					params.push(value)
-					return [`"${name}" != ?`]
-				} else if (isRangeExpression(expression)) {
-					const keys = Object.keys(expression) as (keyof RangeExpression)[]
-
-					return keys
-						.filter((key) => expression[key] !== undefined)
-						.flatMap((key, j) => {
-							const value = expression[key]
-							if (typeof value !== "string") {
-								throw new TypeError("invalid primary key value (expected string)")
-							}
-
-							params.push(value)
-							switch (key) {
-								case "gt":
-									return [`"${name}" > ?`]
-								case "gte":
-									return [`"${name}" >= ?`]
-								case "lt":
-									return [`"${name}" < ?`]
-								case "lte":
-									return [`"${name}" <= ?`]
-							}
-						})
-				} else {
-					signalInvalidType(expression)
-				}
-			} else if (property.kind === "primitive") {
-				if (property.type === "json") {
-					throw new Error("json properties are not supported in where clauses")
-				}
 				if (isLiteralExpression(expression)) {
 					if (expression === null) {
 						return [`"${name}" ISNULL`]

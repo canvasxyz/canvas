@@ -13,8 +13,9 @@ export function parseConfig(init: ModelSchema): Config {
 			`error defining ${modelName}: expected model name to match /^[a-zA-Z0-9$:_\\-\\.]+$/`,
 		)
 
+		const primaryKeys: string[] = []
 		const indexes: string[][] = []
-		const properties: Property[] = []
+		const properties: Record<string, Property> = {}
 
 		for (const [propertyName, propertyType] of Object.entries(rest)) {
 			assert(
@@ -25,9 +26,13 @@ export function parseConfig(init: ModelSchema): Config {
 				typeof propertyType !== "function",
 				`error defining ${modelName}: invalid property type for ${propertyName}`,
 			)
-			const property = parseProperty(modelName, propertyName, propertyType)
 
-			properties.push(property)
+			const [property, primary] = parseProperty(modelName, propertyName, propertyType)
+			if (primary) {
+				primaryKeys.push(propertyName)
+			}
+
+			properties[propertyName] = property
 
 			if (property.kind === "relation") {
 				relations.push({
@@ -39,29 +44,27 @@ export function parseConfig(init: ModelSchema): Config {
 			}
 		}
 
-		const primaryProperties = properties.filter((property) => property.kind === "primary")
-		assert(
-			primaryProperties.length === 1,
-			`error defining ${modelName}: models must have exactly one "primary" property`,
-		)
-		const [{ name: primaryKey }] = primaryProperties
-
-		if ($indexes !== undefined) {
-			for (const index of $indexes) {
-				if (relations.some((relation) => relation.source === modelName && relation.property === index)) {
-					continue
-				} else {
-					const propertyNames = index.split("/")
-					for (const propertyName of propertyNames) {
-						assert(propertyName in rest, "invalid index property", { propertyName })
-					}
-
-					indexes.push(propertyNames)
-				}
-			}
+		if (primaryKeys.length !== 1) {
+			throw new Error(`error defining ${modelName}: models must have exactly one "primary" property`)
 		}
 
-		models.push({ name: modelName, primaryKey, properties, indexes })
+		const [primaryKey] = primaryKeys
+
+		for (const index of $indexes ?? []) {
+			if (relations.some((relation) => relation.source === modelName && relation.property === index)) {
+				continue
+			}
+
+			const propertyNames = index.split("/")
+			for (const propertyName of propertyNames) {
+				assert(properties[propertyName] !== undefined, "invalid index property", { propertyName })
+				assert(properties[propertyName].kind !== "relation", "cannot index relation properties")
+			}
+
+			indexes.push(propertyNames)
+		}
+
+		models.push({ name: modelName, primaryKey, properties: Object.values(properties), indexes })
 	}
 
 	return { relations, models }
@@ -71,14 +74,18 @@ export const primitivePropertyPattern = /^(integer|float|number|string|bytes|boo
 export const referencePropertyPattern = /^@([a-z0-9.-]+)(\??)$/
 export const relationPropertyPattern = /^@([a-z0-9.-]+)\[\]$/
 
-export function parseProperty(modelName: string, propertyName: string, propertyType: PropertyType): Property {
+export function parseProperty(
+	modelName: string,
+	propertyName: string,
+	propertyType: PropertyType,
+): [property: Property, primary: boolean] {
 	assert(
 		namePattern.test(propertyName),
 		`error defining ${modelName}: expected property names to match /^[a-zA-Z0-9$:_\\-\\.]+$/`,
 	)
 
 	if (propertyType === "primary") {
-		return { name: propertyName, kind: "primary" }
+		return [{ name: propertyName, kind: "primitive", type: "string", nullable: false }, true]
 	}
 
 	const primitiveResult = primitivePropertyPattern.exec(propertyType)
@@ -92,19 +99,19 @@ export function parseProperty(modelName: string, propertyName: string, propertyT
 			)
 		}
 
-		return { name: propertyName, kind: "primitive", type: type as PrimitiveType, nullable: nullable === "?" }
+		return [{ name: propertyName, kind: "primitive", type: type as PrimitiveType, nullable: nullable === "?" }, false]
 	}
 
 	const referenceResult = referencePropertyPattern.exec(propertyType)
 	if (referenceResult !== null) {
 		const [_, target, nullable] = referenceResult
-		return { name: propertyName, kind: "reference", target, nullable: nullable === "?" }
+		return [{ name: propertyName, kind: "reference", target, nullable: nullable === "?" }, false]
 	}
 
 	const relationResult = relationPropertyPattern.exec(propertyType)
 	if (relationResult !== null) {
 		const [_, target] = relationResult
-		return { name: propertyName, kind: "relation", target: target }
+		return [{ name: propertyName, kind: "relation", target: target }, false]
 	}
 
 	throw new Error(`error defining ${modelName}: invalid property "${propertyType}"`)

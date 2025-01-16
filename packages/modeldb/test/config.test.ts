@@ -34,7 +34,7 @@ test("parse config", (t) => {
 				indexes: [],
 				primaryKey: "id",
 				properties: [
-					{ name: "id", kind: "primary" },
+					{ name: "id", kind: "primitive", type: "string", nullable: false },
 					{ name: "address", kind: "primitive", type: "string", nullable: false },
 					{ name: "encryptionPublicKey", kind: "primitive", type: "bytes", nullable: false },
 					{ name: "signingPublicKey", kind: "primitive", type: "bytes", nullable: false },
@@ -45,7 +45,7 @@ test("parse config", (t) => {
 				indexes: [["id", "creator"]],
 				primaryKey: "id",
 				properties: [
-					{ name: "id", kind: "primary" },
+					{ name: "id", kind: "primitive", type: "string", nullable: false },
 					{ name: "creator", kind: "reference", target: "user", nullable: false },
 					{ name: "members", kind: "relation", target: "user" },
 				],
@@ -55,7 +55,7 @@ test("parse config", (t) => {
 				indexes: [],
 				primaryKey: "id",
 				properties: [
-					{ name: "id", kind: "primary" },
+					{ name: "id", kind: "primitive", type: "string", nullable: false },
 					{ name: "room", kind: "reference", target: "room", nullable: false },
 					{ name: "sender", kind: "reference", target: "user", nullable: false },
 					{ name: "content", kind: "primitive", type: "string", nullable: false },

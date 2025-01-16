@@ -3,8 +3,6 @@ import * as json from "@ipld/dag-json"
 import type {
 	Model,
 	ModelValue,
-	PrimaryKeyProperty,
-	PrimaryKeyValue,
 	PrimitiveProperty,
 	PrimitiveValue,
 	PropertyValue,
@@ -46,9 +44,7 @@ export function encodeRecordParams(
 		}
 
 		const param = params[property.name]
-		if (property.kind === "primary") {
-			values[param] = encodePrimaryKeyValue(model.name, property, value[property.name])
-		} else if (property.kind === "primitive") {
+		if (property.kind === "primitive") {
 			values[param] = encodePrimitiveValue(model.name, property, value[property.name])
 		} else if (property.kind === "reference") {
 			values[param] = encodeReferenceValue(model.name, property, value[property.name])
@@ -61,14 +57,6 @@ export function encodeRecordParams(
 	}
 
 	return values
-}
-
-function encodePrimaryKeyValue(modelName: string, property: PrimaryKeyProperty, value: PropertyValue): string {
-	if (typeof value === "string") {
-		return value
-	} else {
-		throw new TypeError(`${modelName}/${property.name} must be a string`)
-	}
 }
 
 function encodePrimitiveValue(
@@ -145,9 +133,7 @@ export function decodeRecord(model: Model, record: Record<string, string | numbe
 	const value: ModelValue = {}
 
 	for (const property of model.properties) {
-		if (property.kind === "primary") {
-			value[property.name] = decodePrimaryKeyValue(model.name, property, record[property.name])
-		} else if (property.kind === "primitive") {
+		if (property.kind === "primitive") {
 			value[property.name] = decodePrimitiveValue(model.name, property, record[property.name])
 		} else if (property.kind === "reference") {
 			value[property.name] = decodeReferenceValue(model.name, property, record[property.name])
@@ -156,18 +142,6 @@ export function decodeRecord(model: Model, record: Record<string, string | numbe
 		} else {
 			signalInvalidType(property)
 		}
-	}
-
-	return value
-}
-
-export function decodePrimaryKeyValue(
-	modelName: string,
-	property: PrimaryKeyProperty,
-	value: string | number | Buffer | null,
-): PrimaryKeyValue {
-	if (typeof value !== "string") {
-		throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected string)`)
 	}
 
 	return value

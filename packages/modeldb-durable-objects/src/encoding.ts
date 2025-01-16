@@ -3,8 +3,6 @@ import * as json from "@ipld/dag-json"
 import type {
 	Model,
 	ModelValue,
-	PrimaryKeyProperty,
-	PrimaryKeyValue,
 	PrimitiveProperty,
 	PrimitiveValue,
 	PropertyValue,
@@ -43,9 +41,7 @@ export function encodeRecordParams(
 			throw new Error(`missing value for property ${model.name}/${property.name}`)
 		}
 
-		if (property.kind === "primary") {
-			result.push(encodePrimaryKeyValue(model.name, property, value[property.name]))
-		} else if (property.kind === "primitive") {
+		if (property.kind === "primitive") {
 			result.push(encodePrimitiveValue(model.name, property, value[property.name]))
 		} else if (property.kind === "reference") {
 			result.push(encodeReferenceValue(model.name, property, value[property.name]))
@@ -59,13 +55,6 @@ export function encodeRecordParams(
 	}
 
 	return result
-}
-function encodePrimaryKeyValue(modelName: string, property: PrimaryKeyProperty, value: PropertyValue): string {
-	if (typeof value === "string") {
-		return value
-	} else {
-		throw new TypeError(`${modelName}/${property.name} must be a string`)
-	}
 }
 
 function encodePrimitiveValue(
@@ -144,9 +133,7 @@ export function decodeRecord(
 	const value: ModelValue = {}
 
 	for (const property of model.properties) {
-		if (property.kind === "primary") {
-			value[property.name] = decodePrimaryKeyValue(model.name, property, record[property.name])
-		} else if (property.kind === "primitive") {
+		if (property.kind === "primitive") {
 			value[property.name] = decodePrimitiveValue(model.name, property, record[property.name])
 		} else if (property.kind === "reference") {
 			value[property.name] = decodeReferenceValue(model.name, property, record[property.name])
@@ -155,18 +142,6 @@ export function decodeRecord(
 		} else {
 			signalInvalidType(property)
 		}
-	}
-
-	return value
-}
-
-export function decodePrimaryKeyValue(
-	modelName: string,
-	property: PrimaryKeyProperty,
-	value: string | number | Buffer | ArrayBuffer | null,
-): PrimaryKeyValue {
-	if (typeof value !== "string") {
-		throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected string)`)
 	}
 
 	return value
