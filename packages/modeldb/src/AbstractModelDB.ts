@@ -1,4 +1,4 @@
-import { logger } from "@libp2p/logger"
+import { Logger, logger } from "@libp2p/logger"
 
 import { assert } from "@canvas-js/utils"
 
@@ -25,11 +25,12 @@ export type ModelDBBackend =
 export abstract class AbstractModelDB {
 	public readonly models: Record<string, Model>
 
-	protected readonly log = logger("canvas:modeldb")
+	protected readonly log: Logger
 	protected readonly subscriptions = new Map<number, Subscription>()
 	#subscriptionId = 0
 
 	protected constructor(public readonly config: Config) {
+		this.log = logger(`canvas:modeldb`)
 		this.models = {}
 		for (const model of config.models) {
 			this.models[model.name] = model

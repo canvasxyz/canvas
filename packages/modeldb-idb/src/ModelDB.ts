@@ -32,9 +32,6 @@ export class ModelDB extends AbstractModelDB {
 				// create missing object stores
 				const storeNames = new Set(db.objectStoreNames)
 				for (const model of config.models) {
-					// const primaryKey = model.properties.find((property) => property.kind === "primary")
-					// assert(primaryKey !== undefined, "expected primaryKey !== undefined")
-
 					if (storeNames.has(model.name)) {
 						continue
 					}

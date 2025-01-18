@@ -4,7 +4,7 @@ import { Config, Model, ModelSchema, PrimitiveType, Property, PropertyType, Rela
 import { namePattern } from "./utils.js"
 
 export function parseConfig(init: ModelSchema): Config {
-	const relations: Relation[] = []
+	const relations: Omit<Relation, "sourceType" | "targetType">[] = []
 	const models: Model[] = []
 
 	for (const [modelName, { $indexes, $primary, ...rest }] of Object.entries(init)) {
@@ -19,9 +19,12 @@ export function parseConfig(init: ModelSchema): Config {
 		for (const [propertyName, propertyType] of Object.entries(rest)) {
 			const [property, primary] = parseProperty(modelName, propertyName, propertyType)
 			if (primary || $primary === property.name) {
-				assert(property.kind === "primitive", "primary keys must have type string")
-				assert(property.type === "string", "primary keys must have type string")
-				assert(property.nullable === false, "primary keys canont be nullable")
+				assert(property.kind === "primitive", "primary keys must have type integer, string, or bytes")
+				assert(
+					property.type === "integer" || property.type === "string" || property.type === "bytes",
+					"primary keys must have type integer, string, or bytes",
+				)
+				assert(property.nullable === false, "primary keys cannot be nullable")
 
 				primaryKeys.push(propertyName)
 			}
@@ -31,7 +34,7 @@ export function parseConfig(init: ModelSchema): Config {
 			if (property.kind === "relation") {
 				relations.push({
 					source: modelName,
-					property: propertyName,
+					sourceProperty: propertyName,
 					target: property.target,
 					indexed: $indexes?.includes(propertyName) ?? false,
 				})
@@ -45,7 +48,7 @@ export function parseConfig(init: ModelSchema): Config {
 		const [primaryKey] = primaryKeys
 
 		for (const index of $indexes ?? []) {
-			if (relations.some((relation) => relation.source === modelName && relation.property === index)) {
+			if (relations.some((relation) => relation.source === modelName && relation.sourceProperty === index)) {
 				continue
 			}
 
@@ -61,7 +64,30 @@ export function parseConfig(init: ModelSchema): Config {
 		models.push({ name: modelName, primaryKey, properties: Object.values(properties), indexes })
 	}
 
-	return { relations, models }
+	return {
+		relations: relations.map((relation) => {
+			const sourceModel = models.find((model) => model.name === relation.source)
+			if (sourceModel === undefined) {
+				throw new Error(`invalid model schema: invalid relation source "${relation.source}" (no such model)`)
+			}
+
+			const sourcePrimaryProperty = sourceModel.properties.find((property) => property.name === sourceModel.primaryKey)
+			assert(sourcePrimaryProperty !== undefined)
+			assert(sourcePrimaryProperty.kind === "primitive")
+
+			const targetModel = models.find((model) => model.name === relation.target)
+			if (targetModel === undefined) {
+				throw new Error(`invalid model schema: invalid relation target "${relation.target}" (no such model)`)
+			}
+
+			const targetPrimaryProperty = targetModel.properties.find((property) => property.name === targetModel.primaryKey)
+			assert(targetPrimaryProperty !== undefined)
+			assert(targetPrimaryProperty.kind === "primitive")
+
+			return { ...relation, sourceType: sourcePrimaryProperty.type, targetType: targetPrimaryProperty.type }
+		}),
+		models,
+	}
 }
 
 export const primitivePropertyPattern = /^(integer|float|number|string|bytes|boolean|json)(\??)$/

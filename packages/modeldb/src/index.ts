@@ -9,4 +9,5 @@ export {
 	updateModelValues,
 	isPrimitiveValue,
 	getModelsFromInclude,
+	isPrimaryKey,
 } from "./utils.js"

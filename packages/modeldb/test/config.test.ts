@@ -66,6 +66,29 @@ test("parse config", (t) => {
 			},
 		],
 
-		relations: [{ source: "room", property: "members", target: "user", indexed: true }],
+		relations: [
+			{
+				source: "room",
+				sourceProperty: "members",
+				sourceType: "string",
+				target: "user",
+				targetType: "string",
+				indexed: true,
+			},
+		],
+	})
+})
+
+test("broken relation target", (t) => {
+	t.throws(() => {
+		parseConfig({
+			room: {
+				id: "primary",
+				name: "string",
+				isModerator: "boolean",
+				creator: "@user",
+				members: "@user[]",
+			},
+		})
 	})
 })

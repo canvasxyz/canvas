@@ -8,6 +8,7 @@ import {
 	mergeModelValues,
 	updateModelValues,
 	DeriveModelTypes,
+	RelationValue,
 } from "@canvas-js/modeldb"
 import { assert } from "@canvas-js/utils"
 
@@ -79,8 +80,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 						const backlinkProp = this.db.models[linkModel].properties.find((prop) => prop.name === backlinkKey)
 						assert(backlinkProp !== undefined, `db.link(): link from ${linkModel} used missing property ${backlinkKey}`)
 						if (backlinkProp.kind === "relation") {
-							const current = modelValue[backlinkKey] ?? []
-							assert(Array.isArray(current), "expected relation value to be an array")
+							const current = (modelValue[backlinkKey] ?? []) as RelationValue
 							modelValue[backlinkKey] = current.includes(target) ? current : [...current, target]
 						} else {
 							throw new Error(`db.link(): link from ${linkModel} ${backlinkKey} must be a relation`)
@@ -107,8 +107,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 							`db.unlink(): called on ${linkModel} used missing property ${backlinkKey}`,
 						)
 						if (backlinkProp.kind === "relation") {
-							const current = modelValue[backlinkKey] ?? []
-							assert(Array.isArray(current), "expected relation value to be an array")
+							const current = (modelValue[backlinkKey] ?? []) as RelationValue
 							modelValue[backlinkKey] = current.filter((item) => item !== target)
 						} else {
 							throw new Error(`db.unlink(): link from ${linkModel} ${backlinkKey} must be a relation`)

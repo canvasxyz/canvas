@@ -5,6 +5,7 @@ import type {
 	Model,
 	ModelSchema,
 	ModelValue,
+	PrimaryKeyValue,
 	PrimitiveValue,
 	Property,
 	PropertyValue,
@@ -13,6 +14,18 @@ import type {
 } from "./types.js"
 
 export type Awaitable<T> = T | Promise<T>
+
+export const isPrimaryKey = (value: unknown): value is PrimaryKeyValue => {
+	if (typeof value === "number") {
+		return Number.isSafeInteger(value)
+	} else if (typeof value === "string") {
+		return true
+	} else if (value instanceof Uint8Array) {
+		return true
+	} else {
+		return false
+	}
+}
 
 // eslint-disable-next-line no-useless-escape
 export const namePattern = /^[a-zA-Z0-9$:_\-\.]+$/
@@ -65,84 +78,85 @@ export function validateModelValue(model: Model, value: ModelValue) {
 	}
 }
 
-export function validatePropertyValue(modelName: string, property: Property, value: PropertyValue) {
-	const formatValue = () => {
-		let valueFormat
-		if (value === null) {
-			valueFormat = "null"
-		} else if (value === undefined) {
-			valueFormat = "undefined"
-		} else if (typeof value !== "object") {
+const formatValue = (value: PropertyValue) => {
+	let valueFormat
+	if (value === null) {
+		valueFormat = "null"
+	} else if (value === undefined) {
+		valueFormat = "undefined"
+	} else if (typeof value !== "object") {
+		valueFormat = value.toString()
+	} else {
+		try {
+			valueFormat = JSON.stringify(value)
+		} catch (err) {
 			valueFormat = value.toString()
-		} else {
-			try {
-				valueFormat = JSON.stringify(value)
-			} catch (err) {
-				valueFormat = value.toString()
-			}
 		}
-		return `${typeof value}: ${valueFormat}`
 	}
+	return `${typeof value}: ${valueFormat}`
+}
 
+export function validatePropertyValue(modelName: string, property: Property, value: PropertyValue) {
 	if (property.kind === "primitive") {
 		if (property.nullable && value === null) {
 			return
 		} else if (property.type === "integer") {
 			if (typeof value !== "number") {
 				throw new TypeError(
-					`write to db.${modelName}.${property.name}: expected an integer, received a ${formatValue()}`,
+					`write to db.${modelName}.${property.name}: expected an integer, received ${formatValue(value)}`,
 				)
 			} else if (!Number.isSafeInteger(value)) {
 				throw new TypeError(`write to db.${modelName}.${property.name}: must be a valid Number.isSafeInteger()`)
 			}
 		} else if (property.type === "number" || property.type === "float") {
 			if (typeof value !== "number") {
-				throw new TypeError(`write to db.${modelName}.${property.name}: expected a number, received a ${formatValue()}`)
+				throw new TypeError(
+					`write to db.${modelName}.${property.name}: expected a number, received ${formatValue(value)}`,
+				)
 			}
 		} else if (property.type === "string") {
 			if (typeof value !== "string") {
-				throw new TypeError(`write to db.${modelName}.${property.name}: expected a string, received a ${formatValue()}`)
+				throw new TypeError(
+					`write to db.${modelName}.${property.name}: expected a string, received ${formatValue(value)}`,
+				)
 			}
 		} else if (property.type === "bytes") {
 			if (value instanceof Uint8Array) {
 				return
 			} else {
 				throw new TypeError(
-					`write to db.${modelName}.${property.name}: expected a Uint8Array, received a ${formatValue()}`,
+					`write to db.${modelName}.${property.name}: expected a Uint8Array, received ${formatValue(value)}`,
 				)
 			}
 		} else if (property.type === "boolean") {
 			if (typeof value !== "boolean") {
 				throw new TypeError(
-					`write to db.${modelName}.${property.name}: expected a boolean, received a ${formatValue()}`,
+					`write to db.${modelName}.${property.name}: expected a boolean, received ${formatValue(value)}`,
 				)
 			}
 		} else if (property.type === "json") {
 			// TODO: validate IPLD value
-			// try {
-			// 	json.encode(value)
-			// } catch (e) {
-			// 	throw new TypeError(`write to db.${modelName}.${property.name}: expected an IPLD-encodable value`)
-			// }
 		} else {
 			signalInvalidType(property.type)
 		}
 	} else if (property.kind === "reference") {
 		if (property.nullable && value === null) {
 			return
-		} else if (typeof value !== "string") {
-			throw new TypeError(`write to db.${modelName}.${property.name}: expected a string, received a ${formatValue()}`)
+		} else if (!isPrimaryKey(value)) {
+			throw new TypeError(
+				`write to db.${modelName}.${property.name}: expected a primary key, received ${formatValue(value)}`,
+			)
 		}
 	} else if (property.kind === "relation") {
 		if (value === null) {
-			throw new TypeError(`write to db.${modelName}.${property.name}: expected an array of strings, not null`)
+			throw new TypeError(`write to db.${modelName}.${property.name}: expected an array of primary keys, not null`)
 		} else if (!Array.isArray(value)) {
 			throw new TypeError(
-				`write to db.${modelName}.${property.name}: expected an array of strings, received a ${formatValue()}`,
+				`write to db.${modelName}.${property.name}: expected an array of primary keys, received ${formatValue(value)}`,
 			)
-		} else if (value.some((value) => typeof value !== "string")) {
+		} else if (!value.every(isPrimaryKey)) {
 			throw new TypeError(
-				`write to db.${modelName}.${property.name}: expected an array of strings, received ${formatValue()}`,
+				`write to db.${modelName}.${property.name}: expected an array of primary keys, received ${formatValue(value)}`,
 			)
 		}
 	} else {

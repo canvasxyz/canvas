@@ -1,33 +1,28 @@
 import * as json from "@ipld/dag-json"
-import { SqlValue } from "@sqlite.org/sqlite-wasm"
 
-import type {
-	Model,
-	ModelValue,
-	PrimitiveProperty,
-	PrimitiveValue,
-	PropertyValue,
-	ReferenceProperty,
+import {
+	isPrimaryKey,
+	type Model,
+	type ModelValue,
+	type PrimaryKeyValue,
+	type PrimitiveProperty,
+	type PrimitiveValue,
+	type PropertyValue,
+	type ReferenceProperty,
 } from "@canvas-js/modeldb"
 
 import { assert, mapValues, signalInvalidType } from "@canvas-js/utils"
+import { SqlValue } from "@sqlite.org/sqlite-wasm"
 
-export function encodeQueryParams(params: Record<string, PrimitiveValue>): Record<string, SqlValue> {
-	return mapValues(params, (value) => {
-		if (typeof value === "boolean") {
-			return value ? 1 : 0
-		} else {
-			return value
-		}
-	})
-}
+export type RecordValue = Record<string, SqlValue>
+export type RecordParams = Record<`p${string}`, SqlValue>
 
 export function encodeRecordParams(
 	model: Model,
 	value: ModelValue,
 	params: Record<string, `p${string}`>,
-): { [arg: `p${string}`]: SqlValue } {
-	const values: Record<string, SqlValue> = {}
+): RecordParams {
+	const values: RecordParams = {}
 
 	for (const property of model.properties) {
 		const propertyValue = value[property.name]
@@ -102,17 +97,17 @@ function encodePrimitiveValue(modelName: string, property: PrimitiveProperty, va
 	}
 }
 
-function encodeReferenceValue(modelName: string, property: ReferenceProperty, value: PropertyValue): string | null {
+function encodeReferenceValue(modelName: string, property: ReferenceProperty, value: PropertyValue): SqlValue {
 	if (value === null) {
 		if (property.nullable) {
 			return null
 		} else {
 			throw new TypeError(`${modelName}/${property.name} cannot be null`)
 		}
-	} else if (typeof value === "string") {
+	} else if (isPrimaryKey(value)) {
 		return value
 	} else {
-		throw new TypeError(`${modelName}/${property.name} must be a string`)
+		throw new TypeError(`${modelName}/${property.name} must be a primary key`)
 	}
 }
 
@@ -134,7 +129,7 @@ export function decodeRecord(model: Model, record: Record<string, SqlValue>): Mo
 	return value
 }
 
-export function decodePrimitiveValue(modelName: string, property: PrimitiveProperty, value: SqlValue) {
+export function decodePrimitiveValue(modelName: string, property: PrimitiveProperty, value: SqlValue): PrimitiveValue {
 	if (value === null) {
 		if (property.nullable) {
 			return null
@@ -194,16 +189,20 @@ export function decodePrimitiveValue(modelName: string, property: PrimitivePrope
 	}
 }
 
-export function decodeReferenceValue(modelName: string, property: ReferenceProperty, value: SqlValue): string | null {
+export function decodeReferenceValue(
+	modelName: string,
+	property: ReferenceProperty,
+	value: SqlValue,
+): PrimaryKeyValue | null {
 	if (value === null) {
 		if (property.nullable) {
 			return null
 		} else {
 			throw new TypeError(`internal error - missing ${modelName}/${property.name} value`)
 		}
-	} else if (typeof value === "string") {
+	} else if (isPrimaryKey(value)) {
 		return value
 	} else {
-		throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected string)`)
+		throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected primary key)`)
 	}
 }

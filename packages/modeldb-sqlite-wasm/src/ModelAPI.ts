@@ -1,11 +1,10 @@
-import { assert, signalInvalidType, mapValues } from "@canvas-js/utils"
+import { OpfsDatabase } from "@sqlite.org/sqlite-wasm"
 
 import {
 	Property,
 	Relation,
 	Model,
 	ModelValue,
-	PropertyValue,
 	PrimitiveType,
 	QueryParams,
 	WhereCondition,
@@ -17,16 +16,23 @@ import {
 	isPrimitiveValue,
 	validateModelValue,
 	PrimitiveProperty,
+	Config,
+	PrimaryKeyValue,
+	isPrimaryKey,
 } from "@canvas-js/modeldb"
 
-import { zip } from "@canvas-js/utils"
+import { assert, signalInvalidType, mapValues, zip } from "@canvas-js/utils"
 
-import { decodePrimitiveValue, decodeRecord, decodeReferenceValue, encodeRecordParams } from "./encoding.js"
+import {
+	RecordValue,
+	RecordParams,
+	decodePrimitiveValue,
+	decodeRecord,
+	decodeReferenceValue,
+	encodeRecordParams,
+} from "./encoding.js"
+
 import { Method, Query } from "./utils.js"
-import { OpfsDatabase, SqlValue } from "@sqlite.org/sqlite-wasm"
-
-type RecordValue = Record<string, SqlValue>
-type Params = Record<`p${string}`, SqlValue>
 
 const primitiveColumnTypes = {
 	integer: "INTEGER",
@@ -38,18 +44,26 @@ const primitiveColumnTypes = {
 	json: "TEXT",
 } satisfies Record<PrimitiveType, string>
 
-function getPropertyColumnType(model: Model, property: Property): string {
+function getPropertyColumnType(config: Config, model: Model, property: Property): string {
 	if (property.kind === "primitive") {
+		const type = primitiveColumnTypes[property.type]
+
 		if (property.name === model.primaryKey) {
 			assert(property.nullable === false)
-			assert(property.type === "string")
-			return "TEXT PRIMARY KEY NOT NULL"
+			return `${type} PRIMARY KEY NOT NULL`
 		}
 
-		const type = primitiveColumnTypes[property.type]
 		return property.nullable ? type : `${type} NOT NULL`
 	} else if (property.kind === "reference") {
-		return property.nullable ? "TEXT" : "TEXT NOT NULL"
+		const target = config.models.find((model) => model.name === property.target)
+		assert(target !== undefined)
+
+		const targetPrimaryKey = target.properties.find((property) => property.name === target.primaryKey)
+		assert(targetPrimaryKey !== undefined)
+		assert(targetPrimaryKey.kind === "primitive")
+
+		const type = primitiveColumnTypes[targetPrimaryKey.type]
+		return property.nullable ? type : `${type} NOT NULL`
 	} else if (property.kind === "relation") {
 		throw new Error("internal error - relation properties don't map to columns")
 	} else {
@@ -57,8 +71,8 @@ function getPropertyColumnType(model: Model, property: Property): string {
 	}
 }
 
-const getPropertyColumn = (model: Model, property: Property) =>
-	`'${property.name}' ${getPropertyColumnType(model, property)}`
+const getPropertyColumn = (config: Config, model: Model, property: Property) =>
+	`'${property.name}' ${getPropertyColumnType(config, model, property)}`
 
 export class ModelAPI {
 	readonly #table: string
@@ -66,14 +80,14 @@ export class ModelAPI {
 	readonly #properties: Record<string, Property>
 
 	// Methods
-	#insert: Method<Params>
+	#insert: Method<RecordParams>
 	#update: Method<RecordValue>
-	#delete: Method<Record<`p${string}`, string>>
+	#delete: Method<Record<`p${string}`, PrimaryKeyValue>>
 	#clear: Method<{}>
 
 	// Queries
 	#selectAll: Query<{}, RecordValue>
-	#select: Query<Record<`p${string}`, string>, RecordValue>
+	#select: Query<Record<`p${string}`, PrimaryKeyValue>, RecordValue>
 	#count: Query<{}, { count: number }>
 
 	readonly #relations: Record<string, RelationAPI> = {}
@@ -82,7 +96,7 @@ export class ModelAPI {
 
 	columnNames: string[]
 
-	public constructor(readonly db: OpfsDatabase, readonly model: Model) {
+	public constructor(readonly db: OpfsDatabase, readonly config: Config, readonly model: Model) {
 		this.#table = model.name
 		this.#params = {}
 		this.#properties = Object.fromEntries(model.properties.map((property) => [property.name, property]))
@@ -94,7 +108,7 @@ export class ModelAPI {
 		let primaryKey: PrimitiveProperty | null = null
 		for (const [i, property] of model.properties.entries()) {
 			if (property.kind === "primitive" || property.kind === "reference") {
-				columns.push(getPropertyColumn(model, property))
+				columns.push(getPropertyColumn(config, model, property))
 				this.columnNames.push(`"${property.name}"`)
 				columnParams.push(`:p${i}`)
 				this.#params[property.name] = `p${i}`
@@ -105,12 +119,11 @@ export class ModelAPI {
 					primaryKey = property
 				}
 			} else if (property.kind === "relation") {
-				this.#relations[property.name] = new RelationAPI(db, {
-					source: model.name,
-					property: property.name,
-					target: property.target,
-					indexed: false,
-				})
+				const relation = config.relations.find(
+					(relation) => relation.source === model.name && relation.sourceProperty === property.name,
+				)
+				assert(relation !== undefined, "internal error - relation not found")
+				this.#relations[property.name] = new RelationAPI(db, relation)
 			} else {
 				signalInvalidType(property)
 			}
@@ -135,7 +148,7 @@ export class ModelAPI {
 		// Prepare methods
 		const insertNames = this.columnNames.join(", ")
 		const insertParams = columnParams.join(", ")
-		this.#insert = new Method<Params>(
+		this.#insert = new Method<RecordParams>(
 			db,
 			`INSERT OR IGNORE INTO "${this.#table}" (${insertNames}) VALUES (${insertParams})`,
 		)
@@ -143,7 +156,7 @@ export class ModelAPI {
 		const where = `WHERE "${this.#primaryKeyName}" = :${this.#primaryKeyParam}`
 		const updateEntries = Array.from(zip(this.columnNames, columnParams)).map(([name, param]) => `${name} = ${param}`)
 
-		this.#update = new Method<Params>(db, `UPDATE "${this.#table}" SET ${updateEntries.join(", ")} ${where}`)
+		this.#update = new Method<RecordParams>(db, `UPDATE "${this.#table}" SET ${updateEntries.join(", ")} ${where}`)
 
 		this.#delete = new Method<Record<`p${string}`, string>>(db, `DELETE FROM "${this.#table}" ${where}`)
 
@@ -160,41 +173,25 @@ export class ModelAPI {
 		this.#selectAll = new Query<{}, RecordValue>(this.db, `SELECT ${this.columnNames.join(", ")} FROM "${this.#table}"`)
 	}
 
-	public get(key: string): ModelValue | null {
-		return this.getMany([key])[0]
+	public get(key: PrimaryKeyValue): ModelValue | null {
+		const record = this.#select.get({ [this.#primaryKeyParam]: key })
+		if (record === null) {
+			return null
+		}
+
+		return {
+			...decodeRecord(this.model, record),
+			...mapValues(this.#relations, (api) => api.get(key)),
+		}
 	}
 
-	public getMany(keys: string[]): (ModelValue | null)[] {
-		if (keys.length === 0) {
-			return []
-		}
-
-		const params: Record<`p${number}`, string> = {}
-		const whereParts = []
-		for (const [i, key] of keys.entries()) {
-			whereParts.push(`"${this.#primaryKeyName}" = :p${i}`)
-			params[`p${i}`] = key
-		}
-
-		const queryString = `SELECT ${this.columnNames.join(", ")} FROM "${this.#table}" WHERE ${whereParts.join(" OR ")}`
-
-		const query = new Query<Record<`p${string}`, string>, RecordValue>(this.db, queryString)
-		const rowsByKey: Record<string, ModelValue> = {}
-		for (const row of query.all(params)) {
-			const rowKey = row[this.#primaryKeyName]
-			assert(typeof rowKey === "string", 'expected typeof primaryKey === "string"')
-			rowsByKey[rowKey] = {
-				...decodeRecord(this.model, row),
-				...mapValues(this.#relations, (api) => api.get(rowKey)),
-			}
-		}
-		return keys.map((key) => rowsByKey[key] ?? null)
+	public getMany(keys: PrimaryKeyValue[]): (ModelValue | null)[] {
+		return keys.map((key) => this.get(key))
 	}
 
 	public set(value: ModelValue) {
 		validateModelValue(this.model, value)
-		const key = value[this.#primaryKeyName]
-		assert(typeof key === "string", 'expected typeof primaryKey === "string"')
+		const key = value[this.#primaryKeyName] as PrimaryKeyValue
 
 		const encodedParams = encodeRecordParams(this.model, value, this.#params)
 		const existingRecord = this.#select.get({ [this.#primaryKeyParam]: key })
@@ -209,11 +206,12 @@ export class ModelAPI {
 				relation.delete(key)
 			}
 
+			assert(Array.isArray(value[name]) && value[name].every(isPrimaryKey))
 			relation.add(key, value[name])
 		}
 	}
 
-	public delete(key: string) {
+	public delete(key: PrimaryKeyValue) {
 		const existingRecord = this.#select.get({ [this.#primaryKeyParam]: key })
 		if (existingRecord === null) {
 			return
@@ -273,8 +271,7 @@ export class ModelAPI {
 		}
 
 		for (const record of this.#selectAll.iterate({})) {
-			const key = record[this.#primaryKeyName]
-			assert(typeof key === "string", 'expected typeof key === "string"')
+			const key = record[this.#primaryKeyName] as PrimaryKeyValue
 			const value = {
 				...decodeRecord(this.model, record),
 				...mapValues(this.#relations, (api) => api.get(key)),
@@ -294,8 +291,7 @@ export class ModelAPI {
 
 		const results = this.db.selectObjects(sql, paramsWithColons)
 		return results.map((record): ModelValue => {
-			const key = record[this.#primaryKeyName]
-			assert(typeof key === "string", 'expected typeof primaryKey === "string"')
+			const key = record[this.#primaryKeyName] as PrimaryKeyValue
 
 			const value: ModelValue = {}
 			for (const [propertyName, propertyValue] of Object.entries(record)) {
@@ -312,7 +308,7 @@ export class ModelAPI {
 			}
 
 			for (const relation of relations) {
-				value[relation.property] = this.#relations[relation.property].get(key)
+				value[relation.sourceProperty] = this.#relations[relation.sourceProperty].get(key)
 			}
 
 			return value
@@ -390,12 +386,7 @@ export class ModelAPI {
 			if (property.kind === "primitive" || property.kind === "reference") {
 				columns.push(`"${name}"`)
 			} else if (property.kind === "relation") {
-				relations.push({
-					source: this.model.name,
-					property: name,
-					target: property.target,
-					indexed: this.model.indexes.some((index) => index.length === 1 && index[0] === name),
-				})
+				relations.push(this.#relations[name].relation)
 			} else {
 				signalInvalidType(property)
 			}
@@ -565,16 +556,20 @@ export class RelationAPI {
 	public readonly sourceIndex: string
 	public readonly targetIndex: string
 
-	readonly #select: Query<{ _source: string }, { _target: string }>
-	readonly #insert: Method<{ _source: string; _target: string }>
-	readonly #delete: Method<{ _source: string }>
+	readonly #select: Query<{ _source: PrimaryKeyValue }, { _target: PrimaryKeyValue }>
+	readonly #insert: Method<{ _source: PrimaryKeyValue; _target: PrimaryKeyValue }>
+	readonly #delete: Method<{ _source: PrimaryKeyValue }>
 
 	public constructor(readonly db: OpfsDatabase, readonly relation: Relation) {
-		this.table = `${relation.source}/${relation.property}`
-		this.sourceIndex = `${relation.source}/${relation.property}/source`
-		this.targetIndex = `${relation.source}/${relation.property}/target`
+		this.table = `${relation.source}/${relation.sourceProperty}`
+		this.sourceIndex = `${relation.source}/${relation.sourceProperty}/source`
+		this.targetIndex = `${relation.source}/${relation.sourceProperty}/target`
 
-		const columns = [`_source TEXT NOT NULL`, `_target TEXT NOT NULL`]
+		const columns = [
+			`_source ${primitiveColumnTypes[relation.sourceType]} NOT NULL`,
+			`_target ${primitiveColumnTypes[relation.targetType]} NOT NULL`,
+		]
+
 		db.exec(`CREATE TABLE IF NOT EXISTS "${this.table}" (${columns.join(", ")})`)
 
 		db.exec(`CREATE INDEX IF NOT EXISTS "${this.sourceIndex}" ON "${this.table}" (_source)`)
@@ -598,20 +593,19 @@ export class RelationAPI {
 		)
 	}
 
-	public get(source: string): string[] {
+	public get(source: PrimaryKeyValue): PrimaryKeyValue[] {
 		const targets = this.#select.all({ _source: source })
 		return targets.map(({ _target: target }) => target)
 	}
 
-	public add(source: string, targets: PropertyValue) {
-		assert(Array.isArray(targets), "expected string[]")
+	public add(source: PrimaryKeyValue, targets: PrimaryKeyValue[]) {
+		assert(Array.isArray(targets), "expected PrimaryKey[]")
 		for (const target of targets) {
-			assert(typeof target === "string", "expected string[]")
 			this.#insert.run({ _source: source, _target: target })
 		}
 	}
 
-	public delete(source: string) {
+	public delete(source: PrimaryKeyValue) {
 		this.#delete.run({ _source: source })
 	}
 }

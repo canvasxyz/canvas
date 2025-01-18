@@ -1,49 +1,52 @@
+import pg from "pg"
+
 import * as json from "@ipld/dag-json"
 
 import { assert, signalInvalidType } from "@canvas-js/utils"
 
-import type {
+import {
+	isPrimaryKey,
 	Model,
 	ModelValue,
+	PrimaryKeyValue,
 	PrimitiveProperty,
 	PrimitiveValue,
 	PropertyValue,
 	ReferenceProperty,
 } from "@canvas-js/modeldb"
 
-export type PostgresPrimitiveValue = string | number | boolean | Uint8Array | null
+export type PostgresPrimitiveValue = string | number | boolean | Buffer | null
+export type RecordParams = Record<`p${string}`, PostgresPrimitiveValue>
 
-export function encodeQueryParams(params: PrimitiveValue[]): PostgresPrimitiveValue[] {
-	return params
+export const fromBuffer = (data: Buffer): Uint8Array => new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
+export const toBuffer = (data: Uint8Array) => Buffer.from(data.buffer, data.byteOffset, data.byteLength)
+
+export function encodePrimaryKey(value: PrimaryKeyValue): PostgresPrimitiveValue {
+	if (value instanceof Uint8Array) {
+		return toBuffer(value)
+	} else {
+		return value
+	}
 }
 
-export function encodeRecordParams(
-	model: Model,
-	value: ModelValue,
-	params: Record<string, `p${string}`>,
-): Record<`p${string}`, string | number | boolean | Uint8Array | null> {
-	const values: Record<`p${string}`, string | number | boolean | Uint8Array | null> = {}
-
-	for (const property of model.properties) {
-		const propertyValue = value[property.name]
-		if (propertyValue === undefined) {
-			throw new Error(`missing value for property ${model.name}/${property.name}`)
-		}
-
-		const param = params[property.name]
-		if (property.kind === "primitive") {
-			values[param] = encodePrimitiveValue(model.name, property, value[property.name])
-		} else if (property.kind === "reference") {
-			values[param] = encodeReferenceValue(model.name, property, value[property.name])
-		} else if (property.kind === "relation") {
-			assert(Array.isArray(value[property.name]))
-			continue
-		} else {
-			signalInvalidType(property)
-		}
+export function decodePrimaryKey(value: PostgresPrimitiveValue): PrimaryKeyValue {
+	if (typeof value === "string" || typeof value === "number") {
+		return value
+	} else if (value instanceof Uint8Array) {
+		return toBuffer(value)
+	} else {
+		throw new Error(`internal error - invalid primary key value (${value})`)
 	}
+}
 
-	return values
+export function encodeQueryParams(params: PrimitiveValue[]): PostgresPrimitiveValue[] {
+	return params.map((param) => {
+		if (param instanceof Uint8Array) {
+			return toBuffer(param)
+		} else {
+			return param
+		}
+	})
 }
 
 export function encodePrimitiveValue(
@@ -59,7 +62,7 @@ export function encodePrimitiveValue(
 		}
 	} else if (property.type === "integer") {
 		if (typeof value === "number" && Number.isSafeInteger(value)) {
-			return value
+			return value.toString(10)
 		} else {
 			throw new TypeError(`${modelName}/${property.name} must be a safely representable integer`)
 		}
@@ -77,7 +80,7 @@ export function encodePrimitiveValue(
 		}
 	} else if (property.type === "bytes") {
 		if (value instanceof Uint8Array) {
-			return Buffer.isBuffer(value) ? value : Buffer.from(value.buffer, value.byteOffset, value.byteLength)
+			return toBuffer(value)
 		} else {
 			throw new TypeError(`${modelName}/${property.name} must be a Uint8Array`)
 		}
@@ -103,39 +106,35 @@ export function encodeReferenceValue(
 	modelName: string,
 	property: ReferenceProperty,
 	value: PropertyValue,
-): string | null {
+	target: PrimitiveProperty,
+): string | number | Buffer | null {
 	if (value === null) {
 		if (property.nullable) {
 			return null
 		} else {
 			throw new TypeError(`${modelName}/${property.name} cannot be null`)
 		}
-	} else if (typeof value === "string") {
-		return value
-	} else {
-		throw new TypeError(`${modelName}/${property.name} must be a string`)
-	}
-}
-
-export function decodeRecord(
-	model: Model,
-	record: Record<string, string | number | boolean | Uint8Array | null>,
-): ModelValue {
-	const value: ModelValue = {}
-
-	for (const property of model.properties) {
-		if (property.kind === "primitive") {
-			value[property.name] = decodePrimitiveValue(model.name, property, record[property.name])
-		} else if (property.kind === "reference") {
-			value[property.name] = decodeReferenceValue(model.name, property, record[property.name])
-		} else if (property.kind === "relation") {
-			continue
+	} else if (target.type === "integer") {
+		if (typeof value === "number" && Number.isSafeInteger(value)) {
+			return value.toString(10)
 		} else {
-			signalInvalidType(property)
+			throw new TypeError(`${modelName}/${property.name} must be an integer`)
 		}
+	} else if (target.type === "string") {
+		if (typeof value === "string") {
+			return value
+		} else {
+			throw new TypeError(`${modelName}/${property.name} must be a Uint8Array`)
+		}
+	} else if (target.type === "bytes") {
+		if (value instanceof Uint8Array) {
+			return toBuffer(value)
+		} else {
+			throw new TypeError(`${modelName}/${property.name} must be a Uint8Array`)
+		}
+	} else {
+		throw new Error(`internal error - invalid reference target type`)
 	}
-
-	return value
 }
 
 export function decodePrimitiveValue(modelName: string, property: PrimitiveProperty, value: PostgresPrimitiveValue) {
@@ -148,33 +147,27 @@ export function decodePrimitiveValue(modelName: string, property: PrimitivePrope
 	}
 
 	if (property.type === "integer") {
-		if (typeof value === "string" && Number.isSafeInteger(parseInt(value, 10))) {
+		if (typeof value === "string") {
 			return parseInt(value, 10)
 		} else {
-			console.error("expected integer, got", value)
 			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected integer)`)
 		}
 	} else if (property.type === "number" || property.type === "float") {
-		if (typeof value === "string") {
-			return parseFloat(value)
-		} else if (typeof value === "number") {
+		if (typeof value === "number") {
 			return value
 		} else {
-			console.error("expected float, got", value)
 			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected float)`)
 		}
 	} else if (property.type === "string") {
 		if (typeof value === "string") {
 			return value
 		} else {
-			console.error("expected string, got", value)
 			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected string)`)
 		}
 	} else if (property.type === "bytes") {
 		if (Buffer.isBuffer(value)) {
-			return new Uint8Array(value.buffer, value.byteOffset, value.byteLength)
+			return fromBuffer(value)
 		} else {
-			console.error("expected Uint8Array, got", value)
 			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected Uint8Array)`)
 		}
 	} else if (property.type === "boolean") {
@@ -185,13 +178,7 @@ export function decodePrimitiveValue(modelName: string, property: PrimitivePrope
 			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected boolean)`)
 		}
 	} else if (property.type === "json") {
-		assert(typeof value === "string", 'internal error - expected typeof value === "string"')
-		try {
-			return json.parse<PrimitiveValue>(value)
-		} catch (e) {
-			console.error("internal error - invalid dag-json", value)
-			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected dag-json)`)
-		}
+		return value
 	} else {
 		const _: never = property.type
 		throw new Error(`internal error - unknown primitive type ${JSON.stringify(property.type)}`)
@@ -201,17 +188,34 @@ export function decodePrimitiveValue(modelName: string, property: PrimitivePrope
 export function decodeReferenceValue(
 	modelName: string,
 	property: ReferenceProperty,
-	value: string | number | boolean | Uint8Array | null,
-): string | null {
+	value: PostgresPrimitiveValue,
+	target: PrimitiveProperty,
+): PrimaryKeyValue | null {
 	if (value === null) {
 		if (property.nullable) {
 			return null
 		} else {
-			throw new TypeError(`internal error - missing ${modelName}/${property.name} value`)
+			throw new TypeError(`${modelName}/${property.name} cannot be null`)
 		}
-	} else if (typeof value === "string") {
-		return value
+	} else if (target.type === "integer") {
+		if (typeof value === "string") {
+			return parseInt(value, 10)
+		} else {
+			throw new TypeError(`${modelName}/${property.name} must be an integer`)
+		}
+	} else if (target.type === "string") {
+		if (typeof value === "string") {
+			return value
+		} else {
+			throw new TypeError(`${modelName}/${property.name} must be a string`)
+		}
+	} else if (target.type === "bytes") {
+		if (Buffer.isBuffer(value)) {
+			return fromBuffer(value)
+		} else {
+			throw new TypeError(`${modelName}/${property.name} must be a Uint8Array`)
+		}
 	} else {
-		throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected string)`)
+		throw new Error(`internal error - invalid reference target type`)
 	}
 }

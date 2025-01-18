@@ -10,6 +10,7 @@ testOnModelDB("get fields of all types", async (t, openDB) => {
 			exampleBool: "boolean",
 			exampleInt: "integer",
 			exampleFloat: "float",
+			exampleNumber: "number",
 			exampleJson: "json",
 			exampleBytes: "bytes",
 		},
@@ -23,7 +24,8 @@ testOnModelDB("get fields of all types", async (t, openDB) => {
 		exampleStr: "hello world",
 		exampleBool: true,
 		exampleInt: -1,
-		exampleFloat: 0.1,
+		exampleFloat: Math.PI,
+		exampleNumber: 0.1,
 		exampleJson: jsonValue,
 		exampleBytes: new Uint8Array([0, 255]),
 	})
@@ -35,13 +37,11 @@ testOnModelDB("get fields of all types", async (t, openDB) => {
 		exampleStr: "hello world",
 		exampleBool: true,
 		exampleInt: -1,
-		exampleFloat: 0.1,
+		exampleFloat: Math.PI,
+		exampleNumber: 0.1,
 		exampleJson: jsonValue,
 		exampleBytes: new Uint8Array([0, 255]),
 	})
-
-	// assumes stable serialization
-	t.deepEqual(jsonValue, { foo: "a", bar: "b", qux: null, baz: 0.3 })
 })
 
 testOnModelDB("update a value", async (t, openDB) => {
@@ -77,4 +77,20 @@ testOnModelDB("delete a value ", async (t, openDB) => {
 	await db.delete("user", id)
 	t.is(await db.get("user", id), null)
 	t.is(await db.count("user"), 0)
+})
+
+testOnModelDB("set and get an integer primary key", async (t, openDB) => {
+	const db = await openDB(t, {
+		user: { $primary: "id", id: "integer", name: "string?" },
+	})
+
+	await db.set("user", { id: 0, name: null })
+	await db.set("user", { id: 3, name: null })
+	await db.set("user", { id: 10, name: "John Doe" })
+
+	t.deepEqual(await db.query("user"), [
+		{ id: 0, name: null },
+		{ id: 3, name: null },
+		{ id: 10, name: "John Doe" },
+	])
 })

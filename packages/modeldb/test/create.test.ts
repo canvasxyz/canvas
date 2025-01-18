@@ -17,6 +17,7 @@ testOnModelDB("create modeldb with a model with valid fields", async (t, openDB)
 			creator: "@user",
 			members: "@user[]",
 		},
+		user: { id: "primary" },
 	} satisfies ModelSchema
 
 	await t.notThrowsAsync(async () => {
@@ -55,4 +56,23 @@ testOnModelDB("create a model with two primary keys", async (t, openDB) => {
 	} satisfies ModelSchema
 
 	await t.throwsAsync(() => openDB(t, models))
+})
+
+testOnModelDB("create a model with an integer primary key", async (t, openDB) => {
+	const models = {
+		user: { $primary: "id", id: "integer", name: "string?" },
+	} satisfies ModelSchema
+
+	await t.notThrowsAsync(() => openDB(t, models))
+
+	// const db = await openDB(t, models)
+	// db.set("user", { id: 0, name: null })
+	// db.set("user", { id: 3, name: null })
+	// db.set("user", { id: 10, name: null })
+
+	// t.deepEqual(await db.query("user"), [
+	// 	{ id: 0, name: null },
+	// 	{ id: 3, name: null },
+	// 	{ id: 10, name: null },
+	// ])
 })

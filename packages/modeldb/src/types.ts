@@ -34,7 +34,14 @@ export type Property = PrimitiveProperty | ReferenceProperty | RelationProperty
 // one-to-many relation sources are always indexed, but targets are only indexed
 // if the relation property appears in the $indexes array.
 
-export type Relation = { source: string; property: string; target: string; indexed: boolean }
+export type Relation = {
+	source: string
+	sourceProperty: string
+	sourceType: PrimitiveType
+	target: string
+	targetType: PrimitiveType
+	indexed: boolean
+}
 
 export type Model = {
 	name: string
@@ -50,9 +57,12 @@ export type Config = {
 
 // These are types for the runtime model record values
 
+export type PrimaryKeyValue = number | string | Uint8Array
+// export type PrimaryKeyArray = PrimaryKeyValue[]
+
 export type PrimitiveValue = number | string | Uint8Array | null | boolean
-export type ReferenceValue = string | null
-export type RelationValue = string[]
+export type ReferenceValue = PrimaryKeyValue | null
+export type RelationValue = PrimaryKeyValue[]
 
 export type PropertyValue = PrimitiveValue | ReferenceValue | RelationValue | JSONValue
 

@@ -14,7 +14,7 @@ export class InnerModelDB {
 		this.db = db
 
 		for (const model of Object.values(config.models)) {
-			this.#models[model.name] = new ModelAPI(this.db, model)
+			this.#models[model.name] = new ModelAPI(this.db, config, model)
 		}
 		this.log = log
 	}

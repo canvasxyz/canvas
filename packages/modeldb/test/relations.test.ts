@@ -21,6 +21,26 @@ testOnModelDB("set and get reference and relation values", async (t, openDB) => 
 	t.deepEqual(await db.get("room", roomId), { id: roomId, creator: "a", members: ["a", "b"] })
 })
 
+testOnModelDB("set and get reference and relation values using integer primary keys", async (t, openDB) => {
+	const db = await openDB(t, {
+		user: { $primary: "id", id: "integer" },
+		room: {
+			id: "primary",
+			creator: "@user",
+			members: "@user[]",
+		},
+	})
+
+	await db.set("user", { id: 0 })
+	await db.set("user", { id: 1 })
+
+	t.is(await db.count("user"), 2)
+
+	const roomId = nanoid()
+	await db.set("room", { id: roomId, creator: 0, members: [0, 1] })
+	t.deepEqual(await db.get("room", roomId), { id: roomId, creator: 0, members: [0, 1] })
+})
+
 testOnModelDB("select reference and relation values", async (t, openDB) => {
 	const db = await openDB(t, {
 		user: { address: "primary" },
@@ -338,5 +358,5 @@ testOnModelDB(
 			],
 		)
 	},
-	{ sqliteWasm: false, sqlite: false, idb: true, pg: false, do: false, expo: true },
+	{ idb: true, expo: true },
 )

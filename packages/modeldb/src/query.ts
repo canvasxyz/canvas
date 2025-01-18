@@ -6,6 +6,7 @@ import {
 	Model,
 	ModelValue,
 	NotExpression,
+	PrimaryKeyValue,
 	PrimitiveProperty,
 	PrimitiveType,
 	PropertyValue,
@@ -15,7 +16,7 @@ import {
 	WhereCondition,
 } from "./types.js"
 
-import { validatePropertyValue } from "./utils.js"
+import { isPrimaryKey, validatePropertyValue } from "./utils.js"
 
 export function lessThan(a: Uint8Array | null, b: Uint8Array | null) {
 	if (a === null || b === null) {
@@ -276,12 +277,22 @@ function getRelationFilter(
 ): (value: PropertyValue) => boolean {
 	if (isLiteralExpression(expression)) {
 		const reference = expression
-		assert(
-			Array.isArray(reference) && reference.every((value) => typeof value === "string"),
-			`error filtering ${modelName}.${property.name}: invalid relation expression (expected string[])`,
-		)
-		return (value) =>
-			reference.every((target) => Array.isArray(value) && typeof target === "string" && value.includes(target))
+		if (!Array.isArray(reference) || !reference.every(isPrimaryKey)) {
+			throw new Error(
+				`error filtering ${modelName}.${property.name}: invalid relation expression - expected (number | string | Uint8Array)[]`,
+			)
+		}
+
+		return (value) => {
+			assert(Array.isArray(value))
+			return reference.every((target) => {
+				if (typeof target === "number" || typeof target === "string") {
+					return value.includes(target)
+				} else {
+					return value.some((v) => v instanceof Uint8Array && equals(v, target))
+				}
+			})
+		}
 	} else if (isNotExpression(expression)) {
 		const reference = expression.neq
 		assert(

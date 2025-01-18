@@ -1,3 +1,5 @@
+import type { SqlStorage } from "@cloudflare/workers-types"
+
 import { assert, signalInvalidType, mapValues } from "@canvas-js/utils"
 
 import {
@@ -5,7 +7,6 @@ import {
 	Relation,
 	Model,
 	ModelValue,
-	PropertyValue,
 	PrimitiveType,
 	QueryParams,
 	WhereCondition,
@@ -16,21 +17,23 @@ import {
 	isRangeExpression,
 	isPrimitiveValue,
 	validateModelValue,
+	isPrimaryKey,
 	PrimitiveProperty,
+	Config,
+	PrimaryKeyValue,
 } from "@canvas-js/modeldb"
 
 import {
+	RecordValue,
+	RecordParams,
 	decodePrimitiveValue,
 	decodeRecord,
 	decodeReferenceValue,
 	encodeQueryParams,
 	encodeRecordParams,
 } from "./encoding.js"
-import { Method, Query } from "./utils.js"
-import { SqlStorage } from "@cloudflare/workers-types"
 
-type RecordValue = Record<string, string | number | Buffer | ArrayBuffer | null>
-type Params = Array<string | number | Buffer | ArrayBuffer | null>
+import { Method, Query } from "./utils.js"
 
 const primitiveColumnTypes = {
 	integer: "INTEGER",
@@ -42,17 +45,26 @@ const primitiveColumnTypes = {
 	json: "TEXT",
 } satisfies Record<PrimitiveType, string>
 
-function getPropertyColumnType(model: Model, property: Property): string {
+function getPropertyColumnType(config: Config, model: Model, property: Property): string {
 	if (property.kind === "primitive") {
-		if (property.name === model.primaryKey) {
-			assert(property.type === "string")
-			assert(property.nullable === false)
-			return "TEXT PRIMARY KEY NOT NULL"
-		}
 		const type = primitiveColumnTypes[property.type]
+
+		if (property.name === model.primaryKey) {
+			assert(property.nullable === false)
+			return `${type} PRIMARY KEY NOT NULL`
+		}
+
 		return property.nullable ? type : `${type} NOT NULL`
 	} else if (property.kind === "reference") {
-		return property.nullable ? "TEXT" : "TEXT NOT NULL"
+		const target = config.models.find((model) => model.name === property.target)
+		assert(target !== undefined)
+
+		const targetPrimaryKey = target.properties.find((property) => property.name === target.primaryKey)
+		assert(targetPrimaryKey !== undefined)
+		assert(targetPrimaryKey.kind === "primitive")
+
+		const type = primitiveColumnTypes[targetPrimaryKey.type]
+		return property.nullable ? type : `${type} NOT NULL`
 	} else if (property.kind === "relation") {
 		throw new Error("internal error - relation properties don't map to columns")
 	} else {
@@ -60,13 +72,10 @@ function getPropertyColumnType(model: Model, property: Property): string {
 	}
 }
 
-const getPropertyColumn = (model: Model, property: Property) =>
-	`'${property.name}' ${getPropertyColumnType(model, property)}`
+const getPropertyColumn = (config: Config, model: Model, property: Property) =>
+	`'${property.name}' ${getPropertyColumnType(config, model, property)}`
 
 export class ModelAPI {
-	// #table = this.model.name
-	// #properties: Record<string, Property> = Object.fromEntries(this.model.properties.map((property) => [property.name, property]))
-
 	#table: string
 	#properties: Record<string, Property>
 
@@ -85,7 +94,7 @@ export class ModelAPI {
 	readonly #primaryKeyName: string
 	columnNames: `"${string}"`[]
 
-	public constructor(readonly db: SqlStorage, readonly model: Model) {
+	public constructor(readonly db: SqlStorage, config: Config, readonly model: Model) {
 		// in the cloudflare runtime, `this` cannot be used when assigning default values to private properties
 		this.#table = model.name
 		this.#properties = Object.fromEntries(model.properties.map((property) => [property.name, property]))
@@ -96,7 +105,7 @@ export class ModelAPI {
 		let primaryKey: PrimitiveProperty | null = null
 		for (const [i, property] of model.properties.entries()) {
 			if (property.kind === "primitive" || property.kind === "reference") {
-				columns.push(getPropertyColumn(model, property))
+				columns.push(getPropertyColumn(config, model, property))
 				this.columnNames.push(`"${property.name}"`)
 
 				if (property.name === model.primaryKey) {
@@ -105,12 +114,11 @@ export class ModelAPI {
 					primaryKey = property
 				}
 			} else if (property.kind === "relation") {
-				this.#relations[property.name] = new RelationAPI(db, {
-					source: model.name,
-					property: property.name,
-					target: property.target,
-					indexed: false,
-				})
+				const relation = config.relations.find(
+					(relation) => relation.source === model.name && relation.sourceProperty === property.name,
+				)
+				assert(relation !== undefined, "internal error - relation not found")
+				this.#relations[property.name] = new RelationAPI(db, relation)
 			} else {
 				signalInvalidType(property)
 			}
@@ -118,7 +126,6 @@ export class ModelAPI {
 
 		assert(primaryKey !== null, "expected primaryKey !== null")
 		assert(primaryKeyIndex !== null, "expected primaryKeyIndex !== null")
-		// this.#primaryKeyName = columnNames[primaryKeyIndex]
 		this.#primaryKeyName = primaryKey.name
 
 		// Create record table
@@ -161,7 +168,7 @@ export class ModelAPI {
 		this.#selectAll = new Query<RecordValue>(this.db, `SELECT ${this.columnNames.join(", ")} FROM "${this.#table}"`)
 	}
 
-	public get(key: string): ModelValue | null {
+	public get(key: PrimaryKeyValue): ModelValue | null {
 		const record = this.#select.get([key])
 		if (record === null) {
 			return null
@@ -173,36 +180,13 @@ export class ModelAPI {
 		}
 	}
 
-	public getMany(keys: string[]): (ModelValue | null)[] {
-		if (keys.length === 0) {
-			return []
-		}
-		const params = []
-		const whereParts = []
-		for (const [i, key] of keys.entries()) {
-			whereParts.push(`"${this.#primaryKeyName}" = :p${i}`)
-			params.push(key)
-		}
-
-		const queryString = `SELECT ${this.columnNames.join(", ")} FROM "${this.#table}" WHERE ${whereParts.join(" OR ")}`
-
-		const query = new Query<RecordValue>(this.db, queryString)
-		const rowsByKey: Record<string, ModelValue> = {}
-		for (const row of query.all(params)) {
-			const rowKey = row[this.#primaryKeyName]
-			assert(typeof rowKey === "string", 'expected typeof primaryKey === "string"')
-			rowsByKey[rowKey] = {
-				...decodeRecord(this.model, row),
-				...mapValues(this.#relations, (api) => api.get(rowKey)),
-			}
-		}
-		return keys.map((key) => rowsByKey[key] ?? null)
+	public getMany(keys: PrimaryKeyValue[]): (ModelValue | null)[] {
+		return keys.map((key) => this.get(key))
 	}
 
 	public set(value: ModelValue) {
 		validateModelValue(this.model, value)
-		const key = value[this.#primaryKeyName]
-		assert(typeof key === "string", 'expected typeof primaryKey === "string"')
+		const key = value[this.#primaryKeyName] as PrimaryKeyValue
 
 		const encodedParams = encodeRecordParams(this.model, value)
 
@@ -218,6 +202,7 @@ export class ModelAPI {
 				relation.delete(key)
 			}
 
+			assert(Array.isArray(value[name]) && value[name].every(isPrimaryKey))
 			relation.add(key, value[name])
 		}
 	}
@@ -288,8 +273,7 @@ export class ModelAPI {
 	}
 
 	private parseRecord(record: RecordValue, relations: Relation[]): ModelValue {
-		const key = record[this.#primaryKeyName]
-		assert(typeof key === "string", 'expected typeof primaryKey === "string"')
+		const key = record[this.#primaryKeyName] as PrimaryKeyValue
 
 		const value: ModelValue = {}
 		for (const [propertyName, propertyValue] of Object.entries(record)) {
@@ -306,7 +290,7 @@ export class ModelAPI {
 		}
 
 		for (const relation of relations) {
-			value[relation.property] = this.#relations[relation.property].get(key)
+			value[relation.sourceProperty] = this.#relations[relation.sourceProperty].get(key)
 		}
 
 		return value
@@ -385,12 +369,7 @@ export class ModelAPI {
 			if (property.kind === "primitive" || property.kind === "reference") {
 				columns.push(`"${name}"`)
 			} else if (property.kind === "relation") {
-				relations.push({
-					source: this.model.name,
-					property: name,
-					target: property.target,
-					indexed: this.model.indexes.some((index) => index.length === 1 && index[0] === name),
-				})
+				relations.push(this.#relations[name].relation)
 			} else {
 				signalInvalidType(property)
 			}
@@ -550,16 +529,20 @@ export class RelationAPI {
 	public readonly sourceIndex: string
 	public readonly targetIndex: string
 
-	readonly #select: Query<{ _target: string }>
-	readonly #insert: Method<{ _source: string; _target: string }>
-	readonly #delete: Method<{ _source: string }>
+	readonly #select: Query<{ _target: PrimaryKeyValue }>
+	readonly #insert: Method<{ _source: PrimaryKeyValue; _target: PrimaryKeyValue }>
+	readonly #delete: Method<{ _source: PrimaryKeyValue }>
 
 	public constructor(readonly db: SqlStorage, readonly relation: Relation) {
-		this.table = `${relation.source}/${relation.property}`
-		this.sourceIndex = `${relation.source}/${relation.property}/source`
-		this.targetIndex = `${relation.source}/${relation.property}/target`
+		this.table = `${relation.source}/${relation.sourceProperty}`
+		this.sourceIndex = `${relation.source}/${relation.sourceProperty}/source`
+		this.targetIndex = `${relation.source}/${relation.sourceProperty}/target`
 
-		const columns = [`_source TEXT NOT NULL`, `_target TEXT NOT NULL`]
+		const columns = [
+			`_source ${primitiveColumnTypes[relation.sourceType]} NOT NULL`,
+			`_target ${primitiveColumnTypes[relation.targetType]} NOT NULL`,
+		]
+
 		db.exec(`CREATE TABLE IF NOT EXISTS "${this.table}" (${columns.join(", ")})`)
 
 		db.exec(`CREATE INDEX IF NOT EXISTS "${this.sourceIndex}" ON "${this.table}" (_source)`)
@@ -583,20 +566,19 @@ export class RelationAPI {
 		)
 	}
 
-	public get(source: string): string[] {
+	public get(source: PrimaryKeyValue): PrimaryKeyValue[] {
 		const targets = this.#select.all([source])
 		return targets.map(({ _target: target }) => target)
 	}
 
-	public add(source: string, targets: PropertyValue) {
-		assert(Array.isArray(targets), "expected string[]")
+	public add(source: PrimaryKeyValue, targets: PrimaryKeyValue[]) {
+		assert(Array.isArray(targets), "expected PrimaryKey[]")
 		for (const target of targets) {
-			assert(typeof target === "string", "expected string[]")
 			this.#insert.run([source, target])
 		}
 	}
 
-	public delete(source: string) {
+	public delete(source: PrimaryKeyValue) {
 		this.#delete.run([source])
 	}
 }

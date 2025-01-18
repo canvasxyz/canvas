@@ -8,7 +8,6 @@ import {
 	Relation,
 	Model,
 	ModelValue,
-	PropertyValue,
 	PrimitiveType,
 	QueryParams,
 	WhereCondition,
@@ -20,39 +19,53 @@ import {
 	isPrimitiveValue,
 	validateModelValue,
 	PrimitiveProperty,
+	Config,
+	PrimaryKeyValue,
+	isPrimaryKey,
 } from "@canvas-js/modeldb"
 
 import {
 	encodePrimitiveValue,
 	encodeReferenceValue,
 	decodePrimitiveValue,
-	decodeRecord,
 	decodeReferenceValue,
 	encodeQueryParams,
 	PostgresPrimitiveValue,
+	encodePrimaryKey,
+	decodePrimaryKey,
+	fromBuffer,
 } from "./encoding.js"
 
 const primitiveColumnTypes = {
 	integer: "BIGINT",
-	float: "DECIMAL",
+	float: "DOUBLE PRECISION",
 	number: "DOUBLE PRECISION",
 	string: "TEXT",
 	bytes: "BYTEA",
 	boolean: "BOOLEAN",
-	json: "TEXT",
+	json: "JSONB",
 } satisfies Record<PrimitiveType, string>
 
-function getPropertyColumnType(model: Model, property: Property): string {
+function getPropertyColumnType(config: Config, model: Model, property: Property): string {
 	if (property.kind === "primitive") {
+		const type = primitiveColumnTypes[property.type]
+
 		if (property.name === model.primaryKey) {
 			assert(property.nullable === false)
-			return "TEXT PRIMARY KEY"
+			return `${type} PRIMARY KEY`
 		}
 
-		const type = primitiveColumnTypes[property.type]
 		return property.nullable ? type : `${type} NOT NULL`
 	} else if (property.kind === "reference") {
-		return property.nullable ? "TEXT" : "TEXT NOT NULL"
+		const target = config.models.find((model) => model.name === property.target)
+		assert(target !== undefined)
+
+		const targetPrimaryKey = target.properties.find((property) => property.name === target.primaryKey)
+		assert(targetPrimaryKey !== undefined)
+		assert(targetPrimaryKey.kind === "primitive")
+
+		const type = primitiveColumnTypes[targetPrimaryKey.type]
+		return property.nullable ? type : `${type} NOT NULL`
 	} else if (property.kind === "relation") {
 		throw new Error("internal error - relation properties don't map to columns")
 	} else {
@@ -60,72 +73,52 @@ function getPropertyColumnType(model: Model, property: Property): string {
 	}
 }
 
-const getPropertyColumn = (model: Model, property: Property) =>
-	`"${property.name}" ${getPropertyColumnType(model, property)}`
+const getPropertyColumn = (config: Config, model: Model, property: Property) =>
+	`"${property.name}" ${getPropertyColumnType(config, model, property)}`
 
 export class ModelAPI {
-	readonly #table: string
-	readonly #properties: Record<string, Property>
-
-	readonly #columns: string[]
-	readonly #columnNames: `"${string}"`[]
-	readonly #relations: Record<string, RelationAPI> = {}
-	readonly #primaryKeyName: string
-
-	constructor(
-		readonly client: pg.Client,
-		readonly model: Model,
-		columns: string[],
-		columnNames: `"${string}"`[],
-		relations: Record<string, RelationAPI> = {},
-		primaryKeyName: string,
-	) {
-		this.#table = model.name
-		this.#properties = Object.fromEntries(model.properties.map((property) => [property.name, property]))
-		this.#columns = columns
-		this.#columnNames = columnNames // quoted column names for non-relation properties
-		this.#relations = relations
-		this.#primaryKeyName = primaryKeyName
-	}
-
-	public static async initialize(client: pg.Client, model: Model, clear: boolean = false) {
-		let primaryKeyIndex: number | null = null
+	public static async initialize(client: pg.Client, config: Config, model: Model, clear: boolean = false) {
 		let primaryKey: PrimitiveProperty | null = null
-		let primaryKeyName: string | null
 
 		const columns: string[] = []
 		const columnNames: `"${string}"`[] = []
+		const references: Record<string, PrimitiveProperty> = {}
 		const relations: Record<string, RelationAPI> = {}
 
-		for (const [i, property] of model.properties.entries()) {
-			if (property.kind === "primitive" || property.kind === "reference") {
-				columns.push(getPropertyColumn(model, property))
+		for (const property of model.properties) {
+			if (property.kind === "primitive") {
+				columns.push(getPropertyColumn(config, model, property))
 				columnNames.push(`"${property.name}"`)
 
-				if (property.kind === "primitive" && model.primaryKey === property.name) {
-					primaryKeyIndex = i
+				if (model.primaryKey === property.name) {
 					primaryKey = property
 				}
+			} else if (property.kind === "reference") {
+				columns.push(getPropertyColumn(config, model, property))
+				columnNames.push(`"${property.name}"`)
+
+				const target = config.models.find((model) => model.name === property.target)
+				assert(target !== undefined)
+
+				const targetPrimaryKey = target.properties.find((property) => property.name === target.primaryKey)
+				assert(targetPrimaryKey !== undefined)
+				assert(targetPrimaryKey.kind === "primitive")
+
+				references[property.name] = targetPrimaryKey
 			} else if (property.kind === "relation") {
-				relations[property.name] = await RelationAPI.initialize(
-					client,
-					{
-						source: model.name,
-						property: property.name,
-						target: property.target,
-						indexed: false,
-					},
-					clear,
+				const relation = config.relations.find(
+					(relation) => relation.source === model.name && relation.sourceProperty === property.name,
 				)
+				assert(relation !== undefined, "internal error - relation not found")
+				relations[property.name] = await RelationAPI.initialize(client, relation, clear)
 			} else {
 				signalInvalidType(property)
 			}
 		}
 
 		assert(primaryKey !== null, "expected primaryKey !== null")
-		assert(primaryKeyIndex !== null, "expected primaryKeyIndex !== null")
 
-		const api = new ModelAPI(client, model, columns, columnNames, relations, primaryKey.name)
+		const api = new ModelAPI(client, config, model, columns, columnNames, references, relations, primaryKey.name)
 
 		const queries = []
 
@@ -133,6 +126,7 @@ export class ModelAPI {
 		if (clear) {
 			queries.push(`DROP TABLE IF EXISTS "${api.#table}"`)
 		}
+
 		queries.push(`CREATE TABLE IF NOT EXISTS "${api.#table}" (${api.#columns.join(", ")})`)
 
 		// Create indexes
@@ -141,57 +135,111 @@ export class ModelAPI {
 			const indexColumns = index.map((name) => `"${name}"`)
 			queries.push(`CREATE INDEX IF NOT EXISTS "${indexName}" ON "${api.#table}" (${indexColumns.join(", ")})`)
 		}
+
 		await client.query(queries.join("; "))
 
 		return api
 	}
 
-	public async get(key: string): Promise<ModelValue | null> {
-		return (await this.getMany([key]))[0]
+	readonly #table: string
+	readonly #properties: Record<string, Property>
+
+	readonly #columns: string[]
+	readonly #columnNames: `"${string}"`[]
+	readonly #relations: Record<string, RelationAPI>
+	readonly #references: Record<string, PrimitiveProperty>
+	readonly #primaryKeyName: string
+
+	readonly #update: string
+	readonly #insert: string
+	readonly #select: string
+	readonly #selectMany: string
+
+	constructor(
+		readonly client: pg.Client,
+		readonly config: Config,
+		readonly model: Model,
+		columns: string[],
+		columnNames: `"${string}"`[],
+		references: Record<string, PrimitiveProperty>,
+		relations: Record<string, RelationAPI>,
+		primaryKeyName: string,
+	) {
+		this.#table = model.name
+		this.#properties = Object.fromEntries(model.properties.map((property) => [property.name, property]))
+		this.#columns = columns
+		this.#columnNames = columnNames // quoted column names for non-relation properties
+		this.#references = references
+		this.#relations = relations
+		this.#primaryKeyName = primaryKeyName
+
+		const insertNames = this.#columnNames.join(", ")
+		const insertParams = this.#columnNames.map((name: string, i: number) => `$${i + 1}`)
+		this.#insert = `INSERT INTO "${this.#table}" (${insertNames}) VALUES (${insertParams}) ON CONFLICT DO NOTHING`
+
+		const updateParams = this.#columnNames.map((name: string, i: number) => `$${i + 1}`)
+		const updateEntries = Array.from(zip(this.#columnNames, updateParams)).map(([name, param]) => `${name} = ${param}`)
+		const updateWhere = `"${this.#primaryKeyName}" = $${updateParams.length + 1}`
+		this.#update = `UPDATE "${this.#table}" SET ${updateEntries.join(", ")} WHERE ${updateWhere}`
+
+		const selectColumns = this.#columnNames.join(", ")
+		this.#select = `SELECT ${selectColumns} FROM "${this.#table}" WHERE "${this.#primaryKeyName}" = $1`
+		this.#selectMany = `SELECT ${selectColumns} FROM "${this.#table}" WHERE "${this.#primaryKeyName}" = ANY($1)`
 	}
 
-	public async getMany(keys: string[]): Promise<(ModelValue | null)[]> {
-		let queryResult
-		if (keys.length === 1) {
-			queryResult = await this.client.query(
-				`SELECT ${this.#columnNames.join(", ")} FROM "${this.#table}" WHERE "${this.#primaryKeyName}" = $1`,
-				[keys[0]],
-			)
-		} else {
-			queryResult = await this.client.query(
-				`SELECT ${this.#columnNames.join(", ")} FROM "${this.#table}" WHERE "${this.#primaryKeyName}" = ANY($1)`,
-				[keys],
-			)
+	public async get(key: PrimaryKeyValue): Promise<ModelValue | null> {
+		const {
+			rows: [result = null],
+		} = await this.client.query<Record<string, PostgresPrimitiveValue>, [PrimaryKeyValue]>(this.#select, [key])
+		if (result === null) {
+			return null
 		}
 
-		const relations = await mapValuesAsync(this.#relations, (api) => api.getMany(keys))
-
-		const rowsByKey: Record<string, ModelValue> = {}
-		for (const row of queryResult.rows) {
-			const rowKey = row[this.#primaryKeyName]
-			assert(typeof rowKey === "string", 'expected typeof primaryKey === "string"')
-
-			const rowRelations: Record<string, string[]> = {}
-			for (const relationName of Object.keys(this.#relations)) {
-				rowRelations[relationName] = relations[relationName][rowKey] ?? []
-			}
-
-			rowsByKey[rowKey] = {
-				...decodeRecord(this.model, row),
-				...rowRelations,
-			}
+		const relationValues = await mapValuesAsync(this.#relations, (api) => api.get(key))
+		return {
+			...this.decodeRecord(result),
+			...relationValues,
 		}
+	}
 
-		return keys.map((key) => rowsByKey[key] ?? null)
+	public async getMany(keys: PrimaryKeyValue[]): Promise<(ModelValue | null)[]> {
+		return await Promise.all(keys.map((key) => this.get(key)))
+
+		// let queryResult: pg.QueryResult<Record<string, PostgresPrimitiveValue>>
+		// if (keys.length === 0) {
+		// 	return []
+		// } else if (keys.length === 1) {
+		// 	queryResult = await this.client.query(this.#select, keys)
+		// } else {
+		// 	queryResult = await this.client.query(this.#selectMany, [keys])
+		// }
+
+		// const relations = await mapValuesAsync(this.#relations, (api) => api.getMany(keys))
+
+		// const rowsByKey: Record<string, ModelValue> = {}
+		// for (const row of queryResult.rows) {
+		// 	const rowKey = row[this.#primaryKeyName] as PrimaryKeyValue
+
+		// 	const rowRelations: Record<string, string[]> = {}
+		// 	for (const relationName of Object.keys(this.#relations)) {
+		// 		rowRelations[relationName] = relations[relationName][rowKey] ?? []
+		// 	}
+
+		// 	rowsByKey[rowKey] = {
+		// 		...decodeRecord(this.model, row),
+		// 		...rowRelations,
+		// 	}
+		// }
+
+		// return keys.map((key) => rowsByKey[key] ?? null)
 	}
 
 	public async set(value: ModelValue) {
 		validateModelValue(this.model, value)
-		const key = value[this.#primaryKeyName]
-		assert(typeof key === "string", 'expected typeof primaryKey === "string"')
+		const key = value[this.#primaryKeyName] as PrimaryKeyValue
 
 		// encodeRecordParams
-		const values: Array<string | number | boolean | Uint8Array | null> = []
+		const values: Array<PostgresPrimitiveValue> = []
 		for (const property of this.model.properties) {
 			const propertyValue = value[property.name]
 			if (propertyValue === undefined) {
@@ -201,7 +249,8 @@ export class ModelAPI {
 			if (property.kind === "primitive") {
 				values.push(encodePrimitiveValue(this.model.name, property, value[property.name]))
 			} else if (property.kind === "reference") {
-				values.push(encodeReferenceValue(this.model.name, property, value[property.name]))
+				const target = this.#references[property.name]
+				values.push(encodeReferenceValue(this.model.name, property, value[property.name], target))
 			} else if (property.kind === "relation") {
 				assert(Array.isArray(value[property.name]))
 				continue
@@ -211,33 +260,14 @@ export class ModelAPI {
 		}
 
 		// TODO: convert to upsert for fewer queries
-		const existingRecord = (
-			await this.client.query(
-				`SELECT ${this.#columnNames.join(", ")} FROM "${this.#table}" WHERE "${this.#primaryKeyName}" = $1`,
-				[key],
-			)
-		).rows[0]
+		const {
+			rows: [existingRecord],
+		} = await this.client.query(this.#select, [encodePrimaryKey(key)])
 
 		if (existingRecord === undefined) {
-			const insertNames = this.#columnNames.join(", ")
-			const insertParams = this.#columnNames.map((name: string, i: number) => `$${i + 1}`)
-
-			await this.client.query<{}, any[]>(
-				`INSERT INTO "${this.#table}" (${insertNames}) VALUES (${insertParams}) ON CONFLICT DO NOTHING`,
-				values,
-			)
+			await this.client.query<{}, any[]>(this.#insert, values)
 		} else {
-			const updateParams = this.#columnNames.map((name: string, i: number) => `$${i + 1}`)
-			const updateEntries = Array.from(zip(this.#columnNames, updateParams)).map(
-				([name, param]) => `${name} = ${param}`,
-			)
-
-			await this.client.query<{}, any[]>(
-				`UPDATE "${this.#table}" SET ${updateEntries.join(", ")} WHERE "${this.#primaryKeyName}" = $${
-					updateParams.length + 1
-				}`,
-				values.concat([key]),
-			)
+			await this.client.query<{}, any[]>(this.#update, values.concat([encodePrimaryKey(key)]))
 		}
 
 		for (const [name, relation] of Object.entries(this.#relations)) {
@@ -245,13 +275,16 @@ export class ModelAPI {
 				await relation.delete(key)
 			}
 
+			assert(Array.isArray(value[name]) && value[name].every(isPrimaryKey))
 			await relation.add(key, value[name])
 		}
 	}
 
-	public async delete(key: string) {
+	public async delete(key: PrimaryKeyValue) {
 		// TODO: optimize to single query
-		await this.client.query(`DELETE FROM "${this.#table}" WHERE "${this.#primaryKeyName}" = $1`, [key])
+		await this.client.query(`DELETE FROM "${this.#table}" WHERE "${this.#primaryKeyName}" = $1`, [
+			encodePrimaryKey(key),
+		])
 
 		for (const relation of Object.values(this.#relations)) {
 			await relation.delete(key)
@@ -343,16 +376,16 @@ export class ModelAPI {
 		record: Record<string, PostgresPrimitiveValue>,
 		relations: Relation[],
 	): Promise<ModelValue> {
-		const key = record[this.#primaryKeyName]
-		assert(typeof key === "string", 'expected typeof primaryKey === "string"')
+		const key = record[this.#primaryKeyName] as PrimaryKeyValue
 
-		const value: ModelValue = {}
+		const value = this.decodeRecord(record)
 		for (const [propertyName, propertyValue] of Object.entries(record)) {
 			const property = this.#properties[propertyName]
 			if (property.kind === "primitive") {
 				value[propertyName] = decodePrimitiveValue(this.model.name, property, propertyValue)
 			} else if (property.kind === "reference") {
-				value[propertyName] = decodeReferenceValue(this.model.name, property, propertyValue)
+				const target = this.#references[property.name]
+				value[propertyName] = decodeReferenceValue(this.model.name, property, propertyValue, target)
 			} else if (property.kind === "relation") {
 				throw new Error("internal error")
 			} else {
@@ -362,7 +395,7 @@ export class ModelAPI {
 
 		// TODO: optimize to single query
 		for (const relation of relations) {
-			value[relation.property] = await this.#relations[relation.property].get(key)
+			value[relation.sourceProperty] = await this.#relations[relation.sourceProperty].get(key)
 		}
 
 		return value
@@ -439,12 +472,7 @@ export class ModelAPI {
 			if (property.kind === "primitive" || property.kind === "reference") {
 				columns.push(`"${name}"`)
 			} else if (property.kind === "relation") {
-				relations.push({
-					source: this.model.name,
-					property: name,
-					target: property.target,
-					indexed: this.model.indexes.some((index) => index.length === 1 && index[0] === name),
-				})
+				relations.push(this.#relations[name].relation)
 			} else {
 				signalInvalidType(property)
 			}
@@ -541,23 +569,23 @@ export class ModelAPI {
 					const reference = expression
 					if (reference === null) {
 						return [`"${name}" ISNULL`]
-					} else if (typeof reference === "string") {
+					} else if (isPrimaryKey(reference)) {
 						const p = ++i
 						params[p - 1] = reference
 						return [`"${name}" = $${p}`]
 					} else {
-						throw new Error("invalid reference value (expected string | null)")
+						throw new Error("invalid reference value (expected primary key)")
 					}
 				} else if (isNotExpression(expression)) {
 					const reference = expression.neq
 					if (reference === null) {
 						return [`"${name}" NOTNULL`]
-					} else if (typeof reference === "string") {
+					} else if (isPrimaryKey(reference)) {
 						const p = ++i
 						params[p - 1] = reference
 						return [`"${name}" != $${p}`]
 					} else {
-						throw new Error("invalid reference value (expected string | null)")
+						throw new Error("invalid reference value (expected primary key)")
 					}
 				} else if (isRangeExpression(expression)) {
 					throw new Error("cannot use range expressions on reference values")
@@ -568,10 +596,10 @@ export class ModelAPI {
 				const relationTable = this.#relations[property.name].table
 				if (isLiteralExpression(expression)) {
 					const references = expression
-					assert(Array.isArray(references), "invalid relation value (expected string[])")
+					assert(Array.isArray(references), "invalid relation value (expected PrimaryKeyValue[])")
 					const targets: string[] = []
 					for (const [j, reference] of references.entries()) {
-						assert(typeof reference === "string", "invalid relation value (expected string[])")
+						assert(typeof reference === "string", "invalid relation value (expected PrimaryKeyValue[])")
 						const p = ++i
 						params[p - 1] = reference
 						targets.push(
@@ -581,10 +609,10 @@ export class ModelAPI {
 					return targets.length > 0 ? [targets.join(" AND ")] : []
 				} else if (isNotExpression(expression)) {
 					const references = expression.neq
-					assert(Array.isArray(references), "invalid relation value (expected string[])")
+					assert(Array.isArray(references), "invalid relation value (expected PrimaryKeyValue[])")
 					const targets: string[] = []
 					for (const [j, reference] of references.entries()) {
-						assert(typeof reference === "string", "invalid relation value (expected string[])")
+						assert(typeof reference === "string", "invalid relation value (expected PrimaryKeyValue[])")
 						const p = ++i
 						params[p - 1] = reference
 						targets.push(
@@ -608,6 +636,25 @@ export class ModelAPI {
 			return [`${filters.map((filter) => `(${filter})`).join(" AND ")}`, params]
 		}
 	}
+
+	private decodeRecord(record: Record<string, PostgresPrimitiveValue>): ModelValue {
+		const value: ModelValue = {}
+
+		for (const property of this.model.properties) {
+			if (property.kind === "primitive") {
+				value[property.name] = decodePrimitiveValue(this.model.name, property, record[property.name])
+			} else if (property.kind === "reference") {
+				const targetProperty = this.#references[property.name]
+				value[property.name] = decodeReferenceValue(this.model.name, property, record[property.name], targetProperty)
+			} else if (property.kind === "relation") {
+				continue
+			} else {
+				signalInvalidType(property)
+			}
+		}
+
+		return value
+	}
 }
 
 export class RelationAPI {
@@ -615,69 +662,110 @@ export class RelationAPI {
 	public readonly sourceIndex: string
 	public readonly targetIndex: string
 
+	readonly #insert
+	readonly #delete: string
+	readonly #select: string
+	readonly #selectMany: string
+
 	public constructor(readonly client: pg.Client, readonly relation: Relation) {
-		this.table = `${relation.source}/${relation.property}`
-		this.sourceIndex = `${relation.source}/${relation.property}/source`
-		this.targetIndex = `${relation.source}/${relation.property}/target`
+		this.table = `${relation.source}/${relation.sourceProperty}`
+		this.sourceIndex = `${relation.source}/${relation.sourceProperty}/source`
+		this.targetIndex = `${relation.source}/${relation.sourceProperty}/target`
+
+		this.#insert = `INSERT INTO "${this.table}" (_source, _target) VALUES ($1, $2)`
+		this.#delete = `DELETE FROM "${this.table}" WHERE _source = $1`
+		this.#select = `SELECT _source, _target FROM "${this.table}" WHERE _source = $1`
+		this.#selectMany = `SELECT _source, _target FROM "${this.table}" WHERE _source = ANY($1)`
 	}
 
 	public static async initialize(client: pg.Client, relation: Relation, clear: boolean) {
 		// Initialize tables
 		const relationApi = new RelationAPI(client, relation)
-		const columns = [`_source TEXT NOT NULL`, `_target TEXT NOT NULL`]
+		const columns = [
+			`_source ${primitiveColumnTypes[relation.sourceType]} NOT NULL`,
+			`_target ${primitiveColumnTypes[relation.targetType]} NOT NULL`,
+		]
 
 		const queries = []
 
 		if (clear) {
 			queries.push(`DROP TABLE IF EXISTS "${relationApi.table}"`)
 		}
+
 		queries.push(`CREATE TABLE IF NOT EXISTS "${relationApi.table}" (${columns.join(", ")})`)
 		queries.push(`CREATE INDEX IF NOT EXISTS "${relationApi.sourceIndex}" ON "${relationApi.table}" (_source)`)
 		if (relation.indexed) {
 			queries.push(`CREATE INDEX IF NOT EXISTS "${relationApi.targetIndex}" ON "${relationApi.table}" (_target)`)
 		}
+
 		await client.query(queries.join(";\n"))
 
 		return relationApi
 	}
 
-	public async get(source: string): Promise<string[]> {
-		return (await this.getMany([source]))[source]
+	public async get(source: PrimaryKeyValue): Promise<PrimaryKeyValue[]> {
+		const { rows } = await this.client.query<
+			{ _source: PostgresPrimitiveValue; _target: PostgresPrimitiveValue },
+			[PostgresPrimitiveValue]
+		>(this.#select, [encodePrimaryKey(source)])
+
+		return rows.map((row) => this.decodeRelationTarget(row._target))
 	}
 
-	public async getMany(sources: string[]): Promise<Record<string, string[]>> {
-		// postgres doesn't know at planning time if the array has a single string
-		let queryResult: { rows: { _source: string; _target: string }[] }
-		if (sources.length === 1) {
-			queryResult = await this.client.query<{ _source: string; _target: string }>(
-				`SELECT _source, _target FROM "${this.table}" WHERE _source = $1`,
-				[sources[0]],
-			)
+	private decodeRelationTarget(target: PostgresPrimitiveValue): PrimaryKeyValue {
+		if (this.relation.targetType === "integer") {
+			assert(typeof target === "string", "internal error - expected integer primary key")
+			return parseInt(target, 10)
+		} else if (this.relation.targetType === "string") {
+			assert(typeof target === "string", "internal error - expected string primary key")
+			return target
+		} else if (this.relation.targetType === "bytes") {
+			if (Buffer.isBuffer(target)) {
+				return fromBuffer(target)
+			} else {
+				throw new Error("interal error - expected buffer primary key")
+			}
 		} else {
-			queryResult = await this.client.query<{ _source: string; _target: string }>(
-				`SELECT _source, _target FROM "${this.table}" WHERE _source = ANY($1)`,
-				[sources],
-			)
+			throw new Error("internal error - invalid relation target type")
 		}
-
-		const results: Record<string, string[]> = {}
-		for (const row of queryResult.rows) {
-			results[row._source] ||= []
-			results[row._source].push(row._target)
-		}
-		return results
 	}
 
-	public async add(source: string, targets: PropertyValue) {
-		assert(Array.isArray(targets), "expected string[]")
+	public async getMany(sources: PrimaryKeyValue[]): Promise<PrimaryKeyValue[][]> {
+		return await Promise.all(sources.map((source) => this.get(source)))
+
+		// // postgres doesn't know at planning time if the array has a single string
+		// let queryResult: pg.QueryResult<{ _source: PrimaryKeyValue; _target: PrimaryKeyValue }>
+		// if (sources.length === 0) {
+		// 	return []
+		// } else if (sources.length === 1) {
+		// 	queryResult = await this.client.query<{ _source: PrimaryKeyValue; _target: PrimaryKeyValue }, [PrimaryKeyValue]>(
+		// 		this.#select,
+		// 		[sources[0]],
+		// 	)
+		// } else {
+		// 	queryResult = await this.client.query<
+		// 		{ _source: PrimaryKeyValue; _target: PrimaryKeyValue },
+		// 		[PrimaryKeyValue[]]
+		// 	>(this.#selectMany, [sources])
+		// }
+
+		// const results: Record<string, string[]> = {}
+		// for (const row of queryResult.rows) {
+		// 	results[row._source] ||= []
+		// 	results[row._source].push(row._target)
+		// }
+
+		// return results
+	}
+
+	public async add(source: PrimaryKeyValue, targets: PrimaryKeyValue[]) {
 		// TODO: optimize to single query
 		for (const target of targets) {
-			assert(typeof target === "string", "expected string[]")
-			await this.client.query(`INSERT INTO "${this.table}" (_source, _target) VALUES ($1, $2)`, [source, target])
+			await this.client.query(this.#insert, [encodePrimaryKey(source), encodePrimaryKey(target)])
 		}
 	}
 
-	public async delete(source: string) {
-		await this.client.query(`DELETE FROM "${this.table}" WHERE _source = $1`, [source])
+	public async delete(source: PrimaryKeyValue) {
+		await this.client.query(this.#delete, [encodePrimaryKey(source)])
 	}
 }
