@@ -378,7 +378,7 @@ export class ModelAPI {
 	): Promise<ModelValue> {
 		const key = record[this.#primaryKeyName] as PrimaryKeyValue
 
-		const value = this.decodeRecord(record)
+		const value: ModelValue = {}
 		for (const [propertyName, propertyValue] of Object.entries(record)) {
 			const property = this.#properties[propertyName]
 			if (property.kind === "primitive") {
