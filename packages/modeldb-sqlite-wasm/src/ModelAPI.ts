@@ -566,8 +566,8 @@ export class RelationAPI {
 		this.targetIndex = `${relation.source}/${relation.sourceProperty}/target`
 
 		const columns = [
-			`_source ${primitiveColumnTypes[relation.sourceType]} NOT NULL`,
-			`_target ${primitiveColumnTypes[relation.targetType]} NOT NULL`,
+			`_source ${primitiveColumnTypes[relation.sourcePrimaryKey.type]} NOT NULL`,
+			`_target ${primitiveColumnTypes[relation.targetPrimaryKey.type]} NOT NULL`,
 		]
 
 		db.exec(`CREATE TABLE IF NOT EXISTS "${this.table}" (${columns.join(", ")})`)

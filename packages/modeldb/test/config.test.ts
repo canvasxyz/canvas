@@ -70,9 +70,9 @@ test("parse config", (t) => {
 			{
 				source: "room",
 				sourceProperty: "members",
-				sourceType: "string",
+				sourcePrimaryKey: { name: "id", kind: "primitive", type: "string", nullable: false },
 				target: "user",
-				targetType: "string",
+				targetPrimaryKey: { name: "id", kind: "primitive", type: "string", nullable: false },
 				indexed: true,
 			},
 		],

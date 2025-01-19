@@ -37,9 +37,9 @@ export type Property = PrimitiveProperty | ReferenceProperty | RelationProperty
 export type Relation = {
 	source: string
 	sourceProperty: string
-	sourceType: PrimitiveType
+	sourcePrimaryKey: PrimitiveProperty
 	target: string
-	targetType: PrimitiveType
+	targetPrimaryKey: PrimitiveProperty
 	indexed: boolean
 }
 
