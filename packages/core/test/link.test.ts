@@ -10,7 +10,7 @@ test("link and unlink database items", async (t) => {
 		topic: "com.example.app",
 		contract: {
 			models: {
-				game: { id: "primary", player: "@players[]", manager: "@player[]", observers: "@player[]", status: "json" },
+				game: { id: "primary", player: "@player[]", manager: "@player[]", observers: "@player[]", status: "json" },
 				player: { id: "primary", game: "@game", status: "json" },
 			},
 			actions: {
