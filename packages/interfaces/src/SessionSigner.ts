@@ -34,8 +34,12 @@ export interface SessionSigner<AuthorizationData = any> {
 	) => Awaitable<{ payload: Session<AuthorizationData>; signer: Signer<Action | Session<AuthorizationData> | Snapshot> }>
 
 	/**
-	 * Verify that `session.data` authorizes `session.publicKey`
-	 * to take actions on behalf of the user `session.did`
+	 * Request a signature from the signer's Wallet, and use it to return a session.
+	 */
+	authorize(data: AbstractSessionData, authorizationData?: AuthorizationData): Awaitable<Session<AuthorizationData>>
+
+	/**
+	 * Verify that `session.data` authorizes `session.publicKey` to take actions on behalf of the user `session.did`.
 	 */
 	verifySession: (topic: string, session: Session<AuthorizationData>) => Awaitable<void>
 

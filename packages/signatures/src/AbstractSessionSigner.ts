@@ -57,31 +57,62 @@ export abstract class AbstractSessionSigner<AuthorizationData, WalletAddress ext
 		return this.getAddressFromDid(await this.getDid())
 	}
 
+	/**
+	 * Get a new Session<AuthorizationData> by asking the signer's wallet to 
+	 * produce an authorization signature.
+	 */
 	public abstract authorize(data: AbstractSessionData): Awaitable<Session<AuthorizationData>>
 
-	/*
-	 * Create a new session and cache it for the given `topic`.
+	/**
+	 * Start a new session, either by requesting a signature from a wallet right now,
+	 * or by using a provided AuthorizationData and timestamp (for services like Farcaster).
 	 */
 	public async newSession(
 		topic: string,
+		authorizationData?: AuthorizationData,
+		timestamp?: number
 	): Promise<{ payload: Session<AuthorizationData>; signer: Signer<Action | Session<AuthorizationData> | Snapshot> }> {
 		const signer = this.scheme.create()
 		const did = await this.getDid()
-		const session = await this.authorize({
+
+		const sessionData = {
 			topic,
 			did,
 			publicKey: signer.publicKey,
 			context: {
-				timestamp: Date.now(),
+				timestamp: timestamp ?? Date.now(),
 				duration: this.sessionDuration,
 			},
-		})
+		}
+		const session = authorizationData
+			? await this.getSessionFromAuthorizationData(sessionData, authorizationData) 
+			: await this.authorize(sessionData)
 
 		const key = `canvas/${topic}/${did}`
 		this.#cache.set(key, { session, signer })
 		target.set(key, json.stringify({ session, ...signer.export() }))
 
 		return { payload: session, signer }
+	}
+
+	/**
+	 * Create and validate a Session<AuthorizationData> from a preexisting, externally
+	 * provided AuthorizationData.
+	 */
+	public async getSessionFromAuthorizationData(data: AbstractSessionData, authorizationData: AuthorizationData): Promise<Session<AuthorizationData>> {
+		const { did, publicKey, topic, context: { duration, timestamp } } = data
+
+		const session: Session<AuthorizationData> = {
+			type: "session",
+			did: did,
+			publicKey: publicKey,
+			authorizationData,
+			context: duration ? { duration, timestamp } : { timestamp },
+		}
+
+		await this.verifySession(topic, session)
+
+		return session
 	}
 
 	/*
