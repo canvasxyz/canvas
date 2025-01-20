@@ -17,9 +17,8 @@ When Canvas receives a new message (either by syncing with another peer or gener
 The algorithm is as follows:
 
 1. If the message has no parents, then allocate a new branch number and return it.
-2. Out of the parent messages, select parent with the lowest clock value. Call this the "first parent" (TODO: it might be useful to agree on a terminology for this).
-3. If the "first parent" is the latest message on its branch (i.e. the peer has not seen any of its "children" yet), then return this parent's branch number.
-4. Otherwise, allocate a new branch number.
+2. If the parent with the highest branch value is the latest message on its branch (i.e. the peer has not seen any of its "children" yet), then return this parent's branch number.
+3. Otherwise, allocate a new branch number.
 
 To allocate a new branch number, choose the current maximum branch number across all messages and add `1`.
 
