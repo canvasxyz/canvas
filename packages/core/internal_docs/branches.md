@@ -24,19 +24,40 @@ To allocate a new branch number, choose the current maximum branch number across
 
 ### Example
 
+1. Add a message A. This message has no parents, so allocate a new branch `0`.
+
+![](./images/step_1.svg)
+
+2. Add a message B with one parent A. This message has one parent who has no other children, so give it branch `0`.
+
+![](./images/step_2.svg)
+
+3. Add a message C with parent B. This message also has one parent (B) who has no other children, so give it branch `0`.
+
+![](./images/step_3.svg)
+
+4. Add a message D with parent A. A already has a child (B) so allocate a new branch `1`.
+
+![](./images/step_4.svg)
+
+5. Add a message E with parents B and D. D has a higher branch number (`1`) than B (`0`). D does not have any other children, so E's branch number is `1`.
+
+![](./images/step_5.svg)
+
+6. Add a message F with one parent E. E does not have any other children, so F's branch number is `1`.
+
+![](./images/step_6.svg)
+
+7. Add a message G with parents C and E. Out of the two parents, E has the highest branch number. E already has a child, so allocate a new branch `2`.
+
+![](./images/step_7.svg)
+
+Some observations:
+
+- For a given peer, there is at most one message with a particular combination of clock and branch values.
+- The branch number depends on the order in which messages have been seen.
+
 <!--
-
-how are branch numbers calculated?
-could be a markdown file inside `packages/core`
-flowcharts?
-screenshots of the graph from d3
-
-branches
-
-- model description
-- what do the columns mean
-- how are branch numbers calculated
-- when do we make a new branch
 
 branch merges
 
