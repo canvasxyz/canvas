@@ -1,6 +1,6 @@
 # Branches
 
-In Canvas, the message log is an acyclic directed graph. Messages can have multiple "parents". This results in messages being partially ordered, i.e. some messages are children/ancestors of each other and some occur concurrently. Inside our implementation of Runtime and GossipLog we keep track of the "branch number" of each message and effect. Note that unlike the clock number, the branch number is local to each peer. The same message (i.e. same contents, same transitive set of parents) may have a different branch number on different peers.
+In Canvas, the message log is an acyclic directed graph. Messages can have multiple "parents". This results in messages being partially ordered, i.e. some messages are children/ancestors of each other and some occur concurrently. To keep track of this branching behaviour, Canvas peers assign a "branch number" to each incoming message. Note that this property is local to each peer - on different peers, the same message may have a different branch number.
 
 This document will explain how branch numbers are determined and then explain how they are used within Canvas. Attention will be given to the data model and algorithms used.
 
@@ -52,23 +52,8 @@ To allocate a new branch number, choose the current maximum branch number across
 
 ![](./images/step_7.svg)
 
-Some observations:
+## How branch numbers are used
 
-- For a given peer, there is at most one message with a particular combination of clock and branch values.
-- The branch number depends on the order in which messages have been seen.
+Currently, Canvas does not internally use branch numbers. In the past we have experimented with using the branch number to optimise parts of the Canvas algorithm, see https://github.com/canvasxyz/canvas/pull/304.
 
-<!--
-
-branch merges
-
-- what do the columns mean
-- where/how do we use this table?
-
-show a graph
-and the corresponding values of the effects/branch merges tables
-
-how is model state calculated?
-with and without versions
-
-visualise how versions work
-tables? -->
+Branch numbers can be used to help generate graph layouts for displaying Canvas message logs. On a given peer, each pair of `(clock, branch)` has at most one message associated with it.
