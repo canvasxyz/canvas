@@ -28,10 +28,16 @@ export interface SessionSigner<AuthorizationData = any> {
 	getSession: (
 		topic: string,
 		options?: { did?: DidIdentifier } | { address: string },
-	) => Awaitable<{ payload: Session<AuthorizationData>; signer: Signer<Action | Session<AuthorizationData> | Snapshot> } | null>
+	) => Awaitable<{
+		payload: Session<AuthorizationData>
+		signer: Signer<Action | Session<AuthorizationData> | Snapshot>
+	} | null>
 	newSession: (
 		topic: string,
-	) => Awaitable<{ payload: Session<AuthorizationData>; signer: Signer<Action | Session<AuthorizationData> | Snapshot> }>
+	) => Awaitable<{
+		payload: Session<AuthorizationData>
+		signer: Signer<Action | Session<AuthorizationData> | Snapshot>
+	}>
 
 	/**
 	 * Request a signature from the signer's Wallet, and use it to return a session.

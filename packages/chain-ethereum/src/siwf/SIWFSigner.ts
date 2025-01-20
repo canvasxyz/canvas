@@ -6,12 +6,7 @@ import { AbstractSessionSigner, ed25519 } from "@canvas-js/signatures"
 import { assert, DAYS } from "@canvas-js/utils"
 
 import type { SIWFSessionData, SIWFMessage } from "./types.js"
-import {
-	validateSIWFSessionData,
-	prepareSIWFMessage,
-	parseAddress,
-	addressPattern,
-} from "./utils.js"
+import { validateSIWFSessionData, prepareSIWFMessage, parseAddress, addressPattern } from "./utils.js"
 
 type AbstractSigner = {
 	getAddress(): Awaitable<string>
@@ -78,11 +73,20 @@ export class SIWFSigner extends AbstractSessionSigner<SIWFSessionData> {
 		// that ensure expirationTime and notBefore are around issuedAt.
 		const SIXTY_MINUTES = 60 * 60 * 1000
 
-		assert(new Date(authorizationData.issuedAt).valueOf() === new Date(timestamp).valueOf(), "issuedAt should match timestamp")
+		assert(
+			new Date(authorizationData.issuedAt).valueOf() === new Date(timestamp).valueOf(),
+			"issuedAt should match timestamp",
+		)
 		assert(new Date(authorizationData.expirationTime) >= new Date(timestamp), "issuedAt cannot be before timestamp")
-		assert(new Date(authorizationData.expirationTime) < new Date(timestamp + SIXTY_MINUTES), "issuedAt is too far after timestamp")
+		assert(
+			new Date(authorizationData.expirationTime) < new Date(timestamp + SIXTY_MINUTES),
+			"issuedAt is too far after timestamp",
+		)
 		assert(new Date(authorizationData.notBefore) <= new Date(timestamp), "notBefore cannot be after timestamp")
-		assert(new Date(authorizationData.notBefore) > new Date(timestamp - SIXTY_MINUTES), "notBefore too far before timestamp")
+		assert(
+			new Date(authorizationData.notBefore) > new Date(timestamp - SIXTY_MINUTES),
+			"notBefore too far before timestamp",
+		)
 
 		// TODO
 		console.log(publicKey)

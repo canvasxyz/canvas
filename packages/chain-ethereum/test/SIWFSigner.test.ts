@@ -15,7 +15,9 @@ test("create and verify session using external signature", async (t) => {
 	const farcasterSignerAddress = "0xf0d7b86B8DAEA35903e5ecb1C90dFAc41CBEC9DF"
 
 	const authorizationData: SIWFSessionData = {
-		signature: getBytes("0x22f2f6076df82f3bc78d2b0a1e79112511571278d785c7df6b25cda668c5bcae410890c728796a15da5fd1b70572b1cb6f02fc22fa502e79a200affd88d772c71b"),
+		signature: getBytes(
+			"0x22f2f6076df82f3bc78d2b0a1e79112511571278d785c7df6b25cda668c5bcae410890c728796a15da5fd1b70572b1cb6f02fc22fa502e79a200affd88d772c71b",
+		),
 		domain: "immune-haddock-completely.ngrok-free.app",
 		farcasterSignerAddress,
 		// siweVersion: "1",
@@ -24,7 +26,7 @@ test("create and verify session using external signature", async (t) => {
 		fid: "773313",
 		issuedAt: "2025-01-17T16:10:11.563Z",
 		expirationTime: "2025-01-17T16:20:11.551Z",
-		notBefore: "2025-01-17T16:10:11.551Z",		
+		notBefore: "2025-01-17T16:10:11.551Z",
 	}
 	const timestamp = new Date(authorizationData.issuedAt).valueOf()
 

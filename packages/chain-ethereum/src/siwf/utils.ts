@@ -21,15 +21,18 @@ export function validateSIWFSessionData(authorizationData: unknown): authorizati
 		return false
 	}
 
-	const { signature, domain, farcasterSignerAddress, canvasNonce, fid, issuedAt, expirationTime, notBefore } = authorizationData as Record<string, any>
-	return signature instanceof Uint8Array 
-		&& typeof domain === "string" 
-		&& typeof farcasterSignerAddress === "string" 
-		&& typeof canvasNonce === "string"
-		&& typeof fid === "string"
-		&& typeof issuedAt === "string"
-		&& typeof expirationTime === "string"
-		&& typeof notBefore === "string"
+	const { signature, domain, farcasterSignerAddress, canvasNonce, fid, issuedAt, expirationTime, notBefore } =
+		authorizationData as Record<string, any>
+	return (
+		signature instanceof Uint8Array &&
+		typeof domain === "string" &&
+		typeof farcasterSignerAddress === "string" &&
+		typeof canvasNonce === "string" &&
+		typeof fid === "string" &&
+		typeof issuedAt === "string" &&
+		typeof expirationTime === "string" &&
+		typeof notBefore === "string"
+	)
 }
 
 export function prepareSIWFMessage(message: SIWFMessage): string {

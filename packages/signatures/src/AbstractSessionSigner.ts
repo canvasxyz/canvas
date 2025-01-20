@@ -58,7 +58,7 @@ export abstract class AbstractSessionSigner<AuthorizationData, WalletAddress ext
 	}
 
 	/**
-	 * Get a new Session<AuthorizationData> by asking the signer's wallet to 
+	 * Get a new Session<AuthorizationData> by asking the signer's wallet to
 	 * produce an authorization signature.
 	 */
 	public abstract authorize(data: AbstractSessionData): Awaitable<Session<AuthorizationData>>
@@ -70,7 +70,7 @@ export abstract class AbstractSessionSigner<AuthorizationData, WalletAddress ext
 	public async newSession(
 		topic: string,
 		authorizationData?: AuthorizationData,
-		timestamp?: number
+		timestamp?: number,
 	): Promise<{ payload: Session<AuthorizationData>; signer: Signer<Action | Session<AuthorizationData> | Snapshot> }> {
 		const signer = this.scheme.create()
 		const did = await this.getDid()
@@ -85,7 +85,7 @@ export abstract class AbstractSessionSigner<AuthorizationData, WalletAddress ext
 			},
 		}
 		const session = authorizationData
-			? await this.getSessionFromAuthorizationData(sessionData, authorizationData) 
+			? await this.getSessionFromAuthorizationData(sessionData, authorizationData)
 			: await this.authorize(sessionData)
 
 		const key = `canvas/${topic}/${did}`
@@ -99,8 +99,16 @@ export abstract class AbstractSessionSigner<AuthorizationData, WalletAddress ext
 	 * Create and validate a Session<AuthorizationData> from a preexisting, externally
 	 * provided AuthorizationData.
 	 */
-	public async getSessionFromAuthorizationData(data: AbstractSessionData, authorizationData: AuthorizationData): Promise<Session<AuthorizationData>> {
-		const { did, publicKey, topic, context: { duration, timestamp } } = data
+	public async getSessionFromAuthorizationData(
+		data: AbstractSessionData,
+		authorizationData: AuthorizationData,
+	): Promise<Session<AuthorizationData>> {
+		const {
+			did,
+			publicKey,
+			topic,
+			context: { duration, timestamp },
+		} = data
 
 		const session: Session<AuthorizationData> = {
 			type: "session",
