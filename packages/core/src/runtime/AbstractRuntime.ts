@@ -16,6 +16,25 @@ import {
 } from "@canvas-js/gossiplog"
 import { assert, mapValues } from "@canvas-js/utils"
 import { isAction, isSession, isSnapshot } from "../utils.js"
+import * as Y from "yjs"
+
+type YjsInsertOperation = {
+	type: "yjsInsert"
+	index: number
+	content: string
+}
+type YjsDeleteOperation = {
+	type: "yjsDelete"
+	index: number
+	length: number
+}
+type YjsFormatOperation = {
+	type: "yjsFormat"
+	index: number
+	length: number
+	formattingAttributes: Record<string, string>
+}
+type Operation = YjsInsertOperation | YjsDeleteOperation | YjsFormatOperation
 
 export class ExecutionContext {
 	// // recordId -> { version, value }
@@ -25,6 +44,8 @@ export class ExecutionContext {
 	// public readonly writes: Record<string, Effect> = {}
 
 	public readonly modelEntries: Record<string, Record<string, ModelValue | null>>
+
+	public readonly operations: Record<string, Record<string, Operation[]>> = {}
 
 	constructor(
 		public readonly messageLog: AbstractGossipLog<Action | Session | Snapshot>,
@@ -104,8 +125,39 @@ export abstract class AbstractRuntime {
 	} satisfies ModelSchema
 
 	protected static getModelSchema(schema: ModelSchema): ModelSchema {
+		const outputSchema: ModelSchema = {}
+		for (const [modelName, modelSchema] of Object.entries(schema)) {
+			// @ts-ignore
+			if (modelSchema.content === "yjs-text") {
+				if (
+					Object.entries(modelSchema).length !== 2 &&
+					// @ts-ignore
+					modelSchema.id !== "primary"
+				) {
+					// not valid
+					throw new Error("yjs-text tables must have two columns, one of which is 'id'")
+				} else {
+					// create the two tables
+					// operations
+					outputSchema[`${modelName}:operations`] = {
+						$primary: "record_id/message_id",
+						record_id: "string",
+						message_id: "string",
+						operations: "json",
+					}
+					// state
+					outputSchema[`${modelName}:state`] = {
+						id: "primary",
+						content: "json",
+					}
+				}
+			} else {
+				outputSchema[modelName] = modelSchema
+			}
+		}
+
 		return {
-			...schema,
+			...outputSchema,
 			...AbstractRuntime.sessionsModel,
 			...AbstractRuntime.actionsModel,
 			...AbstractRuntime.effectsModel,
@@ -261,6 +313,47 @@ export abstract class AbstractRuntime {
 
 		const actionRecord: ActionRecord = { message_id: id, did, name, timestamp: context.timestamp }
 		const effects: Effect[] = [{ operation: "set", model: "$actions", value: actionRecord }]
+
+		for (const [model, entries] of Object.entries(executionContext.operations)) {
+			for (const [key, operations] of Object.entries(entries)) {
+				effects.push({
+					model: `${model}:operations`,
+					operation: "set",
+					value: {
+						record_id: key,
+						message_id: executionContext.id,
+						operations,
+					},
+				})
+
+				// apply the operations to the state
+				const existingStateEntries = await this.db.query(`${model}:state`, { where: { id: key } })
+				const doc = new Y.Doc()
+				const ytext = doc.getText()
+				if (existingStateEntries.length > 0) {
+					const [{ content }] = existingStateEntries
+					ytext.applyDelta(content)
+				}
+
+				// apply the actual operations to the document
+				for (const operation of operations) {
+					if (operation.type === "yjsInsert") {
+						ytext.insert(operation.index, operation.content)
+					} else if (operation.type === "yjsDelete") {
+						ytext.delete(operation.index, operation.length)
+					} else if (operation.type === "yjsFormat") {
+						ytext.format(operation.index, operation.length, operation.formattingAttributes)
+					}
+				}
+
+				// confusingly a "quill delta" can both refer to a document's state and a set of changes
+				// since another way of thinking about document state is as a set of changes from an initial empty state
+				const quillDelta = ytext.toDelta()
+				// update the copy of the document with the operations
+				// don't create an entry in the effects table for this
+				await this.db.set(`${model}:state`, { id: key, content: quillDelta })
+			}
+		}
 
 		for (const [model, entries] of Object.entries(executionContext.modelEntries)) {
 			for (const [key, value] of Object.entries(entries)) {

@@ -17,14 +17,18 @@ export type ActionImplementation<
 	ModelsT extends ModelSchema = ModelSchema,
 	Args extends Array<any> = any,
 	Result = any,
-> = (this: ActionContext<DeriveModelTypes<ModelsT>>, db: ModelAPI<DeriveModelTypes<ModelsT>>, ...args: Args) => Awaitable<Result>
+> = (
+	this: ActionContext<DeriveModelTypes<ModelsT>>,
+	db: ModelAPI<DeriveModelTypes<ModelsT>>,
+	...args: Args
+) => Awaitable<Result>
 
 export type Chainable<ModelTypes extends Record<string, ModelValue>> = Promise<void> & {
 	link: <T extends keyof ModelTypes & string>(
 		model: T,
 		primaryKey: string,
 		through?: { through: string },
-	) => Promise<void>,
+	) => Promise<void>
 	unlink: <T extends keyof ModelTypes & string>(
 		model: T,
 		primaryKey: string,
@@ -40,6 +44,25 @@ export type ModelAPI<ModelTypes extends Record<string, ModelValue>> = {
 	update: <T extends keyof ModelTypes & string>(model: T, value: Partial<ModelTypes[T]>) => Chainable<ModelTypes>
 	merge: <T extends keyof ModelTypes & string>(model: T, value: Partial<ModelTypes[T]>) => Chainable<ModelTypes>
 	delete: <T extends keyof ModelTypes & string>(model: T, key: string) => Promise<void>
+	yjsInsert: <T extends keyof ModelTypes & string>(
+		model: T,
+		key: string,
+		index: number,
+		content: string,
+	) => Promise<void>
+	yjsDelete: <T extends keyof ModelTypes & string>(
+		model: T,
+		key: string,
+		index: number,
+		length: number,
+	) => Promise<void>
+	yjsFormat: <T extends keyof ModelTypes & string>(
+		model: T,
+		key: string,
+		index: number,
+		length: number,
+		formattingAttributes: Record<string, string>,
+	) => Promise<void>
 }
 
 export type ActionContext<T extends Record<string, ModelValue>> = {
