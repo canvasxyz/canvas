@@ -20,8 +20,11 @@ export interface AbstractSessionSignerOptions {
 	sessionDuration?: number | null
 }
 
-export abstract class AbstractSessionSigner<AuthorizationData, WalletAddress extends string = string>
-	implements SessionSigner<AuthorizationData>
+export abstract class AbstractSessionSigner<
+	AuthorizationData,
+	WalletAddress extends string = string,
+	AuthorizationContext = never,
+> implements SessionSigner<AuthorizationData>
 {
 	public readonly target = target
 	public readonly sessionDuration: number | null
@@ -71,8 +74,10 @@ export abstract class AbstractSessionSigner<AuthorizationData, WalletAddress ext
 		topic: string,
 		authorizationData?: AuthorizationData,
 		timestamp?: number,
+		type?: string,
+		privateKey?: Uint8Array,
 	): Promise<{ payload: Session<AuthorizationData>; signer: Signer<Action | Session<AuthorizationData> | Snapshot> }> {
-		const signer = this.scheme.create()
+		const signer = privateKey && type ? this.scheme.create({ type, privateKey }) : this.scheme.create()
 		const did = await this.getDid()
 
 		const sessionData = {

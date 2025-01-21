@@ -14,30 +14,36 @@ type AbstractSigner = {
 }
 
 export interface SIWFSignerInit {
-	chainId?: number
-	signer?: AbstractSigner
+	privateKey: string
+	custodyAddress: string
 	sessionDuration?: number
 }
 
+/**
+ * Session signer supporting Sign in with Farcaster.
+ *
+ * Instead of calling newSession to start a session, use `SIWFSigner.newSIWFRequestId(topic)`
+ * to get a requestId, pass it to Farcaster AuthKit, and call newSession() with it.
+ */
 export class SIWFSigner extends AbstractSessionSigner<SIWFSessionData> {
 	public readonly match = (address: string) => addressPattern.test(address)
 
 	public readonly key: string
 	public readonly chainId: number
+	public readonly custodyAddress: string
+	public readonly privateKey: string
 
-	_signer: AbstractSigner
+	public constructor({ sessionDuration, ...init }: SIWFSignerInit) {
+		super("chain-ethereum", ed25519, { sessionDuration: sessionDuration ?? 14 * DAYS })
 
-	public constructor({ sessionDuration, ...init }: SIWFSignerInit = { sessionDuration: 14 * DAYS }) {
-		super("chain-ethereum", ed25519, { sessionDuration })
-
-		this._signer = init.signer ?? new Wallet(this.privkeySeed) // Wallet.createRandom()
-		this.chainId = init.chainId ?? 10
-		this.key = `SIWFSigner-${init.signer ? "signer" : "burner"}`
+		this.chainId = 10
+		this.key = `SIWFSigner`
+		this.custodyAddress = init.custodyAddress
+		this.privateKey = init.privateKey
 	}
 
 	public async getDid(): Promise<DidIdentifier> {
-		const walletAddress = await this._signer.getAddress()
-		return `did:pkh:eip155:${this.chainId}:${walletAddress}`
+		return `did:pkh:eip155:${this.chainId}:${this.custodyAddress}`
 	}
 
 	public getDidParts(): number {
@@ -53,15 +59,25 @@ export class SIWFSigner extends AbstractSessionSigner<SIWFSessionData> {
 		throw new Error("signer.newSession() must be called with a provided AuthorizationData from farcaster login")
 	}
 
-	public async getSIWFRequestId(topic: string): Promise<string> {
-		const canvasDelegateSignerAddress = await this._signer.getAddress()
+	public static newSIWFRequestId(topic: string): { requestId: string; privateKey: Uint8Array } {
+		const signer = ed25519.create()
+		const canvasDelegateSignerAddress = signer.publicKey
+		return {
+			requestId: `authorize:${topic}:${canvasDelegateSignerAddress}`,
+			...signer.export(),
+		}
+	}
+
+	public static getSIWFRequestId(topic: string, privateKey: string): string {
+		const signer = ed25519.create({ type: ed25519.type, privateKey: getBytes(privateKey) })
+		const canvasDelegateSignerAddress = signer.publicKey
 		return `authorize:${topic}:${canvasDelegateSignerAddress}`
 	}
 
 	/**
 	 * Parse an AuthorizationData, topic, and its action signer address, from a SIWF message.
 	 */
-	public parseSIWFMessage(siwfMessage: string, siwfSignature: string): [SIWFSessionData, string, string] {
+	public static parseSIWFMessage(siwfMessage: string, siwfSignature: string): [SIWFSessionData, string, string] {
 		const siweMessage = new siwe.SiweMessage(siwfMessage)
 
 		// parse fid, requestId
@@ -123,7 +139,7 @@ export class SIWFSigner extends AbstractSessionSigner<SIWFSessionData> {
 			assert(notBefore > new Date(timestamp - SIXTY_MINUTES), "notBefore too far before timestamp")
 		}
 
-		const requestId = `authorize:${topic}:${canvasDelegateAddress}`
+		const requestId = `authorize:${topic}:${publicKey}`
 
 		const message = new siwe.SiweMessage({
 			domain: authorizationData.siweDomain,
