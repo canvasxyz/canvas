@@ -1,9 +1,4 @@
 import test from "ava"
-import assert from "assert"
-import * as siwe from "siwe"
-
-import { Wallet } from "ethers"
-
 import { ed25519 } from "@canvas-js/signatures"
 
 import { SIWFSigner, validateSIWFSessionData } from "@canvas-js/chain-ethereum"
@@ -47,10 +42,12 @@ test("create and verify session using external signature", async (t) => {
 	// ... <use AuthKit to get a signed Sign in with Farcaster message> ...
 
 	// parse the SIWF message returned from the Farcaster relay
-	const [authorizationData, parsedTopic, parsedCustodyAddress] = SIWFSigner.parseSIWFMessage(
+	const { authorizationData, topic: parsedTopic, custodyAddress: parsedCustodyAddress } = SIWFSigner.parseSIWFMessage(
 		exampleMessage,
 		exampleSignature,
 	)
+	t.is(parsedTopic, topic)
+	t.is(parsedCustodyAddress, exampleCustodyAddress)
 
 	// validate the SIWF message matches data returned from the Farcaster relay
 	t.is(authorizationData.siweDomain, exampleSignatureParams.domain)
@@ -104,7 +101,7 @@ test("create and verify session using external signature", async (t) => {
 
 test("reject invalid siwf message", async (t) => {
 	const topic = "example:signer"
-	const [authorizationData] = SIWFSigner.parseSIWFMessage(exampleMessage, exampleSignature)
+	const { authorizationData } = SIWFSigner.parseSIWFMessage(exampleMessage, exampleSignature)
 	const timestamp = new Date(authorizationData.siweIssuedAt).valueOf()
 
 	const signer = new SIWFSigner({

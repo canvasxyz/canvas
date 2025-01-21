@@ -1,9 +1,10 @@
 import "@farcaster/auth-kit/styles.css"
 
-import React, { useCallback, useContext, useEffect, useRef, useState } from "react"
-import { JsonRpcProvider, Eip1193Provider, BrowserProvider, EventEmitterable, hexlify } from "ethers"
+import React, { useContext, useEffect, useRef, useState } from "react"
+import { hexlify, getBytes } from "ethers"
 import { SIWFSigner } from "@canvas-js/chain-ethereum"
-import { AuthKitProvider, SignInButton, useProfile } from "@farcaster/auth-kit"
+import { ed25519 } from "@canvas-js/signatures"
+import { SignInButton, useProfile } from "@farcaster/auth-kit"
 
 import { topic } from "../App.js"
 import { AppContext } from "../AppContext.js"
@@ -11,7 +12,7 @@ import { AppContext } from "../AppContext.js"
 export interface ConnectSIWFProps {}
 
 export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({}) => {
-	const { app, sessionSigner, setSessionSigner, address, setAddress } = useContext(AppContext)
+	const { setSessionSigner, setAddress } = useContext(AppContext)
 
 	const profile = useProfile()
 	const {
@@ -70,13 +71,14 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({}) => {
 							setError(new Error("login succeeded but did not return a valid SIWF message"))
 							return
 						}
-						console.log("received SIWF message from farcaster relay", message, signature, privateKey)
+						console.log("received SIWF message from farcaster relay:")
+						console.log(message, signature, privateKey)
 
-						const [authorizationData, topic, custodyAddress] = SIWFSigner.parseSIWFMessage(message, signature)
+						const { authorizationData, topic, custodyAddress } = SIWFSigner.parseSIWFMessage(message, signature)
 						const signer = new SIWFSigner({ privateKey, custodyAddress })
 
 						const timestamp = new Date(authorizationData.siweIssuedAt).valueOf()
-						const { payload, signer: delegateSigner } = await signer.newSession(topic, authorizationData, timestamp)
+						const { payload, signer: delegateSigner } = await signer.newSession(topic, authorizationData, timestamp, ed25519.type, getBytes(privateKey))
 						const address = await signer.getDid()
 						setAddress(address)
 						setSessionSigner(signer)
