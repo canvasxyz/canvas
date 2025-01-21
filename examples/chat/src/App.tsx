@@ -11,6 +11,9 @@ import type { Contract } from "@canvas-js/core"
 
 import { useCanvas } from "@canvas-js/hooks"
 
+import { AuthKitProvider } from "@farcaster/auth-kit"
+import { JsonRpcProvider } from "ethers"
+
 import { AppContext } from "./AppContext.js"
 import { Messages } from "./Chat.js"
 import { MessageComposer } from "./MessageComposer.js"
@@ -21,10 +24,21 @@ import { Connect } from "./connect/index.js"
 import { LogStatus } from "./LogStatus.js"
 import { contract } from "./contract.js"
 
-const topic = "chat-example.canvas.xyz"
+export const topic = "chat-example.canvas.xyz"
 
 const wsURL = import.meta.env.VITE_CANVAS_WS_URL ?? null
 console.log("websocket API URL:", wsURL)
+
+const config = {
+	// For a production app, replace this with an Optimism Mainnet
+	// RPC URL from a provider like Alchemy or Infura.
+	relay: "https://relay.farcaster.xyz",
+	rpcUrl: "https://mainnet.optimism.io",
+	// TODO: replace domain and siweurl with document.location
+	domain: "6adf-66-65-178-244.ngrok-free.app",
+	siweUri: "https://6adf-66-65-178-244.ngrok-free.app/login",
+	provider: new JsonRpcProvider(undefined, 10),
+}
 
 export const App: React.FC<{}> = ({}) => {
 	const [sessionSigner, setSessionSigner] = useState<SessionSigner | null>(null)
@@ -40,27 +54,29 @@ export const App: React.FC<{}> = ({}) => {
 
 	return (
 		<AppContext.Provider value={{ address, setAddress, sessionSigner, setSessionSigner, app: app ?? null }}>
-			{app ? (
-				<main>
-					<div className="flex flex-row gap-4 h-full">
-						<div className="min-w-[480px] flex-1 flex flex-col justify-stretch gap-2">
-							<div className="flex-1 border rounded px-2 overflow-y-scroll">
-								<Messages address={address} />
+			<AuthKitProvider config={config}>
+				{app ? (
+					<main>
+						<div className="flex flex-row gap-4 h-full">
+							<div className="min-w-[480px] flex-1 flex flex-col justify-stretch gap-2">
+								<div className="flex-1 border rounded px-2 overflow-y-scroll">
+									<Messages address={address} />
+								</div>
+								<MessageComposer />
 							</div>
-							<MessageComposer />
+							<div className="flex flex-col gap-4 w-[480px] break-all">
+								<Connect />
+								<SessionStatus />
+								<ConnectionStatus topic={topicRef.current} />
+								<LogStatus />
+								<ControlPanel />
+							</div>
 						</div>
-						<div className="flex flex-col gap-4 w-[480px] break-all">
-							<Connect />
-							<SessionStatus />
-							<ConnectionStatus topic={topicRef.current} />
-							<LogStatus />
-							<ControlPanel />
-						</div>
-					</div>
-				</main>
-			) : (
-				<div className="text-center my-20">Connecting to {wsURL}...</div>
-			)}
+					</main>
+				) : (
+					<div className="text-center my-20">Connecting to {wsURL}...</div>
+				)}
+			</AuthKitProvider>
 		</AppContext.Provider>
 	)
 }

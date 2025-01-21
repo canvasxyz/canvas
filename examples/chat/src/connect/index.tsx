@@ -2,6 +2,7 @@ import React, { useState } from "react"
 
 import { ConnectSIWEBurner } from "./ConnectSIWEBurner.js"
 import { ConnectSIWE } from "./ConnectSIWE.js"
+import { ConnectSIWF } from "./ConnectSIWF.js"
 import { ConnectSIWEViem } from "./ConnectSIWEViem.js"
 import { ConnectEIP712Burner } from "./ConnectEIP712Burner.js"
 import { ConnectEIP712 } from "./ConnectEIP712.js"
@@ -16,7 +17,7 @@ import { ConnectMagic } from "./ConnectMagic.js"
 import { ConnectLeap } from "./ConnectLeap.js"
 
 export const Connect: React.FC<{}> = ({}) => {
-	const [method, setMethod] = useState("burner")
+	const [method, setMethod] = useState("farcaster")
 
 	return (
 		<>
@@ -25,6 +26,7 @@ export const Connect: React.FC<{}> = ({}) => {
 				value={method}
 				onChange={(e) => setMethod(e.target.value)}
 			>
+				<option value="farcaster">Sign in with Farcaster</option>
 				<option value="burner">Burner Wallet</option>
 				<option value="burner-eip712">Burner Wallet - EIP712</option>
 				<option value="ethereum">Ethereum</option>
@@ -48,6 +50,8 @@ export const Connect: React.FC<{}> = ({}) => {
 
 const Method: React.FC<{ method: string }> = (props) => {
 	switch (props.method) {
+		case "farcaster":
+			return <ConnectSIWF />
 		case "burner":
 			return <ConnectSIWEBurner />
 		case "burner-eip712":
