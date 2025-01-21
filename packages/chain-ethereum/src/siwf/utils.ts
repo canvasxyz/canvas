@@ -21,34 +21,32 @@ export function validateSIWFSessionData(authorizationData: unknown): authorizati
 		return false
 	}
 
-	const { signature, domain, farcasterSignerAddress, canvasNonce, fid, issuedAt, expirationTime, notBefore } =
-		authorizationData as Record<string, any>
+	const {
+		custodyAddress,
+		fid,
+		signature,
+		siweDomain,
+		siweUri,
+		siweNonce,
+		siweVersion,
+		siweChainId,
+		siweIssuedAt,
+		siweExpirationTime,
+		siweNotBefore,
+	} = authorizationData as Record<string, any>
 	return (
 		signature instanceof Uint8Array &&
-		typeof domain === "string" &&
-		typeof farcasterSignerAddress === "string" &&
-		typeof canvasNonce === "string" &&
+		typeof custodyAddress === "string" &&
 		typeof fid === "string" &&
-		typeof issuedAt === "string" &&
-		typeof expirationTime === "string" &&
-		typeof notBefore === "string"
+		typeof siweUri === "string" &&
+		typeof siweDomain === "string" &&
+		typeof siweNonce === "string" &&
+		typeof siweVersion === "string" &&
+		typeof siweChainId === "number" &&
+		typeof siweIssuedAt === "string" &&
+		(typeof siweExpirationTime === "string" || siweExpirationTime === null) &&
+		(typeof siweNotBefore === "string" || siweNotBefore === null)
 	)
-}
-
-export function prepareSIWFMessage(message: SIWFMessage): string {
-	return new siwe.SiweMessage({
-		statement: "Farcaster Auth",
-		version: message.version,
-		domain: message.domain,
-		nonce: message.nonce,
-		address: message.address,
-		uri: message.uri,
-		chainId: message.chainId,
-		issuedAt: message.issuedAt,
-		expirationTime: message.expirationTime,
-		notBefore: message.notBefore,
-		resources: message.resources,
-	}).prepareMessage()
 }
 
 export const addressPattern = /^did:pkh:eip155:(\d+):(0x[a-fA-F0-9]+)$/
