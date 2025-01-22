@@ -1,7 +1,7 @@
 import React, { useRef, useState } from "react"
 
 import type { SessionSigner } from "@canvas-js/interfaces"
-import { SIWESigner, Eip712Signer } from "@canvas-js/chain-ethereum"
+import { SIWESigner, SIWFSigner, Eip712Signer } from "@canvas-js/chain-ethereum"
 import { ATPSigner } from "@canvas-js/chain-atp"
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
 import { SubstrateSigner } from "@canvas-js/chain-substrate"
@@ -51,6 +51,7 @@ export const App: React.FC<{}> = ({}) => {
 		signers: [
 			new SIWESigner(),
 			new Eip712Signer(),
+			new SIWFSigner(),
 			new ATPSigner(),
 			new CosmosSigner(),
 			new SubstrateSigner({}),

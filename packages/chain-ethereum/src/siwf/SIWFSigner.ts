@@ -28,7 +28,7 @@ export class SIWFSigner extends AbstractSessionSigner<SIWFSessionData> {
 	public readonly chainId: number
 	public readonly custodyAddress: string | undefined
 
-	public constructor({ sessionDuration, privateKey, ...init }: SIWFSignerInit) {
+	public constructor({ sessionDuration, privateKey, ...init }: SIWFSignerInit = {}) {
 		super("chain-ethereum-farcaster", ed25519, { sessionDuration: sessionDuration ?? 14 * DAYS })
 
 		this.chainId = 10
