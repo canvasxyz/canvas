@@ -71,26 +71,26 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({}) => {
 							setError(new Error("login succeeded but did not return a valid SIWF message"))
 							return
 						}
-						console.log("received SIWF message from farcaster relay:")
-						console.log(message, signature, privateKey)
 
 						const { authorizationData, topic, custodyAddress } = SIWFSigner.parseSIWFMessage(message, signature)
 						const signer = new SIWFSigner({ custodyAddress, privateKey: privateKey.slice(2) })
 						const address = await signer.getDid()
 
 						const timestamp = new Date(authorizationData.siweIssuedAt).valueOf()
-						const { payload, signer: delegateSigner } = await signer.newSession(
+						const { payload, signer: delegateSigner } = await signer.newSIWFSession(
 							topic,
 							authorizationData,
 							timestamp,
-							ed25519.type,
 							getBytes(privateKey),
 						)
 						setAddress(address)
 						setSessionSigner(signer)
-						app.updateSigners([signer, ...app.signers.getAll().filter((signer) => signer.key !== "chain-ethereum-farcaster")])
+						app.updateSigners([
+							signer,
+							...app.signers.getAll().filter((signer) => signer.key !== "chain-ethereum-farcaster"),
+						])
 						app.messageLog.append(payload, { signer: delegateSigner })
-						console.log("created chat session", payload, delegateSigner)
+						console.log("started SIWF chat session", authorizationData)
 					}}
 					onError={(...args) => {
 						console.log("received SIWF error", args)

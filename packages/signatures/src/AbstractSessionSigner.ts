@@ -71,13 +71,9 @@ export abstract class AbstractSessionSigner<
 	 * or by using a provided AuthorizationData and timestamp (for services like Farcaster).
 	 */
 	public async newSession(
-		topic: string,
-		authorizationData?: AuthorizationData,
-		timestamp?: number,
-		type?: string,
-		privateKey?: Uint8Array,
+		topic: string
 	): Promise<{ payload: Session<AuthorizationData>; signer: Signer<Action | Session<AuthorizationData> | Snapshot> }> {
-		const signer = privateKey && type ? this.scheme.create({ type, privateKey }) : this.scheme.create()
+		const signer = this.scheme.create()
 		const did = await this.getDid()
 
 		const sessionData = {
@@ -85,13 +81,11 @@ export abstract class AbstractSessionSigner<
 			did,
 			publicKey: signer.publicKey,
 			context: {
-				timestamp: timestamp ?? Date.now(),
+				timestamp: Date.now(),
 				duration: this.sessionDuration,
 			},
 		}
-		const session = authorizationData
-			? await this.getSessionFromAuthorizationData(sessionData, authorizationData)
-			: await this.authorize(sessionData)
+		const session = await this.authorize(sessionData)
 
 		const key = `canvas/${topic}/${did}`
 		this.#cache.set(key, { session, signer })

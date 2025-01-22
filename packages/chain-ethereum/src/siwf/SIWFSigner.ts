@@ -1,7 +1,8 @@
-import { Wallet, verifyMessage, hexlify, getBytes } from "ethers"
+import { verifyMessage, hexlify, getBytes } from "ethers"
 import * as siwe from "siwe"
+import * as json from "@ipld/dag-json"
 
-import type { Awaitable, Session, AbstractSessionData, DidIdentifier } from "@canvas-js/interfaces"
+import type { Action, Session, Snapshot, AbstractSessionData, DidIdentifier, Signer } from "@canvas-js/interfaces"
 import { AbstractSessionSigner, ed25519 } from "@canvas-js/signatures"
 import { assert, DAYS } from "@canvas-js/utils"
 
@@ -57,7 +58,35 @@ export class SIWFSigner extends AbstractSessionSigner<SIWFSessionData> {
 	}
 
 	public async authorize(sessionData: AbstractSessionData): Promise<Session<SIWFSessionData>> {
-		throw new Error("signer.newSession() must be called with a provided AuthorizationData from farcaster login")
+		throw new Error("use siwfSigner.newSIWFSession() instead")
+	}
+
+	public async newSIWFSession(
+		topic: string,
+		authorizationData: SIWFSessionData,
+		timestamp: number,
+		privateKey: Uint8Array,
+	): Promise<{ payload: Session<SIWFSessionData>; signer: Signer<Action | Session<SIWFSessionData> | Snapshot> }> {
+		const signer = this.scheme.create({ type: ed25519.type, privateKey })
+		const did = await this.getDid()
+
+		const sessionData = {
+			topic,
+			did,
+			publicKey: signer.publicKey,
+			context: {
+				timestamp: timestamp,
+				duration: this.sessionDuration,
+			},
+		}
+		const session = authorizationData
+			? await this.getSessionFromAuthorizationData(sessionData, authorizationData)
+			: await this.authorize(sessionData)
+
+		const key = `canvas/${topic}/${did}`
+		this.target.set(key, json.stringify({ session, ...signer.export() }))
+
+		return { payload: session, signer }
 	}
 
 	public static newSIWFRequestId(topic: string): { requestId: string; privateKey: Uint8Array } {

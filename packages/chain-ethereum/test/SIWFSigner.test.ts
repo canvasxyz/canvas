@@ -62,11 +62,10 @@ test("create and verify session using external signature", async (t) => {
 
 	// create a canvas session based on the SIWF message
 	const timestamp = new Date(authorizationData.siweIssuedAt).valueOf()
-	const { payload, signer: delegateSigner } = await signer.newSession(
+	const { payload, signer: delegateSigner } = await signer.newSIWFSession(
 		topic,
 		authorizationData,
 		timestamp,
-		ed25519.type,
 		getBytes(exampleDelegatePrivateKey),
 	)
 	const session: Session<SIWFSessionData> = payload
@@ -95,7 +94,7 @@ test("create and verify session using external signature", async (t) => {
 
 	// creating or verifying a session with an invalid topic should fail
 	const topic2 = "chat-example2.canvas.xyz"
-	await t.throwsAsync(async () => signer.newSession(topic2, authorizationData, timestamp))
+	await t.throwsAsync(async () => signer.newSIWFSession(topic2, authorizationData, timestamp, getBytes(exampleDelegatePrivateKey)))
 	await t.throwsAsync(async () => signer.verifySession(topic2, session))
 })
 
@@ -109,5 +108,5 @@ test("reject invalid siwf message", async (t) => {
 		privateKey: exampleDelegatePrivateKey.slice(2),
 	})
 
-	await t.throwsAsync(async () => signer.newSession(topic, authorizationData, timestamp))
+	await t.throwsAsync(async () => signer.newSIWFSession(topic, authorizationData, timestamp, getBytes(exampleDelegatePrivateKey)))
 })
