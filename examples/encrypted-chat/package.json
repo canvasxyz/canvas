@@ -1,7 +1,7 @@
 {
 	"private": true,
 	"name": "@canvas-js/example-chat-encrypted",
-	"version": "0.13.10",
+	"version": "0.13.11",
 	"type": "module",
 	"scripts": {
 		"build": "npx vite build",
@@ -9,10 +9,10 @@
 		"dev:server": "canvas run --offline --port 8080 --static dist --network-explorer --topic chat-encrypted.canvas.xyz src/contract.ts"
 	},
 	"dependencies": {
-		"@canvas-js/chain-ethereum": "0.13.10",
-		"@canvas-js/cli": "0.13.10",
-		"@canvas-js/core": "0.13.10",
-		"@canvas-js/hooks": "0.13.10",
+		"@canvas-js/chain-ethereum": "0.13.11",
+		"@canvas-js/cli": "0.13.11",
+		"@canvas-js/core": "0.13.11",
+		"@canvas-js/hooks": "0.13.11",
 		"@metamask/eth-sig-util": "^7.0.1",
 		"ethers": "^6.13.2",
 		"react": "^18.3.1",

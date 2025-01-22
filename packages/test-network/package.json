@@ -1,7 +1,7 @@
 {
 	"private": true,
 	"name": "@canvas-js/test-network",
-	"version": "0.13.10",
+	"version": "0.13.11",
 	"type": "module",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"main": "lib/index.js",
@@ -38,11 +38,11 @@
 		"vite": "^5.4.8"
 	},
 	"dependencies": {
-		"@canvas-js/bootstrap-peer": "0.13.10",
-		"@canvas-js/gossiplog": "0.13.10",
-		"@canvas-js/interfaces": "0.13.10",
-		"@canvas-js/relay-server": "0.13.10",
-		"@canvas-js/utils": "0.13.10",
+		"@canvas-js/bootstrap-peer": "0.13.11",
+		"@canvas-js/gossiplog": "0.13.11",
+		"@canvas-js/interfaces": "0.13.11",
+		"@canvas-js/relay-server": "0.13.11",
+		"@canvas-js/utils": "0.13.11",
 		"@libp2p/crypto": "^5.0.7",
 		"@libp2p/interface": "^2.2.1",
 		"@libp2p/peer-id": "^5.0.4",
