@@ -508,7 +508,7 @@ test("create a contract with a yjs text table", async (t) => {
 				posts: { id: "primary", content: "yjs-text" },
 			},
 			actions: {
-				createPost: (db, { key, index, content }: { key: string; index: number; content: string }) => {
+				postInsert: (db, { key, index, content }: { key: string; index: number; content: string }) => {
 					db.yjsInsert("posts", key, index, content)
 				},
 			},
@@ -520,7 +520,7 @@ test("create a contract with a yjs text table", async (t) => {
 
 	t.teardown(() => app.stop())
 
-	await app.actions.createPost({ key: "post_1", index: 0, content: "hello world" })
+	await app.actions.postInsert({ key: "post_1", index: 0, content: "hello world" })
 
 	const operations = await app.db.query("posts:operations")
 	const state = await app.db.query("posts:state")
