@@ -213,6 +213,10 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 			},
 			yjsInsert: async (model: string, key: string, index: number, content: string) => {
 				assert(this.#context !== null, "expected this.#context !== null")
+
+				if (this.#context.operations[model] === undefined) {
+					this.#context.operations[model] = {}
+				}
 				if (this.#context.operations[model][key] === undefined) {
 					this.#context.operations[model][key] = []
 				}
@@ -224,6 +228,9 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 			},
 			yjsDelete: async (model: string, key: string, index: number, length: number) => {
 				assert(this.#context !== null, "expected this.#context !== null")
+				if (this.#context.operations[model] === undefined) {
+					this.#context.operations[model] = {}
+				}
 				if (this.#context.operations[model][key] === undefined) {
 					this.#context.operations[model][key] = []
 				}
@@ -241,6 +248,9 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 				formattingAttributes: Record<string, string>,
 			) => {
 				assert(this.#context !== null, "expected this.#context !== null")
+				if (this.#context.operations[model] === undefined) {
+					this.#context.operations[model] = {}
+				}
 				if (this.#context.operations[model][key] === undefined) {
 					this.#context.operations[model][key] = []
 				}

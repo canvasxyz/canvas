@@ -188,10 +188,10 @@ test("accept a manually encoded session/action with a legacy-style object arg", 
 		contract: {
 			actions: {
 				createMessage(db, arg) {
-					t.deepEqual(arg, { objectArg: '1' })
-				}
+					t.deepEqual(arg, { objectArg: "1" })
+				},
 			},
-			models: {}
+			models: {},
 		},
 		topic: "com.example.app",
 		reset: true,
@@ -219,8 +219,8 @@ test("accept a manually encoded session/action with a legacy-style object arg", 
 			type: "action",
 			did: sessionMessage.payload.did,
 			name: "createMessage",
-			args: { objectArg: '1' },
-			context: { timestamp: 0 }
+			args: { objectArg: "1" },
+			context: { timestamp: 0 },
 		},
 	}
 	const actionSignature = await session.signer.sign(actionMessage)
@@ -498,4 +498,37 @@ test("open custom modeldb tables", async (t) => {
 	const id = randomUUID()
 	await app.db.set("widgets", { id, name: "foobar" })
 	t.deepEqual(await app.db.get("widgets", id), { id, name: "foobar" })
+})
+
+test("create a contract with a yjs text table", async (t) => {
+	const app = await Canvas.initialize({
+		contract: {
+			models: {
+				// @ts-ignore
+				posts: { id: "primary", content: "yjs-text" },
+			},
+			actions: {
+				createPost: (db, { key, index, content }: { key: string; index: number; content: string }) => {
+					db.yjsInsert("posts", key, index, content)
+				},
+			},
+		},
+
+		topic: "com.example.app",
+		schema: { widgets: { id: "primary", name: "string" } },
+	})
+
+	t.teardown(() => app.stop())
+
+	await app.actions.createPost({ key: "post_1", index: 0, content: "hello world" })
+
+	const operations = await app.db.query("posts:operations")
+	const state = await app.db.query("posts:state")
+
+	t.is(operations.length, 1)
+	t.is(state.length, 1)
+
+	t.is(operations[0].record_id, "post_1")
+	t.is(state[0].id, "post_1")
+	t.is(state[0].content[0].insert, "hello world")
 })

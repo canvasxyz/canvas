@@ -140,7 +140,8 @@ export abstract class AbstractRuntime {
 					// create the two tables
 					// operations
 					outputSchema[`${modelName}:operations`] = {
-						$primary: "record_id/message_id",
+						$primary: "operation_id",
+						operation_id: "string",
 						record_id: "string",
 						message_id: "string",
 						operations: "json",
@@ -321,6 +322,7 @@ export abstract class AbstractRuntime {
 					operation: "set",
 					value: {
 						record_id: key,
+						operation_id: `${key}/${executionContext.id}`,
 						message_id: executionContext.id,
 						operations,
 					},

@@ -4,7 +4,7 @@ import { logger } from "@libp2p/logger"
 import type pg from "pg"
 
 import { Signature, Action, Session, Message, Snapshot, SessionSigner, SignerCache } from "@canvas-js/interfaces"
-import { AbstractModelDB, Model, ModelSchema, Effect } from "@canvas-js/modeldb"
+import { AbstractModelDB, Model, ModelSchema, Effect, ContractModelSchema } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { AbstractGossipLog, GossipLogEvents, SignedMessage } from "@canvas-js/gossiplog"
 import type { ServiceMap, NetworkConfig } from "@canvas-js/gossiplog/libp2p"
