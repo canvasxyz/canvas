@@ -520,16 +520,45 @@ test("create a contract with a yjs text table", async (t) => {
 
 	t.teardown(() => app.stop())
 
-	const postId = "post_1"
-	await app.actions.postInsert({ key: postId, index: 0, content: "hello world" })
+	const post1Id = "post_1"
 
-	const operations = await app.db.query("posts:operations")
-	const state = await app.db.query("posts:state")
+	// call an action that updates the yjs-text item
+	// when you call a yjs action, it will automatically create the table if it doesn't exist
+	const message_1 = await app.actions.postInsert({ key: post1Id, index: 0, content: "hello" })
 
-	t.is(operations.length, 1)
-	t.is(state.length, 1)
+	const operations_1 = await app.db.query("posts:operations")
+	const state_1 = await app.db.query("posts:state")
 
-	t.is(operations[0].record_id, postId)
-	t.is(state[0].id, postId)
-	t.is(state[0].content[0].insert, "hello world")
+	t.is(operations_1.length, 1)
+	t.is(state_1.length, 1)
+
+	t.is(operations_1[0].record_id, post1Id)
+	t.is(operations_1[0].operation_id, `${post1Id}/${message_1.id}`)
+	t.is(operations_1[0].message_id, message_1.id)
+	t.is(state_1[0].id, post1Id)
+	// check the updated content
+	t.is(state_1[0].content[0].insert, "hello")
+
+	// call another action that updates the yjs-text item
+	const message_2 = await app.actions.postInsert({ key: post1Id, index: 6, content: " world" })
+
+	const operations_2 = await app.db.query("posts:operations")
+	const state_2 = await app.db.query("posts:state")
+
+	// there should be two entries in the operations table now
+	t.is(operations_2.length, 2)
+
+	t.is(operations_2[0].record_id, post1Id)
+	t.is(operations_2[0].operation_id, `${post1Id}/${message_1.id}`)
+	t.is(operations_2[0].message_id, message_1.id)
+
+	t.is(operations_2[1].record_id, post1Id)
+	t.is(operations_2[1].operation_id, `${post1Id}/${message_2.id}`)
+	t.is(operations_2[1].message_id, message_2.id)
+
+	// there should just be one entry in the state table
+	t.is(state_2.length, 1)
+	t.is(state_2[0].id, post1Id)
+	// the results of the two inserts should be combined
+	t.is(state_2[0].content[0].insert, "hello world")
 })
