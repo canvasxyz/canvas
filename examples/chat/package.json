@@ -21,6 +21,7 @@
 		"@canvas-js/interfaces": "0.14.0-next.0",
 		"@canvas-js/modeldb-sqlite-wasm": "0.14.0-next.0",
 		"@cosmjs/encoding": "^0.32.3",
+		"@farcaster/auth-kit": "^0.6.0",
 		"@keplr-wallet/types": "^0.11.64",
 		"@libp2p/interface": "^2.2.1",
 		"@magic-ext/auth": "^4.3.2",
