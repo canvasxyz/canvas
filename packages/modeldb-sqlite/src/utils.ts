@@ -1,12 +1,10 @@
-import type * as sqlite from "better-sqlite3"
+import type sqlite from "better-sqlite3"
+import { SqlitePrimitiveValue } from "./encoding.js"
 
-export class Query<P, R> {
+export class Query<P = SqlitePrimitiveValue[], R = Record<string, SqlitePrimitiveValue>> {
 	private readonly statement: sqlite.Statement
 
-	constructor(
-		db: sqlite.Database,
-		private readonly sql: string,
-	) {
+	constructor(db: sqlite.Database, private readonly sql: string) {
 		this.statement = db.prepare(sql)
 	}
 
@@ -24,13 +22,10 @@ export class Query<P, R> {
 	}
 }
 
-export class Method<P> {
+export class Method<P = SqlitePrimitiveValue[]> {
 	private readonly statement: sqlite.Statement
 
-	constructor(
-		db: sqlite.Database,
-		private readonly sql: string,
-	) {
+	constructor(db: sqlite.Database, private readonly sql: string) {
 		this.statement = db.prepare(sql)
 	}
 

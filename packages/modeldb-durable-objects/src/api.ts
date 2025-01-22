@@ -36,9 +36,9 @@ const columnTypes = {
 
 function getColumn(name: string, type: PrimitiveType, nullable: boolean) {
 	if (nullable) {
-		return `'${name}' ${columnTypes[type]}`
+		return `"${name}" ${columnTypes[type]}`
 	} else {
-		return `'${name}' ${columnTypes[type]} NOT NULL`
+		return `"${name}" ${columnTypes[type]} NOT NULL`
 	}
 }
 
@@ -60,10 +60,9 @@ export class ModelAPI {
 	#count: Query<{ count: number }>
 
 	readonly #relations: Record<string, RelationAPI> = {}
-	readonly columnNames: string[]
 
-	readonly primaryProperties: PrimitiveProperty[] = []
-	readonly mutableProperties: Property[] = []
+	readonly primaryProperties: PrimitiveProperty[]
+	readonly mutableProperties: Property[]
 
 	readonly codecs: Record<
 		string,
@@ -75,20 +74,24 @@ export class ModelAPI {
 	> = {}
 
 	public constructor(readonly db: SqlStorage, readonly config: Config, readonly model: Model) {
-		this.mutableProperties = []
-
 		// in the cloudflare runtime, `this` cannot be used when assigning default values to private properties
 		this.#table = model.name
 		this.#properties = Object.fromEntries(model.properties.map((property) => [property.name, property]))
 
+		/** SQL column declarations */
 		const columns: string[] = []
-		this.columnNames = [] // unquoted column names for non-relation properties
+
+		/** unquoted column names for non-relation properties */
+		const columnNames: string[] = []
+
+		this.primaryProperties = config.primaryKeys[model.name]
+		this.mutableProperties = []
 
 		for (const property of model.properties) {
 			if (property.kind === "primitive") {
 				const { name, type, nullable } = property
 				columns.push(getColumn(name, type, nullable))
-				this.columnNames.push(name)
+				columnNames.push(name)
 
 				const propertyName = `${model.name}/${name}`
 				this.codecs[property.name] = {
@@ -97,9 +100,7 @@ export class ModelAPI {
 					decode: (record) => decodePrimitiveValue(propertyName, type, nullable, record[property.name]),
 				}
 
-				if (model.primaryKey.includes(property.name)) {
-					this.primaryProperties.push(property)
-				} else {
+				if (!model.primaryKey.includes(property.name)) {
 					this.mutableProperties.push(property)
 				}
 			} else if (property.kind === "reference") {
@@ -113,7 +114,7 @@ export class ModelAPI {
 				if (target.primaryKey.length === 1) {
 					const [targetProperty] = config.primaryKeys[target.name]
 					columns.push(getColumn(property.name, targetProperty.type, false))
-					this.columnNames.push(property.name)
+					columnNames.push(property.name)
 
 					this.codecs[property.name] = {
 						columns: [property.name],
@@ -127,7 +128,7 @@ export class ModelAPI {
 					for (const targetProperty of config.primaryKeys[target.name]) {
 						const refName = `${property.name}/${targetProperty.name}`
 						columns.push(getColumn(refName, targetProperty.type, false))
-						this.columnNames.push(refName)
+						columnNames.push(refName)
 						refNames.push(refName)
 					}
 
@@ -162,29 +163,31 @@ export class ModelAPI {
 		}
 
 		// Create record table
-		db.exec(`CREATE TABLE IF NOT EXISTS "${this.#table}" (${columns.join(", ")})`)
+		const primaryKeyConstraint = `PRIMARY KEY (${model.primaryKey.map(quote).join(", ")})`
+		const tableSchema = [...columns, primaryKeyConstraint].join(", ")
+		db.exec(`CREATE TABLE IF NOT EXISTS "${this.#table}" (${tableSchema})`)
 
 		// Create indexes
 		for (const index of model.indexes) {
 			const indexName = [model.name, ...index].join("/")
-			const indexColumns = index.map(quote)
-			db.exec(`CREATE INDEX IF NOT EXISTS "${indexName}" ON "${this.#table}" (${indexColumns.join(", ")})`)
+			const indexColumns = index.map(quote).join(", ")
+			db.exec(`CREATE INDEX IF NOT EXISTS "${indexName}" ON "${this.#table}" (${indexColumns})`)
 		}
 
-		const quotedColumnNames = this.columnNames.map(quote).join(", ")
+		const quotedColumnNames = columnNames.map(quote).join(", ")
 
 		// Prepare methods
 
-		const insertParams = Array.from({ length: this.columnNames.length }).fill("?").join(", ")
+		const insertParams = Array.from({ length: columnNames.length }).fill("?").join(", ")
 		this.#insert = new Method(
 			db,
 			`INSERT OR IGNORE INTO "${this.#table}" (${quotedColumnNames}) VALUES (${insertParams})`,
 		)
 
-		const primaryKeyConstraints = model.primaryKey.map((name) => `"${name}" = ?`)
-		const wherePrimaryKeyEquals = `WHERE ${primaryKeyConstraints.join(" AND ")}`
+		const primaryKeyEquals = model.primaryKey.map((name) => `"${name}" = ?`)
+		const wherePrimaryKeyEquals = `WHERE ${primaryKeyEquals.join(" AND ")}`
 
-		const updateNames = this.columnNames.filter((name) => !model.primaryKey.includes(name))
+		const updateNames = columnNames.filter((name) => !model.primaryKey.includes(name))
 		const updateEntries = updateNames.map((name) => `"${name}" = ?`)
 
 		this.#update = new Method(db, `UPDATE "${this.#table}" SET ${updateEntries.join(", ")} ${wherePrimaryKeyEquals}`)
@@ -194,7 +197,6 @@ export class ModelAPI {
 		// Prepare queries
 		this.#count = new Query<{ count: number }>(this.db, `SELECT COUNT(*) AS count FROM "${this.#table}"`)
 		this.#select = new Query(this.db, `SELECT ${quotedColumnNames} FROM "${this.#table}" ${wherePrimaryKeyEquals}`)
-
 		this.#selectAll = new Query(this.db, `SELECT ${quotedColumnNames} FROM "${this.#table}"`)
 	}
 
@@ -205,7 +207,7 @@ export class ModelAPI {
 		}
 
 		const encodedKey = this.primaryProperties.map(({ name, type, nullable }, i) =>
-			encodePrimitiveValue(`${this.model.name}/${name}`, type, nullable, wrappedKey[i]),
+			encodePrimitiveValue(name, type, nullable, wrappedKey[i]),
 		)
 
 		const record = this.#select.get(encodedKey)
@@ -248,7 +250,7 @@ export class ModelAPI {
 		validateModelValue(this.model, value)
 
 		const encodedKey = this.primaryProperties.map(({ name, type, nullable }) =>
-			encodePrimitiveValue(`${this.model.name}/${name}`, type, nullable, value[name]),
+			encodePrimitiveValue(name, type, nullable, value[name]),
 		)
 
 		const existingRecord = this.#select.get(encodedKey)
@@ -267,9 +269,7 @@ export class ModelAPI {
 
 			assert(Array.isArray(value[name]))
 			const target = this.config.primaryKeys[relation.relation.target]
-			const encodedTargets = value[name].map((key) =>
-				encodeReferenceValue(`${this.model.name}/${name}`, target, false, key),
-			)
+			const encodedTargets = value[name].map((key) => encodeReferenceValue(name, target, false, key))
 
 			relation.add(encodedKey, encodedTargets)
 		}
@@ -280,13 +280,11 @@ export class ModelAPI {
 		for (const property of properties) {
 			if (property.kind === "primitive") {
 				const { name, type, nullable } = property
-				result.push(encodePrimitiveValue(`${this.model.name}/${name}`, type, nullable, value[name]))
+				result.push(encodePrimitiveValue(name, type, nullable, value[name]))
 			} else if (property.kind === "reference") {
 				const { name, target, nullable } = property
 				const targetProperties = this.config.primaryKeys[target]
-				result.push(
-					...encodeReferenceValue(`${this.model.name}/${name}`, targetProperties, nullable, value[property.name]),
-				)
+				result.push(...encodeReferenceValue(name, targetProperties, nullable, value[property.name]))
 			} else if (property.kind === "relation") {
 				continue
 			} else {
@@ -304,7 +302,7 @@ export class ModelAPI {
 		}
 
 		const encodedKey = this.primaryProperties.map(({ name, type, nullable }, i) =>
-			encodePrimitiveValue(`${this.model.name}/${name}`, type, nullable, wrappedKey[i]),
+			encodePrimitiveValue(name, type, nullable, wrappedKey[i]),
 		)
 
 		this.#delete.run(encodedKey)
@@ -335,20 +333,16 @@ export class ModelAPI {
 			params.push(...whereParams)
 		}
 
-		const results = this.db.exec(sql.join(" "), ...params).toArray()
-
-		const countResult = results[0].count
-		if (typeof countResult === "number") {
-			return countResult
-		} else {
-			throw new Error("internal error")
-		}
+		const { count } = new Query(this.db, sql.join(" ")).get(params) ?? {}
+		assert(typeof count === "number")
+		return count
 	}
 
 	public query(query: QueryParams): ModelValue[] {
 		const [sql, properties, relations, params] = this.parseQuery(query)
 		const results: ModelValue[] = []
-		for (const row of this.db.exec(sql, ...params)) {
+
+		for (const row of new Query(this.db, sql).iterate(params)) {
 			results.push(this.parseRecord(row, properties, relations))
 		}
 
@@ -358,7 +352,7 @@ export class ModelAPI {
 	public *iterate(query: QueryParams): Iterable<ModelValue> {
 		const [sql, properties, relations, params] = this.parseQuery(query)
 
-		for (const row of this.db.exec(sql, ...params)) {
+		for (const row of new Query(this.db, sql).iterate(params)) {
 			yield this.parseRecord(row, properties, relations)
 		}
 	}
@@ -682,8 +676,8 @@ export class RelationAPI {
 		return targets.map((record) => this.sourceColumnNames.map((name) => record[name]))
 	}
 
-	public add(sourceKey: SqlStorageValue[], targets: SqlStorageValue[][]) {
-		for (const targetKey of targets) {
+	public add(sourceKey: SqlStorageValue[], targetKeys: SqlStorageValue[][]) {
+		for (const targetKey of targetKeys) {
 			this.#insert.run([...sourceKey, ...targetKey])
 		}
 	}

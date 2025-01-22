@@ -94,7 +94,7 @@ export function encodeReferenceValue(
 		throw new TypeError(`${propertyName} - expected primary key with ${target.length} components`)
 	}
 
-	return target.map(({ name, type }) => encodePrimitiveValue(`${propertyName}/${name}`, type, false, value))
+	return target.map(({ name, type }) => encodePrimitiveValue(name, type, false, value))
 }
 
 export function decodePrimitiveValue(
@@ -172,7 +172,7 @@ export function decodeReferenceValue(
 	}
 
 	const result = target.map(
-		({ name, type }, i) => decodePrimitiveValue(`${propertyName}/${name}`, type, false, values[i]) as PrimaryKeyValue,
+		({ name, type }, i) => decodePrimitiveValue(name, type, false, values[i]) as PrimaryKeyValue,
 	)
 
 	if (result.length === 1) {

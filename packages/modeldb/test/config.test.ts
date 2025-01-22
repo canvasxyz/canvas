@@ -1,9 +1,9 @@
 import test from "ava"
 
-import { ModelSchema, Config } from "@canvas-js/modeldb"
+import { Config } from "@canvas-js/modeldb"
 
 test("parse config", (t) => {
-	const { models, relations } = Config.parse({
+	const config = Config.parse({
 		user: {
 			id: "primary",
 			address: "string",
@@ -29,7 +29,7 @@ test("parse config", (t) => {
 		},
 	})
 
-	t.deepEqual(models, [
+	t.deepEqual(config.models, [
 		{
 			name: "user",
 			indexes: [],
@@ -65,7 +65,7 @@ test("parse config", (t) => {
 		},
 	])
 
-	t.deepEqual(relations, [
+	t.deepEqual(config.relations, [
 		{
 			source: "room",
 			sourceProperty: "members",
