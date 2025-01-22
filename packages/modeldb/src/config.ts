@@ -28,7 +28,7 @@ export class Config {
 						throw new Error(
 							"cannot have duplicate 'primary' keys - use $primary: 'a/b/c' syntax for composite primary keys",
 						)
-					} else if ($primary !== undefined && $primary !== propertyName) {
+					} else if ($primary !== undefined) {
 						throw new Error("'primary' properties cannot be used in conjunction with composite $primary keys")
 					} else {
 						primaryKey.push(propertyName)
@@ -57,8 +57,8 @@ export class Config {
 				assert(property.nullable === false, "primary keys cannot be nullable")
 			}
 
-			if (primaryKey.length !== 1) {
-				throw new Error(`error defining ${modelName}: models must have exactly one "primary" property`)
+			if (primaryKey.length === 0) {
+				throw new Error(`error defining ${modelName}: models must have at least one primary key`)
 			}
 
 			for (const index of $indexes ?? []) {
@@ -165,6 +165,18 @@ export class Config {
 				assert(property.nullable === false)
 				return property
 			})
+		}
+
+		for (const relation of relations) {
+			const source = models.find((model) => model.name === relation.source)
+			if (source === undefined) {
+				throw new Error(`invalid relation source - no "${relation.source}" model`)
+			}
+
+			const target = models.find((model) => model.name === relation.target)
+			if (target === undefined) {
+				throw new Error(`invalid relation target - no "${relation.target}" model`)
+			}
 		}
 	}
 }

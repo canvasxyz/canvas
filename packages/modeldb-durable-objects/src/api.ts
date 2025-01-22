@@ -56,7 +56,7 @@ export class ModelAPI {
 
 	// Methods
 	#insert: Method
-	#update: Method
+	#update: Method | null
 	#delete: Method
 	#clear: Method
 
@@ -194,9 +194,14 @@ export class ModelAPI {
 		const wherePrimaryKeyEquals = `WHERE ${primaryKeyEquals.join(" AND ")}`
 
 		const updateNames = columnNames.filter((name) => !model.primaryKey.includes(name))
-		const updateEntries = updateNames.map((name) => `"${name}" = ?`)
 
-		this.#update = new Method(db, `UPDATE "${this.#table}" SET ${updateEntries.join(", ")} ${wherePrimaryKeyEquals}`)
+		if (updateNames.length > 0) {
+			const updateEntries = updateNames.map((name) => `"${name}" = ?`)
+			this.#update = new Method(db, `UPDATE "${this.#table}" SET ${updateEntries.join(", ")} ${wherePrimaryKeyEquals}`)
+		} else {
+			this.#update = null
+		}
+
 		this.#delete = new Method(db, `DELETE FROM "${this.#table}" ${wherePrimaryKeyEquals}`)
 		this.#clear = new Method(db, `DELETE FROM "${this.#table}"`)
 
@@ -263,7 +268,7 @@ export class ModelAPI {
 		if (existingRecord === null) {
 			const params = this.encodeProperties(this.model.properties, value)
 			this.#insert.run(params)
-		} else {
+		} else if (this.#update !== null) {
 			const params = this.encodeProperties(this.mutableProperties, value)
 			this.#update.run([...params, ...encodedKey])
 		}
@@ -683,7 +688,7 @@ export class RelationAPI {
 
 	public get(sourceKey: SqlitePrimitiveValue[]): SqlitePrimitiveValue[][] {
 		const targets = this.#select.all(sourceKey)
-		return targets.map((record) => this.sourceColumnNames.map((name) => record[name]))
+		return targets.map((record) => this.targetColumnNames.map((name) => record[name]))
 	}
 
 	public add(sourceKey: SqlitePrimitiveValue[], targetKeys: SqlitePrimitiveValue[][]) {

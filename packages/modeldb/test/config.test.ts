@@ -13,14 +13,14 @@ test("parse config", (t) => {
 
 		room: {
 			$primary: "id",
-			id: "primary",
+			id: "string",
 			creator: "@user",
 			members: "@user[]",
 			$indexes: ["members", "id/creator"],
 		},
 
 		message: {
-			$primary: "id",
+			$primary: "id/timestamp",
 			id: "string",
 			room: "@room",
 			sender: "@user",
@@ -33,7 +33,7 @@ test("parse config", (t) => {
 		{
 			name: "user",
 			indexes: [],
-			primaryKey: "id",
+			primaryKey: ["id"],
 			properties: [
 				{ name: "id", kind: "primitive", type: "string", nullable: false },
 				{ name: "address", kind: "primitive", type: "string", nullable: false },
@@ -44,7 +44,7 @@ test("parse config", (t) => {
 		{
 			name: "room",
 			indexes: [["id", "creator"]],
-			primaryKey: "id",
+			primaryKey: ["id"],
 			properties: [
 				{ name: "id", kind: "primitive", type: "string", nullable: false },
 				{ name: "creator", kind: "reference", target: "user", nullable: false },
@@ -54,7 +54,7 @@ test("parse config", (t) => {
 		{
 			name: "message",
 			indexes: [],
-			primaryKey: "id",
+			primaryKey: ["id", "timestamp"],
 			properties: [
 				{ name: "id", kind: "primitive", type: "string", nullable: false },
 				{ name: "room", kind: "reference", target: "room", nullable: false },
@@ -69,9 +69,7 @@ test("parse config", (t) => {
 		{
 			source: "room",
 			sourceProperty: "members",
-			sourcePrimaryKey: { name: "id", kind: "primitive", type: "string", nullable: false },
 			target: "user",
-			targetPrimaryKey: { name: "id", kind: "primitive", type: "string", nullable: false },
 			indexed: true,
 		},
 	])

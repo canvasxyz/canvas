@@ -5,15 +5,14 @@ import { assert, signalInvalidType } from "@canvas-js/utils"
 import {
 	AbstractModelDB,
 	ModelDBBackend,
-	Config,
 	Effect,
 	ModelValue,
 	ModelSchema,
 	QueryParams,
 	WhereCondition,
-	parseConfig,
 	getModelsFromInclude,
 	PrimaryKeyValue,
+	Config,
 } from "@canvas-js/modeldb"
 
 import { ModelAPI } from "./api.js"
@@ -27,7 +26,7 @@ export interface ModelDBOptions {
 
 export class ModelDB extends AbstractModelDB {
 	public static async initialize({ name, models, version = 1 }: ModelDBOptions) {
-		const config = parseConfig(models)
+		const config = Config.parse(models)
 		const db = await openDB(name, version, {
 			upgrade(db: IDBPDatabase<unknown>, oldVersion: number, newVersion: number | null) {
 				// create missing object stores
@@ -147,9 +146,9 @@ export class ModelDB extends AbstractModelDB {
 	}
 
 	public async query<T extends ModelValue = ModelValue>(modelName: string, query: QueryParams = {}): Promise<T[]> {
-		if (query.include) {
-			return this.queryWithInclude<T>(modelName, query)
-		}
+		// if (query.include) {
+		// 	return this.queryWithInclude<T>(modelName, query)
+		// }
 
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
@@ -157,26 +156,26 @@ export class ModelDB extends AbstractModelDB {
 		return result as T[]
 	}
 
-	private async queryWithInclude<T extends ModelValue = ModelValue>(
-		modelName: string,
-		query: QueryParams = {},
-	): Promise<T[]> {
-		assert(query.include)
-		const api = this.#models[modelName]
-		const modelNames = Array.from(
-			new Set([modelName, ...getModelsFromInclude(this.config.models, modelName, query.include)]),
-		)
-		for (const modelName of modelNames) {
-			assert(this.#models[modelName] !== undefined, `model ${modelName} not found`)
-		}
+	// private async queryWithInclude<T extends ModelValue = ModelValue>(
+	// 	modelName: string,
+	// 	query: QueryParams = {},
+	// ): Promise<T[]> {
+	// 	assert(query.include)
+	// 	const api = this.#models[modelName]
+	// 	const modelNames = Array.from(
+	// 		new Set([modelName, ...getModelsFromInclude(this.config.models, modelName, query.include)]),
+	// 	)
+	// 	for (const modelName of modelNames) {
+	// 		assert(this.#models[modelName] !== undefined, `model ${modelName} not found`)
+	// 	}
 
-		const result = await this.read(
-			async (txn) => api.queryWithInclude(txn, this.#models, query),
-			modelNames.map((m: string) => this.#models[m].storeName),
-		)
+	// 	const result = await this.read(
+	// 		async (txn) => api.queryWithInclude(txn, this.#models, query),
+	// 		modelNames.map((m: string) => this.#models[m].storeName),
+	// 	)
 
-		return result as T[]
-	}
+	// 	return result as T[]
+	// }
 
 	public async count(modelName: string, where?: WhereCondition): Promise<number> {
 		const api = this.#models[modelName]
@@ -212,9 +211,10 @@ export class ModelDB extends AbstractModelDB {
 					assert(api !== undefined, `model ${model} not found`)
 					if (effects.some((effect) => filter(effect))) {
 						try {
-							const results = query.include
-								? await api.queryWithInclude(txn, this.#models, query)
-								: await api.query(txn, query)
+							// const results = query.include
+							// 	? await api.queryWithInclude(txn, this.#models, query)
+							// 	: await api.query(txn, query)
+							const results = await api.query(txn, query)
 							await callback(results)
 						} catch (err) {
 							this.log.error(err)

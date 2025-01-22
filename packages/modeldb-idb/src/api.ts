@@ -113,137 +113,140 @@ export class ModelAPI {
 		return results
 	}
 
-	async queryWithInclude(
-		txn: IDBPTransaction<any, any, IDBTransactionMode>,
-		models: Record<string, ModelAPI>,
-		query: QueryParams,
-	): Promise<ModelValueWithIncludes[]> {
-		const cache: Record<string, Record<string, ModelValue>> = {} // { [table]: { [id]: ModelValue } }
+	// async queryWithInclude(
+	// 	txn: IDBPTransaction<any, any, IDBTransactionMode>,
+	// 	models: Record<string, ModelAPI>,
+	// 	query: QueryParams,
+	// ): Promise<ModelValueWithIncludes[]> {
+	// 	const cache: Record<string, Record<string, ModelValue>> = {} // { [table]: { [id]: ModelValue } }
 
-		const { include, ...rootQuery } = query
-		const modelValues = (await this.query(txn, rootQuery)) as ModelValueWithIncludes[]
+	// 	const { include, ...rootQuery } = query
+	// 	const modelValues = (await this.query(txn, rootQuery)) as ModelValueWithIncludes[]
 
-		// Two-pass recursive query to populate includes. The first pass populates
-		// the cache with all models in the response, but doesn't join any of them.
-		// The second pass populates includes for every reference/relation,
-		// updating the result record in-place.
-		//
-		// This is necessary because making joins in the first pass would cause the
-		// the `include` to be applied everywhere that model appears in the query,
-		// but we only want it in the exact places the user has asked for it.
-		const populateCache = async (modelName: string, records: ModelValueWithIncludes[], include: IncludeExpression) => {
-			const thisModel = Object.values(models).find((api) => api.model.name === modelName)
-			assert(thisModel !== undefined)
+	// 	// Two-pass recursive query to populate includes. The first pass populates
+	// 	// the cache with all models in the response, but doesn't join any of them.
+	// 	// The second pass populates includes for every reference/relation,
+	// 	// updating the result record in-place.
+	// 	//
+	// 	// This is necessary because making joins in the first pass would cause the
+	// 	// the `include` to be applied everywhere that model appears in the query,
+	// 	// but we only want it in the exact places the user has asked for it.
+	// 	const populateCache = async (modelName: string, records: ModelValueWithIncludes[], include: IncludeExpression) => {
+	// 		const thisModel = Object.values(models).find((api) => api.model.name === modelName)
+	// 		assert(thisModel !== undefined)
 
-			for (const includeKey of Object.keys(include)) {
-				// look up the model corresponding to the { include: key }
-				const prop = thisModel.properties[includeKey]
-				assert(prop, "include was used with a missing property")
-				assert(
-					prop.kind === "reference" || prop.kind === "relation",
-					"include should only be used with references or relations",
-				)
-				const includeModel = prop.target
+	// 		for (const includeKey of Object.keys(include)) {
+	// 			// look up the model corresponding to the { include: key }
+	// 			const prop = thisModel.properties[includeKey]
+	// 			assert(prop, "include was used with a missing property")
+	// 			assert(
+	// 				prop.kind === "reference" || prop.kind === "relation",
+	// 				"include should only be used with references or relations",
+	// 			)
+	// 			const includeModel = prop.target
 
-				cache[includeModel] ||= {}
-				for (const record of records) {
-					const includeValue = record[includeKey]
-					// Reference type
-					if (!Array.isArray(includeValue)) {
-						assert(typeof includeValue === "string", "include should only be used with references or relations")
-						if (cache[includeModel][includeValue]) continue
+	// 			cache[includeModel] ||= {}
+	// 			for (const record of records) {
+	// 				const includeValue = record[includeKey]
+	// 				// Reference type
+	// 				if (!Array.isArray(includeValue)) {
+	// 					assert(typeof includeValue === "string", "include should only be used with references or relations")
+	// 					if (cache[includeModel][includeValue]) continue
 
-						const [result] = await models[includeModel].query(txn, {
-							where: { [models[includeModel].model.primaryKey]: includeValue },
-						})
+	// 					const [result] = await models[includeModel].query(txn, {
+	// 						where: { [models[includeModel].model.primaryKey]: includeValue },
+	// 					})
 
-						if (result === undefined) {
-							console.error(
-								`expected reference to be populated while looking up ${modelName}.${includeKey}: ${includeModel} = ${includeValue}`,
-							)
-							continue
-						}
-						cache[includeModel][includeValue] = { ...result }
-						if (include[includeKey]) {
-							await populateCache(includeModel, [result], include[includeKey])
-						}
-						continue
-					}
-					// Relation type
-					for (const item of includeValue) {
-						assert(typeof item === "string", "include should only be used with references or relations")
-						if (cache[includeModel][item]) continue
-						const [result] = await models[includeModel].query(txn, {
-							where: { [models[includeModel].model.primaryKey]: item },
-						})
-						if (result === undefined) {
-							console.error(
-								`expected relation to be populated while looking up ${modelName}.${includeKey}: ${includeModel} = ${includeValue}`,
-							)
-							continue
-						}
-						cache[includeModel][item] = { ...result }
-						if (include[includeKey]) {
-							await populateCache(includeModel, [result], include[includeKey])
-						}
-					}
-				}
-			}
-		}
-		const populateRecords = async (
-			modelName: string,
-			records: ModelValueWithIncludes[],
-			include: IncludeExpression,
-		) => {
-			if (Object.keys(include).length === 0) return
+	// 					if (result === undefined) {
+	// 						console.error(
+	// 							`expected reference to be populated while looking up ${modelName}.${includeKey}: ${includeModel} = ${includeValue}`,
+	// 						)
+	// 						continue
+	// 					}
+	// 					cache[includeModel][includeValue] = { ...result }
+	// 					if (include[includeKey]) {
+	// 						await populateCache(includeModel, [result], include[includeKey])
+	// 					}
+	// 					continue
+	// 				}
+	// 				// Relation type
+	// 				for (const item of includeValue) {
+	// 					assert(typeof item === "string", "include should only be used with references or relations")
+	// 					if (cache[includeModel][item]) continue
+	// 					const [result] = await models[includeModel].query(txn, {
+	// 						where: { [models[includeModel].model.primaryKey]: item },
+	// 					})
+	// 					if (result === undefined) {
+	// 						console.error(
+	// 							`expected relation to be populated while looking up ${modelName}.${includeKey}: ${includeModel} = ${includeValue}`,
+	// 						)
+	// 						continue
+	// 					}
+	// 					cache[includeModel][item] = { ...result }
+	// 					if (include[includeKey]) {
+	// 						await populateCache(includeModel, [result], include[includeKey])
+	// 					}
+	// 				}
+	// 			}
+	// 		}
+	// 	}
 
-			const thisModel = Object.values(models).find((api) => api.model.name === modelName)
-			assert(thisModel !== undefined)
+	// 	const populateRecords = async (
+	// 		modelName: string,
+	// 		records: ModelValueWithIncludes[],
+	// 		include: IncludeExpression,
+	// 	) => {
+	// 		if (Object.keys(include).length === 0) return
 
-			for (const record of records) {
-				for (const includeKey of Object.keys(include)) {
-					// look up the model corresponding to the { include: key }
-					const prop = thisModel.properties[includeKey]
-					assert(prop, "include was used with a missing property")
-					assert(
-						prop.kind === "reference" || prop.kind === "relation",
-						"include should only be used with references or relations",
-					)
-					const includeModel = prop.target
+	// 		const thisModel = Object.values(models).find((api) => api.model.name === modelName)
+	// 		assert(thisModel !== undefined)
 
-					const includeValue = record[includeKey]
-					if (!Array.isArray(includeValue)) {
-						// Reference type
-						if (includeValue === undefined) {
-							record[includeKey] = null
-							continue
-						}
-						assert(typeof includeValue === "string", "expected reference to be a string")
-						record[includeKey] = { ...cache[includeModel][includeValue] } // replace propertyValue
-						if (include[includeKey]) {
-							await populateRecords(includeModel, [record[includeKey]], include[includeKey])
-						}
-					} else {
-						// Relation type
-						if (includeValue === undefined) {
-							record[includeKey] = []
-							continue
-						}
-						record[includeKey] = includeValue.map((pk) => {
-							assert(typeof pk === "string", "expected relation to be a string[]")
-							return { ...cache[includeModel][pk] }
-						}) // replace propertyValue
-						if (include[includeKey]) {
-							await populateRecords(includeModel, record[includeKey], include[includeKey])
-						}
-					}
-				}
-			}
-		}
-		await populateCache(this.model.name, modelValues, query.include ?? {})
-		await populateRecords(this.model.name, modelValues, query.include ?? {})
-		return modelValues
-	}
+	// 		for (const record of records) {
+	// 			for (const includeKey of Object.keys(include)) {
+	// 				// look up the model corresponding to the { include: key }
+	// 				const prop = thisModel.properties[includeKey]
+	// 				assert(prop, "include was used with a missing property")
+	// 				assert(
+	// 					prop.kind === "reference" || prop.kind === "relation",
+	// 					"include should only be used with references or relations",
+	// 				)
+	// 				const includeModel = prop.target
+
+	// 				const includeValue = record[includeKey]
+	// 				if (!Array.isArray(includeValue)) {
+	// 					// Reference type
+	// 					if (includeValue === undefined) {
+	// 						record[includeKey] = null
+	// 						continue
+	// 					}
+	// 					assert(typeof includeValue === "string", "expected reference to be a string")
+	// 					record[includeKey] = { ...cache[includeModel][includeValue] } // replace propertyValue
+	// 					if (include[includeKey]) {
+	// 						await populateRecords(includeModel, [record[includeKey]], include[includeKey])
+	// 					}
+	// 				} else {
+	// 					// Relation type
+	// 					if (includeValue === undefined) {
+	// 						record[includeKey] = []
+	// 						continue
+	// 					}
+	// 					record[includeKey] = includeValue.map((pk) => {
+	// 						assert(typeof pk === "string", "expected relation to be a string[]")
+	// 						return { ...cache[includeModel][pk] }
+	// 					}) // replace propertyValue
+	// 					if (include[includeKey]) {
+	// 						await populateRecords(includeModel, record[includeKey], include[includeKey])
+	// 					}
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+
+	// 	await populateCache(this.model.name, modelValues, query.include ?? {})
+	// 	await populateRecords(this.model.name, modelValues, query.include ?? {})
+
+	// 	return modelValues
+	// }
 
 	private getStoreIndex(store: IDBPObjectStore<any, any, string, "readonly">, index: string[]): StoreIndex | null {
 		if (equalIndex(index, this.model.primaryKey)) {
