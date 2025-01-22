@@ -57,7 +57,7 @@ test("create and verify session using external signature", async (t) => {
 	// construct a SIWF signer
 	const signer = new SIWFSigner({
 		custodyAddress: exampleCustodyAddress,
-		privateKey: exampleDelegatePrivateKey,
+		privateKey: exampleDelegatePrivateKey.slice(2),
 	})
 
 	// create a canvas session based on the SIWF message
@@ -106,7 +106,7 @@ test("reject invalid siwf message", async (t) => {
 
 	const signer = new SIWFSigner({
 		custodyAddress: exampleCustodyAddress,
-		privateKey: exampleDelegatePrivateKey,
+		privateKey: exampleDelegatePrivateKey.slice(2),
 	})
 
 	await t.throwsAsync(async () => signer.newSession(topic, authorizationData, timestamp))

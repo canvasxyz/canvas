@@ -49,11 +49,11 @@ export function validateSIWFSessionData(authorizationData: unknown): authorizati
 	)
 }
 
-export const addressPattern = /^did:pkh:eip155:(\d+):(0x[a-fA-F0-9]+)$/
+export const addressPattern = /^did:pkh:farcaster:(0x[a-fA-F0-9]+)$/
 
-export function parseAddress(address: string): { chainId: number; address: `0x${string}` } {
+export function parseAddress(address: string): { address: `0x${string}` } {
 	const result = addressPattern.exec(address)
 	assert(result !== null)
-	const [_, chainIdResult, addressResult] = result
-	return { chainId: parseInt(chainIdResult), address: addressResult as `0x${string}` }
+	const [_, addressResult] = result
+	return { address: addressResult as `0x${string}` }
 }

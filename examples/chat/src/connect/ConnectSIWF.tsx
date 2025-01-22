@@ -12,7 +12,7 @@ import { AppContext } from "../AppContext.js"
 export interface ConnectSIWFProps {}
 
 export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({}) => {
-	const { setSessionSigner, setAddress } = useContext(AppContext)
+	const { app, setSessionSigner, setAddress } = useContext(AppContext)
 
 	const profile = useProfile()
 	const {
@@ -43,7 +43,7 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({}) => {
 				<code>{error.message}</code>
 			</div>
 		)
-	} else if (!privateKey || !requestId) {
+	} else if (!privateKey || !requestId || !app) {
 		return (
 			<div className="p-2 border rounded bg-gray-200">
 				<button disabled>Loading...</button>
@@ -75,13 +75,15 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({}) => {
 						console.log(message, signature, privateKey)
 
 						const { authorizationData, topic, custodyAddress } = SIWFSigner.parseSIWFMessage(message, signature)
-						const signer = new SIWFSigner({ privateKey, custodyAddress })
+						const signer = new SIWFSigner({ custodyAddress, privateKey: privateKey.slice(2) })
+						const address = await signer.getDid()
 
 						const timestamp = new Date(authorizationData.siweIssuedAt).valueOf()
 						const { payload, signer: delegateSigner } = await signer.newSession(topic, authorizationData, timestamp, ed25519.type, getBytes(privateKey))
-						const address = await signer.getDid()
 						setAddress(address)
 						setSessionSigner(signer)
+						app.updateSigners([signer])
+						app.messageLog.append(payload, { signer: delegateSigner })
 						console.log("created chat session", payload, delegateSigner)
 					}}
 					onError={(...args) => {
