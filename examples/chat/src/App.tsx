@@ -34,9 +34,8 @@ const config = {
 	// RPC URL from a provider like Alchemy or Infura.
 	relay: "https://relay.farcaster.xyz",
 	rpcUrl: "https://mainnet.optimism.io",
-	// TODO: replace domain and siweurl with document.location
-	domain: "6adf-66-65-178-244.ngrok-free.app",
-	siweUri: "https://6adf-66-65-178-244.ngrok-free.app/login",
+	domain: "chat-example.canvas.xyz",
+	siweUri: "https://chat-example.canvas.xyz",
 	provider: new JsonRpcProvider(undefined, 10),
 }
 

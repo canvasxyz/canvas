@@ -39,7 +39,7 @@ export const Connect: React.FC<{}> = ({}) => {
 				{/* <option value="near">NEAR</option> */}
 				<option value="terra">Terra</option>
 				<option value="cosmos-evm">Cosmos/EVM</option>
-				<option value="bluesky">BlueSky</option>
+				<option value="bluesky">Bluesky</option>
 				<option value="leap">Leap</option>
 				<option value="magic">Magic</option>
 			</select>

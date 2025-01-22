@@ -79,10 +79,16 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({}) => {
 						const address = await signer.getDid()
 
 						const timestamp = new Date(authorizationData.siweIssuedAt).valueOf()
-						const { payload, signer: delegateSigner } = await signer.newSession(topic, authorizationData, timestamp, ed25519.type, getBytes(privateKey))
+						const { payload, signer: delegateSigner } = await signer.newSession(
+							topic,
+							authorizationData,
+							timestamp,
+							ed25519.type,
+							getBytes(privateKey),
+						)
 						setAddress(address)
 						setSessionSigner(signer)
-						app.updateSigners([signer])
+						app.updateSigners([signer, ...app.signers.getAll().filter((signer) => signer.key !== "chain-ethereum-farcaster")])
 						app.messageLog.append(payload, { signer: delegateSigner })
 						console.log("created chat session", payload, delegateSigner)
 					}}
