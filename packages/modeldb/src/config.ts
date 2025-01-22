@@ -4,7 +4,7 @@ import { Config, Model, ModelSchema, PrimitiveType, Property, PropertyType, Rela
 import { namePattern } from "./utils.js"
 
 export function parseConfig(init: ModelSchema): Config {
-	const relations: Omit<Relation, "sourceType" | "targetType">[] = []
+	const relations: Omit<Relation, "sourcePrimaryKey" | "targetPrimaryKey">[] = []
 	const models: Model[] = []
 
 	for (const [modelName, { $indexes, $primary, ...rest }] of Object.entries(init)) {
@@ -71,20 +71,20 @@ export function parseConfig(init: ModelSchema): Config {
 				throw new Error(`invalid model schema: invalid relation source "${relation.source}" (no such model)`)
 			}
 
-			const sourcePrimaryProperty = sourceModel.properties.find((property) => property.name === sourceModel.primaryKey)
-			assert(sourcePrimaryProperty !== undefined)
-			assert(sourcePrimaryProperty.kind === "primitive")
+			const sourcePrimaryKey = sourceModel.properties.find((property) => property.name === sourceModel.primaryKey)
+			assert(sourcePrimaryKey !== undefined)
+			assert(sourcePrimaryKey.kind === "primitive")
 
 			const targetModel = models.find((model) => model.name === relation.target)
 			if (targetModel === undefined) {
 				throw new Error(`invalid model schema: invalid relation target "${relation.target}" (no such model)`)
 			}
 
-			const targetPrimaryProperty = targetModel.properties.find((property) => property.name === targetModel.primaryKey)
-			assert(targetPrimaryProperty !== undefined)
-			assert(targetPrimaryProperty.kind === "primitive")
+			const targetPrimaryKey = targetModel.properties.find((property) => property.name === targetModel.primaryKey)
+			assert(targetPrimaryKey !== undefined)
+			assert(targetPrimaryKey.kind === "primitive")
 
-			return { ...relation, sourceType: sourcePrimaryProperty.type, targetType: targetPrimaryProperty.type }
+			return { ...relation, sourcePrimaryKey, targetPrimaryKey }
 		}),
 		models,
 	}

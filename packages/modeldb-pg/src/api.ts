@@ -378,7 +378,7 @@ export class ModelAPI {
 	): Promise<ModelValue> {
 		const key = record[this.#primaryKeyName] as PrimaryKeyValue
 
-		const value = this.decodeRecord(record)
+		const value: ModelValue = {}
 		for (const [propertyName, propertyValue] of Object.entries(record)) {
 			const property = this.#properties[propertyName]
 			if (property.kind === "primitive") {
@@ -682,8 +682,8 @@ export class RelationAPI {
 		// Initialize tables
 		const relationApi = new RelationAPI(client, relation)
 		const columns = [
-			`_source ${primitiveColumnTypes[relation.sourceType]} NOT NULL`,
-			`_target ${primitiveColumnTypes[relation.targetType]} NOT NULL`,
+			`_source ${primitiveColumnTypes[relation.sourcePrimaryKey.type]} NOT NULL`,
+			`_target ${primitiveColumnTypes[relation.targetPrimaryKey.type]} NOT NULL`,
 		]
 
 		const queries = []
@@ -713,13 +713,14 @@ export class RelationAPI {
 	}
 
 	private decodeRelationTarget(target: PostgresPrimitiveValue): PrimaryKeyValue {
-		if (this.relation.targetType === "integer") {
+		const { type } = this.relation.targetPrimaryKey
+		if (type === "integer") {
 			assert(typeof target === "string", "internal error - expected integer primary key")
 			return parseInt(target, 10)
-		} else if (this.relation.targetType === "string") {
+		} else if (type === "string") {
 			assert(typeof target === "string", "internal error - expected string primary key")
 			return target
-		} else if (this.relation.targetType === "bytes") {
+		} else if (type === "bytes") {
 			if (Buffer.isBuffer(target)) {
 				return fromBuffer(target)
 			} else {
