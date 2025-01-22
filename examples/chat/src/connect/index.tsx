@@ -2,6 +2,7 @@ import React, { useState } from "react"
 
 import { ConnectSIWEBurner } from "./ConnectSIWEBurner.js"
 import { ConnectSIWE } from "./ConnectSIWE.js"
+import { ConnectSIWF } from "./ConnectSIWF.js"
 import { ConnectSIWEViem } from "./ConnectSIWEViem.js"
 import { ConnectEIP712Burner } from "./ConnectEIP712Burner.js"
 import { ConnectEIP712 } from "./ConnectEIP712.js"
@@ -27,6 +28,7 @@ export const Connect: React.FC<{}> = ({}) => {
 			>
 				<option value="burner">Burner Wallet</option>
 				<option value="burner-eip712">Burner Wallet - EIP712</option>
+				<option value="farcaster">Sign in with Farcaster</option>
 				<option value="ethereum">Ethereum</option>
 				<option value="ethereum-viem">Ethereum (Viem)</option>
 				<option value="ethereum-eip712">Ethereum (EIP712)</option>
@@ -37,7 +39,7 @@ export const Connect: React.FC<{}> = ({}) => {
 				{/* <option value="near">NEAR</option> */}
 				<option value="terra">Terra</option>
 				<option value="cosmos-evm">Cosmos/EVM</option>
-				<option value="bluesky">BlueSky</option>
+				<option value="bluesky">Bluesky</option>
 				<option value="leap">Leap</option>
 				<option value="magic">Magic</option>
 			</select>
@@ -48,6 +50,8 @@ export const Connect: React.FC<{}> = ({}) => {
 
 const Method: React.FC<{ method: string }> = (props) => {
 	switch (props.method) {
+		case "farcaster":
+			return <ConnectSIWF />
 		case "burner":
 			return <ConnectSIWEBurner />
 		case "burner-eip712":
