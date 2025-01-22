@@ -1,7 +1,3 @@
-/**
- * The signer implementer is expected to verify that the FID and
- * custody address are attached to each other onchain.
- */
 export type SIWFSessionData = {
 	custodyAddress: string
 	fid: string
