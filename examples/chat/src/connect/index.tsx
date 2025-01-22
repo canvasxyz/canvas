@@ -17,7 +17,7 @@ import { ConnectMagic } from "./ConnectMagic.js"
 import { ConnectLeap } from "./ConnectLeap.js"
 
 export const Connect: React.FC<{}> = ({}) => {
-	const [method, setMethod] = useState("farcaster")
+	const [method, setMethod] = useState("burner")
 
 	return (
 		<>
@@ -26,9 +26,9 @@ export const Connect: React.FC<{}> = ({}) => {
 				value={method}
 				onChange={(e) => setMethod(e.target.value)}
 			>
-				<option value="farcaster">Sign in with Farcaster</option>
 				<option value="burner">Burner Wallet</option>
 				<option value="burner-eip712">Burner Wallet - EIP712</option>
+				<option value="farcaster">Sign in with Farcaster</option>
 				<option value="ethereum">Ethereum</option>
 				<option value="ethereum-viem">Ethereum (Viem)</option>
 				<option value="ethereum-eip712">Ethereum (EIP712)</option>
