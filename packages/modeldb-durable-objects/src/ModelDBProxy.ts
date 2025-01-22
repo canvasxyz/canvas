@@ -1,3 +1,6 @@
+import * as json from "@ipld/dag-json"
+import { Unstable_DevWorker } from "wrangler"
+
 import {
 	AbstractModelDB,
 	ModelDBBackend,
@@ -5,17 +8,14 @@ import {
 	ModelSchema,
 	ModelValue,
 	ModelValueWithIncludes,
-	parseConfig,
 	QueryParams,
 	WhereCondition,
+	Config,
 } from "@canvas-js/modeldb"
 import { Awaitable } from "@canvas-js/interfaces"
 import { assert, prepare } from "@canvas-js/utils"
-import * as json from "@ipld/dag-json"
 
-import { ModelDB } from "./ModelDB.js"
 import { randomUUID } from "./utils.js"
-import { Unstable_DevWorker } from "wrangler"
 
 type Subscription = {
 	model: string
@@ -35,7 +35,7 @@ export class ModelDBProxy extends AbstractModelDB {
 	subscriptions: Map<number, Subscription>
 
 	constructor(worker: Unstable_DevWorker, models: ModelSchema, baseUrl?: string, uuid?: string) {
-		super(parseConfig(models))
+		super(Config.parse(models))
 
 		this.worker = worker
 		this.baseUrl = baseUrl ?? "http://example.com"

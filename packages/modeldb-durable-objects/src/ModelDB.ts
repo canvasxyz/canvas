@@ -3,13 +3,14 @@ import { Awaitable } from "@canvas-js/interfaces"
 import {
 	AbstractModelDB,
 	ModelDBBackend,
-	parseConfig,
+	Config,
 	Effect,
 	ModelValue,
 	ModelSchema,
 	QueryParams,
 	WhereCondition,
 	ModelValueWithIncludes,
+	PrimaryKeyValue,
 } from "@canvas-js/modeldb"
 
 import { SqlStorage } from "@cloudflare/workers-types"
@@ -37,7 +38,7 @@ export class ModelDB extends AbstractModelDB {
 	#models: Record<string, ModelAPI> = {}
 
 	constructor({ db, models }: ModelDBOptions) {
-		super(parseConfig(models))
+		super(Config.parse(models))
 		this.db = db
 
 		for (const model of Object.values(this.models)) {
@@ -54,46 +55,23 @@ export class ModelDB extends AbstractModelDB {
 	}
 
 	public async apply(effects: Effect[]) {
-		// support transactions by rolling back each ModelValue
-		const rollback: Array<{ model: string; key: string; value: ModelValue | null }> = []
-		try {
-			for (const effect of effects) {
-				const model = this.models[effect.model]
-				assert(model !== undefined, `model ${effect.model} not found`)
-				if (effect.operation === "set") {
-					rollback.push({
-						model: effect.model,
-						key: effect.value[model.primaryKey],
-						value: this.#models[effect.model].get(effect.value[model.primaryKey]),
-					})
-					this.#models[effect.model].set(effect.value)
-				} else if (effect.operation === "delete") {
-					rollback.push({ model: effect.model, key: effect.key, value: this.#models[effect.model].get(effect.key) })
-					this.#models[effect.model].delete(effect.key)
-				} else {
-					signalInvalidType(effect)
-				}
-			}
-		} catch (err) {
-			for (const { model, key, value } of rollback) {
-				if (value === null) {
-					this.#models[model].delete(key)
-				} else {
-					this.#models[model].set(value)
-				}
-			}
-			throw err
-		}
+		// From https://developers.cloudflare.com/durable-objects/api/storage-api/#transaction
+		// > Explicit transactions are no longer necessary. Any series of write
+		// > operations with no intervening await will automatically be submitted
+		// > atomically, and the system will prevent concurrent events from executing
+		// > while await a read operation (unless you use allowConcurrency: true).
+		// > Therefore, a series of reads followed by a series of writes (with no other
+		// > intervening I/O) are automatically atomic and behave like a transaction
 
-		for (const { model, query, filter, callback } of this.subscriptions.values()) {
-			if (effects.some(filter)) {
-				const api = this.#models[model]
-				assert(api !== undefined, `model ${model} not found`)
-				try {
-					callback(api.query(query))
-				} catch (err) {
-					this.log.error(err)
-				}
+		for (const effect of effects) {
+			const model = this.models[effect.model]
+			assert(model !== undefined, `model ${effect.model} not found`)
+			if (effect.operation === "set") {
+				this.#models[effect.model].set(effect.value)
+			} else if (effect.operation === "delete") {
+				this.#models[effect.model].delete(effect.key)
+			} else {
+				signalInvalidType(effect)
 			}
 		}
 	}

@@ -6,6 +6,7 @@ import type {
 	ModelSchema,
 	ModelValue,
 	PrimaryKeyValue,
+	PrimitiveProperty,
 	PrimitiveValue,
 	Property,
 	PropertyValue,

@@ -20,6 +20,7 @@ import {
 	WhereCondition,
 	ModelValueWithIncludes,
 	IncludeExpression,
+	PrimaryKeyValue,
 } from "@canvas-js/modeldb"
 
 import { equalIndex, getIndexName } from "./utils.js"
@@ -47,7 +48,7 @@ export class ModelAPI {
 
 	public async get<Mode extends IDBTransactionMode>(
 		txn: IDBPTransaction<any, any, Mode>,
-		key: string,
+		key: PrimaryKeyValue | PrimaryKeyValue[],
 	): Promise<ModelValue | null> {
 		const value: ObjectValue | undefined = await this.getStore(txn).get(key)
 		if (value === undefined) {
@@ -59,7 +60,7 @@ export class ModelAPI {
 
 	public async getMany<Mode extends IDBTransactionMode>(
 		txn: IDBPTransaction<any, any, Mode>,
-		keys: string[],
+		keys: PrimaryKeyValue[] | PrimaryKeyValue[][],
 	): Promise<(ModelValue | null)[]> {
 		// TODO: if keys are near each other, we could try using a range instead of getting each key individually
 		const results = []
@@ -75,7 +76,7 @@ export class ModelAPI {
 		await this.getStore(txn).put(object)
 	}
 
-	async delete(txn: IDBPTransaction<any, any, "readwrite">, key: string): Promise<void> {
+	async delete(txn: IDBPTransaction<any, any, "readwrite">, key: PrimaryKeyValue | PrimaryKeyValue[]): Promise<void> {
 		await this.getStore(txn).delete(key)
 	}
 
@@ -155,6 +156,7 @@ export class ModelAPI {
 						const [result] = await models[includeModel].query(txn, {
 							where: { [models[includeModel].model.primaryKey]: includeValue },
 						})
+
 						if (result === undefined) {
 							console.error(
 								`expected reference to be populated while looking up ${modelName}.${includeKey}: ${includeModel} = ${includeValue}`,
@@ -244,7 +246,7 @@ export class ModelAPI {
 	}
 
 	private getStoreIndex(store: IDBPObjectStore<any, any, string, "readonly">, index: string[]): StoreIndex | null {
-		if (index.length === 1 && this.model.primaryKey === index[0]) {
+		if (equalIndex(index, this.model.primaryKey)) {
 			return store
 		}
 
@@ -463,7 +465,7 @@ export class ModelAPI {
 		let bestIndexExact: boolean
 
 		{
-			const [indexRange, exact] = this.getIndexRange([this.model.primaryKey], where)
+			const [indexRange, exact] = this.getIndexRange(this.model.primaryKey, where)
 			bestIndexRange = indexRange
 			bestIndexExact = exact
 			bestIndexCount = await bestIndex.count(bestIndexRange)

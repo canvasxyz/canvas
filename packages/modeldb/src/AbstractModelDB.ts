@@ -2,9 +2,18 @@ import { Logger, logger } from "@libp2p/logger"
 
 import { assert } from "@canvas-js/utils"
 
-import { Config, ModelValue, Effect, Model, QueryParams, WhereCondition, ModelValueWithIncludes } from "./types.js"
+import { Config } from "./config.js"
+import {
+	ModelValue,
+	Effect,
+	Model,
+	QueryParams,
+	WhereCondition,
+	ModelValueWithIncludes,
+	PrimaryKeyValue,
+} from "./types.js"
 import { getFilter } from "./query.js"
-import { Awaitable, getModelsFromInclude, mergeModelValues, updateModelValues } from "./utils.js"
+import { Awaitable, getModelsFromInclude, isPrimaryKey, mergeModelValues, updateModelValues } from "./utils.js"
 
 type Subscription = {
 	model: string
@@ -41,11 +50,14 @@ export abstract class AbstractModelDB {
 
 	abstract close(): Promise<void>
 
-	abstract get<T extends ModelValue<any> = ModelValue<any>>(modelName: string, key: string): Awaitable<T | null>
+	abstract get<T extends ModelValue<any> = ModelValue<any>>(
+		modelName: string,
+		key: PrimaryKeyValue | PrimaryKeyValue[],
+	): Awaitable<T | null>
 
 	abstract getMany<T extends ModelValue<any> = ModelValue<any>>(
 		modelName: string,
-		key: string[],
+		key: PrimaryKeyValue[] | PrimaryKeyValue[][],
 	): Awaitable<(T | null)[]>
 
 	abstract iterate<T extends ModelValue<any> = ModelValue<any>>(
@@ -69,20 +81,20 @@ export abstract class AbstractModelDB {
 		await this.apply([{ operation: "set", model: modelName, value }])
 	}
 
-	public async delete(modelName: string, key: string) {
+	public async delete(modelName: string, key: PrimaryKeyValue | PrimaryKeyValue[]) {
 		await this.apply([{ operation: "delete", model: modelName, key }])
 	}
 
 	public async update<T extends ModelValue<any> = ModelValue<any>>(modelName: string, value: T) {
-		const key = this.models[modelName].primaryKey
-		const existingValue = await this.get<T>(modelName, value[key])
+		const key = this.models[modelName].primaryKey.map((key) => value[key])
+		const existingValue = await this.get<T>(modelName, key)
 		const updatedValue = updateModelValues(value, existingValue ?? {})
 		await this.apply([{ operation: "set", model: modelName, value: updatedValue }])
 	}
 
 	public async merge<T extends ModelValue<any> = ModelValue<any>>(modelName: string, value: T) {
-		const key = this.models[modelName].primaryKey
-		const existingValue = await this.get<T>(modelName, value[key])
+		const key = this.models[modelName].primaryKey.map((key) => value[key])
+		const existingValue = await this.get<T>(modelName, key)
 		const mergedValue = mergeModelValues(value, existingValue ?? {})
 		await this.apply([{ operation: "set", model: modelName, value: mergedValue }])
 	}

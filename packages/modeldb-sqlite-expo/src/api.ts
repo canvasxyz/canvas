@@ -109,17 +109,21 @@ export class ModelAPI {
 		let primaryKeyIndex: number | null = null
 		let primaryKey: PrimitiveProperty | null = null
 		for (const [i, property] of model.properties.entries()) {
-			if (property.kind === "primitive" || property.kind === "reference") {
+			if (property.kind === "primitive") {
 				columns.push(getPropertyColumn(config, model, property))
 				this.columnNames.push(`"${property.name}"`)
 				columnParams.push(`:p${i}`)
 				this.#params[property.name] = `p${i}`
 
-				if (property.name === model.primaryKey) {
-					assert(property.kind === "primitive")
+				if (model.primaryKey.includes(property.name)) {
 					primaryKeyIndex = i
 					primaryKey = property
 				}
+			} else if (property.kind === "reference") {
+				columns.push(getPropertyColumn(config, model, property))
+				this.columnNames.push(`"${property.name}"`)
+				columnParams.push(`:p${i}`)
+				this.#params[property.name] = `p${i}`
 			} else if (property.kind === "relation") {
 				const relation = config.relations.find(
 					(relation) => relation.source === model.name && relation.sourceProperty === property.name,
@@ -552,12 +556,29 @@ export class RelationAPI {
 		this.sourceIndex = `${relation.source}/${relation.sourceProperty}/source`
 		this.targetIndex = `${relation.source}/${relation.sourceProperty}/target`
 
-		const columns = [
-			`_source ${primitiveColumnTypes[relation.sourcePrimaryKey.type]} NOT NULL`,
-			`_target ${primitiveColumnTypes[relation.targetPrimaryKey.type]} NOT NULL`,
-		]
+		{
+			const columns: string[] = []
 
-		db.execSync(`CREATE TABLE IF NOT EXISTS "${this.table}" (${columns.join(", ")})`)
+			if (relation.sourcePrimaryKey.length === 1) {
+				const [{ type }] = relation.sourcePrimaryKey
+				columns.push(`_source ${primitiveColumnTypes[type]} NOT NULL`)
+			} else {
+				for (const [i, { type }] of relation.sourcePrimaryKey.entries()) {
+					columns.push(`"_source/${i}" ${primitiveColumnTypes[type]} NOT NULL`)
+				}
+			}
+
+			if (relation.targetPrimaryKey.length === 1) {
+				const [{ type }] = relation.targetPrimaryKey
+				columns.push(`_target ${primitiveColumnTypes[type]} NOT NULL`)
+			} else {
+				for (const [i, { type }] of relation.targetPrimaryKey.entries()) {
+					columns.push(`"_target/${i}" ${primitiveColumnTypes[type]} NOT NULL`)
+				}
+			}
+
+			db.execSync(`CREATE TABLE IF NOT EXISTS "${this.table}" (${columns.join(", ")})`)
+		}
 
 		db.execSync(`CREATE INDEX IF NOT EXISTS "${this.sourceIndex}" ON "${this.table}" (_source)`)
 

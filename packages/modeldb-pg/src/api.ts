@@ -82,7 +82,6 @@ export class ModelAPI {
 
 		const columns: string[] = []
 		const columnNames: `"${string}"`[] = []
-		const references: Record<string, PrimitiveProperty> = {}
 		const relations: Record<string, RelationAPI> = {}
 
 		for (const property of model.properties) {
@@ -90,7 +89,7 @@ export class ModelAPI {
 				columns.push(getPropertyColumn(config, model, property))
 				columnNames.push(`"${property.name}"`)
 
-				if (model.primaryKey === property.name) {
+				if (model.primaryKey.includes(property.name)) {
 					primaryKey = property
 				}
 			} else if (property.kind === "reference") {
@@ -99,12 +98,6 @@ export class ModelAPI {
 
 				const target = config.models.find((model) => model.name === property.target)
 				assert(target !== undefined)
-
-				const targetPrimaryKey = target.properties.find((property) => property.name === target.primaryKey)
-				assert(targetPrimaryKey !== undefined)
-				assert(targetPrimaryKey.kind === "primitive")
-
-				references[property.name] = targetPrimaryKey
 			} else if (property.kind === "relation") {
 				const relation = config.relations.find(
 					(relation) => relation.source === model.name && relation.sourceProperty === property.name,
@@ -118,7 +111,7 @@ export class ModelAPI {
 
 		assert(primaryKey !== null, "expected primaryKey !== null")
 
-		const api = new ModelAPI(client, config, model, columns, columnNames, references, relations, primaryKey.name)
+		const api = new ModelAPI(client, config, model, columns, columnNames, relations, primaryKey.name)
 
 		const queries = []
 
@@ -147,7 +140,6 @@ export class ModelAPI {
 	readonly #columns: string[]
 	readonly #columnNames: `"${string}"`[]
 	readonly #relations: Record<string, RelationAPI>
-	readonly #references: Record<string, PrimitiveProperty>
 	readonly #primaryKeyName: string
 
 	readonly #update: string
@@ -161,7 +153,6 @@ export class ModelAPI {
 		readonly model: Model,
 		columns: string[],
 		columnNames: `"${string}"`[],
-		references: Record<string, PrimitiveProperty>,
 		relations: Record<string, RelationAPI>,
 		primaryKeyName: string,
 	) {
@@ -169,7 +160,6 @@ export class ModelAPI {
 		this.#properties = Object.fromEntries(model.properties.map((property) => [property.name, property]))
 		this.#columns = columns
 		this.#columnNames = columnNames // quoted column names for non-relation properties
-		this.#references = references
 		this.#relations = relations
 		this.#primaryKeyName = primaryKeyName
 

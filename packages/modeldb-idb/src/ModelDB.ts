@@ -13,6 +13,7 @@ import {
 	WhereCondition,
 	parseConfig,
 	getModelsFromInclude,
+	PrimaryKeyValue,
 } from "@canvas-js/modeldb"
 
 import { ModelAPI } from "./api.js"
@@ -36,7 +37,8 @@ export class ModelDB extends AbstractModelDB {
 						continue
 					}
 
-					const recordObjectStore = db.createObjectStore(model.name, { keyPath: model.primaryKey })
+					const keyPath = model.primaryKey.length === 1 ? model.primaryKey[0] : model.primaryKey
+					const recordObjectStore = db.createObjectStore(model.name, { keyPath })
 
 					for (const index of model.indexes) {
 						const keyPath = index.length === 1 ? index[0] : index
@@ -126,13 +128,19 @@ export class ModelDB extends AbstractModelDB {
 		yield* api.iterate(txn, query) as AsyncIterable<T>
 	}
 
-	public async get<T extends ModelValue>(modelName: string, key: string): Promise<T | null> {
+	public async get<T extends ModelValue>(
+		modelName: string,
+		key: PrimaryKeyValue | PrimaryKeyValue[],
+	): Promise<T | null> {
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
 		return await this.read((txn) => api.get(txn, key) as Promise<T | null>, [api.storeName])
 	}
 
-	public async getMany<T extends ModelValue>(modelName: string, keys: string[]): Promise<(T | null)[]> {
+	public async getMany<T extends ModelValue>(
+		modelName: string,
+		keys: PrimaryKeyValue[] | PrimaryKeyValue[][],
+	): Promise<(T | null)[]> {
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
 		return await this.read((txn) => api.getMany(txn, keys) as Promise<(T | null)[]>, [api.storeName])

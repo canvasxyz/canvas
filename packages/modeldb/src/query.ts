@@ -1,12 +1,11 @@
 import { equals } from "uint8arrays"
 
-import { assert, signalInvalidType } from "@canvas-js/utils"
+import { assert, signalInvalidType, zip } from "@canvas-js/utils"
 
 import {
 	Model,
 	ModelValue,
 	NotExpression,
-	PrimaryKeyValue,
 	PrimitiveProperty,
 	PrimitiveType,
 	PropertyValue,
@@ -167,7 +166,78 @@ export const primitiveTypeOrders: Record<PrimitiveType, Order> = {
 	json: stringOrder,
 }
 
-export const referenceOrder = stringOrder
+export const referenceOrder: Order = {
+	equals: (a, b) => {
+		if (a === null && b === null) {
+			return true
+		}
+
+		const wrappedA = Array.isArray(a) ? a : [a]
+		const wrappedB = Array.isArray(b) ? b : [b]
+		assert(wrappedA.length === wrappedB.length)
+
+		return Array.from(zip(wrappedA, wrappedB)).every(([keyA, keyB]) => {
+			if (typeof keyA === "number" && typeof keyB === "number") {
+				return keyA === keyB
+			} else if (typeof keyA === "string" && typeof keyB === "string") {
+				return keyA === keyB
+			} else if (keyA instanceof Uint8Array && keyB instanceof Uint8Array) {
+				return equals(keyA, keyB)
+			} else {
+				throw new Error("internal error - incomparable primary keys")
+			}
+		})
+	},
+	lessThan: (a, b) => {
+		if (a === null && b === null) {
+			return false
+		} else if (a === null) {
+			return true
+		} else if (b === null) {
+			return false
+		}
+
+		const wrappedA = Array.isArray(a) ? a : [a]
+		const wrappedB = Array.isArray(b) ? b : [b]
+		assert(wrappedA.length === wrappedB.length)
+
+		for (const [keyA, keyB] of zip(wrappedA, wrappedB)) {
+			if (typeof keyA === "number" && typeof keyB === "number") {
+				if (keyA < keyB) {
+					return true
+				} else if (keyA === keyB) {
+					continue
+				} else {
+					return false
+				}
+			} else if (typeof keyA === "string" && typeof keyB === "string") {
+				if (keyA < keyB) {
+					return true
+				} else if (keyA === keyB) {
+					continue
+				} else {
+					return false
+				}
+			} else if (keyA instanceof Uint8Array && keyB instanceof Uint8Array) {
+				if (lessThan(keyA, keyB)) {
+					return true
+				} else if (equals(keyA, keyB)) {
+					continue
+				} else {
+					return false
+				}
+			} else {
+				throw new Error("internal error - incomparable primary keys")
+			}
+		}
+
+		if (typeof a === "boolean" && typeof b === "boolean") {
+			return a === false && b === true
+		} else {
+			return false
+		}
+	},
+}
 
 export function getCompare(
 	model: Model,
@@ -249,21 +319,11 @@ function getReferenceFilter(
 	expression: PropertyValue | NotExpression | RangeExpression,
 ): (value: PropertyValue) => boolean {
 	if (isLiteralExpression(expression)) {
-		const reference = expression
-		assert(
-			reference === null || typeof reference === "string",
-			`error filtering ${modelName}.${property.name}: invalid reference value expression`,
-		)
-		return (value) => value === reference
+		return (value) => referenceOrder.equals(value, expression)
 	} else if (isNotExpression(expression)) {
-		const reference = expression.neq
-		assert(
-			reference === null || typeof reference === "string",
-			`error filtering ${modelName}.${property.name}: invalid reference value expression`,
-		)
-		return (value) => value !== reference
+		return (value) => expression.neq === undefined || !referenceOrder.equals(value, expression.neq)
 	} else if (isRangeExpression(expression)) {
-		// idk there's no real reason not to allow this
+		// TODO: support range expressions over references
 		throw new Error(`error filtering ${modelName}.${property.name}: cannot use range expressions on reference values`)
 	} else {
 		signalInvalidType(expression)
@@ -277,30 +337,36 @@ function getRelationFilter(
 ): (value: PropertyValue) => boolean {
 	if (isLiteralExpression(expression)) {
 		const reference = expression
-		if (!Array.isArray(reference) || !reference.every(isPrimaryKey)) {
+		if (!Array.isArray(reference)) {
 			throw new Error(
-				`error filtering ${modelName}.${property.name}: invalid relation expression - expected (number | string | Uint8Array)[]`,
+				`error filtering ${modelName}.${property.name}: invalid relation expression - expected array of primary keys`,
+			)
+		} else if (!reference.every((key) => isPrimaryKey(key) || (Array.isArray(key) && key.every(isPrimaryKey)))) {
+			throw new Error(
+				`error filtering ${modelName}.${property.name}: invalid relation expression - expected array of primary keys`,
 			)
 		}
 
 		return (value) => {
-			assert(Array.isArray(value))
-			return reference.every((target) => {
-				if (typeof target === "number" || typeof target === "string") {
-					return value.includes(target)
-				} else {
-					return value.some((v) => v instanceof Uint8Array && equals(v, target))
-				}
-			})
+			assert(Array.isArray(value), "expected array of primary keys to match")
+			return reference.every((target) => value.some((key) => referenceOrder.equals(key, target)))
 		}
 	} else if (isNotExpression(expression)) {
 		const reference = expression.neq
-		assert(
-			Array.isArray(reference) && reference.every((value) => typeof value === "string"),
-			`error filtering ${modelName}.${property.name}: invalid relation expression (expected string[])`,
-		)
-		return (value) =>
-			reference.every((target) => Array.isArray(value) && typeof target === "string" && !value.includes(target))
+		if (!Array.isArray(reference)) {
+			throw new Error(
+				`error filtering ${modelName}.${property.name}: invalid relation expression - expected array of primary keys`,
+			)
+		} else if (!reference.every((key) => isPrimaryKey(key) || (Array.isArray(key) && key.every(isPrimaryKey)))) {
+			throw new Error(
+				`error filtering ${modelName}.${property.name}: invalid relation expression - expected array of primary keys`,
+			)
+		}
+
+		return (value) => {
+			assert(Array.isArray(value), "expected array of primary keys to match")
+			return reference.every((target) => value.every((key) => !referenceOrder.equals(key, target)))
+		}
 	} else if (isRangeExpression(expression)) {
 		throw new Error(`error filtering ${modelName}.${property.name}: cannot use range expressions on relation values`)
 	} else {

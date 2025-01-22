@@ -43,45 +43,23 @@ import { Method, Query } from "./utils.js"
 // type RecordValue = Record<string, SqlitePrimitiveValue>
 // type RecordParams = Record<`p${string}`, SqlitePrimitiveValue>
 
-const primitiveColumnTypes = {
+const columnTypes = {
 	integer: "INTEGER",
 	float: "FLOAT",
-	number: "NUMERIC",
+	number: "FLOAT",
 	string: "TEXT",
 	bytes: "BLOB",
 	boolean: "INTEGER",
 	json: "TEXT",
 } satisfies Record<PrimitiveType, string>
 
-function getPropertyColumnType(config: Config, model: Model, property: Property): string {
-	if (property.kind === "primitive") {
-		const type = primitiveColumnTypes[property.type]
-
-		if (property.name === model.primaryKey) {
-			assert(property.nullable === false)
-			return `${type} PRIMARY KEY NOT NULL`
-		}
-
-		return property.nullable ? type : `${type} NOT NULL`
-	} else if (property.kind === "reference") {
-		const target = config.models.find((model) => model.name === property.target)
-		assert(target !== undefined)
-
-		const targetPrimaryKey = target.properties.find((property) => property.name === target.primaryKey)
-		assert(targetPrimaryKey !== undefined)
-		assert(targetPrimaryKey.kind === "primitive")
-
-		const type = primitiveColumnTypes[targetPrimaryKey.type]
-		return property.nullable ? type : `${type} NOT NULL`
-	} else if (property.kind === "relation") {
-		throw new Error("internal error - relation properties don't map to columns")
+function getColumn(name: string, type: PrimitiveType, nullable: boolean) {
+	if (nullable) {
+		return `'${name}' ${columnTypes[type]}`
 	} else {
-		signalInvalidType(property)
+		return `'${name}' ${columnTypes[type]} NOT NULL`
 	}
 }
-
-const getPropertyColumn = (config: Config, model: Model, property: Property) =>
-	`'${property.name}' ${getPropertyColumnType(config, model, property)}`
 
 export class ModelAPI {
 	readonly #table: string
@@ -100,8 +78,8 @@ export class ModelAPI {
 	#count: Query<{}, { count: number }>
 
 	readonly #relations: Record<string, RelationAPI> = {}
-	readonly #primaryKeyName: string
-	readonly #primaryKeyParam: `p${string}`
+	readonly #primaryKeyNames: string[]
+	readonly #primaryKeyParams: `p${string}`[]
 
 	columnNames: `"${string}"`[]
 
@@ -113,21 +91,45 @@ export class ModelAPI {
 		const columns: string[] = []
 		this.columnNames = [] // quoted column names for non-relation properties
 		const columnParams: `:p${string}`[] = [] // query params for non-relation properties
-		let primaryKeyIndex: number | null = null
-		let primaryKey: PrimitiveProperty | null = null
+
+		const primaryKeyIndices: number[] = []
+
 		for (const [i, property] of model.properties.entries()) {
-			if (property.kind === "primitive" || property.kind === "reference") {
-				columns.push(getPropertyColumn(config, model, property))
+			if (property.kind === "primitive") {
+				columns.push(getColumn(property.name, property.type, property.nullable))
+				if (model.primaryKey.includes(property.name)) {
+					primaryKeyIndices.push(columnParams.length)
+				}
+
 				this.columnNames.push(`"${property.name}"`)
 				columnParams.push(`:p${i}`)
 				this.#params[property.name] = `p${i}`
+			} else if (property.kind === "reference") {
+				const target = config.models.find((model) => model.name === property.target)
+				assert(target !== undefined)
 
-				if (property.kind === "primitive" && property.name === model.primaryKey) {
-					primaryKeyIndex = i
-					primaryKey = property
+				const targetPrimaryKey = getPrimaryProperties(target)
+				if (targetPrimaryKey.length === 1) {
+					const [{ type }] = targetPrimaryKey
+					columns.push(getColumn(property.name, type, false))
+					this.columnNames.push(`"${property.name}"`)
+					columnParams.push(`:p${i}`)
+					this.#params[property.name] = `p${i}`
+				} else {
+					for (const [j, { name, type }] of targetPrimaryKey.entries()) {
+						const refName = `${property.name}/${name}`
+						columns.push(getColumn(refName, type, false))
+						this.columnNames.push(`"${refName}"`)
+						columnParams.push(`:p${i}r${j}`)
+						this.#params[refName] = `p${i}r${j}`
+					}
 				}
+
+				// columns.push(getPropertyColumn(config, model, property))
+				// this.columnNames.push(`"${property.name}"`)
 			} else if (property.kind === "relation") {
-				const relation = config.relations.find(
+				const relation = config.
+				.find(
 					(relation) => relation.source === model.name && relation.sourceProperty === property.name,
 				)
 				assert(relation !== undefined, "internal error - relation not found")
@@ -137,11 +139,8 @@ export class ModelAPI {
 			}
 		}
 
-		assert(primaryKey !== null, "expected primaryKey !== null")
-		assert(primaryKeyIndex !== null, "expected primaryKeyIndex !== null")
-		// this.#primaryKeyName = columnNames[primaryKeyIndex]
-		this.#primaryKeyName = primaryKey.name
-		this.#primaryKeyParam = `p${primaryKeyIndex}`
+		this.#primaryKeyNames = model.primaryKey
+		this.#primaryKeyParams = model.primaryKey.map((name) => this.#params[name])
 
 		// Create record table
 		db.exec(`CREATE TABLE IF NOT EXISTS "${this.#table}" (${columns.join(", ")})`)
@@ -161,7 +160,9 @@ export class ModelAPI {
 			`INSERT OR IGNORE INTO "${this.#table}" (${insertNames}) VALUES (${insertParams})`,
 		)
 
-		const where = `WHERE "${this.#primaryKeyName}" = :${this.#primaryKeyParam}`
+		const primaryKeyConstraints = model.primaryKey.map((name) => `"${name}" = :${this.#params[name]}`)
+		const where = `WHERE ${primaryKeyConstraints.join(" AND ")}`
+
 		const updateEntries = Array.from(zip(this.columnNames, columnParams)).map(([name, param]) => `${name} = ${param}`)
 
 		this.#update = new Method<RecordParams>(db, `UPDATE "${this.#table}" SET ${updateEntries.join(", ")} ${where}`)
@@ -558,12 +559,29 @@ export class RelationAPI {
 		this.sourceIndex = `${relation.source}/${relation.sourceProperty}/source`
 		this.targetIndex = `${relation.source}/${relation.sourceProperty}/target`
 
-		const columns = [
-			`_source ${primitiveColumnTypes[relation.sourcePrimaryKey.type]} NOT NULL`,
-			`_target ${primitiveColumnTypes[relation.targetPrimaryKey.type]} NOT NULL`,
-		]
+		{
+			const columns: string[] = []
 
-		db.exec(`CREATE TABLE IF NOT EXISTS "${this.table}" (${columns.join(", ")})`)
+			if (relation.sourcePrimaryKey.length === 1) {
+				const [{ type }] = relation.sourcePrimaryKey
+				columns.push(`_source ${primitiveColumnTypes[type]} NOT NULL`)
+			} else {
+				for (const [i, { type }] of relation.sourcePrimaryKey.entries()) {
+					columns.push(`"_source/${i}" ${primitiveColumnTypes[type]} NOT NULL`)
+				}
+			}
+
+			if (relation.targetPrimaryKey.length === 1) {
+				const [{ type }] = relation.targetPrimaryKey
+				columns.push(`_target ${primitiveColumnTypes[type]} NOT NULL`)
+			} else {
+				for (const [i, { type }] of relation.targetPrimaryKey.entries()) {
+					columns.push(`"_target/${i}" ${primitiveColumnTypes[type]} NOT NULL`)
+				}
+			}
+
+			db.exec(`CREATE TABLE IF NOT EXISTS "${this.table}" (${columns.join(", ")})`)
+		}
 
 		db.exec(`CREATE INDEX IF NOT EXISTS "${this.sourceIndex}" ON "${this.table}" (_source)`)
 
