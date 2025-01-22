@@ -1,82 +1,121 @@
-import { OpfsDatabase, PreparedStatement, SqlValue } from "@sqlite.org/sqlite-wasm"
+import { OpfsDatabase, PreparedStatement } from "@sqlite.org/sqlite-wasm"
 
-export class Query<P extends { [column: string]: SqlValue }, R> {
+import { SqlitePrimitiveValue } from "./encoding.js"
+
+export class Query<
+	P extends SqlitePrimitiveValue[] = SqlitePrimitiveValue[],
+	R extends Record<string, SqlitePrimitiveValue> = Record<string, SqlitePrimitiveValue>,
+> {
 	private readonly statement: PreparedStatement
 
 	constructor(db: OpfsDatabase, private readonly sql: string) {
 		this.statement = db.prepare(sql)
 	}
 
+	public finalize() {
+		this.statement.finalize()
+	}
+
 	public get(params: P): R | null {
-		const statement = this.statement
-
-		const paramsWithColons = Object.fromEntries(Object.entries(params).map(([key, value]) => [":" + key, value]))
-
+		const stmt = this.statement
 		try {
-			if (Object.keys(paramsWithColons).length > 0) statement.bind(paramsWithColons)
-			if (!statement.step()) {
+			if (params.length > 0) {
+				stmt.bind(params)
+			}
+
+			if (!stmt.step()) {
 				return null
 			}
-			return statement.get({}) as R
+
+			return stmt.get({}) as R
 		} finally {
-			statement.reset(true)
+			stmt.reset(true)
 		}
 	}
 
 	public all(params: P): R[] {
-		const statement = this.statement
-		const paramsWithColons = Object.fromEntries(Object.entries(params).map(([key, value]) => [":" + key, value]))
+		const stmt = this.statement
+
 		try {
-			if (Object.keys(paramsWithColons).length > 0) statement.bind(paramsWithColons)
-			const result = []
-			while (statement.step()) {
-				result.push(statement.get({}) as R)
+			if (params.length > 0) {
+				stmt.bind(params)
 			}
-			return result
+
+			const rows: R[] = []
+			while (stmt.step()) {
+				rows.push(stmt.get({}) as R)
+			}
+
+			return rows
 		} finally {
-			statement.reset(true)
+			stmt.reset(true)
 		}
 	}
 
-	public *iterate(params: P): IterableIterator<R> {
-		const statement = this.statement
-		const paramsWithColons = Object.fromEntries(Object.entries(params).map(([key, value]) => [":" + key, value]))
-		if (Object.keys(paramsWithColons).length > 0) statement.bind(paramsWithColons)
+	public iterate(params: P): IterableIterator<R> {
+		const stmt = this.statement
+		if (params.length > 0) {
+			stmt.bind(params)
+		}
 
-		const iter: IterableIterator<R> = {
+		let finished = false
+
+		return {
 			[Symbol.iterator]() {
 				return this
 			},
+
 			next() {
-				const done = statement.step()
+				if (finished) {
+					return { done: true, value: undefined }
+				}
+
+				const done = stmt.step()
 				if (done) {
+					finished = true
+					stmt.reset(true)
 					return { done: true, value: undefined }
 				} else {
-					return { done: false, value: statement.get({}) as R }
+					return { done: false, value: stmt.get({}) as R }
 				}
 			},
-		}
 
-		try {
-			yield* iter
-		} finally {
-			statement.reset(true)
+			return() {
+				finished = true
+				stmt.reset(true)
+				return { done: true, value: undefined }
+			},
+
+			throw(err: any) {
+				finished = true
+				stmt.reset(true)
+				throw err
+			},
 		}
 	}
 }
 
-export class Method<P extends { [column: string]: SqlValue }> {
+export class Method<P extends SqlitePrimitiveValue[] = SqlitePrimitiveValue[]> {
 	private readonly statement: PreparedStatement
 
 	constructor(db: OpfsDatabase, private readonly sql: string) {
 		this.statement = db.prepare(sql)
 	}
 
+	public finalize() {
+		this.statement.finalize()
+	}
+
 	public run(params: P) {
-		const statement = this.statement
-		const paramsWithColons = Object.fromEntries(Object.entries(params).map(([key, value]) => [":" + key, value]))
-		if (Object.keys(paramsWithColons).length > 0) statement.bind(paramsWithColons)
-		statement.step()
-		statement.reset(true)
+		const stmt = this.statement
+		if (params.length > 0) {
+			stmt.bind(params)
+		}
+
+		try {
+			stmt.step()
+		} finally {
+			stmt.reset(true)
+		}
 	}
 }

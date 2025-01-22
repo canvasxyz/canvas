@@ -1,6 +1,9 @@
 import { SQLiteBindValue, SQLiteDatabase, SQLiteStatement } from "expo-sqlite"
 
-export class Query<P extends SQLiteBindValue[] = SQLiteBindValue[], R = Record<string, SQLiteBindValue>> {
+export class Query<
+	P extends SQLiteBindValue[] = SQLiteBindValue[],
+	R extends Record<string, SQLiteBindValue> = Record<string, SQLiteBindValue>,
+> {
 	private readonly statement: SQLiteStatement
 
 	constructor(db: SQLiteDatabase, private readonly sql: string) {

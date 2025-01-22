@@ -1,4 +1,4 @@
-import { SQLiteDatabase, SQLiteBindValue } from "expo-sqlite"
+import { SQLiteDatabase } from "expo-sqlite"
 
 import { assert, signalInvalidType, mapValues } from "@canvas-js/utils"
 
@@ -20,9 +20,13 @@ import {
 	PropertyValue,
 } from "@canvas-js/modeldb"
 
-import { zip } from "@canvas-js/utils"
-
-import { decodePrimitiveValue, decodeReferenceValue, encodePrimitiveValue, encodeReferenceValue } from "./encoding.js"
+import {
+	SqlitePrimitiveValue,
+	decodePrimitiveValue,
+	decodeReferenceValue,
+	encodePrimitiveValue,
+	encodeReferenceValue,
+} from "./encoding.js"
 
 import { Method, Query } from "./utils.js"
 
@@ -70,8 +74,8 @@ export class ModelAPI {
 		string,
 		{
 			columns: string[]
-			encode: (value: PropertyValue) => SQLiteBindValue[]
-			decode: (record: Record<string, SQLiteBindValue>) => PropertyValue
+			encode: (value: PropertyValue) => SqlitePrimitiveValue[]
+			decode: (record: Record<string, SqlitePrimitiveValue>) => PropertyValue
 		}
 	> = {}
 
@@ -276,8 +280,8 @@ export class ModelAPI {
 		}
 	}
 
-	private encodeProperties(properties: Property[], value: ModelValue): SQLiteBindValue[] {
-		const result: SQLiteBindValue[] = []
+	private encodeProperties(properties: Property[], value: ModelValue): SqlitePrimitiveValue[] {
+		const result: SqlitePrimitiveValue[] = []
 		for (const property of properties) {
 			if (property.kind === "primitive") {
 				const { name, type, nullable } = property
@@ -358,7 +362,11 @@ export class ModelAPI {
 		}
 	}
 
-	private parseRecord(row: Record<string, SQLiteBindValue>, properties: string[], relations: Relation[]): ModelValue {
+	private parseRecord(
+		row: Record<string, SqlitePrimitiveValue>,
+		properties: string[],
+		relations: Relation[],
+	): ModelValue {
 		const record: ModelValue = {}
 		for (const name of properties) {
 			record[name] = this.codecs[name].decode(row)
@@ -382,10 +390,10 @@ export class ModelAPI {
 
 	private parseQuery(
 		query: QueryParams,
-	): [sql: string, properties: string[], relations: Relation[], params: SQLiteBindValue[]] {
+	): [sql: string, properties: string[], relations: Relation[], params: SqlitePrimitiveValue[]] {
 		// See https://www.sqlite.org/lang_select.html for railroad diagram
 		const sql: string[] = []
-		const params: SQLiteBindValue[] = []
+		const params: SqlitePrimitiveValue[] = []
 
 		// SELECT
 		const select = query.select ?? mapValues(this.#properties, () => true)
@@ -672,18 +680,18 @@ export class RelationAPI {
 		this.#select = new Query(this.db, `SELECT ${targetColumns} FROM "${this.table}" WHERE ${selectBySource}`)
 	}
 
-	public get(sourceKey: SQLiteBindValue[]): SQLiteBindValue[][] {
+	public get(sourceKey: SqlitePrimitiveValue[]): SqlitePrimitiveValue[][] {
 		const targets = this.#select.all(sourceKey)
 		return targets.map((record) => this.sourceColumnNames.map((name) => record[name]))
 	}
 
-	public add(sourceKey: SQLiteBindValue[], targetKeys: SQLiteBindValue[][]) {
+	public add(sourceKey: SqlitePrimitiveValue[], targetKeys: SqlitePrimitiveValue[][]) {
 		for (const targetKey of targetKeys) {
 			this.#insert.run([...sourceKey, ...targetKey])
 		}
 	}
 
-	public delete(sourceKey: SQLiteBindValue[]) {
+	public delete(sourceKey: SqlitePrimitiveValue[]) {
 		this.#delete.run(sourceKey)
 	}
 

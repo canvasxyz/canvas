@@ -20,7 +20,13 @@ import {
 	PropertyValue,
 } from "@canvas-js/modeldb"
 
-import { decodePrimitiveValue, decodeReferenceValue, encodePrimitiveValue, encodeReferenceValue } from "./encoding.js"
+import {
+	SqlitePrimitiveValue,
+	decodePrimitiveValue,
+	decodeReferenceValue,
+	encodePrimitiveValue,
+	encodeReferenceValue,
+} from "./encoding.js"
 
 import { Method, Query } from "./utils.js"
 
@@ -68,8 +74,8 @@ export class ModelAPI {
 		string,
 		{
 			columns: string[]
-			encode: (value: PropertyValue) => SqlStorageValue[]
-			decode: (record: Record<string, SqlStorageValue>) => PropertyValue
+			encode: (value: PropertyValue) => SqlitePrimitiveValue[]
+			decode: (record: Record<string, SqlitePrimitiveValue>) => PropertyValue
 		}
 	> = {}
 
@@ -275,8 +281,8 @@ export class ModelAPI {
 		}
 	}
 
-	private encodeProperties(properties: Property[], value: ModelValue): SqlStorageValue[] {
-		const result: SqlStorageValue[] = []
+	private encodeProperties(properties: Property[], value: ModelValue): SqlitePrimitiveValue[] {
+		const result: SqlitePrimitiveValue[] = []
 		for (const property of properties) {
 			if (property.kind === "primitive") {
 				const { name, type, nullable } = property
@@ -320,7 +326,7 @@ export class ModelAPI {
 
 	public count(where?: WhereCondition): number {
 		const sql: string[] = []
-		const params: SqlStorageValue[] = []
+		const params: SqlitePrimitiveValue[] = []
 
 		// SELECT
 		sql.push(`SELECT COUNT(*) AS count FROM "${this.#table}"`)
@@ -357,7 +363,11 @@ export class ModelAPI {
 		}
 	}
 
-	private parseRecord(row: Record<string, SqlStorageValue>, properties: string[], relations: Relation[]): ModelValue {
+	private parseRecord(
+		row: Record<string, SqlitePrimitiveValue>,
+		properties: string[],
+		relations: Relation[],
+	): ModelValue {
 		const record: ModelValue = {}
 		for (const name of properties) {
 			record[name] = this.codecs[name].decode(row)
@@ -381,10 +391,10 @@ export class ModelAPI {
 
 	private parseQuery(
 		query: QueryParams,
-	): [sql: string, properties: string[], relations: Relation[], params: SqlStorageValue[]] {
+	): [sql: string, properties: string[], relations: Relation[], params: SqlitePrimitiveValue[]] {
 		// See https://www.sqlite.org/lang_select.html for railroad diagram
 		const sql: string[] = []
-		const params: SqlStorageValue[] = []
+		const params: SqlitePrimitiveValue[] = []
 
 		// SELECT
 		const select = query.select ?? mapValues(this.#properties, () => true)
@@ -471,8 +481,8 @@ export class ModelAPI {
 		return [columns.join(", "), properties, relations]
 	}
 
-	private getWhereExpression(where: WhereCondition = {}): [where: string | null, params: SqlStorageValue[]] {
-		const params: SqlStorageValue[] = []
+	private getWhereExpression(where: WhereCondition = {}): [where: string | null, params: SqlitePrimitiveValue[]] {
+		const params: SqlitePrimitiveValue[] = []
 
 		const filters: string[] = []
 		for (const [name, expression] of Object.entries(where)) {
@@ -671,18 +681,18 @@ export class RelationAPI {
 		this.#select = new Query(this.db, `SELECT ${targetColumns} FROM "${this.table}" WHERE ${selectBySource}`)
 	}
 
-	public get(sourceKey: SqlStorageValue[]): SqlStorageValue[][] {
+	public get(sourceKey: SqlitePrimitiveValue[]): SqlitePrimitiveValue[][] {
 		const targets = this.#select.all(sourceKey)
 		return targets.map((record) => this.sourceColumnNames.map((name) => record[name]))
 	}
 
-	public add(sourceKey: SqlStorageValue[], targetKeys: SqlStorageValue[][]) {
+	public add(sourceKey: SqlitePrimitiveValue[], targetKeys: SqlitePrimitiveValue[][]) {
 		for (const targetKey of targetKeys) {
 			this.#insert.run([...sourceKey, ...targetKey])
 		}
 	}
 
-	public delete(sourceKey: SqlStorageValue[]) {
+	public delete(sourceKey: SqlitePrimitiveValue[]) {
 		this.#delete.run(sourceKey)
 	}
 

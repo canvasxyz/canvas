@@ -1,6 +1,12 @@
 import * as json from "@ipld/dag-json"
 
-import { PrimaryKeyValue, PrimitiveProperty, PrimitiveValue, PropertyValue, PrimitiveType } from "@canvas-js/modeldb"
+import type {
+	PrimaryKeyValue,
+	PrimitiveProperty,
+	PrimitiveValue,
+	PropertyValue,
+	PrimitiveType,
+} from "@canvas-js/modeldb"
 
 import { assert, signalInvalidType } from "@canvas-js/utils"
 
@@ -8,7 +14,7 @@ import { assert, signalInvalidType } from "@canvas-js/utils"
 // this may not match onto the types in the model
 // because sqlite does not natively support all of the types we might want
 // for example, sqlite does not have a boolean or a json type
-export type SqlitePrimitiveValue = string | number | Buffer | null
+export type SqlitePrimitiveValue = null | number | string | Buffer
 
 const fromBuffer = (data: Buffer): Uint8Array => new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
 const toBuffer = (data: Uint8Array) => Buffer.from(data.buffer, data.byteOffset, data.byteLength)

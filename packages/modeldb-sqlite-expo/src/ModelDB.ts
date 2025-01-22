@@ -6,12 +6,12 @@ import { assert, signalInvalidType } from "@canvas-js/utils"
 import {
 	AbstractModelDB,
 	ModelDBBackend,
-	parseConfig,
 	Effect,
 	ModelValue,
 	ModelSchema,
 	QueryParams,
 	WhereCondition,
+	Config,
 } from "@canvas-js/modeldb"
 
 import { ModelAPI } from "./api.js"
@@ -28,7 +28,7 @@ export class ModelDB extends AbstractModelDB {
 	#transaction: (effects: Effect[]) => void
 
 	constructor({ path, models, clear }: { clear?: boolean } & ModelDBOptions) {
-		super(parseConfig(models))
+		super(Config.parse(models))
 
 		this.db = SQLite.openDatabaseSync(path ?? ":memory:")
 

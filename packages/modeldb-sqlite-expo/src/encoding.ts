@@ -12,12 +12,14 @@ import type {
 
 import { assert, signalInvalidType } from "@canvas-js/utils"
 
+export type SqlitePrimitiveValue = SQLiteBindValue
+
 export function encodePrimitiveValue(
 	propertyName: string,
 	type: PrimitiveType,
 	nullable: boolean,
 	value: PropertyValue,
-): SQLiteBindValue {
+): SqlitePrimitiveValue {
 	if (value === null) {
 		if (nullable) {
 			return null
@@ -72,7 +74,7 @@ export function encodeReferenceValue(
 	target: PrimitiveProperty[],
 	nullable: boolean,
 	value: PropertyValue,
-): SQLiteBindValue[] {
+): SqlitePrimitiveValue[] {
 	if (value === null) {
 		if (nullable) {
 			return Array.from<null>({ length: target.length }).fill(null)
@@ -93,7 +95,7 @@ export function decodePrimitiveValue(
 	propertyName: string,
 	type: PrimitiveType,
 	nullable: boolean,
-	value: SQLiteBindValue,
+	value: SqlitePrimitiveValue,
 ): PrimitiveValue {
 	if (value === null) {
 		if (nullable) {
@@ -153,7 +155,7 @@ export function decodeReferenceValue(
 	propertyName: string,
 	nullable: boolean,
 	target: PrimitiveProperty[],
-	values: SQLiteBindValue[],
+	values: SqlitePrimitiveValue[],
 ): PrimaryKeyValue | PrimaryKeyValue[] | null {
 	if (values.every((value) => value === null)) {
 		if (nullable) {

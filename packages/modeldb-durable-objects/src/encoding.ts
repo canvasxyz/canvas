@@ -6,6 +6,8 @@ import { PrimaryKeyValue, PrimitiveProperty, PrimitiveType, PrimitiveValue, Prop
 
 import { assert, signalInvalidType } from "@canvas-js/utils"
 
+export type SqlitePrimitiveValue = SqlStorageValue
+
 export function toArrayBuffer(data: Uint8Array): ArrayBuffer {
 	if (data.byteOffset === 0 && data.byteLength === data.buffer.byteLength) {
 		return data.buffer
@@ -25,7 +27,7 @@ export function encodePrimitiveValue(
 	type: PrimitiveType,
 	nullable: boolean,
 	value: PropertyValue,
-): SqlStorageValue {
+): SqlitePrimitiveValue {
 	if (value === null) {
 		if (nullable) {
 			return null
@@ -80,7 +82,7 @@ export function encodeReferenceValue(
 	target: PrimitiveProperty[],
 	nullable: boolean,
 	value: PropertyValue,
-): SqlStorageValue[] {
+): SqlitePrimitiveValue[] {
 	if (value === null) {
 		if (nullable) {
 			return Array.from<null>({ length: target.length }).fill(null)
@@ -101,7 +103,7 @@ export function decodePrimitiveValue(
 	propertyName: string,
 	type: PrimitiveType,
 	nullable: boolean,
-	value: SqlStorageValue,
+	value: SqlitePrimitiveValue,
 ): PrimitiveValue {
 	if (value === null) {
 		if (nullable) {
@@ -161,7 +163,7 @@ export function decodeReferenceValue(
 	propertyName: string,
 	nullable: boolean,
 	target: PrimitiveProperty[],
-	values: SqlStorageValue[],
+	values: SqlitePrimitiveValue[],
 ): PrimaryKeyValue | PrimaryKeyValue[] | null {
 	if (values.every((value) => value === null)) {
 		if (nullable) {
