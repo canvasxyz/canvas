@@ -520,7 +520,8 @@ test("create a contract with a yjs text table", async (t) => {
 
 	t.teardown(() => app.stop())
 
-	await app.actions.postInsert({ key: "post_1", index: 0, content: "hello world" })
+	const postId = "post_1"
+	await app.actions.postInsert({ key: postId, index: 0, content: "hello world" })
 
 	const operations = await app.db.query("posts:operations")
 	const state = await app.db.query("posts:state")
@@ -528,7 +529,7 @@ test("create a contract with a yjs text table", async (t) => {
 	t.is(operations.length, 1)
 	t.is(state.length, 1)
 
-	t.is(operations[0].record_id, "post_1")
-	t.is(state[0].id, "post_1")
+	t.is(operations[0].record_id, postId)
+	t.is(state[0].id, postId)
 	t.is(state[0].content[0].insert, "hello world")
 })
