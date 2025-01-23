@@ -3,12 +3,10 @@ import { bytesToHex } from "@noble/hashes/utils"
 import { sha256 } from "@noble/hashes/sha256"
 import { logger } from "@libp2p/logger"
 
-import { Awaitable } from "@canvas-js/interfaces"
-import { JSFunction, JSFunctionAsync, JSValue, assert, mapValues } from "@canvas-js/utils"
+import { assert, mapValues } from "@canvas-js/utils"
+import { JSFunction, JSFunctionAsync, JSValue } from "@canvas-js/utils"
 
 import { VMError } from "./error.js"
-
-const quickJS = await getQuickJS()
 
 export interface VMOptions {
 	log?: (...args: JSValue[]) => void
@@ -24,18 +22,18 @@ export class VM {
 	readonly #localCache = new Set<QuickJSHandle>()
 
 	public static async initialize(options: VMOptions = {}): Promise<VM> {
-		return new VM(options)
+		const quickJS = await getQuickJS()
+		const runtime = quickJS.newRuntime()
+		const context = runtime.newContext()
+		return new VM(runtime, context, options)
 	}
 
-	public readonly runtime: QuickJSRuntime
-	public readonly context: QuickJSContext
-
-	public constructor(options: VMOptions) {
-		this.runtime = quickJS.newRuntime()
-		this.context = this.runtime.newContext()
-
-		const runtimeMemoryLimit = options.runtimeMemoryLimit ?? VM.RUNTIME_MEMORY_LIMIT
-		this.runtime.setMemoryLimit(runtimeMemoryLimit)
+	private constructor(
+		public readonly runtime: QuickJSRuntime,
+		public readonly context: QuickJSContext,
+		options: VMOptions,
+	) {
+		this.runtime.setMemoryLimit(options.runtimeMemoryLimit ?? VM.RUNTIME_MEMORY_LIMIT)
 
 		const log = options.log ?? ((...args) => console.log("[vm]", ...args))
 
@@ -321,7 +319,7 @@ export class VM {
 		}
 	}
 
-	public wrapFunction = (fn: (...args: JSValue[]) => Awaitable<void | JSValue>): QuickJSHandle => {
+	public wrapFunction = (fn: JSFunction | JSFunctionAsync): QuickJSHandle => {
 		const wrap = (value: void | JSValue) => (value === undefined ? this.context.undefined : this.wrapValue(value))
 		return this.context.newFunction(fn.name, (...args) => {
 			let result: ReturnType<typeof fn> | undefined = undefined
