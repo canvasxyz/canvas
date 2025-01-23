@@ -13,6 +13,8 @@ import {
 	getModelsFromInclude,
 	PrimaryKeyValue,
 	Config,
+	updateModelValues,
+	mergeModelValues,
 } from "@canvas-js/modeldb"
 
 import { ModelAPI } from "./api.js"
@@ -146,9 +148,9 @@ export class ModelDB extends AbstractModelDB {
 	}
 
 	public async query<T extends ModelValue = ModelValue>(modelName: string, query: QueryParams = {}): Promise<T[]> {
-		// if (query.include) {
-		// 	return this.queryWithInclude<T>(modelName, query)
-		// }
+		if (query.include) {
+			return this.queryWithInclude<T>(modelName, query)
+		}
 
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
@@ -156,26 +158,26 @@ export class ModelDB extends AbstractModelDB {
 		return result as T[]
 	}
 
-	// private async queryWithInclude<T extends ModelValue = ModelValue>(
-	// 	modelName: string,
-	// 	query: QueryParams = {},
-	// ): Promise<T[]> {
-	// 	assert(query.include)
-	// 	const api = this.#models[modelName]
-	// 	const modelNames = Array.from(
-	// 		new Set([modelName, ...getModelsFromInclude(this.config.models, modelName, query.include)]),
-	// 	)
-	// 	for (const modelName of modelNames) {
-	// 		assert(this.#models[modelName] !== undefined, `model ${modelName} not found`)
-	// 	}
+	private async queryWithInclude<T extends ModelValue = ModelValue>(
+		modelName: string,
+		query: QueryParams = {},
+	): Promise<T[]> {
+		assert(query.include)
+		const api = this.#models[modelName]
+		const modelNames = Array.from(
+			new Set([modelName, ...getModelsFromInclude(this.config.models, modelName, query.include)]),
+		)
+		for (const modelName of modelNames) {
+			assert(this.#models[modelName] !== undefined, `model ${modelName} not found`)
+		}
 
-	// 	const result = await this.read(
-	// 		async (txn) => api.queryWithInclude(txn, this.#models, query),
-	// 		modelNames.map((m: string) => this.#models[m].storeName),
-	// 	)
+		const result = await this.read(
+			async (txn) => api.queryWithInclude(txn, this.#models, query),
+			modelNames.map((m: string) => this.#models[m].storeName),
+		)
 
-	// 	return result as T[]
-	// }
+		return result as T[]
+	}
 
 	public async count(modelName: string, where?: WhereCondition): Promise<number> {
 		const api = this.#models[modelName]
