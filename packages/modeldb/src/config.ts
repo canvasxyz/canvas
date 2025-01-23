@@ -165,6 +165,15 @@ export class Config {
 				assert(property.nullable === false)
 				return property
 			})
+
+			for (const property of model.properties) {
+				if (property.kind === "reference") {
+					const target = models.find((model) => model.name === property.target)
+					if (target === undefined) {
+						throw new Error(`invalid reference target - no "${property.target}" model`)
+					}
+				}
+			}
 		}
 
 		for (const relation of relations) {

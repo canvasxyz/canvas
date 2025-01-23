@@ -18,6 +18,7 @@ import {
 	Config,
 	PrimaryKeyValue,
 	PropertyValue,
+	isPrimaryKey,
 } from "@canvas-js/modeldb"
 
 import {
@@ -28,6 +29,7 @@ import {
 	decodeReferenceValue,
 } from "./encoding.js"
 import { Method, Query } from "./utils.js"
+import { isPrimitive } from "util"
 
 const columnTypes = {
 	integer: "BIGINT",
@@ -36,7 +38,7 @@ const columnTypes = {
 	string: "TEXT",
 	bytes: "BYTEA",
 	boolean: "BOOLEAN",
-	json: "JSONB",
+	json: "TEXT",
 } satisfies Record<PrimitiveType, string>
 
 function getColumn(name: string, type: PrimitiveType, nullable: boolean) {
@@ -186,16 +188,16 @@ export class ModelAPI {
 	readonly #table: string
 
 	// Methods
-	#insert: Method
-	#update: Method | null
-	#delete: Method
-	#clear: Method
+	readonly #insert: Method
+	readonly #update: Method | null
+	readonly #delete: Method
+	readonly #clear: Method
 
 	// Queries
-	#select: Query
-	#selectAll: Query
-	// #selectMany: Query
-	#count: Query<{ count: number }>
+	readonly #select: Query
+	readonly #selectAll: Query
+	// readonly #selectMany: Query
+	readonly #count: Query<{ count: number }>
 
 	constructor(
 		readonly client: pg.Client,
@@ -203,10 +205,8 @@ export class ModelAPI {
 		readonly model: Model,
 		readonly properties: Record<string, Property>,
 		readonly relations: Record<string, RelationAPI>,
-
 		readonly primaryProperties: PrimitiveProperty[],
 		readonly mutableProperties: Property[],
-
 		readonly codecs: Record<
 			string,
 			{
@@ -221,32 +221,37 @@ export class ModelAPI {
 		this.#table = model.name
 
 		const quotedColumnNames = columnNames.map(quote).join(", ")
-		const insertParams = Array.from({ length: columnNames.length }).fill("?").join(", ")
+
+		const insertParams = Array.from({ length: columnNames.length })
+			.map((_, i) => `$${i + 1}`)
+			.join(", ")
+
 		this.#insert = new Method(
 			client,
-			`INSERT OR IGNORE INTO "${this.#table}" (${quotedColumnNames}) VALUES (${insertParams})`,
+			`INSERT INTO "${this.#table}" (${quotedColumnNames}) VALUES (${insertParams}) ON CONFLICT DO NOTHING`,
 		)
-
-		const primaryKeyEquals = model.primaryKey.map((name) => `"${name}" = ?`)
-		const wherePrimaryKeyEquals = `WHERE ${primaryKeyEquals.join(" AND ")}`
 
 		const updateNames = columnNames.filter((name) => !model.primaryKey.includes(name))
 		if (updateNames.length > 0) {
-			const updateEntries = updateNames.map((name) => `"${name}" = ?`)
-			this.#update = new Method(
-				client,
-				`UPDATE "${this.#table}" SET ${updateEntries.join(", ")} ${wherePrimaryKeyEquals}`,
-			)
+			const updateEntries = updateNames.map((name, i) => `"${name}" = $${i + 1}`)
+			const updateWhere = model.primaryKey
+				.map((name, i) => `"${name}" = $${updateEntries.length + i + 1}`)
+				.join(" AND ")
+
+			this.#update = new Method(client, `UPDATE "${this.#table}" SET ${updateEntries.join(", ")} WHERE ${updateWhere}`)
 		} else {
 			this.#update = null
 		}
 
-		this.#delete = new Method(client, `DELETE FROM "${this.#table}" ${wherePrimaryKeyEquals}`)
+		const deleteWhere = model.primaryKey.map((name, i) => `"${name}" = $${i + 1}`).join(" AND ")
+		this.#delete = new Method(client, `DELETE FROM "${this.#table}" WHERE ${deleteWhere}`)
 		this.#clear = new Method(client, `DELETE FROM "${this.#table}"`)
 
 		// Prepare queries
 		this.#count = new Query<{ count: number }>(this.client, `SELECT COUNT(*) AS count FROM "${this.#table}"`)
-		this.#select = new Query(this.client, `SELECT ${quotedColumnNames} FROM "${this.#table}" ${wherePrimaryKeyEquals}`)
+
+		const selectWhere = model.primaryKey.map((name, i) => `"${name}" = $${i + 1}`).join(" AND ")
+		this.#select = new Query(this.client, `SELECT ${quotedColumnNames} FROM "${this.#table}" WHERE ${selectWhere}`)
 		this.#selectAll = new Query(this.client, `SELECT ${quotedColumnNames} FROM "${this.#table}"`)
 		// this.#selectMany = new QUery(this.client, `SELECT ${selectColumns} FROM "${this.#table}" WHERE "${this.#primaryKeyName}" = ANY($1)`)
 
@@ -280,20 +285,19 @@ export class ModelAPI {
 		)
 
 		for (const property of this.mutableProperties) {
-			const propertyName = `${this.model.name}/${property.name}`
 			if (property.kind === "primitive") {
 				const { name, type, nullable } = property
-				result[name] = decodePrimitiveValue(propertyName, type, nullable, record[name])
+				result[name] = decodePrimitiveValue(name, type, nullable, record[name])
 			} else if (property.kind === "reference") {
-				const { name, nullable } = property
+				const { name, nullable, target } = property
 				const values = this.codecs[name].columns.map((name) => record[name])
-				result[name] = decodeReferenceValue(propertyName, nullable, this.config.primaryKeys[name], values)
+				result[name] = decodeReferenceValue(name, nullable, this.config.primaryKeys[target], values)
 			} else if (property.kind === "relation") {
 				const { name, target } = property
 				const targets = await this.relations[name].get(encodedKey)
-				result[name] = targets.map((key) =>
-					decodeReferenceValue(propertyName, false, this.config.primaryKeys[target], key),
-				) as PrimaryKeyValue[] | PrimaryKeyValue[][]
+				result[name] = targets.map((key) => decodeReferenceValue(name, false, this.config.primaryKeys[target], key)) as
+					| PrimaryKeyValue[]
+					| PrimaryKeyValue[][]
 			} else {
 				signalInvalidType(property)
 			}
@@ -313,7 +317,8 @@ export class ModelAPI {
 			encodePrimitiveValue(name, type, nullable, value[name]),
 		)
 
-		const existingRecord = this.#select.get(encodedKey)
+		const existingRecord = await this.#select.get(encodedKey)
+
 		if (existingRecord === null) {
 			const params = this.encodeProperties(this.model.properties, value)
 			await this.#insert.run(params)
@@ -386,17 +391,15 @@ export class ModelAPI {
 		sql.push(`SELECT COUNT(*) AS count FROM "${this.#table}"`)
 
 		// WHERE
-		const [whereExpression, whereParams] = this.getWhereExpression(where)
-
+		const whereExpression = this.getWhereExpression(where, params)
 		if (whereExpression) {
 			sql.push(`WHERE ${whereExpression}`)
-			params.push(...whereParams)
 		}
 
 		const result = await new Query(this.client, sql.join(" ")).get(params)
 		const { count } = result ?? {}
-		assert(typeof count === "number")
-		return count
+		assert(typeof count === "string", 'expected typeof count === "string"')
+		return parseInt(count)
 	}
 
 	public async query(query: QueryParams): Promise<ModelValue[]> {
@@ -458,11 +461,9 @@ export class ModelAPI {
 		sql.push(`SELECT ${selectExpression} FROM "${this.#table}"`)
 
 		// WHERE
-		const [where, whereParams] = this.getWhereExpression(query.where)
-
+		const where = this.getWhereExpression(query.where, params)
 		if (where !== null) {
 			sql.push(`WHERE ${where}`)
-			params.push(...whereParams)
 		}
 
 		// ORDER BY
@@ -480,10 +481,10 @@ export class ModelAPI {
 
 			if (direction === "asc") {
 				const columns = index.flatMap((name) => this.codecs[name].columns)
-				sql.push(`ORDER BY ${columns.map((name) => `"${name}" ASC`).join(", ")}`)
+				sql.push(`ORDER BY ${columns.map((name) => `"${name}" ASC NULLS FIRST`).join(", ")}`)
 			} else if (direction === "desc") {
 				const columns = index.flatMap((name) => this.codecs[name].columns)
-				sql.push(`ORDER BY ${columns.map((name) => `"${name}" DESC`).join(", ")}`)
+				sql.push(`ORDER BY ${columns.map((name) => `"${name}" DESC NULLS LAST`).join(", ")}`)
 			} else {
 				throw new Error("invalid orderBy direction")
 			}
@@ -491,14 +492,14 @@ export class ModelAPI {
 
 		// LIMIT
 		if (typeof query.limit === "number") {
-			sql.push(`LIMIT ?`)
-			params.push(query.limit)
+			const idx = params.push(query.limit)
+			sql.push(`LIMIT $${idx}`)
 		}
 
 		// OFFSET
 		if (typeof query.offset === "number") {
-			sql.push(`OFFSET ?`)
-			params.push(query.offset)
+			const idx = params.push(query.offset)
+			sql.push(`OFFSET $${idx}`)
 		}
 
 		// JOIN (not supported)
@@ -508,60 +509,6 @@ export class ModelAPI {
 
 		return [sql.join(" "), selectProperties, selectRelations, params]
 	}
-	// private parseQuery(query: QueryParams): [sql: string, relations: Relation[], params: PrimitiveValue[]] {
-	// 	const sql: string[] = []
-
-	// 	// SELECT
-	// 	const [select, relations] = this.getSelectExpression(query.select)
-	// 	sql.push(`SELECT ${select} FROM "${this.#table}"`)
-
-	// 	// WHERE
-	// 	const [where, params] = this.getWhereExpression(query.where)
-
-	// 	if (where !== null) {
-	// 		sql.push(`WHERE ${where}`)
-	// 	}
-
-	// 	// ORDER BY
-	// 	if (query.orderBy !== undefined) {
-	// 		const orders = Object.entries(query.orderBy)
-	// 		assert(orders.length === 1, "cannot order by multiple properties at once")
-
-	// 		const [[indexName, direction]] = orders
-	// 		const index = indexName.split("/")
-
-	// 		assert(!index.some((name) => this.#properties[name]?.kind === "relation"), "cannot order by relation properties")
-
-	// 		if (direction === "asc") {
-	// 			const orders = index.map((name) => `"${name}" ASC NULLS FIRST`).join(", ")
-	// 			sql.push(`ORDER BY ${orders}`)
-	// 		} else if (direction === "desc") {
-	// 			const orders = index.map((name) => `"${name}" DESC NULLS LAST`).join(", ")
-	// 			sql.push(`ORDER BY ${orders}`)
-	// 		} else {
-	// 			throw new Error("invalid orderBy direction")
-	// 		}
-	// 	}
-
-	// 	// LIMIT
-	// 	if (typeof query.limit === "number") {
-	// 		sql.push(`LIMIT $${params.length + 1}`)
-	// 		params.push(query.limit)
-	// 	}
-
-	// 	// OFFSET
-	// 	if (typeof query.offset === "number") {
-	// 		sql.push(`OFFSET $${params.length + 1}`)
-	// 		params.push(query.offset)
-	// 	}
-
-	// 	// JOIN (not supported)
-	// 	if (query.include) {
-	// 		throw new Error("cannot use 'include' in queries outside the browser/idb")
-	// 	}
-
-	// 	return [sql.join(" "), relations, params]
-	// }
 
 	private getSelectExpression(
 		select: Record<string, boolean>,
@@ -591,36 +538,7 @@ export class ModelAPI {
 		return [columns.join(", "), properties, relations]
 	}
 
-	// private getSelectExpression(
-	// 	select: Record<string, boolean> = mapValues(this.#properties, () => true),
-	// ): [select: string, relations: Relation[]] {
-	// 	const relations: Relation[] = []
-	// 	const columns = []
-
-	// 	for (const [name, value] of Object.entries(select)) {
-	// 		if (value === false) {
-	// 			continue
-	// 		}
-
-	// 		const property = this.#properties[name]
-	// 		assert(property !== undefined, "property not found")
-	// 		if (property.kind === "primitive" || property.kind === "reference") {
-	// 			columns.push(`"${name}"`)
-	// 		} else if (property.kind === "relation") {
-	// 			relations.push(this.#relations[name].relation)
-	// 		} else {
-	// 			signalInvalidType(property)
-	// 		}
-	// 	}
-
-	// 	assert(columns.length > 0, "cannot query an empty select expression")
-	// 	assert(columns.includes(`"${this.#primaryKeyName}"`), "select expression must include the primary key")
-	// 	return [columns.join(", "), relations]
-	// }
-
-	private getWhereExpression(where: WhereCondition = {}): [where: string | null, params: PostgresPrimitiveValue[]] {
-		const params: PostgresPrimitiveValue[] = []
-
+	private getWhereExpression(where: WhereCondition = {}, params: PostgresPrimitiveValue[]): string | null {
 		const filters: string[] = []
 		for (const [name, expression] of Object.entries(where)) {
 			const property = this.properties[name]
@@ -641,22 +559,23 @@ export class ModelAPI {
 					}
 
 					const encodedValue = encodePrimitiveValue(name, type, false, expression)
-					params.push(encodedValue)
-					filters.push(`"${name}" = ?`)
+					const idx = params.push(encodedValue)
+					filters.push(`"${name}" = $${idx}`)
 				} else if (isNotExpression(expression)) {
 					const { neq: value } = expression
 					if (value === undefined) {
 						continue
 					} else if (value === null) {
 						filters.push(`"${name}" NOTNULL`)
+						continue
 					}
 
 					const encodedValue = encodePrimitiveValue(name, type, false, value)
-					params.push(encodedValue)
+					const idx = params.push(encodedValue)
 					if (nullable) {
-						filters.push(`("${name}" ISNULL OR "${name}" != ?)`)
+						filters.push(`("${name}" ISNULL OR "${name}" != $${idx})`)
 					} else {
-						filters.push(`"${name}" != ?`)
+						filters.push(`"${name}" != $${idx}`)
 					}
 				} else if (isRangeExpression(expression)) {
 					for (const [key, value] of Object.entries(expression)) {
@@ -677,15 +596,15 @@ export class ModelAPI {
 								throw new Error(`invalid range expression "${key}"`)
 							}
 						} else {
-							params.push(encodePrimitiveValue(name, type, nullable, value))
+							const idx = params.push(encodePrimitiveValue(name, type, nullable, value))
 							if (key === "gt") {
-								filters.push(`("${name}" NOTNULL) AND ("${name}" > ?)`)
+								filters.push(`("${name}" NOTNULL) AND ("${name}" > $${idx})`)
 							} else if (key === "gte") {
-								filters.push(`("${name}" NOTNULL) AND ("${name}" >= ?)`)
+								filters.push(`("${name}" NOTNULL) AND ("${name}" >= $${idx})`)
 							} else if (key === "lt") {
-								filters.push(`("${name}" ISNULL) OR ("${name}" < ?)`)
+								filters.push(`("${name}" ISNULL) OR ("${name}" < $${idx})`)
 							} else if (key === "lte") {
-								filters.push(`("${name}" ISNULL) OR ("${name}" <= ?)`)
+								filters.push(`("${name}" ISNULL) OR ("${name}" <= $${idx})`)
 							}
 						}
 					}
@@ -701,7 +620,8 @@ export class ModelAPI {
 					if (encodedKey.every((key) => key === null)) {
 						filters.push(columns.map((c) => `"${c}" ISNULL`).join(" AND "))
 					} else {
-						filters.push(columns.map((c) => `"${c}" = ?`).join(" AND "))
+						const baseIdx = params.length + 1
+						filters.push(columns.map((c, i) => `"${c}" = $${baseIdx + i}`).join(" AND "))
 						params.push(...encodedKey)
 					}
 				} else if (isNotExpression(expression)) {
@@ -714,8 +634,9 @@ export class ModelAPI {
 					if (encodedKey.every((key) => key === null)) {
 						filters.push(columns.map((c) => `"${c}" NOTNULL`).join(" AND "))
 					} else {
+						const baseIdx = params.length + 1
 						const isNull = columns.map((c) => `"${c}" ISNULL`).join(" AND ")
-						const isNotEq = columns.map((c) => `"${c}" != ?`).join(" AND ")
+						const isNotEq = columns.map((c, i) => `"${c}" != $${baseIdx + i}`).join(" AND ")
 						filters.push(`(${isNull}) OR (${isNotEq})`)
 						params.push(...encodedKey)
 					}
@@ -726,16 +647,60 @@ export class ModelAPI {
 					signalInvalidType(expression)
 				}
 			} else if (property.kind === "relation") {
-				throw new Error("cannot query relation values")
+				const relation = this.relations[property.name]
+				const primaryColumnNames = this.primaryProperties.map((property) => property.name)
+				const targetPrimaryProperties = this.config.primaryKeys[property.target]
+
+				if (isLiteralExpression(expression)) {
+					const targets = expression
+					assert(Array.isArray(targets), "invalid relation value (expected array of primary keys)")
+					for (const target of targets) {
+						const wrappedKey = encodeReferenceValue(property.name, targetPrimaryProperties, false, target)
+						assert(wrappedKey.length === relation.targetColumnNames.length)
+
+						const primaryColumns = primaryColumnNames.map(quote).join(", ")
+						const sourceColumns = relation.sourceColumnNames.map(quote).join(", ")
+
+						const targetExpressions = relation.targetColumnNames
+							.map((name, i) => `"${name}" = $${params.push(wrappedKey[i])}`)
+							.join(" AND ")
+
+						filters.push(
+							`(${primaryColumns}) IN (SELECT ${sourceColumns} FROM "${relation.table}" WHERE (${targetExpressions}))`,
+						)
+					}
+				} else if (isNotExpression(expression)) {
+					const targets = expression.neq
+					assert(Array.isArray(targets), "invalid relation value (expected array of primary keys)")
+					for (const target of targets) {
+						const wrappedKey = encodeReferenceValue(property.name, targetPrimaryProperties, false, target)
+						assert(wrappedKey.length === relation.targetColumnNames.length)
+
+						const primaryColumns = primaryColumnNames.map(quote).join(", ")
+						const sourceColumns = relation.sourceColumnNames.map(quote).join(", ")
+
+						const targetExpressions = relation.targetColumnNames
+							.map((name, i) => `"${name}" = $${params.push(wrappedKey[i])}`)
+							.join(" AND ")
+
+						filters.push(
+							`(${primaryColumns}) NOT IN (SELECT ${sourceColumns} FROM "${relation.table}" WHERE (${targetExpressions}))`,
+						)
+					}
+				} else if (isRangeExpression(expression)) {
+					throw new Error("cannot use range expressions on relation values")
+				} else {
+					signalInvalidType(expression)
+				}
 			} else {
 				signalInvalidType(property)
 			}
 		}
 
 		if (filters.length === 0) {
-			return [null, []]
+			return null
 		} else {
-			return [`${filters.map((filter) => `(${filter})`).join(" AND ")}`, params]
+			return `${filters.map((filter) => `(${filter})`).join(" AND ")}`
 		}
 	}
 
@@ -849,38 +814,38 @@ export class ModelAPI {
 	// 				signalInvalidType(expression)
 	// 			}
 	// 		} else if (property.kind === "relation") {
-	// 			const relationTable = this.#relations[property.name].table
-	// 			if (isLiteralExpression(expression)) {
-	// 				const references = expression
-	// 				assert(Array.isArray(references), "invalid relation value (expected PrimaryKeyValue[])")
-	// 				const targets: string[] = []
-	// 				for (const [j, reference] of references.entries()) {
-	// 					assert(typeof reference === "string", "invalid relation value (expected PrimaryKeyValue[])")
-	// 					const p = ++i
-	// 					params[p - 1] = reference
-	// 					targets.push(
-	// 						`"${this.#primaryKeyName}" IN (SELECT _source FROM "${relationTable}" WHERE (_target = $${p}))`,
-	// 					)
-	// 				}
-	// 				return targets.length > 0 ? [targets.join(" AND ")] : []
-	// 			} else if (isNotExpression(expression)) {
-	// 				const references = expression.neq
-	// 				assert(Array.isArray(references), "invalid relation value (expected PrimaryKeyValue[])")
-	// 				const targets: string[] = []
-	// 				for (const [j, reference] of references.entries()) {
-	// 					assert(typeof reference === "string", "invalid relation value (expected PrimaryKeyValue[])")
-	// 					const p = ++i
-	// 					params[p - 1] = reference
-	// 					targets.push(
-	// 						`"${this.#primaryKeyName}" NOT IN (SELECT _source FROM "${relationTable}" WHERE (_target = $${p}))`,
-	// 					)
-	// 				}
-	// 				return targets.length > 0 ? [targets.join(" AND ")] : []
-	// 			} else if (isRangeExpression(expression)) {
-	// 				throw new Error("cannot use range expressions on relation values")
-	// 			} else {
-	// 				signalInvalidType(expression)
-	// 			}
+	// const relationTable = this.#relations[property.name].table
+	// if (isLiteralExpression(expression)) {
+	// 	const references = expression
+	// 	assert(Array.isArray(references), "invalid relation value (expected PrimaryKeyValue[])")
+	// 	const targets: string[] = []
+	// 	for (const [j, reference] of references.entries()) {
+	// 		assert(typeof reference === "string", "invalid relation value (expected PrimaryKeyValue[])")
+	// 		const p = ++i
+	// 		params[p - 1] = reference
+	// 		targets.push(
+	// 			`"${this.#primaryKeyName}" IN (SELECT _source FROM "${relationTable}" WHERE (_target = $${p}))`,
+	// 		)
+	// 	}
+	// 	return targets.length > 0 ? [targets.join(" AND ")] : []
+	// } else if (isNotExpression(expression)) {
+	// 	const references = expression.neq
+	// 	assert(Array.isArray(references), "invalid relation value (expected PrimaryKeyValue[])")
+	// 	const targets: string[] = []
+	// 	for (const [j, reference] of references.entries()) {
+	// 		assert(typeof reference === "string", "invalid relation value (expected PrimaryKeyValue[])")
+	// 		const p = ++i
+	// 		params[p - 1] = reference
+	// 		targets.push(
+	// 			`"${this.#primaryKeyName}" NOT IN (SELECT _source FROM "${relationTable}" WHERE (_target = $${p}))`,
+	// 		)
+	// 	}
+	// 	return targets.length > 0 ? [targets.join(" AND ")] : []
+	// } else if (isRangeExpression(expression)) {
+	// 	throw new Error("cannot use range expressions on relation values")
+	// } else {
+	// 	signalInvalidType(expression)
+	// }
 	// 		} else {
 	// 			signalInvalidType(property)
 	// 		}
@@ -971,11 +936,12 @@ export class RelationAPI {
 
 		// Prepare methods
 		const insertColumns = [...sourceColumnNames, ...targetColumnNames].map(quote).join(", ")
-		const insertParamCount = sourceColumnNames.length + targetColumnNames.length
-		const insertParams = Array.from({ length: insertParamCount }).fill("?").join(", ")
+		const insertParams = Array.from({ length: sourceColumnNames.length + targetColumnNames.length })
+			.map((_, i) => `$${i + 1}`)
+			.join(", ")
 		this.#insert = new Method(client, `INSERT INTO "${this.table}" (${insertColumns}) VALUES (${insertParams})`)
 
-		const selectBySource = sourceColumnNames.map((name) => `"${name}" = ?`).join(" AND ")
+		const selectBySource = sourceColumnNames.map((name, i) => `"${name}" = $${i + 1}`).join(" AND ")
 
 		this.#delete = new Method(client, `DELETE FROM "${this.table}" WHERE ${selectBySource}`)
 		this.#clear = new Method(client, `DELETE FROM "${this.table}"`)

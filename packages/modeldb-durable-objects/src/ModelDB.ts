@@ -10,7 +10,6 @@ import {
 	QueryParams,
 	WhereCondition,
 	ModelValueWithIncludes,
-	PrimaryKeyValue,
 } from "@canvas-js/modeldb"
 
 import { SqlStorage } from "@cloudflare/workers-types"
@@ -54,7 +53,7 @@ export class ModelDB extends AbstractModelDB {
 		this.log("closing")
 	}
 
-	public async apply(effects: Effect[]) {
+	public apply(effects: Effect[]) {
 		// From https://developers.cloudflare.com/durable-objects/api/storage-api/#transaction
 		// > Explicit transactions are no longer necessary. Any series of write
 		// > operations with no intervening await will automatically be submitted
@@ -72,6 +71,18 @@ export class ModelDB extends AbstractModelDB {
 				this.#models[effect.model].delete(effect.key)
 			} else {
 				signalInvalidType(effect)
+			}
+		}
+
+		for (const { model, query, filter, callback } of this.subscriptions.values()) {
+			if (effects.some(filter)) {
+				const api = this.#models[model]
+				assert(api !== undefined, `model ${model} not found`)
+				try {
+					callback(api.query(query))
+				} catch (err) {
+					this.log.error(err)
+				}
 			}
 		}
 	}

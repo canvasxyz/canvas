@@ -73,7 +73,7 @@ export abstract class AbstractModelDB {
 
 	// Batch effect API
 
-	public abstract apply(effects: Effect[]): Promise<void>
+	public abstract apply(effects: Effect[]): Awaitable<void>
 
 	// Model operations
 

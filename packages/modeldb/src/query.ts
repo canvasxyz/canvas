@@ -42,7 +42,7 @@ export function isLiteralExpression(expr: PropertyValue | NotExpression | RangeE
 		return true
 	} else if (expr instanceof Uint8Array) {
 		return true
-	} else if (Array.isArray(expr) && expr.every((value) => typeof value === "string")) {
+	} else if (Array.isArray(expr)) {
 		return true
 	} else {
 		return false

@@ -7,10 +7,8 @@ export class Query<R extends Record<string, PostgresPrimitiveValue> = Record<str
 	constructor(private readonly client: pg.Client, private readonly sql: string) {}
 
 	public async get(params: PostgresPrimitiveValue[]): Promise<R | null> {
-		const {
-			rows: [result = null],
-		} = await this.client.query<R, PostgresPrimitiveValue[]>(this.sql, params)
-
+		const { rows } = await this.client.query<R, PostgresPrimitiveValue[]>(this.sql, params)
+		const [result = null] = rows
 		return result
 	}
 
@@ -43,6 +41,6 @@ export class Method {
 	constructor(private readonly client: pg.Client, private readonly sql: string) {}
 
 	public async run(params: PostgresPrimitiveValue[]) {
-		await this.client.query<{}, PostgresPrimitiveValue[]>(this.sql, params)
+		const result = await this.client.query<{}, PostgresPrimitiveValue[]>(this.sql, params)
 	}
 }

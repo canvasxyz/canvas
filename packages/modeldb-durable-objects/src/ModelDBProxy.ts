@@ -11,6 +11,7 @@ import {
 	QueryParams,
 	WhereCondition,
 	Config,
+	PrimaryKeyValue,
 } from "@canvas-js/modeldb"
 import { Awaitable } from "@canvas-js/interfaces"
 import { assert, prepare } from "@canvas-js/utils"
@@ -102,11 +103,17 @@ export class ModelDBProxy extends AbstractModelDB {
 		this.initialized = false
 	}
 
-	get<T extends ModelValue<any> = ModelValue<any>>(modelName: string, key: string): Awaitable<T | null> {
+	get<T extends ModelValue<any> = ModelValue<any>>(
+		modelName: string,
+		key: PrimaryKeyValue | PrimaryKeyValue[],
+	): Awaitable<T | null> {
 		return this.proxyFetch("get", [modelName, key])
 	}
 
-	getMany<T extends ModelValue<any> = ModelValue<any>>(modelName: string, keys: string[]): Awaitable<(T | null)[]> {
+	getMany<T extends ModelValue<any> = ModelValue<any>>(
+		modelName: string,
+		keys: PrimaryKeyValue[] | PrimaryKeyValue[][],
+	): Awaitable<(T | null)[]> {
 		return this.proxyFetch("getMany", [modelName, keys])
 	}
 
@@ -134,14 +141,6 @@ export class ModelDBProxy extends AbstractModelDB {
 
 	apply(effects: Effect[]): Promise<void> {
 		return this.proxyFetch("apply", [effects])
-	}
-
-	set<T extends ModelValue<any> = ModelValue<any>>(modelName: string, value: T): Promise<void> {
-		return this.proxyFetch("set", [modelName, prepare(value)])
-	}
-
-	delete(modelName: string, key: string): Promise<void> {
-		return this.proxyFetch("delete", [modelName, key])
 	}
 
 	subscribe(

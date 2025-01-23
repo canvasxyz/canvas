@@ -70,13 +70,13 @@ export class Query<
 					return { done: true, value: undefined }
 				}
 
-				const done = stmt.step()
-				if (done) {
+				if (stmt.step()) {
+					const value = stmt.get({}) as R
+					return { done: false, value }
+				} else {
 					finished = true
 					stmt.reset(true)
 					return { done: true, value: undefined }
-				} else {
-					return { done: false, value: stmt.get({}) as R }
 				}
 			},
 

@@ -10,7 +10,7 @@ import type {
 
 import { assert, signalInvalidType } from "@canvas-js/utils"
 
-export type PostgresPrimitiveValue = string | number | boolean | Buffer | null
+export type PostgresPrimitiveValue = string | number | boolean | Buffer | null | boolean
 
 const fromBuffer = (data: Buffer): Uint8Array => new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
 const toBuffer = (data: Uint8Array) => Buffer.from(data.buffer, data.byteOffset, data.byteLength)
@@ -55,7 +55,7 @@ export function encodePrimitiveValue(
 		}
 	} else if (type === "boolean") {
 		if (typeof value === "boolean") {
-			return value ? 1 : 0
+			return value
 		} else {
 			throw new TypeError(`${propertyName} must be a boolean`)
 		}
@@ -131,8 +131,8 @@ export function decodePrimitiveValue(
 			throw new Error(`internal error - invalid ${propertyName} value (expected bytes)`)
 		}
 	} else if (type === "boolean") {
-		if (typeof value === "number") {
-			return value === 1
+		if (typeof value === "boolean") {
+			return value
 		} else {
 			throw new Error(`internal error - invalid ${propertyName} value (expected 0 or 1)`)
 		}

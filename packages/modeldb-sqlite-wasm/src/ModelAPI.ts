@@ -52,21 +52,20 @@ const quote = (name: string) => `"${name}"`
 
 export class ModelAPI {
 	readonly #table: string
-	readonly #properties: Record<string, Property>
 
 	// Methods
-	#insert: Method
-	#update: Method | null
-	#delete: Method
-	#clear: Method<[]>
+	readonly #insert: Method
+	readonly #update: Method | null
+	readonly #delete: Method
+	readonly #clear: Method<[]>
 
 	// Queries
-	#selectAll: Query<[]>
-	#select: Query
-	#count: Query<[], { count: number }>
+	readonly #selectAll: Query<[]>
+	readonly #select: Query
+	readonly #count: Query<[], { count: number }>
 
-	readonly #relations: Record<string, RelationAPI> = {}
-
+	readonly properties: Record<string, Property>
+	readonly relations: Record<string, RelationAPI>
 	readonly primaryProperties: PrimitiveProperty[]
 	readonly mutableProperties: Property[]
 
@@ -81,16 +80,16 @@ export class ModelAPI {
 
 	public constructor(readonly db: OpfsDatabase, readonly config: Config, readonly model: Model) {
 		this.#table = model.name
-		this.#properties = Object.fromEntries(model.properties.map((property) => [property.name, property]))
+		this.properties = Object.fromEntries(model.properties.map((property) => [property.name, property]))
+		this.relations = {}
+		this.primaryProperties = config.primaryKeys[model.name]
+		this.mutableProperties = []
 
 		/** SQL column declarations */
 		const columns: string[] = []
 
 		/** unquoted column names for non-relation properties */
 		const columnNames: string[] = []
-
-		this.primaryProperties = config.primaryKeys[model.name]
-		this.mutableProperties = []
 
 		for (const property of model.properties) {
 			if (property.kind === "primitive") {
@@ -159,7 +158,7 @@ export class ModelAPI {
 					(relation) => relation.source === model.name && relation.sourceProperty === property.name,
 				)
 				assert(relation !== undefined, "internal error - relation not found")
-				this.#relations[property.name] = new RelationAPI(db, config, relation)
+				this.relations[property.name] = new RelationAPI(db, config, relation)
 
 				this.mutableProperties.push(property)
 			} else {
@@ -233,12 +232,12 @@ export class ModelAPI {
 				const { name, type, nullable } = property
 				result[name] = decodePrimitiveValue(propertyName, type, nullable, record[name])
 			} else if (property.kind === "reference") {
-				const { name, nullable } = property
+				const { name, nullable, target } = property
 				const values = this.codecs[name].columns.map((name) => record[name])
-				result[name] = decodeReferenceValue(propertyName, nullable, this.config.primaryKeys[name], values)
+				result[name] = decodeReferenceValue(propertyName, nullable, this.config.primaryKeys[target], values)
 			} else if (property.kind === "relation") {
 				const { name, target } = property
-				const targets = this.#relations[name].get(encodedKey)
+				const targets = this.relations[name].get(encodedKey)
 				result[name] = targets.map((key) =>
 					decodeReferenceValue(propertyName, false, this.config.primaryKeys[target], key),
 				) as PrimaryKeyValue[] | PrimaryKeyValue[][]
@@ -270,7 +269,7 @@ export class ModelAPI {
 			this.#update.run([...params, ...encodedKey])
 		}
 
-		for (const [name, relation] of Object.entries(this.#relations)) {
+		for (const [name, relation] of Object.entries(this.relations)) {
 			if (existingRecord !== null) {
 				relation.delete(encodedKey)
 			}
@@ -314,14 +313,14 @@ export class ModelAPI {
 		)
 
 		this.#delete.run(encodedKey)
-		for (const relation of Object.values(this.#relations)) {
+		for (const relation of Object.values(this.relations)) {
 			relation.delete(encodedKey)
 		}
 	}
 
 	public clear() {
 		this.#clear.run([])
-		for (const relation of Object.values(this.#relations)) {
+		for (const relation of Object.values(this.relations)) {
 			relation.clear()
 		}
 	}
@@ -381,7 +380,7 @@ export class ModelAPI {
 				return row[name]
 			})
 
-			const targetKeys = this.#relations[relation.sourceProperty].get(encodedKey)
+			const targetKeys = this.relations[relation.sourceProperty].get(encodedKey)
 			const targetPrimaryKey = this.config.primaryKeys[relation.target]
 			record[relation.sourceProperty] = targetKeys.map((targetKey) =>
 				decodeReferenceValue(relation.sourceProperty, false, targetPrimaryKey, targetKey),
@@ -399,7 +398,7 @@ export class ModelAPI {
 		const params: SqlitePrimitiveValue[] = []
 
 		// SELECT
-		const select = query.select ?? mapValues(this.#properties, () => true)
+		const select = query.select ?? mapValues(this.properties, () => true)
 		const [selectExpression, selectProperties, selectRelations] = this.getSelectExpression(select)
 		sql.push(`SELECT ${selectExpression} FROM "${this.#table}"`)
 
@@ -419,7 +418,7 @@ export class ModelAPI {
 			const index = indexName.split("/")
 
 			for (const name of index) {
-				if (this.#properties[name].kind === "relation") {
+				if (this.properties[name].kind === "relation") {
 					throw new Error("cannot order by relation properties")
 				}
 			}
@@ -467,13 +466,13 @@ export class ModelAPI {
 				continue
 			}
 
-			const property = this.#properties[name]
+			const property = this.properties[name]
 			assert(property !== undefined, "property not found")
 			if (property.kind === "primitive" || property.kind === "reference") {
 				properties.push(property.name)
 				columns.push(...this.codecs[name].columns.map(quote))
 			} else if (property.kind === "relation") {
-				relations.push(this.#relations[name].relation)
+				relations.push(this.relations[name].relation)
 			} else {
 				signalInvalidType(property)
 			}
@@ -488,7 +487,7 @@ export class ModelAPI {
 
 		const filters: string[] = []
 		for (const [name, expression] of Object.entries(where)) {
-			const property = this.#properties[name]
+			const property = this.properties[name]
 			assert(property !== undefined, "property not found")
 
 			if (expression === undefined) {
@@ -514,6 +513,7 @@ export class ModelAPI {
 						continue
 					} else if (value === null) {
 						filters.push(`"${name}" NOTNULL`)
+						continue
 					}
 
 					const encodedValue = encodePrimitiveValue(name, type, false, value)
@@ -591,7 +591,47 @@ export class ModelAPI {
 					signalInvalidType(expression)
 				}
 			} else if (property.kind === "relation") {
-				throw new Error("cannot query relation values")
+				const relation = this.relations[property.name]
+				const primaryColumnNames = this.primaryProperties.map((property) => property.name)
+				const targetPrimaryProperties = this.config.primaryKeys[property.target]
+
+				if (isLiteralExpression(expression)) {
+					const targets = expression
+					assert(Array.isArray(targets), "invalid relation value (expected array of primary keys)")
+					for (const target of targets) {
+						const wrappedKey = encodeReferenceValue(property.name, targetPrimaryProperties, false, target)
+						assert(wrappedKey.length === relation.targetColumnNames.length)
+
+						const primaryColumns = primaryColumnNames.map(quote).join(", ")
+						const sourceColumns = relation.sourceColumnNames.map(quote).join(", ")
+						const targetExpressions = relation.targetColumnNames.map((name, i) => `"${name}" = ?`).join(" AND ")
+						filters.push(
+							`(${primaryColumns}) IN (SELECT ${sourceColumns} FROM "${relation.table}" WHERE (${targetExpressions}))`,
+						)
+
+						params.push(...wrappedKey)
+					}
+				} else if (isNotExpression(expression)) {
+					const targets = expression.neq
+					assert(Array.isArray(targets), "invalid relation value (expected array of primary keys)")
+					for (const target of targets) {
+						const wrappedKey = encodeReferenceValue(property.name, targetPrimaryProperties, false, target)
+						assert(wrappedKey.length === relation.targetColumnNames.length)
+
+						const primaryColumns = primaryColumnNames.map(quote).join(", ")
+						const sourceColumns = relation.sourceColumnNames.map(quote).join(", ")
+						const targetExpressions = relation.targetColumnNames.map((name, i) => `"${name}" = ?`).join(" AND ")
+						filters.push(
+							`(${primaryColumns}) NOT IN (SELECT ${sourceColumns} FROM "${relation.table}" WHERE (${targetExpressions}))`,
+						)
+
+						params.push(...wrappedKey)
+					}
+				} else if (isRangeExpression(expression)) {
+					throw new Error("cannot use range expressions on relation values")
+				} else {
+					signalInvalidType(expression)
+				}
 			} else {
 				signalInvalidType(property)
 			}
