@@ -18,7 +18,8 @@ export const ModelTable = ({
 		if (modelDefinition) {
 			// the primary property has kind 'primary' or is the first property in the model definition
 			const primaryProperty =
-				modelDefinition.properties.find((p) => p.name === modelDefinition.primaryKey) ?? modelDefinition.properties[0]
+				modelDefinition.properties.find((p) => modelDefinition.primaryKey.includes(p.name)) ??
+				modelDefinition.properties[0]
 			// use the primary property as the sorting column
 			const defaultSortColumn = primaryProperty.name
 			const defaultSortDirection = "asc"
