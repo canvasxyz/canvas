@@ -49,6 +49,10 @@ export class ContractRuntime extends AbstractRuntime {
 		const mergeHandles: Record<string, QuickJSHandle> = {}
 
 		const modelSchema: ModelSchema = mapValues(modelsUnwrap, (handle) => handle.consume(vm.context.dump))
+		assert(
+			Object.keys(modelSchema).every((key) => !key.startsWith("$")),
+			"contract model names cannot start with '$'",
+		)
 
 		const cleanupSetupHandles = () => {
 			for (const handle of Object.values(mergeHandles)) {
@@ -82,84 +86,92 @@ export class ContractRuntime extends AbstractRuntime {
 					return this.getModelValue(this.#context, model, key)
 				}),
 				set: vm.context.newFunction("set", (modelHandle, valueHandle) => {
-					// assert(this.#context !== null, "expected this.#modelEntries !== null")
-					// const model = vm.context.getString(modelHandle)
-					// assert(this.db.models[model] !== undefined, "model not found")
-					// const value = this.vm.unwrapValue(valueHandle) as ModelValue
-					// validateModelValue(this.db.models[model], value)
-					// const { primaryKey } = this.db.models[model]
-					// const key = value[primaryKey] as string
-					// assert(typeof key === "string", "expected value[primaryKey] to be a string")
-					// this.#context.modelEntries[model][key] = value
+					assert(this.#context !== null, "expected this.#modelEntries !== null")
+					const model = vm.context.getString(modelHandle)
+					assert(this.db.models[model] !== undefined, "model not found")
+					const value = this.vm.unwrapValue(valueHandle) as ModelValue
+					validateModelValue(this.db.models[model], value)
+					const {
+						primaryKey: [primaryKey],
+					} = this.db.models[model]
+					const key = value[primaryKey] as string
+					assert(typeof key === "string", "expected value[primaryKey] to be a string")
+					this.#context.modelEntries[model][key] = value
 				}),
 				create: vm.context.newFunction("create", (modelHandle, valueHandle) => {
-					// assert(this.#context !== null, "expected this.#modelEntries !== null")
-					// const model = vm.context.getString(modelHandle)
-					// assert(this.db.models[model] !== undefined, "model not found")
-					// const value = this.vm.unwrapValue(valueHandle) as ModelValue
-					// validateModelValue(this.db.models[model], value)
-					// const { primaryKey } = this.db.models[model]
-					// const key = value[primaryKey] as string
-					// assert(typeof key === "string", "expected value[primaryKey] to be a string")
-					// this.#context.modelEntries[model][key] = value
+					assert(this.#context !== null, "expected this.#modelEntries !== null")
+					const model = vm.context.getString(modelHandle)
+					assert(this.db.models[model] !== undefined, "model not found")
+					const value = this.vm.unwrapValue(valueHandle) as ModelValue
+					validateModelValue(this.db.models[model], value)
+					const {
+						primaryKey: [primaryKey],
+					} = this.db.models[model]
+					const key = value[primaryKey] as string
+					assert(typeof key === "string", "expected value[primaryKey] to be a string")
+					this.#context.modelEntries[model][key] = value
 				}),
 				update: vm.context.newFunction("update", (modelHandle, valueHandle) => {
-					// assert(this.#context !== null, "expected this.#modelEntries !== null")
-					// const model = vm.context.getString(modelHandle)
-					// assert(this.db.models[model] !== undefined, "model not found")
-					// const { primaryKey } = this.db.models[model]
-					// const value = this.vm.unwrapValue(valueHandle) as ModelValue
-					// const key = value[primaryKey] as string
-					// assert(typeof key === "string", "expected value[primaryKey] to be a string")
-					// const promise = vm.context.newPromise()
-					// // TODO: Ensure concurrent merges into the same value don't create a race condition
-					// // if the user doesn't call db.update() with await.
-					// this.getModelValue(this.#context, model, key)
-					// 	.then((previousValue) => {
-					// 		const mergedValue = updateModelValues(value, previousValue ?? {})
-					// 		validateModelValue(this.db.models[model], mergedValue)
-					// 		assert(this.#context !== null)
-					// 		this.#context.modelEntries[model][key] = mergedValue
-					// 		promise.resolve()
-					// 	})
-					// 	.catch((err) => {
-					// 		promise.reject()
-					// 	})
-					// promise.settled.then(vm.runtime.executePendingJobs)
-					// return promise.handle
+					assert(this.#context !== null, "expected this.#modelEntries !== null")
+					const model = vm.context.getString(modelHandle)
+					assert(this.db.models[model] !== undefined, "model not found")
+					const {
+						primaryKey: [primaryKey],
+					} = this.db.models[model]
+					const value = this.vm.unwrapValue(valueHandle) as ModelValue
+					const key = value[primaryKey] as string
+					assert(typeof key === "string", "expected value[primaryKey] to be a string")
+					const promise = vm.context.newPromise()
+					// TODO: Ensure concurrent merges into the same value don't create a race condition
+					// if the user doesn't call db.update() with await.
+					this.getModelValue(this.#context, model, key)
+						.then((previousValue) => {
+							const mergedValue = updateModelValues(value, previousValue ?? {})
+							validateModelValue(this.db.models[model], mergedValue)
+							assert(this.#context !== null)
+							this.#context.modelEntries[model][key] = mergedValue
+							promise.resolve()
+						})
+						.catch((err) => {
+							promise.reject()
+						})
+					promise.settled.then(vm.runtime.executePendingJobs)
+					return promise.handle
 				}),
 				merge: vm.context.newFunction("merge", (modelHandle, valueHandle) => {
-					// assert(this.#context !== null, "expected this.#modelEntries !== null")
-					// const model = vm.context.getString(modelHandle)
-					// assert(this.db.models[model] !== undefined, "model not found")
-					// const { primaryKey } = this.db.models[model]
-					// const value = this.vm.unwrapValue(valueHandle) as ModelValue
-					// const key = value[primaryKey] as string
-					// assert(typeof key === "string", "expected value[primaryKey] to be a string")
-					// const promise = vm.context.newPromise()
-					// // TODO: Ensure concurrent merges into the same value don't create a race condition
-					// // if the user doesn't call db.merge() with await.
-					// this.getModelValue(this.#context, model, key)
-					// 	.then((previousValue) => {
-					// 		const mergedValue = mergeModelValues(value, previousValue ?? {})
-					// 		validateModelValue(this.db.models[model], mergedValue)
-					// 		assert(this.#context !== null)
-					// 		this.#context.modelEntries[model][key] = mergedValue
-					// 		promise.resolve()
-					// 	})
-					// 	.catch((err) => {
-					// 		promise.reject()
-					// 	})
-					// promise.settled.then(vm.runtime.executePendingJobs)
-					// return promise.handle
+					assert(this.#context !== null, "expected this.#modelEntries !== null")
+					const model = vm.context.getString(modelHandle)
+					assert(this.db.models[model] !== undefined, "model not found")
+					const {
+						primaryKey: [primaryKey],
+					} = this.db.models[model]
+					const value = this.vm.unwrapValue(valueHandle) as ModelValue
+					const key = value[primaryKey] as string
+					assert(typeof key === "string", "expected value[primaryKey] to be a string")
+					const promise = vm.context.newPromise()
+					// TODO: Ensure concurrent merges into the same value don't create a race condition
+					// if the user doesn't call db.merge() with await.
+					this.getModelValue(this.#context, model, key)
+						.then((previousValue) => {
+							const mergedValue = mergeModelValues(value, previousValue ?? {})
+							validateModelValue(this.db.models[model], mergedValue)
+							assert(this.#context !== null)
+							this.#context.modelEntries[model][key] = mergedValue
+							promise.resolve()
+						})
+						.catch((err) => {
+							promise.reject()
+						})
+					promise.settled.then(vm.runtime.executePendingJobs)
+					return promise.handle
 				}),
 
 				delete: vm.context.newFunction("delete", (modelHandle, keyHandle) => {
-					// assert(this.#context !== null, "expected this.#modelEntries !== null")
-					// const model = vm.context.getString(modelHandle)
-					// assert(this.db.models[model] !== undefined, "model not found")
-					// const key = vm.context.getString(keyHandle)
-					// this.#context.modelEntries[model][key] = null
+					assert(this.#context !== null, "expected this.#modelEntries !== null")
+					const model = vm.context.getString(modelHandle)
+					assert(this.db.models[model] !== undefined, "model not found")
+					const key = vm.context.getString(keyHandle)
+					this.#context.modelEntries[model][key] = null
 				}),
 			})
 			.consume(vm.cache)

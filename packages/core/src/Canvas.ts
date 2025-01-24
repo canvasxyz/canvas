@@ -107,6 +107,12 @@ export class Canvas<
 			},
 		)
 
+		for (const model of Object.values(messageLog.db.models)) {
+			if (!model.name.startsWith("$") && model.primaryKey.length !== 1) {
+				throw new Error("contract models cannot use composite primary keys")
+			}
+		}
+
 		const db = messageLog.db
 		runtime.db = db
 
