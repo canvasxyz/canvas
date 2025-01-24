@@ -28,6 +28,14 @@ export const isPrimaryKey = (value: unknown): value is PrimaryKeyValue => {
 	}
 }
 
+export const isReferenceValue = (value: unknown): value is ReferenceValue => {
+	if (Array.isArray(value)) {
+		return value.every(isPrimaryKey)
+	} else {
+		return isPrimaryKey(value)
+	}
+}
+
 // eslint-disable-next-line no-useless-escape
 export const namePattern = /^[a-zA-Z0-9$:_\-\.]+$/
 
@@ -143,7 +151,7 @@ export function validatePropertyValue(modelName: string, property: Property, val
 	} else if (property.kind === "reference") {
 		if (property.nullable && value === null) {
 			return
-		} else if (!isPrimaryKey(value)) {
+		} else if (!isReferenceValue(value)) {
 			throw new TypeError(
 				`write to db.${modelName}.${property.name}: expected a primary key, received ${formatValue(value)}`,
 			)
@@ -155,7 +163,7 @@ export function validatePropertyValue(modelName: string, property: Property, val
 			throw new TypeError(
 				`write to db.${modelName}.${property.name}: expected an array of primary keys, received ${formatValue(value)}`,
 			)
-		} else if (!value.every(isPrimaryKey)) {
+		} else if (!value.every(isReferenceValue)) {
 			throw new TypeError(
 				`write to db.${modelName}.${property.name}: expected an array of primary keys, received ${formatValue(value)}`,
 			)

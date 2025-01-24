@@ -15,7 +15,7 @@ import {
 	WhereCondition,
 } from "./types.js"
 
-import { isPrimaryKey, validatePropertyValue } from "./utils.js"
+import { isPrimaryKey, isReferenceValue, validatePropertyValue } from "./utils.js"
 
 export function lessThan(a: Uint8Array | null, b: Uint8Array | null) {
 	if (a === null || b === null) {
@@ -336,12 +336,12 @@ function getRelationFilter(
 	expression: PropertyValue | NotExpression | RangeExpression,
 ): (value: PropertyValue) => boolean {
 	if (isLiteralExpression(expression)) {
-		const reference = expression
-		if (!Array.isArray(reference)) {
+		const targets = expression
+		if (!Array.isArray(targets)) {
 			throw new Error(
 				`error filtering ${modelName}.${property.name}: invalid relation expression - expected array of primary keys`,
 			)
-		} else if (!reference.every((key) => isPrimaryKey(key) || (Array.isArray(key) && key.every(isPrimaryKey)))) {
+		} else if (!targets.every(isReferenceValue)) {
 			throw new Error(
 				`error filtering ${modelName}.${property.name}: invalid relation expression - expected array of primary keys`,
 			)
@@ -349,15 +349,15 @@ function getRelationFilter(
 
 		return (value) => {
 			assert(Array.isArray(value), "expected array of primary keys to match")
-			return reference.every((target) => value.some((key) => referenceOrder.equals(key, target)))
+			return targets.every((target) => value.some((key) => referenceOrder.equals(key, target)))
 		}
 	} else if (isNotExpression(expression)) {
-		const reference = expression.neq
-		if (!Array.isArray(reference)) {
+		const targets = expression.neq
+		if (!Array.isArray(targets)) {
 			throw new Error(
 				`error filtering ${modelName}.${property.name}: invalid relation expression - expected array of primary keys`,
 			)
-		} else if (!reference.every((key) => isPrimaryKey(key) || (Array.isArray(key) && key.every(isPrimaryKey)))) {
+		} else if (!targets.every(isReferenceValue)) {
 			throw new Error(
 				`error filtering ${modelName}.${property.name}: invalid relation expression - expected array of primary keys`,
 			)
@@ -365,7 +365,7 @@ function getRelationFilter(
 
 		return (value) => {
 			assert(Array.isArray(value), "expected array of primary keys to match")
-			return reference.every((target) => value.every((key) => !referenceOrder.equals(key, target)))
+			return targets.every((target) => value.every((key) => !referenceOrder.equals(key, target)))
 		}
 	} else if (isRangeExpression(expression)) {
 		throw new Error(`error filtering ${modelName}.${property.name}: cannot use range expressions on relation values`)

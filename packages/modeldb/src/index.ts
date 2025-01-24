@@ -10,4 +10,5 @@ export {
 	isPrimitiveValue,
 	getModelsFromInclude,
 	isPrimaryKey,
+	isReferenceValue,
 } from "./utils.js"

@@ -24,6 +24,7 @@ import {
 } from "@canvas-js/modeldb"
 
 import { equalIndex, getIndexName } from "./utils.js"
+import { isReferenceValue } from "@canvas-js/modeldb"
 
 type ObjectPropertyValue = PropertyValue | PropertyValue[]
 
@@ -573,9 +574,14 @@ function decodePropertyValue(property: Property, objectPropertyValue: PropertyVa
 	} else if (property.kind === "reference") {
 		if (property.nullable) {
 			assert(Array.isArray(objectPropertyValue))
-			return objectPropertyValue.length === 0 ? null : objectPropertyValue[0]
+			if (objectPropertyValue.length === 0) {
+				return null
+			} else {
+				assert(isReferenceValue(objectPropertyValue[0]), "expected primary key vaue")
+				return objectPropertyValue[0]
+			}
 		} else {
-			assert(!Array.isArray(objectPropertyValue))
+			assert(isReferenceValue(objectPropertyValue), "expected primary key vaue")
 			return objectPropertyValue
 		}
 	} else if (property.kind === "relation") {

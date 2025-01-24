@@ -85,8 +85,15 @@ testOnModelDB("create a model with a reference to a composite primary key", asyn
 
 testOnModelDB("create a model with a relation on a composite primary key", async (t, openDB) => {
 	const models = {
-		user: { $primary: "key/index", key: "string", index: "integer", name: "string?", members: "@room[]" },
-		room: { $primary: "key/index", key: "string", index: "integer", name: "string?", creator: "@user" },
+		user: { $primary: "key/index", key: "string", index: "integer", name: "string?" },
+		room: {
+			$primary: "key/index",
+			key: "string",
+			index: "integer",
+			name: "string?",
+			creator: "@user",
+			members: "@user[]",
+		},
 	} satisfies ModelSchema
 
 	await t.notThrowsAsync(() => openDB(t, models))
