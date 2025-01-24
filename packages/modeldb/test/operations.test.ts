@@ -104,6 +104,11 @@ testOnModelDB("set and get a composite primary key", async (t, openDB) => {
 	await db.set("user", { key: "b", index: 3, name: null })
 	await db.set("user", { key: "b", index: 10, name: "John Doe" })
 
+	t.deepEqual(await db.get("user", ["a", 0]), { key: "a", index: 0, name: null })
+	t.deepEqual(await db.get("user", ["b", 3]), { key: "b", index: 3, name: null })
+	t.deepEqual(await db.get("user", ["b", 10]), { key: "b", index: 10, name: "John Doe" })
+	t.deepEqual(await db.get("user", ["c", 10]), null)
+
 	t.deepEqual(await db.query("user"), [
 		{ key: "a", index: 0, name: null },
 		{ key: "b", index: 3, name: null },
