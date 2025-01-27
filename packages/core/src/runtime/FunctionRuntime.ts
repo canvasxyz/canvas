@@ -85,6 +85,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 						} else {
 							throw new Error(`db.link(): link from ${linkModel} ${backlinkKey} must be a relation`)
 						}
+						if (this.db.models[linkModel] === undefined) throw new Error(`db.link(): no such model "${linkModel}"`)
 						validateModelValue(this.db.models[linkModel], modelValue)
 						this.#context.modelEntries[linkModel][linkPrimaryKey] = modelValue
 					} finally {
