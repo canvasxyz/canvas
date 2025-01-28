@@ -92,7 +92,7 @@ export function encodePrimitiveValue(
 		}
 	} else if (property.type === "json") {
 		try {
-			return json.stringify(value)
+			return JSON.parse(json.stringify(value))
 		} catch (e) {
 			throw new TypeError(`${modelName}/${property.name} must be IPLD-encodable`)
 		}
@@ -178,7 +178,11 @@ export function decodePrimitiveValue(modelName: string, property: PrimitivePrope
 			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected boolean)`)
 		}
 	} else if (property.type === "json") {
-		return value
+		try {
+			return json.decode(json.encode(value))
+		} catch (err) {
+			return value
+		}
 	} else {
 		const _: never = property.type
 		throw new Error(`internal error - unknown primitive type ${JSON.stringify(property.type)}`)
