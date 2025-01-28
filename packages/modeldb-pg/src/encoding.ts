@@ -61,7 +61,7 @@ export function encodePrimitiveValue(
 		}
 	} else if (type === "json") {
 		try {
-			return json.stringify(value)
+			return JSON.parse(json.stringify(value))
 		} catch (e) {
 			throw new TypeError(`${propertyName} must be IPLD-encodable`)
 		}
@@ -137,12 +137,7 @@ export function decodePrimitiveValue(
 			throw new Error(`internal error - invalid ${propertyName} value (expected 0 or 1)`)
 		}
 	} else if (type === "json") {
-		assert(typeof value === "string", 'internal error - expected typeof value === "string"')
-		try {
-			return json.parse<PrimitiveValue>(value)
-		} catch (e) {
-			throw new Error(`internal error - invalid ${propertyName} value (expected dag-json)`)
-		}
+		return json.decode(json.encode(value))
 	} else {
 		signalInvalidType(type)
 	}

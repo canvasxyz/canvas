@@ -38,7 +38,7 @@ const columnTypes = {
 	string: "TEXT",
 	bytes: "BYTEA",
 	boolean: "BOOLEAN",
-	json: "TEXT",
+	json: "JSONB",
 } satisfies Record<PrimitiveType, string>
 
 function getColumn(name: string, type: PrimitiveType, nullable: boolean) {
