@@ -61,7 +61,7 @@ export function encodePrimitiveValue(
 		}
 	} else if (type === "json") {
 		try {
-			return JSON.parse(json.stringify(value))
+			return json.stringify(value)
 		} catch (e) {
 			throw new TypeError(`${propertyName} must be IPLD-encodable`)
 		}
