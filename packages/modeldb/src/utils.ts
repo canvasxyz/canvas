@@ -81,7 +81,7 @@ export function validateModelValue(model: Model, value: ModelValue) {
 	for (const property of model.properties) {
 		const propertyValue = value[property.name]
 		if (propertyValue === undefined) {
-			throw new Error(`write to db.${model.name}: missing ${property.name}`)
+			throw new Error(`write to db.${model.name}: missing field "${property.name}"`)
 		}
 		validatePropertyValue(model.name, property, propertyValue)
 	}

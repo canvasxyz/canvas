@@ -310,6 +310,10 @@ export abstract class AbstractRuntime {
 		model: string,
 		key: string,
 	): Promise<null | T> {
+		if (context.modelEntries[model] === undefined) {
+			throw new Error(`could not access model db.${model} inside runtime action ${context.message.payload.name}`)
+		}
+
 		if (context.modelEntries[model][key] !== undefined) {
 			return context.modelEntries[model][key] as T
 		}
