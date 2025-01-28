@@ -18,7 +18,6 @@ import {
 	Config,
 	PrimaryKeyValue,
 	PropertyValue,
-	isPrimaryKey,
 } from "@canvas-js/modeldb"
 
 import {
@@ -29,7 +28,6 @@ import {
 	decodeReferenceValue,
 } from "./encoding.js"
 import { Method, Query } from "./utils.js"
-import { isPrimitive } from "util"
 
 const columnTypes = {
 	integer: "BIGINT",
