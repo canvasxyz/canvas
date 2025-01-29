@@ -1,17 +1,17 @@
 {
   "accountAssociation": {
     "header": "eyJmaWQiOjE0NCwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDJiYmFFZTg5MDBiYjE2NjRCMUM4M2EzQTRGMTQyY0RCRjIyMjRmYjgifQ",
-    "payload": "eyJkb21haW4iOiI2NTM1OGYyYmYxNjEubmdyb2suYXBwIn0",
-    "signature": "MHgwZDMwNjY5ZDkyNWU5ODQ5NmVkNDkzZjQwMjY0NmY4ODAzNzhmOWI5OTI1NzEwNzI4NmI4MTU5YzVkZTllZGYxMjg4NTFjNjgwNTlkNDAyNDdhODhjOWZmZmUzMmQyMGMyYTIyOTczOWRiN2YzYTI0MWU2YTkxNGVjM2MxZTE4ODFj"
+    "payload": "eyJkb21haW4iOiJjaGF0LWV4YW1wbGUuY2FudmFzLnh5eiJ9",
+    "signature": "MHhjMmU2NjE0ODQwZWM1MTlkODA3MThlMzdkNWI2ZTdhZGVlZDZhODgzZGM5MWU3YmYwZDM3NGNhYTc2MjM2YzhiM2Q1YWFiZjlhZjkxNWQ1NGY2ODgxOTE0N2YzZThlMDkxNTRlMmEwOTAyYWZhOWIwODJmN2UxOTI1MWE1NGU2NTFi"
   },
   "frame": {
     "version": "1",
     "name": "Example Frame",
-    "iconUrl": "https://65358f2bf161.ngrok.app/icon.png",
-    "homeUrl": "https://65358f2bf161.ngrok.app",
-    "imageUrl": "https://65358f2bf161.ngrok.app/image.png",
+    "iconUrl": "https://chat-example.canvas.xyz/icon.png",
+    "homeUrl": "https://chat-example.canvas.xyz",
+    "imageUrl": "https://chat-example.canvas.xyz/image.png",
     "buttonTitle": "Check this out",
-    "splashImageUrl": "https://65358f2bf161.ngrok.app/splash.png",
+    "splashImageUrl": "https://chat-example.canvas.xyz/splash.png",
     "splashBackgroundColor": "#eeccff"
   }
 }
