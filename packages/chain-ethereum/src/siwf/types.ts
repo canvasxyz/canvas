@@ -10,6 +10,7 @@ export type SIWFSessionData = {
 	siweIssuedAt: string
 	siweExpirationTime: string | null
 	siweNotBefore: string | null
+	frame?: true
 }
 
 export type SIWFMessage = {
