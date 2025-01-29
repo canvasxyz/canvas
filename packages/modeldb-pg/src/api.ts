@@ -174,7 +174,7 @@ export class ModelAPI {
 		this.#primaryKeyName = primaryKeyName
 
 		const insertNames = this.#columnNames.join(", ")
-		const insertParams = this.#columnNames.map((name: string, i: number) => `$${i + 1}`)
+		const insertParams = this.#columnNames.map((name: string, i: number) => `$${i + 1}`).join(", ")
 		this.#insert = `INSERT INTO "${this.#table}" (${insertNames}) VALUES (${insertParams}) ON CONFLICT DO NOTHING`
 
 		const updateParams = this.#columnNames.map((name: string, i: number) => `$${i + 1}`)
