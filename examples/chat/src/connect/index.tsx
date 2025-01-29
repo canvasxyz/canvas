@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 
 import { ConnectSIWEBurner } from "./ConnectSIWEBurner.js"
 import { ConnectSIWE } from "./ConnectSIWE.js"
@@ -16,8 +16,14 @@ import { ConnectSolana } from "./ConnectSolana.js"
 import { ConnectMagic } from "./ConnectMagic.js"
 import { ConnectLeap } from "./ConnectLeap.js"
 
+import frameSdk from "@farcaster/frame-sdk"
+
 export const Connect: React.FC<{}> = ({}) => {
 	const [method, setMethod] = useState("burner")
+
+	useEffect(() => {
+		;(frameSdk as any).actions.ready()
+	}, [])
 
 	return (
 		<>
@@ -29,6 +35,7 @@ export const Connect: React.FC<{}> = ({}) => {
 				<option value="burner">Burner Wallet</option>
 				<option value="burner-eip712">Burner Wallet - EIP712</option>
 				<option value="farcaster">Sign in with Farcaster</option>
+				<option value="farcaster-frame">Sign in with Farcaster - Frame</option>
 				<option value="ethereum">Ethereum</option>
 				<option value="ethereum-viem">Ethereum (Viem)</option>
 				<option value="ethereum-eip712">Ethereum (EIP712)</option>
@@ -50,8 +57,6 @@ export const Connect: React.FC<{}> = ({}) => {
 
 const Method: React.FC<{ method: string }> = (props) => {
 	switch (props.method) {
-		case "farcaster":
-			return <ConnectSIWF />
 		case "burner":
 			return <ConnectSIWEBurner />
 		case "burner-eip712":
@@ -62,6 +67,10 @@ const Method: React.FC<{ method: string }> = (props) => {
 			return <ConnectEIP712 />
 		case "ethereum-viem":
 			return <ConnectSIWEViem />
+		case "farcaster":
+			return <ConnectSIWF />
+		case "farcaster-frame":
+			return <ConnectSIWF frame={true} />
 		case "polkadot":
 			return <ConnectPolkadot />
 		case "solana":
