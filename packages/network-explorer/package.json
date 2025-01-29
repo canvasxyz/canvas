@@ -1,16 +1,16 @@
 {
 	"name": "@canvas-js/network-explorer",
 	"type": "module",
-	"version": "0.13.13",
+	"version": "0.13.14",
 	"scripts": {
 		"dev": "npx vite",
 		"build": "npx vite build",
 		"lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
 	},
 	"dependencies": {
-		"@canvas-js/core": "0.13.13",
-		"@canvas-js/modeldb": "0.13.13",
-		"@canvas-js/interfaces": "0.13.13",
+		"@canvas-js/core": "0.13.14",
+		"@canvas-js/modeldb": "0.13.14",
+		"@canvas-js/interfaces": "0.13.14",
 		"@ipld/dag-cbor": "^9.2.2",
 		"@ipld/dag-json": "^10.2.3",
 		"@radix-ui/themes": "^3.1.3",
