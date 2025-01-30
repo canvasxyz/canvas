@@ -16,13 +16,14 @@ import { ConnectSolana } from "./ConnectSolana.js"
 import { ConnectMagic } from "./ConnectMagic.js"
 import { ConnectLeap } from "./ConnectLeap.js"
 
-import frameSdk from "@farcaster/frame-sdk"
+import FrameSDK from "@farcaster/frame-sdk"
 
 export const Connect: React.FC<{}> = ({}) => {
 	const [method, setMethod] = useState("burner")
 
 	useEffect(() => {
-		;(frameSdk as any).actions.ready()
+		// @ts-ignore
+		FrameSDK.actions.ready()
 	}, [])
 
 	return (

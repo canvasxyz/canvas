@@ -3,9 +3,8 @@ import "@farcaster/auth-kit/styles.css"
 import React, { useContext, useEffect, useRef, useState } from "react"
 import { hexlify, getBytes } from "ethers"
 import { SIWFSigner } from "@canvas-js/chain-ethereum"
-import { ed25519 } from "@canvas-js/signatures"
 import { SignInButton, useProfile } from "@farcaster/auth-kit"
-import frameSdk from "@farcaster/frame-sdk"
+import FrameSDK from "@farcaster/frame-sdk"
 
 import { topic } from "../App.js"
 import { AppContext } from "../AppContext.js"
@@ -42,7 +41,7 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ frame }) => {
 			const { nonce, privateKey } = SIWFSigner.newSIWFRequestNonce(topic)
 			setNonce(nonce)
 			setPrivateKey(hexlify(privateKey))
-			;(frameSdk as any).actions.ready()
+			;(FrameSDK as any).actions.ready()
 		} else {
 			const { requestId, privateKey } = SIWFSigner.newSIWFRequestId(topic)
 			setRequestId(requestId)
@@ -85,7 +84,7 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ frame }) => {
 							const now = new Date()
 							const exp = new Date(now.getTime() + 10 * 60 * 1000)
 
-							const result = await (frameSdk as any).actions.signIn({
+							const result = await (FrameSDK as any).actions.signIn({
 								nonce,
 								notBefore: now.toISOString(),
 								expirationTime: exp.toISOString(),
