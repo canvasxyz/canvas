@@ -28,11 +28,19 @@ export const isPrimaryKey = (value: unknown): value is PrimaryKeyValue => {
 	}
 }
 
-export const isReferenceValue = (value: unknown): value is ReferenceValue => {
+export function isReferenceValue(value: unknown): value is ReferenceValue {
 	if (Array.isArray(value)) {
 		return value.every(isPrimaryKey)
 	} else {
 		return isPrimaryKey(value)
+	}
+}
+
+export function isRelationValue(value: unknown): value is RelationValue {
+	if (Array.isArray(value)) {
+		return value.every(isReferenceValue)
+	} else {
+		return false
 	}
 }
 

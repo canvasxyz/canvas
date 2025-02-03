@@ -18,15 +18,10 @@ import {
 	Config,
 	PrimaryKeyValue,
 	PropertyValue,
+	PropertyAPI,
 } from "@canvas-js/modeldb"
 
-import {
-	SqlitePrimitiveValue,
-	decodePrimitiveValue,
-	decodeReferenceValue,
-	encodePrimitiveValue,
-	encodeReferenceValue,
-} from "./encoding.js"
+import { SqlitePrimitiveValue, Encoder, Decoder } from "./encoding.js"
 
 import { Method, Query } from "./utils.js"
 
@@ -69,14 +64,7 @@ export class ModelAPI {
 	readonly primaryProperties: PrimitiveProperty[]
 	readonly mutableProperties: Property[]
 
-	readonly codecs: Record<
-		string,
-		{
-			columns: string[]
-			encode: (value: PropertyValue) => SqlitePrimitiveValue[]
-			decode: (record: Record<string, SqlitePrimitiveValue>) => PropertyValue
-		}
-	> = {}
+	readonly codecs: Record<string, PropertyAPI<SqlitePrimitiveValue>> = {}
 
 	public constructor(readonly db: SqlStorage, readonly config: Config, readonly model: Model) {
 		// in the cloudflare runtime, `this` cannot be used when assigning default values to private properties
@@ -101,8 +89,8 @@ export class ModelAPI {
 				const propertyName = `${model.name}/${name}`
 				this.codecs[property.name] = {
 					columns: [property.name],
-					encode: (value) => [encodePrimitiveValue(propertyName, type, nullable, value)],
-					decode: (record) => decodePrimitiveValue(propertyName, type, nullable, record[property.name]),
+					encode: (value) => [Encoder.encodePrimitiveValue(propertyName, type, nullable, value)],
+					decode: (record) => Decoder.decodePrimitiveValue(propertyName, type, nullable, record[property.name]),
 				}
 
 				if (!model.primaryKey.includes(property.name)) {
@@ -123,9 +111,9 @@ export class ModelAPI {
 
 					this.codecs[property.name] = {
 						columns: [property.name],
-						encode: (value) => encodeReferenceValue(propertyName, [targetProperty], property.nullable, value),
+						encode: (value) => Encoder.encodeReferenceValue(propertyName, [targetProperty], property.nullable, value),
 						decode: (record) =>
-							decodeReferenceValue(propertyName, property.nullable, [targetProperty], [record[property.name]]),
+							Decoder.decodeReferenceValue(propertyName, property.nullable, [targetProperty], [record[property.name]]),
 					}
 				} else {
 					const refNames: string[] = []
@@ -141,10 +129,10 @@ export class ModelAPI {
 						columns: refNames,
 
 						encode: (value) =>
-							encodeReferenceValue(propertyName, config.primaryKeys[target.name], property.nullable, value),
+							Encoder.encodeReferenceValue(propertyName, config.primaryKeys[target.name], property.nullable, value),
 
 						decode: (record) =>
-							decodeReferenceValue(
+							Decoder.decodeReferenceValue(
 								propertyName,
 								property.nullable,
 								config.primaryKeys[target.name],
@@ -218,7 +206,7 @@ export class ModelAPI {
 		}
 
 		const encodedKey = this.primaryProperties.map(({ name, type, nullable }, i) =>
-			encodePrimitiveValue(name, type, nullable, wrappedKey[i]),
+			Encoder.encodePrimitiveValue(name, type, nullable, wrappedKey[i]),
 		)
 
 		const record = this.#select.get(encodedKey)
@@ -234,16 +222,16 @@ export class ModelAPI {
 			const propertyName = `${this.model.name}/${property.name}`
 			if (property.kind === "primitive") {
 				const { name, type, nullable } = property
-				result[name] = decodePrimitiveValue(propertyName, type, nullable, record[name])
+				result[name] = Decoder.decodePrimitiveValue(propertyName, type, nullable, record[name])
 			} else if (property.kind === "reference") {
 				const { name, nullable, target } = property
 				const values = this.codecs[name].columns.map((name) => record[name])
-				result[name] = decodeReferenceValue(propertyName, nullable, this.config.primaryKeys[target], values)
+				result[name] = Decoder.decodeReferenceValue(propertyName, nullable, this.config.primaryKeys[target], values)
 			} else if (property.kind === "relation") {
 				const { name, target } = property
 				const targets = this.relations[name].get(encodedKey)
 				result[name] = targets.map((key) =>
-					decodeReferenceValue(propertyName, false, this.config.primaryKeys[target], key),
+					Decoder.decodeReferenceValue(propertyName, false, this.config.primaryKeys[target], key),
 				) as PrimaryKeyValue[] | PrimaryKeyValue[][]
 			} else {
 				signalInvalidType(property)
@@ -261,7 +249,7 @@ export class ModelAPI {
 		validateModelValue(this.model, value)
 
 		const encodedKey = this.primaryProperties.map(({ name, type, nullable }) =>
-			encodePrimitiveValue(name, type, nullable, value[name]),
+			Encoder.encodePrimitiveValue(name, type, nullable, value[name]),
 		)
 
 		const existingRecord = this.#select.get(encodedKey)
@@ -280,7 +268,7 @@ export class ModelAPI {
 
 			assert(Array.isArray(value[name]))
 			const target = this.config.primaryKeys[relation.relation.target]
-			const encodedTargets = value[name].map((key) => encodeReferenceValue(name, target, false, key))
+			const encodedTargets = value[name].map((key) => Encoder.encodeReferenceValue(name, target, false, key))
 
 			relation.add(encodedKey, encodedTargets)
 		}
@@ -291,11 +279,11 @@ export class ModelAPI {
 		for (const property of properties) {
 			if (property.kind === "primitive") {
 				const { name, type, nullable } = property
-				result.push(encodePrimitiveValue(name, type, nullable, value[name]))
+				result.push(Encoder.encodePrimitiveValue(name, type, nullable, value[name]))
 			} else if (property.kind === "reference") {
 				const { name, target, nullable } = property
 				const targetProperties = this.config.primaryKeys[target]
-				result.push(...encodeReferenceValue(name, targetProperties, nullable, value[property.name]))
+				result.push(...Encoder.encodeReferenceValue(name, targetProperties, nullable, value[property.name]))
 			} else if (property.kind === "relation") {
 				continue
 			} else {
@@ -313,7 +301,7 @@ export class ModelAPI {
 		}
 
 		const encodedKey = this.primaryProperties.map(({ name, type, nullable }, i) =>
-			encodePrimitiveValue(name, type, nullable, wrappedKey[i]),
+			Encoder.encodePrimitiveValue(name, type, nullable, wrappedKey[i]),
 		)
 
 		this.#delete.run(encodedKey)
@@ -387,7 +375,7 @@ export class ModelAPI {
 			const targetKeys = this.relations[relation.sourceProperty].get(encodedKey)
 			const targetPrimaryKey = this.config.primaryKeys[relation.target]
 			record[relation.sourceProperty] = targetKeys.map((targetKey) =>
-				decodeReferenceValue(relation.sourceProperty, false, targetPrimaryKey, targetKey),
+				Decoder.decodeReferenceValue(relation.sourceProperty, false, targetPrimaryKey, targetKey),
 			) as PrimaryKeyValue[] | PrimaryKeyValue[][]
 		}
 
@@ -508,7 +496,7 @@ export class ModelAPI {
 						continue
 					}
 
-					const encodedValue = encodePrimitiveValue(name, type, false, expression)
+					const encodedValue = Encoder.encodePrimitiveValue(name, type, false, expression)
 					params.push(encodedValue)
 					filters.push(`"${name}" = ?`)
 				} else if (isNotExpression(expression)) {
@@ -520,7 +508,7 @@ export class ModelAPI {
 						continue
 					}
 
-					const encodedValue = encodePrimitiveValue(name, type, false, value)
+					const encodedValue = Encoder.encodePrimitiveValue(name, type, false, value)
 					params.push(encodedValue)
 					if (nullable) {
 						filters.push(`("${name}" ISNULL OR "${name}" != ?)`)
@@ -546,7 +534,7 @@ export class ModelAPI {
 								throw new Error(`invalid range expression "${key}"`)
 							}
 						} else {
-							params.push(encodePrimitiveValue(name, type, nullable, value))
+							params.push(Encoder.encodePrimitiveValue(name, type, nullable, value))
 							if (key === "gt") {
 								filters.push(`("${name}" NOTNULL) AND ("${name}" > ?)`)
 							} else if (key === "gte") {
@@ -566,7 +554,7 @@ export class ModelAPI {
 				const { columns } = this.codecs[name]
 
 				if (isLiteralExpression(expression)) {
-					const encodedKey = encodeReferenceValue(name, target, true, expression)
+					const encodedKey = Encoder.encodeReferenceValue(name, target, true, expression)
 					if (encodedKey.every((key) => key === null)) {
 						filters.push(columns.map((c) => `"${c}" ISNULL`).join(" AND "))
 					} else {
@@ -578,7 +566,7 @@ export class ModelAPI {
 						continue
 					}
 
-					const encodedKey = encodeReferenceValue(name, target, true, expression.neq)
+					const encodedKey = Encoder.encodeReferenceValue(name, target, true, expression.neq)
 
 					if (encodedKey.every((key) => key === null)) {
 						filters.push(columns.map((c) => `"${c}" NOTNULL`).join(" AND "))
@@ -603,7 +591,7 @@ export class ModelAPI {
 					const targets = expression
 					assert(Array.isArray(targets), "invalid relation value (expected array of primary keys)")
 					for (const target of targets) {
-						const wrappedKey = encodeReferenceValue(property.name, targetPrimaryProperties, false, target)
+						const wrappedKey = Encoder.encodeReferenceValue(property.name, targetPrimaryProperties, false, target)
 						assert(wrappedKey.length === relation.targetColumnNames.length)
 
 						const primaryColumns = primaryColumnNames.map(quote).join(", ")
@@ -619,7 +607,7 @@ export class ModelAPI {
 					const targets = expression.neq
 					assert(Array.isArray(targets), "invalid relation value (expected array of primary keys)")
 					for (const target of targets) {
-						const wrappedKey = encodeReferenceValue(property.name, targetPrimaryProperties, false, target)
+						const wrappedKey = Encoder.encodeReferenceValue(property.name, targetPrimaryProperties, false, target)
 						assert(wrappedKey.length === relation.targetColumnNames.length)
 
 						const primaryColumns = primaryColumnNames.map(quote).join(", ")

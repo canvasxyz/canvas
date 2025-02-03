@@ -137,3 +137,24 @@ export type Contract<T extends ModelSchema = ModelSchema> = {
 export type Effect =
 	| { model: string; operation: "set"; value: ModelValue<any> }
 	| { model: string; operation: "delete"; key: PrimaryKeyValue | PrimaryKeyValue[] }
+
+export interface PropertyEncoder<T> {
+	encodePrimitiveValue(propertyName: string, type: PrimitiveType, nullable: boolean, value: PropertyValue): T
+	encodeReferenceValue(propertyName: string, target: PrimitiveProperty[], nullable: boolean, value: PropertyValue): T[]
+}
+
+export interface PropertyDecoder<T> {
+	decodePrimitiveValue(propertyName: string, type: PrimitiveType, nullable: boolean, value: T): PrimitiveValue
+	decodeReferenceValue(
+		propertyName: string,
+		nullable: boolean,
+		target: PrimitiveProperty[],
+		values: T[],
+	): ReferenceValue
+}
+
+export interface PropertyAPI<T> {
+	columns: string[]
+	encode: (value: PropertyValue) => T[]
+	decode: (record: Record<string, T>) => PropertyValue
+}

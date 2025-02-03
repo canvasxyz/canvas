@@ -18,15 +18,10 @@ import {
 	Config,
 	PrimaryKeyValue,
 	PropertyValue,
+	PropertyAPI,
 } from "@canvas-js/modeldb"
 
-import {
-	PostgresPrimitiveValue,
-	encodePrimitiveValue,
-	encodeReferenceValue,
-	decodePrimitiveValue,
-	decodeReferenceValue,
-} from "./encoding.js"
+import { PostgresPrimitiveValue, Encoder, Decoder } from "./encoding.js"
 import { Method, Query } from "./utils.js"
 
 const columnTypes = {
@@ -59,18 +54,9 @@ export class ModelAPI {
 
 		const properties = Object.fromEntries(model.properties.map((property) => [property.name, property]))
 		const relations: Record<string, RelationAPI> = {}
-
-		const codecs: Record<
-			string,
-			{
-				columns: string[]
-				encode: (value: PropertyValue) => PostgresPrimitiveValue[]
-				decode: (record: Record<string, PostgresPrimitiveValue>) => PropertyValue
-			}
-		> = {}
-
 		const primaryProperties: PrimitiveProperty[] = config.primaryKeys[model.name]
 		const mutableProperties: Property[] = []
+		const codecs: Record<string, PropertyAPI<PostgresPrimitiveValue>> = {}
 
 		for (const property of model.properties) {
 			if (property.kind === "primitive") {
@@ -81,8 +67,8 @@ export class ModelAPI {
 				const propertyName = `${model.name}/${name}`
 				codecs[property.name] = {
 					columns: [property.name],
-					encode: (value) => [encodePrimitiveValue(propertyName, type, nullable, value)],
-					decode: (record) => decodePrimitiveValue(propertyName, type, nullable, record[property.name]),
+					encode: (value) => [Encoder.encodePrimitiveValue(propertyName, type, nullable, value)],
+					decode: (record) => Decoder.decodePrimitiveValue(propertyName, type, nullable, record[property.name]),
 				}
 
 				if (!model.primaryKey.includes(property.name)) {
@@ -103,9 +89,9 @@ export class ModelAPI {
 
 					codecs[property.name] = {
 						columns: [property.name],
-						encode: (value) => encodeReferenceValue(propertyName, [targetProperty], property.nullable, value),
+						encode: (value) => Encoder.encodeReferenceValue(propertyName, [targetProperty], property.nullable, value),
 						decode: (record) =>
-							decodeReferenceValue(propertyName, property.nullable, [targetProperty], [record[property.name]]),
+							Decoder.decodeReferenceValue(propertyName, property.nullable, [targetProperty], [record[property.name]]),
 					}
 				} else {
 					const refNames: string[] = []
@@ -121,10 +107,10 @@ export class ModelAPI {
 						columns: refNames,
 
 						encode: (value) =>
-							encodeReferenceValue(propertyName, config.primaryKeys[target.name], property.nullable, value),
+							Encoder.encodeReferenceValue(propertyName, config.primaryKeys[target.name], property.nullable, value),
 
 						decode: (record) =>
-							decodeReferenceValue(
+							Decoder.decodeReferenceValue(
 								propertyName,
 								property.nullable,
 								config.primaryKeys[target.name],
@@ -271,7 +257,7 @@ export class ModelAPI {
 		}
 
 		const encodedKey = this.primaryProperties.map(({ name, type, nullable }, i) =>
-			encodePrimitiveValue(name, type, nullable, wrappedKey[i]),
+			Encoder.encodePrimitiveValue(name, type, nullable, wrappedKey[i]),
 		)
 
 		const record = await this.#select.get(encodedKey)
@@ -286,17 +272,17 @@ export class ModelAPI {
 		for (const property of this.mutableProperties) {
 			if (property.kind === "primitive") {
 				const { name, type, nullable } = property
-				result[name] = decodePrimitiveValue(name, type, nullable, record[name])
+				result[name] = Decoder.decodePrimitiveValue(name, type, nullable, record[name])
 			} else if (property.kind === "reference") {
 				const { name, nullable, target } = property
 				const values = this.codecs[name].columns.map((name) => record[name])
-				result[name] = decodeReferenceValue(name, nullable, this.config.primaryKeys[target], values)
+				result[name] = Decoder.decodeReferenceValue(name, nullable, this.config.primaryKeys[target], values)
 			} else if (property.kind === "relation") {
 				const { name, target } = property
 				const targets = await this.relations[name].get(encodedKey)
-				result[name] = targets.map((key) => decodeReferenceValue(name, false, this.config.primaryKeys[target], key)) as
-					| PrimaryKeyValue[]
-					| PrimaryKeyValue[][]
+				result[name] = targets.map((key) =>
+					Decoder.decodeReferenceValue(name, false, this.config.primaryKeys[target], key),
+				) as PrimaryKeyValue[] | PrimaryKeyValue[][]
 			} else {
 				signalInvalidType(property)
 			}
@@ -313,7 +299,7 @@ export class ModelAPI {
 		validateModelValue(this.model, value)
 
 		const encodedKey = this.primaryProperties.map(({ name, type, nullable }) =>
-			encodePrimitiveValue(name, type, nullable, value[name]),
+			Encoder.encodePrimitiveValue(name, type, nullable, value[name]),
 		)
 
 		const existingRecord = await this.#select.get(encodedKey)
@@ -333,7 +319,7 @@ export class ModelAPI {
 
 			assert(Array.isArray(value[name]))
 			const target = this.config.primaryKeys[relation.relation.target]
-			const encodedTargets = value[name].map((key) => encodeReferenceValue(name, target, false, key))
+			const encodedTargets = value[name].map((key) => Encoder.encodeReferenceValue(name, target, false, key))
 
 			await relation.add(encodedKey, encodedTargets)
 		}
@@ -344,11 +330,11 @@ export class ModelAPI {
 		for (const property of properties) {
 			if (property.kind === "primitive") {
 				const { name, type, nullable } = property
-				result.push(encodePrimitiveValue(name, type, nullable, value[name]))
+				result.push(Encoder.encodePrimitiveValue(name, type, nullable, value[name]))
 			} else if (property.kind === "reference") {
 				const { name, target, nullable } = property
 				const targetProperties = this.config.primaryKeys[target]
-				result.push(...encodeReferenceValue(name, targetProperties, nullable, value[property.name]))
+				result.push(...Encoder.encodeReferenceValue(name, targetProperties, nullable, value[property.name]))
 			} else if (property.kind === "relation") {
 				continue
 			} else {
@@ -366,7 +352,7 @@ export class ModelAPI {
 		}
 
 		const encodedKey = this.primaryProperties.map(({ name, type, nullable }, i) =>
-			encodePrimitiveValue(name, type, nullable, wrappedKey[i]),
+			Encoder.encodePrimitiveValue(name, type, nullable, wrappedKey[i]),
 		)
 
 		await this.#delete.run(encodedKey)
@@ -440,7 +426,7 @@ export class ModelAPI {
 			const targetKeys = await this.relations[relation.sourceProperty].get(encodedKey)
 			const targetPrimaryKey = this.config.primaryKeys[relation.target]
 			record[relation.sourceProperty] = targetKeys.map((targetKey) =>
-				decodeReferenceValue(relation.sourceProperty, false, targetPrimaryKey, targetKey),
+				Decoder.decodeReferenceValue(relation.sourceProperty, false, targetPrimaryKey, targetKey),
 			) as PrimaryKeyValue[] | PrimaryKeyValue[][]
 		}
 
@@ -557,7 +543,7 @@ export class ModelAPI {
 						continue
 					}
 
-					const encodedValue = encodePrimitiveValue(name, type, false, expression)
+					const encodedValue = Encoder.encodePrimitiveValue(name, type, false, expression)
 					const idx = params.push(encodedValue)
 					filters.push(`"${name}" = $${idx}`)
 				} else if (isNotExpression(expression)) {
@@ -569,7 +555,7 @@ export class ModelAPI {
 						continue
 					}
 
-					const encodedValue = encodePrimitiveValue(name, type, false, value)
+					const encodedValue = Encoder.encodePrimitiveValue(name, type, false, value)
 					const idx = params.push(encodedValue)
 					if (nullable) {
 						filters.push(`("${name}" ISNULL OR "${name}" != $${idx})`)
@@ -595,7 +581,7 @@ export class ModelAPI {
 								throw new Error(`invalid range expression "${key}"`)
 							}
 						} else {
-							const idx = params.push(encodePrimitiveValue(name, type, nullable, value))
+							const idx = params.push(Encoder.encodePrimitiveValue(name, type, nullable, value))
 							if (key === "gt") {
 								filters.push(`("${name}" NOTNULL) AND ("${name}" > $${idx})`)
 							} else if (key === "gte") {
@@ -615,7 +601,7 @@ export class ModelAPI {
 				const { columns } = this.codecs[name]
 
 				if (isLiteralExpression(expression)) {
-					const encodedKey = encodeReferenceValue(name, target, true, expression)
+					const encodedKey = Encoder.encodeReferenceValue(name, target, true, expression)
 					if (encodedKey.every((key) => key === null)) {
 						filters.push(columns.map((c) => `"${c}" ISNULL`).join(" AND "))
 					} else {
@@ -628,7 +614,7 @@ export class ModelAPI {
 						continue
 					}
 
-					const encodedKey = encodeReferenceValue(name, target, true, expression.neq)
+					const encodedKey = Encoder.encodeReferenceValue(name, target, true, expression.neq)
 
 					if (encodedKey.every((key) => key === null)) {
 						filters.push(columns.map((c) => `"${c}" NOTNULL`).join(" AND "))
@@ -654,7 +640,7 @@ export class ModelAPI {
 					const targets = expression
 					assert(Array.isArray(targets), "invalid relation value (expected array of primary keys)")
 					for (const target of targets) {
-						const wrappedKey = encodeReferenceValue(property.name, targetPrimaryProperties, false, target)
+						const wrappedKey = Encoder.encodeReferenceValue(property.name, targetPrimaryProperties, false, target)
 						assert(wrappedKey.length === relation.targetColumnNames.length)
 
 						const primaryColumns = primaryColumnNames.map(quote).join(", ")
@@ -672,7 +658,7 @@ export class ModelAPI {
 					const targets = expression.neq
 					assert(Array.isArray(targets), "invalid relation value (expected array of primary keys)")
 					for (const target of targets) {
-						const wrappedKey = encodeReferenceValue(property.name, targetPrimaryProperties, false, target)
+						const wrappedKey = Encoder.encodeReferenceValue(property.name, targetPrimaryProperties, false, target)
 						assert(wrappedKey.length === relation.targetColumnNames.length)
 
 						const primaryColumns = primaryColumnNames.map(quote).join(", ")
@@ -702,160 +688,6 @@ export class ModelAPI {
 			return `${filters.map((filter) => `(${filter})`).join(" AND ")}`
 		}
 	}
-
-	// private getWhereExpression(where: WhereCondition = {}): [where: string | null, params: PrimitiveValue[]] {
-	// 	const params: PrimitiveValue[] = []
-
-	// 	let i = 0
-	// 	const filters = Object.entries(where).flatMap(([name, expression]) => {
-	// 		const property = this.#properties[name]
-	// 		assert(property !== undefined, "property not found")
-
-	// 		if (expression === undefined) {
-	// 			return []
-	// 		}
-
-	// 		if (property.kind === "primitive") {
-	// 			assert(property.type !== "json", "json properties are not supported in where clauses")
-
-	// 			if (isLiteralExpression(expression)) {
-	// 				assert(isPrimitiveValue(expression))
-	// 				if (expression === null) {
-	// 					return [`"${name}" ISNULL`]
-	// 				} else if (Array.isArray(expression)) {
-	// 					throw new Error("invalid primitive value (expected null | number | string | Uint8Array)")
-	// 				} else {
-	// 					const p = ++i
-	// 					params[p - 1] = expression instanceof Uint8Array ? Buffer.from(expression) : expression
-	// 					return [`"${name}" = $${p}`]
-	// 				}
-	// 			} else if (isNotExpression(expression)) {
-	// 				const { neq: value } = expression
-	// 				if (value === undefined) {
-	// 					return []
-	// 				} else if (value === null) {
-	// 					return [`"${name}" NOTNULL`]
-	// 				} else if (Array.isArray(value)) {
-	// 					throw new Error("invalid primitive value (expected null | number | string | boolean | Uint8Array)")
-	// 				}
-
-	// 				assert(isPrimitiveValue(value))
-
-	// 				const p = ++i
-	// 				params[p - 1] = value instanceof Uint8Array ? Buffer.from(value) : value
-	// 				if (property.nullable) {
-	// 					return [`("${name}" ISNULL OR "${name}" != $${p})`]
-	// 				} else {
-	// 					return [`"${name}" != $${p}`]
-	// 				}
-	// 			} else if (isRangeExpression(expression)) {
-	// 				const keys = Object.keys(expression) as (keyof RangeExpression)[]
-
-	// 				return keys
-	// 					.filter((key) => expression[key] !== undefined)
-	// 					.flatMap((key, j) => {
-	// 						const value = expression[key] as PrimitiveValue
-	// 						if (value === null) {
-	// 							switch (key) {
-	// 								case "gt":
-	// 									return [`"${name}" NOTNULL`]
-	// 								case "gte":
-	// 									return []
-	// 								case "lt":
-	// 									return ["0 = 1"]
-	// 								case "lte":
-	// 									return []
-	// 							}
-	// 						}
-
-	// 						const p = ++i
-	// 						params[p - 1] = value instanceof Uint8Array ? Buffer.from(value) : value
-	// 						switch (key) {
-	// 							case "gt":
-	// 								return [`("${name}" NOTNULL) AND ("${name}" > $${p})`]
-	// 							case "gte":
-	// 								return [`("${name}" NOTNULL) AND ("${name}" >= $${p})`]
-	// 							case "lt":
-	// 								return [`("${name}" ISNULL) OR ("${name}" < $${p})`]
-	// 							case "lte":
-	// 								return [`("${name}" ISNULL) OR ("${name}" <= $${p})`]
-	// 						}
-	// 					})
-	// 			} else {
-	// 				signalInvalidType(expression)
-	// 			}
-	// 		} else if (property.kind === "reference") {
-	// 			if (isLiteralExpression(expression)) {
-	// 				const reference = expression
-	// 				if (reference === null) {
-	// 					return [`"${name}" ISNULL`]
-	// 				} else if (isPrimaryKey(reference)) {
-	// 					const p = ++i
-	// 					params[p - 1] = reference
-	// 					return [`"${name}" = $${p}`]
-	// 				} else {
-	// 					throw new Error("invalid reference value (expected primary key)")
-	// 				}
-	// 			} else if (isNotExpression(expression)) {
-	// 				const reference = expression.neq
-	// 				if (reference === null) {
-	// 					return [`"${name}" NOTNULL`]
-	// 				} else if (isPrimaryKey(reference)) {
-	// 					const p = ++i
-	// 					params[p - 1] = reference
-	// 					return [`"${name}" != $${p}`]
-	// 				} else {
-	// 					throw new Error("invalid reference value (expected primary key)")
-	// 				}
-	// 			} else if (isRangeExpression(expression)) {
-	// 				throw new Error("cannot use range expressions on reference values")
-	// 			} else {
-	// 				signalInvalidType(expression)
-	// 			}
-	// 		} else if (property.kind === "relation") {
-	// const relationTable = this.#relations[property.name].table
-	// if (isLiteralExpression(expression)) {
-	// 	const references = expression
-	// 	assert(Array.isArray(references), "invalid relation value (expected PrimaryKeyValue[])")
-	// 	const targets: string[] = []
-	// 	for (const [j, reference] of references.entries()) {
-	// 		assert(typeof reference === "string", "invalid relation value (expected PrimaryKeyValue[])")
-	// 		const p = ++i
-	// 		params[p - 1] = reference
-	// 		targets.push(
-	// 			`"${this.#primaryKeyName}" IN (SELECT _source FROM "${relationTable}" WHERE (_target = $${p}))`,
-	// 		)
-	// 	}
-	// 	return targets.length > 0 ? [targets.join(" AND ")] : []
-	// } else if (isNotExpression(expression)) {
-	// 	const references = expression.neq
-	// 	assert(Array.isArray(references), "invalid relation value (expected PrimaryKeyValue[])")
-	// 	const targets: string[] = []
-	// 	for (const [j, reference] of references.entries()) {
-	// 		assert(typeof reference === "string", "invalid relation value (expected PrimaryKeyValue[])")
-	// 		const p = ++i
-	// 		params[p - 1] = reference
-	// 		targets.push(
-	// 			`"${this.#primaryKeyName}" NOT IN (SELECT _source FROM "${relationTable}" WHERE (_target = $${p}))`,
-	// 		)
-	// 	}
-	// 	return targets.length > 0 ? [targets.join(" AND ")] : []
-	// } else if (isRangeExpression(expression)) {
-	// 	throw new Error("cannot use range expressions on relation values")
-	// } else {
-	// 	signalInvalidType(expression)
-	// }
-	// 		} else {
-	// 			signalInvalidType(property)
-	// 		}
-	// 	})
-
-	// 	if (filters.length === 0) {
-	// 		return [null, []]
-	// 	} else {
-	// 		return [`${filters.map((filter) => `(${filter})`).join(" AND ")}`, params]
-	// 	}
-	// }
 }
 
 export class RelationAPI {

@@ -13,7 +13,7 @@ import {
 	PrimaryKeyValue,
 } from "./types.js"
 import { getFilter } from "./query.js"
-import { Awaitable, getModelsFromInclude, isPrimaryKey, mergeModelValues, updateModelValues } from "./utils.js"
+import { Awaitable, getModelsFromInclude, mergeModelValues, updateModelValues } from "./utils.js"
 
 type Subscription = {
 	model: string

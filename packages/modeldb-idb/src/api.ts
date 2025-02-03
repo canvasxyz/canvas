@@ -1,6 +1,5 @@
 import { IDBPIndex, IDBPObjectStore, IDBPTransaction } from "idb"
 import { logger } from "@libp2p/logger"
-import * as json from "@ipld/dag-json"
 
 import { assert, signalInvalidType } from "@canvas-js/utils"
 
@@ -12,23 +11,21 @@ import {
 	PropertyValue,
 	QueryParams,
 	RangeExpression,
+	WhereCondition,
+	ModelValueWithIncludes,
+	IncludeExpression,
+	PrimaryKeyValue,
 	getFilter,
 	isNotExpression,
 	isLiteralExpression,
 	isRangeExpression,
 	validateModelValue,
-	WhereCondition,
-	ModelValueWithIncludes,
-	IncludeExpression,
-	PrimaryKeyValue,
 } from "@canvas-js/modeldb"
 
+import { IDBValue, encodePropertyValue, decodePropertyValue } from "./encoding.js"
 import { equalIndex, getIndexName } from "./utils.js"
-import { isReferenceValue } from "@canvas-js/modeldb"
 
-type ObjectPropertyValue = PropertyValue | PropertyValue[]
-
-type ObjectValue = Record<string, ObjectPropertyValue>
+type ObjectValue = Record<string, IDBValue>
 
 type StoreIndex = IDBPObjectStore<any, any, string, "readonly"> | IDBPIndex<any, any, string, string, "readonly">
 
@@ -532,62 +529,6 @@ export class ModelAPI {
 		}
 
 		return value
-	}
-}
-
-function encodePropertyValue(property: Property, propertyValue: PropertyValue): PropertyValue | PropertyValue[] {
-	if (property.kind === "primitive") {
-		if (property.nullable) {
-			assert(property.type !== "json")
-			return propertyValue === null ? [] : [propertyValue]
-		} else if (property.type === "json") {
-			return json.stringify(propertyValue)
-		} else {
-			return propertyValue
-		}
-	} else if (property.kind === "reference") {
-		if (property.nullable) {
-			return propertyValue === null ? [] : [propertyValue]
-		} else {
-			return propertyValue
-		}
-	} else if (property.kind === "relation") {
-		return propertyValue
-	} else {
-		signalInvalidType(property)
-	}
-}
-
-function decodePropertyValue(property: Property, objectPropertyValue: PropertyValue | PropertyValue[]): PropertyValue {
-	if (property.kind === "primitive") {
-		if (property.nullable) {
-			assert(property.type !== "json")
-			assert(Array.isArray(objectPropertyValue))
-			return objectPropertyValue.length === 0 ? null : objectPropertyValue[0]
-		} else if (property.type === "json") {
-			assert(typeof objectPropertyValue === "string")
-			return json.parse(objectPropertyValue)
-		} else {
-			assert(!Array.isArray(objectPropertyValue))
-			return objectPropertyValue
-		}
-	} else if (property.kind === "reference") {
-		if (property.nullable) {
-			assert(Array.isArray(objectPropertyValue))
-			if (objectPropertyValue.length === 0) {
-				return null
-			} else {
-				assert(isReferenceValue(objectPropertyValue[0]), "expected primary key vaue")
-				return objectPropertyValue[0]
-			}
-		} else {
-			assert(isReferenceValue(objectPropertyValue), "expected primary key vaue")
-			return objectPropertyValue
-		}
-	} else if (property.kind === "relation") {
-		return objectPropertyValue as string[]
-	} else {
-		signalInvalidType(property)
 	}
 }
 
