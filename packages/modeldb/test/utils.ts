@@ -56,6 +56,7 @@ test.before(async (t) => {
 
 	worker = await unstable_dev("test/worker.ts", {
 		experimental: { disableExperimentalWarning: true },
+		logLevel: "error",
 	})
 })
 
@@ -63,7 +64,7 @@ test.after(async (t) => {
 	await page.close()
 	await browser.close()
 	await server.close()
-	worker.stop()
+	await worker.stop()
 })
 
 function getConnectionConfig() {

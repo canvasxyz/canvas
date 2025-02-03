@@ -188,10 +188,10 @@ test("accept a manually encoded session/action with a legacy-style object arg", 
 		contract: {
 			actions: {
 				createMessage(db, arg) {
-					t.deepEqual(arg, { objectArg: '1' })
-				}
+					t.deepEqual(arg, { objectArg: "1" })
+				},
 			},
-			models: {}
+			models: {},
 		},
 		topic: "com.example.app",
 		reset: true,
@@ -219,8 +219,8 @@ test("accept a manually encoded session/action with a legacy-style object arg", 
 			type: "action",
 			did: sessionMessage.payload.did,
 			name: "createMessage",
-			args: { objectArg: '1' },
-			context: { timestamp: 0 }
+			args: { objectArg: "1" },
+			context: { timestamp: 0 },
 		},
 	}
 	const actionSignature = await session.signer.sign(actionMessage)

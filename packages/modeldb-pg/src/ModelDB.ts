@@ -10,7 +10,6 @@ import {
 	ModelValue,
 	ModelSchema,
 	QueryParams,
-	parseConfig,
 	WhereCondition,
 } from "@canvas-js/modeldb"
 
@@ -33,7 +32,7 @@ export class ModelDB extends AbstractModelDB {
 		await client.connect()
 
 		try {
-			const modelDBConfig = parseConfig(models)
+			const modelDBConfig = Config.parse(models)
 
 			const modelDBAPIs: Record<string, ModelAPI> = {}
 			for (const model of Object.values(modelDBConfig.models)) {

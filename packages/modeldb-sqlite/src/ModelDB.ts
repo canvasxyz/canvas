@@ -5,7 +5,7 @@ import { assert, signalInvalidType } from "@canvas-js/utils"
 import {
 	AbstractModelDB,
 	ModelDBBackend,
-	parseConfig,
+	Config,
 	Effect,
 	ModelValue,
 	ModelSchema,
@@ -27,7 +27,7 @@ export class ModelDB extends AbstractModelDB {
 	#transaction: sqlite.Transaction<(effects: Effect[]) => void>
 
 	constructor({ path, models }: ModelDBOptions) {
-		super(parseConfig(models))
+		super(Config.parse(models))
 
 		this.db = new Database(path ?? ":memory:")
 

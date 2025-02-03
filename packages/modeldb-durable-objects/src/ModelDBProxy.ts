@@ -1,3 +1,6 @@
+import * as json from "@ipld/dag-json"
+import { Unstable_DevWorker } from "wrangler"
+
 import {
 	AbstractModelDB,
 	ModelDBBackend,
@@ -5,17 +8,15 @@ import {
 	ModelSchema,
 	ModelValue,
 	ModelValueWithIncludes,
-	parseConfig,
 	QueryParams,
 	WhereCondition,
+	Config,
+	PrimaryKeyValue,
 } from "@canvas-js/modeldb"
 import { Awaitable } from "@canvas-js/interfaces"
 import { assert, prepare } from "@canvas-js/utils"
-import * as json from "@ipld/dag-json"
 
-import { ModelDB } from "./ModelDB.js"
 import { randomUUID } from "./utils.js"
-import { Unstable_DevWorker } from "wrangler"
 
 type Subscription = {
 	model: string
@@ -35,7 +36,7 @@ export class ModelDBProxy extends AbstractModelDB {
 	subscriptions: Map<number, Subscription>
 
 	constructor(worker: Unstable_DevWorker, models: ModelSchema, baseUrl?: string, uuid?: string) {
-		super(parseConfig(models))
+		super(Config.parse(models))
 
 		this.worker = worker
 		this.baseUrl = baseUrl ?? "http://example.com"
@@ -102,11 +103,17 @@ export class ModelDBProxy extends AbstractModelDB {
 		this.initialized = false
 	}
 
-	get<T extends ModelValue<any> = ModelValue<any>>(modelName: string, key: string): Awaitable<T | null> {
+	get<T extends ModelValue<any> = ModelValue<any>>(
+		modelName: string,
+		key: PrimaryKeyValue | PrimaryKeyValue[],
+	): Awaitable<T | null> {
 		return this.proxyFetch("get", [modelName, key])
 	}
 
-	getMany<T extends ModelValue<any> = ModelValue<any>>(modelName: string, keys: string[]): Awaitable<(T | null)[]> {
+	getMany<T extends ModelValue<any> = ModelValue<any>>(
+		modelName: string,
+		keys: PrimaryKeyValue[] | PrimaryKeyValue[][],
+	): Awaitable<(T | null)[]> {
 		return this.proxyFetch("getMany", [modelName, keys])
 	}
 
@@ -134,14 +141,6 @@ export class ModelDBProxy extends AbstractModelDB {
 
 	apply(effects: Effect[]): Promise<void> {
 		return this.proxyFetch("apply", [effects])
-	}
-
-	set<T extends ModelValue<any> = ModelValue<any>>(modelName: string, value: T): Promise<void> {
-		return this.proxyFetch("set", [modelName, prepare(value)])
-	}
-
-	delete(modelName: string, key: string): Promise<void> {
-		return this.proxyFetch("delete", [modelName, key])
 	}
 
 	subscribe(

@@ -1,4 +1,4 @@
-import { ModelSchema, ModelValue, ModelValueWithIncludes, QueryParams } from "@canvas-js/modeldb"
+import { Effect, ModelSchema, ModelValue, ModelValueWithIncludes, QueryParams } from "@canvas-js/modeldb"
 import * as json from "@ipld/dag-json"
 
 import { Env } from "./ModelDBProxyWorker.js"
@@ -61,6 +61,12 @@ export class ModelDBProxyObject {
 				const result = json.stringify(this.subscriptionResults)
 				this.subscriptionResults = []
 				return new Response(result)
+			} else if (call === "apply") {
+				if (!this.db) throw new Error("uninitialized")
+				const [effects] = args as [Effect[]]
+				this.state.storage.transactionSync(() => this.db!.apply(effects))
+				// await this.db.apply(effects)
+				return new Response("null")
 			} else {
 				if (!this.db) throw new Error("uninitialized")
 				// eslint-disable-next-line @typescript-eslint/ban-types

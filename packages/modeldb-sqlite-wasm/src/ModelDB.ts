@@ -2,14 +2,13 @@ import { logger } from "@libp2p/logger"
 import * as Comlink from "comlink"
 import sqlite3InitModule from "@sqlite.org/sqlite-wasm"
 import {
+	Config,
 	AbstractModelDB,
 	ModelDBBackend,
-	parseConfig,
 	Effect,
 	ModelValue,
 	ModelSchema,
 	QueryParams,
-	Config,
 	WhereCondition,
 } from "@canvas-js/modeldb"
 import { InnerModelDB } from "./InnerModelDB.js"
@@ -25,7 +24,7 @@ export class ModelDB extends AbstractModelDB {
 	private readonly wrappedDB: Comlink.Remote<InnerModelDB> | InnerModelDB
 
 	public static async initialize({ path, models }: ModelDBOptions) {
-		const config = parseConfig(models)
+		const config = Config.parse(models)
 		let worker, wrappedDB
 		if (path) {
 			worker = new Worker(new URL("./worker.js", import.meta.url), { type: "module" })

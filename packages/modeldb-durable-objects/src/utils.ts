@@ -1,35 +1,30 @@
-import { SqlStorage } from "@cloudflare/workers-types"
+import { SqlStorage, SqlStorageValue } from "@cloudflare/workers-types"
 
-export class Query<R> {
-	constructor(
-		private readonly db: SqlStorage,
-		private readonly sql: string,
-	) {}
+export class Query<R = Record<string, SqlStorageValue>> {
+	constructor(private readonly db: SqlStorage, private readonly sql: string) {}
 
-	public get(params: any[]): R | null {
-		try {
-			return this.db.exec(this.sql, ...params).one() as R
-		} catch (err) {
-			return null
+	public get(params: SqlStorageValue[]): R | null {
+		const cursor = this.db.exec(this.sql, ...params)
+		for (const value of cursor) {
+			return value as R
 		}
+
+		return null
 	}
 
-	public all(params: any[]): R[] {
+	public all(params: SqlStorageValue[]): R[] {
 		return this.db.exec(this.sql, ...params).toArray() as R[]
 	}
 
-	public iterate(params: any[]): IterableIterator<R> {
+	public iterate(params: SqlStorageValue[]): IterableIterator<R> {
 		return this.db.exec(this.sql, ...params) as IterableIterator<R>
 	}
 }
 
-export class Method<P> {
-	constructor(
-		private readonly db: SqlStorage,
-		private readonly sql: string,
-	) {}
+export class Method {
+	constructor(private readonly db: SqlStorage, private readonly sql: string) {}
 
-	public run(params: any[]) {
+	public run(params: SqlStorageValue[]) {
 		this.db.exec(this.sql, ...params)
 	}
 }

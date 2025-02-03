@@ -144,9 +144,6 @@ export abstract class AbstractRuntime {
 		const handleSnapshot = this.handleSnapshot.bind(this)
 
 		return async function (this: AbstractGossipLog<Action | Session | Snapshot>, signedMessage) {
-			const { id, signature, message, branch } = signedMessage
-			assert(branch !== undefined, "internal error - expected branch !== undefined")
-
 			if (isSession(signedMessage)) {
 				return await handleSession(signedMessage)
 			} else if (isAction(signedMessage)) {

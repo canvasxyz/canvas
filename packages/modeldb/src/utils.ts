@@ -6,6 +6,7 @@ import type {
 	ModelSchema,
 	ModelValue,
 	PrimaryKeyValue,
+	PrimitiveProperty,
 	PrimitiveValue,
 	Property,
 	PropertyValue,
@@ -24,6 +25,14 @@ export const isPrimaryKey = (value: unknown): value is PrimaryKeyValue => {
 		return true
 	} else {
 		return false
+	}
+}
+
+export const isReferenceValue = (value: unknown): value is ReferenceValue => {
+	if (Array.isArray(value)) {
+		return value.every(isPrimaryKey)
+	} else {
+		return isPrimaryKey(value)
 	}
 }
 
@@ -142,7 +151,7 @@ export function validatePropertyValue(modelName: string, property: Property, val
 	} else if (property.kind === "reference") {
 		if (property.nullable && value === null) {
 			return
-		} else if (!isPrimaryKey(value)) {
+		} else if (!isReferenceValue(value)) {
 			throw new TypeError(
 				`write to db.${modelName}.${property.name}: expected a primary key, received ${formatValue(value)}`,
 			)
@@ -154,7 +163,7 @@ export function validatePropertyValue(modelName: string, property: Property, val
 			throw new TypeError(
 				`write to db.${modelName}.${property.name}: expected an array of primary keys, received ${formatValue(value)}`,
 			)
-		} else if (!value.every(isPrimaryKey)) {
+		} else if (!value.every(isReferenceValue)) {
 			throw new TypeError(
 				`write to db.${modelName}.${property.name}: expected an array of primary keys, received ${formatValue(value)}`,
 			)

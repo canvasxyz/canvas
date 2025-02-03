@@ -2,21 +2,11 @@ import type { SqlStorageValue } from "@cloudflare/workers-types"
 
 import * as json from "@ipld/dag-json"
 
-import {
-	isPrimaryKey,
-	Model,
-	ModelValue,
-	PrimaryKeyValue,
-	PrimitiveProperty,
-	PrimitiveValue,
-	PropertyValue,
-	ReferenceProperty,
-} from "@canvas-js/modeldb"
+import { PrimaryKeyValue, PrimitiveProperty, PrimitiveType, PrimitiveValue, PropertyValue } from "@canvas-js/modeldb"
 
 import { assert, signalInvalidType } from "@canvas-js/utils"
 
-export type RecordValue = Record<string, SqlStorageValue>
-export type RecordParams = SqlStorageValue[]
+export type SqlitePrimitiveValue = SqlStorageValue
 
 export function toArrayBuffer(data: Uint8Array): ArrayBuffer {
 	if (data.byteOffset === 0 && data.byteLength === data.buffer.byteLength) {
@@ -32,200 +22,164 @@ export function fromArrayBuffer(data: ArrayBuffer): Uint8Array {
 	return new Uint8Array(data, 0, data.byteLength)
 }
 
-export function encodeQueryParams(params: PrimitiveValue[]): SqlStorageValue[] {
-	return params.map((value) => {
-		if (typeof value === "boolean") {
-			return value ? 1 : 0
-		} else if (value instanceof Uint8Array) {
-			return toArrayBuffer(value)
-		} else {
-			return value
-		}
-	})
-}
-
-export function encodeRecordParams(model: Model, value: ModelValue): SqlStorageValue[] {
-	const result: SqlStorageValue[] = []
-
-	for (const property of model.properties) {
-		const propertyValue = value[property.name]
-		if (propertyValue === undefined) {
-			throw new Error(`missing value for property ${model.name}/${property.name}`)
-		}
-
-		if (property.kind === "primitive") {
-			result.push(encodePrimitiveValue(model.name, property, value[property.name]))
-		} else if (property.kind === "reference") {
-			result.push(encodeReferenceValue(model.name, property, value[property.name]))
-		} else if (property.kind === "relation") {
-			// TODO: add test for relation
-			assert(Array.isArray(value[property.name]))
-			continue
-		} else {
-			signalInvalidType(property)
-		}
-	}
-
-	return result
-}
-
-function encodePrimitiveValue(modelName: string, property: PrimitiveProperty, value: PropertyValue): SqlStorageValue {
+export function encodePrimitiveValue(
+	propertyName: string,
+	type: PrimitiveType,
+	nullable: boolean,
+	value: PropertyValue,
+): SqlitePrimitiveValue {
 	if (value === null) {
-		if (property.nullable) {
+		if (nullable) {
 			return null
-		} else if (property.type === "json") {
+		} else if (type === "json") {
 			return "null"
 		} else {
-			throw new TypeError(`${modelName}/${property.name} cannot be null`)
+			throw new TypeError(`${propertyName} cannot be null`)
 		}
-	} else if (property.type === "integer") {
+	} else if (type === "integer") {
 		if (typeof value === "number" && Number.isSafeInteger(value)) {
 			return value
 		} else {
-			throw new TypeError(`${modelName}/${property.name} must be a safely representable integer`)
+			throw new TypeError(`${propertyName} must be a safely representable integer`)
 		}
-	} else if (property.type === "number" || property.type === "float") {
+	} else if (type === "number" || type === "float") {
 		if (typeof value === "number") {
 			return value
 		} else {
-			throw new TypeError(`${modelName}/${property.name} must be a number`)
+			throw new TypeError(`${propertyName} must be a number`)
 		}
-	} else if (property.type === "string") {
+	} else if (type === "string") {
 		if (typeof value === "string") {
 			return value
 		} else {
-			throw new TypeError(`${modelName}/${property.name} must be a string`)
+			throw new TypeError(`${propertyName} must be a string`)
 		}
-	} else if (property.type === "bytes") {
+	} else if (type === "bytes") {
 		if (value instanceof Uint8Array) {
 			return toArrayBuffer(value)
 		} else {
-			throw new TypeError(`${modelName}/${property.name} must be a Uint8Array`)
+			throw new TypeError(`${propertyName} must be a Uint8Array`)
 		}
-	} else if (property.type === "boolean") {
+	} else if (type === "boolean") {
 		if (typeof value === "boolean") {
 			return value ? 1 : 0
 		} else {
-			throw new TypeError(`${modelName}/${property.name} must be a boolean`)
+			throw new TypeError(`${propertyName} must be a boolean`)
 		}
-	} else if (property.type === "json") {
+	} else if (type === "json") {
 		try {
 			return json.stringify(value)
 		} catch (e) {
-			throw new TypeError(`${modelName}/${property.name} must be IPLD-encodable`)
+			throw new TypeError(`${propertyName} must be IPLD-encodable`)
 		}
 	} else {
-		const _: never = property.type
-		throw new Error(`internal error - unknown primitive type ${JSON.stringify(property.type)}`)
+		signalInvalidType(type)
 	}
 }
 
-function encodeReferenceValue(modelName: string, property: ReferenceProperty, value: PropertyValue): SqlStorageValue {
+export function encodeReferenceValue(
+	propertyName: string,
+	target: PrimitiveProperty[],
+	nullable: boolean,
+	value: PropertyValue,
+): SqlitePrimitiveValue[] {
 	if (value === null) {
-		if (property.nullable) {
-			return null
+		if (nullable) {
+			return Array.from<null>({ length: target.length }).fill(null)
 		} else {
-			throw new TypeError(`${modelName}/${property.name} cannot be null`)
-		}
-	} else if (isPrimaryKey(value)) {
-		return value
-	} else {
-		throw new TypeError(`${modelName}/${property.name} must be a primary key`)
-	}
-}
-
-export function decodeRecord(model: Model, record: Record<string, SqlStorageValue>): ModelValue {
-	const value: ModelValue = {}
-
-	for (const property of model.properties) {
-		if (property.kind === "primitive") {
-			value[property.name] = decodePrimitiveValue(model.name, property, record[property.name])
-		} else if (property.kind === "reference") {
-			value[property.name] = decodeReferenceValue(model.name, property, record[property.name])
-		} else if (property.kind === "relation") {
-			continue
-		} else {
-			signalInvalidType(property)
+			throw new TypeError(`${propertyName} cannot be null`)
 		}
 	}
 
-	return value
+	const wrappedValue = Array.isArray(value) ? value : [value]
+	if (wrappedValue.length !== target.length) {
+		throw new TypeError(`${propertyName} - expected primary key with ${target.length} components`)
+	}
+
+	return target.map(({ name, type }, i) => encodePrimitiveValue(name, type, false, wrappedValue[i]))
 }
 
 export function decodePrimitiveValue(
-	modelName: string,
-	property: PrimitiveProperty,
-	value: SqlStorageValue,
+	propertyName: string,
+	type: PrimitiveType,
+	nullable: boolean,
+	value: SqlitePrimitiveValue,
 ): PrimitiveValue {
 	if (value === null) {
-		if (property.nullable) {
+		if (nullable) {
 			return null
 		} else {
-			throw new Error(`internal error - missing ${modelName}/${property.name} value`)
+			throw new Error(`internal error - missing ${propertyName} value`)
 		}
 	}
 
-	if (property.type === "integer") {
+	if (type === "integer") {
 		if (typeof value === "number" && Number.isSafeInteger(value)) {
 			return value
 		} else {
 			console.error("expected integer, got", value)
-			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected integer)`)
+			throw new Error(`internal error - invalid ${propertyName} value (expected integer)`)
 		}
-	} else if (property.type === "number" || property.type === "float") {
+	} else if (type === "number" || type === "float") {
 		if (typeof value === "number") {
 			return value
 		} else {
 			console.error("expected float, got", value)
-			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected float)`)
+			throw new Error(`internal error - invalid ${propertyName} value (expected float)`)
 		}
-	} else if (property.type === "string") {
+	} else if (type === "string") {
 		if (typeof value === "string") {
 			return value
 		} else {
 			console.error("expected string, got", value)
-			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected string)`)
+			throw new Error(`internal error - invalid ${propertyName} value (expected string)`)
 		}
-	} else if (property.type === "bytes") {
+	} else if (type === "bytes") {
 		if (value instanceof ArrayBuffer) {
 			return fromArrayBuffer(value)
 		} else {
-			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected ArrayBuffer)`)
+			throw new Error(`internal error - invalid ${propertyName} value (expected ArrayBuffer)`)
 		}
-	} else if (property.type === "boolean") {
+	} else if (type === "boolean") {
 		if (typeof value === "number") {
 			return value === 1
 		} else {
-			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected 0 or 1)`)
+			throw new Error(`internal error - invalid ${propertyName} value (expected 0 or 1)`)
 		}
-	} else if (property.type === "json") {
+	} else if (type === "json") {
 		assert(typeof value === "string", 'internal error - expected typeof value === "string"')
 		try {
 			return json.parse<PrimitiveValue>(value)
 		} catch (e) {
 			console.error("internal error - invalid dag-json", value)
-			throw new Error(`internal error - invalid ${modelName}/${property.name} value (expected dag-json)`)
+			throw new Error(`internal error - invalid ${propertyName} value (expected dag-json)`)
 		}
 	} else {
-		const _: never = property.type
-		throw new Error(`internal error - unknown primitive type ${JSON.stringify(property.type)}`)
+		signalInvalidType(type)
 	}
 }
 
 export function decodeReferenceValue(
-	modelName: string,
-	property: ReferenceProperty,
-	value: SqlStorageValue,
-): PrimaryKeyValue | null {
-	if (value === null) {
-		if (property.nullable) {
+	propertyName: string,
+	nullable: boolean,
+	target: PrimitiveProperty[],
+	values: SqlitePrimitiveValue[],
+): PrimaryKeyValue | PrimaryKeyValue[] | null {
+	if (values.every((value) => value === null)) {
+		if (nullable) {
 			return null
 		} else {
-			throw new TypeError(`internal error - missing ${modelName}/${property.name} value`)
+			throw new Error(`internal error - missing ${propertyName} value`)
 		}
-	} else if (value instanceof ArrayBuffer) {
-		return fromArrayBuffer(value)
+	}
+
+	const result = target.map(
+		({ name, type }, i) => decodePrimitiveValue(name, type, false, values[i]) as PrimaryKeyValue,
+	)
+
+	if (result.length === 1) {
+		return result[0]
 	} else {
-		return value
+		return result
 	}
 }
