@@ -167,3 +167,67 @@ testOnModelDB("query should ignore undefined expressions", async (t, openDB) => 
 		{ address: "c", name: "Jane Doe" },
 	])
 })
+
+testOnModelDB("query filtering on composite reference targets", async (t, openDB) => {
+	const db = await openDB(t, {
+		user: { $primary: "key/index", key: "string", index: "integer", name: "string?" },
+		room: {
+			$primary: "key/index",
+			$indexes: ["creator"],
+			key: "string",
+			index: "integer",
+			creator: "@user",
+		},
+	})
+
+	await db.set("user", { key: "a", index: 0, name: null })
+	await db.set("user", { key: "b", index: 3, name: null })
+	await db.set("user", { key: "b", index: 10, name: "John Doe" })
+
+	await db.set("room", { key: "x", index: 0, creator: ["a", 0] })
+	await db.set("room", { key: "x", index: 1, creator: ["a", 0] })
+	await db.set("room", { key: "y", index: 1, creator: ["b", 10] })
+
+	t.deepEqual(
+		await db.query("room", {
+			orderBy: { "key/index": "asc" },
+			select: { key: true, index: true },
+			where: { creator: ["b", 10] },
+		}),
+		[{ key: "y", index: 1 }],
+	)
+})
+
+testOnModelDB("query filtering on composite relation targets", async (t, openDB) => {
+	const db = await openDB(t, {
+		user: { $primary: "key/index", key: "string", index: "integer", name: "string?" },
+		room: {
+			$primary: "key/index",
+			$indexes: ["creator", "members"],
+			key: "string",
+			index: "integer",
+			creator: "@user",
+			members: "@room[]",
+		},
+	})
+
+	await db.set("user", { key: "a", index: 0, name: null })
+	await db.set("user", { key: "b", index: 3, name: null })
+	await db.set("user", { key: "b", index: 10, name: "John Doe" })
+
+	await db.set("room", { key: "x", index: 0, creator: ["a", 0], members: [["a", 0]] })
+	await db.set("room", { key: "x", index: 1, creator: ["a", 0], members: [["a", 0]] })
+	await db.set("room", { key: "y", index: 1, creator: ["b", 10], members: [["b", 10]] })
+
+	t.deepEqual(
+		await db.query("room", {
+			orderBy: { "key/index": "asc" },
+			select: { key: true, index: true },
+			where: { members: [["a", 0]] },
+		}),
+		[
+			{ key: "x", index: 0 },
+			{ key: "x", index: 1 },
+		],
+	)
+})

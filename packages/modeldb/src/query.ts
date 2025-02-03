@@ -174,7 +174,9 @@ export const referenceOrder: Order = {
 
 		const wrappedA = Array.isArray(a) ? a : [a]
 		const wrappedB = Array.isArray(b) ? b : [b]
-		assert(wrappedA.length === wrappedB.length)
+		if (wrappedA.length !== wrappedB.length) {
+			return false
+		}
 
 		return Array.from(zip(wrappedA, wrappedB)).every(([keyA, keyB]) => {
 			if (typeof keyA === "number" && typeof keyB === "number") {

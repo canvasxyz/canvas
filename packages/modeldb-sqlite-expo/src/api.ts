@@ -174,7 +174,8 @@ export class ModelAPI {
 		// Create indexes
 		for (const index of model.indexes) {
 			const indexName = [model.name, ...index].join("/")
-			const indexColumns = index.map(quote).join(", ")
+			const indexColumnNames = index.flatMap((name) => this.codecs[name].columns)
+			const indexColumns = indexColumnNames.map(quote).join(", ")
 			db.execSync(`CREATE INDEX IF NOT EXISTS "${indexName}" ON "${this.#table}" (${indexColumns})`)
 		}
 
