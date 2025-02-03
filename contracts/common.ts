@@ -1,6 +1,6 @@
 import type { ModelSchema, Actions } from "@canvas-js/core"
 
-export const contractTopic = "common.xyz"
+// export const contractTopic = "common.xyz"
 
 export const models = {
 	threads: {
@@ -17,15 +17,15 @@ export const models = {
 	comments: {
 		id: "primary",
 		author: "string",
-		thread_id: "@threads.id?",
+		thread_id: "@threads?",
 		body: "string",
-		parent_comment_id: "@comments.id?",
+		parent_comment_id: "@comments?",
 		updated_at: "integer",
 		$indexes: [["thread_id", "author"]],
 	},
 	thread_reactions: {
 		id: "primary",
-		thread_id: "@threads.id?",
+		thread_id: "@threads?",
 		author: "string",
 		value: "string?",
 		updated_at: "integer",
@@ -33,7 +33,7 @@ export const models = {
 	},
 	comment_reactions: {
 		id: "primary",
-		comment_id: "@comments.id?",
+		comment_id: "@comments?",
 		author: "string",
 		value: "string?",
 		updated_at: "integer",
@@ -172,5 +172,3 @@ export const actions = {
 		await db.delete("comment_reactions", `${comment_id}/${did}`)
 	},
 } satisfies Actions<typeof models>
-
-export const contract = { models, actions }
