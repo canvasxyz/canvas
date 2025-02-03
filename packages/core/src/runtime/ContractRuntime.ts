@@ -30,17 +30,28 @@ export class ContractRuntime extends AbstractRuntime {
 			handle.dispose()
 		}
 
-		assert(
-			contractHandle !== undefined || (actionsHandle !== undefined && modelsHandle !== undefined),
-			"must export `contract` or `models` and `actions`",
-		)
+		let actionHandles: Record<string, QuickJSHandle>
+		let modelHandles: Record<string, QuickJSHandle>
+		if (contractHandle !== undefined) {
+			assert(actionsHandle === undefined, "cannot export both `contract` and `actions`")
+			assert(modelsHandle === undefined, "cannot export both `contract` and `models`")
+			const { actions, models, ...rest } = contractHandle.consume(vm.unwrapObject)
+			assert(actions !== undefined, "missing `actions` in contract export")
+			assert(models !== undefined, "missing `models` in contract export")
+			actionHandles = actions.consume(vm.unwrapObject)
+			modelHandles = models.consume(vm.unwrapObject)
+			for (const [key, value] of Object.entries(rest)) {
+				console.warn(`extraneous entry "${key}" in contract export`)
+				value.dispose()
+			}
+		} else {
+			assert(actionsHandle !== undefined, "missing `actions` export")
+			assert(modelsHandle !== undefined, "missing `models` export")
+			actionHandles = actionsHandle.consume(vm.unwrapObject)
+			modelHandles = modelsHandle.consume(vm.unwrapObject)
+		}
 
-		// intermediate unwrapped objects Record<string, QuickJSHandle>
-		const contractUnwrap = contractHandle?.consume(vm.unwrapObject)
-		const actionsUnwrap = (contractHandle ? contractUnwrap.actions : actionsHandle).consume(vm.unwrapObject)
-		const modelsUnwrap = (contractHandle ? contractUnwrap.models : modelsHandle).consume(vm.unwrapObject)
-
-		const actions = mapValues(actionsUnwrap, (handle) => {
+		const actions = mapValues(actionHandles, (handle) => {
 			assert(vm.context.typeof(handle) === "function", "expected action handle to be a function")
 			return handle.consume(vm.cache)
 		})
@@ -48,7 +59,7 @@ export class ContractRuntime extends AbstractRuntime {
 		// TODO: Validate that models satisfies ModelSchema
 		const mergeHandles: Record<string, QuickJSHandle> = {}
 
-		const modelSchema: ModelSchema = mapValues(modelsUnwrap, (handle) => handle.consume(vm.context.dump))
+		const modelSchema: ModelSchema = mapValues(modelHandles, (handle) => handle.consume(vm.context.dump))
 
 		const cleanupSetupHandles = () => {
 			for (const handle of Object.values(mergeHandles)) {
