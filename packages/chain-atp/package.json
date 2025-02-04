@@ -13,8 +13,8 @@
 		"generate-test-data": "node test/lib/generateTestData.js"
 	},
 	"dependencies": {
-		"@atproto/api": "^0.13.18",
-		"@atproto/crypto": "^0.4.2",
+		"@atproto/api": "^0.13.32",
+		"@atproto/crypto": "^0.4.3",
 		"@canvas-js/interfaces": "0.14.0-next.1",
 		"@canvas-js/signatures": "0.14.0-next.1",
 		"@canvas-js/utils": "0.14.0-next.1",
@@ -22,7 +22,7 @@
 		"@ipld/dag-cbor": "^9.2.2",
 		"@ipld/dag-json": "^10.2.3",
 		"@libp2p/logger": "^5.1.7",
-		"@noble/hashes": "^1.6.1",
+		"@noble/hashes": "^1.7.1",
 		"multiformats": "^13.3.1"
 	},
 	"devDependencies": {
