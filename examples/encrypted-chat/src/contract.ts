@@ -1,7 +1,7 @@
 import type { ModelSchema, Actions } from "@canvas-js/core"
 import { EthEncryptedData } from "@metamask/eth-sig-util"
 
-const models = {
+export const models = {
 	encryptionKeys: {
 		address: "primary",
 		key: "string",
@@ -50,5 +50,3 @@ export const actions = {
 		db.set("privateMessages", { id, ciphertext, group, timestamp })
 	},
 } satisfies Actions<typeof models>
-
-export const contract = { models, actions }
