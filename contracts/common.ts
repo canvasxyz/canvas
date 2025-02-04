@@ -1,6 +1,6 @@
 import type { ModelSchema, Actions } from "@canvas-js/core"
 
-// export const contractTopic = "common.xyz"
+export const contractTopic = "common.xyz"
 
 export const models = {
 	threads: {
@@ -172,3 +172,5 @@ export const actions = {
 		await db.delete("comment_reactions", `${comment_id}/${did}`)
 	},
 } satisfies Actions<typeof models>
+
+export const contract = { models, actions }
