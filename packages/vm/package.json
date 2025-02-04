@@ -20,7 +20,7 @@
 	},
 	"dependencies": {
 		"@canvas-js/utils": "0.14.0-next.1",
-		"@libp2p/logger": "^5.1.0",
+		"@libp2p/logger": "^5.1.7",
 		"@noble/hashes": "^1.6.1",
 		"quickjs-emscripten": "^0.31.0"
 	}
