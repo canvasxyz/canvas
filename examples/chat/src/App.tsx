@@ -22,7 +22,7 @@ import { SessionStatus } from "./SessionStatus.js"
 import { ConnectionStatus } from "./ConnectionStatus.js"
 import { Connect } from "./connect/index.js"
 import { LogStatus } from "./LogStatus.js"
-import { contract } from "./contract.js"
+import * as contract from "./contract.js"
 
 export const topic = "chat-example.canvas.xyz"
 
@@ -47,7 +47,7 @@ export const App: React.FC<{}> = ({}) => {
 
 	const { app } = useCanvas(wsURL, {
 		topic: topicRef.current,
-		contract: contract,
+		contract,
 		signers: [
 			new SIWESigner(),
 			new Eip712Signer(),

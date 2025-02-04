@@ -2,7 +2,7 @@ import React, { useEffect, useContext, useRef } from "react"
 
 import { useLiveQuery } from "@canvas-js/hooks"
 
-import { contract } from "./contract.js"
+import { models } from "./contract.js"
 import { AppContext } from "./AppContext.js"
 
 export interface MessagesProps {
@@ -15,7 +15,7 @@ export const Messages: React.FC<MessagesProps> = ({ address }) => {
 	const { app } = useContext(AppContext)
 	const scrollboxRef = useRef<HTMLDivElement | null>(null)
 
-	const messages = useLiveQuery<typeof contract.models, "message">(app, "message", {
+	const messages = useLiveQuery<typeof models, "message">(app, "message", {
 		orderBy: { timestamp: "asc" },
 	})
 
