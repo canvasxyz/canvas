@@ -36,7 +36,7 @@ type SnapshotEffect struct {
 
 type Snapshot struct {
   models    {String:[Bytes]}
-  effects   [SnapshotEffect]
+  effects   optional [SnapshotEffect]
 }
 
 type Payload union {

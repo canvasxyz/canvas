@@ -5,7 +5,7 @@ import { logger } from "@libp2p/logger"
 
 import type { Action, Session, Snapshot, SignerCache } from "@canvas-js/interfaces"
 
-import { AbstractModelDB, Effect, ModelValue, ModelSchema } from "@canvas-js/modeldb"
+import { AbstractModelDB, Effect, ModelValue, ModelSchema, PrimaryKeyValue } from "@canvas-js/modeldb"
 import {
 	GossipLogConsumer,
 	MAX_MESSAGE_ID,
@@ -15,7 +15,7 @@ import {
 	SignedMessage,
 } from "@canvas-js/gossiplog"
 import { assert, mapValues } from "@canvas-js/utils"
-import { isAction, isSession, isSnapshot } from "../utils.js"
+import { getRecordId, isAction, isSession, isSnapshot } from "../utils.js"
 
 export class ExecutionContext {
 	// // recordId -> { version, value }
@@ -51,7 +51,20 @@ export class ExecutionContext {
 	}
 }
 
-export type EffectRecord = { key: string; value: Uint8Array | null; branch: number; clock: number }
+// export type EffectRecord = { key: string; value: Uint8Array | null; branch: number; clock: number }
+
+export type WriteRecord = {
+	record_id: string
+	message_id: string
+	value: Uint8Array | null
+	csx: number | null
+}
+
+export type ReadRecord = {
+	reader_id: string
+	writer_id: string
+	record_id: string
+}
 
 export type SessionRecord = {
 	message_id: string
@@ -69,14 +82,32 @@ export type ActionRecord = {
 }
 
 export abstract class AbstractRuntime {
-	protected static effectsModel: ModelSchema = {
-		$effects: {
-			key: "primary", // `${model}/${hash(key)}/${version}
+	protected static effectsModel = {
+		$writes: {
+			$primary: "record_id/message_id",
+			record_id: "string",
+			message_id: "string",
 			value: "bytes?",
-			branch: "integer",
-			clock: "integer",
+			csx: "integer?",
 		},
+
+		$reads: {
+			$primary: "reader_id/writer_id/record_id",
+			reader_id: "string",
+			writer_id: "string",
+			record_id: "string",
+		},
+
+		// $records: { id: "primary", model: "string", key: "bytes" },
 	} satisfies ModelSchema
+
+	// protected static revertModel = {
+	// 	$revert_slices: {
+	// 		$primary: "effect_id/cause_id",
+	// 		cause_id: "string",
+	// 		effect_id: "primary",
+	// 	},
+	// } satisfies ModelSchema
 
 	protected static sessionsModel = {
 		$sessions: {
@@ -160,17 +191,27 @@ export abstract class AbstractRuntime {
 		signedMessage: SignedMessage<Snapshot>,
 		messageLog: AbstractGossipLog<Action | Session | Snapshot>,
 	) {
-		const { models, effects } = signedMessage.message.payload
+		const { models } = signedMessage.message.payload
 
 		const messages = await messageLog.getMessages()
 		assert(messages.length === 0, "snapshot must be first entry on log")
 
-		for (const { key, value } of effects) {
-			await this.db.set("$effects", { key, value, branch: 0, clock: 0 })
-		}
-		for (const [model, rows] of Object.entries(models)) {
-			for (const row of rows) {
-				await this.db.set(model, cbor.decode(row) as any)
+		for (const [modelName, values] of Object.entries(models)) {
+			const model = this.db.models[modelName]
+
+			for (const value of values) {
+				const modelValue = cbor.decode<ModelValue>(value)
+				const primaryKey = model.primaryKey.map((name) => modelValue[name] as PrimaryKeyValue)
+				const recordId = getRecordId(modelName, primaryKey)
+
+				await this.db.set(modelName, modelValue)
+
+				await this.db.set<WriteRecord>("$writes", {
+					record_id: recordId,
+					message_id: MIN_MESSAGE_ID,
+					value: value,
+					csx: null,
+				})
 			}
 		}
 	}
@@ -261,19 +302,25 @@ export abstract class AbstractRuntime {
 
 		for (const [model, entries] of Object.entries(executionContext.modelEntries)) {
 			for (const [key, value] of Object.entries(entries)) {
-				const keyHash = AbstractRuntime.getKeyHash(key)
+				const recordId = getRecordId(model, key)
 
-				const effectKey = `${model}/${keyHash}/${id}`
-				const results = await this.db.query<{ key: string }>("$effects", {
-					select: { key: true },
-					where: { key: { gt: effectKey, lte: `${model}/${keyHash}/${MAX_MESSAGE_ID}` } },
+				const writeRecord: WriteRecord = {
+					record_id: recordId,
+					message_id: id,
+					value: value && cbor.encode(value),
+					csx: null,
+				}
+
+				effects.push({ model: "$writes", operation: "set", value: writeRecord })
+
+				const results = await this.db.query<{ record_id: string; message_id: string }>("$writes", {
+					select: { record_id: true, message_id: true },
+					where: {
+						record_id: recordId,
+						message_id: { gt: id, lte: MAX_MESSAGE_ID },
+						csx: null,
+					},
 					limit: 1,
-				})
-
-				effects.push({
-					model: "$effects",
-					operation: "set",
-					value: { key: effectKey, value: value && cbor.encode(value), branch, clock },
 				})
 
 				if (results.length > 0) {
@@ -303,8 +350,6 @@ export abstract class AbstractRuntime {
 		return result
 	}
 
-	protected static getKeyHash = (key: string) => bytesToHex(blake3(key, { dkLen: 16 }))
-
 	protected async getModelValue<T extends ModelValue = ModelValue>(
 		context: ExecutionContext,
 		model: string,
@@ -318,17 +363,15 @@ export abstract class AbstractRuntime {
 			return context.modelEntries[model][key] as T
 		}
 
-		const keyHash = AbstractRuntime.getKeyHash(key)
-		const lowerBound = `${model}/${keyHash}/`
-
-		let upperBound = `${model}/${keyHash}/${context.id}`
+		const recordId = getRecordId(model, key)
+		const lowerBound = MIN_MESSAGE_ID
+		let upperBound = context.id
 
 		// eslint-disable-next-line no-constant-condition
 		while (true) {
-			const results = await this.db.query<{ key: string; value: Uint8Array; clock: number }>("$effects", {
-				select: { key: true, value: true, clock: true },
-				where: { key: { gt: lowerBound, lt: upperBound } },
-				orderBy: { key: "desc" },
+			const results = await this.db.query<WriteRecord>("$writes", {
+				where: { record_id: recordId, message_id: { gte: lowerBound, lt: upperBound } },
+				orderBy: { "record_id/message_id": "desc" },
 				limit: 1,
 			})
 
@@ -336,24 +379,26 @@ export abstract class AbstractRuntime {
 				return null
 			}
 
-			if (results[0].clock === 0) {
-				if (results[0].value === null) return null
-				return cbor.decode<null | T>(results[0].value)
-			}
+			const [{ message_id: messageId, value }] = results
 
-			const [effect] = results
-			const [{}, {}, messageId] = effect.key.split("/")
+			if (messageId === MIN_MESSAGE_ID) {
+				assert(value !== null, "expected snapshot write to be non-null")
+				return cbor.decode<T>(value)
+			}
 
 			const visited = new Set<string>()
 			for (const parent of context.message.parents) {
 				const isAncestor = await context.messageLog.isAncestor(parent, messageId, visited)
 				if (isAncestor) {
-					if (effect.value === null) return null
-					return cbor.decode<null | T>(effect.value)
+					if (value === null) {
+						return null
+					} else {
+						return cbor.decode<null | T>(value)
+					}
 				}
 			}
 
-			upperBound = effect.key
+			upperBound = messageId
 		}
 	}
 }
