@@ -11,7 +11,6 @@ import {
 	MAX_MESSAGE_ID,
 	MIN_MESSAGE_ID,
 	AbstractGossipLog,
-	BranchMergeRecord,
 	SignedMessage,
 } from "@canvas-js/gossiplog"
 import { assert, mapValues } from "@canvas-js/utils"
@@ -50,8 +49,6 @@ export class ExecutionContext {
 		return this.messageLog.db
 	}
 }
-
-// export type EffectRecord = { key: string; value: Uint8Array | null; branch: number; clock: number }
 
 export type WriteRecord = {
 	record_id: string
@@ -289,10 +286,6 @@ export abstract class AbstractRuntime {
 		if (sessionId === null) {
 			throw new Error(`missing session ${signature.publicKey} for ${did}`)
 		}
-
-		const clock = message.clock
-		const branch = signedMessage.branch
-		assert(branch !== undefined, "expected branch !== undefined")
 
 		const executionContext = new ExecutionContext(messageLog, signedMessage, address)
 		const result = await this.execute(executionContext)
