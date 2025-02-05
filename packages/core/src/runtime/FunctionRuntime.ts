@@ -1,15 +1,7 @@
 import pDefer, { DeferredPromise } from "p-defer"
 
 import type { SignerCache } from "@canvas-js/interfaces"
-import {
-	ModelSchema,
-	ModelValue,
-	validateModelValue,
-	mergeModelValues,
-	updateModelValues,
-	DeriveModelTypes,
-	RelationValue,
-} from "@canvas-js/modeldb"
+import { ModelSchema, ModelValue, validateModelValue, DeriveModelTypes } from "@canvas-js/modeldb"
 import { assert } from "@canvas-js/utils"
 
 import { ActionContext, ActionImplementation, Contract, ModelAPI, Chainable } from "../types.js"
@@ -147,14 +139,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 				await this.acquireLock()
 				try {
 					assert(this.#context !== null, "expected this.#context !== null")
-					validateModelValue(this.db.models[model], value)
-					const {
-						primaryKey: [primaryKey],
-					} = this.db.models[model]
-					assert(primaryKey in value, `db.set(${model}): missing primary key ${primaryKey}`)
-					assert(primaryKey !== null && primaryKey !== undefined, `db.set(${model}): ${primaryKey} primary key`)
-					const key = (value as ModelValue)[primaryKey] as string
-					this.#context.modelEntries[model][key] = value
+					this.#context.setModelValue(model, value)
 				} finally {
 					this.releaseLock()
 				}
@@ -163,14 +148,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 				await this.acquireLock()
 				try {
 					assert(this.#context !== null, "expected this.#context !== null")
-					validateModelValue(this.db.models[model], value)
-					const {
-						primaryKey: [primaryKey],
-					} = this.db.models[model]
-					assert(primaryKey in value, `db.create(${model}): missing primary key ${primaryKey}`)
-					assert(primaryKey !== null && primaryKey !== undefined, `db.create(${model}): ${primaryKey} primary key`)
-					const key = (value as ModelValue)[primaryKey] as string
-					this.#context.modelEntries[model][key] = value
+					this.#context.setModelValue(model, value)
 				} finally {
 					this.releaseLock()
 				}
@@ -179,20 +157,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 				await this.acquireLock()
 				try {
 					assert(this.#context !== null, "expected this.#context !== null")
-					const {
-						primaryKey: [primaryKey],
-					} = this.db.models[model]
-					assert(primaryKey in value, `db.update(${model}): missing primary key ${primaryKey}`)
-					const key = (value as ModelValue)[primaryKey] as string
-					assert(typeof key === "string", `db.update(${model}): ${primaryKey} primary key`)
-					const modelValue = await this.#context.getModelValue(model, key)
-					if (modelValue === null) {
-						console.log(`db.update(${model}, ${key}): attempted to update a nonexistent value`)
-						return
-					}
-					const mergedValue = updateModelValues(value as ModelValue, modelValue)
-					validateModelValue(this.db.models[model], mergedValue)
-					this.#context.modelEntries[model][key] = mergedValue
+					await this.#context.updateModelValue(model, value)
 				} finally {
 					this.releaseLock()
 				}
@@ -201,20 +166,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 				await this.acquireLock()
 				try {
 					assert(this.#context !== null, "expected this.#context !== null")
-					const {
-						primaryKey: [primaryKey],
-					} = this.db.models[model]
-					assert(primaryKey in value, `db.merge(${model}): missing primary key ${primaryKey}`)
-					assert(primaryKey !== null && primaryKey !== undefined, `db.merge(${model}): ${primaryKey} primary key`)
-					const key = (value as ModelValue)[primaryKey] as string
-					const modelValue = await this.#context.getModelValue(model, key)
-					if (modelValue === null) {
-						console.log(`db.merge(${model}, ${key}): attempted to merge into a nonexistent value`)
-						return
-					}
-					const mergedValue = mergeModelValues(value as ModelValue, modelValue)
-					validateModelValue(this.db.models[model], mergedValue)
-					this.#context.modelEntries[model][key] = mergedValue
+					await this.#context.mergeModelValue(model, value)
 				} finally {
 					this.releaseLock()
 				}
@@ -223,7 +175,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 				await this.acquireLock()
 				try {
 					assert(this.#context !== null, "expected this.#context !== null")
-					this.#context.modelEntries[model][key] = null
+					this.#context.deleteModelValue(model, key)
 				} finally {
 					this.releaseLock()
 				}
