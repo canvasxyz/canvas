@@ -3,17 +3,7 @@ import { logger } from "@libp2p/logger"
 
 import type { Action, Session, Snapshot, SignerCache, Awaitable } from "@canvas-js/interfaces"
 
-import {
-	AbstractModelDB,
-	Effect,
-	ModelValue,
-	ModelSchema,
-	PropertyValue,
-	PrimaryKeyValue,
-	validateModelValue,
-	updateModelValues,
-	mergeModelValues,
-} from "@canvas-js/modeldb"
+import { AbstractModelDB, Effect, ModelValue, ModelSchema, PrimaryKeyValue } from "@canvas-js/modeldb"
 
 import {
 	GossipLogConsumer,
@@ -21,7 +11,6 @@ import {
 	MIN_MESSAGE_ID,
 	AbstractGossipLog,
 	SignedMessage,
-	MessageId,
 } from "@canvas-js/gossiplog"
 
 import { assert, mapValues } from "@canvas-js/utils"
