@@ -38,22 +38,15 @@ export type Property = PrimitiveProperty | ReferenceProperty | RelationProperty
 export type Relation = {
 	source: string
 	sourceProperty: string
-	sourcePrimaryKey: PrimitiveProperty
 	target: string
-	targetPrimaryKey: PrimitiveProperty
 	indexed: boolean
 }
 
 export type Model = {
 	name: string
-	primaryKey: string
+	primaryKey: string[]
 	properties: Property[]
 	indexes: string[][]
-}
-
-export type Config = {
-	relations: Relation[]
-	models: Model[]
 }
 
 // These are types for the runtime model record values
@@ -62,8 +55,8 @@ export type PrimaryKeyValue = number | string | Uint8Array
 // export type PrimaryKeyArray = PrimaryKeyValue[]
 
 export type PrimitiveValue = number | string | Uint8Array | null | boolean
-export type ReferenceValue = PrimaryKeyValue | null
-export type RelationValue = PrimaryKeyValue[]
+export type ReferenceValue = PrimaryKeyValue | PrimaryKeyValue[] | null
+export type RelationValue = PrimaryKeyValue[] | PrimaryKeyValue[][]
 
 export type PropertyValue = PrimitiveValue | ReferenceValue | RelationValue | JSONValue
 
@@ -74,7 +67,12 @@ export type ModelValueWithIncludes<T = PropertyValue> = {
 
 export type WhereCondition = Record<string, PropertyValue | NotExpression | RangeExpression | undefined>
 export type NotExpression = { neq: PropertyValue | undefined }
-export type RangeExpression = { gt?: PrimitiveValue; gte?: PrimitiveValue; lt?: PrimitiveValue; lte?: PrimitiveValue }
+export type RangeExpression = {
+	gt?: PrimitiveValue | ReferenceValue
+	gte?: PrimitiveValue | ReferenceValue
+	lt?: PrimitiveValue | ReferenceValue
+	lte?: PrimitiveValue | ReferenceValue
+}
 
 export type IncludeExpression = { [key: string]: IncludeExpression }
 
@@ -139,4 +137,25 @@ export type Contract<T extends ModelSchema = ModelSchema> = {
 
 export type Effect =
 	| { model: string; operation: "set"; value: ModelValue<any> }
-	| { model: string; operation: "delete"; key: string }
+	| { model: string; operation: "delete"; key: PrimaryKeyValue | PrimaryKeyValue[] }
+
+export interface PropertyEncoder<T> {
+	encodePrimitiveValue(propertyName: string, type: PrimitiveType, nullable: boolean, value: PropertyValue): T
+	encodeReferenceValue(propertyName: string, target: PrimitiveProperty[], nullable: boolean, value: PropertyValue): T[]
+}
+
+export interface PropertyDecoder<T> {
+	decodePrimitiveValue(propertyName: string, type: PrimitiveType, nullable: boolean, value: T): PrimitiveValue
+	decodeReferenceValue(
+		propertyName: string,
+		nullable: boolean,
+		target: PrimitiveProperty[],
+		values: T[],
+	): ReferenceValue
+}
+
+export interface PropertyAPI<T> {
+	columns: string[]
+	encode: (value: PropertyValue) => T[]
+	decode: (record: Record<string, T>) => PropertyValue
+}

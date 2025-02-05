@@ -2,6 +2,7 @@ export * from "./types.js"
 export * from "./config.js"
 export * from "./query.js"
 export * from "./AbstractModelDB.js"
+
 export {
 	validateModelValue,
 	validatePropertyValue,
@@ -10,4 +11,6 @@ export {
 	isPrimitiveValue,
 	getModelsFromInclude,
 	isPrimaryKey,
+	isReferenceValue,
+	isRelationValue,
 } from "./utils.js"

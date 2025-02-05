@@ -64,15 +64,37 @@ testOnModelDB("create a model with an integer primary key", async (t, openDB) =>
 	} satisfies ModelSchema
 
 	await t.notThrowsAsync(() => openDB(t, models))
+})
 
-	// const db = await openDB(t, models)
-	// db.set("user", { id: 0, name: null })
-	// db.set("user", { id: 3, name: null })
-	// db.set("user", { id: 10, name: null })
+testOnModelDB("create a model with a composite primary key", async (t, openDB) => {
+	const models = {
+		user: { $primary: "key/index", key: "string", index: "integer", name: "string?" },
+	} satisfies ModelSchema
 
-	// t.deepEqual(await db.query("user"), [
-	// 	{ id: 0, name: null },
-	// 	{ id: 3, name: null },
-	// 	{ id: 10, name: null },
-	// ])
+	await t.notThrowsAsync(() => openDB(t, models))
+})
+
+testOnModelDB("create a model with a reference to a composite primary key", async (t, openDB) => {
+	const models = {
+		user: { $primary: "key/index", key: "string", index: "integer", name: "string?" },
+		room: { $primary: "key/index", key: "string", index: "integer", name: "string?", creator: "@user" },
+	} satisfies ModelSchema
+
+	await t.notThrowsAsync(() => openDB(t, models))
+})
+
+testOnModelDB("create a model with a relation on a composite primary key", async (t, openDB) => {
+	const models = {
+		user: { $primary: "key/index", key: "string", index: "integer", name: "string?" },
+		room: {
+			$primary: "key/index",
+			key: "string",
+			index: "integer",
+			name: "string?",
+			creator: "@user",
+			members: "@user[]",
+		},
+	} satisfies ModelSchema
+
+	await t.notThrowsAsync(() => openDB(t, models))
 })

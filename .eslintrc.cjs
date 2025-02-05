@@ -7,7 +7,7 @@ module.exports = {
 		browser: true,
 		node: true,
 	},
-	ignorePatterns: ["webpack.config.js", "*.d.ts", "**/dist/**/*.js", "**/lib/**/*.js"],
+	ignorePatterns: ["webpack.config.js", "*.d.ts", "**/dist/**/*.js", "**/lib/**/*.js", "**/build/**/*.js"],
 	settings: {
 		"import/parsers": {
 			"@typescript-eslint/parser": [".ts", ".tsx"],

@@ -1,6 +1,5 @@
 import { IDBPIndex, IDBPObjectStore, IDBPTransaction } from "idb"
 import { logger } from "@libp2p/logger"
-import * as json from "@ipld/dag-json"
 
 import { assert, signalInvalidType } from "@canvas-js/utils"
 
@@ -12,21 +11,21 @@ import {
 	PropertyValue,
 	QueryParams,
 	RangeExpression,
+	WhereCondition,
+	ModelValueWithIncludes,
+	IncludeExpression,
+	PrimaryKeyValue,
 	getFilter,
 	isNotExpression,
 	isLiteralExpression,
 	isRangeExpression,
 	validateModelValue,
-	WhereCondition,
-	ModelValueWithIncludes,
-	IncludeExpression,
 } from "@canvas-js/modeldb"
 
+import { IDBValue, encodePropertyValue, decodePropertyValue } from "./encoding.js"
 import { equalIndex, getIndexName } from "./utils.js"
 
-type ObjectPropertyValue = PropertyValue | PropertyValue[]
-
-type ObjectValue = Record<string, ObjectPropertyValue>
+type ObjectValue = Record<string, IDBValue>
 
 type StoreIndex = IDBPObjectStore<any, any, string, "readonly"> | IDBPIndex<any, any, string, string, "readonly">
 
@@ -47,9 +46,11 @@ export class ModelAPI {
 
 	public async get<Mode extends IDBTransactionMode>(
 		txn: IDBPTransaction<any, any, Mode>,
-		key: string,
+		key: PrimaryKeyValue | PrimaryKeyValue[],
 	): Promise<ModelValue | null> {
-		const value: ObjectValue | undefined = await this.getStore(txn).get(key)
+		const unwrappedKey = Array.isArray(key) && key.length === 1 ? key[0] : key
+		const value: ObjectValue | undefined = await this.getStore(txn).get(unwrappedKey)
+
 		if (value === undefined) {
 			return null
 		} else {
@@ -59,7 +60,7 @@ export class ModelAPI {
 
 	public async getMany<Mode extends IDBTransactionMode>(
 		txn: IDBPTransaction<any, any, Mode>,
-		keys: string[],
+		keys: PrimaryKeyValue[] | PrimaryKeyValue[][],
 	): Promise<(ModelValue | null)[]> {
 		// TODO: if keys are near each other, we could try using a range instead of getting each key individually
 		const results = []
@@ -75,7 +76,7 @@ export class ModelAPI {
 		await this.getStore(txn).put(object)
 	}
 
-	async delete(txn: IDBPTransaction<any, any, "readwrite">, key: string): Promise<void> {
+	async delete(txn: IDBPTransaction<any, any, "readwrite">, key: PrimaryKeyValue | PrimaryKeyValue[]): Promise<void> {
 		await this.getStore(txn).delete(key)
 	}
 
@@ -109,6 +110,7 @@ export class ModelAPI {
 		for await (const value of this.iterate(txn, query)) {
 			results.push(value)
 		}
+
 		return results
 	}
 
@@ -131,63 +133,80 @@ export class ModelAPI {
 		// the `include` to be applied everywhere that model appears in the query,
 		// but we only want it in the exact places the user has asked for it.
 		const populateCache = async (modelName: string, records: ModelValueWithIncludes[], include: IncludeExpression) => {
-			const thisModel = Object.values(models).find((api) => api.model.name === modelName)
-			assert(thisModel !== undefined)
+			const api = Object.values(models).find((api) => api.model.name === modelName)
+			assert(api !== undefined)
 
 			for (const includeKey of Object.keys(include)) {
 				// look up the model corresponding to the { include: key }
-				const prop = thisModel.properties[includeKey]
+				const prop = api.properties[includeKey]
 				assert(prop, "include was used with a missing property")
 				assert(
 					prop.kind === "reference" || prop.kind === "relation",
 					"include should only be used with references or relations",
 				)
-				const includeModel = prop.target
+				const includeModelName = prop.target
+				const includeModelApi = models[includeModelName]
+				const includeModel = includeModelApi.model
+				assert(
+					includeModel.primaryKey.length === 1,
+					"'include' can only be used on models with a single string primary key",
+				)
+				const [includePrimaryKeyName] = includeModel.primaryKey
+				const includePrimaryKeyProperty = includeModelApi.properties[includePrimaryKeyName]
+				assert(
+					includePrimaryKeyProperty.kind === "primitive" && includePrimaryKeyProperty.type === "string",
+					"'include' can only be used on models with a single string primary key",
+				)
 
-				cache[includeModel] ||= {}
+				cache[includeModelName] ||= {}
 				for (const record of records) {
 					const includeValue = record[includeKey]
+
 					// Reference type
 					if (!Array.isArray(includeValue)) {
 						assert(typeof includeValue === "string", "include should only be used with references or relations")
-						if (cache[includeModel][includeValue]) continue
+						if (cache[includeModelName][includeValue]) continue
 
-						const [result] = await models[includeModel].query(txn, {
-							where: { [models[includeModel].model.primaryKey]: includeValue },
+						const [result] = await includeModelApi.query(txn, {
+							where: { [includePrimaryKeyName]: includeValue },
 						})
+
 						if (result === undefined) {
 							console.error(
-								`expected reference to be populated while looking up ${modelName}.${includeKey}: ${includeModel} = ${includeValue}`,
+								`expected reference to be populated while looking up ${modelName}.${includeKey}: ${includeModelName} = ${includeValue}`,
 							)
 							continue
 						}
-						cache[includeModel][includeValue] = { ...result }
+
+						cache[includeModelName][includeValue] = { ...result }
 						if (include[includeKey]) {
-							await populateCache(includeModel, [result], include[includeKey])
+							await populateCache(includeModelName, [result], include[includeKey])
 						}
 						continue
 					}
+
 					// Relation type
 					for (const item of includeValue) {
 						assert(typeof item === "string", "include should only be used with references or relations")
-						if (cache[includeModel][item]) continue
-						const [result] = await models[includeModel].query(txn, {
-							where: { [models[includeModel].model.primaryKey]: item },
+						if (cache[includeModelName][item]) continue
+						const [result] = await models[includeModelName].query(txn, {
+							where: { [includePrimaryKeyName]: item },
 						})
 						if (result === undefined) {
 							console.error(
-								`expected relation to be populated while looking up ${modelName}.${includeKey}: ${includeModel} = ${includeValue}`,
+								`expected relation to be populated while looking up ${modelName}.${includeKey}: ${includeModelName} = ${includeValue}`,
 							)
 							continue
 						}
-						cache[includeModel][item] = { ...result }
+						cache[includeModelName][item] = { ...result }
 						if (include[includeKey]) {
-							await populateCache(includeModel, [result], include[includeKey])
+							await populateCache(includeModelName, [result], include[includeKey])
 						}
 					}
 				}
 			}
 		}
+
 		const populateRecords = async (
 			modelName: string,
 			records: ModelValueWithIncludes[],
@@ -238,13 +257,15 @@ export class ModelAPI {
 				}
 			}
 		}
+
 		await populateCache(this.model.name, modelValues, query.include ?? {})
 		await populateRecords(this.model.name, modelValues, query.include ?? {})
+
 		return modelValues
 	}
 
 	private getStoreIndex(store: IDBPObjectStore<any, any, string, "readonly">, index: string[]): StoreIndex | null {
-		if (index.length === 1 && this.model.primaryKey === index[0]) {
+		if (equalIndex(index, this.model.primaryKey)) {
 			return store
 		}
 
@@ -463,7 +484,7 @@ export class ModelAPI {
 		let bestIndexExact: boolean
 
 		{
-			const [indexRange, exact] = this.getIndexRange([this.model.primaryKey], where)
+			const [indexRange, exact] = this.getIndexRange(this.model.primaryKey, where)
 			bestIndexRange = indexRange
 			bestIndexExact = exact
 			bestIndexCount = await bestIndex.count(bestIndexRange)
@@ -508,57 +529,6 @@ export class ModelAPI {
 		}
 
 		return value
-	}
-}
-
-function encodePropertyValue(property: Property, propertyValue: PropertyValue): PropertyValue | PropertyValue[] {
-	if (property.kind === "primitive") {
-		if (property.nullable) {
-			assert(property.type !== "json")
-			return propertyValue === null ? [] : [propertyValue]
-		} else if (property.type === "json") {
-			return json.stringify(propertyValue)
-		} else {
-			return propertyValue
-		}
-	} else if (property.kind === "reference") {
-		if (property.nullable) {
-			return propertyValue === null ? [] : [propertyValue]
-		} else {
-			return propertyValue
-		}
-	} else if (property.kind === "relation") {
-		return propertyValue
-	} else {
-		signalInvalidType(property)
-	}
-}
-
-function decodePropertyValue(property: Property, objectPropertyValue: PropertyValue | PropertyValue[]): PropertyValue {
-	if (property.kind === "primitive") {
-		if (property.nullable) {
-			assert(property.type !== "json")
-			assert(Array.isArray(objectPropertyValue))
-			return objectPropertyValue.length === 0 ? null : objectPropertyValue[0]
-		} else if (property.type === "json") {
-			assert(typeof objectPropertyValue === "string")
-			return json.parse(objectPropertyValue)
-		} else {
-			assert(!Array.isArray(objectPropertyValue))
-			return objectPropertyValue
-		}
-	} else if (property.kind === "reference") {
-		if (property.nullable) {
-			assert(Array.isArray(objectPropertyValue))
-			return objectPropertyValue.length === 0 ? null : objectPropertyValue[0]
-		} else {
-			assert(!Array.isArray(objectPropertyValue))
-			return objectPropertyValue
-		}
-	} else if (property.kind === "relation") {
-		return objectPropertyValue as string[]
-	} else {
-		signalInvalidType(property)
 	}
 }
 

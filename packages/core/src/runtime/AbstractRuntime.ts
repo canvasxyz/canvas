@@ -197,9 +197,6 @@ export abstract class AbstractRuntime {
 		const handleSnapshot = this.handleSnapshot.bind(this)
 
 		return async function (this: AbstractGossipLog<Action | Session | Snapshot>, signedMessage) {
-			const { id, signature, message, branch } = signedMessage
-			assert(branch !== undefined, "internal error - expected branch !== undefined")
-
 			if (isSession(signedMessage)) {
 				return await handleSession(signedMessage)
 			} else if (isAction(signedMessage)) {
@@ -408,6 +405,10 @@ export abstract class AbstractRuntime {
 		model: string,
 		key: string,
 	): Promise<null | T> {
+		if (context.modelEntries[model] === undefined) {
+			throw new Error(`could not access model db.${model} inside runtime action ${context.message.payload.name}`)
+		}
+
 		if (context.modelEntries[model][key] !== undefined) {
 			return context.modelEntries[model][key] as T
 		}

@@ -94,3 +94,112 @@ testOnModelDB("set and get an integer primary key", async (t, openDB) => {
 		{ id: 10, name: "John Doe" },
 	])
 })
+
+testOnModelDB("set and get a composite primary key", async (t, openDB) => {
+	const db = await openDB(t, {
+		user: { $primary: "key/index", key: "string", index: "integer", name: "string?" },
+	})
+
+	await db.set("user", { key: "a", index: 0, name: null })
+	await db.set("user", { key: "b", index: 3, name: null })
+	await db.set("user", { key: "b", index: 10, name: "John Doe" })
+
+	t.deepEqual(await db.get("user", ["a", 0]), { key: "a", index: 0, name: null })
+	t.deepEqual(await db.get("user", ["b", 3]), { key: "b", index: 3, name: null })
+	t.deepEqual(await db.get("user", ["b", 10]), { key: "b", index: 10, name: "John Doe" })
+	t.deepEqual(await db.get("user", ["c", 10]), null)
+
+	t.deepEqual(await db.query("user"), [
+		{ key: "a", index: 0, name: null },
+		{ key: "b", index: 3, name: null },
+		{ key: "b", index: 10, name: "John Doe" },
+	])
+})
+
+testOnModelDB("set and get a reference to a composite primary key", async (t, openDB) => {
+	const db = await openDB(t, {
+		user: { $primary: "key/index", key: "string", index: "integer", name: "string?" },
+		room: { $primary: "key/index", key: "string", index: "integer", creator: "@user" },
+	})
+
+	await db.set("user", { key: "a", index: 0, name: null })
+	await db.set("user", { key: "b", index: 3, name: null })
+	await db.set("user", { key: "b", index: 10, name: "John Doe" })
+
+	await db.set("room", { key: "x", index: 0, creator: ["a", 0] })
+	await db.set("room", { key: "x", index: 1, creator: ["a", 0] })
+	await db.set("room", { key: "y", index: 1, creator: ["b", 10] })
+
+	t.deepEqual(await db.query("user"), [
+		{ key: "a", index: 0, name: null },
+		{ key: "b", index: 3, name: null },
+		{ key: "b", index: 10, name: "John Doe" },
+	])
+
+	t.deepEqual(await db.query("room"), [
+		{ key: "x", index: 0, creator: ["a", 0] },
+		{ key: "x", index: 1, creator: ["a", 0] },
+		{ key: "y", index: 1, creator: ["b", 10] },
+	])
+})
+
+testOnModelDB("set and get a relation on a composite primary key", async (t, openDB) => {
+	const db = await openDB(t, {
+		user: { $primary: "key/index", key: "string", index: "integer", name: "string?" },
+		room: { $primary: "key/index", key: "string", index: "integer", creator: "@user", members: "@room[]" },
+	})
+
+	await db.set("user", { key: "a", index: 0, name: null })
+	await db.set("user", { key: "b", index: 3, name: null })
+	await db.set("user", { key: "b", index: 10, name: "John Doe" })
+
+	await db.set("room", { key: "x", index: 0, creator: ["a", 0], members: [["a", 0]] })
+	await db.set("room", { key: "x", index: 1, creator: ["a", 0], members: [["a", 0]] })
+	await db.set("room", { key: "y", index: 1, creator: ["b", 10], members: [["b", 10]] })
+
+	t.deepEqual(await db.query("room"), [
+		{ key: "x", index: 0, creator: ["a", 0], members: [["a", 0]] },
+		{ key: "x", index: 1, creator: ["a", 0], members: [["a", 0]] },
+		{ key: "y", index: 1, creator: ["b", 10], members: [["b", 10]] },
+	])
+
+	await db.update("room", {
+		key: "x",
+		index: 1,
+		members: [
+			["a", 0],
+			["b", 3],
+			["b", 10],
+		],
+	})
+
+	t.deepEqual(await db.get("room", ["x", 1]), {
+		key: "x",
+		index: 1,
+		creator: ["a", 0],
+		members: [
+			["a", 0],
+			["b", 3],
+			["b", 10],
+		],
+	})
+
+	await db.update("room", {
+		key: "x",
+		index: 1,
+		members: [
+			["a", 0],
+			["b", 10],
+		],
+	})
+
+	t.deepEqual(await db.get("room", ["x", 1]), {
+		key: "x",
+		index: 1,
+		creator: ["a", 0],
+		members: [
+			["a", 0],
+			["b", 10],
+		],
+	})
+})

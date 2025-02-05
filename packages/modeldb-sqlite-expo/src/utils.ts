@@ -1,10 +1,17 @@
 import { SQLiteBindValue, SQLiteDatabase, SQLiteStatement } from "expo-sqlite"
 
-export class Query<P extends Record<string, SQLiteBindValue>, R> {
+export class Query<
+	P extends SQLiteBindValue[] = SQLiteBindValue[],
+	R extends Record<string, SQLiteBindValue> = Record<string, SQLiteBindValue>,
+> {
 	private readonly statement: SQLiteStatement
 
 	constructor(db: SQLiteDatabase, private readonly sql: string) {
 		this.statement = db.prepareSync(sql)
+	}
+
+	public finalize() {
+		this.statement.finalizeSync()
 	}
 
 	public get(params: P): R | null {
@@ -20,15 +27,18 @@ export class Query<P extends Record<string, SQLiteBindValue>, R> {
 	}
 }
 
-export class Method<P extends Record<string, SQLiteBindValue>> {
+export class Method<P extends SQLiteBindValue[] = SQLiteBindValue[]> {
 	private readonly statement: SQLiteStatement
 
 	constructor(db: SQLiteDatabase, private readonly sql: string) {
 		this.statement = db.prepareSync(sql)
 	}
 
+	public finalize() {
+		this.statement.finalizeSync()
+	}
+
 	public run(params: P) {
-		const prefixedParams = Object.fromEntries(Object.entries(params).map(([k, v]) => [":" + k, v]))
-		this.statement.executeSync(prefixedParams)
+		this.statement.executeSync(params)
 	}
 }

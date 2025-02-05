@@ -1,4 +1,12 @@
-import { QuickJSContext, QuickJSHandle, QuickJSRuntime, VmCallResult, getQuickJS, isFail } from "quickjs-emscripten"
+import {
+	QuickJSContext,
+	QuickJSHandle,
+	QuickJSRuntime,
+	QuickJSWASMModule,
+	VmCallResult,
+	getQuickJS,
+	isFail,
+} from "quickjs-emscripten"
 import { bytesToHex } from "@noble/hashes/utils"
 import { sha256 } from "@noble/hashes/sha256"
 import { logger } from "@libp2p/logger"
@@ -7,8 +15,6 @@ import { Awaitable } from "@canvas-js/interfaces"
 import { JSFunction, JSFunctionAsync, JSValue, assert, mapValues } from "@canvas-js/utils"
 
 import { VMError } from "./error.js"
-
-const quickJS = await getQuickJS()
 
 export interface VMOptions {
 	log?: (...args: JSValue[]) => void
@@ -24,13 +30,14 @@ export class VM {
 	readonly #localCache = new Set<QuickJSHandle>()
 
 	public static async initialize(options: VMOptions = {}): Promise<VM> {
-		return new VM(options)
+		const quickJS = await getQuickJS()
+		return new VM(quickJS, options)
 	}
 
 	public readonly runtime: QuickJSRuntime
 	public readonly context: QuickJSContext
 
-	public constructor(options: VMOptions) {
+	private constructor(quickJS: QuickJSWASMModule, options: VMOptions) {
 		this.runtime = quickJS.newRuntime()
 		this.context = this.runtime.newContext()
 

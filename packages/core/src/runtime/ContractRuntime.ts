@@ -30,17 +30,28 @@ export class ContractRuntime extends AbstractRuntime {
 			handle.dispose()
 		}
 
-		assert(
-			contractHandle !== undefined || (actionsHandle !== undefined && modelsHandle !== undefined),
-			"must export `contract` or `models` and `actions`",
-		)
+		let actionHandles: Record<string, QuickJSHandle>
+		let modelHandles: Record<string, QuickJSHandle>
+		if (contractHandle !== undefined) {
+			assert(actionsHandle === undefined, "cannot export both `contract` and `actions`")
+			assert(modelsHandle === undefined, "cannot export both `contract` and `models`")
+			const { actions, models, ...rest } = contractHandle.consume(vm.unwrapObject)
+			assert(actions !== undefined, "missing `actions` in contract export")
+			assert(models !== undefined, "missing `models` in contract export")
+			actionHandles = actions.consume(vm.unwrapObject)
+			modelHandles = models.consume(vm.unwrapObject)
+			for (const [key, value] of Object.entries(rest)) {
+				console.warn(`extraneous entry "${key}" in contract export`)
+				value.dispose()
+			}
+		} else {
+			assert(actionsHandle !== undefined, "missing `actions` export")
+			assert(modelsHandle !== undefined, "missing `models` export")
+			actionHandles = actionsHandle.consume(vm.unwrapObject)
+			modelHandles = modelsHandle.consume(vm.unwrapObject)
+		}
 
-		// intermediate unwrapped objects Record<string, QuickJSHandle>
-		const contractUnwrap = contractHandle?.consume(vm.unwrapObject)
-		const actionsUnwrap = (contractHandle ? contractUnwrap.actions : actionsHandle).consume(vm.unwrapObject)
-		const modelsUnwrap = (contractHandle ? contractUnwrap.models : modelsHandle).consume(vm.unwrapObject)
-
-		const actions = mapValues(actionsUnwrap, (handle) => {
+		const actions = mapValues(actionHandles, (handle) => {
 			assert(vm.context.typeof(handle) === "function", "expected action handle to be a function")
 			return handle.consume(vm.cache)
 		})
@@ -48,7 +59,11 @@ export class ContractRuntime extends AbstractRuntime {
 		// TODO: Validate that models satisfies ModelSchema
 		const mergeHandles: Record<string, QuickJSHandle> = {}
 
-		const modelSchema: ModelSchema = mapValues(modelsUnwrap, (handle) => handle.consume(vm.context.dump))
+		const modelSchema: ModelSchema = mapValues(modelHandles, (handle) => handle.consume(vm.context.dump))
+		assert(
+			Object.keys(modelSchema).every((key) => !key.startsWith("$")),
+			"contract model names cannot start with '$'",
+		)
 
 		const cleanupSetupHandles = () => {
 			for (const handle of Object.values(mergeHandles)) {
@@ -87,7 +102,9 @@ export class ContractRuntime extends AbstractRuntime {
 					assert(this.db.models[model] !== undefined, "model not found")
 					const value = this.vm.unwrapValue(valueHandle) as ModelValue
 					validateModelValue(this.db.models[model], value)
-					const { primaryKey } = this.db.models[model]
+					const {
+						primaryKey: [primaryKey],
+					} = this.db.models[model]
 					const key = value[primaryKey] as string
 					assert(typeof key === "string", "expected value[primaryKey] to be a string")
 					this.#context.modelEntries[model][key] = value
@@ -98,7 +115,9 @@ export class ContractRuntime extends AbstractRuntime {
 					assert(this.db.models[model] !== undefined, "model not found")
 					const value = this.vm.unwrapValue(valueHandle) as ModelValue
 					validateModelValue(this.db.models[model], value)
-					const { primaryKey } = this.db.models[model]
+					const {
+						primaryKey: [primaryKey],
+					} = this.db.models[model]
 					const key = value[primaryKey] as string
 					assert(typeof key === "string", "expected value[primaryKey] to be a string")
 					this.#context.modelEntries[model][key] = value
@@ -107,12 +126,13 @@ export class ContractRuntime extends AbstractRuntime {
 					assert(this.#context !== null, "expected this.#modelEntries !== null")
 					const model = vm.context.getString(modelHandle)
 					assert(this.db.models[model] !== undefined, "model not found")
-					const { primaryKey } = this.db.models[model]
+					const {
+						primaryKey: [primaryKey],
+					} = this.db.models[model]
 					const value = this.vm.unwrapValue(valueHandle) as ModelValue
 					const key = value[primaryKey] as string
 					assert(typeof key === "string", "expected value[primaryKey] to be a string")
 					const promise = vm.context.newPromise()
-
 					// TODO: Ensure concurrent merges into the same value don't create a race condition
 					// if the user doesn't call db.update() with await.
 					this.getModelValue(this.#context, model, key)
@@ -126,7 +146,6 @@ export class ContractRuntime extends AbstractRuntime {
 						.catch((err) => {
 							promise.reject()
 						})
-
 					promise.settled.then(vm.runtime.executePendingJobs)
 					return promise.handle
 				}),
@@ -134,12 +153,13 @@ export class ContractRuntime extends AbstractRuntime {
 					assert(this.#context !== null, "expected this.#modelEntries !== null")
 					const model = vm.context.getString(modelHandle)
 					assert(this.db.models[model] !== undefined, "model not found")
-					const { primaryKey } = this.db.models[model]
+					const {
+						primaryKey: [primaryKey],
+					} = this.db.models[model]
 					const value = this.vm.unwrapValue(valueHandle) as ModelValue
 					const key = value[primaryKey] as string
 					assert(typeof key === "string", "expected value[primaryKey] to be a string")
 					const promise = vm.context.newPromise()
-
 					// TODO: Ensure concurrent merges into the same value don't create a race condition
 					// if the user doesn't call db.merge() with await.
 					this.getModelValue(this.#context, model, key)
@@ -153,7 +173,6 @@ export class ContractRuntime extends AbstractRuntime {
 						.catch((err) => {
 							promise.reject()
 						})
-
 					promise.settled.then(vm.runtime.executePendingJobs)
 					return promise.handle
 				}),

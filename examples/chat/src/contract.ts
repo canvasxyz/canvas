@@ -1,6 +1,6 @@
 import type { Actions, ModelSchema } from "@canvas-js/core"
 
-const models = {
+export const models = {
 	message: {
 		id: "primary",
 		address: "string",
@@ -16,5 +16,3 @@ export const actions = {
 		await db.set("message", { id, address, content, timestamp })
 	},
 } satisfies Actions<typeof models>
-
-export const contract = { models, actions }

@@ -6,6 +6,7 @@ import type {
 	ModelSchema,
 	ModelValue,
 	PrimaryKeyValue,
+	PrimitiveProperty,
 	PrimitiveValue,
 	Property,
 	PropertyValue,
@@ -22,6 +23,22 @@ export const isPrimaryKey = (value: unknown): value is PrimaryKeyValue => {
 		return true
 	} else if (value instanceof Uint8Array) {
 		return true
+	} else {
+		return false
+	}
+}
+
+export function isReferenceValue(value: unknown): value is ReferenceValue {
+	if (Array.isArray(value)) {
+		return value.every(isPrimaryKey)
+	} else {
+		return isPrimaryKey(value)
+	}
+}
+
+export function isRelationValue(value: unknown): value is RelationValue {
+	if (Array.isArray(value)) {
+		return value.every(isReferenceValue)
 	} else {
 		return false
 	}
@@ -72,7 +89,7 @@ export function validateModelValue(model: Model, value: ModelValue) {
 	for (const property of model.properties) {
 		const propertyValue = value[property.name]
 		if (propertyValue === undefined) {
-			throw new Error(`write to db.${model.name}: missing ${property.name}`)
+			throw new Error(`write to db.${model.name}: missing field "${property.name}"`)
 		}
 		validatePropertyValue(model.name, property, propertyValue)
 	}
@@ -142,7 +159,7 @@ export function validatePropertyValue(modelName: string, property: Property, val
 	} else if (property.kind === "reference") {
 		if (property.nullable && value === null) {
 			return
-		} else if (!isPrimaryKey(value)) {
+		} else if (!isReferenceValue(value)) {
 			throw new TypeError(
 				`write to db.${modelName}.${property.name}: expected a primary key, received ${formatValue(value)}`,
 			)
@@ -154,7 +171,7 @@ export function validatePropertyValue(modelName: string, property: Property, val
 			throw new TypeError(
 				`write to db.${modelName}.${property.name}: expected an array of primary keys, received ${formatValue(value)}`,
 			)
-		} else if (!value.every(isPrimaryKey)) {
+		} else if (!value.every(isReferenceValue)) {
 			throw new TypeError(
 				`write to db.${modelName}.${property.name}: expected an array of primary keys, received ${formatValue(value)}`,
 			)

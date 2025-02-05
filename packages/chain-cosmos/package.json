@@ -1,6 +1,6 @@
 {
 	"name": "@canvas-js/chain-cosmos",
-	"version": "0.14.0-next.0",
+	"version": "0.14.0-next.1",
 	"type": "module",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"main": "lib/index.js",
@@ -12,19 +12,19 @@
 		"test": "ava"
 	},
 	"dependencies": {
-		"@canvas-js/interfaces": "0.14.0-next.0",
-		"@canvas-js/signatures": "0.14.0-next.0",
-		"@canvas-js/utils": "0.14.0-next.0",
+		"@canvas-js/interfaces": "0.14.0-next.1",
+		"@canvas-js/signatures": "0.14.0-next.1",
+		"@canvas-js/utils": "0.14.0-next.1",
 		"@cosmjs/amino": "^0.32.3",
 		"@cosmjs/crypto": "^0.32.3",
 		"@cosmjs/encoding": "^0.32.3",
 		"@ipld/dag-cbor": "^9.2.2",
 		"@ipld/dag-json": "^10.2.3",
 		"@keplr-wallet/types": "^0.11.64",
-		"@libp2p/logger": "^5.1.0",
-		"@noble/curves": "^1.7.0",
-		"@noble/hashes": "^1.6.1",
-		"ethers": "^6.13.2",
+		"@libp2p/logger": "^5.1.7",
+		"@noble/curves": "^1.8.1",
+		"@noble/hashes": "^1.7.1",
+		"ethers": "^6.13.5",
 		"multiformats": "^13.3.1"
 	}
 }

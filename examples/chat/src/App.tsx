@@ -1,7 +1,7 @@
 import React, { useRef, useState } from "react"
 
 import type { SessionSigner } from "@canvas-js/interfaces"
-import { SIWESigner } from "@canvas-js/chain-ethereum"
+import { SIWESigner, SIWFSigner, Eip712Signer } from "@canvas-js/chain-ethereum"
 import { ATPSigner } from "@canvas-js/chain-atp"
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
 import { SubstrateSigner } from "@canvas-js/chain-substrate"
@@ -11,6 +11,9 @@ import type { Contract } from "@canvas-js/core"
 
 import { useCanvas } from "@canvas-js/hooks"
 
+import { AuthKitProvider } from "@farcaster/auth-kit"
+import { JsonRpcProvider } from "ethers"
+
 import { AppContext } from "./AppContext.js"
 import { Messages } from "./Chat.js"
 import { MessageComposer } from "./MessageComposer.js"
@@ -19,12 +22,22 @@ import { SessionStatus } from "./SessionStatus.js"
 import { ConnectionStatus } from "./ConnectionStatus.js"
 import { Connect } from "./connect/index.js"
 import { LogStatus } from "./LogStatus.js"
-import { contract } from "./contract.js"
+import * as contract from "./contract.js"
 
-const topic = "chat-example.canvas.xyz"
+export const topic = "chat-example.canvas.xyz"
 
 const wsURL = import.meta.env.VITE_CANVAS_WS_URL ?? null
 console.log("websocket API URL:", wsURL)
+
+const config = {
+	// For a production app, replace this with an Optimism Mainnet
+	// RPC URL from a provider like Alchemy or Infura.
+	relay: "https://relay.farcaster.xyz",
+	rpcUrl: "https://mainnet.optimism.io",
+	domain: "chat-example.canvas.xyz",
+	siweUri: "https://chat-example.canvas.xyz",
+	provider: new JsonRpcProvider(undefined, 10),
+}
 
 export const App: React.FC<{}> = ({}) => {
 	const [sessionSigner, setSessionSigner] = useState<SessionSigner | null>(null)
@@ -34,33 +47,43 @@ export const App: React.FC<{}> = ({}) => {
 
 	const { app } = useCanvas(wsURL, {
 		topic: topicRef.current,
-		contract: contract,
-		signers: [new SIWESigner(), new ATPSigner(), new CosmosSigner(), new SubstrateSigner({}), new SolanaSigner()],
+		contract,
+		signers: [
+			new SIWESigner(),
+			new Eip712Signer(),
+			new SIWFSigner(),
+			new ATPSigner(),
+			new CosmosSigner(),
+			new SubstrateSigner({}),
+			new SolanaSigner(),
+		],
 	})
 
 	return (
 		<AppContext.Provider value={{ address, setAddress, sessionSigner, setSessionSigner, app: app ?? null }}>
-			{app ? (
-				<main>
-					<div className="flex flex-row gap-4 h-full">
-						<div className="min-w-[480px] flex-1 flex flex-col justify-stretch gap-2">
-							<div className="flex-1 border rounded px-2 overflow-y-scroll">
-								<Messages address={address} />
+			<AuthKitProvider config={config}>
+				{app ? (
+					<main>
+						<div className="flex flex-row gap-4 h-full">
+							<div className="min-w-[480px] flex-1 flex flex-col justify-stretch gap-2">
+								<div className="flex-1 border rounded px-2 overflow-y-scroll">
+									<Messages address={address} />
+								</div>
+								<MessageComposer />
 							</div>
-							<MessageComposer />
+							<div className="flex flex-col gap-4 w-[480px] break-all">
+								<Connect />
+								<SessionStatus />
+								<ConnectionStatus topic={topicRef.current} />
+								<LogStatus />
+								<ControlPanel />
+							</div>
 						</div>
-						<div className="flex flex-col gap-4 w-[480px] break-all">
-							<Connect />
-							<SessionStatus />
-							<ConnectionStatus topic={topicRef.current} />
-							<LogStatus />
-							<ControlPanel />
-						</div>
-					</div>
-				</main>
-			) : (
-				<div className="text-center my-20">Connecting to {wsURL}...</div>
-			)}
+					</main>
+				) : (
+					<div className="text-center my-20">Connecting to {wsURL}...</div>
+				)}
+			</AuthKitProvider>
 		</AppContext.Provider>
 	)
 }

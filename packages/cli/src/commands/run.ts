@@ -25,7 +25,7 @@ import { MIN_CONNECTIONS, MAX_CONNECTIONS } from "@canvas-js/core/constants"
 import { NetworkServer } from "@canvas-js/gossiplog/server"
 import { defaultBootstrapList } from "@canvas-js/gossiplog/bootstrap"
 
-import { SIWESigner } from "@canvas-js/chain-ethereum"
+import { SIWESigner, Eip712Signer, SIWFSigner } from "@canvas-js/chain-ethereum"
 import { ATPSigner } from "@canvas-js/chain-atp"
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
 import { SubstrateSigner } from "@canvas-js/chain-substrate"
@@ -164,7 +164,15 @@ export async function handler(args: Args) {
 
 	console.log(`${chalk.gray("[canvas] Starting app on topic")} ${chalk.whiteBright(topic)}`)
 
-	const signers = [new SIWESigner(), new ATPSigner(), new CosmosSigner(), new SubstrateSigner(), new SolanaSigner()]
+	const signers = [
+		new SIWESigner(),
+		new Eip712Signer(),
+		new SIWFSigner(),
+		new ATPSigner(),
+		new CosmosSigner(),
+		new SubstrateSigner(),
+		new SolanaSigner(),
+	]
 	const app = await Canvas.initialize({ path: location, topic, contract, signers })
 
 	app.addEventListener("message", ({ detail: { id, message } }) => {
