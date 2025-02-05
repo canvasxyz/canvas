@@ -6,14 +6,7 @@ import { logger } from "@libp2p/logger"
 import type { Action, Session, Snapshot, SignerCache } from "@canvas-js/interfaces"
 
 import { AbstractModelDB, Effect, ModelValue, ModelSchema } from "@canvas-js/modeldb"
-import {
-	GossipLogConsumer,
-	MAX_MESSAGE_ID,
-	MIN_MESSAGE_ID,
-	AbstractGossipLog,
-	BranchMergeRecord,
-	SignedMessage,
-} from "@canvas-js/gossiplog"
+import { GossipLogConsumer, MAX_MESSAGE_ID, AbstractGossipLog, SignedMessage, MessageId } from "@canvas-js/gossiplog"
 import { assert, mapValues } from "@canvas-js/utils"
 import { isAction, isSession, isSnapshot } from "../utils.js"
 
@@ -25,6 +18,7 @@ export class ExecutionContext {
 	// public readonly writes: Record<string, Effect> = {}
 
 	public readonly modelEntries: Record<string, Record<string, ModelValue | null>>
+	public readonly root: MessageId[]
 
 	constructor(
 		public readonly messageLog: AbstractGossipLog<Action | Session | Snapshot>,
@@ -32,6 +26,7 @@ export class ExecutionContext {
 		public readonly address: string,
 	) {
 		this.modelEntries = mapValues(messageLog.db.models, () => ({}))
+		this.root = signedMessage.message.parents.map((id) => MessageId.encode(id))
 	}
 
 	public get id() {
@@ -48,6 +43,10 @@ export class ExecutionContext {
 
 	public get db() {
 		return this.messageLog.db
+	}
+
+	public async isAncestor(ancestor: string | MessageId): Promise<boolean> {
+		return await this.messageLog.isAncestor(this.root, ancestor)
 	}
 }
 
@@ -226,6 +225,7 @@ export abstract class AbstractRuntime {
 		}
 
 		const address = signer.getAddressFromDid(did)
+		const executionContext = new ExecutionContext(messageLog, signedMessage, address)
 
 		const sessions = await this.db.query<{ message_id: string; expiration: number | null }>("$sessions", {
 			where: { public_key: signature.publicKey, did: did },
@@ -235,7 +235,7 @@ export abstract class AbstractRuntime {
 
 		let sessionId: string | null = null
 		for (const session of activeSessions) {
-			const isAncestor = await messageLog.isAncestor(message.parents, session.message_id)
+			const isAncestor = await executionContext.isAncestor(session.message_id)
 			if (isAncestor) {
 				sessionId = session.message_id
 			}
@@ -249,7 +249,6 @@ export abstract class AbstractRuntime {
 		const branch = signedMessage.branch
 		assert(branch !== undefined, "expected branch !== undefined")
 
-		const executionContext = new ExecutionContext(messageLog, signedMessage, address)
 		const result = await this.execute(executionContext)
 
 		const actionRecord: ActionRecord = { message_id: id, did, name, timestamp: context.timestamp }
@@ -340,7 +339,7 @@ export abstract class AbstractRuntime {
 			const [effect] = results
 			const [{}, {}, messageId] = effect.key.split("/")
 
-			const isAncestor = await context.messageLog.isAncestor(context.message.parents, messageId)
+			const isAncestor = await context.isAncestor(messageId)
 			if (isAncestor) {
 				if (effect.value === null) {
 					return null
