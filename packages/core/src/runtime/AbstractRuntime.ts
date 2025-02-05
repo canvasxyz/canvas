@@ -234,14 +234,10 @@ export abstract class AbstractRuntime {
 		const activeSessions = sessions.filter(({ expiration }) => expiration === null || expiration > context.timestamp)
 
 		let sessionId: string | null = null
-		for (const { message_id } of activeSessions) {
-			const visited = new Set<string>()
-			for (const parentId of message.parents) {
-				const isAncestor = await messageLog.isAncestor(parentId, message_id, visited)
-				if (isAncestor) {
-					sessionId = message_id
-					break
-				}
+		for (const session of activeSessions) {
+			const isAncestor = await messageLog.isAncestor(message.parents, session.message_id)
+			if (isAncestor) {
+				sessionId = session.message_id
 			}
 		}
 
@@ -344,16 +340,16 @@ export abstract class AbstractRuntime {
 			const [effect] = results
 			const [{}, {}, messageId] = effect.key.split("/")
 
-			const visited = new Set<string>()
-			for (const parent of context.message.parents) {
-				const isAncestor = await context.messageLog.isAncestor(parent, messageId, visited)
-				if (isAncestor) {
-					if (effect.value === null) return null
+			const isAncestor = await context.messageLog.isAncestor(context.message.parents, messageId)
+			if (isAncestor) {
+				if (effect.value === null) {
+					return null
+				} else {
 					return cbor.decode<null | T>(effect.value)
 				}
+			} else {
+				upperBound = effect.key
 			}
-
-			upperBound = effect.key
 		}
 	}
 }
