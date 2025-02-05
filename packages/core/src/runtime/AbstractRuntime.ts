@@ -10,6 +10,8 @@ import { GossipLogConsumer, MAX_MESSAGE_ID, AbstractGossipLog, SignedMessage, Me
 import { assert, mapValues } from "@canvas-js/utils"
 import { isAction, isSession, isSnapshot } from "../utils.js"
 
+const getKeyHash = (key: string) => bytesToHex(blake3(key, { dkLen: 16 }))
+
 export class ExecutionContext {
 	// // recordId -> { version, value }
 	// public readonly reads: Record<string, { version: string | null; value: ModelValue | null }> = {}
@@ -47,6 +49,55 @@ export class ExecutionContext {
 
 	public async isAncestor(ancestor: string | MessageId): Promise<boolean> {
 		return await this.messageLog.isAncestor(this.root, ancestor)
+	}
+
+	public async getModelValue<T extends ModelValue = ModelValue>(model: string, key: string): Promise<null | T> {
+		if (this.modelEntries[model] === undefined) {
+			const { name } = this.message.payload
+			throw new Error(`could not access model db.${model} inside runtime action ${name}`)
+		}
+
+		if (this.modelEntries[model][key] !== undefined) {
+			return this.modelEntries[model][key] as T
+		}
+
+		const keyHash = getKeyHash(key)
+		const lowerBound = `${model}/${keyHash}/`
+
+		let upperBound = `${model}/${keyHash}/${this.id}`
+
+		// eslint-disable-next-line no-constant-condition
+		while (true) {
+			const results = await this.db.query<{ key: string; value: Uint8Array; clock: number }>("$effects", {
+				select: { key: true, value: true, clock: true },
+				where: { key: { gt: lowerBound, lt: upperBound } },
+				orderBy: { key: "desc" },
+				limit: 1,
+			})
+
+			if (results.length === 0) {
+				return null
+			}
+
+			if (results[0].clock === 0) {
+				if (results[0].value === null) return null
+				return cbor.decode<null | T>(results[0].value)
+			}
+
+			const [effect] = results
+			const [{}, {}, messageId] = effect.key.split("/")
+
+			const isAncestor = await this.isAncestor(messageId)
+			if (isAncestor) {
+				if (effect.value === null) {
+					return null
+				} else {
+					return cbor.decode<null | T>(effect.value)
+				}
+			} else {
+				upperBound = effect.key
+			}
+		}
 	}
 }
 
@@ -256,7 +307,7 @@ export abstract class AbstractRuntime {
 
 		for (const [model, entries] of Object.entries(executionContext.modelEntries)) {
 			for (const [key, value] of Object.entries(entries)) {
-				const keyHash = AbstractRuntime.getKeyHash(key)
+				const keyHash = getKeyHash(key)
 
 				const effectKey = `${model}/${keyHash}/${id}`
 				const results = await this.db.query<{ key: string }>("$effects", {
@@ -296,59 +347,5 @@ export abstract class AbstractRuntime {
 		}
 
 		return result
-	}
-
-	protected static getKeyHash = (key: string) => bytesToHex(blake3(key, { dkLen: 16 }))
-
-	protected async getModelValue<T extends ModelValue = ModelValue>(
-		context: ExecutionContext,
-		model: string,
-		key: string,
-	): Promise<null | T> {
-		if (context.modelEntries[model] === undefined) {
-			throw new Error(`could not access model db.${model} inside runtime action ${context.message.payload.name}`)
-		}
-
-		if (context.modelEntries[model][key] !== undefined) {
-			return context.modelEntries[model][key] as T
-		}
-
-		const keyHash = AbstractRuntime.getKeyHash(key)
-		const lowerBound = `${model}/${keyHash}/`
-
-		let upperBound = `${model}/${keyHash}/${context.id}`
-
-		// eslint-disable-next-line no-constant-condition
-		while (true) {
-			const results = await this.db.query<{ key: string; value: Uint8Array; clock: number }>("$effects", {
-				select: { key: true, value: true, clock: true },
-				where: { key: { gt: lowerBound, lt: upperBound } },
-				orderBy: { key: "desc" },
-				limit: 1,
-			})
-
-			if (results.length === 0) {
-				return null
-			}
-
-			if (results[0].clock === 0) {
-				if (results[0].value === null) return null
-				return cbor.decode<null | T>(results[0].value)
-			}
-
-			const [effect] = results
-			const [{}, {}, messageId] = effect.key.split("/")
-
-			const isAncestor = await context.isAncestor(messageId)
-			if (isAncestor) {
-				if (effect.value === null) {
-					return null
-				} else {
-					return cbor.decode<null | T>(effect.value)
-				}
-			} else {
-				upperBound = effect.key
-			}
-		}
 	}
 }
