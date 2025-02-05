@@ -2,7 +2,7 @@ import { fromString, toString } from "uint8arrays"
 
 import { Node, Key } from "@canvas-js/okra"
 import { AbstractModelDB, RangeExpression } from "@canvas-js/modeldb"
-import { MIN_MESSAGE_ID, encodeId } from "./ids.js"
+import { MIN_MESSAGE_ID, encodeId } from "./MessageId.js"
 
 type NodeRecord = { id: string; hash: Uint8Array }
 
