@@ -6,7 +6,7 @@ export interface JSONObject {
 	[key: string]: JSONValue
 }
 
-export type JSValue = null | boolean | number | string | Uint8Array | JSArray | JSObject
+export type JSValue = undefined | null | boolean | number | string | Uint8Array | JSArray | JSObject
 export interface JSArray extends Array<JSValue> {}
 export interface JSObject {
 	[key: string]: JSValue
