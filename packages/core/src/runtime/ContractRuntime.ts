@@ -5,7 +5,8 @@ import { ModelValue, ModelSchema } from "@canvas-js/modeldb"
 import { VM } from "@canvas-js/vm"
 import { assert, mapValues } from "@canvas-js/utils"
 
-import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
+import { ExecutionContext } from "../ExecutionContext.js"
+import { AbstractRuntime } from "./AbstractRuntime.js"
 
 export class ContractRuntime extends AbstractRuntime {
 	public static async init(

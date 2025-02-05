@@ -5,7 +5,8 @@ import { ModelSchema, ModelValue, validateModelValue, DeriveModelTypes } from "@
 import { assert } from "@canvas-js/utils"
 
 import { ActionContext, ActionImplementation, Contract, ModelAPI, Chainable } from "../types.js"
-import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
+import { ExecutionContext } from "../ExecutionContext.js"
+import { AbstractRuntime } from "./AbstractRuntime.js"
 
 export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntime {
 	public static async init<ModelsT extends ModelSchema>(
