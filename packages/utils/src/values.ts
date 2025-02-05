@@ -41,7 +41,7 @@ export function isObject(value: JSValue): value is JSObject {
 	return typeOf(value) === "Object"
 }
 
-export function merge(from: JSValue | undefined, into: JSValue | undefined): JSValue | undefined {
+export function merge(from: JSValue, into: JSValue): JSValue {
 	if (from === null) {
 		return from
 	} else if (from === undefined) {
@@ -81,7 +81,7 @@ export function merge(from: JSValue | undefined, into: JSValue | undefined): JSV
 	}
 }
 
-export function update(from: JSValue | undefined, into: JSValue | undefined): JSValue | undefined {
+export function update(from: JSValue, into: JSValue): JSValue {
 	if (from === null) {
 		return from
 	} else if (from === undefined) {
