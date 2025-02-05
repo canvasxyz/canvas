@@ -6,7 +6,7 @@ export interface JSONObject {
 	[key: string]: JSONValue
 }
 
-export type JSValue = null | boolean | number | string | Uint8Array | JSArray | JSObject
+export type JSValue = undefined | null | boolean | number | string | Uint8Array | JSArray | JSObject
 export interface JSArray extends Array<JSValue> {}
 export interface JSObject {
 	[key: string]: JSValue
@@ -41,7 +41,7 @@ export function isObject(value: JSValue): value is JSObject {
 	return typeOf(value) === "Object"
 }
 
-export function merge(from: JSValue | undefined, into: JSValue | undefined): JSValue | undefined {
+export function merge(from: JSValue, into: JSValue): JSValue {
 	if (from === null) {
 		return from
 	} else if (from === undefined) {
@@ -81,7 +81,7 @@ export function merge(from: JSValue | undefined, into: JSValue | undefined): JSV
 	}
 }
 
-export function update(from: JSValue | undefined, into: JSValue | undefined): JSValue | undefined {
+export function update(from: JSValue, into: JSValue): JSValue {
 	if (from === null) {
 		return from
 	} else if (from === undefined) {

@@ -5,7 +5,18 @@ import { logger } from "@libp2p/logger"
 
 import type { Action, Session, Snapshot, SignerCache, Awaitable } from "@canvas-js/interfaces"
 
-import { AbstractModelDB, Effect, ModelValue, ModelSchema, PrimaryKeyValue } from "@canvas-js/modeldb"
+import {
+	AbstractModelDB,
+	Effect,
+	ModelValue,
+	ModelSchema,
+	PropertyValue,
+	PrimaryKeyValue,
+	validateModelValue,
+	updateModelValues,
+	mergeModelValues,
+} from "@canvas-js/modeldb"
+
 import {
 	GossipLogConsumer,
 	MAX_MESSAGE_ID,
@@ -103,6 +114,46 @@ export class ExecutionContext {
 				upperBound = messageId
 			}
 		}
+	}
+
+	public setModelValue(model: string, value: ModelValue): void {
+		assert(this.db.models[model] !== undefined, "model not found")
+		validateModelValue(this.db.models[model], value)
+		const {
+			primaryKey: [primaryKey],
+		} = this.db.models[model]
+		const key = value[primaryKey] as string
+		assert(typeof key === "string", "expected value[primaryKey] to be a string")
+		this.modelEntries[model][key] = value
+	}
+
+	public deleteModelValue(model: string, key: string): void {
+		assert(this.db.models[model] !== undefined, "model not found")
+		this.modelEntries[model][key] = null
+	}
+
+	public async updateModelValue(model: string, value: Record<string, PropertyValue | undefined>): Promise<void> {
+		assert(this.db.models[model] !== undefined, "model not found")
+		const {
+			primaryKey: [primaryKey],
+		} = this.db.models[model]
+		const key = value[primaryKey] as string
+		const previousValue = await this.getModelValue(model, key)
+		const result = updateModelValues(value, previousValue)
+		validateModelValue(this.db.models[model], result)
+		this.modelEntries[model][key] = result
+	}
+
+	public async mergeModelValue(model: string, value: Record<string, PropertyValue | undefined>): Promise<void> {
+		assert(this.db.models[model] !== undefined, "model not found")
+		const {
+			primaryKey: [primaryKey],
+		} = this.db.models[model]
+		const key = value[primaryKey] as string
+		const previousValue = await this.getModelValue(model, key)
+		const result = mergeModelValues(value, previousValue)
+		validateModelValue(this.db.models[model], result)
+		this.modelEntries[model][key] = result
 	}
 }
 
