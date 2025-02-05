@@ -406,8 +406,18 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		}
 	}
 
-	public async isAncestor(id: string, ancestor: string, visited = new Set<string>()): Promise<boolean> {
-		return await new AncestorIndex(this.db).isAncestor(id, ancestor, visited)
+	public async isAncestor(root: string | string[], ancestor: string): Promise<boolean> {
+		const ids = Array.isArray(root) ? root : [root]
+		const visited = new Set<string>()
+		const ancestorIndex = new AncestorIndex(this.db)
+		for (const id of ids) {
+			const isAncestor = await ancestorIndex.isAncestor(id, ancestor, visited)
+			if (isAncestor) {
+				return true
+			}
+		}
+
+		return false
 	}
 
 	/**

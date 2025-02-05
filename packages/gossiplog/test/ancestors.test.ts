@@ -37,7 +37,7 @@ test("simulate a randomly partitioned network, logs on disk", async (t) => {
 	// const maxChainLength = 6
 	const maxMessageCount = 256
 	const maxChainLength = 5
-	await simulateRandomNetwork(t, topic, logs, maxMessageCount, maxChainLength)
+	await simulateRandomNetwork(t, logs, maxMessageCount, maxChainLength)
 })
 
 // test("simulate a randomly partitioned network, logs on postgres", async (t) => {
@@ -72,7 +72,6 @@ test("simulate a randomly partitioned network, logs on disk", async (t) => {
 
 export const simulateRandomNetwork = async (
 	t: ExecutionContext<unknown>,
-	topic: string,
 	logs: AbstractGossipLog<string>[],
 	maxMessageCount: number,
 	maxChainLength: number,
