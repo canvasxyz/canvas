@@ -88,14 +88,14 @@ export abstract class AbstractModelDB {
 	public async update<T extends ModelValue<any> = ModelValue<any>>(modelName: string, value: T) {
 		const key = this.models[modelName].primaryKey.map((key) => value[key])
 		const existingValue = await this.get<T>(modelName, key)
-		const updatedValue = updateModelValues(value, existingValue ?? {})
+		const updatedValue = updateModelValues(value, existingValue)
 		await this.apply([{ operation: "set", model: modelName, value: updatedValue }])
 	}
 
 	public async merge<T extends ModelValue<any> = ModelValue<any>>(modelName: string, value: T) {
 		const key = this.models[modelName].primaryKey.map((key) => value[key])
 		const existingValue = await this.get<T>(modelName, key)
-		const mergedValue = mergeModelValues(value, existingValue ?? {})
+		const mergedValue = mergeModelValues(value, existingValue)
 		await this.apply([{ operation: "set", model: modelName, value: mergedValue }])
 	}
 

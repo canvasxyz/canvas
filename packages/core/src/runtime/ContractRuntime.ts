@@ -138,7 +138,7 @@ export class ContractRuntime extends AbstractRuntime {
 					this.#context
 						.getModelValue(model, key)
 						.then((previousValue) => {
-							const mergedValue = updateModelValues(value, previousValue ?? {})
+							const mergedValue = updateModelValues(value, previousValue)
 							validateModelValue(this.db.models[model], mergedValue)
 							assert(this.#context !== null)
 							this.#context.modelEntries[model][key] = mergedValue
@@ -166,7 +166,7 @@ export class ContractRuntime extends AbstractRuntime {
 					this.#context
 						.getModelValue(model, key)
 						.then((previousValue) => {
-							const mergedValue = mergeModelValues(value, previousValue ?? {})
+							const mergedValue = mergeModelValues(value, previousValue)
 							validateModelValue(this.db.models[model], mergedValue)
 							assert(this.#context !== null)
 							this.#context.modelEntries[model][key] = mergedValue

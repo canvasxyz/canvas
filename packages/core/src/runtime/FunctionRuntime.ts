@@ -190,7 +190,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 						console.log(`db.update(${model}, ${key}): attempted to update a nonexistent value`)
 						return
 					}
-					const mergedValue = updateModelValues(value as ModelValue, modelValue ?? {})
+					const mergedValue = updateModelValues(value as ModelValue, modelValue)
 					validateModelValue(this.db.models[model], mergedValue)
 					this.#context.modelEntries[model][key] = mergedValue
 				} finally {
@@ -212,7 +212,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 						console.log(`db.merge(${model}, ${key}): attempted to merge into a nonexistent value`)
 						return
 					}
-					const mergedValue = mergeModelValues(value as ModelValue, modelValue ?? {})
+					const mergedValue = mergeModelValues(value as ModelValue, modelValue)
 					validateModelValue(this.db.models[model], mergedValue)
 					this.#context.modelEntries[model][key] = mergedValue
 				} finally {

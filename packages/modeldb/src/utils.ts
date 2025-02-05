@@ -1,4 +1,4 @@
-import { signalInvalidType, merge, update, JSONValue, assert } from "@canvas-js/utils"
+import { signalInvalidType, merge, update, JSONValue, assert, JSValue } from "@canvas-js/utils"
 
 import type {
 	IncludeExpression,
@@ -47,12 +47,15 @@ export function isRelationValue(value: unknown): value is RelationValue {
 // eslint-disable-next-line no-useless-escape
 export const namePattern = /^[a-zA-Z0-9$:_\-\.]+$/
 
-export function updateModelValues(from: ModelValue | undefined, into: ModelValue | undefined): ModelValue {
-	return update(from, into) as ModelValue
+export function updateModelValues(
+	from: Record<string, PropertyValue | undefined>,
+	into: ModelValue | null,
+): ModelValue {
+	return update(from, into ?? {}) as ModelValue
 }
 
-export function mergeModelValues(from: ModelValue | undefined, into: ModelValue | undefined): ModelValue {
-	return merge(from, into) as ModelValue
+export function mergeModelValues(from: Record<string, PropertyValue | undefined>, into: ModelValue | null): ModelValue {
+	return merge(from, into ?? {}) as ModelValue
 }
 
 export function* getModelsFromInclude(models: Model[], modelName: string, obj: IncludeExpression): Generator<string> {
@@ -85,17 +88,22 @@ export function isPrimitiveValue(value: unknown): value is PrimitiveValue {
 	)
 }
 
-export function validateModelValue(model: Model, value: ModelValue) {
+export function validateModelValue(model: Model, value: unknown): asserts value is ModelValue {
+	if (value === null || typeof value !== "object") {
+		throw new TypeError(`invalid ${model} value: expected object, got ${typeof value}`)
+	}
+
 	for (const property of model.properties) {
-		const propertyValue = value[property.name]
+		const { [property.name]: propertyValue } = value as Record<string, unknown>
 		if (propertyValue === undefined) {
 			throw new Error(`write to db.${model.name}: missing field "${property.name}"`)
 		}
+
 		validatePropertyValue(model.name, property, propertyValue)
 	}
 }
 
-const formatValue = (value: PropertyValue) => {
+const formatValue = (value: unknown) => {
 	let valueFormat
 	if (value === null) {
 		valueFormat = "null"
@@ -113,7 +121,11 @@ const formatValue = (value: PropertyValue) => {
 	return `${typeof value}: ${valueFormat}`
 }
 
-export function validatePropertyValue(modelName: string, property: Property, value: PropertyValue) {
+export function validatePropertyValue(
+	modelName: string,
+	property: Property,
+	value: unknown,
+): asserts value is PropertyValue {
 	if (property.kind === "primitive") {
 		if (property.nullable && value === null) {
 			return
