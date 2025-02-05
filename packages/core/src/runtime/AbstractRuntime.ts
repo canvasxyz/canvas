@@ -3,7 +3,7 @@ import { blake3 } from "@noble/hashes/blake3"
 import { bytesToHex } from "@noble/hashes/utils"
 import { logger } from "@libp2p/logger"
 
-import type { Action, Session, Snapshot, SignerCache } from "@canvas-js/interfaces"
+import type { Action, Session, Snapshot, SignerCache, Awaitable } from "@canvas-js/interfaces"
 
 import { AbstractModelDB, Effect, ModelValue, ModelSchema, PrimaryKeyValue } from "@canvas-js/modeldb"
 import {
@@ -209,6 +209,8 @@ export abstract class AbstractRuntime {
 
 	protected abstract execute(context: ExecutionContext): Promise<void | any>
 
+	public abstract close(): Awaitable<void>
+
 	public get db() {
 		assert(this.#db !== null, "internal error - expected this.#db !== null")
 		return this.#db
@@ -216,10 +218,6 @@ export abstract class AbstractRuntime {
 
 	public set db(db: AbstractModelDB) {
 		this.#db = db
-	}
-
-	public async close() {
-		await this.db.close()
 	}
 
 	public getConsumer(): GossipLogConsumer<Action | Session | Snapshot> {
