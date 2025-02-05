@@ -2,7 +2,7 @@ import type { AbstractModelDB, ModelSchema } from "@canvas-js/modeldb"
 import { assert } from "@canvas-js/utils"
 
 import { decodeClock } from "./clock.js"
-import { encodeId, MessageId } from "./ids.js"
+import { encodeId, MessageId } from "./MessageId.js"
 import { getAncestorClocks } from "./utils.js"
 
 export type AncestorRecord = { id: string; links: string[][] }

@@ -12,7 +12,9 @@ import {
 	MIN_MESSAGE_ID,
 	AbstractGossipLog,
 	SignedMessage,
+	MessageId,
 } from "@canvas-js/gossiplog"
+
 import { assert, mapValues } from "@canvas-js/utils"
 import { getRecordId, isAction, isSession, isSnapshot } from "../utils.js"
 
@@ -24,6 +26,7 @@ export class ExecutionContext {
 	// public readonly writes: Record<string, Effect> = {}
 
 	public readonly modelEntries: Record<string, Record<string, ModelValue | null>>
+	public readonly root: MessageId[]
 
 	constructor(
 		public readonly messageLog: AbstractGossipLog<Action | Session | Snapshot>,
@@ -31,6 +34,7 @@ export class ExecutionContext {
 		public readonly address: string,
 	) {
 		this.modelEntries = mapValues(messageLog.db.models, () => ({}))
+		this.root = signedMessage.message.parents.map((id) => MessageId.encode(id))
 	}
 
 	public get id() {
@@ -47,6 +51,10 @@ export class ExecutionContext {
 
 	public get db() {
 		return this.messageLog.db
+	}
+
+	public async isAncestor(ancestor: string | MessageId): Promise<boolean> {
+		return await this.messageLog.isAncestor(this.root, ancestor)
 	}
 }
 
@@ -264,6 +272,7 @@ export abstract class AbstractRuntime {
 		}
 
 		const address = signer.getAddressFromDid(did)
+		const executionContext = new ExecutionContext(messageLog, signedMessage, address)
 
 		const sessions = await this.db.query<{ message_id: string; expiration: number | null }>("$sessions", {
 			where: { public_key: signature.publicKey, did: did },
@@ -273,7 +282,7 @@ export abstract class AbstractRuntime {
 
 		let sessionId: string | null = null
 		for (const session of activeSessions) {
-			const isAncestor = await messageLog.isAncestor(message.parents, session.message_id)
+			const isAncestor = await executionContext.isAncestor(session.message_id)
 			if (isAncestor) {
 				sessionId = session.message_id
 			}
@@ -283,7 +292,6 @@ export abstract class AbstractRuntime {
 			throw new Error(`missing session ${signature.publicKey} for ${did}`)
 		}
 
-		const executionContext = new ExecutionContext(messageLog, signedMessage, address)
 		const result = await this.execute(executionContext)
 
 		const actionRecord: ActionRecord = { message_id: id, did, name, timestamp: context.timestamp }
@@ -340,21 +348,23 @@ export abstract class AbstractRuntime {
 	}
 
 	protected async getModelValue<T extends ModelValue = ModelValue>(
-		context: ExecutionContext,
+		executionContext: ExecutionContext,
 		model: string,
 		key: string,
 	): Promise<null | T> {
-		if (context.modelEntries[model] === undefined) {
-			throw new Error(`could not access model db.${model} inside runtime action ${context.message.payload.name}`)
+		if (executionContext.modelEntries[model] === undefined) {
+			throw new Error(
+				`could not access model db.${model} inside runtime action ${executionContext.message.payload.name}`,
+			)
 		}
 
-		if (context.modelEntries[model][key] !== undefined) {
-			return context.modelEntries[model][key] as T
+		if (executionContext.modelEntries[model][key] !== undefined) {
+			return executionContext.modelEntries[model][key] as T
 		}
 
 		const recordId = getRecordId(model, key)
 		const lowerBound = MIN_MESSAGE_ID
-		let upperBound = context.id
+		let upperBound = executionContext.id
 
 		// eslint-disable-next-line no-constant-condition
 		while (true) {
@@ -375,7 +385,7 @@ export abstract class AbstractRuntime {
 				return cbor.decode<T>(value)
 			}
 
-			const isAncestor = await context.messageLog.isAncestor(context.message.parents, messageId)
+			const isAncestor = await executionContext.isAncestor(messageId)
 			if (isAncestor) {
 				if (value === null) {
 					return null

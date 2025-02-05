@@ -1,7 +1,7 @@
 import type { Signature, Message } from "@canvas-js/interfaces"
 
 import { encodeSignedMessage, decodeSignedMessage } from "./schema.js"
-import { decodeId, getKey } from "./ids.js"
+import { decodeId, getKey } from "./MessageId.js"
 
 export type MessageSourceType = "pubsub" | "push" | "sync"
 export type MessageSource = { type: MessageSourceType; peer: string }
