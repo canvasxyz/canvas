@@ -3,7 +3,7 @@
 
 import { sha256 } from "@noble/hashes/sha256"
 import { base32hex } from "multiformats/bases/base32"
-import { encodeClock } from "./clock.js"
+import { encodeClock, decodeClock } from "./clock.js"
 
 export const KEY_LENGTH = 20
 export const ID_LENGTH = 32
@@ -21,3 +21,36 @@ export function getKey(clock: number, value: Uint8Array): Uint8Array {
 
 export const encodeId = (id: string) => base32hex.baseDecode(id)
 export const decodeId = (key: Uint8Array) => base32hex.baseEncode(key)
+
+export class MessageId {
+	public static create(clock: number, value: Uint8Array): MessageId {
+		const hash = sha256(value)
+		const key = new Uint8Array(KEY_LENGTH)
+		const encodingLength = encodeClock(key, clock)
+		key.set(hash.subarray(0, KEY_LENGTH - encodingLength), encodingLength)
+		const id = decodeId(key)
+		return new MessageId(id, key, clock)
+	}
+
+	public static decode(key: Uint8Array): MessageId {
+		const id = decodeId(key)
+		const [clock] = decodeClock(key)
+		return new MessageId(id, key, clock)
+	}
+
+	public static encode(id: string): MessageId {
+		const key = encodeId(id)
+		const [clock] = decodeClock(key)
+		return new MessageId(id, key, clock)
+	}
+
+	private constructor(public readonly id: string, public readonly key: Uint8Array, public readonly clock: number) {}
+
+	public equals(other: MessageId) {
+		return this.id === other.id
+	}
+
+	public toString(): string {
+		return this.id
+	}
+}
