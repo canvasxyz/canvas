@@ -80,7 +80,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 							primaryKey: [primaryKey],
 						} = this.db.models[model]
 						const target = isSelect ? (value as string) : ((value as ModelValue)[primaryKey] as string)
-						const modelValue = await this.getModelValue(this.#context, linkModel, linkPrimaryKey)
+						const modelValue = await this.#context.getModelValue(linkModel, linkPrimaryKey)
 						assert(modelValue !== null, `db.link(): link from a missing model ${linkModel}.get(${linkPrimaryKey})`)
 						const backlinkKey = params?.through ?? model
 						const backlinkProp = this.db.models[linkModel].properties.find((prop) => prop.name === backlinkKey)
@@ -107,7 +107,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 							primaryKey: [primaryKey],
 						} = this.db.models[model]
 						const target = isSelect ? (value as string) : ((value as ModelValue)[primaryKey] as string)
-						const modelValue = await this.getModelValue(this.#context, linkModel, linkPrimaryKey)
+						const modelValue = await this.#context.getModelValue(linkModel, linkPrimaryKey)
 						assert(modelValue !== null, `db.unlink(): called on a missing model ${linkModel}.get(${linkPrimaryKey})`)
 						const backlinkKey = params?.through ?? model
 						const backlinkProp = this.db.models[linkModel].properties.find((prop) => prop.name === backlinkKey)
@@ -136,7 +136,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 				await this.acquireLock()
 				try {
 					assert(this.#context !== null, "expected this.#context !== null")
-					const result = await this.getModelValue(this.#context, model, key)
+					const result = await this.#context.getModelValue(model, key)
 					return result as DeriveModelTypes<ModelsT>[T]
 				} finally {
 					this.releaseLock()
@@ -185,7 +185,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 					assert(primaryKey in value, `db.update(${model}): missing primary key ${primaryKey}`)
 					const key = (value as ModelValue)[primaryKey] as string
 					assert(typeof key === "string", `db.update(${model}): ${primaryKey} primary key`)
-					const modelValue = await this.getModelValue(this.#context, model, key)
+					const modelValue = await this.#context.getModelValue(model, key)
 					if (modelValue === null) {
 						console.log(`db.update(${model}, ${key}): attempted to update a nonexistent value`)
 						return
@@ -207,7 +207,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 					assert(primaryKey in value, `db.merge(${model}): missing primary key ${primaryKey}`)
 					assert(primaryKey !== null && primaryKey !== undefined, `db.merge(${model}): ${primaryKey} primary key`)
 					const key = (value as ModelValue)[primaryKey] as string
-					const modelValue = await this.getModelValue(this.#context, model, key)
+					const modelValue = await this.#context.getModelValue(model, key)
 					if (modelValue === null) {
 						console.log(`db.merge(${model}, ${key}): attempted to merge into a nonexistent value`)
 						return

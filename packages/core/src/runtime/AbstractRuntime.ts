@@ -18,6 +18,8 @@ import {
 import { assert, mapValues } from "@canvas-js/utils"
 import { getRecordId, isAction, isSession, isSnapshot } from "../utils.js"
 
+const getKeyHash = (key: string) => bytesToHex(blake3(key, { dkLen: 16 }))
+
 export class ExecutionContext {
 	// // recordId -> { version, value }
 	// public readonly reads: Record<string, { version: string | null; value: ModelValue | null }> = {}
@@ -55,6 +57,52 @@ export class ExecutionContext {
 
 	public async isAncestor(ancestor: string | MessageId): Promise<boolean> {
 		return await this.messageLog.isAncestor(this.root, ancestor)
+	}
+
+	public async getModelValue<T extends ModelValue = ModelValue>(model: string, key: string): Promise<null | T> {
+		if (this.modelEntries[model] === undefined) {
+			const { name } = this.message.payload
+			throw new Error(`could not access model db.${model} inside runtime action ${name}`)
+		}
+
+		if (this.modelEntries[model][key] !== undefined) {
+			return this.modelEntries[model][key] as T
+		}
+
+		const recordId = getRecordId(model, key)
+		const lowerBound = MIN_MESSAGE_ID
+		let upperBound = this.id
+
+		// eslint-disable-next-line no-constant-condition
+		while (true) {
+			const results = await this.db.query<WriteRecord>("$writes", {
+				where: { record_id: recordId, message_id: { gte: lowerBound, lt: upperBound } },
+				orderBy: { "record_id/message_id": "desc" },
+				limit: 1,
+			})
+
+			if (results.length === 0) {
+				return null
+			}
+
+			const [{ message_id: messageId, value }] = results
+
+			if (messageId === MIN_MESSAGE_ID) {
+				assert(value !== null, "expected snapshot write to be non-null")
+				return cbor.decode<T>(value)
+			}
+
+			const isAncestor = await this.isAncestor(messageId)
+			if (isAncestor) {
+				if (value === null) {
+					return null
+				} else {
+					return cbor.decode<null | T>(value)
+				}
+			} else {
+				upperBound = messageId
+			}
+		}
 	}
 }
 
@@ -345,56 +393,5 @@ export abstract class AbstractRuntime {
 		}
 
 		return result
-	}
-
-	protected async getModelValue<T extends ModelValue = ModelValue>(
-		executionContext: ExecutionContext,
-		model: string,
-		key: string,
-	): Promise<null | T> {
-		if (executionContext.modelEntries[model] === undefined) {
-			throw new Error(
-				`could not access model db.${model} inside runtime action ${executionContext.message.payload.name}`,
-			)
-		}
-
-		if (executionContext.modelEntries[model][key] !== undefined) {
-			return executionContext.modelEntries[model][key] as T
-		}
-
-		const recordId = getRecordId(model, key)
-		const lowerBound = MIN_MESSAGE_ID
-		let upperBound = executionContext.id
-
-		// eslint-disable-next-line no-constant-condition
-		while (true) {
-			const results = await this.db.query<WriteRecord>("$writes", {
-				where: { record_id: recordId, message_id: { gte: lowerBound, lt: upperBound } },
-				orderBy: { "record_id/message_id": "desc" },
-				limit: 1,
-			})
-
-			if (results.length === 0) {
-				return null
-			}
-
-			const [{ message_id: messageId, value }] = results
-
-			if (messageId === MIN_MESSAGE_ID) {
-				assert(value !== null, "expected snapshot write to be non-null")
-				return cbor.decode<T>(value)
-			}
-
-			const isAncestor = await executionContext.isAncestor(messageId)
-			if (isAncestor) {
-				if (value === null) {
-					return null
-				} else {
-					return cbor.decode<null | T>(value)
-				}
-			} else {
-				upperBound = messageId
-			}
-		}
 	}
 }

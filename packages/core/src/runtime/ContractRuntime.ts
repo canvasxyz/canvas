@@ -94,7 +94,7 @@ export class ContractRuntime extends AbstractRuntime {
 					assert(this.#context !== null, "expected this.#context !== null")
 					assert(typeof model === "string", 'expected typeof model === "string"')
 					assert(typeof key === "string", 'expected typeof key === "string"')
-					return this.getModelValue(this.#context, model, key)
+					return this.#context.getModelValue(model, key)
 				}),
 				set: vm.context.newFunction("set", (modelHandle, valueHandle) => {
 					assert(this.#context !== null, "expected this.#modelEntries !== null")
@@ -135,7 +135,8 @@ export class ContractRuntime extends AbstractRuntime {
 					const promise = vm.context.newPromise()
 					// TODO: Ensure concurrent merges into the same value don't create a race condition
 					// if the user doesn't call db.update() with await.
-					this.getModelValue(this.#context, model, key)
+					this.#context
+						.getModelValue(model, key)
 						.then((previousValue) => {
 							const mergedValue = updateModelValues(value, previousValue ?? {})
 							validateModelValue(this.db.models[model], mergedValue)
@@ -162,7 +163,8 @@ export class ContractRuntime extends AbstractRuntime {
 					const promise = vm.context.newPromise()
 					// TODO: Ensure concurrent merges into the same value don't create a race condition
 					// if the user doesn't call db.merge() with await.
-					this.getModelValue(this.#context, model, key)
+					this.#context
+						.getModelValue(model, key)
 						.then((previousValue) => {
 							const mergedValue = mergeModelValues(value, previousValue ?? {})
 							validateModelValue(this.db.models[model], mergedValue)
