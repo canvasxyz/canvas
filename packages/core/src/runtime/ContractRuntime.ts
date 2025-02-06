@@ -103,12 +103,6 @@ export class ContractRuntime extends AbstractRuntime {
 					const value = this.vm.unwrapValue(valueHandle) as ModelValue
 					this.#context.setModelValue(model, value)
 				}),
-				create: vm.context.newFunction("create", (modelHandle, valueHandle) => {
-					assert(this.#context !== null, "expected this.#context !== null")
-					const model = vm.context.getString(modelHandle)
-					const value = this.vm.unwrapValue(valueHandle) as ModelValue
-					this.#context.setModelValue(model, value)
-				}),
 				update: vm.context.newFunction("update", (modelHandle, valueHandle) => {
 					assert(this.#context !== null, "expected this.#context !== null")
 					const model = vm.context.getString(modelHandle)

@@ -4,7 +4,7 @@ import type { SignerCache } from "@canvas-js/interfaces"
 import { ModelSchema, ModelValue, validateModelValue, DeriveModelTypes } from "@canvas-js/modeldb"
 import { assert } from "@canvas-js/utils"
 
-import { ActionContext, ActionImplementation, Contract, ModelAPI, Chainable } from "../types.js"
+import { ActionContext, ActionImplementation, Contract, ModelAPI } from "../types.js"
 import { ExecutionContext } from "../ExecutionContext.js"
 import { AbstractRuntime } from "./AbstractRuntime.js"
 
@@ -54,76 +54,6 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 	) {
 		super()
 
-		// Extend the return type of set(), merge(), or update() to allow chaining a link() call.
-		const getChainableMethod =
-			<A extends string, B, ModelTypes extends DeriveModelTypes<ModelsT>>(
-				updater: (model: A, value: B) => Promise<void>,
-				isSelect?: boolean,
-			): ((model: A, value: B) => Chainable<ModelTypes>) =>
-			(model, value) => {
-				const promise = updater(model, value) as Chainable<ModelTypes>
-
-				// Create a backlink from the model `linkModel` where pk=`linkPrimaryKey`
-				// to point at the model we just created or updated.
-				promise.link = async (linkModel: string, linkPrimaryKey: string, params?: { through: string }) => {
-					await this.acquireLock()
-					try {
-						assert(this.#context !== null, "expected this.#context !== null")
-						const {
-							primaryKey: [primaryKey],
-						} = this.db.models[model]
-						const target = isSelect ? (value as string) : ((value as ModelValue)[primaryKey] as string)
-						const modelValue = await this.#context.getModelValue(linkModel, linkPrimaryKey)
-						assert(modelValue !== null, `db.link(): link from a missing model ${linkModel}.get(${linkPrimaryKey})`)
-						const backlinkKey = params?.through ?? model
-						const backlinkProp = this.db.models[linkModel].properties.find((prop) => prop.name === backlinkKey)
-						assert(backlinkProp !== undefined, `db.link(): link from ${linkModel} used missing property ${backlinkKey}`)
-						if (backlinkProp.kind === "relation") {
-							const current = (modelValue[backlinkKey] ?? []) as string[]
-							modelValue[backlinkKey] = current.includes(target) ? current : [...current, target]
-						} else {
-							throw new Error(`db.link(): link from ${linkModel} ${backlinkKey} must be a relation`)
-						}
-						if (this.db.models[linkModel] === undefined) throw new Error(`db.link(): no such model "${linkModel}"`)
-						validateModelValue(this.db.models[linkModel], modelValue)
-						this.#context.modelEntries[linkModel][linkPrimaryKey] = modelValue
-					} finally {
-						this.releaseLock()
-					}
-				}
-
-				promise.unlink = async (linkModel: string, linkPrimaryKey: string, params?: { through: string }) => {
-					await this.acquireLock()
-					try {
-						assert(this.#context !== null, "expected this.#context !== null")
-						const {
-							primaryKey: [primaryKey],
-						} = this.db.models[model]
-						const target = isSelect ? (value as string) : ((value as ModelValue)[primaryKey] as string)
-						const modelValue = await this.#context.getModelValue(linkModel, linkPrimaryKey)
-						assert(modelValue !== null, `db.unlink(): called on a missing model ${linkModel}.get(${linkPrimaryKey})`)
-						const backlinkKey = params?.through ?? model
-						const backlinkProp = this.db.models[linkModel].properties.find((prop) => prop.name === backlinkKey)
-						assert(
-							backlinkProp !== undefined,
-							`db.unlink(): called on ${linkModel} used missing property ${backlinkKey}`,
-						)
-						if (backlinkProp.kind === "relation") {
-							const current = (modelValue[backlinkKey] ?? []) as string[]
-							modelValue[backlinkKey] = current.filter((item) => item !== target)
-						} else {
-							throw new Error(`db.unlink(): link from ${linkModel} ${backlinkKey} must be a relation`)
-						}
-						validateModelValue(this.db.models[linkModel], modelValue)
-						this.#context.modelEntries[linkModel][linkPrimaryKey] = modelValue
-					} finally {
-						this.releaseLock()
-					}
-				}
-
-				return promise
-			}
-
 		this.#db = {
 			get: async <T extends keyof DeriveModelTypes<ModelsT> & string>(model: T, key: string) => {
 				await this.acquireLock()
@@ -135,8 +65,8 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 					this.releaseLock()
 				}
 			},
-			select: getChainableMethod(async (model, key: string) => {}, true),
-			set: getChainableMethod(async (model, value) => {
+
+			set: async (model, value) => {
 				await this.acquireLock()
 				try {
 					assert(this.#context !== null, "expected this.#context !== null")
@@ -144,17 +74,8 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 				} finally {
 					this.releaseLock()
 				}
-			}),
-			create: getChainableMethod(async (model, value) => {
-				await this.acquireLock()
-				try {
-					assert(this.#context !== null, "expected this.#context !== null")
-					this.#context.setModelValue(model, value)
-				} finally {
-					this.releaseLock()
-				}
-			}),
-			update: getChainableMethod(async (model, value) => {
+			},
+			update: async (model, value) => {
 				await this.acquireLock()
 				try {
 					assert(this.#context !== null, "expected this.#context !== null")
@@ -162,8 +83,8 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 				} finally {
 					this.releaseLock()
 				}
-			}),
-			merge: getChainableMethod(async (model, value) => {
+			},
+			merge: async (model, value) => {
 				await this.acquireLock()
 				try {
 					assert(this.#context !== null, "expected this.#context !== null")
@@ -171,7 +92,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 				} finally {
 					this.releaseLock()
 				}
-			}),
+			},
 			delete: async (model: string, key: string) => {
 				await this.acquireLock()
 				try {
