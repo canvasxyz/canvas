@@ -71,6 +71,7 @@ export class ContractRuntime extends AbstractRuntime {
 
 	#context: ExecutionContext | null = null
 	#thisHandle: QuickJSHandle | null = null
+	#transaction: boolean = false
 
 	constructor(
 		public readonly topic: string,
@@ -85,54 +86,41 @@ export class ContractRuntime extends AbstractRuntime {
 				get: vm.wrapFunction((model, key) => {
 					assert(typeof model === "string", 'expected typeof model === "string"')
 					assert(typeof key === "string", 'expected typeof key === "string"')
-					return this.context.getModelValue(model, key)
-				}),
-				set: vm.context.newFunction("set", (modelHandle, valueHandle) => {
-					const model = vm.context.getString(modelHandle)
-					const value = this.vm.unwrapValue(valueHandle) as ModelValue
-					this.context.setModelValue(model, value)
-				}),
-				update: vm.context.newFunction("update", (modelHandle, valueHandle) => {
-					const model = vm.context.getString(modelHandle)
-					const value = this.vm.unwrapValue(valueHandle) as ModelValue
-
-					const promise = vm.context.newPromise()
-
-					// TODO: Ensure concurrent merges into the same value don't create a race condition
-					// if the user doesn't call db.update() with await.
-					this.context
-						.updateModelValue(model, value)
-						.then(() => promise.resolve())
-						.catch((err) => promise.reject())
-
-					promise.settled.then(vm.runtime.executePendingJobs)
-					return promise.handle
-				}),
-				merge: vm.context.newFunction("merge", (modelHandle, valueHandle) => {
-					const model = vm.context.getString(modelHandle)
-					const value = this.vm.unwrapValue(valueHandle) as ModelValue
-
-					const promise = vm.context.newPromise()
-
-					// TODO: Ensure concurrent merges into the same value don't create a race condition
-					// if the user doesn't call db.update() with await.
-					this.context
-						.mergeModelValue(model, value)
-						.then(() => promise.resolve())
-						.catch((err) => promise.reject())
-
-					promise.settled.then(vm.runtime.executePendingJobs)
-					return promise.handle
+					return this.context.getModelValue(model, key, this.#transaction)
 				}),
 
-				delete: vm.context.newFunction("delete", (modelHandle, keyHandle) => {
-					const model = vm.context.getString(modelHandle)
-					const key = vm.context.getString(keyHandle)
-					this.context.deleteModelValue(model, key)
+				set: vm.wrapFunction((model, value) => {
+					assert(typeof model === "string", 'expected typeof model === "string"')
+					this.context.setModelValue(model, value as ModelValue, this.#transaction)
+				}),
+
+				update: vm.wrapFunction(async (model, value) => {
+					assert(typeof model === "string", 'expected typeof model === "string"')
+					await this.context.updateModelValue(model, value as ModelValue, this.#transaction)
+				}),
+
+				merge: vm.wrapFunction(async (model, value) => {
+					assert(typeof model === "string", 'expected typeof model === "string"')
+					await this.context.mergeModelValue(model, value as ModelValue, this.#transaction)
+				}),
+
+				delete: vm.wrapFunction((model, key) => {
+					assert(typeof model === "string", 'expected typeof model === "string"')
+					assert(typeof key === "string", 'expected typeof key === "string"')
+					this.context.deleteModelValue(model, key, this.#transaction)
 				}),
 
 				transaction: vm.context.newFunction("transaction", (callbackHandle) => {
-					this.vm.call(callbackHandle, this.thisHandle, [])
+					const promise = vm.context.newPromise()
+
+					this.#transaction = true
+					this.vm
+						.callAsync(callbackHandle, this.thisHandle, [])
+						.then(promise.resolve, promise.reject)
+						.finally(() => void (this.#transaction = false))
+
+					promise.settled.then(vm.runtime.executePendingJobs)
+					return promise.handle
 				}),
 			})
 			.consume(vm.cache)
@@ -179,6 +167,8 @@ export class ContractRuntime extends AbstractRuntime {
 			blockhash: blockhash ?? null,
 			timestamp,
 		})
+
+		this.vm.context.setProp(thisHandle, "db", this.#databaseAPI)
 
 		const argHandles = Array.isArray(args) ? args.map(this.vm.wrapValue) : [this.vm.wrapValue(args)]
 

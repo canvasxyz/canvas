@@ -26,6 +26,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 	}
 
 	#context: ExecutionContext | null = null
+	#transaction: boolean = false
 	#thisValue: ActionContext<DeriveModelTypes<ModelsT>> | null = null
 	#queue = new PQueue({ concurrency: 1 })
 	#db: ModelAPI<DeriveModelTypes<ModelsT>>
@@ -40,17 +41,24 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 
 		this.#db = {
 			get: async <T extends keyof DeriveModelTypes<ModelsT> & string>(model: T, key: string) => {
-				const result = await this.#queue.add(() => this.context.getModelValue<DeriveModelTypes<ModelsT>[T]>(model, key))
+				const result = await this.#queue.add(() =>
+					this.context.getModelValue<DeriveModelTypes<ModelsT>[T]>(model, key, this.#transaction),
+				)
 				return result ?? null
 			},
 
-			set: (model, value) => this.#queue.add(() => this.context.setModelValue(model, value)),
-			update: (model, value) => this.#queue.add(() => this.context.updateModelValue(model, value)),
-			merge: (model, value) => this.#queue.add(() => this.context.mergeModelValue(model, value)),
-			delete: (model, key) => this.#queue.add(() => this.context.deleteModelValue(model, key)),
+			set: (model, value) => this.#queue.add(() => this.context.setModelValue(model, value, this.#transaction)),
+			update: (model, value) => this.#queue.add(() => this.context.updateModelValue(model, value, this.#transaction)),
+			merge: (model, value) => this.#queue.add(() => this.context.mergeModelValue(model, value, this.#transaction)),
+			delete: (model, key) => this.#queue.add(() => this.context.deleteModelValue(model, key, this.#transaction)),
 
 			transaction: async (callback) => {
-				await callback.apply(this.thisValue, [])
+				try {
+					this.#transaction = true
+					await callback.apply(this.thisValue, [])
+				} finally {
+					this.#transaction = false
+				}
 			},
 		}
 	}

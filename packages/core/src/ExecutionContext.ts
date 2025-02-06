@@ -48,7 +48,11 @@ export class ExecutionContext {
 		return await this.messageLog.isAncestor(this.root, ancestor)
 	}
 
-	public async getModelValue<T extends ModelValue = ModelValue>(model: string, key: string): Promise<null | T> {
+	public async getModelValue<T extends ModelValue = ModelValue>(
+		model: string,
+		key: string,
+		transaction: boolean,
+	): Promise<null | T> {
 		if (this.modelEntries[model] === undefined) {
 			const { name } = this.message.payload
 			throw new Error(`could not access model db.${model} inside runtime action ${name}`)
@@ -94,7 +98,7 @@ export class ExecutionContext {
 		}
 	}
 
-	public setModelValue(model: string, value: ModelValue): void {
+	public setModelValue(model: string, value: ModelValue, transaction: boolean): void {
 		assert(this.db.models[model] !== undefined, "model not found")
 		validateModelValue(this.db.models[model], value)
 		const {
@@ -105,30 +109,38 @@ export class ExecutionContext {
 		this.modelEntries[model][key] = value
 	}
 
-	public deleteModelValue(model: string, key: string): void {
+	public deleteModelValue(model: string, key: string, transaction: boolean): void {
 		assert(this.db.models[model] !== undefined, "model not found")
 		this.modelEntries[model][key] = null
 	}
 
-	public async updateModelValue(model: string, value: Record<string, PropertyValue | undefined>): Promise<void> {
+	public async updateModelValue(
+		model: string,
+		value: Record<string, PropertyValue | undefined>,
+		transaction: boolean,
+	): Promise<void> {
 		assert(this.db.models[model] !== undefined, "model not found")
 		const {
 			primaryKey: [primaryKey],
 		} = this.db.models[model]
 		const key = value[primaryKey] as string
-		const previousValue = await this.getModelValue(model, key)
+		const previousValue = await this.getModelValue(model, key, transaction)
 		const result = updateModelValues(value, previousValue)
 		validateModelValue(this.db.models[model], result)
 		this.modelEntries[model][key] = result
 	}
 
-	public async mergeModelValue(model: string, value: Record<string, PropertyValue | undefined>): Promise<void> {
+	public async mergeModelValue(
+		model: string,
+		value: Record<string, PropertyValue | undefined>,
+		transaction: boolean,
+	): Promise<void> {
 		assert(this.db.models[model] !== undefined, "model not found")
 		const {
 			primaryKey: [primaryKey],
 		} = this.db.models[model]
 		const key = value[primaryKey] as string
-		const previousValue = await this.getModelValue(model, key)
+		const previousValue = await this.getModelValue(model, key, transaction)
 		const result = mergeModelValues(value, previousValue)
 		validateModelValue(this.db.models[model], result)
 		this.modelEntries[model][key] = result
