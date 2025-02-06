@@ -92,19 +92,16 @@ export class ContractRuntime extends AbstractRuntime {
 		this.#databaseAPI = vm
 			.wrapObject({
 				get: vm.wrapFunction((model, key) => {
-					assert(this.#context !== null, "expected this.#context !== null")
 					assert(typeof model === "string", 'expected typeof model === "string"')
 					assert(typeof key === "string", 'expected typeof key === "string"')
-					return this.#context.getModelValue(model, key)
+					return this.context.getModelValue(model, key)
 				}),
 				set: vm.context.newFunction("set", (modelHandle, valueHandle) => {
-					assert(this.#context !== null, "expected this.#context !== null")
 					const model = vm.context.getString(modelHandle)
 					const value = this.vm.unwrapValue(valueHandle) as ModelValue
-					this.#context.setModelValue(model, value)
+					this.context.setModelValue(model, value)
 				}),
 				update: vm.context.newFunction("update", (modelHandle, valueHandle) => {
-					assert(this.#context !== null, "expected this.#context !== null")
 					const model = vm.context.getString(modelHandle)
 					const value = this.vm.unwrapValue(valueHandle) as ModelValue
 
@@ -112,7 +109,7 @@ export class ContractRuntime extends AbstractRuntime {
 
 					// TODO: Ensure concurrent merges into the same value don't create a race condition
 					// if the user doesn't call db.update() with await.
-					this.#context
+					this.context
 						.updateModelValue(model, value)
 						.then(() => promise.resolve())
 						.catch((err) => promise.reject())
@@ -121,7 +118,6 @@ export class ContractRuntime extends AbstractRuntime {
 					return promise.handle
 				}),
 				merge: vm.context.newFunction("merge", (modelHandle, valueHandle) => {
-					assert(this.#context !== null, "expected this.#context !== null")
 					const model = vm.context.getString(modelHandle)
 					const value = this.vm.unwrapValue(valueHandle) as ModelValue
 
@@ -129,7 +125,7 @@ export class ContractRuntime extends AbstractRuntime {
 
 					// TODO: Ensure concurrent merges into the same value don't create a race condition
 					// if the user doesn't call db.update() with await.
-					this.#context
+					this.context
 						.mergeModelValue(model, value)
 						.then(() => promise.resolve())
 						.catch((err) => promise.reject())
@@ -139,10 +135,9 @@ export class ContractRuntime extends AbstractRuntime {
 				}),
 
 				delete: vm.context.newFunction("delete", (modelHandle, keyHandle) => {
-					assert(this.#context !== null, "expected this.#context !== null")
 					const model = vm.context.getString(modelHandle)
 					const key = vm.context.getString(keyHandle)
-					this.#context.deleteModelValue(model, key)
+					this.context.deleteModelValue(model, key)
 				}),
 			})
 			.consume(vm.cache)
@@ -155,6 +150,11 @@ export class ContractRuntime extends AbstractRuntime {
 
 	public get actionNames() {
 		return Object.keys(this.actions)
+	}
+
+	private get context() {
+		assert(this.#context !== null, "expected this.#context !== null")
+		return this.#context
 	}
 
 	protected async execute(context: ExecutionContext): Promise<void | any> {
@@ -173,8 +173,6 @@ export class ContractRuntime extends AbstractRuntime {
 			throw new Error(`invalid action name: ${name}`)
 		}
 
-		this.#context = context
-
 		const ctxHandle = this.vm.wrapValue({
 			id: context.id,
 			publicKey,
@@ -187,6 +185,7 @@ export class ContractRuntime extends AbstractRuntime {
 		const argHandles = Array.isArray(args) ? args.map(this.vm.wrapValue) : [this.vm.wrapValue(args)]
 
 		try {
+			this.#context = context
 			const result = await this.vm.callAsync(actionHandle, ctxHandle, [this.#databaseAPI, ...argHandles])
 
 			return result.consume((handle) => {

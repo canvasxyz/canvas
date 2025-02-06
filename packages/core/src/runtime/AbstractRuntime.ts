@@ -13,7 +13,7 @@ import {
 	SignedMessage,
 } from "@canvas-js/gossiplog"
 
-import { assert, mapValues } from "@canvas-js/utils"
+import { assert } from "@canvas-js/utils"
 
 import { ExecutionContext } from "../ExecutionContext.js"
 import { getRecordId, isAction, isSession, isSnapshot } from "../utils.js"
@@ -50,6 +50,7 @@ export abstract class AbstractRuntime {
 	protected static effectsModel = {
 		$writes: {
 			$primary: "record_id/message_id",
+			$indexes: ["record_id/csx/message_id"],
 			record_id: "string",
 			message_id: "string",
 			value: "bytes?",
@@ -62,17 +63,15 @@ export abstract class AbstractRuntime {
 			writer_id: "string",
 			record_id: "string",
 		},
-
-		// $records: { id: "primary", model: "string", key: "bytes" },
 	} satisfies ModelSchema
 
-	// protected static revertModel = {
-	// 	$revert_slices: {
-	// 		$primary: "effect_id/cause_id",
-	// 		cause_id: "string",
-	// 		effect_id: "primary",
-	// 	},
-	// } satisfies ModelSchema
+	protected static revertModel = {
+		$revert_triggers: {
+			$primary: "effect_id/cause_id",
+			effect_id: "string",
+			cause_id: "string",
+		},
+	} satisfies ModelSchema
 
 	protected static sessionsModel = {
 		$sessions: {
@@ -164,7 +163,7 @@ export abstract class AbstractRuntime {
 					record_id: recordId,
 					message_id: MIN_MESSAGE_ID,
 					value: value,
-					csx: null,
+					csx: 0,
 				})
 			}
 		}

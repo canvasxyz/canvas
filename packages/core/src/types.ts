@@ -29,6 +29,8 @@ export type ModelAPI<ModelTypes extends Record<string, ModelValue>> = {
 	update: <T extends keyof ModelTypes & string>(model: T, value: Partial<ModelTypes[T]>) => Promise<void>
 	merge: <T extends keyof ModelTypes & string>(model: T, value: Partial<ModelTypes[T]>) => Promise<void>
 	delete: <T extends keyof ModelTypes & string>(model: T, key: string) => Promise<void>
+
+	transaction: (callback: () => Awaitable<void>) => Promise<void>
 }
 
 export type ActionContext<T extends Record<string, ModelValue>> = {
