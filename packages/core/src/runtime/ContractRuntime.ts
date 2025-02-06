@@ -79,6 +79,7 @@ export class ContractRuntime extends AbstractRuntime {
 	readonly #databaseAPI: QuickJSHandle
 
 	#context: ExecutionContext | null = null
+	#thisHandle: QuickJSHandle | null = null
 
 	constructor(
 		public readonly topic: string,
@@ -139,6 +140,10 @@ export class ContractRuntime extends AbstractRuntime {
 					const key = vm.context.getString(keyHandle)
 					this.context.deleteModelValue(model, key)
 				}),
+
+				transaction: vm.context.newFunction("transaction", (callbackHandle) => {
+					this.vm.call(callbackHandle, this.thisHandle, [])
+				}),
 			})
 			.consume(vm.cache)
 	}
@@ -157,6 +162,11 @@ export class ContractRuntime extends AbstractRuntime {
 		return this.#context
 	}
 
+	private get thisHandle() {
+		assert(this.#thisHandle !== null, "expected this.#thisHandle !== null")
+		return this.#thisHandle
+	}
+
 	protected async execute(context: ExecutionContext): Promise<void | any> {
 		const { publicKey } = context.signature
 		const { address } = context
@@ -168,12 +178,11 @@ export class ContractRuntime extends AbstractRuntime {
 		} = context.message.payload
 
 		const actionHandle = this.actions[name]
-
 		if (actionHandle === undefined) {
 			throw new Error(`invalid action name: ${name}`)
 		}
 
-		const ctxHandle = this.vm.wrapValue({
+		const thisHandle = this.vm.wrapValue({
 			id: context.id,
 			publicKey,
 			did,
@@ -186,19 +195,14 @@ export class ContractRuntime extends AbstractRuntime {
 
 		try {
 			this.#context = context
-			const result = await this.vm.callAsync(actionHandle, ctxHandle, [this.#databaseAPI, ...argHandles])
-
-			return result.consume((handle) => {
-				if (this.vm.context.typeof(handle) === "undefined") {
-					return undefined
-				} else {
-					return this.vm.unwrapValue(result)
-				}
-			})
+			this.#thisHandle = thisHandle
+			const result = await this.vm.callAsync(actionHandle, thisHandle, [this.#databaseAPI, ...argHandles])
+			return result.consume((handle) => this.vm.unwrapValue(handle))
 		} finally {
 			argHandles.map((handle: QuickJSHandle) => handle.dispose())
-			ctxHandle.dispose()
+			thisHandle.dispose()
 			this.#context = null
+			this.#thisHandle = null
 		}
 	}
 }

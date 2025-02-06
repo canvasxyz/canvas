@@ -121,7 +121,6 @@ export class Canvas<
 		}
 
 		const db = messageLog.db
-		runtime.db = db
 
 		if (config.reset) {
 			for (const modelName of Object.keys({ ...config.schema, ...runtime.schema, ...AbstractGossipLog.schema })) {
@@ -220,7 +219,7 @@ export class Canvas<
 		private readonly runtime: Runtime,
 	) {
 		super()
-		this.db = runtime.db
+		this.db = messageLog.db
 
 		this.messageLog.addEventListener("message", (event) => this.safeDispatchEvent("message", event))
 		this.messageLog.addEventListener("commit", (event) => this.safeDispatchEvent("commit", event))
