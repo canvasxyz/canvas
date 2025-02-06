@@ -57,23 +57,14 @@ export class ContractRuntime extends AbstractRuntime {
 			return handle.consume(vm.cache)
 		})
 
-		// TODO: Validate that models satisfies ModelSchema
-		const mergeHandles: Record<string, QuickJSHandle> = {}
-
 		const modelSchema: ModelSchema = mapValues(modelHandles, (handle) => handle.consume(vm.context.dump))
 		assert(
 			Object.keys(modelSchema).every((key) => !key.startsWith("$")),
 			"contract model names cannot start with '$'",
 		)
 
-		const cleanupSetupHandles = () => {
-			for (const handle of Object.values(mergeHandles)) {
-				handle.dispose()
-			}
-		}
-
 		const schema = AbstractRuntime.getModelSchema(modelSchema)
-		return new ContractRuntime(topic, signers, schema, vm, actions, cleanupSetupHandles)
+		return new ContractRuntime(topic, signers, schema, vm, actions)
 	}
 
 	readonly #databaseAPI: QuickJSHandle
@@ -86,7 +77,6 @@ export class ContractRuntime extends AbstractRuntime {
 		public readonly schema: ModelSchema,
 		public readonly vm: VM,
 		public readonly actions: Record<string, QuickJSHandle>,
-		private disposeSetupHandles: () => void,
 	) {
 		super()
 		this.#databaseAPI = vm
@@ -149,7 +139,6 @@ export class ContractRuntime extends AbstractRuntime {
 	}
 
 	public close() {
-		this.disposeSetupHandles()
 		this.vm.dispose()
 	}
 
