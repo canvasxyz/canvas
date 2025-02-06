@@ -1,5 +1,6 @@
 import type { DeriveModelTypes, ModelSchema, ModelValue } from "@canvas-js/modeldb"
 import type { Awaitable } from "@canvas-js/interfaces"
+import { RelativePosition } from "yjs"
 
 export type { ModelValue, ModelSchema, DeriveModelTypes, DeriveModelType } from "@canvas-js/modeldb"
 
@@ -47,19 +48,19 @@ export type ModelAPI<ModelTypes extends Record<string, ModelValue>> = {
 	yjsInsert: <T extends keyof ModelTypes & string>(
 		model: T,
 		key: string,
-		index: number,
+		pos: RelativePosition,
 		content: string,
 	) => Promise<void>
 	yjsDelete: <T extends keyof ModelTypes & string>(
 		model: T,
 		key: string,
-		index: number,
+		pos: RelativePosition,
 		length: number,
 	) => Promise<void>
 	yjsFormat: <T extends keyof ModelTypes & string>(
 		model: T,
 		key: string,
-		index: number,
+		pos: RelativePosition,
 		length: number,
 		formattingAttributes: Record<string, string>,
 	) => Promise<void>

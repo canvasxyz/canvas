@@ -9,6 +9,7 @@ import { SIWESigner, Eip712Signer } from "@canvas-js/chain-ethereum"
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
 import { Canvas, Config } from "@canvas-js/core"
 import { assert } from "@canvas-js/utils"
+import * as Y from "yjs"
 
 const contract = `
 export const models = {
@@ -508,8 +509,8 @@ test("create a contract with a yjs text table", async (t) => {
 				posts: { id: "primary", content: "yjs-text" },
 			},
 			actions: {
-				postInsert: (db, { key, index, content }: { key: string; index: number; content: string }) => {
-					db.yjsInsert("posts", key, index, content)
+				postInsert: (db, { key, pos, content }: { key: string; pos: Y.RelativePosition; content: string }) => {
+					db.yjsInsert("posts", key, pos, content)
 				},
 			},
 		},
@@ -524,62 +525,25 @@ test("create a contract with a yjs text table", async (t) => {
 
 	// call an action that updates the yjs-text item
 	// when you call a yjs action, it will automatically create the table if it doesn't exist
-	const message_1 = await app.actions.postInsert({ key: post1Id, index: 0, content: "hello" })
-
-	t.deepEqual(await app.db.query("posts:operations"), [
-		{
-			record_id: post1Id,
-			operation_id: `${post1Id}/${message_1.id}`,
-			message_id: message_1.id,
-			operations: [
-				{
-					content: "hello",
-					index: 0,
-					type: "yjsInsert",
-				},
-			],
-		},
-	])
-
-	t.deepEqual(await app.db.query("posts:state"), [
-		{
-			id: post1Id,
-			content: [{ insert: "hello" }],
-		},
-	])
+	const ytext1 = new Y.Doc().getText()
+	await app.actions.postInsert({
+		key: post1Id,
+		pos: Y.createRelativePositionFromTypeIndex(ytext1, 0),
+		content: "hello",
+	})
 
 	// call another action that updates the yjs-text item
-	const message_2 = await app.actions.postInsert({ key: post1Id, index: 6, content: " world" })
+	const ytext2 = await app.messageLog.getYText("posts", post1Id)
+	t.is(ytext2?.toJSON(), "hello")
 
-	// there should be two entries in the operations table now
-	t.deepEqual(await app.db.query("posts:operations"), [
-		{
-			record_id: post1Id,
-			operation_id: `${post1Id}/${message_1.id}`,
-			message_id: message_1.id,
-			operations: [
-				{
-					content: "hello",
-					index: 0,
-					type: "yjsInsert",
-				},
-			],
-		},
-		{
-			record_id: post1Id,
-			operation_id: `${post1Id}/${message_2.id}`,
-			message_id: message_2.id,
-			operations: [{ content: " world", index: 6, type: "yjsInsert" }],
-		},
-	])
+	await app.actions.postInsert({
+		key: post1Id,
+		pos: Y.createRelativePositionFromTypeIndex(ytext2!, 5),
+		content: " world",
+	})
 
-	// the results of the two inserts should be combined
-	t.deepEqual(await app.db.query("posts:state"), [
-		{
-			id: post1Id,
-			content: [{ insert: "hello world" }],
-		},
-	])
+	const ytext3_1 = await app.messageLog.getYText("posts", post1Id)
+	t.is(ytext3_1?.toJSON(), "hello world")
 
 	// initialize another app with the same config
 	const app2 = await Canvas.initialize(config)
@@ -587,62 +551,28 @@ test("create a contract with a yjs text table", async (t) => {
 	// sync app -> app2
 	await app.messageLog.serve((source) => app2.messageLog.sync(source))
 
-	// assert that app2 now has the same posts data as app
-	t.deepEqual(await app2.db.query("posts:operations"), [
-		{
-			record_id: post1Id,
-			operation_id: `${post1Id}/${message_1.id}`,
-			message_id: message_1.id,
-			operations: [
-				{
-					content: "hello",
-					index: 0,
-					type: "yjsInsert",
-				},
-			],
-		},
-		{
-			record_id: post1Id,
-			operation_id: `${post1Id}/${message_2.id}`,
-			message_id: message_2.id,
-			operations: [{ content: " world", index: 6, type: "yjsInsert" }],
-		},
-	])
-
-	// the results of the two inserts should be combined
-	t.deepEqual(await app2.db.query("posts:state"), [
-		{
-			id: post1Id,
-			content: [{ insert: "hello world" }],
-		},
-	])
+	const ytext3_2 = await app2.messageLog.getYText("posts", post1Id)
+	t.is(ytext3_2?.toJSON(), "hello world")
 
 	// apply an action on app
-	await app.actions.postInsert({ key: post1Id, index: 11, content: "!" })
+	await app.actions.postInsert({
+		key: post1Id,
+		pos: Y.createRelativePositionFromTypeIndex(ytext3_1!, 10),
+		content: "!",
+	})
 
 	// concurrently apply an action on app2
-	await app2.actions.postInsert({ key: post1Id, index: 11, content: "?" })
+	await app2.actions.postInsert({
+		key: post1Id,
+		pos: Y.createRelativePositionFromTypeIndex(ytext3_2!, 10),
+		content: "?",
+	})
 
-	// sync app -> app2
 	await app.messageLog.serve((source) => app2.messageLog.sync(source))
-
-	// assert that app2 contains both changes
-	t.deepEqual(await app2.db.query("posts:state"), [
-		{
-			id: post1Id,
-			content: [{ insert: "hello world!?" }],
-		},
-	])
-
-	// sync app2 -> app
 	await app2.messageLog.serve((source) => app.messageLog.sync(source))
 
 	// assert that app contains both changes
-	// and that they are the same as those in app2
-	t.deepEqual(await app.db.query("posts:state"), [
-		{
-			id: post1Id,
-			content: [{ insert: "hello world!?" }],
-		},
-	])
+	const ytext4_2 = await app2.messageLog.getYText("posts", post1Id)
+	const ytext4_1 = await app.messageLog.getYText("posts", post1Id)
+	t.is(ytext4_1?.toJSON(), ytext4_2?.toJSON())
 })

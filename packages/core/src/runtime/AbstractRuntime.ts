@@ -20,17 +20,17 @@ import * as Y from "yjs"
 
 type YjsInsertOperation = {
 	type: "yjsInsert"
-	index: number
+	pos: Y.RelativePosition
 	content: string
 }
 type YjsDeleteOperation = {
 	type: "yjsDelete"
-	index: number
+	pos: Y.RelativePosition
 	length: number
 }
 type YjsFormatOperation = {
 	type: "yjsFormat"
-	index: number
+	pos: Y.RelativePosition
 	length: number
 	formattingAttributes: Record<string, string>
 }
@@ -149,7 +149,7 @@ export abstract class AbstractRuntime {
 					// state
 					outputSchema[`${modelName}:state`] = {
 						id: "primary",
-						content: "json",
+						content: "bytes",
 					}
 				}
 			} else {
@@ -326,31 +326,33 @@ export abstract class AbstractRuntime {
 				})
 
 				// apply the operations to the state
-				const existingStateEntries = await this.db.query(`${model}:state`, { where: { id: key } })
-				const doc = new Y.Doc()
-				const ytext = doc.getText()
-				if (existingStateEntries.length > 0) {
-					const [{ content }] = existingStateEntries
-					ytext.applyDelta(content)
+				let ytext = await executionContext.messageLog.getYText(model, key)
+				if (ytext === null) {
+					const doc = new Y.Doc()
+					ytext = doc.getText()
 				}
 
 				// apply the actual operations to the document
 				for (const operation of operations) {
+					const absolutePosition = Y.createAbsolutePositionFromRelativePosition(operation.pos, ytext.doc!)
+
+					if (!absolutePosition) {
+						// throw an error - we can't generate an absolute position from this relative position
+						throw new Error(
+							`Could not generate absolute position from relative position ${JSON.stringify(operation.pos)}`,
+						)
+					}
+
 					if (operation.type === "yjsInsert") {
-						ytext.insert(operation.index, operation.content)
+						ytext.insert(absolutePosition.index, operation.content)
 					} else if (operation.type === "yjsDelete") {
-						ytext.delete(operation.index, operation.length)
+						ytext.delete(absolutePosition.index, operation.length)
 					} else if (operation.type === "yjsFormat") {
-						ytext.format(operation.index, operation.length, operation.formattingAttributes)
+						ytext.format(absolutePosition.index, operation.length, operation.formattingAttributes)
 					}
 				}
 
-				// confusingly a "quill delta" can both refer to a document's state and a set of changes
-				// since another way of thinking about document state is as a set of changes from an initial empty state
-				const quillDelta = ytext.toDelta()
-				// update the copy of the document with the operations
-				// don't create an entry in the effects table for this
-				await this.db.set(`${model}:state`, { id: key, content: quillDelta })
+				await this.db.set(`${model}:state`, { id: key, content: Y.encodeStateAsUpdate(ytext.doc!) })
 			}
 		}
 

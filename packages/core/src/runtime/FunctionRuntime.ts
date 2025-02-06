@@ -14,6 +14,7 @@ import { assert } from "@canvas-js/utils"
 
 import { ActionContext, ActionImplementation, Contract, ModelAPI, Chainable } from "../types.js"
 import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
+import { RelativePosition } from "yjs"
 
 export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntime {
 	public static async init<ModelsT extends ModelSchema>(
@@ -228,7 +229,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 					this.releaseLock()
 				}
 			},
-			yjsInsert: async (model: string, key: string, index: number, content: string) => {
+			yjsInsert: async (model: string, key: string, pos: RelativePosition, content: string) => {
 				assert(this.#context !== null, "expected this.#context !== null")
 
 				if (this.#context.operations[model] === undefined) {
@@ -239,11 +240,11 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 				}
 				this.#context.operations[model][key].push({
 					type: "yjsInsert",
-					index,
+					pos,
 					content,
 				})
 			},
-			yjsDelete: async (model: string, key: string, index: number, length: number) => {
+			yjsDelete: async (model: string, key: string, pos: RelativePosition, length: number) => {
 				assert(this.#context !== null, "expected this.#context !== null")
 				if (this.#context.operations[model] === undefined) {
 					this.#context.operations[model] = {}
@@ -253,14 +254,14 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 				}
 				this.#context.operations[model][key].push({
 					type: "yjsDelete",
-					index,
+					pos,
 					length,
 				})
 			},
 			yjsFormat: async (
 				model: string,
 				key: string,
-				index: number,
+				pos: RelativePosition,
 				length: number,
 				formattingAttributes: Record<string, string>,
 			) => {
@@ -274,7 +275,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 				this.#context.operations[model][key].push({
 					type: "yjsFormat",
 
-					index,
+					pos,
 					length,
 					formattingAttributes,
 				})
