@@ -26,6 +26,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 	}
 
 	#context: ExecutionContext | null = null
+	#thisValue: ActionContext<DeriveModelTypes<ModelsT>> | null = null
 	#queue = new PQueue({ concurrency: 1 })
 	#db: ModelAPI<DeriveModelTypes<ModelsT>>
 
@@ -49,7 +50,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 			delete: (model, key) => this.#queue.add(() => this.context.deleteModelValue(model, key)),
 
 			transaction: async (callback) => {
-				await callback()
+				await callback.apply(this.thisValue, [])
 			},
 		}
 	}
@@ -63,6 +64,11 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 	private get context() {
 		assert(this.#context !== null, "expected this.#context !== null")
 		return this.#context
+	}
+
+	private get thisValue() {
+		assert(this.#thisValue !== null, "expected this.#thisValue !== null")
+		return this.#thisValue
 	}
 
 	protected async execute(context: ExecutionContext): Promise<void | any> {
@@ -80,27 +86,30 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 			throw new Error(`invalid action name: ${name}`)
 		}
 
-		this.#context = context
+		const thisValue: ActionContext<DeriveModelTypes<ModelsT>> = {
+			db: this.#db,
+			id: context.id,
+			publicKey,
+			did,
+			address,
+			blockhash: blockhash ?? null,
+			timestamp,
+		}
 
 		try {
-			const thisValue: ActionContext<DeriveModelTypes<ModelsT>> = {
-				db: this.#db,
-				id: context.id,
-				publicKey,
-				did,
-				address,
-				blockhash: blockhash ?? null,
-				timestamp,
-			}
+			this.#context = context
+			this.#thisValue = thisValue
 
 			const result = await action.apply(thisValue, Array.isArray(args) ? [this.#db, ...args] : [this.#db, args])
 			await this.#queue.onIdle()
+
 			return result
 		} catch (err) {
 			console.log("dispatch action failed:", err)
 			throw err
 		} finally {
 			this.#context = null
+			this.#thisValue = null
 		}
 	}
 }
