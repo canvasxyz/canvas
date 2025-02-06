@@ -83,7 +83,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 		this.#context = context
 
 		try {
-			const actionContext: ActionContext<DeriveModelTypes<ModelsT>> = {
+			const thisValue: ActionContext<DeriveModelTypes<ModelsT>> = {
 				db: this.#db,
 				id: context.id,
 				publicKey,
@@ -93,7 +93,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 				timestamp,
 			}
 
-			const result = await action.apply(actionContext, Array.isArray(args) ? [this.#db, ...args] : [this.#db, args])
+			const result = await action.apply(thisValue, Array.isArray(args) ? [this.#db, ...args] : [this.#db, args])
 			await this.#queue.onIdle()
 			return result
 		} catch (err) {
