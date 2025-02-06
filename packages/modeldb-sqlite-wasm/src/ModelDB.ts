@@ -1,112 +1,130 @@
+import sqlite3InitModule, { Database, Sqlite3Static } from "@sqlite.org/sqlite-wasm"
 import { logger } from "@libp2p/logger"
-import * as Comlink from "comlink"
-import sqlite3InitModule from "@sqlite.org/sqlite-wasm"
 import {
-	Config,
 	AbstractModelDB,
-	ModelDBBackend,
+	Config,
 	Effect,
-	ModelValue,
+	ModelDBBackend,
 	ModelSchema,
+	ModelValue,
 	QueryParams,
 	WhereCondition,
 } from "@canvas-js/modeldb"
-import { InnerModelDB } from "./InnerModelDB.js"
-import "./worker.js"
+import { assert, signalInvalidType } from "@canvas-js/utils"
+
+import { ModelAPI } from "./ModelAPI.js"
 
 export interface ModelDBOptions {
-	path?: string
+	sqlite3?: Sqlite3Static
+	path?: string | null
 	models: ModelSchema
 }
 
-export class ModelDB extends AbstractModelDB {
-	private readonly worker: Worker | null
-	private readonly wrappedDB: Comlink.Remote<InnerModelDB> | InnerModelDB
+const isWorker = typeof WorkerGlobalScope !== "undefined" && self instanceof WorkerGlobalScope
 
-	public static async initialize({ path, models }: ModelDBOptions) {
-		const config = Config.parse(models)
-		let worker, wrappedDB
-		if (path) {
-			worker = new Worker(new URL("./worker.js", import.meta.url), { type: "module" })
-			const initializeDB = Comlink.wrap(worker) as any
-			const logProxy = Comlink.proxy(logger("canvas:modeldb:worker"))
-			wrappedDB = (await initializeDB(path, config, logProxy)) as Comlink.Remote<InnerModelDB>
-		} else {
-			worker = null
-			const sqlite3 = await sqlite3InitModule({ print: console.log, printErr: console.error })
-			const db = new sqlite3.oo1.DB()
-			const log = logger("canvas:modeldb:transient")
-			wrappedDB = new InnerModelDB(db, config, log)
+export class ModelDB extends AbstractModelDB {
+	#models: Record<string, ModelAPI> = {}
+	protected readonly log = logger("canvas:modeldb")
+
+	public static async initialize({ sqlite3, path, models }: ModelDBOptions) {
+		if (sqlite3 === undefined) {
+			sqlite3 = await sqlite3InitModule({
+				print: console.log,
+				printErr: console.error,
+			})
 		}
 
-		return new ModelDB({ worker: worker, wrappedDB, config })
+		return new ModelDB(sqlite3, path ?? null, models)
 	}
 
-	private constructor({
-		worker,
-		wrappedDB,
-		config,
-	}: {
-		worker: Worker | null
-		wrappedDB: Comlink.Remote<InnerModelDB> | InnerModelDB
-		config: Config
-	}) {
-		super(config)
-		this.worker = worker
-		this.wrappedDB = wrappedDB
+	public readonly db: Database
+
+	public constructor(public readonly sqlite3: Sqlite3Static, public readonly path: string | null, models: ModelSchema) {
+		super(Config.parse(models))
+		this.log("Running SQLite3 version %s", sqlite3.version.libVersion)
+
+		if (path === null) {
+			this.db = new sqlite3.oo1.DB(":memory:")
+		} else if (isWorker) {
+			if ("opfs" in sqlite3) {
+				this.db = new sqlite3.oo1.OpfsDb(path, "c")
+			} else {
+				throw new Error("cannot open persistent database: missing OPFS API support")
+			}
+		} else {
+			throw new Error("cannot open persistent database: persistent databases are only available in worker threads")
+		}
+
+		for (const model of Object.values(this.config.models)) {
+			this.#models[model.name] = new ModelAPI(this.db, this.config, model)
+		}
 	}
 
 	public getType(): ModelDBBackend {
 		return "sqlite-wasm"
 	}
 
-	public async close() {
-		this.log("closing")
-		await this.wrappedDB.close()
-		if (this.worker !== null) {
-			this.worker.terminate()
-		}
+	public close() {
+		this.db.close()
 	}
 
-	public async apply(effects: Effect[]) {
-		await this.wrappedDB.apply(effects)
-
-		for (const { model, query, filter, callback } of this.subscriptions.values()) {
-			if (effects.some(filter)) {
-				try {
-					const queryRes = await this.query(model, query)
-					callback(queryRes)
-				} catch (err) {
-					console.error(err)
+	public apply(effects: Effect[]) {
+		this.db.transaction(() => {
+			for (const effect of effects) {
+				const model = this.#models[effect.model]
+				assert(model !== undefined, `model ${effect.model} not found`)
+				if (effect.operation === "set") {
+					this.#models[effect.model].set(effect.value)
+				} else if (effect.operation === "delete") {
+					this.#models[effect.model].delete(effect.key)
+				} else {
+					signalInvalidType(effect)
 				}
 			}
-		}
+		})
 	}
 
 	public async get<T extends ModelValue>(modelName: string, key: string): Promise<T | null> {
-		// @ts-ignore
-		return this.wrappedDB.get(modelName, key)
+		const api = this.#models[modelName]
+		assert(api !== undefined, `model ${modelName} not found`)
+		return api.get(key) as T | null
 	}
 
 	public async getMany<T extends ModelValue>(modelName: string, keys: string[]): Promise<(T | null)[]> {
-		// @ts-ignore
-		return this.wrappedDB.getMany(modelName, keys)
-	}
-
-	public async *iterate<T extends ModelValue<any> = ModelValue<any>>(modelName: string): AsyncIterable<T> {
-		return this.wrappedDB.iterate(modelName) as AsyncIterable<T>
+		const api = this.#models[modelName]
+		assert(api !== undefined, `model ${modelName} not found`)
+		return api.getMany(keys) as (T | null)[]
 	}
 
 	public async count(modelName: string, where?: WhereCondition): Promise<number> {
-		return this.wrappedDB.count(modelName, where)
+		const api = this.#models[modelName]
+		assert(api !== undefined, `model ${modelName} not found`)
+		return api.count(where)
 	}
 
 	public async clear(modelName: string): Promise<void> {
-		return this.wrappedDB.clear(modelName)
+		const api = this.#models[modelName]
+		assert(api !== undefined, `model ${modelName} not found`)
+		return api.clear()
 	}
 
 	public async query<T extends ModelValue = ModelValue>(modelName: string, query: QueryParams = {}): Promise<T[]> {
-		// @ts-ignore
-		return this.wrappedDB.query(modelName, query)
+		const api = this.#models[modelName]
+		assert(api !== undefined, `model ${modelName} not found`)
+		return api.query(query) as T[]
+	}
+
+	public async *iterate<T extends ModelValue = ModelValue>(
+		modelName: string,
+		query: QueryParams = {},
+	): AsyncIterable<T> {
+		const api = this.#models[modelName]
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
+		for await (const value of api.iterate(query)) {
+			yield value as T
+		}
 	}
 }

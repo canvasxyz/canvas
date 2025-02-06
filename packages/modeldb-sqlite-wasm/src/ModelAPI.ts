@@ -195,6 +195,7 @@ export class ModelAPI {
 		this.#select = new Query(this.db, `SELECT ${quotedColumnNames} FROM "${this.#table}" ${wherePrimaryKeyEquals}`)
 		this.#selectAll = new Query(this.db, `SELECT ${quotedColumnNames} FROM "${this.#table}"`)
 	}
+
 	public get(key: PrimaryKeyValue | PrimaryKeyValue[]): ModelValue | null {
 		const wrappedKey = Array.isArray(key) ? key : [key]
 		if (wrappedKey.length !== this.primaryProperties.length) {
@@ -337,18 +338,28 @@ export class ModelAPI {
 		const [sql, properties, relations, params] = this.parseQuery(query)
 		const results: ModelValue[] = []
 
-		for (const row of new Query(this.db, sql).iterate(params)) {
-			results.push(this.parseRecord(row, properties, relations))
-		}
+		const stmt = new Query(this.db, sql)
+		try {
+			for (const row of stmt.iterate(params)) {
+				results.push(this.parseRecord(row, properties, relations))
+			}
 
-		return results
+			return results
+		} finally {
+			stmt.finalize()
+		}
 	}
 
 	public *iterate(query: QueryParams): IterableIterator<ModelValue> {
 		const [sql, properties, relations, params] = this.parseQuery(query)
 
-		for (const row of new Query(this.db, sql).iterate(params)) {
-			yield this.parseRecord(row, properties, relations)
+		const stmt = new Query(this.db, sql)
+		try {
+			for (const row of stmt.iterate(params)) {
+				yield this.parseRecord(row, properties, relations)
+			}
+		} finally {
+			stmt.finalize()
 		}
 	}
 
