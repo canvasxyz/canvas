@@ -1,8 +1,8 @@
 import * as cbor from "@ipld/dag-cbor"
 
 import { Action, Session, Snapshot } from "@canvas-js/interfaces"
-import { mergeModelValues, ModelValue, PropertyValue, updateModelValues, validateModelValue } from "@canvas-js/modeldb"
-import { AbstractGossipLog, MessageId, MIN_MESSAGE_ID, SignedMessage } from "@canvas-js/gossiplog"
+import { ModelValue, PropertyValue, validateModelValue, updateModelValues, mergeModelValues } from "@canvas-js/modeldb"
+import { AbstractGossipLog, MessageId, SignedMessage, MIN_MESSAGE_ID, MAX_MESSAGE_ID } from "@canvas-js/gossiplog"
 import { assert, mapValues } from "@canvas-js/utils"
 
 import { getRecordId } from "./utils.js"
@@ -13,10 +13,12 @@ export class ExecutionContext {
 	// // recordId -> { version, value }
 	// public readonly reads: Record<string, { version: string | null; value: ModelValue | null }> = {}
 
-	// // recordId -> effect
-	// public readonly writes: Record<string, Effect> = {}
+	// recordId -> { model, value, csx }
+	public readonly writes: Map<string, { model: string; key: string; value: ModelValue | null; csx: number | null }> =
+		new Map()
 
-	public readonly modelEntries: Record<string, Record<string, ModelValue | null>>
+	// public readonly modelEntries: Record<string, Record<string, ModelValue | null>>
+
 	public readonly root: MessageId[]
 
 	constructor(
@@ -24,7 +26,7 @@ export class ExecutionContext {
 		public readonly signedMessage: SignedMessage<Action>,
 		public readonly address: string,
 	) {
-		this.modelEntries = mapValues(messageLog.db.models, () => ({}))
+		// this.modelEntries = mapValues(messageLog.db.models, () => ({}))
 		this.root = signedMessage.message.parents.map((id) => MessageId.encode(id))
 	}
 
@@ -52,17 +54,18 @@ export class ExecutionContext {
 		model: string,
 		key: string,
 		transaction: boolean,
-	): Promise<null | T> {
-		if (this.modelEntries[model] === undefined) {
-			const { name } = this.message.payload
-			throw new Error(`could not access model db.${model} inside runtime action ${name}`)
-		}
-
-		if (this.modelEntries[model][key] !== undefined) {
-			return this.modelEntries[model][key] as T
+	): Promise<T | null> {
+		if (this.db.models[model] === undefined) {
+			throw new Error(`model db.${model} not found`)
 		}
 
 		const recordId = getRecordId(model, key)
+
+		if (this.writes.has(recordId)) {
+			const { value } = this.writes.get(recordId)!
+			return value as T | null
+		}
+
 		const lowerBound = MIN_MESSAGE_ID
 		let upperBound = this.id
 
@@ -98,20 +101,37 @@ export class ExecutionContext {
 		}
 	}
 
-	public setModelValue(model: string, value: ModelValue, transaction: boolean): void {
-		assert(this.db.models[model] !== undefined, "model not found")
+	public async setModelValue(model: string, value: ModelValue, transaction: boolean): Promise<void> {
+		if (this.db.models[model] === undefined) {
+			throw new Error(`model db.${model} not found`)
+		}
+
 		validateModelValue(this.db.models[model], value)
 		const {
 			primaryKey: [primaryKey],
 		} = this.db.models[model]
 		const key = value[primaryKey] as string
 		assert(typeof key === "string", "expected value[primaryKey] to be a string")
-		this.modelEntries[model][key] = value
+
+		const recordId = getRecordId(model, key)
+		let csx: number | null = null
+		if (transaction) {
+			csx = await this.getConflictSetIndex(recordId)
+		}
+
+		this.writes.set(recordId, { model, key, value, csx })
 	}
 
-	public deleteModelValue(model: string, key: string, transaction: boolean): void {
+	public async deleteModelValue(model: string, key: string, transaction: boolean): Promise<void> {
 		assert(this.db.models[model] !== undefined, "model not found")
-		this.modelEntries[model][key] = null
+
+		const recordId = getRecordId(model, key)
+		let csx: number | null = null
+		if (transaction) {
+			csx = await this.getConflictSetIndex(recordId)
+		}
+
+		this.writes.set(recordId, { model, key, value: null, csx })
 	}
 
 	public async updateModelValue(
@@ -119,15 +139,17 @@ export class ExecutionContext {
 		value: Record<string, PropertyValue | undefined>,
 		transaction: boolean,
 	): Promise<void> {
-		assert(this.db.models[model] !== undefined, "model not found")
+		if (this.db.models[model] === undefined) {
+			throw new Error(`model db.${model} not found`)
+		}
+
 		const {
 			primaryKey: [primaryKey],
 		} = this.db.models[model]
 		const key = value[primaryKey] as string
 		const previousValue = await this.getModelValue(model, key, transaction)
 		const result = updateModelValues(value, previousValue)
-		validateModelValue(this.db.models[model], result)
-		this.modelEntries[model][key] = result
+		await this.setModelValue(model, result, transaction)
 	}
 
 	public async mergeModelValue(
@@ -135,14 +157,76 @@ export class ExecutionContext {
 		value: Record<string, PropertyValue | undefined>,
 		transaction: boolean,
 	): Promise<void> {
-		assert(this.db.models[model] !== undefined, "model not found")
+		if (this.db.models[model] === undefined) {
+			throw new Error(`model db.${model} not found`)
+		}
+
 		const {
 			primaryKey: [primaryKey],
 		} = this.db.models[model]
 		const key = value[primaryKey] as string
 		const previousValue = await this.getModelValue(model, key, transaction)
 		const result = mergeModelValues(value, previousValue)
-		validateModelValue(this.db.models[model], result)
-		this.modelEntries[model][key] = result
+		await this.setModelValue(model, result, transaction)
+	}
+
+	public async getConflictSetIndex(recordId: string): Promise<number> {
+		type Write = { record_id: string; message_id: string; csx: number | null }
+
+		let baseCSX: number | null = null
+
+		for await (const write of this.db.iterate<Write>("$writes", {
+			select: { record_id: true, message_id: true, csx: true },
+			where: { record_id: recordId, message_id: { lt: this.id } },
+			orderBy: { "record_id/message_id": "desc" },
+		})) {
+			if (write.csx === null) {
+				continue
+			}
+
+			const isAncestor = await this.isAncestor(write.message_id)
+			if (!isAncestor) {
+				continue
+			}
+
+			// we call the first write we encounter "baseCSX"
+			baseCSX = write.csx
+			break
+		}
+
+		if (baseCSX === null) {
+			return 1
+		}
+
+		// baseCSX is *probably* the final CSX, but we still have to check
+		// for other 'intermediate' messages descending from other members
+		// of baseCSX that are also ancestors.
+
+		let id: string | null = null
+		do {
+			baseCSX += 1
+			id = await this.getGreatestElement(recordId, baseCSX)
+		} while (id !== null)
+
+		return baseCSX
+	}
+
+	public async getGreatestElement(recordId: string, csx: number): Promise<string | null> {
+		type Write = { record_id: string; message_id: string; csx: number | null }
+
+		for await (const write of this.db.iterate<Write>("$writes", {
+			select: { record_id: true, message_id: true, csx: true },
+			where: { record_id: recordId, csx, message_id: { lt: this.id } },
+			orderBy: { "record_id/csx/message_id": "desc" },
+		})) {
+			const isAncestor = await this.isAncestor(write.message_id)
+			if (!isAncestor) {
+				continue
+			}
+
+			return write.message_id
+		}
+
+		return null
 	}
 }

@@ -83,15 +83,15 @@ export class ContractRuntime extends AbstractRuntime {
 		super()
 		this.#databaseAPI = vm
 			.wrapObject({
-				get: vm.wrapFunction((model, key) => {
+				get: vm.wrapFunction(async (model, key) => {
 					assert(typeof model === "string", 'expected typeof model === "string"')
 					assert(typeof key === "string", 'expected typeof key === "string"')
-					return this.context.getModelValue(model, key, this.#transaction)
+					return await this.context.getModelValue(model, key, this.#transaction)
 				}),
 
-				set: vm.wrapFunction((model, value) => {
+				set: vm.wrapFunction(async (model, value) => {
 					assert(typeof model === "string", 'expected typeof model === "string"')
-					this.context.setModelValue(model, value as ModelValue, this.#transaction)
+					await this.context.setModelValue(model, value as ModelValue, this.#transaction)
 				}),
 
 				update: vm.wrapFunction(async (model, value) => {
@@ -104,10 +104,10 @@ export class ContractRuntime extends AbstractRuntime {
 					await this.context.mergeModelValue(model, value as ModelValue, this.#transaction)
 				}),
 
-				delete: vm.wrapFunction((model, key) => {
+				delete: vm.wrapFunction(async (model, key) => {
 					assert(typeof model === "string", 'expected typeof model === "string"')
 					assert(typeof key === "string", 'expected typeof key === "string"')
-					this.context.deleteModelValue(model, key, this.#transaction)
+					await this.context.deleteModelValue(model, key, this.#transaction)
 				}),
 
 				transaction: vm.context.newFunction("transaction", (callbackHandle) => {

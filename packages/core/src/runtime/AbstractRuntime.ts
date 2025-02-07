@@ -248,41 +248,73 @@ export abstract class AbstractRuntime {
 		const actionRecord: ActionRecord = { message_id: id, did, name, timestamp: context.timestamp }
 		const effects: Effect[] = [{ operation: "set", model: "$actions", value: actionRecord }]
 
-		for (const [model, entries] of Object.entries(executionContext.modelEntries)) {
-			for (const [key, value] of Object.entries(entries)) {
-				const recordId = getRecordId(model, key)
+		for (const [recordId, { model, key, value, csx }] of executionContext.writes) {
+			const writeRecord: WriteRecord = {
+				record_id: recordId,
+				message_id: id,
+				value: value && cbor.encode(value),
+				csx: csx,
+			}
 
-				const writeRecord: WriteRecord = {
+			effects.push({ model: "$writes", operation: "set", value: writeRecord })
+
+			const results = await messageLog.db.query<{ record_id: string; message_id: string }>("$writes", {
+				select: { record_id: true, message_id: true },
+				where: {
 					record_id: recordId,
-					message_id: id,
-					value: value && cbor.encode(value),
+					message_id: { gt: id, lte: MAX_MESSAGE_ID },
 					csx: null,
-				}
+				},
+				limit: 1,
+			})
 
-				effects.push({ model: "$writes", operation: "set", value: writeRecord })
+			if (results.length > 0) {
+				this.log("skipping effect %o because it is superceeded by effects %O", [model, key], results)
+				continue
+			}
 
-				const results = await messageLog.db.query<{ record_id: string; message_id: string }>("$writes", {
-					select: { record_id: true, message_id: true },
-					where: {
-						record_id: recordId,
-						message_id: { gt: id, lte: MAX_MESSAGE_ID },
-						csx: null,
-					},
-					limit: 1,
-				})
-
-				if (results.length > 0) {
-					this.log("skipping effect %o because it is superceeded by effects %O", [key, value], results)
-					continue
-				}
-
-				if (value === null) {
-					effects.push({ model, operation: "delete", key })
-				} else {
-					effects.push({ model, operation: "set", value })
-				}
+			if (value === null) {
+				effects.push({ model, operation: "delete", key })
+			} else {
+				effects.push({ model, operation: "set", value })
 			}
 		}
+
+		// for (const [model, entries] of Object.entries(executionContext.modelEntries)) {
+		// 	for (const [key, value] of Object.entries(entries)) {
+		// 		const recordId = getRecordId(model, key)
+
+		// 		const writeRecord: WriteRecord = {
+		// 			record_id: recordId,
+		// 			message_id: id,
+		// 			value: value && cbor.encode(value),
+		// 			csx: null,
+		// 		}
+
+		// 		effects.push({ model: "$writes", operation: "set", value: writeRecord })
+
+		// 		const results = await messageLog.db.query<{ record_id: string; message_id: string }>("$writes", {
+		// 			select: { record_id: true, message_id: true },
+		// 			where: {
+		// 				record_id: recordId,
+		// 				message_id: { gt: id, lte: MAX_MESSAGE_ID },
+		// 				csx: null,
+		// 			},
+		// 			limit: 1,
+		// 		})
+
+		// 		if (results.length > 0) {
+		// 			this.log("skipping effect %o because it is superceeded by effects %O", [key, value], results)
+		// 			continue
+		// 		}
+
+		// 		if (value === null) {
+		// 			effects.push({ model, operation: "delete", key })
+		// 		} else {
+		// 			effects.push({ model, operation: "set", value })
+		// 		}
+		// 	}
+		// }
 
 		this.log("applying effects %O", effects)
 
