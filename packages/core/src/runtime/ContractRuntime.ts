@@ -134,6 +134,24 @@ export class ContractRuntime extends AbstractRuntime {
 					const key = vm.context.getString(keyHandle)
 					this.context.deleteModelValue(model, key)
 				}),
+
+				applyDocumentUpdate: vm.context.newFunction("applyDocumentUpdate", (modelHandle, keyHandle, updateHandle) => {
+					const model = vm.context.getString(modelHandle)
+					const key = vm.context.getString(keyHandle)
+
+					assert(this.#context !== null, "expected this.#context !== null")
+
+					if (this.#context.operations[model] === undefined) {
+						this.#context.operations[model] = {}
+					}
+					if (this.#context.operations[model][key] === undefined) {
+						this.#context.operations[model][key] = []
+					}
+					this.#context.operations[model][key].push({
+						type: "applyDocumentUpdate",
+						update: this.vm.unwrapValue(updateHandle) as Uint8Array,
+					})
+				}),
 			})
 			.consume(vm.cache)
 	}

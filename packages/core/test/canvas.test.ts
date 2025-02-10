@@ -508,8 +508,26 @@ test("open custom modeldb tables", async (t) => {
 	t.deepEqual(await app.db.get("widgets", id), { id, name: "foobar" })
 })
 
-test("create a contract with a yjs text table", async (t) => {
-	const config: Config = {
+test("create a contract with a yjs text table with ContractRuntime", async (t) => {
+	await yjsTest(t, {
+		contract: `
+			export const models = {
+				posts: {
+					id: "primary",
+					content: "yjs-doc"
+				}
+			};
+			export const actions = {
+				updatePost: (db, { key, update }) => {
+					db.applyDocumentUpdate("posts", key, update)
+				}
+			};`,
+		topic: "com.example.app",
+	})
+})
+
+test("create a contract with a yjs text table with FunctionRuntime", async (t) => {
+	await yjsTest(t, {
 		contract: {
 			models: {
 				// @ts-ignore
@@ -521,9 +539,11 @@ test("create a contract with a yjs text table", async (t) => {
 				},
 			},
 		},
-
 		topic: "com.example.app",
-	}
+	})
+})
+
+async function yjsTest(t: ExecutionContext, config: Config) {
 	// initialize two apps with the same config
 	const appA = await Canvas.initialize(config)
 	const appB = await Canvas.initialize(config)
@@ -584,4 +604,4 @@ test("create a contract with a yjs text table", async (t) => {
 	const doc4A = await appA.messageLog.getYDoc("posts", post1Id)
 	const doc4B = await appB.messageLog.getYDoc("posts", post1Id)
 	t.is(doc4A!.getText().toJSON(), doc4B!.getText().toJSON(), "assert concurrent changes have converged")
-})
+}
