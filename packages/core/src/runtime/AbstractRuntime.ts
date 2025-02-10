@@ -76,16 +76,8 @@ export abstract class AbstractRuntime {
 					// not valid
 					throw new Error("yjs-doc tables must have two columns, one of which is 'id'")
 				} else {
-					// create the two tables
-					// operations
-					outputSchema[`${modelName}:operations`] = {
-						$primary: "operation_id",
-						operation_id: "string",
-						record_id: "string",
-						message_id: "string",
-						operations: "json",
-					}
-					// state
+					// this table stores the current state of the Yjs document
+					// we just need one entry per document because updates are commutative
 					outputSchema[`${modelName}:state`] = {
 						id: "primary",
 						content: "bytes",
@@ -247,17 +239,6 @@ export abstract class AbstractRuntime {
 
 		for (const [model, entries] of Object.entries(executionContext.operations)) {
 			for (const [key, operations] of Object.entries(entries)) {
-				effects.push({
-					model: `${model}:operations`,
-					operation: "set",
-					value: {
-						record_id: key,
-						operation_id: `${key}/${executionContext.id}`,
-						message_id: executionContext.id,
-						operations,
-					},
-				})
-
 				// load the current doc from the database or create a new one if it doesn't exist yet
 				const currentState = (await executionContext.messageLog.getYDoc(model, key)) || new Y.Doc()
 
