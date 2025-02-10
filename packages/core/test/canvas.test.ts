@@ -524,64 +524,64 @@ test("create a contract with a yjs text table", async (t) => {
 
 		topic: "com.example.app",
 	}
-	const app = await Canvas.initialize(config)
+	// initialize two apps with the same config
+	const appA = await Canvas.initialize(config)
+	const appB = await Canvas.initialize(config)
 
-	t.teardown(() => app.stop())
+	t.teardown(() => {
+		appA.stop()
+		appB.stop()
+	})
 
 	const post1Id = "post_1"
 
 	// call an action that updates the yjs-text item
-	// when you call a yjs action, it will automatically create the table if it doesn't exist
-	const doc0 = new Y.Doc()
-	const update0 = createUpdate(doc0, (doc) => doc.getText().insert(0, "hello"))
+	const doc0A = new Y.Doc()
 
-	await app.actions.updatePost({
+	await appA.actions.updatePost({
 		key: post1Id,
-		update: update0,
+		update: createUpdate(doc0A, (doc) => doc.getText().insert(0, "hello")),
 	})
 
-	t.is(doc0.getText().toJSON(), "hello", "assert local doc has been update")
-	const doc1 = await app.messageLog.getYDoc("posts", post1Id)
-	t.is(doc1!.getText().toJSON(), "hello", "assert remote doc has been updated")
+	const doc1A = await appA.messageLog.getYDoc("posts", post1Id)
+	t.is(doc1A!.getText().toJSON(), "hello", "assert doc has been updated")
 
 	// call another action that updates the yjs-text item
-	const update1 = createUpdate(doc1!, (doc) => doc.getText().insert(5, " world"))
-	await app.actions.postInsert({
+	const update1 = await appA.actions.updatePost({
 		key: post1Id,
-		update: update1,
+		update: createUpdate(doc1A!, (doc) => doc.getText().insert(5, " world")),
 	})
 
-	// const ytext3_1 = await app.messageLog.getYText("posts", post1Id)
-	// t.is(ytext3_1?.toJSON(), "hello world")
+	const doc2A = await appA.messageLog.getYDoc("posts", post1Id)
+	t.is(doc2A!.getText().toJSON(), "hello world", "assert doc has been updated")
 
-	// // initialize another app with the same config
-	// const app2 = await Canvas.initialize(config)
+	// sync app -> app2
+	await appA.messageLog.serve((source) => appB.messageLog.sync(source))
 
-	// // sync app -> app2
-	// await app.messageLog.serve((source) => app2.messageLog.sync(source))
+	const doc2B = await appB.messageLog.getYDoc("posts", post1Id)
+	t.is(doc2B!.getText().toJSON(), "hello world", "assert doc on peer has been updated")
 
-	// const ytext3_2 = await app2.messageLog.getYText("posts", post1Id)
-	// t.is(ytext3_2?.toJSON(), "hello world")
+	// apply an action on app
+	await appA.actions.updatePost({
+		key: post1Id,
+		update: createUpdate(doc2A!, (doc) => doc.getText().insert(11, "!")),
+	})
+	const doc3A = await appA.messageLog.getYDoc("posts", post1Id)
+	t.is(doc3A!.getText().toJSON(), "hello world!", "assert doc has been updated")
 
-	// // apply an action on app
-	// await app.actions.postInsert({
-	// 	key: post1Id,
-	// 	pos: Y.createRelativePositionFromTypeIndex(ytext3_1!, 10),
-	// 	content: "!",
-	// })
+	// concurrently apply an action on app2
+	await appB.actions.updatePost({
+		key: post1Id,
+		update: createUpdate(doc2B!, (doc) => doc.getText().insert(11, "?")),
+	})
+	const doc3B = await appB.messageLog.getYDoc("posts", post1Id)
+	t.is(doc3B!.getText().toJSON(), "hello world?", "assert doc on peer has been updated")
 
-	// // concurrently apply an action on app2
-	// await app2.actions.postInsert({
-	// 	key: post1Id,
-	// 	pos: Y.createRelativePositionFromTypeIndex(ytext3_2!, 10),
-	// 	content: "?",
-	// })
+	await appA.messageLog.serve((source) => appB.messageLog.sync(source))
+	await appB.messageLog.serve((source) => appA.messageLog.sync(source))
 
-	// await app.messageLog.serve((source) => app2.messageLog.sync(source))
-	// await app2.messageLog.serve((source) => app.messageLog.sync(source))
-
-	// // assert that app contains both changes
-	// const ytext4_2 = await app2.messageLog.getYText("posts", post1Id)
-	// const ytext4_1 = await app.messageLog.getYText("posts", post1Id)
-	// t.is(ytext4_1?.toJSON(), ytext4_2?.toJSON())
+	// assert that app contains both changes
+	const doc4A = await appA.messageLog.getYDoc("posts", post1Id)
+	const doc4B = await appB.messageLog.getYDoc("posts", post1Id)
+	t.is(doc4A!.getText().toJSON(), doc4B!.getText().toJSON(), "assert concurrent changes have converged")
 })
