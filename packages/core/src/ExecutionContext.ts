@@ -11,23 +11,12 @@ import { assert, mapValues } from "@canvas-js/utils"
 
 export const getKeyHash = (key: string) => bytesToHex(blake3(key, { dkLen: 16 }))
 
-type YjsInsertOperation = {
-	type: "yjsInsert"
-	pos: Y.RelativePosition
-	content: string
+type ApplyDocumentUpdate = {
+	type: "applyDocumentUpdate"
+	update: Uint8Array
 }
-type YjsDeleteOperation = {
-	type: "yjsDelete"
-	pos: Y.RelativePosition
-	length: number
-}
-type YjsFormatOperation = {
-	type: "yjsFormat"
-	pos: Y.RelativePosition
-	length: number
-	formattingAttributes: Record<string, string>
-}
-type Operation = YjsInsertOperation | YjsDeleteOperation | YjsFormatOperation
+
+type Operation = ApplyDocumentUpdate
 
 export class ExecutionContext {
 	// // recordId -> { version, value }

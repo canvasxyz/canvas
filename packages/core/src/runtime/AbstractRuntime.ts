@@ -258,34 +258,18 @@ export abstract class AbstractRuntime {
 					},
 				})
 
-				// apply the operations to the state
-				let ytext = await executionContext.messageLog.getYText(model, key)
-				if (ytext === null) {
-					const doc = new Y.Doc()
-					ytext = doc.getText()
-				}
+				// load the current doc from the database or create a new one if it doesn't exist yet
+				const currentState = (await executionContext.messageLog.getYDoc(model, key)) || new Y.Doc()
 
 				// apply the actual operations to the document
 				for (const operation of operations) {
-					const absolutePosition = Y.createAbsolutePositionFromRelativePosition(operation.pos, ytext.doc!)
-
-					if (!absolutePosition) {
-						// throw an error - we can't generate an absolute position from this relative position
-						throw new Error(
-							`Could not generate absolute position from relative position ${JSON.stringify(operation.pos)}`,
-						)
-					}
-
-					if (operation.type === "yjsInsert") {
-						ytext.insert(absolutePosition.index, operation.content)
-					} else if (operation.type === "yjsDelete") {
-						ytext.delete(absolutePosition.index, operation.length)
-					} else if (operation.type === "yjsFormat") {
-						ytext.format(absolutePosition.index, operation.length, operation.formattingAttributes)
+					if (operation.type === "applyDocumentUpdate") {
+						// apply document update to the doc here
+						Y.applyUpdate(currentState, operation.update)
 					}
 				}
 
-				await this.db.set(`${model}:state`, { id: key, content: Y.encodeStateAsUpdate(ytext.doc!) })
+				await this.db.set(`${model}:state`, { id: key, content: Y.encodeStateAsUpdate(currentState) })
 			}
 		}
 

@@ -45,25 +45,7 @@ export type ModelAPI<ModelTypes extends Record<string, ModelValue>> = {
 	update: <T extends keyof ModelTypes & string>(model: T, value: Partial<ModelTypes[T]>) => Chainable<ModelTypes>
 	merge: <T extends keyof ModelTypes & string>(model: T, value: Partial<ModelTypes[T]>) => Chainable<ModelTypes>
 	delete: <T extends keyof ModelTypes & string>(model: T, key: string) => Promise<void>
-	yjsInsert: <T extends keyof ModelTypes & string>(
-		model: T,
-		key: string,
-		pos: RelativePosition,
-		content: string,
-	) => Promise<void>
-	yjsDelete: <T extends keyof ModelTypes & string>(
-		model: T,
-		key: string,
-		pos: RelativePosition,
-		length: number,
-	) => Promise<void>
-	yjsFormat: <T extends keyof ModelTypes & string>(
-		model: T,
-		key: string,
-		pos: RelativePosition,
-		length: number,
-		formattingAttributes: Record<string, string>,
-	) => Promise<void>
+	applyDocumentUpdate: <T extends keyof ModelTypes & string>(model: T, key: string, update: Uint8Array) => Promise<void>
 }
 
 export type ActionContext<T extends Record<string, ModelValue>> = {

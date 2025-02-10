@@ -198,13 +198,15 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		return this.encode(signature, message, { branch })
 	}
 
-	public async getYText(modelName: string, id: string): Promise<Y.Text | null> {
-		const existingStateEntries = await this.db.query(`${modelName}:state`, { where: { id: id }, limit: 1 })
+	public async getYDoc(modelName: string, id: string): Promise<Y.Doc | null> {
+		const existingStateEntries = await this.db.query<{ id: string; content: Uint8Array }>(`${modelName}:state`, {
+			where: { id: id },
+			limit: 1,
+		})
 		if (existingStateEntries.length > 0) {
 			const doc = new Y.Doc()
-			const [{ content }] = existingStateEntries
-			Y.applyUpdate(doc, content)
-			return doc.getText()
+			Y.applyUpdate(doc, existingStateEntries[0].content)
+			return doc
 		} else {
 			return null
 		}

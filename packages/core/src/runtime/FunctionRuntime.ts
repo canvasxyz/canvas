@@ -1,5 +1,4 @@
 import pDefer, { DeferredPromise } from "p-defer"
-import { RelativePosition } from "yjs"
 
 import type { SignerCache } from "@canvas-js/interfaces"
 import { ModelSchema, ModelValue, validateModelValue, DeriveModelTypes } from "@canvas-js/modeldb"
@@ -174,7 +173,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 					this.releaseLock()
 				}
 			},
-			yjsInsert: async (model: string, key: string, pos: RelativePosition, content: string) => {
+			applyDocumentUpdate: async (model: string, key: string, update: Uint8Array) => {
 				assert(this.#context !== null, "expected this.#context !== null")
 
 				if (this.#context.operations[model] === undefined) {
@@ -184,45 +183,8 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 					this.#context.operations[model][key] = []
 				}
 				this.#context.operations[model][key].push({
-					type: "yjsInsert",
-					pos,
-					content,
-				})
-			},
-			yjsDelete: async (model: string, key: string, pos: RelativePosition, length: number) => {
-				assert(this.#context !== null, "expected this.#context !== null")
-				if (this.#context.operations[model] === undefined) {
-					this.#context.operations[model] = {}
-				}
-				if (this.#context.operations[model][key] === undefined) {
-					this.#context.operations[model][key] = []
-				}
-				this.#context.operations[model][key].push({
-					type: "yjsDelete",
-					pos,
-					length,
-				})
-			},
-			yjsFormat: async (
-				model: string,
-				key: string,
-				pos: RelativePosition,
-				length: number,
-				formattingAttributes: Record<string, string>,
-			) => {
-				assert(this.#context !== null, "expected this.#context !== null")
-				if (this.#context.operations[model] === undefined) {
-					this.#context.operations[model] = {}
-				}
-				if (this.#context.operations[model][key] === undefined) {
-					this.#context.operations[model][key] = []
-				}
-				this.#context.operations[model][key].push({
-					type: "yjsFormat",
-
-					pos,
-					length,
-					formattingAttributes,
+					type: "applyDocumentUpdate",
+					update,
 				})
 			},
 		}
