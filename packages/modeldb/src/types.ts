@@ -21,7 +21,6 @@ export type PropertyType =
 export type IndexInit = string
 
 export type ModelSchema = Record<string, { $indexes?: IndexInit[]; $primary?: string } | Record<string, PropertyType>>
-export type ContractModelSchema = { [key: string]: "yjs-doc" }
 
 // These are more structured representations of the schema defined by ModelSchema that are easier
 // to work with at runtime

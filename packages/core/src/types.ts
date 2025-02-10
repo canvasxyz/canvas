@@ -1,6 +1,5 @@
 import type { DeriveModelTypes, ModelSchema, ModelValue } from "@canvas-js/modeldb"
 import type { Awaitable } from "@canvas-js/interfaces"
-import { RelativePosition } from "yjs"
 
 export type { ModelValue, ModelSchema, DeriveModelTypes, DeriveModelType } from "@canvas-js/modeldb"
 
