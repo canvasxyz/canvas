@@ -513,7 +513,7 @@ test("create a contract with a yjs text table", async (t) => {
 		contract: {
 			models: {
 				// @ts-ignore
-				posts: { id: "primary", content: "yjs-text" },
+				posts: { id: "primary", content: "yjs-doc" },
 			},
 			actions: {
 				updatePost: (db, { key, update }: { key: string; update: Uint8Array }) => {
@@ -535,7 +535,7 @@ test("create a contract with a yjs text table", async (t) => {
 
 	const post1Id = "post_1"
 
-	// call an action that updates the yjs-text item
+	// call an action that updates the yjs-doc item
 	const doc0A = new Y.Doc()
 
 	await appA.actions.updatePost({
@@ -546,7 +546,7 @@ test("create a contract with a yjs text table", async (t) => {
 	const doc1A = await appA.messageLog.getYDoc("posts", post1Id)
 	t.is(doc1A!.getText().toJSON(), "hello", "assert doc has been updated")
 
-	// call another action that updates the yjs-text item
+	// call another action that updates the yjs-doc item
 	const update1 = await appA.actions.updatePost({
 		key: post1Id,
 		update: createUpdate(doc1A!, (doc) => doc.getText().insert(5, " world")),

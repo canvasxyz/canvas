@@ -67,14 +67,14 @@ export abstract class AbstractRuntime {
 		const outputSchema: ModelSchema = {}
 		for (const [modelName, modelSchema] of Object.entries(schema)) {
 			// @ts-ignore
-			if (modelSchema.content === "yjs-text") {
+			if (modelSchema.content === "yjs-doc") {
 				if (
 					Object.entries(modelSchema).length !== 2 &&
 					// @ts-ignore
 					modelSchema.id !== "primary"
 				) {
 					// not valid
-					throw new Error("yjs-text tables must have two columns, one of which is 'id'")
+					throw new Error("yjs-doc tables must have two columns, one of which is 'id'")
 				} else {
 					// create the two tables
 					// operations
