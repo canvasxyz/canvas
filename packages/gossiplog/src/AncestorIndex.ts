@@ -2,7 +2,7 @@ import type { AbstractModelDB, ModelSchema } from "@canvas-js/modeldb"
 import { assert } from "@canvas-js/utils"
 
 import { decodeClock } from "./clock.js"
-import { encodeId } from "./ids.js"
+import { encodeId, MessageId } from "./MessageId.js"
 import { getAncestorClocks } from "./utils.js"
 
 export type AncestorRecord = { id: string; links: string[][] }
@@ -14,75 +14,46 @@ export class AncestorIndex {
 
 	constructor(private readonly db: AbstractModelDB) {}
 
-	private async getLinks(id: string): Promise<string[][]> {
-		const record = await this.db.get<AncestorRecord>("$ancestors", id)
+	private async getLinks(id: string | MessageId): Promise<string[][]> {
+		const key = typeof id === "string" ? id : id.id
+		const record = await this.db.get<AncestorRecord>("$ancestors", key)
 		if (record === null) {
-			throw new Error(`ancestor links not found for ${id}`)
+			throw new Error(`ancestor links not found for ${key}`)
 		}
 
 		return record.links
 	}
 
-	private async setLinks(id: string, links: string[][]): Promise<void> {
-		await this.db.set<AncestorRecord>("$ancestors", { id, links })
+	private async setLinks(id: string | MessageId, links: string[][]): Promise<void> {
+		const key = typeof id === "string" ? id : id.id
+		await this.db.set<AncestorRecord>("$ancestors", { id: key, links })
 	}
 
-	public async getAncestors(
-		id: string,
-		atOrBefore: number,
-		results = new Set<string>(),
-		visited = new Set<string>(),
-	): Promise<Set<string>> {
-		assert(atOrBefore > 0, "expected atOrBefore > 0")
+	public async isAncestor(
+		id: string | MessageId,
+		ancestorId: string | MessageId,
+		visited: Set<string>,
+	): Promise<boolean> {
+		id = typeof id === "string" ? MessageId.encode(id) : id
+		ancestorId = typeof ancestorId === "string" ? MessageId.encode(ancestorId) : ancestorId
 
-		const key = encodeId(id)
-		const [clock] = decodeClock(key)
-		assert(atOrBefore < clock, "expected atOrBefore < clock")
-
-		const index = Math.floor(Math.log2(clock - atOrBefore))
-
-		const links = await this.getLinks(id)
-		for (const ancestorId of links[index]) {
-			const ancestorKey = encodeId(ancestorId)
-			const [ancestorClock] = decodeClock(ancestorKey)
-
-			if (ancestorClock <= atOrBefore) {
-				results.add(ancestorId)
-			} else if (visited.has(ancestorId)) {
-				break
-			} else {
-				visited.add(ancestorId)
-				await this.getAncestors(ancestorId, atOrBefore, results, visited)
-			}
-		}
-
-		return results
-	}
-
-	public async isAncestor(id: string, ancestorId: string, visited = new Set<string>()): Promise<boolean> {
-		if (id === ancestorId) {
+		if (id.equals(ancestorId)) {
 			return true
 		}
 
-		const key = encodeId(id)
-		const [clock] = decodeClock(key)
-
-		const ancestorKey = encodeId(ancestorId)
-		const [ancestorClock] = decodeClock(ancestorKey)
-
-		if (clock <= ancestorClock) {
+		if (id.clock <= ancestorId.clock) {
 			return false
 		}
 
 		const links = await this.getLinks(id)
-		const index = Math.floor(Math.log2(clock - ancestorClock))
-		for (const id of links[index]) {
-			if (visited.has(id)) {
+		const index = Math.floor(Math.log2(id.clock - ancestorId.clock))
+		for (const link of links[index]) {
+			if (visited.has(link)) {
 				continue
 			}
 
-			visited.add(id)
-			const result = await this.isAncestor(id, ancestorId, visited)
+			visited.add(link)
+			const result = await this.isAncestor(link, ancestorId, visited)
 			if (result) {
 				return true
 			}
@@ -118,5 +89,37 @@ export class AncestorIndex {
 		}
 
 		await this.setLinks(id, ancestorLinks)
+	}
+
+	public async getAncestors(
+		id: string,
+		atOrBefore: number,
+		results = new Set<string>(),
+		visited = new Set<string>(),
+	): Promise<Set<string>> {
+		assert(atOrBefore > 0, "expected atOrBefore > 0")
+
+		const key = encodeId(id)
+		const [clock] = decodeClock(key)
+		assert(atOrBefore < clock, "expected atOrBefore < clock")
+
+		const index = Math.floor(Math.log2(clock - atOrBefore))
+
+		const links = await this.getLinks(id)
+		for (const ancestorId of links[index]) {
+			const ancestorKey = encodeId(ancestorId)
+			const [ancestorClock] = decodeClock(ancestorKey)
+
+			if (ancestorClock <= atOrBefore) {
+				results.add(ancestorId)
+			} else if (visited.has(ancestorId)) {
+				break
+			} else {
+				visited.add(ancestorId)
+				await this.getAncestors(ancestorId, atOrBefore, results, visited)
+			}
+		}
+
+		return results
 	}
 }

@@ -1,76 +1,15 @@
 import * as cbor from "@ipld/dag-cbor"
-import { blake3 } from "@noble/hashes/blake3"
-import { bytesToHex } from "@noble/hashes/utils"
 import { logger } from "@libp2p/logger"
 
-import type { Action, Session, Snapshot, SignerCache } from "@canvas-js/interfaces"
+import type { Action, Session, Snapshot, SignerCache, Awaitable } from "@canvas-js/interfaces"
 
-import { AbstractModelDB, Effect, ModelValue, ModelSchema } from "@canvas-js/modeldb"
-import {
-	GossipLogConsumer,
-	MAX_MESSAGE_ID,
-	MIN_MESSAGE_ID,
-	AbstractGossipLog,
-	BranchMergeRecord,
-	SignedMessage,
-} from "@canvas-js/gossiplog"
-import { assert, mapValues } from "@canvas-js/utils"
+import { AbstractModelDB, Effect, ModelSchema } from "@canvas-js/modeldb"
+import { GossipLogConsumer, MAX_MESSAGE_ID, AbstractGossipLog, SignedMessage } from "@canvas-js/gossiplog"
+import { assert } from "@canvas-js/utils"
+
+import { ExecutionContext, getKeyHash } from "../ExecutionContext.js"
 import { isAction, isSession, isSnapshot } from "../utils.js"
 import * as Y from "yjs"
-
-type YjsInsertOperation = {
-	type: "yjsInsert"
-	pos: Y.RelativePosition
-	content: string
-}
-type YjsDeleteOperation = {
-	type: "yjsDelete"
-	pos: Y.RelativePosition
-	length: number
-}
-type YjsFormatOperation = {
-	type: "yjsFormat"
-	pos: Y.RelativePosition
-	length: number
-	formattingAttributes: Record<string, string>
-}
-type Operation = YjsInsertOperation | YjsDeleteOperation | YjsFormatOperation
-
-export class ExecutionContext {
-	// // recordId -> { version, value }
-	// public readonly reads: Record<string, { version: string | null; value: ModelValue | null }> = {}
-
-	// // recordId -> effect
-	// public readonly writes: Record<string, Effect> = {}
-
-	public readonly modelEntries: Record<string, Record<string, ModelValue | null>>
-
-	public readonly operations: Record<string, Record<string, Operation[]>> = {}
-
-	constructor(
-		public readonly messageLog: AbstractGossipLog<Action | Session | Snapshot>,
-		public readonly signedMessage: SignedMessage<Action>,
-		public readonly address: string,
-	) {
-		this.modelEntries = mapValues(messageLog.db.models, () => ({}))
-	}
-
-	public get id() {
-		return this.signedMessage.id
-	}
-
-	public get signature() {
-		return this.signedMessage.signature
-	}
-
-	public get message() {
-		return this.signedMessage.message
-	}
-
-	public get db() {
-		return this.messageLog.db
-	}
-}
 
 export type EffectRecord = { key: string; value: Uint8Array | null; branch: number; clock: number }
 
@@ -178,6 +117,8 @@ export abstract class AbstractRuntime {
 
 	protected abstract execute(context: ExecutionContext): Promise<void | any>
 
+	public abstract close(): Awaitable<void>
+
 	public get db() {
 		assert(this.#db !== null, "internal error - expected this.#db !== null")
 		return this.#db
@@ -185,10 +126,6 @@ export abstract class AbstractRuntime {
 
 	public set db(db: AbstractModelDB) {
 		this.#db = db
-	}
-
-	public async close() {
-		await this.db.close()
 	}
 
 	public getConsumer(): GossipLogConsumer<Action | Session | Snapshot> {
@@ -279,6 +216,7 @@ export abstract class AbstractRuntime {
 		}
 
 		const address = signer.getAddressFromDid(did)
+		const executionContext = new ExecutionContext(messageLog, signedMessage, address)
 
 		const sessions = await this.db.query<{ message_id: string; expiration: number | null }>("$sessions", {
 			where: { public_key: signature.publicKey, did: did },
@@ -287,14 +225,10 @@ export abstract class AbstractRuntime {
 		const activeSessions = sessions.filter(({ expiration }) => expiration === null || expiration > context.timestamp)
 
 		let sessionId: string | null = null
-		for (const { message_id } of activeSessions) {
-			const visited = new Set<string>()
-			for (const parentId of message.parents) {
-				const isAncestor = await messageLog.isAncestor(parentId, message_id, visited)
-				if (isAncestor) {
-					sessionId = message_id
-					break
-				}
+		for (const session of activeSessions) {
+			const isAncestor = await executionContext.isAncestor(session.message_id)
+			if (isAncestor) {
+				sessionId = session.message_id
 			}
 		}
 
@@ -306,7 +240,6 @@ export abstract class AbstractRuntime {
 		const branch = signedMessage.branch
 		assert(branch !== undefined, "expected branch !== undefined")
 
-		const executionContext = new ExecutionContext(messageLog, signedMessage, address)
 		const result = await this.execute(executionContext)
 
 		const actionRecord: ActionRecord = { message_id: id, did, name, timestamp: context.timestamp }
@@ -358,7 +291,7 @@ export abstract class AbstractRuntime {
 
 		for (const [model, entries] of Object.entries(executionContext.modelEntries)) {
 			for (const [key, value] of Object.entries(entries)) {
-				const keyHash = AbstractRuntime.getKeyHash(key)
+				const keyHash = getKeyHash(key)
 
 				const effectKey = `${model}/${keyHash}/${id}`
 				const results = await this.db.query<{ key: string }>("$effects", {
@@ -398,59 +331,5 @@ export abstract class AbstractRuntime {
 		}
 
 		return result
-	}
-
-	protected static getKeyHash = (key: string) => bytesToHex(blake3(key, { dkLen: 16 }))
-
-	protected async getModelValue<T extends ModelValue = ModelValue>(
-		context: ExecutionContext,
-		model: string,
-		key: string,
-	): Promise<null | T> {
-		if (context.modelEntries[model] === undefined) {
-			throw new Error(`could not access model db.${model} inside runtime action ${context.message.payload.name}`)
-		}
-
-		if (context.modelEntries[model][key] !== undefined) {
-			return context.modelEntries[model][key] as T
-		}
-
-		const keyHash = AbstractRuntime.getKeyHash(key)
-		const lowerBound = `${model}/${keyHash}/`
-
-		let upperBound = `${model}/${keyHash}/${context.id}`
-
-		// eslint-disable-next-line no-constant-condition
-		while (true) {
-			const results = await this.db.query<{ key: string; value: Uint8Array; clock: number }>("$effects", {
-				select: { key: true, value: true, clock: true },
-				where: { key: { gt: lowerBound, lt: upperBound } },
-				orderBy: { key: "desc" },
-				limit: 1,
-			})
-
-			if (results.length === 0) {
-				return null
-			}
-
-			if (results[0].clock === 0) {
-				if (results[0].value === null) return null
-				return cbor.decode<null | T>(results[0].value)
-			}
-
-			const [effect] = results
-			const [{}, {}, messageId] = effect.key.split("/")
-
-			const visited = new Set<string>()
-			for (const parent of context.message.parents) {
-				const isAncestor = await context.messageLog.isAncestor(parent, messageId, visited)
-				if (isAncestor) {
-					if (effect.value === null) return null
-					return cbor.decode<null | T>(effect.value)
-				}
-			}
-
-			upperBound = effect.key
-		}
 	}
 }

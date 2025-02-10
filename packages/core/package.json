@@ -7,8 +7,7 @@
 		"node": ">=20.0.0"
 	},
 	"files": [
-		"lib",
-		"types"
+		"lib"
 	],
 	"main": "./lib/index.js",
 	"types": "./lib/index.d.ts",

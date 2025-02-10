@@ -17,7 +17,7 @@ import * as sync from "@canvas-js/gossiplog/sync"
 import { MissingParentError } from "@canvas-js/gossiplog/errors"
 
 import { AbstractGossipLog, GossipLogEvents } from "../AbstractGossipLog.js"
-import { decodeId, encodeId } from "../ids.js"
+import { decodeId, encodeId } from "../MessageId.js"
 import { getPushProtocol, getSyncProtocol, chunk, encodeEvents, decodeEvents } from "../utils.js"
 
 export const factory = yamux({})({ logger: { forComponent: logger } })

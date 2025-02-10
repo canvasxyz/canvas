@@ -1,20 +1,13 @@
 import pDefer, { DeferredPromise } from "p-defer"
+import { RelativePosition } from "yjs"
 
 import type { SignerCache } from "@canvas-js/interfaces"
-import {
-	ModelSchema,
-	ModelValue,
-	validateModelValue,
-	mergeModelValues,
-	updateModelValues,
-	DeriveModelTypes,
-	RelationValue,
-} from "@canvas-js/modeldb"
+import { ModelSchema, ModelValue, validateModelValue, DeriveModelTypes } from "@canvas-js/modeldb"
 import { assert } from "@canvas-js/utils"
 
 import { ActionContext, ActionImplementation, Contract, ModelAPI, Chainable } from "../types.js"
-import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
-import { RelativePosition } from "yjs"
+import { ExecutionContext } from "../ExecutionContext.js"
+import { AbstractRuntime } from "./AbstractRuntime.js"
 
 export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntime {
 	public static async init<ModelsT extends ModelSchema>(
@@ -76,12 +69,11 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 				promise.link = async (linkModel: string, linkPrimaryKey: string, params?: { through: string }) => {
 					await this.acquireLock()
 					try {
-						assert(this.#context !== null, "expected this.#context !== null")
 						const {
 							primaryKey: [primaryKey],
 						} = this.db.models[model]
 						const target = isSelect ? (value as string) : ((value as ModelValue)[primaryKey] as string)
-						const modelValue = await this.getModelValue(this.#context, linkModel, linkPrimaryKey)
+						const modelValue = await this.context.getModelValue(linkModel, linkPrimaryKey)
 						assert(modelValue !== null, `db.link(): link from a missing model ${linkModel}.get(${linkPrimaryKey})`)
 						const backlinkKey = params?.through ?? model
 						const backlinkProp = this.db.models[linkModel].properties.find((prop) => prop.name === backlinkKey)
@@ -94,7 +86,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 						}
 						if (this.db.models[linkModel] === undefined) throw new Error(`db.link(): no such model "${linkModel}"`)
 						validateModelValue(this.db.models[linkModel], modelValue)
-						this.#context.modelEntries[linkModel][linkPrimaryKey] = modelValue
+						this.context.modelEntries[linkModel][linkPrimaryKey] = modelValue
 					} finally {
 						this.releaseLock()
 					}
@@ -103,12 +95,11 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 				promise.unlink = async (linkModel: string, linkPrimaryKey: string, params?: { through: string }) => {
 					await this.acquireLock()
 					try {
-						assert(this.#context !== null, "expected this.#context !== null")
 						const {
 							primaryKey: [primaryKey],
 						} = this.db.models[model]
 						const target = isSelect ? (value as string) : ((value as ModelValue)[primaryKey] as string)
-						const modelValue = await this.getModelValue(this.#context, linkModel, linkPrimaryKey)
+						const modelValue = await this.context.getModelValue(linkModel, linkPrimaryKey)
 						assert(modelValue !== null, `db.unlink(): called on a missing model ${linkModel}.get(${linkPrimaryKey})`)
 						const backlinkKey = params?.through ?? model
 						const backlinkProp = this.db.models[linkModel].properties.find((prop) => prop.name === backlinkKey)
@@ -123,7 +114,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 							throw new Error(`db.unlink(): link from ${linkModel} ${backlinkKey} must be a relation`)
 						}
 						validateModelValue(this.db.models[linkModel], modelValue)
-						this.#context.modelEntries[linkModel][linkPrimaryKey] = modelValue
+						this.context.modelEntries[linkModel][linkPrimaryKey] = modelValue
 					} finally {
 						this.releaseLock()
 					}
@@ -136,8 +127,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 			get: async <T extends keyof DeriveModelTypes<ModelsT> & string>(model: T, key: string) => {
 				await this.acquireLock()
 				try {
-					assert(this.#context !== null, "expected this.#context !== null")
-					const result = await this.getModelValue(this.#context, model, key)
+					const result = await this.context.getModelValue(model, key)
 					return result as DeriveModelTypes<ModelsT>[T]
 				} finally {
 					this.releaseLock()
@@ -147,15 +137,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 			set: getChainableMethod(async (model, value) => {
 				await this.acquireLock()
 				try {
-					assert(this.#context !== null, "expected this.#context !== null")
-					validateModelValue(this.db.models[model], value)
-					const {
-						primaryKey: [primaryKey],
-					} = this.db.models[model]
-					assert(primaryKey in value, `db.set(${model}): missing primary key ${primaryKey}`)
-					assert(primaryKey !== null && primaryKey !== undefined, `db.set(${model}): ${primaryKey} primary key`)
-					const key = (value as ModelValue)[primaryKey] as string
-					this.#context.modelEntries[model][key] = value
+					this.context.setModelValue(model, value)
 				} finally {
 					this.releaseLock()
 				}
@@ -163,15 +145,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 			create: getChainableMethod(async (model, value) => {
 				await this.acquireLock()
 				try {
-					assert(this.#context !== null, "expected this.#context !== null")
-					validateModelValue(this.db.models[model], value)
-					const {
-						primaryKey: [primaryKey],
-					} = this.db.models[model]
-					assert(primaryKey in value, `db.create(${model}): missing primary key ${primaryKey}`)
-					assert(primaryKey !== null && primaryKey !== undefined, `db.create(${model}): ${primaryKey} primary key`)
-					const key = (value as ModelValue)[primaryKey] as string
-					this.#context.modelEntries[model][key] = value
+					this.context.setModelValue(model, value)
 				} finally {
 					this.releaseLock()
 				}
@@ -179,21 +153,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 			update: getChainableMethod(async (model, value) => {
 				await this.acquireLock()
 				try {
-					assert(this.#context !== null, "expected this.#context !== null")
-					const {
-						primaryKey: [primaryKey],
-					} = this.db.models[model]
-					assert(primaryKey in value, `db.update(${model}): missing primary key ${primaryKey}`)
-					const key = (value as ModelValue)[primaryKey] as string
-					assert(typeof key === "string", `db.update(${model}): ${primaryKey} primary key`)
-					const modelValue = await this.getModelValue(this.#context, model, key)
-					if (modelValue === null) {
-						console.log(`db.update(${model}, ${key}): attempted to update a nonexistent value`)
-						return
-					}
-					const mergedValue = updateModelValues(value as ModelValue, modelValue ?? {})
-					validateModelValue(this.db.models[model], mergedValue)
-					this.#context.modelEntries[model][key] = mergedValue
+					await this.context.updateModelValue(model, value)
 				} finally {
 					this.releaseLock()
 				}
@@ -201,21 +161,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 			merge: getChainableMethod(async (model, value) => {
 				await this.acquireLock()
 				try {
-					assert(this.#context !== null, "expected this.#context !== null")
-					const {
-						primaryKey: [primaryKey],
-					} = this.db.models[model]
-					assert(primaryKey in value, `db.merge(${model}): missing primary key ${primaryKey}`)
-					assert(primaryKey !== null && primaryKey !== undefined, `db.merge(${model}): ${primaryKey} primary key`)
-					const key = (value as ModelValue)[primaryKey] as string
-					const modelValue = await this.getModelValue(this.#context, model, key)
-					if (modelValue === null) {
-						console.log(`db.merge(${model}, ${key}): attempted to merge into a nonexistent value`)
-						return
-					}
-					const mergedValue = mergeModelValues(value as ModelValue, modelValue ?? {})
-					validateModelValue(this.db.models[model], mergedValue)
-					this.#context.modelEntries[model][key] = mergedValue
+					await this.context.mergeModelValue(model, value)
 				} finally {
 					this.releaseLock()
 				}
@@ -223,8 +169,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 			delete: async (model: string, key: string) => {
 				await this.acquireLock()
 				try {
-					assert(this.#context !== null, "expected this.#context !== null")
-					this.#context.modelEntries[model][key] = null
+					this.context.deleteModelValue(model, key)
 				} finally {
 					this.releaseLock()
 				}
@@ -283,8 +228,15 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 		}
 	}
 
+	public close() {}
+
 	public get actionNames() {
 		return Object.keys(this.actions)
+	}
+
+	private get context() {
+		assert(this.#context !== null, "expected this.#context !== null")
+		return this.#context
 	}
 
 	protected async execute(context: ExecutionContext): Promise<void | any> {
@@ -305,7 +257,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 		this.#context = context
 
 		try {
-			const actionContext: ActionContext<DeriveModelTypes<ModelsT>> = {
+			const thisValue: ActionContext<DeriveModelTypes<ModelsT>> = {
 				db: this.#db,
 				id: context.id,
 				publicKey,
@@ -314,7 +266,8 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 				blockhash: blockhash ?? null,
 				timestamp,
 			}
-			const result = await action.apply(actionContext, Array.isArray(args) ? [this.#db, ...args] : [this.#db, args])
+
+			const result = await action.apply(thisValue, Array.isArray(args) ? [this.#db, ...args] : [this.#db, args])
 			while (this.#waiting > 0) {
 				await new Promise((resolve) => setTimeout(resolve, 10))
 			}

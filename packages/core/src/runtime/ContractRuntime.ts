@@ -1,11 +1,12 @@
 import { QuickJSHandle } from "quickjs-emscripten"
 
 import type { SignerCache } from "@canvas-js/interfaces"
-import { ModelValue, ModelSchema, validateModelValue, updateModelValues, mergeModelValues } from "@canvas-js/modeldb"
+import { ModelValue, ModelSchema } from "@canvas-js/modeldb"
 import { VM } from "@canvas-js/vm"
 import { assert, mapValues } from "@canvas-js/utils"
 
-import { AbstractRuntime, ExecutionContext } from "./AbstractRuntime.js"
+import { ExecutionContext } from "../ExecutionContext.js"
+import { AbstractRuntime } from "./AbstractRuntime.js"
 
 export class ContractRuntime extends AbstractRuntime {
 	public static async init(
@@ -56,23 +57,14 @@ export class ContractRuntime extends AbstractRuntime {
 			return handle.consume(vm.cache)
 		})
 
-		// TODO: Validate that models satisfies ModelSchema
-		const mergeHandles: Record<string, QuickJSHandle> = {}
-
 		const modelSchema: ModelSchema = mapValues(modelHandles, (handle) => handle.consume(vm.context.dump))
 		assert(
 			Object.keys(modelSchema).every((key) => !key.startsWith("$")),
 			"contract model names cannot start with '$'",
 		)
 
-		const cleanupSetupHandles = () => {
-			for (const handle of Object.values(mergeHandles)) {
-				handle.dispose()
-			}
-		}
-
 		const schema = AbstractRuntime.getModelSchema(modelSchema)
-		return new ContractRuntime(topic, signers, schema, vm, actions, cleanupSetupHandles)
+		return new ContractRuntime(topic, signers, schema, vm, actions)
 	}
 
 	readonly #databaseAPI: QuickJSHandle
@@ -85,120 +77,78 @@ export class ContractRuntime extends AbstractRuntime {
 		public readonly schema: ModelSchema,
 		public readonly vm: VM,
 		public readonly actions: Record<string, QuickJSHandle>,
-		private disposeSetupHandles: () => void,
 	) {
 		super()
 		this.#databaseAPI = vm
 			.wrapObject({
 				get: vm.wrapFunction((model, key) => {
-					assert(this.#context !== null, "expected this.#context !== null")
 					assert(typeof model === "string", 'expected typeof model === "string"')
 					assert(typeof key === "string", 'expected typeof key === "string"')
-					return this.getModelValue(this.#context, model, key)
+					return this.context.getModelValue(model, key)
 				}),
 				set: vm.context.newFunction("set", (modelHandle, valueHandle) => {
-					assert(this.#context !== null, "expected this.#modelEntries !== null")
 					const model = vm.context.getString(modelHandle)
-					assert(this.db.models[model] !== undefined, "model not found")
 					const value = this.vm.unwrapValue(valueHandle) as ModelValue
-					validateModelValue(this.db.models[model], value)
-					const {
-						primaryKey: [primaryKey],
-					} = this.db.models[model]
-					const key = value[primaryKey] as string
-					assert(typeof key === "string", "expected value[primaryKey] to be a string")
-					this.#context.modelEntries[model][key] = value
+					this.context.setModelValue(model, value)
 				}),
 				create: vm.context.newFunction("create", (modelHandle, valueHandle) => {
-					assert(this.#context !== null, "expected this.#modelEntries !== null")
 					const model = vm.context.getString(modelHandle)
-					assert(this.db.models[model] !== undefined, "model not found")
 					const value = this.vm.unwrapValue(valueHandle) as ModelValue
-					validateModelValue(this.db.models[model], value)
-					const {
-						primaryKey: [primaryKey],
-					} = this.db.models[model]
-					const key = value[primaryKey] as string
-					assert(typeof key === "string", "expected value[primaryKey] to be a string")
-					this.#context.modelEntries[model][key] = value
+					this.context.setModelValue(model, value)
 				}),
 				update: vm.context.newFunction("update", (modelHandle, valueHandle) => {
-					assert(this.#context !== null, "expected this.#modelEntries !== null")
 					const model = vm.context.getString(modelHandle)
-					assert(this.db.models[model] !== undefined, "model not found")
-					const {
-						primaryKey: [primaryKey],
-					} = this.db.models[model]
 					const value = this.vm.unwrapValue(valueHandle) as ModelValue
-					const key = value[primaryKey] as string
-					assert(typeof key === "string", "expected value[primaryKey] to be a string")
+
 					const promise = vm.context.newPromise()
+
 					// TODO: Ensure concurrent merges into the same value don't create a race condition
 					// if the user doesn't call db.update() with await.
-					this.getModelValue(this.#context, model, key)
-						.then((previousValue) => {
-							const mergedValue = updateModelValues(value, previousValue ?? {})
-							validateModelValue(this.db.models[model], mergedValue)
-							assert(this.#context !== null)
-							this.#context.modelEntries[model][key] = mergedValue
-							promise.resolve()
-						})
-						.catch((err) => {
-							promise.reject()
-						})
+					this.context
+						.updateModelValue(model, value)
+						.then(() => promise.resolve())
+						.catch((err) => promise.reject())
+
 					promise.settled.then(vm.runtime.executePendingJobs)
 					return promise.handle
 				}),
 				merge: vm.context.newFunction("merge", (modelHandle, valueHandle) => {
-					assert(this.#context !== null, "expected this.#modelEntries !== null")
 					const model = vm.context.getString(modelHandle)
-					assert(this.db.models[model] !== undefined, "model not found")
-					const {
-						primaryKey: [primaryKey],
-					} = this.db.models[model]
 					const value = this.vm.unwrapValue(valueHandle) as ModelValue
-					const key = value[primaryKey] as string
-					assert(typeof key === "string", "expected value[primaryKey] to be a string")
+
 					const promise = vm.context.newPromise()
+
 					// TODO: Ensure concurrent merges into the same value don't create a race condition
-					// if the user doesn't call db.merge() with await.
-					this.getModelValue(this.#context, model, key)
-						.then((previousValue) => {
-							const mergedValue = mergeModelValues(value, previousValue ?? {})
-							validateModelValue(this.db.models[model], mergedValue)
-							assert(this.#context !== null)
-							this.#context.modelEntries[model][key] = mergedValue
-							promise.resolve()
-						})
-						.catch((err) => {
-							promise.reject()
-						})
+					// if the user doesn't call db.update() with await.
+					this.context
+						.mergeModelValue(model, value)
+						.then(() => promise.resolve())
+						.catch((err) => promise.reject())
+
 					promise.settled.then(vm.runtime.executePendingJobs)
 					return promise.handle
 				}),
 
 				delete: vm.context.newFunction("delete", (modelHandle, keyHandle) => {
-					assert(this.#context !== null, "expected this.#modelEntries !== null")
 					const model = vm.context.getString(modelHandle)
-					assert(this.db.models[model] !== undefined, "model not found")
 					const key = vm.context.getString(keyHandle)
-					this.#context.modelEntries[model][key] = null
+					this.context.deleteModelValue(model, key)
 				}),
 			})
 			.consume(vm.cache)
 	}
 
-	public async close() {
-		try {
-			await super.close()
-		} finally {
-			this.disposeSetupHandles()
-			this.vm.dispose()
-		}
+	public close() {
+		this.vm.dispose()
 	}
 
 	public get actionNames() {
 		return Object.keys(this.actions)
+	}
+
+	private get context() {
+		assert(this.#context !== null, "expected this.#context !== null")
+		return this.#context
 	}
 
 	protected async execute(context: ExecutionContext): Promise<void | any> {
@@ -217,9 +167,7 @@ export class ContractRuntime extends AbstractRuntime {
 			throw new Error(`invalid action name: ${name}`)
 		}
 
-		this.#context = context
-
-		const ctxHandle = this.vm.wrapValue({
+		const thisHandle = this.vm.wrapValue({
 			id: context.id,
 			publicKey,
 			did,
@@ -231,7 +179,8 @@ export class ContractRuntime extends AbstractRuntime {
 		const argHandles = Array.isArray(args) ? args.map(this.vm.wrapValue) : [this.vm.wrapValue(args)]
 
 		try {
-			const result = await this.vm.callAsync(actionHandle, ctxHandle, [this.#databaseAPI, ...argHandles])
+			this.#context = context
+			const result = await this.vm.callAsync(actionHandle, thisHandle, [this.#databaseAPI, ...argHandles])
 
 			return result.consume((handle) => {
 				if (this.vm.context.typeof(handle) === "undefined") {
@@ -242,7 +191,7 @@ export class ContractRuntime extends AbstractRuntime {
 			})
 		} finally {
 			argHandles.map((handle: QuickJSHandle) => handle.dispose())
-			ctxHandle.dispose()
+			thisHandle.dispose()
 			this.#context = null
 		}
 	}

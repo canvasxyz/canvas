@@ -29,7 +29,7 @@ import { MissingParentError } from "@canvas-js/gossiplog/errors"
 import { AbstractGossipLog, GossipLogEvents } from "../AbstractGossipLog.js"
 import { SignedMessage } from "../SignedMessage.js"
 
-import { decodeId, encodeId } from "../ids.js"
+import { decodeId, encodeId } from "../MessageId.js"
 
 import {
 	DEFAULT_PROTOCOL_SELECT_TIMEOUT,

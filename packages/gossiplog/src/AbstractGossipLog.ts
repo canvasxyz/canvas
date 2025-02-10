@@ -18,7 +18,7 @@ import type { SyncSnapshot } from "./interface.js"
 import { AncestorIndex } from "./AncestorIndex.js"
 import { BranchMergeIndex } from "./BranchMergeIndex.js"
 import { MessageSource, SignedMessage } from "./SignedMessage.js"
-import { decodeId, encodeId, messageIdPattern } from "./ids.js"
+import { decodeId, encodeId, MessageId, messageIdPattern } from "./MessageId.js"
 import { getNextClock } from "./schema.js"
 import { gossiplogTopicPattern } from "./utils.js"
 import * as Y from "yjs"
@@ -419,8 +419,21 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		}
 	}
 
-	public async isAncestor(id: string, ancestor: string, visited = new Set<string>()): Promise<boolean> {
-		return await new AncestorIndex(this.db).isAncestor(id, ancestor, visited)
+	public async isAncestor(
+		root: string | string[] | MessageId | MessageId[],
+		ancestor: string | MessageId,
+	): Promise<boolean> {
+		const ids = Array.isArray(root) ? root : [root]
+		const visited = new Set<string>()
+		const ancestorIndex = new AncestorIndex(this.db)
+		for (const id of ids) {
+			const isAncestor = await ancestorIndex.isAncestor(id, ancestor, visited)
+			if (isAncestor) {
+				return true
+			}
+		}
+
+		return false
 	}
 
 	/**
