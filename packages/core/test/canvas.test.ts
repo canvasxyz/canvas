@@ -7,8 +7,16 @@ import type { Action, Message, Session } from "@canvas-js/interfaces"
 import { ed25519 } from "@canvas-js/signatures"
 import { SIWESigner, Eip712Signer } from "@canvas-js/chain-ethereum"
 import { CosmosSigner } from "@canvas-js/chain-cosmos"
-import { Canvas } from "@canvas-js/core"
+import { Canvas, Config } from "@canvas-js/core"
 import { assert } from "@canvas-js/utils"
+import * as Y from "yjs"
+
+function createUpdate(baseDoc: Y.Doc, update: (startDoc: Y.Doc) => void) {
+	const state0 = Y.encodeStateAsUpdate(baseDoc)
+	update(baseDoc)
+	const state1 = Y.encodeStateAsUpdate(baseDoc)
+	return Y.diffUpdate(state1, Y.encodeStateVectorFromUpdate(state0))
+}
 
 const contract = `
 export const models = {
@@ -499,3 +507,101 @@ test("open custom modeldb tables", async (t) => {
 	await app.db.set("widgets", { id, name: "foobar" })
 	t.deepEqual(await app.db.get("widgets", id), { id, name: "foobar" })
 })
+
+test("create a contract with a yjs text table with ContractRuntime", async (t) => {
+	await yjsTest(t, {
+		contract: `
+			export const models = {
+				posts: {
+					id: "primary",
+					content: "yjs-doc"
+				}
+			};
+			export const actions = {
+				updatePost: (db, { key, update }) => {
+					db.applyDocumentUpdate("posts", key, update)
+				}
+			};`,
+		topic: "com.example.app",
+	})
+})
+
+test("create a contract with a yjs text table with FunctionRuntime", async (t) => {
+	await yjsTest(t, {
+		contract: {
+			models: {
+				// @ts-ignore
+				posts: { id: "primary", content: "yjs-doc" },
+			},
+			actions: {
+				updatePost: (db, { key, update }: { key: string; update: Uint8Array }) => {
+					db.applyDocumentUpdate("posts", key, update)
+				},
+			},
+		},
+		topic: "com.example.app",
+	})
+})
+
+async function yjsTest(t: ExecutionContext, config: Config) {
+	// initialize two apps with the same config
+	const appA = await Canvas.initialize(config)
+	const appB = await Canvas.initialize(config)
+
+	t.teardown(() => {
+		appA.stop()
+		appB.stop()
+	})
+
+	const post1Id = "post_1"
+
+	// call an action that updates the yjs-doc item
+	const doc0A = new Y.Doc()
+
+	await appA.actions.updatePost({
+		key: post1Id,
+		update: createUpdate(doc0A, (doc) => doc.getText().insert(0, "hello")),
+	})
+
+	const doc1A = await appA.messageLog.getYDoc("posts", post1Id)
+	t.is(doc1A!.getText().toJSON(), "hello", "assert doc has been updated")
+
+	// call another action that updates the yjs-doc item
+	const update1 = await appA.actions.updatePost({
+		key: post1Id,
+		update: createUpdate(doc1A!, (doc) => doc.getText().insert(5, " world")),
+	})
+
+	const doc2A = await appA.messageLog.getYDoc("posts", post1Id)
+	t.is(doc2A!.getText().toJSON(), "hello world", "assert doc has been updated")
+
+	// sync app -> app2
+	await appA.messageLog.serve((source) => appB.messageLog.sync(source))
+
+	const doc2B = await appB.messageLog.getYDoc("posts", post1Id)
+	t.is(doc2B!.getText().toJSON(), "hello world", "assert doc on peer has been updated")
+
+	// apply an action on app
+	await appA.actions.updatePost({
+		key: post1Id,
+		update: createUpdate(doc2A!, (doc) => doc.getText().insert(11, "!")),
+	})
+	const doc3A = await appA.messageLog.getYDoc("posts", post1Id)
+	t.is(doc3A!.getText().toJSON(), "hello world!", "assert doc has been updated")
+
+	// concurrently apply an action on app2
+	await appB.actions.updatePost({
+		key: post1Id,
+		update: createUpdate(doc2B!, (doc) => doc.getText().insert(11, "?")),
+	})
+	const doc3B = await appB.messageLog.getYDoc("posts", post1Id)
+	t.is(doc3B!.getText().toJSON(), "hello world?", "assert doc on peer has been updated")
+
+	await appA.messageLog.serve((source) => appB.messageLog.sync(source))
+	await appB.messageLog.serve((source) => appA.messageLog.sync(source))
+
+	// assert that app contains both changes
+	const doc4A = await appA.messageLog.getYDoc("posts", post1Id)
+	const doc4B = await appB.messageLog.getYDoc("posts", post1Id)
+	t.is(doc4A!.getText().toJSON(), doc4B!.getText().toJSON(), "assert concurrent changes have converged")
+}

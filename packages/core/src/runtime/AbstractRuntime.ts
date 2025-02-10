@@ -9,6 +9,7 @@ import { assert } from "@canvas-js/utils"
 
 import { ExecutionContext, getKeyHash } from "../ExecutionContext.js"
 import { isAction, isSession, isSnapshot } from "../utils.js"
+import * as Y from "yjs"
 
 export type EffectRecord = { key: string; value: Uint8Array | null; branch: number; clock: number }
 
@@ -63,8 +64,32 @@ export abstract class AbstractRuntime {
 	} satisfies ModelSchema
 
 	protected static getModelSchema(schema: ModelSchema): ModelSchema {
+		const outputSchema: ModelSchema = {}
+		for (const [modelName, modelSchema] of Object.entries(schema)) {
+			// @ts-ignore
+			if (modelSchema.content === "yjs-doc") {
+				if (
+					Object.entries(modelSchema).length !== 2 &&
+					// @ts-ignore
+					modelSchema.id !== "primary"
+				) {
+					// not valid
+					throw new Error("yjs-doc tables must have two columns, one of which is 'id'")
+				} else {
+					// this table stores the current state of the Yjs document
+					// we just need one entry per document because updates are commutative
+					outputSchema[`${modelName}:state`] = {
+						id: "primary",
+						content: "bytes",
+					}
+				}
+			} else {
+				outputSchema[modelName] = modelSchema
+			}
+		}
+
 		return {
-			...schema,
+			...outputSchema,
 			...AbstractRuntime.sessionsModel,
 			...AbstractRuntime.actionsModel,
 			...AbstractRuntime.effectsModel,
@@ -211,6 +236,23 @@ export abstract class AbstractRuntime {
 
 		const actionRecord: ActionRecord = { message_id: id, did, name, timestamp: context.timestamp }
 		const effects: Effect[] = [{ operation: "set", model: "$actions", value: actionRecord }]
+
+		for (const [model, entries] of Object.entries(executionContext.operations)) {
+			for (const [key, operations] of Object.entries(entries)) {
+				// load the current doc from the database or create a new one if it doesn't exist yet
+				const currentState = (await executionContext.messageLog.getYDoc(model, key)) || new Y.Doc()
+
+				// apply the actual operations to the document
+				for (const operation of operations) {
+					if (operation.type === "applyDocumentUpdate") {
+						// apply document update to the doc here
+						Y.applyUpdate(currentState, operation.update)
+					}
+				}
+
+				await this.db.set(`${model}:state`, { id: key, content: Y.encodeStateAsUpdate(currentState) })
+			}
+		}
 
 		for (const [model, entries] of Object.entries(executionContext.modelEntries)) {
 			for (const [key, value] of Object.entries(entries)) {

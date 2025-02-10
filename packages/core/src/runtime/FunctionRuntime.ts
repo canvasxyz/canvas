@@ -173,6 +173,20 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 					this.releaseLock()
 				}
 			},
+			applyDocumentUpdate: async (model: string, key: string, update: Uint8Array) => {
+				assert(this.#context !== null, "expected this.#context !== null")
+
+				if (this.#context.operations[model] === undefined) {
+					this.#context.operations[model] = {}
+				}
+				if (this.#context.operations[model][key] === undefined) {
+					this.#context.operations[model][key] = []
+				}
+				this.#context.operations[model][key].push({
+					type: "applyDocumentUpdate",
+					update,
+				})
+			},
 		}
 	}
 

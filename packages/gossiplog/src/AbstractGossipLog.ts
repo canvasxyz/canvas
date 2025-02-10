@@ -21,6 +21,7 @@ import { MessageSource, SignedMessage } from "./SignedMessage.js"
 import { decodeId, encodeId, MessageId, messageIdPattern } from "./MessageId.js"
 import { getNextClock } from "./schema.js"
 import { gossiplogTopicPattern } from "./utils.js"
+import * as Y from "yjs"
 
 export type GossipLogConsumer<Payload = unknown, Result = any> = (
 	this: AbstractGossipLog<Payload, Result>,
@@ -195,6 +196,20 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 
 		const { signature, message, branch } = record
 		return this.encode(signature, message, { branch })
+	}
+
+	public async getYDoc(modelName: string, id: string): Promise<Y.Doc | null> {
+		const existingStateEntries = await this.db.query<{ id: string; content: Uint8Array }>(`${modelName}:state`, {
+			where: { id: id },
+			limit: 1,
+		})
+		if (existingStateEntries.length > 0) {
+			const doc = new Y.Doc()
+			Y.applyUpdate(doc, existingStateEntries[0].content)
+			return doc
+		} else {
+			return null
+		}
 	}
 
 	public getMessages(

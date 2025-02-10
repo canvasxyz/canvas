@@ -1,6 +1,7 @@
 import * as cbor from "@ipld/dag-cbor"
 import { blake3 } from "@noble/hashes/blake3"
 import { bytesToHex } from "@noble/hashes/utils"
+import * as Y from "yjs"
 
 import type { Action, Session, Snapshot } from "@canvas-js/interfaces"
 
@@ -9,6 +10,13 @@ import { AbstractGossipLog, SignedMessage, MessageId } from "@canvas-js/gossiplo
 import { assert, mapValues } from "@canvas-js/utils"
 
 export const getKeyHash = (key: string) => bytesToHex(blake3(key, { dkLen: 16 }))
+
+type ApplyDocumentUpdate = {
+	type: "applyDocumentUpdate"
+	update: Uint8Array
+}
+
+type Operation = ApplyDocumentUpdate
 
 export class ExecutionContext {
 	// // recordId -> { version, value }
@@ -19,6 +27,7 @@ export class ExecutionContext {
 
 	public readonly modelEntries: Record<string, Record<string, ModelValue | null>>
 	public readonly root: MessageId[]
+	public readonly operations: Record<string, Record<string, Operation[]>> = {}
 
 	constructor(
 		public readonly messageLog: AbstractGossipLog<Action | Session | Snapshot>,
