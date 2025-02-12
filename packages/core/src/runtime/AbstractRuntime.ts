@@ -1,11 +1,12 @@
 import * as cbor from "@ipld/dag-cbor"
 import { logger } from "@libp2p/logger"
+import * as Y from "yjs"
 
 import type { Action, Session, Snapshot, SignerCache, Awaitable, MessageType } from "@canvas-js/interfaces"
 
 import { AbstractModelDB, Effect, ModelSchema } from "@canvas-js/modeldb"
 import { GossipLogConsumer, MAX_MESSAGE_ID, AbstractGossipLog, SignedMessage } from "@canvas-js/gossiplog"
-import { assert, signalInvalidType } from "@canvas-js/utils"
+import { assert } from "@canvas-js/utils"
 
 import { ExecutionContext, getKeyHash } from "../ExecutionContext.js"
 import { isAction, isSession, isSnapshot, isUpdates } from "../utils.js"
@@ -63,8 +64,32 @@ export abstract class AbstractRuntime {
 	} satisfies ModelSchema
 
 	protected static getModelSchema(schema: ModelSchema): ModelSchema {
+		const outputSchema: ModelSchema = {}
+		for (const [modelName, modelSchema] of Object.entries(schema)) {
+			// @ts-ignore
+			if (modelSchema.content === "yjs-doc") {
+				if (
+					Object.entries(modelSchema).length !== 2 &&
+					// @ts-ignore
+					modelSchema.id !== "primary"
+				) {
+					// not valid
+					throw new Error("yjs-doc tables must have two columns, one of which is 'id'")
+				} else {
+					// this table stores the current state of the Yjs document
+					// we just need one entry per document because updates are commutative
+					outputSchema[`${modelName}:state`] = {
+						id: "primary",
+						content: "bytes",
+					}
+				}
+			} else {
+				outputSchema[modelName] = modelSchema
+			}
+		}
+
 		return {
-			...schema,
+			...outputSchema,
 			...AbstractRuntime.sessionsModel,
 			...AbstractRuntime.actionsModel,
 			...AbstractRuntime.effectsModel,
@@ -237,6 +262,31 @@ export abstract class AbstractRuntime {
 				}
 			}
 		}
+
+		const diffs: { model: string; key: string; diff: Uint8Array }[] = []
+		for (const [model, modelCalls] of Object.entries(executionContext.yjsCalls)) {
+			for (const [key, calls] of Object.entries(modelCalls)) {
+				const doc = (await executionContext.getYDoc(model, key)) || new Y.Doc()
+				// get the initial state of the document
+				const beforeState = Y.encodeStateAsUpdate(doc)
+				for (const call of calls) {
+					if (call.call === "insert") {
+						doc.getText().insert(call.index, call.content)
+					} else if (call.call === "delete") {
+						doc.getText().delete(call.index, call.length)
+					} else {
+						throw new Error("unexpected call type")
+					}
+				}
+				// diff the document with the initial state
+				const afterState = Y.encodeStateAsUpdate(doc)
+				const diff = Y.diffUpdate(afterState, Y.encodeStateVectorFromUpdate(beforeState))
+				diffs.push({ model, key, diff })
+			}
+		}
+
+		// TODO: we want the diff to trigger another message - how should we do this?
+		// add another return value to the consumer
 
 		this.log("applying effects %O", effects)
 

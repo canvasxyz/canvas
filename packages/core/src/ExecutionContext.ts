@@ -1,6 +1,7 @@
 import * as cbor from "@ipld/dag-cbor"
 import { blake3 } from "@noble/hashes/blake3"
 import { bytesToHex } from "@noble/hashes/utils"
+import * as Y from "yjs"
 
 import type { Action, MessageType } from "@canvas-js/interfaces"
 
@@ -9,6 +10,17 @@ import { AbstractGossipLog, SignedMessage, MessageId } from "@canvas-js/gossiplo
 import { assert, mapValues } from "@canvas-js/utils"
 
 export const getKeyHash = (key: string) => bytesToHex(blake3(key, { dkLen: 16 }))
+type YjsCallInsert = {
+	call: "insert"
+	index: number
+	content: string
+}
+type YjsCallDelete = {
+	call: "delete"
+	index: number
+	length: number
+}
+export type YjsCall = YjsCallInsert | YjsCallDelete
 
 export class ExecutionContext {
 	// // recordId -> { version, value }
@@ -18,6 +30,7 @@ export class ExecutionContext {
 	// public readonly writes: Record<string, Effect> = {}
 
 	public readonly modelEntries: Record<string, Record<string, ModelValue | null>>
+	public readonly yjsCalls: Record<string, Record<string, YjsCall[]>> = {}
 	public readonly root: MessageId[]
 
 	constructor(
@@ -137,5 +150,19 @@ export class ExecutionContext {
 		const result = mergeModelValues(value, previousValue)
 		validateModelValue(this.db.models[model], result)
 		this.modelEntries[model][key] = result
+	}
+
+	public async getYDoc(modelName: string, id: string): Promise<Y.Doc | null> {
+		const existingStateEntries = await this.db.query<{ id: string; content: Uint8Array }>(`${modelName}:state`, {
+			where: { id: id },
+			limit: 1,
+		})
+		if (existingStateEntries.length > 0) {
+			const doc = new Y.Doc()
+			Y.applyUpdate(doc, existingStateEntries[0].content)
+			return doc
+		} else {
+			return null
+		}
 	}
 }

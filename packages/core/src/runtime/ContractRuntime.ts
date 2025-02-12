@@ -134,6 +134,25 @@ export class ContractRuntime extends AbstractRuntime {
 					const key = vm.context.getString(keyHandle)
 					this.context.deleteModelValue(model, key)
 				}),
+
+				yjsInsert: vm.context.newFunction("yjsInsert", (modelHandle, keyHandle, indexHandle, contentHandle) => {
+					const model = vm.context.getString(modelHandle)
+					const key = vm.context.getString(keyHandle)
+					const index = vm.context.getNumber(indexHandle)
+					const content = vm.context.getString(contentHandle)
+					this.context.yjsCalls[model] ||= {}
+					this.context.yjsCalls[model][key] ||= []
+					this.context.yjsCalls[model][key].push({ call: "insert", index, content })
+				}),
+				yjsDelete: vm.context.newFunction("yjsDelete", (modelHandle, keyHandle, indexHandle, lengthHandle) => {
+					const model = vm.context.getString(modelHandle)
+					const key = vm.context.getString(keyHandle)
+					const index = vm.context.getNumber(indexHandle)
+					const length = vm.context.getNumber(lengthHandle)
+					this.context.yjsCalls[model] ||= {}
+					this.context.yjsCalls[model][key] ||= []
+					this.context.yjsCalls[model][key].push({ call: "delete", index, length })
+				}),
 			})
 			.consume(vm.cache)
 	}
