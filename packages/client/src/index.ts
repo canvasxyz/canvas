@@ -1,7 +1,7 @@
 import * as json from "@ipld/dag-json"
 import { StatusCodes } from "http-status-codes"
 
-import type { Action, Message, Session, SessionSigner, Signer } from "@canvas-js/interfaces"
+import type { Action, Message, MessageType, Session, SessionSigner, Signer } from "@canvas-js/interfaces"
 import { assert } from "@canvas-js/utils"
 
 export class Client {
@@ -60,7 +60,7 @@ export class Client {
 		})
 	}
 
-	private async insert(delegateSigner: Signer<Action | Session>, message: Message<Action | Session>): Promise<string> {
+	private async insert(delegateSigner: Signer<MessageType>, message: Message<MessageType>): Promise<string> {
 		const signature = await delegateSigner.sign(message)
 
 		const res = await fetch(`${this.host}/api/messages`, {
