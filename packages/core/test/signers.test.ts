@@ -1,7 +1,7 @@
 import test from "ava"
 
 import { Canvas } from "@canvas-js/core"
-import { PRNGSigner } from "./PRNGSigner.js"
+import { PRNGSigner } from "./utils.js"
 import { setTimeout } from "timers/promises"
 
 test("test PRNGSigner", async (t) => {
