@@ -4,16 +4,7 @@ import { logger } from "@libp2p/logger"
 import type pg from "pg"
 import type { SqlStorage } from "@cloudflare/workers-types"
 
-import {
-	Signature,
-	Action,
-	Session,
-	Message,
-	Snapshot,
-	SessionSigner,
-	SignerCache,
-	MessageType,
-} from "@canvas-js/interfaces"
+import { Signature, Action, Message, Snapshot, SessionSigner, SignerCache, MessageType } from "@canvas-js/interfaces"
 import { AbstractModelDB, Model, ModelSchema, Effect } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { AbstractGossipLog, GossipLogEvents, SignedMessage } from "@canvas-js/gossiplog"
@@ -185,6 +176,8 @@ export class Canvas<
 						app.log("indexing user %s (did: %s)", publicKey, did)
 						const record = { did }
 						effects.push({ operation: "set", model: "$dids", value: record })
+					} else if (message.payload.type === "updates") {
+						// TODO: handle updates
 					}
 					start = id
 				}

@@ -1,7 +1,5 @@
 import type { SignatureScheme, Signer } from "./Signer.js"
 import type { Session } from "./Session.js"
-import type { Action } from "./Action.js"
-import type { Snapshot } from "./Snapshot.js"
 import type { Awaitable } from "./Awaitable.js"
 import { MessageType } from "./MessageType.js"
 
