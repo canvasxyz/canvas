@@ -4,17 +4,7 @@ import { logger } from "@libp2p/logger"
 import type pg from "pg"
 import type { SqlStorage } from "@cloudflare/workers-types"
 
-import {
-	Signature,
-	Action,
-	Session,
-	Message,
-	MessageType,
-	Snapshot,
-	SessionSigner,
-	SignerCache,
-	Updates,
-} from "@canvas-js/interfaces"
+import { Signature, Action, Message, Snapshot, SessionSigner, SignerCache, MessageType } from "@canvas-js/interfaces"
 import { AbstractModelDB, Model, ModelSchema, Effect } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { AbstractGossipLog, GossipLogEvents, SignedMessage } from "@canvas-js/gossiplog"
@@ -159,9 +149,9 @@ export class Canvas<
 			let resultCount: number
 			let start: string | undefined = undefined
 			do {
-				const results: { id: string; message: Message<Action | Session | Updates> }[] = await db.query<{
+				const results: { id: string; message: Message<MessageType> }[] = await db.query<{
 					id: string
-					message: Message<Action | Session | Updates>
+					message: Message<MessageType>
 				}>("$messages", {
 					limit,
 					select: { id: true, message: true },
@@ -249,10 +239,11 @@ export class Canvas<
 		for (const name of runtime.actionNames) {
 			const action = async (signer: SessionSigner<any> | null, ...args: any) => {
 				this.log("executing action %s %o", name, args)
-				const timestamp = Date.now()
 
 				const sessionSigner = signer ?? signers.getFirst()
 				assert(sessionSigner !== undefined, "signer not found")
+
+				const timestamp = sessionSigner.getCurrentTimestamp()
 
 				this.log("using session signer %s", sessionSigner.key)
 				let session = await sessionSigner.getSession(this.topic)

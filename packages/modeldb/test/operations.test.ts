@@ -203,3 +203,12 @@ testOnModelDB("set and get a relation on a composite primary key", async (t, ope
 		],
 	})
 })
+
+testOnModelDB("set and get top-level string JSON values", async (t, openDB) => {
+	const db = await openDB(t, {
+		foo: { id: "primary", value: "json" },
+	})
+
+	await db.set("foo", { id: "abc", value: "hello world" })
+	t.deepEqual(await db.get("foo", "abc"), { id: "abc", value: "hello world" })
+})

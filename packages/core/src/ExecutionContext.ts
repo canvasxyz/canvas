@@ -35,7 +35,6 @@ export class ExecutionContext {
 
 	constructor(
 		public readonly messageLog: AbstractGossipLog<MessageType>,
-		// TODO: why is this just action? should it be `SignedMessage<Action | Updates>`?
 		public readonly signedMessage: SignedMessage<Action>,
 		public readonly address: string,
 	) {
