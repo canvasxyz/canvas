@@ -1,14 +1,14 @@
 import * as cbor from "@ipld/dag-cbor"
 import { logger } from "@libp2p/logger"
 
-import type { Action, Session, Snapshot, SignerCache, Awaitable } from "@canvas-js/interfaces"
+import type { Action, Session, Snapshot, SignerCache, Awaitable, MessageType } from "@canvas-js/interfaces"
 
 import { AbstractModelDB, Effect, ModelSchema } from "@canvas-js/modeldb"
 import { GossipLogConsumer, MAX_MESSAGE_ID, AbstractGossipLog, SignedMessage } from "@canvas-js/gossiplog"
-import { assert } from "@canvas-js/utils"
+import { assert, signalInvalidType } from "@canvas-js/utils"
 
 import { ExecutionContext, getKeyHash } from "../ExecutionContext.js"
-import { isAction, isSession, isSnapshot } from "../utils.js"
+import { isAction, isSession, isSnapshot, isUpdates } from "../utils.js"
 
 export type EffectRecord = { key: string; value: Uint8Array | null; branch: number; clock: number }
 
@@ -95,28 +95,27 @@ export abstract class AbstractRuntime {
 		this.#db = db
 	}
 
-	public getConsumer(): GossipLogConsumer<Action | Session | Snapshot> {
+	public getConsumer(): GossipLogConsumer<MessageType> {
 		const handleSession = this.handleSession.bind(this)
 		const handleAction = this.handleAction.bind(this)
 		const handleSnapshot = this.handleSnapshot.bind(this)
 
-		return async function (this: AbstractGossipLog<Action | Session | Snapshot>, signedMessage) {
+		return async function (this: AbstractGossipLog<MessageType>, signedMessage) {
 			if (isSession(signedMessage)) {
 				return await handleSession(signedMessage)
 			} else if (isAction(signedMessage)) {
 				return await handleAction(signedMessage, this)
 			} else if (isSnapshot(signedMessage)) {
 				return await handleSnapshot(signedMessage, this)
+			} else if (isUpdates(signedMessage)) {
+				// TODO: handle updates
 			} else {
 				throw new Error("invalid message payload type")
 			}
 		}
 	}
 
-	private async handleSnapshot(
-		signedMessage: SignedMessage<Snapshot>,
-		messageLog: AbstractGossipLog<Action | Session | Snapshot>,
-	) {
+	private async handleSnapshot(signedMessage: SignedMessage<Snapshot>, messageLog: AbstractGossipLog<MessageType>) {
 		const { models, effects } = signedMessage.message.payload
 
 		const messages = await messageLog.getMessages()
@@ -167,10 +166,7 @@ export abstract class AbstractRuntime {
 		await this.db.apply(effects)
 	}
 
-	private async handleAction(
-		signedMessage: SignedMessage<Action>,
-		messageLog: AbstractGossipLog<Action | Session | Snapshot>,
-	) {
+	private async handleAction(signedMessage: SignedMessage<Action>, messageLog: AbstractGossipLog<MessageType>) {
 		const { id, signature, message } = signedMessage
 		const { did, name, context } = message.payload
 

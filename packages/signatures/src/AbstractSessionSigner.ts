@@ -3,15 +3,14 @@ import { Logger, logger } from "@libp2p/logger"
 import { randomBytes, bytesToHex } from "@noble/hashes/utils"
 
 import type {
-	Action,
 	Session,
-	Snapshot,
 	Signer,
 	Awaitable,
 	SignatureScheme,
 	AbstractSessionData,
 	SessionSigner,
 	DidIdentifier,
+	MessageType,
 } from "@canvas-js/interfaces"
 
 import target from "#target"
@@ -32,11 +31,11 @@ export abstract class AbstractSessionSigner<
 	protected readonly log: Logger
 	protected readonly privkeySeed: string
 
-	#cache = new Map<string, { session: Session; signer: Signer<Action | Session<AuthorizationData> | Snapshot> }>()
+	#cache = new Map<string, { session: Session; signer: Signer<MessageType<AuthorizationData>> }>()
 
 	public constructor(
 		public readonly key: string,
-		public readonly scheme: SignatureScheme<Action | Session<AuthorizationData> | Snapshot>,
+		public readonly scheme: SignatureScheme<MessageType<AuthorizationData>>,
 		options: AbstractSessionSignerOptions = {},
 	) {
 		this.log = logger(`canvas:signer:${key}`)
@@ -71,8 +70,8 @@ export abstract class AbstractSessionSigner<
 	 * or by using a provided AuthorizationData and timestamp (for services like Farcaster).
 	 */
 	public async newSession(
-		topic: string
-	): Promise<{ payload: Session<AuthorizationData>; signer: Signer<Action | Session<AuthorizationData> | Snapshot> }> {
+		topic: string,
+	): Promise<{ payload: Session<AuthorizationData>; signer: Signer<MessageType<AuthorizationData>> }> {
 		const signer = this.scheme.create()
 		const did = await this.getDid()
 
@@ -131,7 +130,7 @@ export abstract class AbstractSessionSigner<
 		options: { did?: string; address?: string } = {},
 	): Promise<{
 		payload: Session<AuthorizationData>
-		signer: Signer<Action | Session<AuthorizationData> | Snapshot>
+		signer: Signer<MessageType<AuthorizationData>>
 	} | null> {
 		let did
 		if (options.address) {
