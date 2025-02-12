@@ -158,9 +158,9 @@ export class Canvas<
 			let resultCount: number
 			let start: string | undefined = undefined
 			do {
-				const results: { id: string; message: Message<Action | Session> }[] = await db.query<{
+				const results: { id: string; message: Message<MessageType> }[] = await db.query<{
 					id: string
-					message: Message<Action | Session>
+					message: Message<MessageType>
 				}>("$messages", {
 					limit,
 					select: { id: true, message: true },
