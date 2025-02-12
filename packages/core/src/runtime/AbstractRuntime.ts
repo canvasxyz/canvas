@@ -3,15 +3,9 @@ import { logger } from "@libp2p/logger"
 
 import type { Action, Session, Snapshot, SignerCache, Awaitable } from "@canvas-js/interfaces"
 
-import { AbstractModelDB, Effect, ModelValue, ModelSchema, PrimaryKeyValue } from "@canvas-js/modeldb"
+import { AbstractModelDB, Effect, ModelValue, ModelSchema, PrimaryKeyValue, ReferenceValue } from "@canvas-js/modeldb"
 
-import {
-	GossipLogConsumer,
-	MAX_MESSAGE_ID,
-	MIN_MESSAGE_ID,
-	AbstractGossipLog,
-	SignedMessage,
-} from "@canvas-js/gossiplog"
+import { GossipLogConsumer, MIN_MESSAGE_ID, AbstractGossipLog, SignedMessage } from "@canvas-js/gossiplog"
 
 import { assert } from "@canvas-js/utils"
 
@@ -29,6 +23,18 @@ export type ReadRecord = {
 	reader_id: string
 	writer_id: string
 	record_id: string
+}
+
+export type VersionRecord = {
+	id: string
+	model: string
+	key: ReferenceValue
+	version: string
+}
+
+export type RevertRecord = {
+	effect_id: string
+	cause_id: string
 }
 
 export type SessionRecord = {
@@ -50,7 +56,7 @@ export abstract class AbstractRuntime {
 	protected static effectsModel = {
 		$writes: {
 			$primary: "record_id/message_id",
-			$indexes: ["record_id/csx/message_id"],
+			$indexes: ["record_id/csx/message_id", "message_id/record_id/csx"],
 			record_id: "string",
 			message_id: "string",
 			value: "bytes?",
@@ -58,16 +64,19 @@ export abstract class AbstractRuntime {
 		},
 
 		$reads: {
-			$primary: "reader_id/writer_id/record_id",
+			$primary: "reader_id/record_id",
 			reader_id: "string",
 			writer_id: "string",
 			record_id: "string",
 		},
+
+		$versions: { id: "primary", model: "string", key: "json", version: "string" },
 	} satisfies ModelSchema
 
 	protected static revertModel = {
-		$revert_triggers: {
+		$reverts: {
 			$primary: "effect_id/cause_id",
+			$indexes: ["cause_id/effect_id"],
 			effect_id: "string",
 			cause_id: "string",
 		},
@@ -104,6 +113,7 @@ export abstract class AbstractRuntime {
 			...AbstractRuntime.sessionsModel,
 			...AbstractRuntime.actionsModel,
 			...AbstractRuntime.effectsModel,
+			...AbstractRuntime.revertModel,
 			...AbstractRuntime.usersModel,
 		}
 	}
@@ -164,6 +174,13 @@ export abstract class AbstractRuntime {
 					message_id: MIN_MESSAGE_ID,
 					value: value,
 					csx: 0,
+				})
+
+				await messageLog.db.set<VersionRecord>("$versions", {
+					id: recordId,
+					model: modelName,
+					key: primaryKey,
+					version: MIN_MESSAGE_ID,
 				})
 			}
 		}
@@ -248,73 +265,152 @@ export abstract class AbstractRuntime {
 		const actionRecord: ActionRecord = { message_id: id, did, name, timestamp: context.timestamp }
 		const effects: Effect[] = [{ operation: "set", model: "$actions", value: actionRecord }]
 
-		for (const [recordId, { model, key, value, csx }] of executionContext.writes) {
-			const writeRecord: WriteRecord = {
-				record_id: recordId,
-				message_id: id,
-				value: value && cbor.encode(value),
-				csx: csx,
-			}
+		const revertCauses = new Set<string>()
 
-			effects.push({ model: "$writes", operation: "set", value: writeRecord })
+		for (const [recordId, { version }] of executionContext.transactionalReads) {
+			if (version !== null) {
+				const value: ReadRecord = { reader_id: id, writer_id: version, record_id: recordId }
+				effects.push({ model: "$reads", operation: "set", value })
 
-			const results = await messageLog.db.query<{ record_id: string; message_id: string }>("$writes", {
-				select: { record_id: true, message_id: true },
-				where: {
-					record_id: recordId,
-					message_id: { gt: id, lte: MAX_MESSAGE_ID },
-					csx: null,
-				},
-				limit: 1,
-			})
-
-			if (results.length > 0) {
-				this.log("skipping effect %o because it is superceeded by effects %O", [model, key], results)
-				continue
-			}
-
-			if (value === null) {
-				effects.push({ model, operation: "delete", key })
-			} else {
-				effects.push({ model, operation: "set", value })
+				for await (const revert of messageLog.db.iterate<RevertRecord>("$reverts", {
+					where: { effect_id: version },
+				})) {
+					revertCauses.add(revert.cause_id)
+				}
 			}
 		}
 
-		// for (const [model, entries] of Object.entries(executionContext.modelEntries)) {
-		// 	for (const [key, value] of Object.entries(entries)) {
-		// 		const recordId = getRecordId(model, key)
+		const transactionalEffects: Effect[] = []
+		for (const [recordId, { model, key, value, csx }] of executionContext.writes) {
+			if (csx === null) {
+				// LWW write
+				const writeRecord: WriteRecord = {
+					record_id: recordId,
+					message_id: id,
+					value: value && cbor.encode(value),
+					csx: csx,
+				}
 
-		// 		const writeRecord: WriteRecord = {
-		// 			record_id: recordId,
-		// 			message_id: id,
-		// 			value: value && cbor.encode(value),
-		// 			csx: null,
-		// 		}
+				effects.push({ model: "$writes", operation: "set", value: writeRecord })
 
-		// 		effects.push({ model: "$writes", operation: "set", value: writeRecord })
+				const superiorWrites = await messageLog.db.query<{ record_id: string; message_id: string }>("$writes", {
+					select: { record_id: true, message_id: true },
+					where: { record_id: recordId, message_id: { gt: id } },
+					limit: 1,
+				})
 
-		// 		const results = await messageLog.db.query<{ record_id: string; message_id: string }>("$writes", {
-		// 			select: { record_id: true, message_id: true },
-		// 			where: {
-		// 				record_id: recordId,
-		// 				message_id: { gt: id, lte: MAX_MESSAGE_ID },
-		// 				csx: null,
-		// 			},
-		// 			limit: 1,
-		// 		})
+				if (superiorWrites.length > 0) {
+					const [write] = superiorWrites
+					this.log("skipping effect %o because it is superceeded by message %O", [model, key], write.message_id)
+					continue
+				}
 
-		// 		if (results.length > 0) {
-		// 			this.log("skipping effect %o because it is superceeded by effects %O", [key, value], results)
-		// 			continue
-		// 		}
+				if (value === null) {
+					effects.push({ model, operation: "delete", key })
+				} else {
+					effects.push({ model, operation: "set", value })
+				}
 
-		// 		if (value === null) {
-		// 			effects.push({ model, operation: "delete", key })
-		// 		} else {
-		// 			effects.push({ model, operation: "set", value })
-		// 		}
-		// 	}
-		// }
+				const versionValue: VersionRecord = {
+					id: recordId,
+					model,
+					key: Array.isArray(key) ? key : [key],
+					version: id,
+				}
+
+				effects.push({ model: "$versions", operation: "set", value: versionValue })
+			} else {
+				// Transactional write
+
+				const writeRecord: WriteRecord = {
+					record_id: recordId,
+					message_id: id,
+					value: value && cbor.encode(value),
+					csx: csx,
+				}
+
+				effects.push({ model: "$writes", operation: "set", value: writeRecord })
+
+				const inferiorWrites = await messageLog.db.query<{ record_id: string; message_id: string; csx: number }>(
+					"$writes",
+					{
+						select: { record_id: true, message_id: true, csx: true },
+						where: { record_id: recordId, csx, message_id: { lt: id } },
+						orderBy: { "record_id/csx/message_id": "asc" },
+					},
+				)
+
+				for (const inferiorWrite of inferiorWrites) {
+					const inferiorWriteRevertCauses = await messageLog.db.query<RevertRecord>("$reverts", {
+						where: { effect_id: inferiorWrite.message_id },
+					})
+
+					for (const inferiorWriteRevert of inferiorWriteRevertCauses) {
+						const isAncestor = await executionContext.isAncestor(inferiorWriteRevert.cause_id)
+						if (isAncestor) {
+							continue
+						} else {
+							const value: RevertRecord = { cause_id: id, effect_id: inferiorWrite.message_id }
+							effects.push({ model: "$reverts", operation: "set", value })
+						}
+					}
+				}
+
+				const superiorWrites = await messageLog.db.query<{ record_id: string; message_id: string; csx: number }>(
+					"$writes",
+					{
+						select: { record_id: true, message_id: true, csx: true },
+						where: { record_id: recordId, csx, message_id: { gt: id } },
+						orderBy: { "record_id/csx/message_id": "asc" },
+					},
+				)
+
+				if (superiorWrites.length > 0) {
+					this.log("skipping effect %o because it is superceeded by effects %O", [model, key], superiorWrites)
+					for (const write of superiorWrites) {
+						revertCauses.add(write.message_id)
+					}
+				}
+
+				if (superiorWrites.length === 0) {
+					if (value === null) {
+						transactionalEffects.push({ model, operation: "delete", key })
+					} else {
+						transactionalEffects.push({ model, operation: "set", value })
+					}
+
+					const versionValue: VersionRecord = {
+						id: recordId,
+						model: model,
+						key: Array.isArray(key) ? key : [key],
+						version: id,
+					}
+
+					transactionalEffects.push({ model: "$versions", operation: "set", value: versionValue })
+				}
+			}
+		}
+
+		// filter revertCauses down to a minimal mutually-concurrent set
+		const revertCausesSorted = Array.from(revertCauses).sort()
+		for (const [i, causeId] of revertCausesSorted.entries()) {
+			for (const ancestorCauseId of revertCausesSorted.slice(0, i)) {
+				const isAncestor = await messageLog.isAncestor(causeId, ancestorCauseId)
+				if (isAncestor) {
+					revertCauses.delete(causeId)
+					break
+				}
+			}
+		}
+
+		if (revertCauses.size > 0) {
+			for (const causeId of revertCauses) {
+				const value: RevertRecord = { effect_id: id, cause_id: causeId }
+				effects.push({ model: "$reverts", operation: "set", value })
+			}
+		} else {
+			effects.push(...transactionalEffects)
+		}
 
 		this.log("applying effects %O", effects)
 
