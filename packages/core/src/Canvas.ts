@@ -392,7 +392,7 @@ export class Canvas<
 	 * Low-level utility method for internal and debugging use.
 	 * The normal way to apply actions is to use the `Canvas.actions[name](...)` functions.
 	 */
-	public async insert(signature: Signature, message: Message<Session | Action | Snapshot>): Promise<{ id: string }> {
+	public async insert(signature: Signature, message: Message<MessageType>): Promise<{ id: string }> {
 		assert(message.topic === this.topic, "invalid message topic")
 
 		const signedMessage = this.messageLog.encode(signature, message)

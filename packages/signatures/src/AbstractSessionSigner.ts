@@ -3,9 +3,7 @@ import { Logger, logger } from "@libp2p/logger"
 import { randomBytes, bytesToHex } from "@noble/hashes/utils"
 
 import type {
-	Action,
 	Session,
-	Snapshot,
 	Signer,
 	Awaitable,
 	SignatureScheme,
