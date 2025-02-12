@@ -10,7 +10,7 @@ import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { AbstractGossipLog, GossipLogEvents, SignedMessage } from "@canvas-js/gossiplog"
 import type { ServiceMap, NetworkConfig } from "@canvas-js/gossiplog/libp2p"
 
-import { assert, mapValues, signalInvalidType } from "@canvas-js/utils"
+import { assert, mapValues } from "@canvas-js/utils"
 
 import target from "#target"
 
@@ -178,8 +178,6 @@ export class Canvas<
 						effects.push({ operation: "set", model: "$dids", value: record })
 					} else if (message.payload.type === "updates") {
 						// TODO: handle updates
-					} else {
-						signalInvalidType(message.payload)
 					}
 					start = id
 				}
