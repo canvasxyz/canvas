@@ -244,10 +244,11 @@ export class Canvas<
 		for (const name of runtime.actionNames) {
 			const action = async (signer: SessionSigner<any> | null, ...args: any) => {
 				this.log("executing action %s %o", name, args)
-				const timestamp = Date.now()
 
 				const sessionSigner = signer ?? signers.getFirst()
 				assert(sessionSigner !== undefined, "signer not found")
+
+				const timestamp = sessionSigner.getCurrentTimestamp()
 
 				this.log("using session signer %s", sessionSigner.key)
 				let session = await sessionSigner.getSession(this.topic)

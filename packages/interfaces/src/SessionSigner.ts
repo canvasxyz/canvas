@@ -24,6 +24,7 @@ export interface SessionSigner<AuthorizationData = any> {
 	getDid: () => Awaitable<DidIdentifier>
 	getDidParts: () => number
 	getAddressFromDid: (did: DidIdentifier) => string
+	getCurrentTimestamp: () => number
 
 	hasSession: (topic: string, did: DidIdentifier) => boolean
 	getSession: (
