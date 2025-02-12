@@ -4,7 +4,16 @@ import { logger } from "@libp2p/logger"
 import type pg from "pg"
 import type { SqlStorage } from "@cloudflare/workers-types"
 
-import { Signature, Action, Session, Message, Snapshot, SessionSigner, SignerCache } from "@canvas-js/interfaces"
+import {
+	Signature,
+	Action,
+	Session,
+	Message,
+	Snapshot,
+	SessionSigner,
+	SignerCache,
+	MessageType,
+} from "@canvas-js/interfaces"
 import { AbstractModelDB, Model, ModelSchema, Effect } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { AbstractGossipLog, GossipLogEvents, SignedMessage } from "@canvas-js/gossiplog"
@@ -49,14 +58,14 @@ export type ActionResult<Result = any> = { id: string; signature: Signature; mes
 
 export type ActionAPI<Args extends Array<any> = any, Result = any> = (...args: Args) => Promise<ActionResult<Result>>
 
-export interface CanvasEvents extends GossipLogEvents<Action | Session | Snapshot> {
+export interface CanvasEvents extends GossipLogEvents<MessageType> {
 	stop: Event
 }
 
 export type CanvasLogEvent = CustomEvent<{
 	id: string
 	signature: unknown
-	message: Message<Action | Session | Snapshot>
+	message: Message<MessageType>
 }>
 
 export type ApplicationData = {
@@ -88,7 +97,7 @@ export class Canvas<
 
 		const signers = new SignerCache(initSigners.length === 0 ? [new SIWESigner()] : initSigners)
 
-		const verifySignature = (signature: Signature, message: Message<Action | Session | Snapshot>) => {
+		const verifySignature = (signature: Signature, message: Message<MessageType>) => {
 			const signer = signers.getAll().find((signer) => signer.scheme.codecs.includes(signature.codec))
 			assert(signer !== undefined, "no matching signer found")
 			return signer.scheme.verify(signature, message)
@@ -216,7 +225,7 @@ export class Canvas<
 
 	private constructor(
 		public readonly signers: SignerCache,
-		public readonly messageLog: AbstractGossipLog<Action | Session | Snapshot>,
+		public readonly messageLog: AbstractGossipLog<MessageType>,
 		private readonly runtime: Runtime,
 	) {
 		super()
@@ -302,7 +311,7 @@ export class Canvas<
 		await target.listen(this, port, options)
 	}
 
-	public async startLibp2p(config: NetworkConfig): Promise<Libp2p<ServiceMap<Action | Session | Snapshot>>> {
+	public async startLibp2p(config: NetworkConfig): Promise<Libp2p<ServiceMap<MessageType>>> {
 		this.networkConfig = config
 		return await this.messageLog.startLibp2p(config)
 	}
@@ -390,7 +399,7 @@ export class Canvas<
 		return { id: signedMessage.id }
 	}
 
-	public async getMessage(id: string): Promise<SignedMessage<Action | Session | Snapshot> | null> {
+	public async getMessage(id: string): Promise<SignedMessage<MessageType> | null> {
 		return await this.messageLog.get(id)
 	}
 
@@ -398,7 +407,7 @@ export class Canvas<
 		lowerBound: { id: string; inclusive: boolean } | null = null,
 		upperBound: { id: string; inclusive: boolean } | null = null,
 		options: { reverse?: boolean } = {},
-	): AsyncIterable<SignedMessage<Action | Session | Snapshot>> {
+	): AsyncIterable<SignedMessage<MessageType>> {
 		const range: { lt?: string; lte?: string; gt?: string; gte?: string; reverse?: boolean; limit?: number } = {}
 		if (lowerBound) {
 			if (lowerBound.inclusive) range.gte = lowerBound.id
