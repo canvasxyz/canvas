@@ -230,7 +230,7 @@ export class Canvas<
 
 	private constructor(
 		public readonly signers: SignerCache,
-		public readonly messageLog: AbstractGossipLog<MessageType | Updates>,
+		public readonly messageLog: AbstractGossipLog<MessageType>,
 		private readonly runtime: Runtime,
 	) {
 		super()
