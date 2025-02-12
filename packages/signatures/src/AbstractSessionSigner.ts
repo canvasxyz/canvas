@@ -66,12 +66,16 @@ export abstract class AbstractSessionSigner<
 	 */
 	public abstract authorize(data: AbstractSessionData): Awaitable<Session<AuthorizationData>>
 
+	public getCurrentTimestamp() {
+		return Date.now()
+	}
+
 	/**
 	 * Start a new session, either by requesting a signature from a wallet right now,
 	 * or by using a provided AuthorizationData and timestamp (for services like Farcaster).
 	 */
 	public async newSession(
-		topic: string
+		topic: string,
 	): Promise<{ payload: Session<AuthorizationData>; signer: Signer<Action | Session<AuthorizationData> | Snapshot> }> {
 		const signer = this.scheme.create()
 		const did = await this.getDid()
@@ -81,7 +85,7 @@ export abstract class AbstractSessionSigner<
 			did,
 			publicKey: signer.publicKey,
 			context: {
-				timestamp: Date.now(),
+				timestamp: this.getCurrentTimestamp(),
 				duration: this.sessionDuration,
 			},
 		}
