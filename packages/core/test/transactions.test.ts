@@ -8,7 +8,7 @@ import { Actions, Canvas, ModelSchema } from "@canvas-js/core"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { Wallet } from "ethers"
 import { bytesToHex } from "@noble/hashes/utils"
-import { PRNGSigner } from "./PRNGSigner.js"
+import { PRNGSigner } from "./utils.js"
 
 // test("increment a counter, reading outside the transaction", async (t) => {
 // 	const rng = new Prando.default(0)
