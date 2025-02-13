@@ -150,18 +150,18 @@ test("increment a counter, reading inside the transaction", async (t) => {
 			total += 1
 			const start = performance.now()
 			const { id, result } = await app.actions.increment()
-			console.log(`increment app${n + 1} ->`, id, result)
+			// console.log(`increment app${n + 1} ->`, id, result)
 			last = performance.now() - start
 			time += last
 		}
 
 		if (random(2) === 0) {
-			console.log("syncing app2 -> app1")
+			// console.log("syncing app2 -> app1")
 			await app2.messageLog.serve((snapshot) => app1.messageLog.sync(snapshot))
 		}
 
 		if (random(2) === 0) {
-			console.log("syncing app1 -> app2")
+			// console.log("syncing app1 -> app2")
 			await app1.messageLog.serve((snapshot) => app2.messageLog.sync(snapshot))
 		}
 	}
