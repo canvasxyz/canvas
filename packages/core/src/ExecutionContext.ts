@@ -1,4 +1,5 @@
 import * as cbor from "@ipld/dag-cbor"
+import { logger } from "@libp2p/logger"
 
 import { Action, Session, Snapshot } from "@canvas-js/interfaces"
 import { ModelValue, PropertyValue, validateModelValue, updateModelValues, mergeModelValues } from "@canvas-js/modeldb"
@@ -8,18 +9,20 @@ import { assert } from "@canvas-js/utils"
 import { getRecordId } from "./utils.js"
 
 import { ReadRecord, WriteRecord } from "./runtime/AbstractRuntime.js"
-import { logger } from "@libp2p/logger"
+
+type TransactionalRead<T extends ModelValue = ModelValue> = {
+	version: string | null
+	value: T | null
+	csx: number | null
+}
 
 export class ExecutionContext {
-	// recordId -> { version, value }
-	public readonly transactionalReads: Map<
-		string,
-		{ version: string | null; value: ModelValue | null; csx: number | null }
-	> = new Map()
-
+	// recordId -> { version, value, csx }
+	public readonly transactionalReads: Map<string, TransactionalRead> = new Map()
+	// recordId -> value
 	public readonly lwwReads: Map<string, ModelValue | null> = new Map()
 
-	// recordId -> { model, value, csx }
+	// recordId -> { model, key, value, csx }
 	public readonly writes: Map<string, { model: string; key: string; value: ModelValue | null; csx: number | null }> =
 		new Map()
 
@@ -51,8 +54,8 @@ export class ExecutionContext {
 		return this.messageLog.db
 	}
 
-	public async isAncestor(ancestor: string | MessageId): Promise<boolean> {
-		return await this.messageLog.isAncestor(this.root, ancestor)
+	public async isAncestor(root: MessageId[], ancestor: string | MessageId): Promise<boolean> {
+		return await this.messageLog.isAncestor(root, ancestor)
 	}
 
 	public async getModelValue<T extends ModelValue = ModelValue>(
@@ -60,10 +63,7 @@ export class ExecutionContext {
 		key: string,
 		transactional: boolean,
 	): Promise<T | null> {
-		if (this.db.models[model] === undefined) {
-			throw new Error(`model db.${model} not found`)
-		}
-
+		assert(this.db.models[model] !== undefined, "model not found")
 		this.log("getModelValue(%s, %o, %o)", model, key, transactional)
 
 		const recordId = getRecordId(model, key)
@@ -79,37 +79,9 @@ export class ExecutionContext {
 				return value as T | null
 			}
 
-			let [csx, messageId] = await this.getLatestConflictSet(recordId)
-			if (csx === null || messageId === null) {
-				this.transactionalReads.set(recordId, { version: null, value: null, csx: null })
-				return null
-			}
-
-			this.log("got latest conflict set %d (%s)", csx, messageId)
-
-			// this iterates backward over the greatest element of each conflict set
-			// and returns the value of the first non-reverted write.
-			// eslint-disable-next-line no-constant-condition
-			while (true) {
-				const isReverted = await this.isReverted(messageId)
-				this.log("isReverted(%s): %o", messageId, isReverted)
-				if (!isReverted) {
-					const write = await this.db.get<WriteRecord>("$writes", [recordId, messageId])
-					assert(write !== null, "internal error - missing write record")
-					const value = write.value && cbor.decode<T>(write.value)
-					this.log("returning write value %o", value)
-					this.transactionalReads.set(recordId, { version: messageId, value, csx })
-					return value
-				} else if (csx > 1) {
-					csx -= 1
-					messageId = await this.getGreatestElement(recordId, csx)
-					assert(messageId !== null, "internal error - failed to get greatest element")
-					this.log("got previous conflict set %d (%s)", csx, messageId)
-				} else {
-					this.transactionalReads.set(recordId, { version: null, value: null, csx: null })
-					return null
-				}
-			}
+			const result = await this.getLastValueTransactional<T>(this.root, recordId)
+			this.transactionalReads.set(recordId, result)
+			return result.value
 		} else {
 			if (this.lwwReads.has(recordId)) {
 				const value = this.lwwReads.get(recordId)!
@@ -128,7 +100,41 @@ export class ExecutionContext {
 		}
 	}
 
-	private async getLastValue(recordId: string): Promise<WriteRecord | null> {
+	public async getLastValueTransactional<T extends ModelValue>(
+		root: MessageId[],
+		recordId: string,
+	): Promise<TransactionalRead<T>> {
+		let [csx, messageId] = await this.getLatestConflictSet(root, recordId)
+		if (csx === null || messageId === null) {
+			return { version: null, value: null, csx: null }
+		}
+
+		this.log("got latest conflict set [%d, %s] w/r/t roots %s", csx, messageId, root.toString())
+
+		// this iterates backward over the greatest element of each conflict set
+		// and returns the value of the first non-reverted write.
+		// eslint-disable-next-line no-constant-condition
+		while (true) {
+			const isReverted = await this.isReverted(root, messageId)
+			this.log("isReverted(%s): %o", messageId, isReverted)
+			if (!isReverted) {
+				const write = await this.db.get<WriteRecord>("$writes", [recordId, messageId])
+				assert(write !== null, "internal error - missing write record")
+				const value = write.value && cbor.decode<T>(write.value)
+				this.log("returning write value %o", value)
+				return { version: messageId, value, csx }
+			} else if (csx > 1) {
+				csx -= 1
+				messageId = await this.getGreatestElement(root, recordId, csx)
+				assert(messageId !== null, "internal error - failed to get greatest element")
+				this.log("got previous conflict set %d (%s)", csx, messageId)
+			} else {
+				return { version: null, value: null, csx: null }
+			}
+		}
+	}
+
+	private async getLastValue(recordId: string, root = this.root): Promise<WriteRecord | null> {
 		const lowerBound = MIN_MESSAGE_ID
 		let upperBound = this.id
 
@@ -146,7 +152,7 @@ export class ExecutionContext {
 
 			const [write] = results
 
-			const isAncestor = await this.isAncestor(write.message_id)
+			const isAncestor = await this.isAncestor(root, write.message_id)
 			if (isAncestor) {
 				return write
 			} else {
@@ -157,6 +163,7 @@ export class ExecutionContext {
 
 	public async setModelValue(model: string, value: ModelValue, transactional: boolean): Promise<void> {
 		assert(this.db.models[model] !== undefined, "model not found")
+		this.log("setModelValue(%s, %o, %s)", model, value, transactional)
 
 		validateModelValue(this.db.models[model], value)
 		const {
@@ -168,7 +175,7 @@ export class ExecutionContext {
 		const recordId = getRecordId(model, key)
 		let csx: number | null = null
 		if (transactional) {
-			const [previousCSX] = await this.getLatestConflictSet(recordId)
+			const [previousCSX] = await this.getLatestConflictSet(this.root, recordId)
 			csx = (previousCSX ?? 0) + 1
 		}
 
@@ -177,11 +184,12 @@ export class ExecutionContext {
 
 	public async deleteModelValue(model: string, key: string, transactional: boolean): Promise<void> {
 		assert(this.db.models[model] !== undefined, "model not found")
+		this.log("deleteModelValue(%s, %o, %s)", model, key, transactional)
 
 		const recordId = getRecordId(model, key)
 		let csx: number | null = null
 		if (transactional) {
-			const [previousCSX] = await this.getLatestConflictSet(recordId)
+			const [previousCSX] = await this.getLatestConflictSet(this.root, recordId)
 			csx = (previousCSX ?? 0) + 1
 		}
 
@@ -224,7 +232,12 @@ export class ExecutionContext {
 		await this.setModelValue(model, result, transactional)
 	}
 
-	public async getLatestConflictSet(recordId: string): Promise<[csx: number | null, greatestElementId: string | null]> {
+	public async getLatestConflictSet(
+		root: MessageId[],
+		recordId: string,
+	): Promise<[csx: number | null, greatestElementId: string | null]> {
+		this.log("getting latest csx for record %s w/r/t root %s", recordId, root.toString())
+
 		type Write = { record_id: string; message_id: string; csx: number | null }
 
 		let baseId: string | null = null
@@ -232,14 +245,14 @@ export class ExecutionContext {
 
 		for await (const write of this.db.iterate<Write>("$writes", {
 			select: { record_id: true, message_id: true, csx: true },
-			where: { record_id: recordId, message_id: { lt: this.id } },
+			where: { record_id: recordId },
 			orderBy: { "record_id/message_id": "desc" },
 		})) {
 			if (write.csx === null) {
 				continue
 			}
 
-			const isAncestor = await this.isAncestor(write.message_id)
+			const isAncestor = await this.isAncestor(root, write.message_id)
 			if (!isAncestor) {
 				continue
 			}
@@ -249,6 +262,8 @@ export class ExecutionContext {
 			baseId = write.message_id
 			break
 		}
+
+		this.log("got initial baseId %s and baseCSX %d", baseId, baseCSX)
 
 		if (baseCSX === null) {
 			return [null, null]
@@ -260,7 +275,8 @@ export class ExecutionContext {
 
 		// eslint-disable-next-line no-constant-condition
 		while (true) {
-			const next = await this.getGreatestElement(recordId, baseCSX + 1)
+			const next = await this.getGreatestElement(root, recordId, baseCSX + 1)
+			this.log("checking next CS %d and got id %s", baseCSX + 1, next)
 			if (next === null) {
 				return [baseCSX, baseId]
 			} else {
@@ -270,17 +286,17 @@ export class ExecutionContext {
 		}
 	}
 
-	public async getGreatestElement(recordId: string, csx: number): Promise<string | null> {
+	public async getGreatestElement(root: MessageId[], recordId: string, csx: number): Promise<string | null> {
 		assert(csx >= 1, "expected csx >= 1")
 
 		type Write = { record_id: string; message_id: string; csx: number }
 
 		for await (const write of this.db.iterate<Write>("$writes", {
 			select: { record_id: true, message_id: true, csx: true },
-			where: { record_id: recordId, csx, message_id: { lt: this.id } },
+			where: { record_id: recordId, csx },
 			orderBy: { "record_id/csx/message_id": "desc" },
 		})) {
-			const isAncestor = await this.isAncestor(write.message_id)
+			const isAncestor = await this.isAncestor(root, write.message_id)
 			if (!isAncestor) {
 				continue
 			}
@@ -291,7 +307,7 @@ export class ExecutionContext {
 		return null
 	}
 
-	public async isReverted(messageId: string): Promise<boolean> {
+	public async isReverted(root: MessageId[], messageId: string): Promise<boolean> {
 		this.log("isReverted(%s)", messageId)
 
 		type Write = { record_id: string; message_id: string; csx: number }
@@ -313,7 +329,7 @@ export class ExecutionContext {
 				orderBy: { "record_id/csx/message_id": "asc" },
 			})) {
 				this.log("checking if superior write from %s is an ancestor", write.message_id)
-				const isAncestor = await this.isAncestor(write.message_id)
+				const isAncestor = await this.isAncestor(root, write.message_id)
 				if (isAncestor) {
 					this.log("superior write to record %s from message %s is an ancestor", record_id, write.message_id)
 					return true
@@ -330,7 +346,7 @@ export class ExecutionContext {
 
 		for (const read of reads) {
 			this.log("message %s read record %s from message %s", read.reader_id, read.record_id, read.writer_id)
-			const isReverted = await this.isReverted(read.writer_id)
+			const isReverted = await this.isReverted(root, read.writer_id)
 			if (isReverted) {
 				this.log("dependency %s was reverted", read.reader_id)
 				return true

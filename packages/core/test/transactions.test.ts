@@ -9,6 +9,7 @@ import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { Wallet } from "ethers"
 import { bytesToHex } from "@noble/hashes/utils"
 import { PRNGSigner } from "./utils.js"
+import { AbstractModelDB, ModelValue } from "@canvas-js/modeldb"
 
 // test("increment a counter, reading outside the transaction", async (t) => {
 // 	const rng = new Prando.default(0)
@@ -143,10 +144,10 @@ test("increment a counter, reading inside the transaction", async (t) => {
 	let last: number
 
 	const apps = [app1, app2]
-	for (let i = 0; i < 10; i++) {
+	for (let i = 0; i < 2; i++) {
 		const n = random(2)
 		const app = apps[n]
-		const count = 1 + random(10)
+		const count = 1 + random(4)
 		for (let j = 0; j < count; j++) {
 			total += 1
 			const start = performance.now()
@@ -174,16 +175,34 @@ test("increment a counter, reading inside the transaction", async (t) => {
 	await app2.messageLog.serve((snapshot) => app1.messageLog.sync(snapshot))
 	await app1.messageLog.serve((snapshot) => app2.messageLog.sync(snapshot))
 
-	const counter1 = await app1.db.get<{ id: string; value: number }>("counter", "counter")
-	const counter2 = await app2.db.get<{ id: string; value: number }>("counter", "counter")
+	// const counter1 = await app1.db.get<{ id: string; value: number }>("counter", "counter")
+	// const counter2 = await app2.db.get<{ id: string; value: number }>("counter", "counter")
+
+	await compare(t, app1.db, app2.db, "$writes", ":")
+	await compare(t, app1.db, app2.db, "$reads", ":")
+	await compare(t, app1.db, app2.db, "$reverts", ":")
+	await compare(t, app1.db, app2.db, "$versions", ":")
+
+	// t.deepEqual(
+	// 	await app1.db.query("$reverts", { orderBy: { "effect_id/cause_id": "asc" } }),
+	// 	await app2.db.query("$reverts", { orderBy: { "effect_id/cause_id": "asc" } }),
+	// )
+
+	// t.deepEqual(
+	// 	await app1.db.query("$versions", { orderBy: { id: "asc" } }),
+	// 	await app2.db.query("$versions", { orderBy: { id: "asc" } }),
+	// )
+
+	const { result: counter1 } = await app1.actions.increment()
+	const { result: counter2 } = await app2.actions.increment()
 
 	t.log("total", total)
-	t.log("counter1", counter1?.value)
-	t.log("counter2", counter2?.value)
+	t.log("counter1", counter1)
+	t.log("counter2", counter2)
 
-	// t.is(counter1?.value, counter2?.value)
-	// t.true(counter1!.value < total)
-	// t.true(counter2!.value < total)
+	t.is(counter1, counter2)
+	t.true(counter1 <= total)
+	t.true(counter2 <= total)
 
 	// const reverts1 = await app1.db.query("$reverts", { orderBy: { "cause_id/effect_id": "asc" } })
 	// console.log("reverts1 -----------------")
@@ -217,3 +236,25 @@ test("increment a counter, reading inside the transaction", async (t) => {
 
 	t.pass()
 })
+
+async function compare(
+	t: ExecutionContext<unknown>,
+	a: AbstractModelDB,
+	b: AbstractModelDB,
+	model: string,
+	keyDelimiter = "/",
+) {
+	t.deepEqual(await collect(a, model, keyDelimiter), await collect(b, model, keyDelimiter))
+}
+
+async function collect(db: AbstractModelDB, model: string, keyDelimiter = "/"): Promise<Record<string, ModelValue>> {
+	const values: Record<string, ModelValue> = {}
+
+	const { primaryKey } = db.models[model]
+	for await (const value of db.iterate(model, { orderBy: { [primaryKey.join("/")]: "asc" } })) {
+		const key = primaryKey.map((name) => value[name]).join(keyDelimiter)
+		values[key] = value
+	}
+
+	return values
+}

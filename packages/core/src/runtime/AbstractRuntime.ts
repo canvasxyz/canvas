@@ -5,7 +5,7 @@ import type { Action, Session, Snapshot, SignerCache, Awaitable } from "@canvas-
 
 import { AbstractModelDB, Effect, ModelValue, ModelSchema, PrimaryKeyValue, ReferenceValue } from "@canvas-js/modeldb"
 
-import { GossipLogConsumer, MIN_MESSAGE_ID, AbstractGossipLog, SignedMessage } from "@canvas-js/gossiplog"
+import { GossipLogConsumer, MIN_MESSAGE_ID, AbstractGossipLog, SignedMessage, MessageId } from "@canvas-js/gossiplog"
 
 import { assert } from "@canvas-js/utils"
 
@@ -28,8 +28,9 @@ export type ReadRecord = {
 export type VersionRecord = {
 	id: string
 	model: string
-	key: ReferenceValue
+	key: PrimaryKeyValue[]
 	version: string
+	csx: number | null
 }
 
 export type RevertRecord = {
@@ -75,8 +76,8 @@ export abstract class AbstractRuntime {
 
 	protected static revertModel = {
 		$reverts: {
-			$primary: "effect_id/cause_id",
-			$indexes: ["cause_id/effect_id"],
+			$primary: "cause_id/effect_id",
+			$indexes: ["effect_id/cause_id"],
 			effect_id: "string",
 			cause_id: "string",
 		},
@@ -124,7 +125,6 @@ export abstract class AbstractRuntime {
 	public abstract readonly actionNames: string[]
 
 	protected readonly log = logger("canvas:runtime")
-	#db: AbstractModelDB | null = null
 
 	protected constructor() {}
 
@@ -181,6 +181,7 @@ export abstract class AbstractRuntime {
 					model: modelName,
 					key: primaryKey,
 					version: MIN_MESSAGE_ID,
+					csx: 0,
 				})
 			}
 		}
@@ -228,6 +229,8 @@ export abstract class AbstractRuntime {
 		messageLog: AbstractGossipLog<Action | Session | Snapshot>,
 		signedMessage: SignedMessage<Action>,
 	) {
+		const db = messageLog.db
+
 		const { id, signature, message } = signedMessage
 		const { did, name, context } = message.payload
 
@@ -242,7 +245,7 @@ export abstract class AbstractRuntime {
 		const address = signer.getAddressFromDid(did)
 		const executionContext = new ExecutionContext(messageLog, signedMessage, address)
 
-		const sessions = await messageLog.db.query<{ message_id: string; expiration: number | null }>("$sessions", {
+		const sessions = await db.query<{ message_id: string; expiration: number | null }>("$sessions", {
 			where: { public_key: signature.publicKey, did: did },
 		})
 
@@ -250,7 +253,7 @@ export abstract class AbstractRuntime {
 
 		let sessionId: string | null = null
 		for (const session of activeSessions) {
-			const isAncestor = await executionContext.isAncestor(session.message_id)
+			const isAncestor = await executionContext.isAncestor(executionContext.root, session.message_id)
 			if (isAncestor) {
 				sessionId = session.message_id
 			}
@@ -266,21 +269,22 @@ export abstract class AbstractRuntime {
 		const effects: Effect[] = [{ operation: "set", model: "$actions", value: actionRecord }]
 
 		const revertCauses = new Set<string>()
+		const revertEffects = new Set<string>()
 
 		for (const [recordId, { version }] of executionContext.transactionalReads) {
 			if (version !== null) {
 				const value: ReadRecord = { reader_id: id, writer_id: version, record_id: recordId }
 				effects.push({ model: "$reads", operation: "set", value })
 
-				for await (const revert of messageLog.db.iterate<RevertRecord>("$reverts", {
-					where: { effect_id: version },
-				})) {
+				for await (const revert of db.iterate<RevertRecord>("$reverts", { where: { effect_id: version } })) {
 					revertCauses.add(revert.cause_id)
 				}
 			}
 		}
 
-		const transactionalEffects: Effect[] = []
+		const conditionalEffects: Effect[] = []
+		const effectsInCaseOfRevert: Effect[] = []
+
 		for (const [recordId, { model, key, value, csx }] of executionContext.writes) {
 			if (csx === null) {
 				// LWW write
@@ -293,7 +297,7 @@ export abstract class AbstractRuntime {
 
 				effects.push({ model: "$writes", operation: "set", value: writeRecord })
 
-				const superiorWrites = await messageLog.db.query<{ record_id: string; message_id: string }>("$writes", {
+				const superiorWrites = await db.query<{ record_id: string; message_id: string }>("$writes", {
 					select: { record_id: true, message_id: true },
 					where: { record_id: recordId, message_id: { gt: id } },
 					limit: 1,
@@ -316,6 +320,7 @@ export abstract class AbstractRuntime {
 					model,
 					key: Array.isArray(key) ? key : [key],
 					version: id,
+					csx: null,
 				}
 
 				effects.push({ model: "$versions", operation: "set", value: versionValue })
@@ -331,39 +336,35 @@ export abstract class AbstractRuntime {
 
 				effects.push({ model: "$writes", operation: "set", value: writeRecord })
 
-				const inferiorWrites = await messageLog.db.query<{ record_id: string; message_id: string; csx: number }>(
-					"$writes",
-					{
-						select: { record_id: true, message_id: true, csx: true },
-						where: { record_id: recordId, csx, message_id: { lt: id } },
-						orderBy: { "record_id/csx/message_id": "asc" },
-					},
-				)
+				const inferiorWrites = await db.query<{ record_id: string; message_id: string; csx: number }>("$writes", {
+					select: { record_id: true, message_id: true, csx: true },
+					where: { record_id: recordId, csx, message_id: { lt: id } },
+					orderBy: { "record_id/csx/message_id": "asc" },
+				})
 
 				for (const inferiorWrite of inferiorWrites) {
-					const inferiorWriteRevertCauses = await messageLog.db.query<RevertRecord>("$reverts", {
+					const inferiorWriteRevertCauses = await db.query<RevertRecord>("$reverts", {
 						where: { effect_id: inferiorWrite.message_id },
 					})
 
+					let isAncestor = false
 					for (const inferiorWriteRevert of inferiorWriteRevertCauses) {
-						const isAncestor = await executionContext.isAncestor(inferiorWriteRevert.cause_id)
+						isAncestor = await executionContext.isAncestor(executionContext.root, inferiorWriteRevert.cause_id)
 						if (isAncestor) {
-							continue
-						} else {
-							const value: RevertRecord = { cause_id: id, effect_id: inferiorWrite.message_id }
-							effects.push({ model: "$reverts", operation: "set", value })
+							break
 						}
+					}
+
+					if (!isAncestor) {
+						revertEffects.add(inferiorWrite.message_id)
 					}
 				}
 
-				const superiorWrites = await messageLog.db.query<{ record_id: string; message_id: string; csx: number }>(
-					"$writes",
-					{
-						select: { record_id: true, message_id: true, csx: true },
-						where: { record_id: recordId, csx, message_id: { gt: id } },
-						orderBy: { "record_id/csx/message_id": "asc" },
-					},
-				)
+				const superiorWrites = await db.query<{ record_id: string; message_id: string; csx: number }>("$writes", {
+					select: { record_id: true, message_id: true, csx: true },
+					where: { record_id: recordId, csx, message_id: { gt: id } },
+					orderBy: { "record_id/csx/message_id": "asc" },
+				})
 
 				if (superiorWrites.length > 0) {
 					this.log("skipping effect %o because it is superceeded by effects %O", [model, key], superiorWrites)
@@ -374,9 +375,9 @@ export abstract class AbstractRuntime {
 
 				if (superiorWrites.length === 0) {
 					if (value === null) {
-						transactionalEffects.push({ model, operation: "delete", key })
+						conditionalEffects.push({ model, operation: "delete", key })
 					} else {
-						transactionalEffects.push({ model, operation: "set", value })
+						conditionalEffects.push({ model, operation: "set", value })
 					}
 
 					const versionValue: VersionRecord = {
@@ -384,12 +385,88 @@ export abstract class AbstractRuntime {
 						model: model,
 						key: Array.isArray(key) ? key : [key],
 						version: id,
+						csx: csx,
 					}
 
-					transactionalEffects.push({ model: "$versions", operation: "set", value: versionValue })
+					conditionalEffects.push({ model: "$versions", operation: "set", value: versionValue })
 				}
 			}
 		}
+
+		const addDependencies = async (revertEffects: Set<string>, effectId: string) => {
+			const dependencies = await db.query<ReadRecord>("$reads", {
+				select: { reader_id: true, writer_id: true },
+				where: { writer_id: effectId },
+			})
+
+			// console.log("propagating dependencies: got dependency count", effectDependencies.length)
+			for (const { reader_id: dependency } of dependencies) {
+				const existingCauses = await db.query<RevertRecord>("$reverts", { where: { effect_id: dependency } })
+				let isAncestor = false
+				for (const { cause_id: existingCause } of existingCauses) {
+					isAncestor = await executionContext.isAncestor(executionContext.root, existingCause)
+					if (isAncestor) {
+						break
+					}
+				}
+
+				if (!isAncestor) {
+					this.log("adding transitive revert effect %s", dependency)
+					revertEffects.add(dependency)
+					await addDependencies(revertEffects, dependency)
+				}
+			}
+		}
+
+		this.log("got base revertEffects: %o", revertEffects)
+
+		const [_, heads] = await messageLog.getClock()
+		for (const effectId of revertEffects) await addDependencies(revertEffects, effectId)
+		for (const effectId of revertEffects) {
+			const value: RevertRecord = { cause_id: id, effect_id: effectId }
+			effects.push({ model: "$reverts", operation: "set", value })
+
+			// check for existing versions of reverted txns
+			this.log("checking for values currently referencing reverted effect %s", effectId)
+
+			const versions = await db.query<VersionRecord>("$versions", { where: { version: effectId } })
+			this.log("found %d existing records referencing the reverted action %s", versions.length, effectId)
+			for (const { id, model, key } of versions) {
+				const { value, csx, version } = await executionContext.getLastValueTransactional(
+					heads.map(MessageId.encode),
+					id,
+				)
+
+				this.log("got new version %s of record %s (csx %d)", version, id, csx)
+
+				const revertEffects: Effect[] = []
+
+				if (version !== null) {
+					revertEffects.push({
+						model: "$versions",
+						operation: "set",
+						value: { id, model, key, version, csx } satisfies VersionRecord,
+					})
+
+					if (value === null) {
+						revertEffects.push({ model, operation: "delete", key })
+					} else {
+						revertEffects.push({ model, operation: "set", value })
+					}
+				} else {
+					revertEffects.push({ model: "$versions", operation: "delete", key: id })
+					revertEffects.push({ model, operation: "delete", key })
+				}
+
+				if (executionContext.writes.has(id)) {
+					effectsInCaseOfRevert.push(...revertEffects)
+				} else {
+					conditionalEffects.push(...revertEffects)
+				}
+			}
+		}
+
+		this.log("got base revertCauses: %o", revertCauses)
 
 		// filter revertCauses down to a minimal mutually-concurrent set
 		const revertCausesSorted = Array.from(revertCauses).sort()
@@ -403,19 +480,23 @@ export abstract class AbstractRuntime {
 			}
 		}
 
+		this.log("got filtered revertCauses: %o", revertCauses)
 		if (revertCauses.size > 0) {
 			for (const causeId of revertCauses) {
 				const value: RevertRecord = { effect_id: id, cause_id: causeId }
 				effects.push({ model: "$reverts", operation: "set", value })
 			}
+
+			this.log("adding effects in case of revert: %o", effectsInCaseOfRevert)
+			effects.push(...effectsInCaseOfRevert)
 		} else {
-			effects.push(...transactionalEffects)
+			effects.push(...conditionalEffects)
 		}
 
 		this.log("applying effects %O", effects)
 
 		try {
-			await messageLog.db.apply(effects)
+			await db.apply(effects)
 		} catch (err) {
 			if (err instanceof Error) {
 				err.message = `${name}: ${err.message}`
