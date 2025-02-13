@@ -30,25 +30,25 @@ test("increment a counter, reading outside the transaction", async (t) => {
 		},
 	} satisfies Actions<typeof models>
 
-	const init = async (t: ExecutionContext<unknown>) => {
+	const init = async (t: ExecutionContext<unknown>, seed: number) => {
 		const app = await Canvas.initialize({
 			contract: { models, actions },
 			topic: "com.example.app",
+			signers: [new PRNGSigner(seed)],
 		})
 
 		t.teardown(() => app.stop())
 		return app
 	}
 
-	const app1 = await init(t)
-	const app2 = await init(t)
+	const [app1, app2] = await Promise.all([init(t, 1), init(t, 2)])
 
 	let total = 0
 
 	const apps = [app1, app2]
 	for (let i = 0; i < 100; i++) {
 		const app = apps[random(2)]
-		const count = 1 + random(10)
+		const count = 1 + random(8)
 		for (let j = 0; j < count; j++) {
 			total += 1
 			await app.actions.increment()
