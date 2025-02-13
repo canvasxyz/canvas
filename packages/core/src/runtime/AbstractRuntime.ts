@@ -1,7 +1,8 @@
 import * as cbor from "@ipld/dag-cbor"
 import { logger } from "@libp2p/logger"
+import * as Y from "yjs"
 
-import type { Action, Session, Snapshot, SignerCache, Awaitable, MessageType } from "@canvas-js/interfaces"
+import type { Action, Session, Snapshot, SignerCache, Awaitable, MessageType, Updates } from "@canvas-js/interfaces"
 
 import { AbstractModelDB, Effect, ModelSchema } from "@canvas-js/modeldb"
 import { GossipLogConsumer, MAX_MESSAGE_ID, AbstractGossipLog, SignedMessage } from "@canvas-js/gossiplog"
@@ -123,6 +124,7 @@ export abstract class AbstractRuntime {
 		const handleSession = this.handleSession.bind(this)
 		const handleAction = this.handleAction.bind(this)
 		const handleSnapshot = this.handleSnapshot.bind(this)
+		const handleUpdates = this.handleUpdates.bind(this)
 
 		return async function (this: AbstractGossipLog<MessageType>, signedMessage, isAppend) {
 			if (isSession(signedMessage)) {
@@ -132,7 +134,7 @@ export abstract class AbstractRuntime {
 			} else if (isSnapshot(signedMessage)) {
 				return await handleSnapshot(signedMessage, this)
 			} else if (isUpdates(signedMessage)) {
-				// TODO: handle updates
+				return await handleUpdates(signedMessage, this)
 			} else {
 				throw new Error("invalid message payload type")
 			}
@@ -280,5 +282,28 @@ export abstract class AbstractRuntime {
 		const additionalMessages = isAppend ? await executionContext.generateAdditionalMessages() : []
 
 		return { result, additionalMessages }
+	}
+
+	private async handleUpdates(signedMessage: SignedMessage<Updates>, messageLog: AbstractGossipLog<MessageType>) {
+		const effects: Effect[] = []
+		for (const { model, key, diff } of signedMessage.message.payload.updates) {
+			const existingStateEntries = await this.db.query<{ id: string; content: Uint8Array }>(`${model}:state`, {
+				where: { id: key },
+				limit: 1,
+			})
+
+			// apply the diff to the doc
+			const doc = new Y.Doc()
+			Y.applyUpdate(doc, existingStateEntries[0].content)
+			Y.applyUpdate(doc, diff)
+			const newContent = Y.encodeStateAsUpdate(doc)
+
+			effects.push({
+				model: `${model}:state`,
+				operation: "set",
+				value: { id: key, content: newContent },
+			})
+		}
+		await this.db.apply(effects)
 	}
 }
