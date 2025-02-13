@@ -235,11 +235,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		payload: T,
 		{ signer = this.signer }: { signer?: Signer<Payload> } = {},
 	): Promise<SignedMessage<T, Result> & { result: Result }> {
-		let root: Node | null = null
-		let heads: string[] | null = null
-		let result: Result | undefined = undefined
-
-		const signedMessage = await this.tree.write(async (txn) => {
+		const { signedMessage, applyResult } = await this.tree.write(async (txn) => {
 			const [clock, parents] = await this.getClock()
 
 			const message: Message<T> = {
@@ -256,17 +252,22 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 
 			const applyResult = await this.apply(txn, signedMessage, true)
 
-			root = applyResult.root
-			heads = applyResult.heads
-			result = applyResult.result
-
-			return signedMessage
+			return { signedMessage, applyResult }
 		})
 
-		assert(root !== null && heads !== null, "failed to commit transaction")
-		this.dispatchEvent(new CustomEvent("commit", { detail: { root, heads } }))
+		assert(applyResult.root !== null && applyResult.heads !== null, "failed to commit transaction")
+		this.dispatchEvent(new CustomEvent("commit", { detail: { root: applyResult.root, heads: applyResult.heads } }))
 
-		signedMessage.result = result
+		signedMessage.result = applyResult.result?.result
+
+		// append the additional messages
+		const additionalMessages = applyResult.result?.additionalMessages
+		if (additionalMessages) {
+			for (const additionalMessage of additionalMessages) {
+				await this.append(additionalMessage, { signer })
+			}
+		}
+
 		return signedMessage as SignedMessage<T, Result> & { result: Result }
 	}
 
@@ -306,7 +307,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		txn: ReadWriteTransaction,
 		signedMessage: SignedMessage<Payload>,
 		isAppend: boolean,
-	): Promise<{ root: Node; heads: string[]; result: Result }> {
+	): Promise<{ root: Node; heads: string[]; result: { result: Result; additionalMessages?: Payload[] } | void }> {
 		const { id, signature, message, key, value } = signedMessage
 		this.log.trace("applying %s %O", id, message)
 
@@ -361,8 +362,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		this.dispatchEvent(new CustomEvent("message", { detail: signedMessage }))
 
 		const root = txn.getRoot()
-		// TODO: more elegant handling of `Result` type
-		return { root, heads, result: result ? result.result : (undefined as any) }
+		return { root, heads, result }
 	}
 
 	private async newBranch() {
