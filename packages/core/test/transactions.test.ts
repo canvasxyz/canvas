@@ -135,19 +135,17 @@ test("increment a counter, reading inside the transaction", async (t) => {
 		return app
 	}
 
-	const app1 = await init(t, 1)
-	const app2 = await init(t, 2)
+	const [app1, app2] = await Promise.all([init(t, 1), init(t, 2)])
 
 	let total = 0
-
 	let time = 0
 	let last: number
 
 	const apps = [app1, app2]
-	for (let i = 0; i < 2; i++) {
+	for (let i = 0; i < 100; i++) {
 		const n = random(2)
 		const app = apps[n]
-		const count = 1 + random(4)
+		const count = 1 + random(8)
 		for (let j = 0; j < count; j++) {
 			total += 1
 			const start = performance.now()

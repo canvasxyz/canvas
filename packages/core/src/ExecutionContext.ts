@@ -103,6 +103,7 @@ export class ExecutionContext {
 	public async getLastValueTransactional<T extends ModelValue>(
 		root: MessageId[],
 		recordId: string,
+		reverted?: Set<string>,
 	): Promise<TransactionalRead<T>> {
 		let [csx, messageId] = await this.getLatestConflictSet(root, recordId)
 		if (csx === null || messageId === null) {
@@ -115,7 +116,8 @@ export class ExecutionContext {
 		// and returns the value of the first non-reverted write.
 		// eslint-disable-next-line no-constant-condition
 		while (true) {
-			const isReverted = await this.isReverted(root, messageId)
+			let isReverted = reverted?.has(messageId)
+			isReverted ??= await this.isReverted(root, messageId)
 			this.log("isReverted(%s): %o", messageId, isReverted)
 			if (!isReverted) {
 				const write = await this.db.get<WriteRecord>("$writes", [recordId, messageId])
@@ -345,15 +347,15 @@ export class ExecutionContext {
 		this.log("got %d reads for message %s", reads.length, messageId)
 
 		for (const read of reads) {
-			this.log("message %s read record %s from message %s", read.reader_id, read.record_id, read.writer_id)
+			this.log("- %s <- %s", read.record_id, read.writer_id)
 			const isReverted = await this.isReverted(root, read.writer_id)
 			if (isReverted) {
-				this.log("dependency %s was reverted", read.reader_id)
+				this.log("dependency %s was reverted, so %s is also reverted", read.writer_id, read.writer_id)
 				return true
 			}
 		}
 
-		this.log("message %s is not reverted", messageId)
+		this.log("dependency %s is not reverted", messageId)
 		return false
 	}
 }

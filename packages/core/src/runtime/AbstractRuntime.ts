@@ -3,9 +3,9 @@ import { logger } from "@libp2p/logger"
 
 import type { Action, Session, Snapshot, SignerCache, Awaitable } from "@canvas-js/interfaces"
 
-import { AbstractModelDB, Effect, ModelValue, ModelSchema, PrimaryKeyValue, ReferenceValue } from "@canvas-js/modeldb"
+import { Effect, ModelValue, ModelSchema, PrimaryKeyValue } from "@canvas-js/modeldb"
 
-import { GossipLogConsumer, MIN_MESSAGE_ID, AbstractGossipLog, SignedMessage, MessageId } from "@canvas-js/gossiplog"
+import { GossipLogConsumer, AbstractGossipLog, SignedMessage, MessageId, MIN_MESSAGE_ID } from "@canvas-js/gossiplog"
 
 import { assert } from "@canvas-js/utils"
 
@@ -420,50 +420,10 @@ export abstract class AbstractRuntime {
 
 		this.log("got base revertEffects: %o", revertEffects)
 
-		const [_, heads] = await messageLog.getClock()
 		for (const effectId of revertEffects) await addDependencies(revertEffects, effectId)
 		for (const effectId of revertEffects) {
 			const value: RevertRecord = { cause_id: id, effect_id: effectId }
 			effects.push({ model: "$reverts", operation: "set", value })
-
-			// check for existing versions of reverted txns
-			this.log("checking for values currently referencing reverted effect %s", effectId)
-
-			const versions = await db.query<VersionRecord>("$versions", { where: { version: effectId } })
-			this.log("found %d existing records referencing the reverted action %s", versions.length, effectId)
-			for (const { id, model, key } of versions) {
-				const { value, csx, version } = await executionContext.getLastValueTransactional(
-					heads.map(MessageId.encode),
-					id,
-				)
-
-				this.log("got new version %s of record %s (csx %d)", version, id, csx)
-
-				const revertEffects: Effect[] = []
-
-				if (version !== null) {
-					revertEffects.push({
-						model: "$versions",
-						operation: "set",
-						value: { id, model, key, version, csx } satisfies VersionRecord,
-					})
-
-					if (value === null) {
-						revertEffects.push({ model, operation: "delete", key })
-					} else {
-						revertEffects.push({ model, operation: "set", value })
-					}
-				} else {
-					revertEffects.push({ model: "$versions", operation: "delete", key: id })
-					revertEffects.push({ model, operation: "delete", key })
-				}
-
-				if (executionContext.writes.has(id)) {
-					effectsInCaseOfRevert.push(...revertEffects)
-				} else {
-					conditionalEffects.push(...revertEffects)
-				}
-			}
 		}
 
 		this.log("got base revertCauses: %o", revertCauses)
@@ -497,6 +457,44 @@ export abstract class AbstractRuntime {
 
 		try {
 			await db.apply(effects)
+
+			{
+				const [_, heads] = await messageLog.getClock()
+				const root = heads.map(MessageId.encode)
+
+				const effects: Effect[] = []
+				for (const effectId of revertEffects) {
+					// check for existing versions of reverted txns
+					this.log("checking for values currently referencing reverted effect %s", effectId)
+
+					const versions = await db.query<VersionRecord>("$versions", { where: { version: effectId } })
+					this.log("found %d existing records referencing the reverted action %s", versions.length, effectId)
+					for (const { id, model, key } of versions) {
+						const { value, csx, version } = await executionContext.getLastValueTransactional(root, id, revertEffects)
+
+						this.log("got new version %s of record %s (csx %d)", version, id, csx)
+
+						if (version !== null) {
+							effects.push({
+								model: "$versions",
+								operation: "set",
+								value: { id, model, key, version, csx } satisfies VersionRecord,
+							})
+
+							if (value === null) {
+								effects.push({ model, operation: "delete", key })
+							} else {
+								effects.push({ model, operation: "set", value })
+							}
+						} else {
+							effects.push({ model: "$versions", operation: "delete", key: id })
+							effects.push({ model, operation: "delete", key })
+						}
+					}
+
+					await db.apply(effects)
+				}
+			}
 		} catch (err) {
 			if (err instanceof Error) {
 				err.message = `${name}: ${err.message}`
