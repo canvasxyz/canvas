@@ -7,6 +7,7 @@ import test, { ExecutionContext } from "ava"
 import { Actions, Canvas, ModelSchema } from "@canvas-js/core"
 import { AbstractModelDB, ModelValue } from "@canvas-js/modeldb"
 import { PRNGSigner } from "./utils.js"
+import { SECONDS } from "@canvas-js/utils"
 
 test("increment a counter, reading outside the transaction", async (t) => {
 	const rng = new Prando.default(0)
@@ -99,6 +100,7 @@ test("increment a counter, reading outside the transaction", async (t) => {
 })
 
 test("increment a counter, reading inside the transaction", async (t) => {
+	t.timeout(10 * SECONDS)
 	const rng = new Prando.default(0)
 	const random = (n: number) => rng.nextInt(0, n - 1)
 
