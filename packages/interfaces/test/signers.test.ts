@@ -80,14 +80,14 @@ const SIGNER_IMPLEMENTATIONS: SessionSignerImplementation[] = [
 
 function runTestSuite({ createSessionSigner: createSessionSigner, name }: SessionSignerImplementation) {
 	test(`${name} - create and verify session`, async (t) => {
-		const topic = "example:signer"
+		const topic = "com.example.app"
 		const sessionSigner = await createSessionSigner()
 		const { payload: session } = await sessionSigner.newSession(topic)
 		await t.notThrowsAsync(() => Promise.resolve(sessionSigner.verifySession(topic, session)))
 	})
 
 	test(`${name} - create and verify session with a session duration`, async (t) => {
-		const topic = "example:signer"
+		const topic = "com.example.app"
 		const duration = 1000 * 60 * 60 * 24 * 7
 		const sessionSigner = await createSessionSigner({ sessionDuration: duration })
 		const { payload: session } = await sessionSigner.newSession(topic)
@@ -96,7 +96,7 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 	})
 
 	test(`${name} - create and verify session with no session duration given`, async (t) => {
-		const topic = "example:signer"
+		const topic = "com.example.app"
 		const sessionSigner = await createSessionSigner({})
 		const { payload: session } = await sessionSigner.newSession(topic)
 		// if no sessionDuration is given, the session duration should be undefined
@@ -105,7 +105,7 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 	})
 
 	test(`${name} - create and verify session fails on incorrect signature`, async (t) => {
-		const topic = "example:signer"
+		const topic = "com.example.app"
 		const sessionSigner = await createSessionSigner()
 
 		const { payload: session } = await sessionSigner.newSession(topic)
@@ -120,7 +120,7 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 	})
 
 	test(`${name} - sign session and verify session signature`, async (t) => {
-		const topic = "example:signer"
+		const topic = "com.example.app"
 		const sessionSigner = await createSessionSigner()
 
 		const { payload: session, signer: delegateSigner } = await sessionSigner.newSession(topic)
@@ -131,7 +131,7 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 	})
 
 	test(`${name} - session address is matched by the signer`, async (t) => {
-		const topic = "example:signer"
+		const topic = "com.example.app"
 		const sessionSigner = await createSessionSigner()
 
 		const { payload: session } = await sessionSigner.newSession(topic)
@@ -140,7 +140,7 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 	})
 
 	// test(`${name} - refuse to sign foreign sessions`, async (t) => {
-	// 	const topic = "example:signer"
+	// 	const topic = "com.example.app"
 	// 	const [a, b] = await Promise.all([createSigner(), createSigner()])
 
 	// 	const sessionA = await a.getSession(topic)
@@ -153,7 +153,7 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 	// })
 
 	test(`${name} - different signers successfully verify each other's sessions`, async (t) => {
-		const topic = "example:signer"
+		const topic = "com.example.app"
 		const [a, b] = await Promise.all([createSessionSigner(), createSessionSigner()])
 
 		const { payload: sessionA } = await a.newSession(topic)
@@ -164,7 +164,7 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 	})
 
 	test(`${name} - create and verify session and action`, async (t) => {
-		const topic = "example:signer"
+		const topic = "com.example.app"
 		const sessionSigner = await createSessionSigner()
 		const { payload: session, signer: delegateSigner } = await sessionSigner.newSession(topic)
 		t.notThrows(() => sessionSigner.verifySession(topic, session))
@@ -194,7 +194,7 @@ for (const implementation of SIGNER_IMPLEMENTATIONS) {
 }
 
 test(`ethereum - ethers signer can verify ethereum viem signed data`, async (t) => {
-	const topic = "example:signer"
+	const topic = "com.example.app"
 	const signingSigner = new SIWESignerViem()
 	const verifyingSigner = new SIWESigner()
 
@@ -203,7 +203,7 @@ test(`ethereum - ethers signer can verify ethereum viem signed data`, async (t) 
 })
 
 test(`ethereum - viem signer can verify ethers signed data`, async (t) => {
-	const topic = "example:signer"
+	const topic = "com.example.app"
 	const signingSigner = new SIWESigner()
 	const verifyingSigner = new SIWESignerViem()
 

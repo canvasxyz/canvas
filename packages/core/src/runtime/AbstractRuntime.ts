@@ -1,7 +1,7 @@
 import * as cbor from "@ipld/dag-cbor"
 import { logger } from "@libp2p/logger"
 
-import type { Action, Session, Snapshot, SignerCache, Awaitable } from "@canvas-js/interfaces"
+import type { Action, Session, Snapshot, SignerCache, Awaitable, MessageType } from "@canvas-js/interfaces"
 
 import { Effect, ModelValue, ModelSchema, PrimaryKeyValue } from "@canvas-js/modeldb"
 
@@ -137,7 +137,7 @@ export abstract class AbstractRuntime {
 		const handleAction = this.handleAction.bind(this)
 		const handleSnapshot = this.handleSnapshot.bind(this)
 
-		return async function (this: AbstractGossipLog<Action | Session | Snapshot>, signedMessage) {
+		return async function (this: AbstractGossipLog<MessageType>, signedMessage) {
 			if (isSession(signedMessage)) {
 				return await handleSession(this, signedMessage)
 			} else if (isAction(signedMessage)) {

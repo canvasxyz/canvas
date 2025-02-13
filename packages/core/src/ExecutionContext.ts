@@ -1,14 +1,16 @@
 import * as cbor from "@ipld/dag-cbor"
-import { logger } from "@libp2p/logger"
 
-import { Action, Session, Snapshot } from "@canvas-js/interfaces"
+import { logger } from "@libp2p/logger"
+import type { MessageType } from "@canvas-js/interfaces"
+
+import { Action } from "@canvas-js/interfaces"
 import { ModelValue, PropertyValue, validateModelValue, updateModelValues, mergeModelValues } from "@canvas-js/modeldb"
 import { AbstractGossipLog, MessageId, SignedMessage, MIN_MESSAGE_ID } from "@canvas-js/gossiplog"
 import { assert } from "@canvas-js/utils"
 
 import { getRecordId } from "./utils.js"
 
-import { ReadRecord, RevertRecord, WriteRecord } from "./runtime/AbstractRuntime.js"
+import { RevertRecord, WriteRecord } from "./runtime/AbstractRuntime.js"
 
 type TransactionalRead<T extends ModelValue = ModelValue> = {
 	version: string | null
@@ -31,7 +33,7 @@ export class ExecutionContext {
 	private readonly log = logger("canvas:runtime:exec")
 
 	constructor(
-		public readonly messageLog: AbstractGossipLog<Action | Session | Snapshot>,
+		public readonly messageLog: AbstractGossipLog<MessageType>,
 		public readonly signedMessage: SignedMessage<Action>,
 		public readonly address: string,
 	) {
