@@ -8,7 +8,7 @@ import { assert } from "@canvas-js/utils"
 
 import { getRecordId } from "./utils.js"
 
-import { ReadRecord, WriteRecord } from "./runtime/AbstractRuntime.js"
+import { ReadRecord, RevertRecord, WriteRecord } from "./runtime/AbstractRuntime.js"
 
 type TransactionalRead<T extends ModelValue = ModelValue> = {
 	version: string | null
@@ -309,53 +309,68 @@ export class ExecutionContext {
 		return null
 	}
 
+	// // old naive recursive impl
+	// public async isReverted(root: MessageId[], messageId: string): Promise<boolean> {
+	// 	this.log("isReverted(%s)", messageId)
+
+	// 	type Write = { record_id: string; message_id: string; csx: number }
+
+	// 	// first we check for superior elements of the message's writes
+	// 	const writes = await this.db.query<Write>("$writes", {
+	// 		select: { record_id: true, message_id: true, csx: true },
+	// 		where: { message_id: messageId, csx: { neq: null } },
+	// 	})
+
+	// 	this.log("got %d writes for messsage %s", writes.length, messageId)
+
+	// 	for (const { record_id, csx } of writes) {
+	// 		this.log("looking at conflicting writes for record %s csx %d", record_id, csx)
+
+	// 		for await (const write of this.db.iterate<Write>("$writes", {
+	// 			select: { record_id: true, message_id: true, csx: true },
+	// 			where: { record_id, csx, message_id: { gt: messageId } },
+	// 			orderBy: { "record_id/csx/message_id": "asc" },
+	// 		})) {
+	// 			this.log("checking if superior write from %s is an ancestor", write.message_id)
+	// 			const isAncestor = await this.isAncestor(root, write.message_id)
+	// 			if (isAncestor) {
+	// 				this.log("superior write to record %s from message %s is an ancestor", record_id, write.message_id)
+	// 				return true
+	// 			}
+	// 		}
+	// 	}
+
+	// 	// then we recursively check the message's dependencies
+	// 	const reads = await this.db.query<ReadRecord>("$reads", {
+	// 		where: { reader_id: messageId },
+	// 	})
+
+	// 	this.log("got %d reads for message %s", reads.length, messageId)
+
+	// 	for (const read of reads) {
+	// 		this.log("- %s <- %s", read.record_id, read.writer_id)
+	// 		const isReverted = await this.isReverted(root, read.writer_id)
+	// 		if (isReverted) {
+	// 			this.log("dependency %s was reverted, so %s is also reverted", read.writer_id, read.writer_id)
+	// 			return true
+	// 		}
+	// 	}
+
+	// 	this.log("dependency %s is not reverted", messageId)
+	// 	return false
+	// }
+
 	public async isReverted(root: MessageId[], messageId: string): Promise<boolean> {
 		this.log("isReverted(%s)", messageId)
 
-		type Write = { record_id: string; message_id: string; csx: number }
-
-		// first we check for superior elements of the message's writes
-		const writes = await this.db.query<Write>("$writes", {
-			select: { record_id: true, message_id: true, csx: true },
-			where: { message_id: messageId, csx: { neq: null } },
-		})
-
-		this.log("got %d writes for messsage %s", writes.length, messageId)
-
-		for (const { record_id, csx } of writes) {
-			this.log("looking at conflicting writes for record %s csx %d", record_id, csx)
-
-			for await (const write of this.db.iterate<Write>("$writes", {
-				select: { record_id: true, message_id: true, csx: true },
-				where: { record_id, csx, message_id: { gt: messageId } },
-				orderBy: { "record_id/csx/message_id": "asc" },
-			})) {
-				this.log("checking if superior write from %s is an ancestor", write.message_id)
-				const isAncestor = await this.isAncestor(root, write.message_id)
-				if (isAncestor) {
-					this.log("superior write to record %s from message %s is an ancestor", record_id, write.message_id)
-					return true
-				}
-			}
-		}
-
-		// then we recursively check the message's dependencies
-		const reads = await this.db.query<ReadRecord>("$reads", {
-			where: { reader_id: messageId },
-		})
-
-		this.log("got %d reads for message %s", reads.length, messageId)
-
-		for (const read of reads) {
-			this.log("- %s <- %s", read.record_id, read.writer_id)
-			const isReverted = await this.isReverted(root, read.writer_id)
-			if (isReverted) {
-				this.log("dependency %s was reverted, so %s is also reverted", read.writer_id, read.writer_id)
+		const revertCauses = await this.db.query<RevertRecord>("$reverts", { where: { effect_id: messageId } })
+		for (const revert of revertCauses) {
+			const isAncestor = await this.isAncestor(root, revert.cause_id)
+			if (isAncestor) {
 				return true
 			}
 		}
 
-		this.log("dependency %s is not reverted", messageId)
 		return false
 	}
 }

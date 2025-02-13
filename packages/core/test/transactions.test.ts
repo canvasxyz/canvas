@@ -4,10 +4,13 @@ import * as cbor from "@ipld/dag-cbor"
 
 import test, { ExecutionContext } from "ava"
 
-import { Actions, Canvas, ModelSchema } from "@canvas-js/core"
 import { AbstractModelDB, ModelValue } from "@canvas-js/modeldb"
-import { PRNGSigner } from "./utils.js"
+import { Actions, Canvas, ModelSchema } from "@canvas-js/core"
 import { SECONDS } from "@canvas-js/utils"
+import { PRNGSigner } from "./utils.js"
+
+const steps = 500
+const chainLength = 8
 
 test("increment a counter, reading outside the transaction", async (t) => {
 	const rng = new Prando.default(0)
@@ -47,9 +50,9 @@ test("increment a counter, reading outside the transaction", async (t) => {
 	let total = 0
 
 	const apps = [app1, app2]
-	for (let i = 0; i < 100; i++) {
+	for (let i = 0; i < steps; i++) {
 		const app = apps[random(2)]
-		const count = 1 + random(8)
+		const count = 1 + random(chainLength)
 		for (let j = 0; j < count; j++) {
 			total += 1
 			await app.actions.increment()
@@ -141,10 +144,10 @@ test("increment a counter, reading inside the transaction", async (t) => {
 	let last: number
 
 	const apps = [app1, app2]
-	for (let i = 0; i < 100; i++) {
+	for (let i = 0; i < steps; i++) {
 		const n = random(2)
 		const app = apps[n]
-		const count = 1 + random(8)
+		const count = 1 + random(chainLength)
 		for (let j = 0; j < count; j++) {
 			total += 1
 			const start = performance.now()
