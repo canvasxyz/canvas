@@ -1,6 +1,5 @@
 import * as cbor from "@ipld/dag-cbor"
 import { logger } from "@libp2p/logger"
-import * as Y from "yjs"
 
 import type { Action, Session, Snapshot, SignerCache, Awaitable, MessageType } from "@canvas-js/interfaces"
 
@@ -125,11 +124,11 @@ export abstract class AbstractRuntime {
 		const handleAction = this.handleAction.bind(this)
 		const handleSnapshot = this.handleSnapshot.bind(this)
 
-		return async function (this: AbstractGossipLog<MessageType>, signedMessage) {
+		return async function (this: AbstractGossipLog<MessageType>, signedMessage, isAppend) {
 			if (isSession(signedMessage)) {
 				return await handleSession(signedMessage)
 			} else if (isAction(signedMessage)) {
-				return await handleAction(signedMessage, this)
+				return await handleAction(signedMessage, isAppend, this)
 			} else if (isSnapshot(signedMessage)) {
 				return await handleSnapshot(signedMessage, this)
 			} else if (isUpdates(signedMessage)) {
@@ -191,7 +190,11 @@ export abstract class AbstractRuntime {
 		await this.db.apply(effects)
 	}
 
-	private async handleAction(signedMessage: SignedMessage<Action>, messageLog: AbstractGossipLog<MessageType>) {
+	private async handleAction(
+		signedMessage: SignedMessage<Action>,
+		isAppend: boolean,
+		messageLog: AbstractGossipLog<MessageType>,
+	) {
 		const { id, signature, message } = signedMessage
 		const { did, name, context } = message.payload
 
@@ -263,31 +266,6 @@ export abstract class AbstractRuntime {
 			}
 		}
 
-		const diffs: { model: string; key: string; diff: Uint8Array }[] = []
-		for (const [model, modelCalls] of Object.entries(executionContext.yjsCalls)) {
-			for (const [key, calls] of Object.entries(modelCalls)) {
-				const doc = (await executionContext.getYDoc(model, key)) || new Y.Doc()
-				// get the initial state of the document
-				const beforeState = Y.encodeStateAsUpdate(doc)
-				for (const call of calls) {
-					if (call.call === "insert") {
-						doc.getText().insert(call.index, call.content)
-					} else if (call.call === "delete") {
-						doc.getText().delete(call.index, call.length)
-					} else {
-						throw new Error("unexpected call type")
-					}
-				}
-				// diff the document with the initial state
-				const afterState = Y.encodeStateAsUpdate(doc)
-				const diff = Y.diffUpdate(afterState, Y.encodeStateVectorFromUpdate(beforeState))
-				diffs.push({ model, key, diff })
-			}
-		}
-
-		// TODO: we want the diff to trigger another message - how should we do this?
-		// add another return value to the consumer
-
 		this.log("applying effects %O", effects)
 
 		try {
@@ -299,6 +277,8 @@ export abstract class AbstractRuntime {
 			throw err
 		}
 
-		return result
+		const additionalMessages = isAppend ? await executionContext.generateAdditionalMessages() : []
+
+		return { result, additionalMessages }
 	}
 }

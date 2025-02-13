@@ -25,7 +25,8 @@ import { gossiplogTopicPattern } from "./utils.js"
 export type GossipLogConsumer<Payload = unknown, Result = any> = (
 	this: AbstractGossipLog<Payload, Result>,
 	signedMessage: SignedMessage<Payload, Result>,
-) => Awaitable<Result>
+	isAppend: boolean,
+) => Awaitable<{ result: Result; additionalMessages?: Payload[] } | void>
 
 export interface GossipLogInit<Payload = unknown, Result = any> {
 	topic: string
@@ -127,7 +128,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 				const { signature, message, branch } = record
 				const signedMessage = this.encode(signature, message, { branch })
 				assert(signedMessage.id === id)
-				await this.#apply.apply(this, [signedMessage])
+				await this.#apply.apply(this, [signedMessage, false])
 			}
 		})
 	}
@@ -253,7 +254,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 			const signedMessage = this.encode(signature, message)
 			this.log("appending message %s at clock %d with parents %o", signedMessage.id, clock, parents)
 
-			const applyResult = await this.apply(txn, signedMessage)
+			const applyResult = await this.apply(txn, signedMessage, true)
 
 			root = applyResult.root
 			heads = applyResult.heads
@@ -291,7 +292,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 				return null
 			}
 
-			return await this.apply(txn, signedMessage)
+			return await this.apply(txn, signedMessage, false)
 		})
 
 		if (result !== null) {
@@ -304,6 +305,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 	private async apply(
 		txn: ReadWriteTransaction,
 		signedMessage: SignedMessage<Payload>,
+		isAppend: boolean,
 	): Promise<{ root: Node; heads: string[]; result: Result }> {
 		const { id, signature, message, key, value } = signedMessage
 		this.log.trace("applying %s %O", id, message)
@@ -321,7 +323,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 
 		const branch = await this.getBranch(id, parentMessageRecords)
 		signedMessage.branch = branch
-		const result = await this.#apply.apply(this, [signedMessage])
+		const result = await this.#apply.apply(this, [signedMessage, isAppend])
 
 		const hash = toString(hashEntry(key, value), "hex")
 
@@ -359,7 +361,8 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		this.dispatchEvent(new CustomEvent("message", { detail: signedMessage }))
 
 		const root = txn.getRoot()
-		return { root, heads, result }
+		// TODO: more elegant handling of `Result` type
+		return { root, heads, result: result ? result.result : (undefined as any) }
 	}
 
 	private async newBranch() {

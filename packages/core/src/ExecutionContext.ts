@@ -164,4 +164,29 @@ export class ExecutionContext {
 			return null
 		}
 	}
+
+	public async generateAdditionalMessages(): Promise<MessageType[]> {
+		const updates = []
+		for (const [model, modelCalls] of Object.entries(this.yjsCalls)) {
+			for (const [key, calls] of Object.entries(modelCalls)) {
+				const doc = (await this.getYDoc(model, key)) || new Y.Doc()
+				// get the initial state of the document
+				const beforeState = Y.encodeStateAsUpdate(doc)
+				for (const call of calls) {
+					if (call.call === "insert") {
+						doc.getText().insert(call.index, call.content)
+					} else if (call.call === "delete") {
+						doc.getText().delete(call.index, call.length)
+					} else {
+						throw new Error("unexpected call type")
+					}
+				}
+				// diff the document with the initial state
+				const afterState = Y.encodeStateAsUpdate(doc)
+				const diff = Y.diffUpdate(afterState, Y.encodeStateVectorFromUpdate(beforeState))
+				updates.push({ model, key, diff })
+			}
+		}
+		return [{ type: "updates", updates }]
+	}
 }
