@@ -23,6 +23,7 @@ export type ReadRecord = {
 	reader_id: string
 	writer_id: string
 	record_id: string
+	csx: number
 }
 
 export type VersionRecord = {
@@ -66,9 +67,11 @@ export abstract class AbstractRuntime {
 
 		$reads: {
 			$primary: "reader_id/record_id",
+			$indexes: ["record_id/csx/reader_id"],
 			reader_id: "string",
 			writer_id: "string",
 			record_id: "string",
+			csx: "integer",
 		},
 
 		$versions: { id: "primary", model: "string", key: "json", version: "string" },
@@ -271,19 +274,46 @@ export abstract class AbstractRuntime {
 		const revertCauses = new Set<string>()
 		const revertEffects = new Set<string>()
 
+		const messageId = MessageId.encode(id)
+
 		for (const [recordId, { version }] of executionContext.transactionalReads) {
 			if (version !== null) {
-				const value: ReadRecord = { reader_id: id, writer_id: version, record_id: recordId }
+				const [previousCSX] = await executionContext.getLatestConflictSet(executionContext.root, recordId)
+				const csx = (previousCSX ?? 0) + 1
+				const value: ReadRecord = { reader_id: id, writer_id: version, record_id: recordId, csx }
 				effects.push({ model: "$reads", operation: "set", value })
 
 				for await (const revert of db.iterate<RevertRecord>("$reverts", { where: { effect_id: version } })) {
 					revertCauses.add(revert.cause_id)
 				}
+
+				if (executionContext.writes.get(recordId)?.csx ?? 0 > 0) {
+					continue
+				}
+
+				const writes = await db.query<{ record_id: string; message_id: string; csx: number }>("$writes", {
+					where: { record_id: recordId, csx },
+					orderBy: { "record_id/csx/message_id": "asc" },
+				})
+
+				this.log("found %d concurrent writes to record %s csx %d", writes.length, recordId, csx)
+				for await (const write of writes) {
+					const isAncestor = await executionContext.isAncestor([MessageId.encode(write.message_id)], messageId)
+					this.log(
+						"- write from %s, isAncestor(%s, %s) = %s",
+						write.message_id,
+						write.message_id,
+						messageId,
+						isAncestor,
+					)
+					if (!isAncestor) {
+						revertCauses.add(write.message_id)
+					}
+				}
 			}
 		}
 
 		const conditionalEffects: Effect[] = []
-		const effectsInCaseOfRevert: Effect[] = []
 
 		for (const [recordId, { model, key, value, csx }] of executionContext.writes) {
 			if (csx === null) {
@@ -336,6 +366,20 @@ export abstract class AbstractRuntime {
 
 				effects.push({ model: "$writes", operation: "set", value: writeRecord })
 
+				const conflictingReads = await db.query<ReadRecord>("$reads", { where: { record_id: recordId, csx } })
+				for (const read of conflictingReads) {
+					const isAncestor = await executionContext.isAncestor(executionContext.root, read.reader_id)
+					if (!isAncestor) {
+						const [{ csx } = { csx: null }] = await db.query<WriteRecord>("$writes", {
+							where: { record_id: recordId, message_id: read.reader_id },
+						})
+
+						if (csx === null) {
+							revertEffects.add(read.reader_id)
+						}
+					}
+				}
+
 				const inferiorWrites = await db.query<{ record_id: string; message_id: string; csx: number }>("$writes", {
 					select: { record_id: true, message_id: true, csx: true },
 					where: { record_id: recordId, csx, message_id: { lt: id } },
@@ -366,30 +410,29 @@ export abstract class AbstractRuntime {
 					orderBy: { "record_id/csx/message_id": "asc" },
 				})
 
+				this.log("write to %s has %d superior writes", recordId, superiorWrites.length)
 				if (superiorWrites.length > 0) {
-					this.log("skipping effect %o because it is superceeded by effects %O", [model, key], superiorWrites)
 					for (const write of superiorWrites) {
+						this.log("- adding %s to revert causes", write.message_id)
 						revertCauses.add(write.message_id)
 					}
 				}
 
-				if (superiorWrites.length === 0) {
-					if (value === null) {
-						conditionalEffects.push({ model, operation: "delete", key })
-					} else {
-						conditionalEffects.push({ model, operation: "set", value })
-					}
-
-					const versionValue: VersionRecord = {
-						id: recordId,
-						model: model,
-						key: Array.isArray(key) ? key : [key],
-						version: id,
-						csx: csx,
-					}
-
-					conditionalEffects.push({ model: "$versions", operation: "set", value: versionValue })
+				if (value === null) {
+					conditionalEffects.push({ model, operation: "delete", key })
+				} else {
+					conditionalEffects.push({ model, operation: "set", value })
 				}
+
+				const versionValue: VersionRecord = {
+					id: recordId,
+					model: model,
+					key: Array.isArray(key) ? key : [key],
+					version: id,
+					csx: csx,
+				}
+
+				conditionalEffects.push({ model: "$versions", operation: "set", value: versionValue })
 			}
 		}
 
@@ -446,9 +489,6 @@ export abstract class AbstractRuntime {
 				const value: RevertRecord = { effect_id: id, cause_id: causeId }
 				effects.push({ model: "$reverts", operation: "set", value })
 			}
-
-			this.log("adding effects in case of revert: %o", effectsInCaseOfRevert)
-			effects.push(...effectsInCaseOfRevert)
 		} else {
 			effects.push(...conditionalEffects)
 		}
@@ -492,6 +532,7 @@ export abstract class AbstractRuntime {
 						}
 					}
 
+					this.log("applying revert effects %O", effects)
 					await db.apply(effects)
 				}
 			}

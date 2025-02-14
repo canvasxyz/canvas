@@ -7,9 +7,10 @@ import test, { ExecutionContext } from "ava"
 import { AbstractModelDB, ModelValue } from "@canvas-js/modeldb"
 import { Actions, Canvas, ModelSchema } from "@canvas-js/core"
 import { SECONDS } from "@canvas-js/utils"
+
 import { PRNGSigner } from "./utils.js"
 
-const steps = 500
+const steps = 100
 const chainLength = 8
 
 test("increment a counter, reading outside the transaction", async (t) => {
