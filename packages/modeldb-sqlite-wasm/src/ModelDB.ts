@@ -88,6 +88,11 @@ export class ModelDB extends AbstractModelDB {
 		return this.wrappedDB.get(modelName, key)
 	}
 
+	public async getAll<T extends ModelValue>(modelName: string): Promise<T[]> {
+		// @ts-ignore
+		return this.wrappedDB.getAll(modelName)
+	}
+
 	public async getMany<T extends ModelValue>(modelName: string, keys: string[]): Promise<(T | null)[]> {
 		// @ts-ignore
 		return this.wrappedDB.getMany(modelName, keys)

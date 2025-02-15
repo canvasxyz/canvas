@@ -10,11 +10,9 @@ import {
 	ModelSchema,
 	QueryParams,
 	WhereCondition,
-	getModelsFromInclude,
 	PrimaryKeyValue,
 	Config,
-	updateModelValues,
-	mergeModelValues,
+	getModelsFromInclude,
 } from "@canvas-js/modeldb"
 
 import { ModelAPI } from "./api.js"
@@ -136,6 +134,12 @@ export class ModelDB extends AbstractModelDB {
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
 		return await this.read((txn) => api.get(txn, key) as Promise<T | null>, [api.storeName])
+	}
+
+	public async getAll<T extends ModelValue>(modelName: string): Promise<T[]> {
+		const api = this.#models[modelName]
+		assert(api !== undefined, `model ${modelName} not found`)
+		return await this.read((txn) => api.getAll(txn) as Promise<T[]>, [api.storeName])
 	}
 
 	public async getMany<T extends ModelValue>(

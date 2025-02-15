@@ -184,6 +184,9 @@ export class ModelAPI {
 	// readonly #selectMany: Query
 	readonly #count: Query<{ count: number }>
 
+	readonly codecNames: string[]
+	readonly relationNames: string[]
+
 	constructor(
 		readonly client: pg.Client,
 		readonly config: Config,
@@ -192,18 +195,12 @@ export class ModelAPI {
 		readonly relations: Record<string, RelationAPI>,
 		readonly primaryProperties: PrimitiveProperty[],
 		readonly mutableProperties: Property[],
-		readonly codecs: Record<
-			string,
-			{
-				columns: string[]
-				encode: (value: PropertyValue) => PostgresPrimitiveValue[]
-				decode: (record: Record<string, PostgresPrimitiveValue>) => PropertyValue
-			}
-		>,
-
+		readonly codecs: Record<string, PropertyAPI<PostgresPrimitiveValue>>,
 		columnNames: string[],
 	) {
 		this.#table = model.name
+		this.codecNames = Object.keys(this.codecs)
+		this.relationNames = Object.keys(this.relations)
 
 		const quotedColumnNames = columnNames.map(quote).join(", ")
 
@@ -293,6 +290,11 @@ export class ModelAPI {
 
 	public async getMany(keys: PrimaryKeyValue[] | PrimaryKeyValue[][]): Promise<(ModelValue | null)[]> {
 		return await Promise.all(keys.map((key) => this.get(key)))
+	}
+
+	public async getAll(): Promise<ModelValue[]> {
+		const rows = await this.#selectAll.all([])
+		return Promise.all(rows.map((row) => this.parseRecord(row, this.codecNames, this.relationNames)))
 	}
 
 	public async set(value: ModelValue) {
@@ -410,23 +412,25 @@ export class ModelAPI {
 	private async parseRecord(
 		row: Record<string, PostgresPrimitiveValue>,
 		properties: string[],
-		relations: Relation[],
+		relations: string[],
 	): Promise<ModelValue> {
 		const record: ModelValue = {}
 		for (const name of properties) {
 			record[name] = this.codecs[name].decode(row)
 		}
 
-		for (const relation of relations) {
+		for (const name of relations) {
+			const api = this.relations[name]
+			const { sourceProperty, target } = api.relation
 			const encodedKey = this.config.primaryKeys[this.model.name].map(({ name }) => {
 				assert(row[name] !== undefined, "cannot select relation properties without selecting the primary key")
 				return row[name]
 			})
 
-			const targetKeys = await this.relations[relation.sourceProperty].get(encodedKey)
-			const targetPrimaryKey = this.config.primaryKeys[relation.target]
-			record[relation.sourceProperty] = targetKeys.map((targetKey) =>
-				Decoder.decodeReferenceValue(relation.sourceProperty, false, targetPrimaryKey, targetKey),
+			const targetKeys = await this.relations[sourceProperty].get(encodedKey)
+			const targetPrimaryKey = this.config.primaryKeys[target]
+			record[sourceProperty] = targetKeys.map((targetKey) =>
+				Decoder.decodeReferenceValue(sourceProperty, false, targetPrimaryKey, targetKey),
 			) as PrimaryKeyValue[] | PrimaryKeyValue[][]
 		}
 
@@ -435,7 +439,7 @@ export class ModelAPI {
 
 	private parseQuery(
 		query: QueryParams,
-	): [sql: string, properties: string[], relations: Relation[], params: PostgresPrimitiveValue[]] {
+	): [sql: string, properties: string[], relations: string[], params: PostgresPrimitiveValue[]] {
 		// See https://www.sqlite.org/lang_select.html for railroad diagram
 		const sql: string[] = []
 		const params: PostgresPrimitiveValue[] = []
@@ -497,9 +501,9 @@ export class ModelAPI {
 
 	private getSelectExpression(
 		select: Record<string, boolean>,
-	): [selectExpression: string, properties: string[], relations: Relation[]] {
+	): [selectExpression: string, properties: string[], relations: string[]] {
 		const properties: string[] = []
-		const relations: Relation[] = []
+		const relations: string[] = []
 		const columns = []
 
 		for (const [name, value] of Object.entries(select)) {
@@ -510,10 +514,10 @@ export class ModelAPI {
 			const property = this.properties[name]
 			assert(property !== undefined, "property not found")
 			if (property.kind === "primitive" || property.kind === "reference") {
-				properties.push(property.name)
+				properties.push(name)
 				columns.push(...this.codecs[name].columns.map(quote))
 			} else if (property.kind === "relation") {
-				relations.push(this.relations[name].relation)
+				relations.push(name)
 			} else {
 				signalInvalidType(property)
 			}

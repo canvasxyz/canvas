@@ -101,13 +101,19 @@ export class ModelDB extends AbstractModelDB {
 		}
 	}
 
-	public async get<T extends ModelValue>(modelName: string, key: string): Promise<T | null> {
+	public get<T extends ModelValue>(modelName: string, key: string): Promise<T | null> {
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
 		return api.get(key) as Promise<T | null>
 	}
 
-	public async getMany<T extends ModelValue>(modelName: string, keys: string[]): Promise<(T | null)[]> {
+	public getAll<T extends ModelValue<any> = ModelValue<any>>(modelName: string): Promise<T[]> {
+		const api = this.#models[modelName]
+		assert(api !== undefined, `model ${modelName} not found`)
+		return api.getAll() as Promise<T[]>
+	}
+
+	public getMany<T extends ModelValue>(modelName: string, keys: string[]): Promise<(T | null)[]> {
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
 		return api.getMany(keys) as Promise<(T | null)[]>

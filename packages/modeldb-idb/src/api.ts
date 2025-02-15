@@ -58,6 +58,11 @@ export class ModelAPI {
 		}
 	}
 
+	public async getAll<Mode extends IDBTransactionMode>(txn: IDBPTransaction<any, any, Mode>): Promise<ModelValue[]> {
+		const objects = await this.getStore(txn).getAll()
+		return objects.map((value) => this.decodeObject(value))
+	}
+
 	public async getMany<Mode extends IDBTransactionMode>(
 		txn: IDBPTransaction<any, any, Mode>,
 		keys: PrimaryKeyValue[] | PrimaryKeyValue[][],

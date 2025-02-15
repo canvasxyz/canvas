@@ -212,3 +212,19 @@ testOnModelDB("set and get top-level string JSON values", async (t, openDB) => {
 	await db.set("foo", { id: "abc", value: "hello world" })
 	t.deepEqual(await db.get("foo", "abc"), { id: "abc", value: "hello world" })
 })
+
+testOnModelDB("get all values", async (t, openDB) => {
+	const db = await openDB(t, {
+		user: { $primary: "id", id: "integer", name: "string?" },
+	})
+
+	await db.set("user", { id: 0, name: null })
+	await db.set("user", { id: 3, name: null })
+	await db.set("user", { id: 10, name: "John Doe" })
+
+	t.deepEqual(await db.getAll("user"), [
+		{ id: 0, name: null },
+		{ id: 3, name: null },
+		{ id: 10, name: "John Doe" },
+	])
+})
