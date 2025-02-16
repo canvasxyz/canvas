@@ -45,6 +45,12 @@ export class InnerModelDB {
 		return api.get(key) as T
 	}
 
+	public async getAll<T extends ModelValue<any> = ModelValue<any>>(modelName: string): Promise<T[]> {
+		const api = this.#models[modelName]
+		assert(api !== undefined, `model ${modelName} not found`)
+		return api.getAll() as T[]
+	}
+
 	public getMany<T extends ModelValue>(modelName: string, keys: string[]): T[] {
 		const api = this.#models[modelName]
 		assert(api !== undefined, `model ${modelName} not found`)
