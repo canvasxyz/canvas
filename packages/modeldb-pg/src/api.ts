@@ -234,7 +234,13 @@ export class ModelAPI {
 
 		const selectWhere = model.primaryKey.map((name, i) => `"${name}" = $${i + 1}`).join(" AND ")
 		this.#select = new Query(this.client, `SELECT ${quotedColumnNames} FROM "${this.#table}" WHERE ${selectWhere}`)
-		this.#selectAll = new Query(this.client, `SELECT ${quotedColumnNames} FROM "${this.#table}"`)
+
+		const orderByPrimaryKey = model.primaryKey.map((name) => `"${name}" ASC`).join(", ")
+		this.#selectAll = new Query(
+			this.client,
+			`SELECT ${quotedColumnNames} FROM "${this.#table}" ORDER BY ${orderByPrimaryKey}`,
+		)
+
 		// this.#selectMany = new QUery(this.client, `SELECT ${selectColumns} FROM "${this.#table}" WHERE "${this.#primaryKeyName}" = ANY($1)`)
 
 		// const updateParams = columnNames.map((name: string, i: number) => `$${i + 1}`)

@@ -13,6 +13,7 @@ import {
 	PrimaryKeyValue,
 	Config,
 	getModelsFromInclude,
+	Model,
 } from "@canvas-js/modeldb"
 
 import { ModelAPI } from "./api.js"
@@ -47,7 +48,9 @@ export class ModelDB extends AbstractModelDB {
 			},
 		})
 
-		return new ModelDB(db, config)
+		const modelDB = new ModelDB(db, config)
+		await modelDB.query<Model>("$models").then((models) => modelDB.validateModels(models))
+		return modelDB
 	}
 
 	readonly #models: Record<string, ModelAPI> = {}

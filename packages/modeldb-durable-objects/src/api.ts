@@ -105,8 +105,6 @@ export class ModelAPI {
 				const target = config.models.find((model) => model.name === property.target)
 				assert(target !== undefined)
 
-				config.primaryKeys[target.name]
-
 				if (target.primaryKey.length === 1) {
 					const [targetProperty] = config.primaryKeys[target.name]
 					columns.push(getColumn(property.name, targetProperty.type, false))
@@ -202,7 +200,12 @@ export class ModelAPI {
 		// Prepare queries
 		this.#count = new Query<{ count: number }>(this.db, `SELECT COUNT(*) AS count FROM "${this.#table}"`)
 		this.#select = new Query(this.db, `SELECT ${quotedColumnNames} FROM "${this.#table}" ${wherePrimaryKeyEquals}`)
-		this.#selectAll = new Query(this.db, `SELECT ${quotedColumnNames} FROM "${this.#table}"`)
+
+		const orderByPrimaryKey = model.primaryKey.map((name) => `"${name}" ASC`).join(", ")
+		this.#selectAll = new Query(
+			this.db,
+			`SELECT ${quotedColumnNames} FROM "${this.#table}" ORDER BY ${orderByPrimaryKey}`,
+		)
 	}
 
 	public get(key: PrimaryKeyValue | PrimaryKeyValue[]): ModelValue | null {
