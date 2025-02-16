@@ -175,7 +175,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 	}
 
 	public async getClock(): Promise<[clock: number, heads: string[]]> {
-		const heads = await this.db.query<{ id: string }>("$heads", { orderBy: { id: "asc" } })
+		const heads = await this.db.getAll<{ id: string }>("$heads")
 		const ids = heads.map(({ id }) => id)
 		const clock = getNextClock(ids.map(encodeId))
 		return [clock, ids]
