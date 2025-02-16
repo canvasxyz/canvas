@@ -48,9 +48,7 @@ export class ModelDB extends AbstractModelDB {
 			},
 		})
 
-		const modelDB = new ModelDB(db, config)
-		await modelDB.query<Model>("$models").then((models) => modelDB.validateModels(models))
-		return modelDB
+		return new ModelDB(db, config)
 	}
 
 	readonly #models: Record<string, ModelAPI> = {}
