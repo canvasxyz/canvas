@@ -127,7 +127,7 @@ export class ExecutionContext {
 				const value = write.value && cbor.decode<T>(write.value)
 				this.log.trace("returning write value %o", value)
 				return { version: messageId, value, csx }
-			} else if (csx > 0) {
+			} else if (csx > 1) {
 				csx -= 1
 				messageId = await this.getGreatestElement(root, recordId, csx)
 				assert(messageId !== null, "internal error - failed to get greatest element")
