@@ -30,7 +30,7 @@ export type ModelAPI<ModelTypes extends Record<string, ModelValue>> = {
 	merge: <T extends keyof ModelTypes & string>(model: T, value: Partial<ModelTypes[T]>) => Promise<void>
 	delete: <T extends keyof ModelTypes & string>(model: T, key: string) => Promise<void>
 
-	transaction: (callback: () => Awaitable<void>) => Promise<void>
+	transaction: <T>(callback: () => Awaitable<T>) => Promise<T>
 }
 
 export type ActionContext<T extends Record<string, ModelValue>> = {

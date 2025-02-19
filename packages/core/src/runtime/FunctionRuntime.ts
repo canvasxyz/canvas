@@ -55,7 +55,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 			transaction: async (callback) => {
 				try {
 					this.#transaction = true
-					await callback.apply(this.thisValue, [])
+					return await callback.apply(this.thisValue, [])
 				} finally {
 					this.#transaction = false
 				}
