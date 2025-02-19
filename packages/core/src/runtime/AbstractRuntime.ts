@@ -276,14 +276,14 @@ export abstract class AbstractRuntime {
 
 		const messageId = MessageId.encode(id)
 
-		for (const [recordId, { version }] of executionContext.transactionalReads) {
-			if (version !== null) {
+		for (const [recordId, read] of executionContext.transactionalReads) {
+			if (read !== null) {
 				const [previousCSX] = await executionContext.getLatestConflictSet(executionContext.root, recordId)
 				const csx = (previousCSX ?? 0) + 1
-				const value: ReadRecord = { reader_id: id, writer_id: version, record_id: recordId, csx }
+				const value: ReadRecord = { reader_id: id, writer_id: read.version, record_id: recordId, csx }
 				effects.push({ model: "$reads", operation: "set", value })
 
-				for await (const revert of db.iterate<RevertRecord>("$reverts", { where: { effect_id: version } })) {
+				for await (const revert of db.iterate<RevertRecord>("$reverts", { where: { effect_id: read.version } })) {
 					revertCauses.add(revert.cause_id)
 				}
 
@@ -296,10 +296,10 @@ export abstract class AbstractRuntime {
 					orderBy: { "record_id/csx/message_id": "asc" },
 				})
 
-				this.log("found %d concurrent writes to record %s csx %d", writes.length, recordId, csx)
+				this.log.trace("found %d concurrent writes to record %s csx %d", writes.length, recordId, csx)
 				for await (const write of writes) {
 					const isAncestor = await executionContext.isAncestor([MessageId.encode(write.message_id)], messageId)
-					this.log(
+					this.log.trace(
 						"- write from %s, isAncestor(%s, %s) = %s",
 						write.message_id,
 						write.message_id,
@@ -410,10 +410,10 @@ export abstract class AbstractRuntime {
 					orderBy: { "record_id/csx/message_id": "asc" },
 				})
 
-				this.log("write to %s has %d superior writes", recordId, superiorWrites.length)
+				this.log.trace("write to %s has %d superior writes", recordId, superiorWrites.length)
 				if (superiorWrites.length > 0) {
 					for (const write of superiorWrites) {
-						this.log("- adding %s to revert causes", write.message_id)
+						this.log.trace("- adding %s to revert causes", write.message_id)
 						revertCauses.add(write.message_id)
 					}
 				}
@@ -442,7 +442,7 @@ export abstract class AbstractRuntime {
 				where: { writer_id: effectId },
 			})
 
-			// console.log("propagating dependencies: got dependency count", effectDependencies.length)
+			this.log.trace("found %d dependencies for effect %s", dependencies.length, effectId)
 			for (const { reader_id: dependency } of dependencies) {
 				const existingCauses = await db.query<RevertRecord>("$reverts", { where: { effect_id: dependency } })
 				let isAncestor = false
@@ -454,22 +454,24 @@ export abstract class AbstractRuntime {
 				}
 
 				if (!isAncestor) {
-					this.log("adding transitive revert effect %s", dependency)
+					this.log.trace("adding transitive revert effect %s", dependency)
 					revertEffects.add(dependency)
 					await addDependencies(revertEffects, dependency)
 				}
 			}
 		}
 
-		this.log("got base revertEffects: %o", revertEffects)
+		this.log.trace("got base revert effects: %o", revertEffects)
 
 		for (const effectId of revertEffects) await addDependencies(revertEffects, effectId)
+		this.log.trace("got expanded revert effects: %o", revertEffects)
+
 		for (const effectId of revertEffects) {
 			const value: RevertRecord = { cause_id: id, effect_id: effectId }
 			effects.push({ model: "$reverts", operation: "set", value })
 		}
 
-		this.log("got base revertCauses: %o", revertCauses)
+		this.log.trace("got base revert causes: %o", revertCauses)
 
 		// filter revertCauses down to a minimal mutually-concurrent set
 		const revertCausesSorted = Array.from(revertCauses).sort()
@@ -483,7 +485,8 @@ export abstract class AbstractRuntime {
 			}
 		}
 
-		this.log("got filtered revertCauses: %o", revertCauses)
+		this.log.trace("got reduced revert causes: %o", revertCauses)
+
 		if (revertCauses.size > 0) {
 			for (const causeId of revertCauses) {
 				const value: RevertRecord = { effect_id: id, cause_id: causeId }
@@ -504,17 +507,19 @@ export abstract class AbstractRuntime {
 
 				const effects: Effect[] = []
 				for (const effectId of revertEffects) {
-					// check for existing versions of reverted txns
-					this.log("checking for values currently referencing reverted effect %s", effectId)
+					this.log.trace("checking for values currently referencing reverted effect %s", effectId)
 
 					const versions = await db.query<VersionRecord>("$versions", { where: { version: effectId } })
-					this.log("found %d existing records referencing the reverted action %s", versions.length, effectId)
+					this.log.trace("found %d existing records referencing the reverted action %s", versions.length, effectId)
 					for (const { id, model, key } of versions) {
-						const { value, csx, version } = await executionContext.getLastValueTransactional(root, id, revertEffects)
-
-						this.log("got new version %s of record %s (csx %d)", version, id, csx)
-
-						if (version !== null) {
+						const read = await executionContext.getLastValueTransactional(root, id, revertEffects)
+						if (read === null) {
+							this.log.trace("no other versions of record %s found", id)
+							effects.push({ model: "$versions", operation: "delete", key: id })
+							effects.push({ model, operation: "delete", key })
+						} else {
+							const { value, csx, version } = read
+							this.log.trace("got new version %s of record %s (csx %d)", version, id, csx)
 							effects.push({
 								model: "$versions",
 								operation: "set",
@@ -526,9 +531,6 @@ export abstract class AbstractRuntime {
 							} else {
 								effects.push({ model, operation: "set", value })
 							}
-						} else {
-							effects.push({ model: "$versions", operation: "delete", key: id })
-							effects.push({ model, operation: "delete", key })
 						}
 					}
 

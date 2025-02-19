@@ -13,14 +13,14 @@ import { getRecordId } from "./utils.js"
 import { RevertRecord, WriteRecord } from "./runtime/AbstractRuntime.js"
 
 type TransactionalRead<T extends ModelValue = ModelValue> = {
-	version: string | null
+	version: string
 	value: T | null
-	csx: number | null
+	csx: number
 }
 
 export class ExecutionContext {
 	// recordId -> { version, value, csx }
-	public readonly transactionalReads: Map<string, TransactionalRead> = new Map()
+	public readonly transactionalReads: Map<string, TransactionalRead | null> = new Map()
 	// recordId -> value
 	public readonly lwwReads: Map<string, ModelValue | null> = new Map()
 
@@ -77,13 +77,13 @@ export class ExecutionContext {
 
 		if (transactional) {
 			if (this.transactionalReads.has(recordId)) {
-				const { value } = this.transactionalReads.get(recordId)!
+				const { value = null } = this.transactionalReads.get(recordId) ?? {}
 				return value as T | null
 			}
 
 			const result = await this.getLastValueTransactional<T>(this.root, recordId)
 			this.transactionalReads.set(recordId, result)
-			return result.value
+			return result?.value ?? null
 		} else {
 			if (this.lwwReads.has(recordId)) {
 				const value = this.lwwReads.get(recordId)!
@@ -106,13 +106,13 @@ export class ExecutionContext {
 		root: MessageId[],
 		recordId: string,
 		reverted?: Set<string>,
-	): Promise<TransactionalRead<T>> {
+	): Promise<TransactionalRead<T> | null> {
 		let [csx, messageId] = await this.getLatestConflictSet(root, recordId)
 		if (csx === null || messageId === null) {
-			return { version: null, value: null, csx: null }
+			return null
 		}
 
-		this.log("got latest conflict set [%d, %s] w/r/t roots %s", csx, messageId, root.toString())
+		this.log.trace("got latest conflict set [%d, %s] w/r/t roots %s", csx, messageId, root.toString())
 
 		// this iterates backward over the greatest element of each conflict set
 		// and returns the value of the first non-reverted write.
@@ -120,20 +120,20 @@ export class ExecutionContext {
 		while (true) {
 			let isReverted = reverted?.has(messageId)
 			isReverted ??= await this.isReverted(root, messageId)
-			this.log("isReverted(%s): %o", messageId, isReverted)
+			this.log.trace("isReverted(%s): %o", messageId, isReverted)
 			if (!isReverted) {
 				const write = await this.db.get<WriteRecord>("$writes", [recordId, messageId])
 				assert(write !== null, "internal error - missing write record")
 				const value = write.value && cbor.decode<T>(write.value)
-				this.log("returning write value %o", value)
+				this.log.trace("returning write value %o", value)
 				return { version: messageId, value, csx }
-			} else if (csx > 1) {
+			} else if (csx > 0) {
 				csx -= 1
 				messageId = await this.getGreatestElement(root, recordId, csx)
 				assert(messageId !== null, "internal error - failed to get greatest element")
-				this.log("got previous conflict set %d (%s)", csx, messageId)
+				this.log.trace("got previous conflict set %d (%s)", csx, messageId)
 			} else {
-				return { version: null, value: null, csx: null }
+				return null
 			}
 		}
 	}
@@ -240,7 +240,7 @@ export class ExecutionContext {
 		root: MessageId[],
 		recordId: string,
 	): Promise<[csx: number | null, greatestElementId: string | null]> {
-		this.log("getting latest csx for record %s w/r/t root %s", recordId, root.toString())
+		this.log.trace("getting latest csx for record %s w/r/t root %s", recordId, root.toString())
 
 		type Write = { record_id: string; message_id: string; csx: number | null }
 
@@ -267,7 +267,7 @@ export class ExecutionContext {
 			break
 		}
 
-		this.log("got initial baseId %s and baseCSX %d", baseId, baseCSX)
+		this.log.trace("got initial baseId %s and baseCSX %d", baseId, baseCSX)
 
 		if (baseCSX === null) {
 			return [null, null]
@@ -280,7 +280,7 @@ export class ExecutionContext {
 		// eslint-disable-next-line no-constant-condition
 		while (true) {
 			const next = await this.getGreatestElement(root, recordId, baseCSX + 1)
-			this.log("checking next CS %d and got id %s", baseCSX + 1, next)
+			this.log.trace("checking next CS %d and got id %s", baseCSX + 1, next)
 			if (next === null) {
 				return [baseCSX, baseId]
 			} else {
@@ -291,7 +291,7 @@ export class ExecutionContext {
 	}
 
 	public async getGreatestElement(root: MessageId[], recordId: string, csx: number): Promise<string | null> {
-		assert(csx >= 1, "expected csx >= 1")
+		assert(csx >= 0, "expected csx >= 0")
 
 		type Write = { record_id: string; message_id: string; csx: number }
 
@@ -311,59 +311,11 @@ export class ExecutionContext {
 		return null
 	}
 
-	// // old naive recursive impl
-	// public async isReverted(root: MessageId[], messageId: string): Promise<boolean> {
-	// 	this.log("isReverted(%s)", messageId)
-
-	// 	type Write = { record_id: string; message_id: string; csx: number }
-
-	// 	// first we check for superior elements of the message's writes
-	// 	const writes = await this.db.query<Write>("$writes", {
-	// 		select: { record_id: true, message_id: true, csx: true },
-	// 		where: { message_id: messageId, csx: { neq: null } },
-	// 	})
-
-	// 	this.log("got %d writes for messsage %s", writes.length, messageId)
-
-	// 	for (const { record_id, csx } of writes) {
-	// 		this.log("looking at conflicting writes for record %s csx %d", record_id, csx)
-
-	// 		for await (const write of this.db.iterate<Write>("$writes", {
-	// 			select: { record_id: true, message_id: true, csx: true },
-	// 			where: { record_id, csx, message_id: { gt: messageId } },
-	// 			orderBy: { "record_id/csx/message_id": "asc" },
-	// 		})) {
-	// 			this.log("checking if superior write from %s is an ancestor", write.message_id)
-	// 			const isAncestor = await this.isAncestor(root, write.message_id)
-	// 			if (isAncestor) {
-	// 				this.log("superior write to record %s from message %s is an ancestor", record_id, write.message_id)
-	// 				return true
-	// 			}
-	// 		}
-	// 	}
-
-	// 	// then we recursively check the message's dependencies
-	// 	const reads = await this.db.query<ReadRecord>("$reads", {
-	// 		where: { reader_id: messageId },
-	// 	})
-
-	// 	this.log("got %d reads for message %s", reads.length, messageId)
-
-	// 	for (const read of reads) {
-	// 		this.log("- %s <- %s", read.record_id, read.writer_id)
-	// 		const isReverted = await this.isReverted(root, read.writer_id)
-	// 		if (isReverted) {
-	// 			this.log("dependency %s was reverted, so %s is also reverted", read.writer_id, read.writer_id)
-	// 			return true
-	// 		}
-	// 	}
-
-	// 	this.log("dependency %s is not reverted", messageId)
-	// 	return false
-	// }
-
 	public async isReverted(root: MessageId[], messageId: string): Promise<boolean> {
-		this.log("isReverted(%s)", messageId)
+		this.log.trace("isReverted(%s)", messageId)
+		if (messageId === MIN_MESSAGE_ID) {
+			return false
+		}
 
 		const revertCauses = await this.db.query<RevertRecord>("$reverts", { where: { effect_id: messageId } })
 		for (const revert of revertCauses) {
