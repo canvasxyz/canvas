@@ -3,14 +3,16 @@ import { logger } from "@libp2p/logger"
 
 import type { Action, Session, Snapshot, SignerCache, Awaitable, MessageType } from "@canvas-js/interfaces"
 
-import { Effect, ModelValue, ModelSchema, PrimaryKeyValue } from "@canvas-js/modeldb"
+import { Effect, ModelValue, ModelSchema, PrimaryKeyValue, isPrimaryKey } from "@canvas-js/modeldb"
 
 import { GossipLogConsumer, AbstractGossipLog, SignedMessage, MessageId, MIN_MESSAGE_ID } from "@canvas-js/gossiplog"
 
 import { assert } from "@canvas-js/utils"
 
 import { ExecutionContext } from "../ExecutionContext.js"
+
 import { getRecordId, isAction, isSession, isSnapshot } from "../utils.js"
+import { View } from "../View.js"
 
 export type WriteRecord = {
 	record_id: string
@@ -167,25 +169,34 @@ export abstract class AbstractRuntime {
 
 			for (const value of values) {
 				const modelValue = cbor.decode<ModelValue>(value)
-				const primaryKey = model.primaryKey.map((name) => modelValue[name] as PrimaryKeyValue)
+				const primaryKey = model.primaryKey.map((name) => {
+					const key = modelValue[name]
+					assert(isPrimaryKey(key), "invalid primary key value")
+					return key
+				})
+
 				const recordId = getRecordId(modelName, primaryKey)
 
-				await messageLog.db.set(modelName, modelValue)
-
-				await messageLog.db.set<WriteRecord>("$writes", {
+				const writeRecord: WriteRecord = {
 					record_id: recordId,
 					message_id: MIN_MESSAGE_ID,
 					value: value,
 					csx: 0,
-				})
+				}
 
-				await messageLog.db.set<VersionRecord>("$versions", {
+				const versionRecord: VersionRecord = {
 					id: recordId,
 					model: modelName,
 					key: primaryKey,
 					version: MIN_MESSAGE_ID,
 					csx: 0,
-				})
+				}
+
+				await messageLog.db.apply([
+					{ model: modelName, operation: "set", value: modelValue },
+					{ model: "$writes", operation: "set", value: writeRecord },
+					{ model: "$versions", operation: "set", value: versionRecord },
+				])
 			}
 		}
 	}
@@ -220,12 +231,10 @@ export abstract class AbstractRuntime {
 			expiration: duration === undefined ? null : timestamp + duration,
 		}
 
-		const effects: Effect[] = [
+		await messageLog.db.apply([
 			{ model: "$sessions", operation: "set", value: sessionRecord },
 			{ model: "$dids", operation: "set", value: { did } },
-		]
-
-		await messageLog.db.apply(effects)
+		])
 	}
 
 	private async handleAction(
@@ -242,21 +251,20 @@ export abstract class AbstractRuntime {
 			.find((signer) => signer.scheme.codecs.includes(signature.codec) && signer.match(did))
 
 		if (!signer) {
-			throw new Error("unexpected missing signer")
+			throw new Error(`missing signer for codec ${signature.codec} matching did ${did}`)
 		}
 
-		const address = signer.getAddressFromDid(did)
-		const executionContext = new ExecutionContext(messageLog, signedMessage, address)
+		const view = new ExecutionContext(messageLog, signedMessage, signer)
 
-		const sessions = await db.query<{ message_id: string; expiration: number | null }>("$sessions", {
-			where: { public_key: signature.publicKey, did: did },
+		const sessions = await db.query<SessionRecord>("$sessions", {
+			where: { did, public_key: signature.publicKey },
 		})
 
 		const activeSessions = sessions.filter(({ expiration }) => expiration === null || expiration > context.timestamp)
 
 		let sessionId: string | null = null
 		for (const session of activeSessions) {
-			const isAncestor = await executionContext.isAncestor(executionContext.root, session.message_id)
+			const isAncestor = await view.isAncestor(session.message_id)
 			if (isAncestor) {
 				sessionId = session.message_id
 			}
@@ -266,7 +274,7 @@ export abstract class AbstractRuntime {
 			throw new Error(`missing session ${signature.publicKey} for ${did}`)
 		}
 
-		const result = await this.execute(executionContext)
+		const result = await this.execute(view)
 
 		const actionRecord: ActionRecord = { message_id: id, did, name, timestamp: context.timestamp }
 		const effects: Effect[] = [{ operation: "set", model: "$actions", value: actionRecord }]
@@ -276,9 +284,9 @@ export abstract class AbstractRuntime {
 
 		const messageId = MessageId.encode(id)
 
-		for (const [recordId, read] of executionContext.transactionalReads) {
+		for (const [recordId, read] of view.transactionalReads) {
 			if (read !== null) {
-				const [previousCSX] = await executionContext.getLatestConflictSet(executionContext.root, recordId)
+				const [previousCSX] = await view.getLatestConflictSet(recordId)
 				const csx = (previousCSX ?? 0) + 1
 				const value: ReadRecord = { reader_id: id, writer_id: read.version, record_id: recordId, csx }
 				effects.push({ model: "$reads", operation: "set", value })
@@ -287,7 +295,7 @@ export abstract class AbstractRuntime {
 					revertCauses.add(revert.cause_id)
 				}
 
-				if (executionContext.writes.get(recordId)?.csx ?? 0 > 0) {
+				if (view.writes.get(recordId)?.csx ?? 0 > 0) {
 					continue
 				}
 
@@ -298,14 +306,8 @@ export abstract class AbstractRuntime {
 
 				this.log.trace("found %d concurrent writes to record %s csx %d", writes.length, recordId, csx)
 				for await (const write of writes) {
-					const isAncestor = await executionContext.isAncestor([MessageId.encode(write.message_id)], messageId)
-					this.log.trace(
-						"- write from %s, isAncestor(%s, %s) = %s",
-						write.message_id,
-						write.message_id,
-						messageId,
-						isAncestor,
-					)
+					const isAncestor = await messageLog.isAncestor(write.message_id, messageId)
+					this.log.trace("- write from %s (isAncestor: %s)", write.message_id, isAncestor)
 					if (!isAncestor) {
 						revertCauses.add(write.message_id)
 					}
@@ -315,7 +317,7 @@ export abstract class AbstractRuntime {
 
 		const conditionalEffects: Effect[] = []
 
-		for (const [recordId, { model, key, value, csx }] of executionContext.writes) {
+		for (const [recordId, { model, key, value, csx }] of view.writes) {
 			if (csx === null) {
 				// LWW write
 				const writeRecord: WriteRecord = {
@@ -368,7 +370,7 @@ export abstract class AbstractRuntime {
 
 				const conflictingReads = await db.query<ReadRecord>("$reads", { where: { record_id: recordId, csx } })
 				for (const read of conflictingReads) {
-					const isAncestor = await executionContext.isAncestor(executionContext.root, read.reader_id)
+					const isAncestor = await view.isAncestor(read.reader_id)
 					if (!isAncestor) {
 						const [{ csx } = { csx: null }] = await db.query<WriteRecord>("$writes", {
 							where: { record_id: recordId, message_id: read.reader_id },
@@ -393,7 +395,7 @@ export abstract class AbstractRuntime {
 
 					let isAncestor = false
 					for (const inferiorWriteRevert of inferiorWriteRevertCauses) {
-						isAncestor = await executionContext.isAncestor(executionContext.root, inferiorWriteRevert.cause_id)
+						isAncestor = await view.isAncestor(inferiorWriteRevert.cause_id)
 						if (isAncestor) {
 							break
 						}
@@ -447,7 +449,7 @@ export abstract class AbstractRuntime {
 				const existingCauses = await db.query<RevertRecord>("$reverts", { where: { effect_id: dependency } })
 				let isAncestor = false
 				for (const { cause_id: existingCause } of existingCauses) {
-					isAncestor = await executionContext.isAncestor(executionContext.root, existingCause)
+					isAncestor = await view.isAncestor(existingCause)
 					if (isAncestor) {
 						break
 					}
@@ -496,48 +498,43 @@ export abstract class AbstractRuntime {
 			effects.push(...conditionalEffects)
 		}
 
-		this.log("applying effects %O", effects)
+		if (revertEffects.size > 0) {
+			const [_, heads] = await messageLog.getClock()
+			const currentView = new View(messageLog, heads)
 
-		try {
-			await db.apply(effects)
+			for (const effectId of revertEffects) {
+				this.log.trace("checking for values currently referencing reverted effect %s", effectId)
 
-			{
-				const [_, heads] = await messageLog.getClock()
-				const root = heads.map(MessageId.encode)
+				const versions = await db.query<VersionRecord>("$versions", { where: { version: effectId } })
+				this.log.trace("found %d existing records referencing the reverted action %s", versions.length, effectId)
+				for (const { id, model, key } of versions) {
+					const read = await currentView.getLastValueTransactional(id, revertEffects)
+					if (read === null) {
+						this.log.trace("no other versions of record %s found", id)
+						effects.push({ model: "$versions", operation: "delete", key: id })
+						effects.push({ model, operation: "delete", key })
+					} else {
+						const { value, csx, version } = read
+						this.log.trace("got new version %s of record %s (csx %d)", version, id, csx)
+						effects.push({
+							model: "$versions",
+							operation: "set",
+							value: { id, model, key, version, csx } satisfies VersionRecord,
+						})
 
-				const effects: Effect[] = []
-				for (const effectId of revertEffects) {
-					this.log.trace("checking for values currently referencing reverted effect %s", effectId)
-
-					const versions = await db.query<VersionRecord>("$versions", { where: { version: effectId } })
-					this.log.trace("found %d existing records referencing the reverted action %s", versions.length, effectId)
-					for (const { id, model, key } of versions) {
-						const read = await executionContext.getLastValueTransactional(root, id, revertEffects)
-						if (read === null) {
-							this.log.trace("no other versions of record %s found", id)
-							effects.push({ model: "$versions", operation: "delete", key: id })
+						if (value === null) {
 							effects.push({ model, operation: "delete", key })
 						} else {
-							const { value, csx, version } = read
-							this.log.trace("got new version %s of record %s (csx %d)", version, id, csx)
-							effects.push({
-								model: "$versions",
-								operation: "set",
-								value: { id, model, key, version, csx } satisfies VersionRecord,
-							})
-
-							if (value === null) {
-								effects.push({ model, operation: "delete", key })
-							} else {
-								effects.push({ model, operation: "set", value })
-							}
+							effects.push({ model, operation: "set", value })
 						}
 					}
-
-					this.log("applying revert effects %O", effects)
-					await db.apply(effects)
 				}
 			}
+		}
+
+		try {
+			this.log.trace("applying effects %O", effects)
+			await db.apply(effects)
 		} catch (err) {
 			if (err instanceof Error) {
 				err.message = `${name}: ${err.message}`

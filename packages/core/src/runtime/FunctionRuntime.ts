@@ -79,15 +79,13 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 		return this.#thisValue
 	}
 
-	protected async execute(context: ExecutionContext): Promise<void | any> {
-		const { publicKey } = context.signature
-		const { address } = context
+	protected async execute(ex: ExecutionContext): Promise<void | any> {
 		const {
 			did,
 			name,
 			args,
 			context: { blockhash, timestamp },
-		} = context.message.payload
+		} = ex.message.payload
 
 		const action = this.actions[name]
 		if (action === undefined) {
@@ -96,16 +94,16 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 
 		const thisValue: ActionContext<DeriveModelTypes<ModelsT>> = {
 			db: this.#db,
-			id: context.id,
-			publicKey,
-			did,
-			address,
+			id: ex.id,
+			publicKey: ex.signature.publicKey,
+			did: did,
+			address: ex.address,
 			blockhash: blockhash ?? null,
-			timestamp,
+			timestamp: timestamp,
 		}
 
 		try {
-			this.#context = context
+			this.#context = ex
 			this.#thisValue = thisValue
 
 			const result = await action.apply(thisValue, Array.isArray(args) ? [this.#db, ...args] : [this.#db, args])

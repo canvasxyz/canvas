@@ -145,10 +145,7 @@ export class ContractRuntime extends AbstractRuntime {
 	}
 
 	protected async execute(context: ExecutionContext): Promise<void | any> {
-		const { publicKey } = context.signature
-		const { address } = context
 		const {
-			did,
 			name,
 			args,
 			context: { blockhash, timestamp },
@@ -161,9 +158,9 @@ export class ContractRuntime extends AbstractRuntime {
 
 		const thisHandle = this.vm.wrapValue({
 			id: context.id,
-			publicKey,
-			did,
-			address,
+			publicKey: context.publicKey,
+			did: context.did,
+			address: context.address,
 			blockhash: blockhash ?? null,
 			timestamp,
 		})
