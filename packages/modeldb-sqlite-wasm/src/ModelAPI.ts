@@ -17,7 +17,6 @@ import {
 	PrimitiveProperty,
 	Config,
 	PrimaryKeyValue,
-	PropertyValue,
 	PropertyAPI,
 } from "@canvas-js/modeldb"
 
@@ -342,27 +341,37 @@ export class ModelAPI {
 			params.push(...whereParams)
 		}
 
-		const { count } = new Query(this.db, sql.join(" ")).get(params) ?? {}
-		assert(typeof count === "number")
-		return count
+		const stmt = new Query<SqlitePrimitiveValue[], { count: number }>(this.db, sql.join(" "))
+		try {
+			const result = stmt.get(params)
+			assert(result !== null && typeof result.count === "number")
+			return result.count
+		} finally {
+			stmt.finalize()
+		}
 	}
 
 	public query(query: QueryParams): ModelValue[] {
 		const [sql, properties, relations, params] = this.parseQuery(query)
-		const results: ModelValue[] = []
 
-		for (const row of new Query(this.db, sql).iterate(params)) {
-			results.push(this.parseRecord(row, properties, relations))
+		const stmt = new Query(this.db, sql)
+		try {
+			return stmt.all(params).map((row) => this.parseRecord(row, properties, relations))
+		} finally {
+			stmt.finalize()
 		}
-
-		return results
 	}
 
 	public *iterate(query: QueryParams): IterableIterator<ModelValue> {
 		const [sql, properties, relations, params] = this.parseQuery(query)
 
-		for (const row of new Query(this.db, sql).iterate(params)) {
-			yield this.parseRecord(row, properties, relations)
+		const stmt = new Query(this.db, sql)
+		try {
+			for (const row of stmt.iterate(params)) {
+				yield this.parseRecord(row, properties, relations)
+			}
+		} finally {
+			stmt.finalize()
 		}
 	}
 

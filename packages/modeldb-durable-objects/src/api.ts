@@ -345,26 +345,24 @@ export class ModelAPI {
 			params.push(...whereParams)
 		}
 
-		const { count } = new Query(this.db, sql.join(" ")).get(params) ?? {}
-		assert(typeof count === "number")
-		return count
+		const stmt = new Query<{ count: number }>(this.db, sql.join(" "))
+		const result = stmt.get(params)
+		assert(result !== null && typeof result.count === "number")
+		return result.count
 	}
 
 	public query(query: QueryParams): ModelValue[] {
 		const [sql, properties, relations, params] = this.parseQuery(query)
-		const results: ModelValue[] = []
 
-		for (const row of new Query(this.db, sql).iterate(params)) {
-			results.push(this.parseRecord(row, properties, relations))
-		}
-
-		return results
+		const stmt = new Query(this.db, sql)
+		return stmt.all(params).map((row) => this.parseRecord(row, properties, relations))
 	}
 
 	public *iterate(query: QueryParams): Iterable<ModelValue> {
 		const [sql, properties, relations, params] = this.parseQuery(query)
 
-		for (const row of new Query(this.db, sql).iterate(params)) {
+		const stmt = new Query(this.db, sql)
+		for (const row of stmt.iterate(params)) {
 			yield this.parseRecord(row, properties, relations)
 		}
 	}
