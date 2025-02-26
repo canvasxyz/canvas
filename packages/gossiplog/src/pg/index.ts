@@ -15,7 +15,7 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 		connectionConfig: string | pg.ConnectionConfig,
 		{ clear, ...init }: GossipLogInit<Payload> & { clear?: boolean },
 	) {
-		const db = await ModelDB.initialize({
+		const db = await ModelDB.open({
 			connectionConfig,
 			models: { ...init.schema, ...AbstractGossipLog.schema },
 			clear: clear,

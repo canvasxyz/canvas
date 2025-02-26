@@ -27,7 +27,7 @@ export class ModelDB extends AbstractModelDB {
 	#models: Record<string, ModelAPI> = {}
 	#doTransaction: (effects: Effect[]) => Promise<void>
 
-	public static async initialize({ connectionConfig, models, clear }: ModelDBOptions) {
+	public static async open({ connectionConfig, models, clear }: ModelDBOptions) {
 		const client = new pg.Client(connectionConfig)
 		await client.connect()
 
@@ -47,7 +47,9 @@ export class ModelDB extends AbstractModelDB {
 	}
 
 	constructor(client: pg.Client, modelDBConfig: Config, modelAPIs: Record<string, ModelAPI>) {
-		super(modelDBConfig)
+		super(modelDBConfig, {
+			[AbstractModelDB.namespace]: AbstractModelDB.version,
+		})
 
 		for (const model of Object.values(this.models)) {
 			this.#models[model.name] = modelAPIs[model.name]

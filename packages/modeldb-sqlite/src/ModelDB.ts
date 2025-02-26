@@ -43,21 +43,26 @@ export class ModelDB extends AbstractModelDB {
 
 		const db = new Database(path ?? ":memory:")
 
-		const baseModelDB = new ModelDB(db, Config.baseConfig)
-		await baseModelDB.initialize(newConfig, newVersion, async (oldConfig, oldVersion) => {
+		// calling this constructor will create empty $versions and $models
+		// tables if they do not already exist
+		const baseModelDB = new ModelDB(db, Config.baseConfig, {
+			[AbstractModelDB.namespace]: AbstractModelDB.version,
+		})
+
+		await AbstractModelDB.initialize(baseModelDB, newConfig, newVersion, async (oldConfig, oldVersion) => {
 			if (upgrade !== undefined) {
-				const existingDB = new ModelDB(db, oldConfig)
+				const existingDB = new ModelDB(db, oldConfig, oldVersion)
 				const upgradeAPI = existingDB.getUpgradeAPI()
 				await upgrade(upgradeAPI, oldVersion, newVersion)
 			}
 		})
 
 		newConfig.freeze()
-		return new ModelDB(db, newConfig)
+		return new ModelDB(db, newConfig, newVersion)
 	}
 
-	private constructor(public readonly db: sqlite.Database, config: Config) {
-		super(config)
+	private constructor(public readonly db: sqlite.Database, config: Config, version: Record<string, number>) {
+		super(config, version)
 
 		for (const model of Object.values(this.models)) {
 			this.#models[model.name] = new ModelAPI(this.db, this.config, model)

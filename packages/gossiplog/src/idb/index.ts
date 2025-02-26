@@ -16,7 +16,7 @@ export interface Options {
 export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 	public static namespace = "gossiplog"
 	public static async open<Payload>({ name, ...init }: GossipLogInit<Payload> & Options) {
-		const db = await ModelDB.initialize({
+		const db = await ModelDB.open({
 			name: name ?? `canvas/v1/${init.topic}`,
 			models: { ...init.schema, ...AbstractGossipLog.schema },
 			version: { [GossipLog.namespace]: 1 },

@@ -28,7 +28,9 @@ export class ModelDB extends AbstractModelDB {
 	#transaction: (effects: Effect[]) => void
 
 	constructor({ path, models, clear }: { clear?: boolean } & ModelDBOptions) {
-		super(Config.parse(models))
+		super(Config.parse(models), {
+			[AbstractModelDB.namespace]: AbstractModelDB.version,
+		})
 
 		this.db = SQLite.openDatabaseSync(path ?? ":memory:")
 

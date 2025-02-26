@@ -23,7 +23,7 @@ export class ModelDB extends AbstractModelDB {
 	private readonly worker: Worker | null
 	private readonly wrappedDB: Comlink.Remote<InnerModelDB> | InnerModelDB
 
-	public static async initialize({ path, models }: ModelDBOptions) {
+	public static async open({ path, models }: ModelDBOptions) {
 		const config = Config.parse(models)
 		let worker, wrappedDB
 		if (path) {
@@ -51,7 +51,9 @@ export class ModelDB extends AbstractModelDB {
 		wrappedDB: Comlink.Remote<InnerModelDB> | InnerModelDB
 		config: Config
 	}) {
-		super(config)
+		super(config, {
+			[AbstractModelDB.namespace]: AbstractModelDB.version,
+		})
 		this.worker = worker
 		this.wrappedDB = wrappedDB
 	}

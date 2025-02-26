@@ -36,7 +36,9 @@ export class ModelDBProxy extends AbstractModelDB {
 	subscriptions: Map<number, Subscription>
 
 	constructor(worker: Unstable_DevWorker, models: ModelSchema, baseUrl?: string, uuid?: string) {
-		super(Config.parse(models))
+		super(Config.parse(models), {
+			[AbstractModelDB.namespace]: AbstractModelDB.version,
+		})
 
 		this.worker = worker
 		this.baseUrl = baseUrl ?? "http://example.com"

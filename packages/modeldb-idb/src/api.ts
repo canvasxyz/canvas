@@ -76,21 +76,24 @@ export class ModelAPI {
 		return results
 	}
 
-	async set(txn: IDBPTransaction<any, any, "readwrite">, value: ModelValue): Promise<void> {
+	async set(txn: IDBPTransaction<any, any, "readwrite" | "versionchange">, value: ModelValue): Promise<void> {
 		validateModelValue(this.model, value)
 		const object = this.encodeObject(value)
 		await this.getStore(txn).put(object)
 	}
 
-	async delete(txn: IDBPTransaction<any, any, "readwrite">, key: PrimaryKeyValue | PrimaryKeyValue[]): Promise<void> {
+	async delete(
+		txn: IDBPTransaction<any, any, "readwrite" | "versionchange">,
+		key: PrimaryKeyValue | PrimaryKeyValue[],
+	): Promise<void> {
 		await this.getStore(txn).delete(key)
 	}
 
-	async clear(txn: IDBPTransaction<any, any, "readwrite">) {
+	async clear(txn: IDBPTransaction<any, any, "readwrite" | "versionchange">) {
 		await this.getStore(txn).clear()
 	}
 
-	async count(txn: IDBPTransaction<any, any, IDBTransactionMode>, where: WhereCondition = {}): Promise<number> {
+	async count(txn: IDBPTransaction<any, any, IDBTransactionMode>, where: WhereCondition): Promise<number> {
 		const store = this.getStore(txn)
 
 		if (Object.keys(where).length === 0) {

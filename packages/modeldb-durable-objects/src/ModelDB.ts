@@ -37,7 +37,10 @@ export class ModelDB extends AbstractModelDB {
 	#models: Record<string, ModelAPI> = {}
 
 	constructor({ db, models }: ModelDBOptions) {
-		super(Config.parse(models))
+		super(Config.parse(models), {
+			[AbstractModelDB.namespace]: AbstractModelDB.version,
+		})
+
 		this.db = db
 
 		for (const model of Object.values(this.models)) {
