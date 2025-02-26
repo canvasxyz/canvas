@@ -33,7 +33,7 @@ testOnModelDB("count entries in a modeldb table", async (t, openDB) => {
 	})
 
 	t.is(await db.count("user"), 3)
-	db.clear("user")
+	await db.clear("user")
 	t.is(await db.count("user"), 0)
 })
 

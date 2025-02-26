@@ -28,7 +28,7 @@ class InnerExecutionContext {
 // @ts-ignore
 async function openOpfsDB(t: any, models: ModelSchema) {
 	// @ts-ignore
-	const db = await ModelDB.initialize({
+	const db = await ModelDB.open({
 		path: `${nanoid()}.db`,
 		models,
 	})
@@ -38,7 +38,7 @@ async function openOpfsDB(t: any, models: ModelSchema) {
 // @ts-ignore
 async function openTransientDB(t: any, models: ModelSchema) {
 	// @ts-ignore
-	const db = await ModelDB.initialize({
+	const db = await ModelDB.open({
 		models,
 	})
 	return db

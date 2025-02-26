@@ -43,7 +43,7 @@ export abstract class AbstractModelDB implements DatabaseAPI {
 	protected readonly subscriptions = new Map<number, Subscription>()
 	#subscriptionId = 0
 
-	protected constructor(public readonly config: Config) {
+	protected constructor(public readonly config: Config, public readonly version: Record<string, number>) {
 		this.log = logger(`canvas:modeldb`)
 		this.models = {}
 		for (const model of config.models) {
@@ -51,7 +51,8 @@ export abstract class AbstractModelDB implements DatabaseAPI {
 		}
 	}
 
-	protected async initialize(
+	protected static async initialize(
+		baseModelDB: DatabaseAPI,
 		newConfig: Config,
 		newVersion: Record<string, number>,
 		upgrade: (oldConfig: Config, oldVersion: Record<string, number>) => Promise<void>,
@@ -60,7 +61,7 @@ export abstract class AbstractModelDB implements DatabaseAPI {
 
 		const baseEffects: Effect[] = []
 
-		const [oldModelDBVersion = null] = await this.query<{ namespace: string; version: number }>("$versions", {
+		const [oldModelDBVersion = null] = await baseModelDB.query<{ namespace: string; version: number }>("$versions", {
 			select: { namespace: true, version: true },
 			limit: 1,
 			where: { namespace: AbstractModelDB.namespace },
@@ -85,16 +86,18 @@ export abstract class AbstractModelDB implements DatabaseAPI {
 			throw new Error(`unsupported modeldb version`)
 		}
 
-		await this.apply(baseEffects)
+		await baseModelDB.apply(baseEffects)
 
-		const existingVersions = await this.getAll<{ namespace: string; version: number; timestamp: string }>("$versions")
+		const existingVersions = await baseModelDB.getAll<{ namespace: string; version: number; timestamp: string }>(
+			"$versions",
+		)
 		const oldVersion: Record<string, number> = {}
 		for (const { namespace, version } of existingVersions) {
 			assert(Number.isSafeInteger(version) && version >= 0, "internal error - found invalid version number")
 			oldVersion[namespace] = Math.max(oldVersion[namespace] ?? 0, version)
 		}
 
-		const oldModels = await this.getAll<{ name: string; model: Model }>("$models")
+		const oldModels = await baseModelDB.getAll<{ name: string; model: Model }>("$models")
 		const oldConfig = new Config(oldModels.map(({ model }) => model))
 		const newEntries = Object.entries(newVersion).map(([namespace, version]) => ({ namespace, version, timestamp }))
 
@@ -149,7 +152,7 @@ export abstract class AbstractModelDB implements DatabaseAPI {
 				}
 			}
 
-			await this.apply(
+			await baseModelDB.apply(
 				newEntries
 					.filter(({ namespace, version }) => oldVersion[namespace] === undefined || oldVersion[namespace] < version)
 					.map((value) => ({ model: "$versions", operation: "set", value })),

@@ -123,7 +123,7 @@ export const testOnModelDB = (
 
 	if (platforms.idb) {
 		test(`IDB - ${name}`, macro, async (t, models) => {
-			const mdb = await ModelDBIdb.initialize({ name: nanoid(), models })
+			const mdb = await ModelDBIdb.open({ name: nanoid(), models })
 			t.teardown(() => mdb.close())
 			return mdb
 		})
@@ -131,7 +131,7 @@ export const testOnModelDB = (
 
 	if (platforms.pg) {
 		test.serial(`Postgres - ${name}`, macro, async (t, models) => {
-			const mdb = await ModelDBPostgres.initialize({ connectionConfig, models, clear: true })
+			const mdb = await ModelDBPostgres.open({ connectionConfig, models, clear: true })
 			t.teardown(() => mdb.close())
 			return mdb
 		})
