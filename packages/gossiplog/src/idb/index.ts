@@ -14,11 +14,12 @@ export interface Options {
 }
 
 export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
-	public static async open<Payload>({ name, version, ...init }: GossipLogInit<Payload> & Options) {
+	public static namespace = "gossiplog"
+	public static async open<Payload>({ name, ...init }: GossipLogInit<Payload> & Options) {
 		const db = await ModelDB.initialize({
 			name: name ?? `canvas/v1/${init.topic}`,
 			models: { ...init.schema, ...AbstractGossipLog.schema },
-			version: version ?? 1,
+			version: { [GossipLog.namespace]: 1 },
 		})
 
 		const messageCount = await db.count("$messages")

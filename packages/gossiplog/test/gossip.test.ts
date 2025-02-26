@@ -12,7 +12,7 @@ test("send a message from one peer to another via gossipsub", async (t) => {
 	const topic = randomUUID()
 	const apply: GossipLogConsumer<string> = (i) => {}
 
-	const network = await createNetwork(t, () => new GossipLog({ topic, apply }), {
+	const network = await createNetwork(t, () => GossipLog.open(null, { topic, apply }), {
 		a: { port: 9990, peers: ["b"] },
 		b: { port: 9991, peers: ["a"] },
 	})
@@ -33,7 +33,7 @@ test("deliver two concurrent messages to two peers via gossipsub", async (t) => 
 	const topic = randomUUID()
 	const apply: GossipLogConsumer<string> = (i) => {}
 
-	const network = await createNetwork(t, () => new GossipLog({ topic, apply }), {
+	const network = await createNetwork(t, () => GossipLog.open(null, { topic, apply }), {
 		a: { port: 9990, peers: ["b"] },
 		b: { port: 9991, peers: ["a"] },
 	})
@@ -58,7 +58,7 @@ test("exchange serial messages between two peers via gossipsub", async (t) => {
 	const topic = randomUUID()
 	const apply: GossipLogConsumer<string> = (i) => {}
 
-	const network = await createNetwork(t, () => new GossipLog({ topic, apply }), {
+	const network = await createNetwork(t, () => GossipLog.open(null, { topic, apply }), {
 		a: { port: 9990, peers: ["b"] },
 		b: { port: 9991, peers: ["a"] },
 	})

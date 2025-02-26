@@ -52,7 +52,7 @@ function getPgConfig(): string | PoolConfig {
 const worker = CF_WORKER
 	? await unstable_dev("test/worker.ts", {
 			experimental: { disableExperimentalWarning: true },
-		})
+	  })
 	: null
 
 export const testPlatforms = (
@@ -77,7 +77,7 @@ export const testPlatforms = (
 
 	if (platforms.memory) {
 		test(`Sqlite (in-memory) - ${name}`, macro, async (t, init) => {
-			const log = new GossipLogSqlite(init)
+			const log = await GossipLogSqlite.open(null, init)
 			t.teardown(() => log.close())
 			return log
 		})
@@ -85,7 +85,7 @@ export const testPlatforms = (
 
 	if (platforms.sqlite) {
 		test(`Sqlite (on-disk) - ${name}`, macro, async (t, init) => {
-			const log = new GossipLogSqlite({ ...init, directory: getDirectory(t) })
+			const log = await GossipLogSqlite.open(getDirectory(t), init)
 			t.teardown(() => log.close())
 			return log
 		})

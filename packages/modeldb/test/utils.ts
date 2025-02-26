@@ -1,4 +1,6 @@
 import "fake-indexeddb/auto"
+import os from "node:os"
+import fs from "node:fs"
 import path from "node:path"
 import test, { ExecutionContext } from "ava"
 import puppeteer from "puppeteer"
@@ -113,7 +115,7 @@ export const testOnModelDB = (
 
 	if (platforms.sqlite) {
 		test(`Sqlite - ${name}`, macro, async (t, models) => {
-			const mdb = new ModelDBSqlite({ path: null, models })
+			const mdb = await ModelDBSqlite.open({ path: null, models })
 			t.teardown(() => mdb.close())
 			return mdb
 		})
@@ -213,4 +215,15 @@ export async function collect<T>(iter: AsyncIterable<T>): Promise<T[]> {
 		values.push(value)
 	}
 	return values
+}
+
+export function getDirectory(t: ExecutionContext<unknown>): string {
+	const directory = path.resolve(os.tmpdir(), nanoid())
+	fs.mkdirSync(directory)
+	t.log("Created temporary directory", directory)
+	t.teardown(() => {
+		fs.rmSync(directory, { recursive: true })
+		t.log("Removed temporary directory", directory)
+	})
+	return directory
 }

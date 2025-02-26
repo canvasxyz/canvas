@@ -20,10 +20,11 @@ import {
 	isLiteralExpression,
 	isRangeExpression,
 	validateModelValue,
+	Config,
 } from "@canvas-js/modeldb"
 
 import { IDBValue, encodePropertyValue, decodePropertyValue } from "./encoding.js"
-import { equalIndex, getIndexName } from "./utils.js"
+import { getIndexName } from "./utils.js"
 
 type ObjectValue = Record<string, IDBValue>
 
@@ -270,11 +271,11 @@ export class ModelAPI {
 	}
 
 	private getStoreIndex(store: IDBPObjectStore<any, any, string, "readonly">, index: string[]): StoreIndex | null {
-		if (equalIndex(index, this.model.primaryKey)) {
+		if (Config.equalIndex(index, this.model.primaryKey)) {
 			return store
 		}
 
-		if (this.model.indexes.some((i) => equalIndex(index, i))) {
+		if (this.model.indexes.some((i) => Config.equalIndex(index, i))) {
 			return store.index(getIndexName(index))
 		}
 
@@ -435,6 +436,9 @@ export class ModelAPI {
 			assert(entries.length === 1, "expected exactly one entry in query.orderBy")
 			const [[indexName, direction]] = entries
 			const index = indexName.split("/")
+			for (const name of index) {
+				assert(name in this.properties, "invalid orderBy index")
+			}
 
 			const storeIndex = this.getStoreIndex(store, index)
 			assert(storeIndex !== null, "orderBy properties must be indexed")

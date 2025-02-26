@@ -14,6 +14,9 @@ import {
 	Config,
 	getModelsFromInclude,
 	Model,
+	DatabaseUpgradeAPI,
+	ModelInit,
+	PropertyType,
 } from "@canvas-js/modeldb"
 
 import { ModelAPI } from "./api.js"
@@ -22,33 +25,58 @@ import { getIndexName, checkForMissingObjectStores } from "./utils.js"
 export interface ModelDBOptions {
 	name: string
 	models: ModelSchema
-	version?: number
+
+	version?: Record<string, number>
+	upgrade?: (
+		db: DatabaseUpgradeAPI,
+		oldVersion: Record<string, number>,
+		newVersion: Record<string, number>,
+	) => void | Promise<void>
 }
 
 export class ModelDB extends AbstractModelDB {
-	public static async initialize({ name, models, version = 1 }: ModelDBOptions) {
-		const config = Config.parse(models)
-		const db = await openDB(name, version, {
-			upgrade(db: IDBPDatabase<unknown>, oldVersion: number, newVersion: number | null) {
+	public static async initialize({ name, models, version, upgrade }: ModelDBOptions) {
+		const newConfig = Config.parse(models)
+		const newVersion = Object.assign(version ?? {}, {
+			[AbstractModelDB.namespace]: AbstractModelDB.version,
+		})
+
+		const sum = Object.values(version ?? {}).reduce((sum, value) => sum + value, 0)
+		const db = await openDB(name, sum, {
+			async upgrade(db: IDBPDatabase<unknown>) {
 				// create missing object stores
 				const storeNames = new Set(db.objectStoreNames)
-				for (const model of config.models) {
-					if (storeNames.has(model.name)) {
-						continue
-					}
 
-					const keyPath = model.primaryKey.length === 1 ? model.primaryKey[0] : model.primaryKey
-					const recordObjectStore = db.createObjectStore(model.name, { keyPath })
-
-					for (const index of model.indexes) {
-						const keyPath = index.length === 1 ? index[0] : index
-						recordObjectStore.createIndex(getIndexName(index), keyPath)
+				for (const [name, model] of Object.entries(Config.baseModels)) {
+					if (!storeNames.has(name)) {
+						ModelDB.createModel(db, model)
 					}
 				}
+
+				const baseModelDB = new ModelDB(db, Config.baseConfig)
+				await baseModelDB.initialize(newConfig, newVersion, async (oldConfig, oldVersion) => {
+					if (upgrade !== undefined) {
+						const existingDB = new ModelDB(db, oldConfig)
+						const upgradeAPI = existingDB.getUpgradeAPI()
+						await upgrade(upgradeAPI, oldVersion, newVersion)
+					}
+				})
 			},
 		})
 
-		return new ModelDB(db, config)
+		return new ModelDB(db, newConfig)
+	}
+
+	private static getKeyPath = (index: string[]) => (index.length === 1 ? index[0] : index)
+
+	private static createModel(db: IDBPDatabase<unknown>, model: Model) {
+		const keyPath = ModelDB.getKeyPath(model.primaryKey)
+		const recordObjectStore = db.createObjectStore(model.name, { keyPath })
+
+		for (const index of model.indexes) {
+			const keyPath = ModelDB.getKeyPath(index)
+			recordObjectStore.createIndex(getIndexName(index), keyPath)
+		}
 	}
 
 	readonly #models: Record<string, ModelAPI> = {}
@@ -230,5 +258,54 @@ export class ModelDB extends AbstractModelDB {
 				}),
 			)
 		})
+	}
+
+	private getUpgradeAPI() {
+		return {
+			get: this.get.bind(this),
+			getAll: this.getAll.bind(this),
+			getMany: this.getMany.bind(this),
+			iterate: this.iterate.bind(this),
+			query: this.query.bind(this),
+			count: this.count.bind(this),
+			clear: this.clear.bind(this),
+			apply: this.apply.bind(this),
+			set: this.set.bind(this),
+			delete: this.delete.bind(this),
+
+			createModel: async (name: string, init: ModelInit) => {
+				const model = this.config.createModel(name, init)
+				this.models[name] = model
+				this.#models[name] = new ModelAPI(model)
+				await this.write((txn) => this.#models.$models.set(txn, { name, model }))
+			},
+
+			deleteModel: async (name: string) => {
+				this.config.deleteModel(name)
+				delete this.#models[name]
+				delete this.models[name]
+				await this.write((txn) => this.#models.$models.delete(txn, name))
+			},
+
+			addProperty: (modelName: string, propertyName: string, propertyType: PropertyType) => {
+				const property = this.config.addProperty(modelName, propertyName, propertyType)
+				throw new Error("not implemented")
+			},
+
+			removeProperty: (modelName: string, propertyName: string) => {
+				this.config.removeProperty(modelName, propertyName)
+				throw new Error("not implemented")
+			},
+
+			addIndex: (modelName: string, index: string) => {
+				const propertyNames = this.config.addIndex(modelName, index)
+				throw new Error("not implemented")
+			},
+
+			removeIndex: (modelName: string, index: string) => {
+				this.config.removeIndex(modelName, index)
+				throw new Error("not implemented")
+			},
+		} satisfies DatabaseUpgradeAPI
 	}
 }

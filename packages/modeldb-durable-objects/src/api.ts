@@ -166,6 +166,10 @@ export class ModelAPI {
 
 		// Create indexes
 		for (const index of model.indexes) {
+			if (index.length === 1 && index[0] in this.relations) {
+				continue
+			}
+
 			const indexName = [model.name, ...index].join("/")
 			const indexColumnNames = index.flatMap((name) => this.codecs[name].columns)
 			const indexColumns = indexColumnNames.map(quote).join(", ")
@@ -423,6 +427,7 @@ export class ModelAPI {
 			const index = indexName.split("/")
 
 			for (const name of index) {
+				assert(name in this.properties, "invalid orderBy index")
 				if (this.properties[name].kind === "relation") {
 					throw new Error("cannot order by relation properties")
 				}
