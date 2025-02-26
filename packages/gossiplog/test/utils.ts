@@ -50,9 +50,7 @@ function getPgConfig(): string | PoolConfig {
 }
 
 const worker = CF_WORKER
-	? await unstable_dev("test/worker.ts", {
-			experimental: { disableExperimentalWarning: true },
-	  })
+	? await unstable_dev("test/worker.ts", { experimental: { disableExperimentalWarning: true } })
 	: null
 
 export const testPlatforms = (
