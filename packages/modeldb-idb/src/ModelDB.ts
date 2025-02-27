@@ -12,15 +12,15 @@ import {
 	WhereCondition,
 	PrimaryKeyValue,
 	Config,
-	getModelsFromInclude,
 	Model,
 	DatabaseUpgradeAPI,
 	ModelInit,
 	PropertyType,
+	getModelsFromInclude,
 } from "@canvas-js/modeldb"
 
 import { ModelAPI } from "./api.js"
-import { getIndexName, checkForMissingObjectStores } from "./utils.js"
+import { getIndexName } from "./utils.js"
 
 export interface ModelDBOptions {
 	name: string
@@ -28,7 +28,7 @@ export interface ModelDBOptions {
 
 	version?: Record<string, number>
 	upgrade?: (
-		db: DatabaseUpgradeAPI,
+		upgradeAPI: DatabaseUpgradeAPI,
 		oldVersion: Record<string, number>,
 		newVersion: Record<string, number>,
 	) => void | Promise<void>
@@ -127,7 +127,6 @@ export class ModelDB extends AbstractModelDB {
 		fn: (txn: IDBPTransaction<any, any, "readonly">) => T | Promise<T>,
 		objectStoreNames: string[] = [...this.db.objectStoreNames],
 	) {
-		checkForMissingObjectStores(this.db, objectStoreNames)
 		const txn = this.db.transaction(objectStoreNames, "readonly")
 		return await fn(txn)
 	}
@@ -156,10 +155,11 @@ export class ModelDB extends AbstractModelDB {
 		query: QueryParams = {},
 	): AsyncIterable<T> {
 		const api = this.#models[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
 
 		// TODO: re-open the transaction if the caller awaits on other promises between yields
-		checkForMissingObjectStores(this.db, [api.storeName])
 		const txn = this.db.transaction([api.storeName], "readonly", {})
 		yield* api.iterate(txn, query) as AsyncIterable<T>
 	}
@@ -169,13 +169,19 @@ export class ModelDB extends AbstractModelDB {
 		key: PrimaryKeyValue | PrimaryKeyValue[],
 	): Promise<T | null> {
 		const api = this.#models[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
 		return await this.read((txn) => api.get(txn, key) as Promise<T | null>, [api.storeName])
 	}
 
 	public async getAll<T extends ModelValue>(modelName: string): Promise<T[]> {
 		const api = this.#models[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
 		return await this.read((txn) => api.getAll(txn) as Promise<T[]>, [api.storeName])
 	}
 
@@ -184,7 +190,10 @@ export class ModelDB extends AbstractModelDB {
 		keys: PrimaryKeyValue[] | PrimaryKeyValue[][],
 	): Promise<(T | null)[]> {
 		const api = this.#models[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
 		return await this.read((txn) => api.getMany(txn, keys) as Promise<(T | null)[]>, [api.storeName])
 	}
 
@@ -194,7 +203,9 @@ export class ModelDB extends AbstractModelDB {
 		}
 
 		const api = this.#models[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
 
 		const result = await this.read((txn) => api.query(txn, query), [api.storeName])
 		return result as T[]
@@ -206,6 +217,10 @@ export class ModelDB extends AbstractModelDB {
 	): Promise<T[]> {
 		assert(query.include)
 		const api = this.#models[modelName]
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
 		const modelNames = Array.from(
 			new Set([modelName, ...getModelsFromInclude(this.config.models, modelName, query.include)]),
 		)
@@ -223,8 +238,9 @@ export class ModelDB extends AbstractModelDB {
 
 	public async count(modelName: string, where: WhereCondition = {}): Promise<number> {
 		const api = this.#models[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
-		checkForMissingObjectStores(this.db, [api.storeName])
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
 
 		return await this.read((txn) => api.count(txn, where), [api.storeName])
 	}
