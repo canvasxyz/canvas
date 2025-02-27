@@ -10,15 +10,14 @@ import {
 	PrimitiveType,
 	QueryParams,
 	WhereCondition,
+	PrimitiveProperty,
+	Config,
+	PrimaryKeyValue,
+	PropertyAPI,
 	isNotExpression,
 	isLiteralExpression,
 	isRangeExpression,
 	validateModelValue,
-	PrimitiveProperty,
-	Config,
-	PrimaryKeyValue,
-	PropertyValue,
-	PropertyAPI,
 } from "@canvas-js/modeldb"
 
 import { PostgresPrimitiveValue, Encoder, Decoder } from "./encoding.js"
@@ -45,7 +44,7 @@ function getColumn(name: string, type: PrimitiveType, nullable: boolean) {
 const quote = (name: string) => `"${name}"`
 
 export class ModelAPI {
-	public static async initialize(client: pg.Client, config: Config, model: Model, clear: boolean = false) {
+	public static async create(client: pg.Client, config: Config, model: Model, clear: boolean = false) {
 		/** SQL column declarations */
 		const columns: string[] = []
 
@@ -125,7 +124,7 @@ export class ModelAPI {
 					(relation) => relation.source === model.name && relation.sourceProperty === property.name,
 				)
 				assert(relation !== undefined, "internal error - relation not found")
-				relations[property.name] = await RelationAPI.initialize(client, config, relation, clear)
+				relations[property.name] = await RelationAPI.create(client, config, relation, clear)
 
 				mutableProperties.push(property)
 			} else {
@@ -150,12 +149,12 @@ export class ModelAPI {
 		// Create record table
 
 		if (clear) {
-			queries.push(`DROP TABLE IF EXISTS "${api.#table}"`)
+			queries.push(`DROP TABLE IF EXISTS "${api.table}"`)
 		}
 
 		const primaryKeyConstraint = `PRIMARY KEY (${model.primaryKey.map(quote).join(", ")})`
 		const tableSchema = [...columns, primaryKeyConstraint].join(", ")
-		queries.push(`CREATE TABLE IF NOT EXISTS "${api.#table}" (${tableSchema})`)
+		queries.push(`CREATE TABLE IF NOT EXISTS "${api.table}" (${tableSchema})`)
 
 		// Create indexes
 		for (const index of model.indexes) {
@@ -166,7 +165,7 @@ export class ModelAPI {
 			const indexName = [model.name, ...index].join("/")
 			const indexColumnNames = index.flatMap((name) => codecs[name].columns)
 			const indexColumns = indexColumnNames.map(quote).join(", ")
-			queries.push(`CREATE INDEX IF NOT EXISTS "${indexName}" ON "${api.#table}" (${indexColumns})`)
+			queries.push(`CREATE INDEX IF NOT EXISTS "${indexName}" ON "${api.table}" (${indexColumns})`)
 		}
 
 		await client.query(queries.join("; "))
@@ -174,7 +173,7 @@ export class ModelAPI {
 		return api
 	}
 
-	readonly #table: string
+	readonly table: string
 
 	// Methods
 	readonly #insert: Method
@@ -202,7 +201,7 @@ export class ModelAPI {
 		readonly codecs: Record<string, PropertyAPI<PostgresPrimitiveValue>>,
 		columnNames: string[],
 	) {
-		this.#table = model.name
+		this.table = model.name
 		this.codecNames = Object.keys(this.codecs)
 		this.relationNames = Object.keys(this.relations)
 
@@ -214,7 +213,7 @@ export class ModelAPI {
 
 		this.#insert = new Method(
 			client,
-			`INSERT INTO "${this.#table}" (${quotedColumnNames}) VALUES (${insertParams}) ON CONFLICT DO NOTHING`,
+			`INSERT INTO "${this.table}" (${quotedColumnNames}) VALUES (${insertParams}) ON CONFLICT DO NOTHING`,
 		)
 
 		const updateNames = columnNames.filter((name) => !model.primaryKey.includes(name))
@@ -224,25 +223,25 @@ export class ModelAPI {
 				.map((name, i) => `"${name}" = $${updateEntries.length + i + 1}`)
 				.join(" AND ")
 
-			this.#update = new Method(client, `UPDATE "${this.#table}" SET ${updateEntries.join(", ")} WHERE ${updateWhere}`)
+			this.#update = new Method(client, `UPDATE "${this.table}" SET ${updateEntries.join(", ")} WHERE ${updateWhere}`)
 		} else {
 			this.#update = null
 		}
 
 		const deleteWhere = model.primaryKey.map((name, i) => `"${name}" = $${i + 1}`).join(" AND ")
-		this.#delete = new Method(client, `DELETE FROM "${this.#table}" WHERE ${deleteWhere}`)
-		this.#clear = new Method(client, `DELETE FROM "${this.#table}"`)
+		this.#delete = new Method(client, `DELETE FROM "${this.table}" WHERE ${deleteWhere}`)
+		this.#clear = new Method(client, `DELETE FROM "${this.table}"`)
 
 		// Prepare queries
-		this.#count = new Query<{ count: number }>(this.client, `SELECT COUNT(*) AS count FROM "${this.#table}"`)
+		this.#count = new Query<{ count: number }>(this.client, `SELECT COUNT(*) AS count FROM "${this.table}"`)
 
 		const selectWhere = model.primaryKey.map((name, i) => `"${name}" = $${i + 1}`).join(" AND ")
-		this.#select = new Query(this.client, `SELECT ${quotedColumnNames} FROM "${this.#table}" WHERE ${selectWhere}`)
+		this.#select = new Query(this.client, `SELECT ${quotedColumnNames} FROM "${this.table}" WHERE ${selectWhere}`)
 
 		const orderByPrimaryKey = model.primaryKey.map((name) => `"${name}" ASC`).join(", ")
 		this.#selectAll = new Query(
 			this.client,
-			`SELECT ${quotedColumnNames} FROM "${this.#table}" ORDER BY ${orderByPrimaryKey}`,
+			`SELECT ${quotedColumnNames} FROM "${this.table}" ORDER BY ${orderByPrimaryKey}`,
 		)
 
 		// this.#selectMany = new QUery(this.client, `SELECT ${selectColumns} FROM "${this.#table}" WHERE "${this.#primaryKeyName}" = ANY($1)`)
@@ -255,6 +254,16 @@ export class ModelAPI {
 		// const selectColumns = this.#columnNames.join(", ")
 		// this.#select = `SELECT ${selectColumns} FROM "${this.#table}" WHERE "${this.#primaryKeyName}" = $1`
 		// this.#selectMany = `SELECT ${selectColumns} FROM "${this.#table}" WHERE "${this.#primaryKeyName}" = ANY($1)`
+	}
+
+	public async drop() {
+		const queries: string[] = []
+		for (const relationAPI of Object.values(this.relations)) {
+			queries.push(`DROP TABLE "${relationAPI.table}";`)
+		}
+
+		queries.push(`DROP TABLE "${this.table}";`)
+		await this.client.query(queries.join("\n"))
 	}
 
 	public async get(key: PrimaryKeyValue | PrimaryKeyValue[]): Promise<ModelValue | null> {
@@ -385,7 +394,7 @@ export class ModelAPI {
 		const params: PostgresPrimitiveValue[] = []
 
 		// SELECT
-		sql.push(`SELECT COUNT(*) AS count FROM "${this.#table}"`)
+		sql.push(`SELECT COUNT(*) AS count FROM "${this.table}"`)
 
 		// WHERE
 		const whereExpression = this.getWhereExpression(where, params)
@@ -457,7 +466,7 @@ export class ModelAPI {
 		// SELECT
 		const select = query.select ?? mapValues(this.properties, () => true)
 		const [selectExpression, selectProperties, selectRelations] = this.getSelectExpression(select)
-		sql.push(`SELECT ${selectExpression} FROM "${this.#table}"`)
+		sql.push(`SELECT ${selectExpression} FROM "${this.table}"`)
 
 		// WHERE
 		const where = this.getWhereExpression(query.where, params)
@@ -713,7 +722,7 @@ export class RelationAPI {
 	readonly #delete: Method
 	readonly #clear: Method
 
-	public static async initialize(client: pg.Client, config: Config, relation: Relation, clear: boolean) {
+	public static async create(client: pg.Client, config: Config, relation: Relation, clear: boolean) {
 		const sourceColumnNames: string[] = []
 		const targetColumnNames: string[] = []
 

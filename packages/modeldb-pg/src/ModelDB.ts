@@ -11,52 +11,78 @@ import {
 	ModelSchema,
 	QueryParams,
 	WhereCondition,
+	DatabaseUpgradeAPI,
+	ModelInit,
+	PropertyType,
+	PrimaryKeyValue,
 } from "@canvas-js/modeldb"
 
 import { ModelAPI } from "./api.js"
 
 export interface ModelDBOptions {
-	connectionConfig: string | pg.ConnectionConfig
 	models: ModelSchema
 	clear?: boolean
+
+	version?: Record<string, number>
+	upgrade?: (
+		upgradeAPI: DatabaseUpgradeAPI,
+		oldVersion: Record<string, number>,
+		newVersion: Record<string, number>,
+	) => void | Promise<void>
 }
 
 export class ModelDB extends AbstractModelDB {
-	public readonly client: pg.Client
-
 	#models: Record<string, ModelAPI> = {}
-	#doTransaction: (effects: Effect[]) => Promise<void>
+	#transaction: (effects: Effect[]) => Promise<void>
 
-	public static async open({ connectionConfig, models, clear }: ModelDBOptions) {
-		const client = new pg.Client(connectionConfig)
+	public static async open(uri: string | pg.ConnectionConfig, { models, version, upgrade, clear }: ModelDBOptions) {
+		const newConfig = Config.parse(models)
+		const newVersion = Object.assign(version ?? {}, {
+			[AbstractModelDB.namespace]: AbstractModelDB.version,
+		})
+
+		const client = new pg.Client(uri)
 		await client.connect()
 
 		try {
-			const modelDBConfig = Config.parse(models)
+			const baseModelDB = new ModelDB(client, Config.baseConfig, {
+				[AbstractModelDB.namespace]: AbstractModelDB.version,
+			})
 
-			const modelDBAPIs: Record<string, ModelAPI> = {}
-			for (const model of Object.values(modelDBConfig.models)) {
-				modelDBAPIs[model.name] = await ModelAPI.initialize(client, modelDBConfig, model, clear)
+			for (const model of Config.baseConfig.models) {
+				baseModelDB.#models[model.name] = await ModelAPI.create(client, newConfig, model, clear)
 			}
 
-			return new ModelDB(client, modelDBConfig, modelDBAPIs)
+			await AbstractModelDB.initialize(baseModelDB, newConfig, newVersion, async (oldConfig, oldVersion) => {
+				if (upgrade !== undefined) {
+					const existingDB = new ModelDB(client, oldConfig, oldVersion)
+					for (const model of oldConfig.models) {
+						existingDB.#models[model.name] = await ModelAPI.create(client, oldConfig, model, clear)
+					}
+
+					const upgradeAPI = existingDB.getUpgradeAPI()
+					await upgrade(upgradeAPI, oldVersion, newVersion)
+				}
+			})
+
+			newConfig.freeze()
+
+			const modelDB = new ModelDB(client, newConfig, newVersion)
+			for (const model of newConfig.models) {
+				modelDB.#models[model.name] = await ModelAPI.create(client, newConfig, model, clear)
+			}
+
+			return modelDB
 		} catch (e) {
 			await client.end()
 			throw e
 		}
 	}
 
-	constructor(client: pg.Client, modelDBConfig: Config, modelAPIs: Record<string, ModelAPI>) {
-		super(modelDBConfig, {
-			[AbstractModelDB.namespace]: AbstractModelDB.version,
-		})
+	private constructor(public readonly client: pg.Client, config: Config, version: Record<string, number>) {
+		super(config, version)
 
-		for (const model of Object.values(this.models)) {
-			this.#models[model.name] = modelAPIs[model.name]
-		}
-
-		this.client = client
-		this.#doTransaction = async (effects: Effect[]) => {
+		this.#transaction = async (effects: Effect[]) => {
 			await client.query("BEGIN")
 			try {
 				for (const effect of effects) {
@@ -88,7 +114,7 @@ export class ModelDB extends AbstractModelDB {
 	}
 
 	public async apply(effects: Effect[]) {
-		await this.#doTransaction(effects)
+		await this.#transaction(effects)
 
 		for (const { model, query, filter, callback } of this.subscriptions.values()) {
 			if (effects.some(filter)) {
@@ -105,19 +131,28 @@ export class ModelDB extends AbstractModelDB {
 
 	public get<T extends ModelValue>(modelName: string, key: string): Promise<T | null> {
 		const api = this.#models[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
 		return api.get(key) as Promise<T | null>
 	}
 
 	public getAll<T extends ModelValue<any> = ModelValue<any>>(modelName: string): Promise<T[]> {
 		const api = this.#models[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
 		return api.getAll() as Promise<T[]>
 	}
 
 	public getMany<T extends ModelValue>(modelName: string, keys: string[]): Promise<(T | null)[]> {
 		const api = this.#models[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
 		return api.getMany(keys) as Promise<(T | null)[]>
 	}
 
@@ -126,25 +161,87 @@ export class ModelDB extends AbstractModelDB {
 		query: QueryParams = {},
 	): AsyncIterable<T> {
 		const api = this.#models[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
 		yield* api.iterate(query) as AsyncIterable<T>
 	}
 
-	public async count(modelName: string, where?: WhereCondition): Promise<number> {
+	public count(modelName: string, where?: WhereCondition): Promise<number> {
 		const api = this.#models[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
 		return api.count(where)
 	}
 
-	public async clear(modelName: string): Promise<void> {
+	public clear(modelName: string): Promise<void> {
 		const api = this.#models[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
 		return api.clear()
 	}
 
-	public async query<T extends ModelValue = ModelValue>(modelName: string, query: QueryParams = {}): Promise<T[]> {
+	public query<T extends ModelValue = ModelValue>(modelName: string, query: QueryParams = {}): Promise<T[]> {
 		const api = this.#models[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
 		return api.query(query) as Promise<T[]>
+	}
+
+	private getUpgradeAPI() {
+		return {
+			get: this.get.bind(this),
+			getAll: this.getAll.bind(this),
+			getMany: this.getMany.bind(this),
+			iterate: this.iterate.bind(this),
+			query: this.query.bind(this),
+			count: this.count.bind(this),
+			clear: this.clear.bind(this),
+			apply: this.apply.bind(this),
+			set: this.set.bind(this),
+			delete: this.delete.bind(this),
+
+			createModel: async (name: string, init: ModelInit) => {
+				const model = this.config.createModel(name, init)
+				this.models[name] = model
+				this.#models[name] = await ModelAPI.create(this.client, this.config, model)
+				await this.#models.$models.set({ name, model })
+			},
+
+			deleteModel: async (name: string) => {
+				this.config.deleteModel(name)
+				await this.#models[name].drop()
+				delete this.#models[name]
+				delete this.models[name]
+				await this.#models.$models.delete(name)
+			},
+
+			addProperty: (modelName: string, propertyName: string, propertyType: PropertyType) => {
+				const property = this.config.addProperty(modelName, propertyName, propertyType)
+				throw new Error("not implemented")
+			},
+
+			removeProperty: (modelName: string, propertyName: string) => {
+				this.config.removeProperty(modelName, propertyName)
+				throw new Error("not implemented")
+			},
+
+			addIndex: (modelName: string, index: string) => {
+				const propertyNames = this.config.addIndex(modelName, index)
+				throw new Error("not implemented")
+			},
+
+			removeIndex: (modelName: string, index: string) => {
+				this.config.removeIndex(modelName, index)
+				throw new Error("not implemented")
+			},
+		} satisfies DatabaseUpgradeAPI
 	}
 }
