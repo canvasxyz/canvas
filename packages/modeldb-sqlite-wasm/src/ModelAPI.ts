@@ -208,6 +208,7 @@ export class ModelAPI {
 			`SELECT ${quotedColumnNames} FROM "${this.#table}" ORDER BY ${orderByPrimaryKey}`,
 		)
 	}
+
 	public get(key: PrimaryKeyValue | PrimaryKeyValue[]): ModelValue | null {
 		const wrappedKey = Array.isArray(key) ? key : [key]
 		if (wrappedKey.length !== this.primaryProperties.length) {
@@ -477,7 +478,7 @@ export class ModelAPI {
 	): [selectExpression: string, properties: string[], relations: string[]] {
 		const properties: string[] = []
 		const relations: string[] = []
-		const columns = []
+		const columns: string[] = []
 
 		for (const [name, value] of Object.entries(select)) {
 			if (value === false) {

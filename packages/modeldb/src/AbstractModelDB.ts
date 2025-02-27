@@ -161,7 +161,7 @@ export abstract class AbstractModelDB implements DatabaseAPI {
 
 	abstract getType(): ModelDBBackend
 
-	abstract close(): Promise<void>
+	abstract close(): Awaitable<void>
 
 	abstract get<T extends ModelValue<any> = ModelValue<any>>(
 		modelName: string,
