@@ -18,7 +18,7 @@
 		"@canvas-js/utils": "0.14.0-next.1",
 		"@ipld/dag-json": "^10.2.3",
 		"@libp2p/logger": "^5.1.7",
-		"@sqlite.org/sqlite-wasm": "github:sqlite/sqlite-wasm#node",
+		"@sqlite.org/sqlite-wasm": "^3.49.1-build2",
 		"comlink": "^4.4.1"
 	}
 }
