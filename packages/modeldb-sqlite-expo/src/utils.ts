@@ -1,5 +1,7 @@
 import { SQLiteBindValue, SQLiteDatabase, SQLiteStatement } from "expo-sqlite"
 
+export const quote = (name: string) => `"${name}"`
+
 export class Query<
 	P extends SQLiteBindValue[] = SQLiteBindValue[],
 	R extends Record<string, SQLiteBindValue> = Record<string, SQLiteBindValue>,

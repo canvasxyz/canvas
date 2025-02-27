@@ -19,7 +19,7 @@ import {
 	getModelsFromInclude,
 } from "@canvas-js/modeldb"
 
-import { ModelAPI } from "./api.js"
+import { ModelAPI } from "./ModelAPI.js"
 import { getIndexName } from "./utils.js"
 
 export interface ModelDBOptions {

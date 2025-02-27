@@ -18,7 +18,7 @@ import {
 	PrimaryKeyValue,
 } from "@canvas-js/modeldb"
 
-import { ModelAPI } from "./api.js"
+import { ModelAPI } from "./ModelAPI.js"
 
 export interface ModelDBOptions {
 	path: string | null

@@ -17,7 +17,7 @@ import {
 
 import { SqlStorage } from "@cloudflare/workers-types"
 
-import { ModelAPI } from "./api.js"
+import { ModelAPI } from "./ModelAPI.js"
 
 export interface ModelDBOptions {
 	db: SqlStorage

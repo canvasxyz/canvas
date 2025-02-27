@@ -16,7 +16,7 @@ import {
 	PropertyType,
 } from "@canvas-js/modeldb"
 
-import { ModelAPI } from "./api.js"
+import { ModelAPI } from "./ModelAPI.js"
 
 export interface ModelDBOptions {
 	models: ModelSchema
