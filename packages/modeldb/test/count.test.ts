@@ -3,9 +3,9 @@ import test from "ava"
 // test for the `count` function in the ModelDB class
 
 import { nanoid } from "nanoid"
-import { testOnModelDB } from "./utils.js"
+import { testPlatforms } from "./utils.js"
 
-testOnModelDB("count entries in a modeldb table", async (t, openDB) => {
+testPlatforms("count entries in a modeldb table", async (t, openDB) => {
 	const db = await openDB(t, {
 		user: {
 			id: "primary",
@@ -37,7 +37,7 @@ testOnModelDB("count entries in a modeldb table", async (t, openDB) => {
 	t.is(await db.count("user"), 0)
 })
 
-testOnModelDB("count entries in a modeldb table with a where condition", async (t, openDB) => {
+testPlatforms("count entries in a modeldb table with a where condition", async (t, openDB) => {
 	const db = await openDB(t, {
 		user: {
 			id: "primary",

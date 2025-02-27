@@ -50,7 +50,7 @@ export type PlatformConfig = {
 	expo?: boolean
 }
 
-export const testOnModelDB = (
+export const testPlatforms = (
 	name: string,
 	run: (
 		t: ExecutionContext<unknown>,
