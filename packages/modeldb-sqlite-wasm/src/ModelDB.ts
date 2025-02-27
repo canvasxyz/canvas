@@ -14,7 +14,6 @@ import {
 	DatabaseUpgradeAPI,
 	ModelInit,
 	PropertyType,
-	PrimaryKeyValue,
 } from "@canvas-js/modeldb"
 import { assert, signalInvalidType } from "@canvas-js/utils"
 
