@@ -25,7 +25,7 @@ export interface ModelDBOptions {
 
 	version?: Record<string, number>
 	upgrade?: (
-		db: DatabaseUpgradeAPI,
+		upgradeAPI: DatabaseUpgradeAPI,
 		oldVersion: Record<string, number>,
 		newVersion: Record<string, number>,
 	) => void | Promise<void>
@@ -113,13 +113,19 @@ export class ModelDB extends AbstractModelDB {
 		key: PrimaryKeyValue | PrimaryKeyValue[],
 	): T | null {
 		const api = this.#models[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
 		return api.get(key) as T | null
 	}
 
 	public getAll<T extends ModelValue<any> = ModelValue<any>>(modelName: string): T[] {
 		const api = this.#models[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
 		return api.getAll() as T[]
 	}
 
@@ -128,7 +134,10 @@ export class ModelDB extends AbstractModelDB {
 		keys: PrimaryKeyValue[] | PrimaryKeyValue[][],
 	): (T | null)[] {
 		const api = this.#models[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
 		return api.getMany(keys) as (T | null)[]
 	}
 
@@ -137,25 +146,37 @@ export class ModelDB extends AbstractModelDB {
 		query: QueryParams = {},
 	): AsyncIterable<T> {
 		const api = this.#models[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
 		yield* api.iterate(query) as Iterable<T>
 	}
 
 	public count(modelName: string, where?: WhereCondition): number {
 		const api = this.#models[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
 		return api.count(where)
 	}
 
 	public clear(modelName: string) {
 		const api = this.#models[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
 		api.clear()
 	}
 
 	public query<T extends ModelValue<any> = ModelValue<any>>(modelName: string, query: QueryParams = {}): T[] {
 		const api = this.#models[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
 		return api.query(query) as T[]
 	}
 
