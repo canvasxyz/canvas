@@ -15,7 +15,7 @@ import {
 	ModelInit,
 	PropertyType,
 } from "@canvas-js/modeldb"
-import { assert, signalInvalidType } from "@canvas-js/utils"
+import { signalInvalidType } from "@canvas-js/utils"
 
 import { ModelAPI } from "./ModelAPI.js"
 
@@ -109,7 +109,10 @@ export class ModelDB extends AbstractModelDB {
 		this.db.transaction(() => {
 			for (const effect of effects) {
 				const model = this.#models[effect.model]
-				assert(model !== undefined, `model ${effect.model} not found`)
+				if (model === undefined) {
+					throw new Error(`model ${effect.model} not found`)
+				}
+
 				if (effect.operation === "set") {
 					this.#models[effect.model].set(effect.value)
 				} else if (effect.operation === "delete") {
@@ -122,7 +125,10 @@ export class ModelDB extends AbstractModelDB {
 			for (const { model, query, filter, callback } of this.subscriptions.values()) {
 				if (effects.some(filter)) {
 					const api = this.#models[model]
-					assert(api !== undefined, `model ${model} not found`)
+					if (api === undefined) {
+						throw new Error(`model ${model} not found`)
+					}
+
 					try {
 						const results = api.query(query)
 						Promise.resolve(callback(results)).catch((err) => this.log.error(err))
@@ -136,37 +142,55 @@ export class ModelDB extends AbstractModelDB {
 
 	public async get<T extends ModelValue>(modelName: string, key: string): Promise<T | null> {
 		const api = this.#models[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
 		return api.get(key) as T | null
 	}
 
 	public async getAll<T extends ModelValue>(modelName: string): Promise<T[]> {
 		const api = this.#models[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
 		return api.getAll() as T[]
 	}
 
 	public async getMany<T extends ModelValue>(modelName: string, keys: string[]): Promise<(T | null)[]> {
 		const api = this.#models[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
 		return api.getMany(keys) as (T | null)[]
 	}
 
 	public async count(modelName: string, where?: WhereCondition): Promise<number> {
 		const api = this.#models[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
 		return api.count(where)
 	}
 
 	public async clear(modelName: string): Promise<void> {
 		const api = this.#models[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
 		return api.clear()
 	}
 
 	public async query<T extends ModelValue = ModelValue>(modelName: string, query: QueryParams = {}): Promise<T[]> {
 		const api = this.#models[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
 		return api.query(query) as T[]
 	}
 
@@ -184,6 +208,41 @@ export class ModelDB extends AbstractModelDB {
 		}
 	}
 
+	private createModel(name: string, init: ModelInit) {
+		const model = this.config.createModel(name, init)
+		this.models[name] = model
+		this.#models[name] = new ModelAPI(this.db, this.config, model)
+		this.#models.$models.set({ name, model })
+	}
+
+	private deleteModel(name: string) {
+		this.config.deleteModel(name)
+		this.#models[name].drop()
+		delete this.#models[name]
+		delete this.models[name]
+		this.#models.$models.delete(name)
+	}
+
+	private addProperty(modelName: string, propertyName: string, propertyType: PropertyType) {
+		const property = this.config.addProperty(modelName, propertyName, propertyType)
+		throw new Error("not implemented")
+	}
+
+	private removeProperty(modelName: string, propertyName: string) {
+		this.config.removeProperty(modelName, propertyName)
+		throw new Error("not implemented")
+	}
+
+	private addIndex(modelName: string, index: string) {
+		const propertyNames = this.config.addIndex(modelName, index)
+		throw new Error("not implemented")
+	}
+
+	private removeIndex(modelName: string, index: string) {
+		this.config.removeIndex(modelName, index)
+		throw new Error("not implemented")
+	}
+
 	private getUpgradeAPI() {
 		return {
 			get: this.get.bind(this),
@@ -197,40 +256,12 @@ export class ModelDB extends AbstractModelDB {
 			set: this.set.bind(this),
 			delete: this.delete.bind(this),
 
-			createModel: (name: string, init: ModelInit) => {
-				const model = this.config.createModel(name, init)
-				this.models[name] = model
-				this.#models[name] = new ModelAPI(this.db, this.config, model)
-				this.#models.$models.set({ name, model })
-			},
-
-			deleteModel: (name: string) => {
-				this.config.deleteModel(name)
-				this.#models[name].drop()
-				delete this.#models[name]
-				delete this.models[name]
-				this.#models.$models.delete(name)
-			},
-
-			addProperty: (modelName: string, propertyName: string, propertyType: PropertyType) => {
-				const property = this.config.addProperty(modelName, propertyName, propertyType)
-				throw new Error("not implemented")
-			},
-
-			removeProperty: (modelName: string, propertyName: string) => {
-				this.config.removeProperty(modelName, propertyName)
-				throw new Error("not implemented")
-			},
-
-			addIndex: (modelName: string, index: string) => {
-				const propertyNames = this.config.addIndex(modelName, index)
-				throw new Error("not implemented")
-			},
-
-			removeIndex: (modelName: string, index: string) => {
-				this.config.removeIndex(modelName, index)
-				throw new Error("not implemented")
-			},
+			createModel: this.createModel.bind(this),
+			deleteModel: this.deleteModel.bind(this),
+			addProperty: this.addProperty.bind(this),
+			removeProperty: this.removeProperty.bind(this),
+			addIndex: this.addIndex.bind(this),
+			removeIndex: this.removeIndex.bind(this),
 		} satisfies DatabaseUpgradeAPI
 	}
 }

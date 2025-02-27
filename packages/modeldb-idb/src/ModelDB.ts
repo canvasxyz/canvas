@@ -215,7 +215,7 @@ export class ModelDB extends AbstractModelDB {
 		modelName: string,
 		query: QueryParams = {},
 	): Promise<T[]> {
-		assert(query.include)
+		assert(query.include, "internal error")
 		const api = this.#models[modelName]
 		if (api === undefined) {
 			throw new Error(`model ${modelName} not found`)
@@ -224,8 +224,11 @@ export class ModelDB extends AbstractModelDB {
 		const modelNames = Array.from(
 			new Set([modelName, ...getModelsFromInclude(this.config.models, modelName, query.include)]),
 		)
+
 		for (const modelName of modelNames) {
-			assert(this.#models[modelName] !== undefined, `model ${modelName} not found`)
+			if (this.#models[modelName] === undefined) {
+				throw new Error(`model ${modelName} not found`)
+			}
 		}
 
 		const result = await this.read(
@@ -247,7 +250,10 @@ export class ModelDB extends AbstractModelDB {
 
 	public async clear(modelName: string): Promise<void> {
 		const api = this.#models[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
 		return await this.write((txn) => api.clear(txn))
 	}
 
@@ -258,7 +264,10 @@ export class ModelDB extends AbstractModelDB {
 			await Promise.all(
 				[...this.subscriptions.values()].map(async ({ model, query, filter, callback }) => {
 					const api = this.#models[model]
-					assert(api !== undefined, `model ${model} not found`)
+					if (api === undefined) {
+						throw new Error(`model ${model} not found`)
+					}
+
 					if (effects.some((effect) => filter(effect))) {
 						try {
 							// const results = query.include
@@ -278,7 +287,10 @@ export class ModelDB extends AbstractModelDB {
 	async #apply(txn: IDBPTransaction<unknown, string[], "versionchange" | "readwrite">, effects: Effect[]) {
 		for (const effect of effects) {
 			const api = this.#models[effect.model]
-			assert(api !== undefined, `model ${effect.model} not found`)
+			if (api === undefined) {
+				throw new Error(`model ${effect.model} not found`)
+			}
+
 			if (effect.operation === "set") {
 				await api.set(txn, effect.value)
 			} else if (effect.operation === "delete") {

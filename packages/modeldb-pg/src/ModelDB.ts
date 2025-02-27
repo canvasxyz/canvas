@@ -1,6 +1,6 @@
 import pg from "pg"
 
-import { assert, signalInvalidType } from "@canvas-js/utils"
+import { signalInvalidType } from "@canvas-js/utils"
 
 import {
 	AbstractModelDB,
@@ -14,7 +14,6 @@ import {
 	DatabaseUpgradeAPI,
 	ModelInit,
 	PropertyType,
-	PrimaryKeyValue,
 } from "@canvas-js/modeldb"
 
 import { ModelAPI } from "./api.js"
@@ -87,7 +86,10 @@ export class ModelDB extends AbstractModelDB {
 			try {
 				for (const effect of effects) {
 					const model = this.models[effect.model]
-					assert(model !== undefined, `model ${effect.model} not found`)
+					if (model === undefined) {
+						throw new Error(`model ${effect.model} not found`)
+					}
+
 					if (effect.operation === "set") {
 						await this.#models[effect.model].set(effect.value)
 					} else if (effect.operation === "delete") {
@@ -119,7 +121,10 @@ export class ModelDB extends AbstractModelDB {
 		for (const { model, query, filter, callback } of this.subscriptions.values()) {
 			if (effects.some(filter)) {
 				const api = this.#models[model]
-				assert(api !== undefined, `model ${model} not found`)
+				if (api === undefined) {
+					throw new Error(`model ${model} not found`)
+				}
+
 				try {
 					callback(await api.query(query))
 				} catch (err) {
@@ -195,6 +200,41 @@ export class ModelDB extends AbstractModelDB {
 		return api.query(query) as Promise<T[]>
 	}
 
+	private async createModel(name: string, init: ModelInit) {
+		const model = this.config.createModel(name, init)
+		this.models[name] = model
+		this.#models[name] = await ModelAPI.create(this.client, this.config, model)
+		await this.#models.$models.set({ name, model })
+	}
+
+	private async deleteModel(name: string) {
+		this.config.deleteModel(name)
+		await this.#models[name].drop()
+		delete this.#models[name]
+		delete this.models[name]
+		await this.#models.$models.delete(name)
+	}
+
+	private async addProperty(modelName: string, propertyName: string, propertyType: PropertyType) {
+		const property = this.config.addProperty(modelName, propertyName, propertyType)
+		throw new Error("not implemented")
+	}
+
+	private async removeProperty(modelName: string, propertyName: string) {
+		this.config.removeProperty(modelName, propertyName)
+		throw new Error("not implemented")
+	}
+
+	private async addIndex(modelName: string, index: string) {
+		const propertyNames = this.config.addIndex(modelName, index)
+		throw new Error("not implemented")
+	}
+
+	private async removeIndex(modelName: string, index: string) {
+		this.config.removeIndex(modelName, index)
+		throw new Error("not implemented")
+	}
+
 	private getUpgradeAPI() {
 		return {
 			get: this.get.bind(this),
@@ -208,40 +248,12 @@ export class ModelDB extends AbstractModelDB {
 			set: this.set.bind(this),
 			delete: this.delete.bind(this),
 
-			createModel: async (name: string, init: ModelInit) => {
-				const model = this.config.createModel(name, init)
-				this.models[name] = model
-				this.#models[name] = await ModelAPI.create(this.client, this.config, model)
-				await this.#models.$models.set({ name, model })
-			},
-
-			deleteModel: async (name: string) => {
-				this.config.deleteModel(name)
-				await this.#models[name].drop()
-				delete this.#models[name]
-				delete this.models[name]
-				await this.#models.$models.delete(name)
-			},
-
-			addProperty: (modelName: string, propertyName: string, propertyType: PropertyType) => {
-				const property = this.config.addProperty(modelName, propertyName, propertyType)
-				throw new Error("not implemented")
-			},
-
-			removeProperty: (modelName: string, propertyName: string) => {
-				this.config.removeProperty(modelName, propertyName)
-				throw new Error("not implemented")
-			},
-
-			addIndex: (modelName: string, index: string) => {
-				const propertyNames = this.config.addIndex(modelName, index)
-				throw new Error("not implemented")
-			},
-
-			removeIndex: (modelName: string, index: string) => {
-				this.config.removeIndex(modelName, index)
-				throw new Error("not implemented")
-			},
+			createModel: this.createModel.bind(this),
+			deleteModel: this.deleteModel.bind(this),
+			addProperty: this.addProperty.bind(this),
+			removeProperty: this.removeProperty.bind(this),
+			addIndex: this.addIndex.bind(this),
+			removeIndex: this.removeIndex.bind(this),
 		} satisfies DatabaseUpgradeAPI
 	}
 }
