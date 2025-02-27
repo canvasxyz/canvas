@@ -1,6 +1,6 @@
-import { collect, testOnModelDB } from "./utils.js"
+import { collect, testPlatforms } from "./utils.js"
 
-testOnModelDB("apply should roll back partially performed updates if it fails", async (t, openDB) => {
+testPlatforms("apply should roll back partially performed updates if it fails", async (t, openDB) => {
 	const db = await openDB(t, { message: { id: "primary", content: "string" } })
 
 	await t.throwsAsync(

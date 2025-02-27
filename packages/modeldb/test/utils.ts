@@ -45,16 +45,6 @@ function getConnectionConfig() {
 	}
 }
 
-export const testOnModelDBNoWasm = (
-	name: string,
-	run: (
-		t: ExecutionContext<unknown>,
-		openDB: (t: ExecutionContext, models: ModelSchema) => Promise<AbstractModelDB>,
-	) => void,
-) => {
-	return testOnModelDB(name, run, { sqliteWasm: false, sqlite: true, idb: true, pg: true, do: true, expo: true })
-}
-
 export type PlatformConfig = {
 	sqliteWasm?: boolean
 	sqlite?: boolean
@@ -64,7 +54,7 @@ export type PlatformConfig = {
 	expo?: boolean
 }
 
-export const testOnModelDB = (
+export const testPlatforms = (
 	name: string,
 	run: (
 		t: ExecutionContext<unknown>,

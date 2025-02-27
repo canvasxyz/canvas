@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto"
-import { testOnModelDBNoWasm } from "./utils.js"
+import { testPlatforms } from "./utils.js"
 
-testOnModelDBNoWasm("iterate (select)", async (t, openDB) => {
+testPlatforms("iterate (select)", async (t, openDB) => {
 	const db = await openDB(t, {
 		user: { id: "primary", is_moderator: "boolean", name: "string?" },
 	})
@@ -28,7 +28,7 @@ testOnModelDBNoWasm("iterate (select)", async (t, openDB) => {
 	])
 })
 
-testOnModelDBNoWasm("iterate (orderBy)", async (t, openDB) => {
+testPlatforms("iterate (orderBy)", async (t, openDB) => {
 	const db = await openDB(t, {
 		user: { id: "primary" },
 	})

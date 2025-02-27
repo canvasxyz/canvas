@@ -1,8 +1,8 @@
 import { nanoid } from "nanoid"
 
-import { testOnModelDB } from "./utils.js"
+import { testPlatforms } from "./utils.js"
 
-testOnModelDB("create ModelDB", async (t, openDB) => {
+testPlatforms("create ModelDB", async (t, openDB) => {
 	const db = await openDB(t, {
 		user: {
 			id: "primary",
