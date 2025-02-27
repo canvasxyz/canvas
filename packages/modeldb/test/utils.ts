@@ -20,35 +20,6 @@ import { ModelDB as ModelDBSqliteExpo } from "@canvas-js/modeldb-sqlite-expo"
 let worker: Unstable_DevWorker
 
 test.before(async (t) => {
-	// server = await createServer({
-	// 	root: path.resolve(__dirname, "server"),
-	// })
-
-	// await server.listen()
-
-	// browser = await puppeteer.launch({
-	// 	dumpio: true,
-	// 	headless: true,
-	// 	args: [
-	// 		"--no-sandbox",
-	// 		"--disable-setuid-sandbox",
-	// 		"--disable-extensions",
-	// 		"--enable-chrome-browser-cloud-management",
-	// 	],
-	// })
-	// page = await browser.newPage()
-
-	// page.on("workercreated", (worker) => t.log("Worker created: " + worker.url()))
-	// page.on("workerdestroyed", (worker) => t.log("Worker destroyed: " + worker.url()))
-
-	// page.on("console", async (e) => {
-	// 	const args = await Promise.all(e.args().map((a) => a.jsonValue()))
-	// 	t.log(...args)
-	// })
-
-	// const { port } = server.config.server
-	// await page.goto(`http://localhost:${port}`)
-
 	worker = await unstable_dev("test/worker-durable-objects.ts", {
 		experimental: { disableExperimentalWarning: true },
 		logLevel: "error",
@@ -56,9 +27,6 @@ test.before(async (t) => {
 })
 
 test.after(async (t) => {
-	// await page.close()
-	// await browser.close()
-	// await server.close()
 	await worker.stop()
 })
 
@@ -87,20 +55,22 @@ export const testOnModelDBNoWasm = (
 	return testOnModelDB(name, run, { sqliteWasm: false, sqlite: true, idb: true, pg: true, do: true, expo: true })
 }
 
+export type PlatformConfig = {
+	sqliteWasm?: boolean
+	sqlite?: boolean
+	idb?: boolean
+	pg?: boolean
+	do?: boolean
+	expo?: boolean
+}
+
 export const testOnModelDB = (
 	name: string,
 	run: (
 		t: ExecutionContext<unknown>,
 		openDB: (t: ExecutionContext, models: ModelSchema) => Promise<AbstractModelDB>,
 	) => void,
-	platforms: { sqliteWasm?: boolean; sqlite?: boolean; idb?: boolean; pg?: boolean; do?: boolean; expo?: boolean } = {
-		sqliteWasm: true,
-		sqlite: true,
-		idb: true,
-		pg: true,
-		do: true,
-		expo: true,
-	},
+	platforms: PlatformConfig = { sqliteWasm: true, sqlite: true, idb: true, pg: true, do: true, expo: true },
 ) => {
 	const macro = test.macro(run)
 
