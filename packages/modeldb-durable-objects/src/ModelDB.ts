@@ -75,7 +75,7 @@ export class ModelDB extends AbstractModelDB {
 		this.log("closing")
 	}
 
-	public apply(effects: Effect[]) {
+	public async apply(effects: Effect[]) {
 		// From https://developers.cloudflare.com/durable-objects/api/storage-api/#transaction
 		// > Explicit transactions are no longer necessary. Any series of write
 		// > operations with no intervening await will automatically be submitted

@@ -95,7 +95,7 @@ export class ModelDB extends AbstractModelDB {
 		this.db.close()
 	}
 
-	public apply(effects: Effect[]) {
+	public async apply(effects: Effect[]) {
 		this.#transaction(effects)
 
 		for (const { model, query, filter, callback } of this.subscriptions.values()) {
@@ -114,10 +114,10 @@ export class ModelDB extends AbstractModelDB {
 		}
 	}
 
-	public get<T extends ModelValue<any> = ModelValue<any>>(
+	public async get<T extends ModelValue<any> = ModelValue<any>>(
 		modelName: string,
 		key: PrimaryKeyValue | PrimaryKeyValue[],
-	): T | null {
+	): Promise<T | null> {
 		const api = this.#models[modelName]
 		if (api === undefined) {
 			throw new Error(`model ${modelName} not found`)
@@ -126,7 +126,7 @@ export class ModelDB extends AbstractModelDB {
 		return api.get(key) as T | null
 	}
 
-	public getAll<T extends ModelValue<any> = ModelValue<any>>(modelName: string): T[] {
+	public async getAll<T extends ModelValue<any> = ModelValue<any>>(modelName: string): Promise<T[]> {
 		const api = this.#models[modelName]
 		if (api === undefined) {
 			throw new Error(`model ${modelName} not found`)
@@ -135,10 +135,10 @@ export class ModelDB extends AbstractModelDB {
 		return api.getAll() as T[]
 	}
 
-	public getMany<T extends ModelValue<any> = ModelValue<any>>(
+	public async getMany<T extends ModelValue<any> = ModelValue<any>>(
 		modelName: string,
 		keys: PrimaryKeyValue[] | PrimaryKeyValue[][],
-	): (T | null)[] {
+	): Promise<(T | null)[]> {
 		const api = this.#models[modelName]
 		if (api === undefined) {
 			throw new Error(`model ${modelName} not found`)
@@ -159,7 +159,7 @@ export class ModelDB extends AbstractModelDB {
 		yield* api.iterate(query) as Iterable<T>
 	}
 
-	public count(modelName: string, where?: WhereCondition): number {
+	public async count(modelName: string, where?: WhereCondition): Promise<number> {
 		const api = this.#models[modelName]
 		if (api === undefined) {
 			throw new Error(`model ${modelName} not found`)
@@ -168,7 +168,7 @@ export class ModelDB extends AbstractModelDB {
 		return api.count(where)
 	}
 
-	public clear(modelName: string) {
+	public async clear(modelName: string) {
 		const api = this.#models[modelName]
 		if (api === undefined) {
 			throw new Error(`model ${modelName} not found`)
@@ -177,7 +177,10 @@ export class ModelDB extends AbstractModelDB {
 		api.clear()
 	}
 
-	public query<T extends ModelValue<any> = ModelValue<any>>(modelName: string, query: QueryParams = {}): T[] {
+	public async query<T extends ModelValue<any> = ModelValue<any>>(
+		modelName: string,
+		query: QueryParams = {},
+	): Promise<T[]> {
 		const api = this.#models[modelName]
 		if (api === undefined) {
 			throw new Error(`model ${modelName} not found`)

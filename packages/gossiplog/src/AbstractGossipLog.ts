@@ -344,7 +344,8 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 
 		const messageRecord: MessageRecord<Payload> = { id, signature, message, hash, branch, clock: message.clock }
 
-		const heads: string[] = await Promise.resolve(this.db.getAll<{ id: string }>("$heads"))
+		const heads: string[] = await this.db
+			.getAll<{ id: string }>("$heads")
 			.then((heads) => heads.filter((head) => message.parents.includes(head.id)))
 			.then((heads) => heads.map((head) => head.id))
 

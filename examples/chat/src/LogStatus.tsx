@@ -18,9 +18,7 @@ export const LogStatus: React.FC<LogStatusProps> = ({}) => {
 		}
 
 		app.messageLog.tree.read((txn) => txn.getRoot()).then((root) => setRoot(`${root.level}:${bytesToHex(root.hash)}`))
-		Promise.resolve(app.db.getAll<{ id: string }>("$heads")).then((records) =>
-			setHeads(records.map((record) => record.id)),
-		)
+		app.db.getAll<{ id: string }>("$heads").then((records) => setHeads(records.map((record) => record.id)))
 
 		const handleCommit = ({ detail: { root, heads } }: CanvasEvents["commit"]) => {
 			const rootValue = `${root.level}:${bytesToHex(root.hash)}`

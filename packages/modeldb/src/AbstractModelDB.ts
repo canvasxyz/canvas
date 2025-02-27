@@ -161,34 +161,34 @@ export abstract class AbstractModelDB implements DatabaseAPI {
 
 	abstract getType(): ModelDBBackend
 
-	abstract close(): Awaitable<void>
+	abstract close(): Promise<void>
 
 	abstract get<T extends ModelValue<any> = ModelValue<any>>(
 		modelName: string,
 		key: PrimaryKeyValue | PrimaryKeyValue[],
-	): Awaitable<T | null>
+	): Promise<T | null>
 
-	abstract getAll<T extends ModelValue<any> = ModelValue<any>>(modelName: string): Awaitable<T[]>
+	abstract getAll<T extends ModelValue<any> = ModelValue<any>>(modelName: string): Promise<T[]>
 
 	abstract getMany<T extends ModelValue<any> = ModelValue<any>>(
 		modelName: string,
 		key: PrimaryKeyValue[] | PrimaryKeyValue[][],
-	): Awaitable<(T | null)[]>
+	): Promise<(T | null)[]>
 
 	abstract iterate<T extends ModelValue<any> = ModelValue<any>>(
 		modelName: string,
 		query?: QueryParams,
 	): AsyncIterable<T>
 
-	abstract query<T extends ModelValue<any> = ModelValue<any>>(modelName: string, query?: QueryParams): Awaitable<T[]>
+	abstract query<T extends ModelValue<any> = ModelValue<any>>(modelName: string, query?: QueryParams): Promise<T[]>
 
-	abstract count(modelName: string, where?: WhereCondition): Awaitable<number>
+	abstract count(modelName: string, where?: WhereCondition): Promise<number>
 
-	abstract clear(modelName: string): Awaitable<void>
+	abstract clear(modelName: string): Promise<void>
 
 	// Batch effect API
 
-	public abstract apply(effects: Effect[]): Awaitable<void>
+	public abstract apply(effects: Effect[]): Promise<void>
 
 	// Model operations
 
@@ -228,7 +228,7 @@ export abstract class AbstractModelDB implements DatabaseAPI {
 
 		return {
 			id,
-			results: Promise.resolve(this.query(modelName, query)).then(async (results) => {
+			results: this.query(modelName, query).then(async (results) => {
 				try {
 					await callback(results)
 				} catch (err) {

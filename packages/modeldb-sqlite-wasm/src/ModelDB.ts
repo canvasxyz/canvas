@@ -101,11 +101,11 @@ export class ModelDB extends AbstractModelDB {
 		return "sqlite-wasm"
 	}
 
-	public close() {
+	public async close() {
 		this.db.close()
 	}
 
-	public apply(effects: Effect[]) {
+	public async apply(effects: Effect[]) {
 		this.db.transaction(() => {
 			for (const effect of effects) {
 				const model = this.#models[effect.model]

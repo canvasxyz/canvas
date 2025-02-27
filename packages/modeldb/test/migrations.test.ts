@@ -13,8 +13,8 @@ import { getDirectory } from "./utils.js"
 test("Initialize empty database (SQLite)", async (t) => {
 	const db = await ModelDBSqlite.open({ path: null, models: {} })
 
-	const models = db.getAll<{ name: string; model: Model }>("$models")
-	const versions = db.query<{}>("$versions", {
+	const models = await db.getAll<{ name: string; model: Model }>("$models")
+	const versions = await db.query<{}>("$versions", {
 		select: { namespace: true, version: true },
 		orderBy: { "namespace/version": "asc" },
 	})
@@ -47,8 +47,8 @@ test("Initialize example database", async (t) => {
 		},
 	})
 
-	const models = db.getAll<{ name: string; model: Model }>("$models")
-	const versions = db.query<{}>("$versions", {
+	const models = await db.getAll<{ name: string; model: Model }>("$models")
+	const versions = await db.query<{}>("$versions", {
 		select: { namespace: true, version: true },
 		orderBy: { "namespace/version": "asc" },
 	})
