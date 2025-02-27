@@ -1,69 +1,60 @@
 import "fake-indexeddb/auto"
-import path from "node:path"
 import test, { ExecutionContext } from "ava"
-import puppeteer from "puppeteer"
 import { nanoid } from "nanoid"
-
-import { fileURLToPath } from "node:url"
-import { createServer, ViteDevServer } from "vite"
 
 import { unstable_dev } from "wrangler"
 import type { Unstable_DevWorker } from "wrangler"
-
-const __dirname = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "..")
 
 import type { AbstractModelDB, ModelSchema } from "@canvas-js/modeldb"
 import { ModelDB as ModelDBSqlite } from "@canvas-js/modeldb-sqlite"
 import { ModelDB as ModelDBIdb } from "@canvas-js/modeldb-idb"
 import { ModelDB as ModelDBPostgres } from "@canvas-js/modeldb-pg"
 import { ModelDBProxy as ModelDBDurableObjectsProxy } from "@canvas-js/modeldb-durable-objects"
+import { ModelDB as ModelDBSqliteWasm } from "@canvas-js/modeldb-sqlite-wasm"
 import { ModelDB as ModelDBSqliteExpo } from "@canvas-js/modeldb-sqlite-expo"
 
-let browser: puppeteer.Browser
-let page: puppeteer.Page
-let server: ViteDevServer
 let worker: Unstable_DevWorker
 
 test.before(async (t) => {
-	server = await createServer({
-		root: path.resolve(__dirname, "server"),
-	})
+	// server = await createServer({
+	// 	root: path.resolve(__dirname, "server"),
+	// })
 
-	await server.listen()
+	// await server.listen()
 
-	browser = await puppeteer.launch({
-		dumpio: true,
-		headless: true,
-		args: [
-			"--no-sandbox",
-			"--disable-setuid-sandbox",
-			"--disable-extensions",
-			"--enable-chrome-browser-cloud-management",
-		],
-	})
-	page = await browser.newPage()
+	// browser = await puppeteer.launch({
+	// 	dumpio: true,
+	// 	headless: true,
+	// 	args: [
+	// 		"--no-sandbox",
+	// 		"--disable-setuid-sandbox",
+	// 		"--disable-extensions",
+	// 		"--enable-chrome-browser-cloud-management",
+	// 	],
+	// })
+	// page = await browser.newPage()
 
-	page.on("workercreated", (worker) => t.log("Worker created: " + worker.url()))
-	page.on("workerdestroyed", (worker) => t.log("Worker destroyed: " + worker.url()))
+	// page.on("workercreated", (worker) => t.log("Worker created: " + worker.url()))
+	// page.on("workerdestroyed", (worker) => t.log("Worker destroyed: " + worker.url()))
 
-	page.on("console", async (e) => {
-		const args = await Promise.all(e.args().map((a) => a.jsonValue()))
-		t.log(...args)
-	})
+	// page.on("console", async (e) => {
+	// 	const args = await Promise.all(e.args().map((a) => a.jsonValue()))
+	// 	t.log(...args)
+	// })
 
-	const { port } = server.config.server
-	await page.goto(`http://localhost:${port}`)
+	// const { port } = server.config.server
+	// await page.goto(`http://localhost:${port}`)
 
-	worker = await unstable_dev("test/worker.ts", {
+	worker = await unstable_dev("test/worker-durable-objects.ts", {
 		experimental: { disableExperimentalWarning: true },
 		logLevel: "error",
 	})
 })
 
 test.after(async (t) => {
-	await page.close()
-	await browser.close()
-	await server.close()
+	// await page.close()
+	// await browser.close()
+	// await server.close()
 	await worker.stop()
 })
 
@@ -152,49 +143,10 @@ export const testOnModelDB = (
 	}
 
 	if (platforms.sqliteWasm) {
-		test(`Sqlite Wasm Opfs - ${name}`, async (t) => {
-			const testResult = await page.evaluate(async (run) => {
-				// @ts-ignore
-				const ctx = new InnerExecutionContext()
-				const testFunc = eval(`(${run})`)
-				try {
-					// @ts-ignore
-					await testFunc(ctx, openOpfsDB)
-					return { result: "passed" }
-				} catch (error: any) {
-					return { result: "failed", error: error.message }
-				} finally {
-					if (ctx.teardownFunction) ctx.teardownFunction()
-				}
-			}, run.toString())
-
-			if (testResult.result === "passed") {
-				t.pass()
-			} else {
-				t.fail(testResult.error)
-			}
-		})
-		test(`Sqlite Wasm Transient - ${name}`, async (t) => {
-			const testResult = await page.evaluate(async (run) => {
-				// @ts-ignore
-				const ctx = new InnerExecutionContext()
-				const testFunc = eval(`(${run})`)
-				try {
-					// @ts-ignore
-					await testFunc(ctx, openTransientDB)
-					return { result: "passed" }
-				} catch (error: any) {
-					return { result: "failed", error: error.message }
-				} finally {
-					if (ctx.teardownFunction) ctx.teardownFunction()
-				}
-			}, run.toString())
-
-			if (testResult.result === "passed") {
-				t.pass()
-			} else {
-				t.fail(testResult.error)
-			}
+		test.serial(`Sqlite Wasm - ${name}`, macro, async (t, models) => {
+			const mdb = await ModelDBSqliteWasm.initialize({ models, path: null })
+			t.teardown(() => mdb.close())
+			return mdb
 		})
 	}
 }
