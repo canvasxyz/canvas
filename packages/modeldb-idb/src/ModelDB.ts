@@ -34,8 +34,6 @@ export interface ModelDBOptions {
 	) => void | Promise<void>
 }
 
-type UpgradeTxn = IDBPTransaction<unknown, string[], "versionchange">
-
 export class ModelDB extends AbstractModelDB {
 	public static async open({ name, models, version, upgrade }: ModelDBOptions) {
 		const newConfig = Config.parse(models)
@@ -45,7 +43,12 @@ export class ModelDB extends AbstractModelDB {
 
 		const sum = Object.values(newVersion).reduce((sum, value) => sum + value, 0)
 		const db = await openDB(name, sum, {
-			async upgrade(db: IDBPDatabase<unknown>, oldSum, newSum, txn: UpgradeTxn) {
+			async upgrade(
+				db: IDBPDatabase<unknown>,
+				oldSum,
+				newSum,
+				txn: IDBPTransaction<unknown, string[], "versionchange">,
+			) {
 				// create missing base model object stores
 				for (const [name, model] of Object.entries(Config.baseModels)) {
 					if (!db.objectStoreNames.contains(name)) {
@@ -301,7 +304,55 @@ export class ModelDB extends AbstractModelDB {
 		}
 	}
 
-	private getUpgradeAPI(txn: UpgradeTxn): DatabaseUpgradeAPI {
+	private async createModel(txn: IDBPTransaction<unknown, string[], "versionchange">, name: string, init: ModelInit) {
+		const model = this.config.createModel(name, init)
+		this.models[name] = model
+		this.#models[name] = new ModelAPI(model)
+		await this.#models.$models.set(txn, { name, model })
+	}
+
+	private async deleteModel(txn: IDBPTransaction<unknown, string[], "versionchange">, name: string) {
+		this.config.deleteModel(name)
+		this.db.deleteObjectStore(name)
+		delete this.#models[name]
+		delete this.models[name]
+		await this.#models.$models.delete(txn, name)
+	}
+
+	private async addProperty(
+		txn: IDBPTransaction<unknown, string[], "versionchange">,
+		modelName: string,
+		propertyName: string,
+		propertyType: PropertyType,
+	) {
+		// const property = this.config.addProperty(modelName, propertyName, propertyType)
+		throw new Error("not implemented")
+	}
+
+	private async removeProperty(
+		txn: IDBPTransaction<unknown, string[], "versionchange">,
+		modelName: string,
+		propertyName: string,
+	) {
+		// this.config.removeProperty(modelName, propertyName)
+		throw new Error("not implemented")
+	}
+
+	private async addIndex(txn: IDBPTransaction<unknown, string[], "versionchange">, modelName: string, index: string) {
+		// const propertyNames = this.config.addIndex(modelName, index)
+		throw new Error("not implemented")
+	}
+
+	private async removeIndex(
+		txn: IDBPTransaction<unknown, string[], "versionchange">,
+		modelName: string,
+		index: string,
+	) {
+		// this.config.removeIndex(modelName, index)
+		throw new Error("not implemented")
+	}
+
+	private getUpgradeAPI(txn: IDBPTransaction<unknown, string[], "versionchange">): DatabaseUpgradeAPI {
 		return {
 			get: <T>(modelName: string, key: PrimaryKeyValue | PrimaryKeyValue[]) =>
 				this.#models[modelName].get(txn, key) as Promise<T>,
@@ -323,40 +374,13 @@ export class ModelDB extends AbstractModelDB {
 			set: (modelName, value) => this.#models[modelName].set(txn, value),
 			delete: (modelName, key) => this.#models[modelName].delete(txn, key),
 
-			createModel: async (name: string, init: ModelInit) => {
-				const model = this.config.createModel(name, init)
-				this.models[name] = model
-				this.#models[name] = new ModelAPI(model)
-				await this.#models.$models.set(txn, { name, model })
-			},
-
-			deleteModel: async (name: string) => {
-				this.config.deleteModel(name)
-				this.db.deleteObjectStore(name)
-				delete this.#models[name]
-				delete this.models[name]
-				await this.#models.$models.delete(txn, name)
-			},
-
-			addProperty: (modelName: string, propertyName: string, propertyType: PropertyType) => {
-				// const property = this.config.addProperty(modelName, propertyName, propertyType)
-				throw new Error("not implemented")
-			},
-
-			removeProperty: (modelName: string, propertyName: string) => {
-				// this.config.removeProperty(modelName, propertyName)
-				throw new Error("not implemented")
-			},
-
-			addIndex: (modelName: string, index: string) => {
-				// const propertyNames = this.config.addIndex(modelName, index)
-				throw new Error("not implemented")
-			},
-
-			removeIndex: (modelName: string, index: string) => {
-				// this.config.removeIndex(modelName, index)
-				throw new Error("not implemented")
-			},
+			createModel: (name, init) => this.createModel(txn, name, init),
+			deleteModel: (name) => this.deleteModel(txn, name),
+			addProperty: (modelName, propertyName, propertyInit) =>
+				this.addProperty(txn, modelName, propertyName, propertyInit),
+			removeProperty: (modelName, propertyName) => this.removeProperty(txn, modelName, propertyName),
+			addIndex: (modelName, index) => this.addIndex(txn, modelName, index),
+			removeIndex: (modelName, index) => this.removeIndex(txn, modelName, index),
 		}
 	}
 }
