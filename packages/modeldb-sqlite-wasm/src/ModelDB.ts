@@ -1,3 +1,5 @@
+/// <reference lib="webworker" />
+
 import sqlite3InitModule, { Database, Sqlite3Static } from "@sqlite.org/sqlite-wasm"
 import { logger } from "@libp2p/logger"
 import {
@@ -79,6 +81,19 @@ export class ModelDB extends AbstractModelDB {
 					this.#models[effect.model].delete(effect.key)
 				} else {
 					signalInvalidType(effect)
+				}
+			}
+
+			for (const { model, query, filter, callback } of this.subscriptions.values()) {
+				if (effects.some(filter)) {
+					const api = this.#models[model]
+					assert(api !== undefined, `model ${model} not found`)
+					try {
+						const results = api.query(query)
+						Promise.resolve(callback(results)).catch((err) => this.log.error(err))
+					} catch (err) {
+						this.log.error(err)
+					}
 				}
 			}
 		})

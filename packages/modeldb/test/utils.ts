@@ -143,56 +143,11 @@ export const testOnModelDB = (
 	}
 
 	if (platforms.sqliteWasm) {
-		test.serial(`Sqlite Wasm Opfs - ${name}`, macro, async (t, models) => {
+		test.serial(`Sqlite Wasm - ${name}`, macro, async (t, models) => {
 			const mdb = await ModelDBSqliteWasm.initialize({ models, path: null })
 			t.teardown(() => mdb.close())
 			return mdb
 		})
-
-		// test(`Sqlite Wasm Opfs - ${name}`,  async (t, models) => {
-		// 	const testResult = await page.evaluate(async (run) => {
-		// 		// @ts-ignore
-		// 		const ctx = new InnerExecutionContext()
-		// 		const testFunc = eval(`(${run})`)
-		// 		try {
-		// 			// @ts-ignore
-		// 			await testFunc(ctx, openOpfsDB)
-		// 			return { result: "passed" }
-		// 		} catch (error: any) {
-		// 			return { result: "failed", error: error.message }
-		// 		} finally {
-		// 			if (ctx.teardownFunction) ctx.teardownFunction()
-		// 		}
-		// 	}, run.toString())
-		// 	if (testResult.result === "passed") {
-		// 		t.pass()
-		// 	} else {
-		// 		t.fail(testResult.error)
-		// 	}
-		// })
-
-		// test(`Sqlite Wasm Transient - ${name}`, async (t) => {
-		// 	const testResult = await page.evaluate(async (run) => {
-		// 		// @ts-ignore
-		// 		const ctx = new InnerExecutionContext()
-		// 		const testFunc = eval(`(${run})`)
-		// 		try {
-		// 			// @ts-ignore
-		// 			await testFunc(ctx, openTransientDB)
-		// 			return { result: "passed" }
-		// 		} catch (error: any) {
-		// 			return { result: "failed", error: error.message }
-		// 		} finally {
-		// 			if (ctx.teardownFunction) ctx.teardownFunction()
-		// 		}
-		// 	}, run.toString())
-
-		// 	if (testResult.result === "passed") {
-		// 		t.pass()
-		// 	} else {
-		// 		t.fail(testResult.error)
-		// 	}
-		// })
 	}
 }
 
