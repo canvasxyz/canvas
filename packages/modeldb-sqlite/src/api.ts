@@ -1,6 +1,6 @@
 import { Database } from "better-sqlite3"
 
-import { assert, signalInvalidType, mapValues, zip } from "@canvas-js/utils"
+import { assert, signalInvalidType, mapValues } from "@canvas-js/utils"
 
 import {
 	Property,
@@ -10,14 +10,14 @@ import {
 	PrimitiveType,
 	QueryParams,
 	WhereCondition,
-	isNotExpression,
-	isLiteralExpression,
-	isRangeExpression,
-	validateModelValue,
 	PrimitiveProperty,
 	Config,
 	PrimaryKeyValue,
 	PropertyAPI,
+	isNotExpression,
+	isLiteralExpression,
+	isRangeExpression,
+	validateModelValue,
 } from "@canvas-js/modeldb"
 
 import { SqlitePrimitiveValue, Encoder, Decoder } from "./encoding.js"
@@ -62,11 +62,13 @@ export class ModelAPI {
 
 	#statements: Statements
 
-	readonly properties: Record<string, Property>
+	readonly properties: Record<string, Property> = {}
 	readonly relations: Record<string, RelationAPI> = {}
 	readonly relationNames: string[] = []
+
 	readonly primaryProperties: PrimitiveProperty[]
 	readonly mutableProperties: Property[]
+
 	readonly codecs: Record<string, PropertyAPI<SqlitePrimitiveValue>> = {}
 	readonly codecNames: string[] = []
 
@@ -75,7 +77,10 @@ export class ModelAPI {
 
 	public constructor(readonly db: Database, readonly config: Config, readonly model: Model) {
 		this.table = model.name
-		this.properties = Object.fromEntries(model.properties.map((property) => [property.name, property]))
+		for (const property of model.properties) {
+			this.properties[property.name] = property
+		}
+
 		this.primaryProperties = config.primaryKeys[model.name]
 		this.mutableProperties = []
 		this.columnNames = []
@@ -140,11 +145,6 @@ export class ModelAPI {
 		)
 
 		return { insert, update, delete: _delete, clear, count, select, selectAll }
-	}
-
-	public drop() {
-		Object.values(this.relations).forEach((relation) => relation.drop())
-		this.db.exec(`DROP TABLE "${this.table}"`)
 	}
 
 	// public addProperty(property: Property) {
@@ -234,7 +234,7 @@ export class ModelAPI {
 				(relation) => relation.source === this.model.name && relation.sourceProperty === property.name,
 			)
 			assert(relation !== undefined, "internal error - relation not found")
-			this.addRelation(property.name, new RelationAPI(this.db, this.config, relation))
+			this.addRelation(relation)
 			this.mutableProperties.push(property)
 		} else {
 			signalInvalidType(property)
@@ -246,9 +246,14 @@ export class ModelAPI {
 		this.codecNames.push(name)
 	}
 
-	private addRelation(name: string, relation: RelationAPI) {
-		this.relations[name] = relation
-		this.relationNames.push(name)
+	private addRelation(relation: Relation) {
+		this.relations[relation.sourceProperty] = new RelationAPI(this.db, this.config, relation)
+		this.relationNames.push(relation.sourceProperty)
+	}
+
+	public drop() {
+		Object.values(this.relations).forEach((relation) => relation.drop())
+		this.db.exec(`DROP TABLE "${this.table}"`)
 	}
 
 	public get(key: PrimaryKeyValue | PrimaryKeyValue[]): ModelValue | null {

@@ -12,7 +12,6 @@ import {
 	ModelValueWithIncludes,
 	PrimaryKeyValue,
 	DatabaseAPI,
-	DatabaseUpgradeAPI,
 } from "./types.js"
 import { getFilter } from "./query.js"
 import { Awaitable, getModelsFromInclude, mergeModelValues, updateModelValues } from "./utils.js"
