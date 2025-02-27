@@ -55,6 +55,8 @@ export abstract class AbstractModelDB {
 		key: PrimaryKeyValue | PrimaryKeyValue[],
 	): Awaitable<T | null>
 
+	abstract getAll<T extends ModelValue<any> = ModelValue<any>>(modelName: string): Awaitable<T[]>
+
 	abstract getMany<T extends ModelValue<any> = ModelValue<any>>(
 		modelName: string,
 		key: PrimaryKeyValue[] | PrimaryKeyValue[][],

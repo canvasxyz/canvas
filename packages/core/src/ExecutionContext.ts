@@ -2,7 +2,7 @@ import * as cbor from "@ipld/dag-cbor"
 import { blake3 } from "@noble/hashes/blake3"
 import { bytesToHex } from "@noble/hashes/utils"
 
-import type { Action, Session, Snapshot } from "@canvas-js/interfaces"
+import type { Action, MessageType } from "@canvas-js/interfaces"
 
 import { ModelValue, PropertyValue, validateModelValue, updateModelValues, mergeModelValues } from "@canvas-js/modeldb"
 import { AbstractGossipLog, SignedMessage, MessageId } from "@canvas-js/gossiplog"
@@ -21,7 +21,7 @@ export class ExecutionContext {
 	public readonly root: MessageId[]
 
 	constructor(
-		public readonly messageLog: AbstractGossipLog<Action | Session | Snapshot>,
+		public readonly messageLog: AbstractGossipLog<MessageType>,
 		public readonly signedMessage: SignedMessage<Action>,
 		public readonly address: string,
 	) {

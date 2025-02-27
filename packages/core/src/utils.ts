@@ -4,21 +4,18 @@ import { blake3 } from "@noble/hashes/blake3"
 import { utf8ToBytes } from "@noble/hashes/utils"
 import { base64 } from "multiformats/bases/base64"
 
-import { Action, Session, Snapshot } from "@canvas-js/interfaces"
+import { Action, MessageType, Session, Snapshot } from "@canvas-js/interfaces"
 import { SignedMessage } from "@canvas-js/gossiplog"
 import { PrimaryKeyValue } from "@canvas-js/modeldb"
 
-export const isAction = (
-	signedMessage: SignedMessage<Action | Session | Snapshot>,
-): signedMessage is SignedMessage<Action> => signedMessage.message.payload.type === "action"
+export const isAction = (signedMessage: SignedMessage<MessageType>): signedMessage is SignedMessage<Action> =>
+	signedMessage.message.payload.type === "action"
 
-export const isSession = (
-	signedMessage: SignedMessage<Action | Session | Snapshot>,
-): signedMessage is SignedMessage<Session> => signedMessage.message.payload.type === "session"
+export const isSession = (signedMessage: SignedMessage<MessageType>): signedMessage is SignedMessage<Session> =>
+	signedMessage.message.payload.type === "session"
 
-export const isSnapshot = (
-	signedMessage: SignedMessage<Action | Session | Snapshot>,
-): signedMessage is SignedMessage<Snapshot> => signedMessage.message.payload.type === "snapshot"
+export const isSnapshot = (signedMessage: SignedMessage<MessageType>): signedMessage is SignedMessage<Snapshot> =>
+	signedMessage.message.payload.type === "snapshot"
 
 export const topicPattern = /^[a-zA-Z0-9.-]+$/
 

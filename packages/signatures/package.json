@@ -28,10 +28,10 @@
 		"@canvas-js/utils": "0.14.0-next.1",
 		"@ipld/dag-cbor": "^9.2.2",
 		"@ipld/dag-json": "^10.2.3",
-		"@libp2p/logger": "^5.1.7",
+		"@libp2p/logger": "^5.1.8",
 		"@noble/curves": "^1.8.1",
 		"@noble/hashes": "^1.7.1",
-		"multiformats": "^13.3.1"
+		"multiformats": "^13.3.2"
 	},
 	"devDependencies": {
 		"react-native-mmkv": "^3.1.0"

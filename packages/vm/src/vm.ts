@@ -235,9 +235,10 @@ export class VM {
 	 * returning a QuickJSHandle in the host environment.
 	 * `wrapObject` disposes all of its handle values.
 	 */
-	public wrapObject = (object: Record<string, QuickJSHandle>): QuickJSHandle => {
+	public wrapObject = (object: Record<string, QuickJSHandle> | [string, QuickJSHandle][]): QuickJSHandle => {
 		const objectHandle = this.context.newObject()
-		for (const [key, valueHandle] of Object.entries(object)) {
+		const entries = Array.isArray(object) ? object : Object.entries(object)
+		for (const [key, valueHandle] of entries) {
 			valueHandle.consume((handle) => this.context.setProp(objectHandle, key, handle))
 		}
 
@@ -284,7 +285,9 @@ export class VM {
 		} else if (Array.isArray(value)) {
 			return this.wrapArray(value.map(this.wrapValue))
 		} else {
-			return this.wrapObject(mapValues(value, this.wrapValue))
+			return this.wrapObject(
+				Object.entries(value).map<[string, QuickJSHandle]>(([key, value]) => [key, this.wrapValue(value)]),
+			)
 		}
 	}
 
@@ -305,7 +308,7 @@ export class VM {
 
 	public unwrapValue = (handle: QuickJSHandle): JSValue => {
 		if (this.is(handle, this.context.undefined)) {
-			throw new Error("cannot unwrap `undefined`")
+			return undefined
 		} else if (this.is(handle, this.context.null)) {
 			return null
 		}

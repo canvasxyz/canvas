@@ -61,10 +61,12 @@ export class ModelAPI {
 
 	readonly properties: Record<string, Property>
 	readonly relations: Record<string, RelationAPI>
+	readonly relationNames: string[]
 	readonly primaryProperties: PrimitiveProperty[]
 	readonly mutableProperties: Property[]
 
-	readonly codecs: Record<string, PropertyAPI<SqlitePrimitiveValue>> = {}
+	readonly codecs: Record<string, PropertyAPI<SqlitePrimitiveValue>>
+	readonly codecNames: string[]
 
 	public constructor(readonly db: SqlStorage, readonly config: Config, readonly model: Model) {
 		// in the cloudflare runtime, `this` cannot be used when assigning default values to private properties
@@ -73,6 +75,7 @@ export class ModelAPI {
 		this.relations = {}
 		this.primaryProperties = config.primaryKeys[model.name]
 		this.mutableProperties = []
+		this.codecs = {}
 
 		/** SQL column declarations */
 		const columns: string[] = []
@@ -101,8 +104,6 @@ export class ModelAPI {
 
 				const target = config.models.find((model) => model.name === property.target)
 				assert(target !== undefined)
-
-				config.primaryKeys[target.name]
 
 				if (target.primaryKey.length === 1) {
 					const [targetProperty] = config.primaryKeys[target.name]
@@ -155,6 +156,9 @@ export class ModelAPI {
 			}
 		}
 
+		this.codecNames = Object.keys(this.codecs)
+		this.relationNames = Object.keys(this.relations)
+
 		// Create record table
 		const primaryKeyConstraint = `PRIMARY KEY (${model.primaryKey.map(quote).join(", ")})`
 		const tableSchema = [...columns, primaryKeyConstraint].join(", ")
@@ -196,7 +200,12 @@ export class ModelAPI {
 		// Prepare queries
 		this.#count = new Query<{ count: number }>(this.db, `SELECT COUNT(*) AS count FROM "${this.#table}"`)
 		this.#select = new Query(this.db, `SELECT ${quotedColumnNames} FROM "${this.#table}" ${wherePrimaryKeyEquals}`)
-		this.#selectAll = new Query(this.db, `SELECT ${quotedColumnNames} FROM "${this.#table}"`)
+
+		const orderByPrimaryKey = model.primaryKey.map((name) => `"${name}" ASC`).join(", ")
+		this.#selectAll = new Query(
+			this.db,
+			`SELECT ${quotedColumnNames} FROM "${this.#table}" ORDER BY ${orderByPrimaryKey}`,
+		)
 	}
 
 	public get(key: PrimaryKeyValue | PrimaryKeyValue[]): ModelValue | null {
@@ -243,6 +252,10 @@ export class ModelAPI {
 
 	public getMany(keys: PrimaryKeyValue[] | PrimaryKeyValue[][]): (ModelValue | null)[] {
 		return keys.map((key) => this.get(key))
+	}
+
+	public getAll(): ModelValue[] {
+		return this.#selectAll.all([]).map((row) => this.parseRecord(row, this.codecNames, this.relationNames))
 	}
 
 	public set(value: ModelValue) {
@@ -332,50 +345,50 @@ export class ModelAPI {
 			params.push(...whereParams)
 		}
 
-		const { count } = new Query(this.db, sql.join(" ")).get(params) ?? {}
-		assert(typeof count === "number")
-		return count
+		const stmt = new Query<{ count: number }>(this.db, sql.join(" "))
+		const result = stmt.get(params)
+		assert(result !== null && typeof result.count === "number")
+		return result.count
 	}
 
 	public query(query: QueryParams): ModelValue[] {
 		const [sql, properties, relations, params] = this.parseQuery(query)
-		const results: ModelValue[] = []
 
-		for (const row of new Query(this.db, sql).iterate(params)) {
-			results.push(this.parseRecord(row, properties, relations))
-		}
-
-		return results
+		const stmt = new Query(this.db, sql)
+		return stmt.all(params).map((row) => this.parseRecord(row, properties, relations))
 	}
 
 	public *iterate(query: QueryParams): Iterable<ModelValue> {
 		const [sql, properties, relations, params] = this.parseQuery(query)
 
-		for (const row of new Query(this.db, sql).iterate(params)) {
+		const stmt = new Query(this.db, sql)
+		for (const row of stmt.iterate(params)) {
 			yield this.parseRecord(row, properties, relations)
 		}
 	}
 
 	private parseRecord(
 		row: Record<string, SqlitePrimitiveValue>,
-		properties: string[],
-		relations: Relation[],
+		properties: string[] = this.codecNames,
+		relations: string[] = this.relationNames,
 	): ModelValue {
 		const record: ModelValue = {}
 		for (const name of properties) {
 			record[name] = this.codecs[name].decode(row)
 		}
 
-		for (const relation of relations) {
+		for (const name of relations) {
+			const api = this.relations[name]
+			const { sourceProperty, target } = api.relation
 			const encodedKey = this.config.primaryKeys[this.model.name].map(({ name }) => {
 				assert(row[name] !== undefined, "cannot select relation properties without selecting the primary key")
 				return row[name]
 			})
 
-			const targetKeys = this.relations[relation.sourceProperty].get(encodedKey)
-			const targetPrimaryKey = this.config.primaryKeys[relation.target]
-			record[relation.sourceProperty] = targetKeys.map((targetKey) =>
-				Decoder.decodeReferenceValue(relation.sourceProperty, false, targetPrimaryKey, targetKey),
+			const targetKeys = api.get(encodedKey)
+			const targetPrimaryKey = this.config.primaryKeys[target]
+			record[sourceProperty] = targetKeys.map((targetKey) =>
+				Decoder.decodeReferenceValue(sourceProperty, false, targetPrimaryKey, targetKey),
 			) as PrimaryKeyValue[] | PrimaryKeyValue[][]
 		}
 
@@ -384,7 +397,7 @@ export class ModelAPI {
 
 	private parseQuery(
 		query: QueryParams,
-	): [sql: string, properties: string[], relations: Relation[], params: SqlitePrimitiveValue[]] {
+	): [sql: string, properties: string[], relations: string[], params: SqlitePrimitiveValue[]] {
 		// See https://www.sqlite.org/lang_select.html for railroad diagram
 		const sql: string[] = []
 		const params: SqlitePrimitiveValue[] = []
@@ -448,9 +461,9 @@ export class ModelAPI {
 
 	private getSelectExpression(
 		select: Record<string, boolean>,
-	): [selectExpression: string, properties: string[], relations: Relation[]] {
+	): [selectExpression: string, properties: string[], relations: string[]] {
 		const properties: string[] = []
-		const relations: Relation[] = []
+		const relations: string[] = []
 		const columns = []
 
 		for (const [name, value] of Object.entries(select)) {
@@ -461,10 +474,10 @@ export class ModelAPI {
 			const property = this.properties[name]
 			assert(property !== undefined, "property not found")
 			if (property.kind === "primitive" || property.kind === "reference") {
-				properties.push(property.name)
+				properties.push(name)
 				columns.push(...this.codecs[name].columns.map(quote))
 			} else if (property.kind === "relation") {
-				relations.push(this.relations[name].relation)
+				relations.push(name)
 			} else {
 				signalInvalidType(property)
 			}

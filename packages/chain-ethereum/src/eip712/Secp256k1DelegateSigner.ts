@@ -11,7 +11,16 @@ import {
 
 import { AbiCoder } from "ethers/abi"
 
-import type { Action, Message, Session, Snapshot, Signature, SignatureScheme, Signer } from "@canvas-js/interfaces"
+import type {
+	Action,
+	Message,
+	Session,
+	Snapshot,
+	Signature,
+	SignatureScheme,
+	Signer,
+	MessageType,
+} from "@canvas-js/interfaces"
 import { decodeURI, encodeURI } from "@canvas-js/signatures"
 import { assert, prepareMessage, signalInvalidType } from "@canvas-js/utils"
 
@@ -28,7 +37,7 @@ export const codecs = {
  * - canvas-action-eip712
  * - canvas-session-eip712
  */
-export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712SessionData> | Snapshot> {
+export class Secp256k1DelegateSigner implements Signer<MessageType<Eip712SessionData>> {
 	public static eip712ActionTypes = {
 		Message: [
 			{ name: "topic", type: "string" },
@@ -63,7 +72,7 @@ export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712Se
 		AuthorizationData: [{ name: "signature", type: "bytes" }],
 	} satisfies Record<string, TypedDataField[]>
 
-	public readonly scheme: SignatureScheme<Action | Session<Eip712SessionData> | Snapshot> = Secp256k1SignatureScheme
+	public readonly scheme: SignatureScheme<MessageType<Eip712SessionData>> = Secp256k1SignatureScheme
 	public readonly publicKey: string
 
 	readonly #wallet: BaseWallet
@@ -80,7 +89,7 @@ export class Secp256k1DelegateSigner implements Signer<Action | Session<Eip712Se
 		this.publicKey = encodeURI(Secp256k1SignatureScheme.type, publicKey)
 	}
 
-	public async sign(message: Message<Action | Session<Eip712SessionData> | Snapshot>): Promise<Signature> {
+	public async sign(message: Message<MessageType<Eip712SessionData>>): Promise<Signature> {
 		const { topic, clock, parents, payload } = prepareMessage(message)
 
 		if (payload.type === "action") {
@@ -182,10 +191,10 @@ function getAbiTypeForValue(value: any) {
 	throw new TypeError(`invalid type ${typeof value}: ${JSON.stringify(value)}`)
 }
 
-export const Secp256k1SignatureScheme: SignatureScheme<Action | Session<Eip712SessionData> | Snapshot> = {
+export const Secp256k1SignatureScheme: SignatureScheme<MessageType<Eip712SessionData>> = {
 	type: "secp256k1",
 	codecs: [codecs.action, codecs.session],
-	verify(signature: Signature, message: Message<Action | Session<Eip712SessionData> | Snapshot>) {
+	verify(signature: Signature, message: Message<MessageType<Eip712SessionData>>) {
 		const { type, publicKey } = decodeURI(signature.publicKey)
 		assert(type === Secp256k1SignatureScheme.type)
 
