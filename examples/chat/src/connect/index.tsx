@@ -28,29 +28,108 @@ export const Connect: React.FC<{}> = ({}) => {
 
 	return (
 		<>
-			<select
-				className="w-full p-2 border rounded bg-gray-100 cursor-pointer"
-				value={method}
-				onChange={(e) => setMethod(e.target.value)}
-			>
-				<option value="burner">Burner Wallet</option>
-				<option value="burner-eip712">Burner Wallet - EIP712</option>
-				<option value="farcaster">Sign in with Farcaster</option>
-				<option value="farcaster-frame">Sign in with Farcaster - Frame</option>
-				<option value="ethereum">Ethereum</option>
-				<option value="ethereum-viem">Ethereum (Viem)</option>
-				<option value="ethereum-eip712">Ethereum (EIP712)</option>
-				<option value="polkadot">Polkadot</option>
-				<option value="solana">Solana</option>
-				<option value="cosmos-keplr">Cosmos/Keplr</option>
-				<option value="ethereum-keplr">Ethereum/Keplr</option>
-				{/* <option value="near">NEAR</option> */}
-				<option value="terra">Terra</option>
-				<option value="cosmos-evm">Cosmos/EVM</option>
-				<option value="bluesky">Bluesky</option>
-				<option value="leap">Leap</option>
-				<option value="magic">Magic</option>
-			</select>
+			<div className="grid gap-0.5 min-h-[100px] max-h-[50vh] overflow-y-auto">
+				<button
+					className={`p-1 border rounded ${method === "burner" ? "bg-blue-500 text-white" : "bg-gray-100"}`}
+					onClick={() => setMethod("burner")}
+				>
+					Burner Wallet
+				</button>
+				<button
+					className={`p-1 border rounded ${method === "burner-eip712" ? "bg-blue-500 text-white" : "bg-gray-100"}`}
+					onClick={() => setMethod("burner-eip712")}
+				>
+					Burner Wallet (EIP712)
+				</button>
+				<button
+					className={`p-1 border rounded ${method === "ethereum" ? "bg-blue-500 text-white" : "bg-gray-100"}`}
+					onClick={() => setMethod("ethereum")}
+				>
+					Ethereum
+				</button>
+				<button
+					className={`p-1 border rounded ${method === "ethereum-viem" ? "bg-blue-500 text-white" : "bg-gray-100"}`}
+					onClick={() => setMethod("ethereum-viem")}
+				>
+					Ethereum (Viem)
+				</button>
+				<button
+					className={`p-1 border rounded ${method === "ethereum-eip712" ? "bg-blue-500 text-white" : "bg-gray-100"}`}
+					onClick={() => setMethod("ethereum-eip712")}
+				>
+					Ethereum (EIP712)
+				</button>
+				<button
+					className={`p-1 border rounded ${method === "farcaster" ? "bg-blue-500 text-white" : "bg-gray-100"}`}
+					onClick={() => setMethod("farcaster")}
+				>
+					Sign in with Farcaster (Browser)
+				</button>
+				<button
+					className={`p-1 border rounded ${method === "farcaster-frame" ? "bg-blue-500 text-white" : "bg-gray-100"}`}
+					onClick={() => setMethod("farcaster-frame")}
+				>
+					Sign in with Farcaster (Frame)
+				</button>
+				<button
+					className={`p-1 border rounded ${method === "polkadot" ? "bg-blue-500 text-white" : "bg-gray-100"}`}
+					onClick={() => setMethod("polkadot")}
+				>
+					Polkadot
+				</button>
+				<button
+					className={`p-1 border rounded ${method === "solana" ? "bg-blue-500 text-white" : "bg-gray-100"}`}
+					onClick={() => setMethod("solana")}
+				>
+					Solana
+				</button>
+				<button
+					className={`p-1 border rounded ${method === "cosmos-keplr" ? "bg-blue-500 text-white" : "bg-gray-100"}`}
+					onClick={() => setMethod("cosmos-keplr")}
+				>
+					Cosmos (Keplr)
+				</button>
+				<button
+					className={`p-1 border rounded ${method === "leap" ? "bg-blue-500 text-white" : "bg-gray-100"}`}
+					onClick={() => setMethod("leap")}
+				>
+					Cosmos (Leap)
+				</button>
+				<button
+					className={`p-1 border rounded ${method === "ethereum-keplr" ? "bg-blue-500 text-white" : "bg-gray-100"}`}
+					onClick={() => setMethod("ethereum-keplr")}
+				>
+					Evmos (Keplr)
+				</button>
+				<button
+					className={`p-1 border rounded ${method === "terra" ? "bg-blue-500 text-white" : "bg-gray-100"}`}
+					onClick={() => setMethod("terra")}
+				>
+					Terra
+				</button>
+				<button
+					className={`p-1 border rounded ${method === "cosmos-evm" ? "bg-blue-500 text-white" : "bg-gray-100"}`}
+					onClick={() => setMethod("cosmos-evm")}
+				>
+					Cosmos (Metamask)
+				</button>
+				<button
+					className={`p-1 border rounded ${method === "bluesky" ? "bg-blue-500 text-white" : "bg-gray-100"}`}
+					onClick={() => setMethod("bluesky")}
+				>
+					Bluesky
+				</button>
+				<button
+					className={`p-1 border rounded ${method === "magic" ? "bg-blue-500 text-white" : "bg-gray-100"} ${
+						!import.meta.env.VITE_PUBLIC_MAGIC_API_KEY ? "opacity-70" : ""
+					}`}
+					onClick={() => setMethod("magic")}
+					disabled={!import.meta.env.VITE_PUBLIC_MAGIC_API_KEY}
+					title={!import.meta.env.VITE_PUBLIC_MAGIC_API_KEY ? "Magic API key not configured" : undefined}
+				>
+					Magic {!import.meta.env.VITE_PUBLIC_MAGIC_API_KEY && "(API key required)"}
+				</button>
+			</div>
 			<Method method={method} />
 		</>
 	)
