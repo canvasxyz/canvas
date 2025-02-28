@@ -16,7 +16,7 @@ import {
 } from "@canvas-js/interfaces"
 import { AbstractModelDB, Model, ModelSchema, Effect } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
-import { AbstractGossipLog, GossipLogEvents, SignedMessage } from "@canvas-js/gossiplog"
+import { AbstractGossipLog, GossipLogEvents, NetworkClient, SignedMessage } from "@canvas-js/gossiplog"
 import type { ServiceMap, NetworkConfig } from "@canvas-js/gossiplog/libp2p"
 
 import { assert, mapValues } from "@canvas-js/utils"
@@ -302,9 +302,9 @@ export class Canvas<
 		}
 	}
 
-	public async connect(url: string, options: { signal?: AbortSignal } = {}): Promise<void> {
+	public async connect(url: string, options: { signal?: AbortSignal } = {}): Promise<NetworkClient<any>> {
 		this.wsConnect = { url }
-		await this.messageLog.connect(url, options)
+		return await this.messageLog.connect(url, options)
 	}
 
 	public async listen(port: number, options: { signal?: AbortSignal } = {}): Promise<void> {

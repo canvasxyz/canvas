@@ -8,6 +8,7 @@ import type { AbstractModelDB, ModelSchema, Effect } from "@canvas-js/modeldb"
 import { ed25519 } from "@canvas-js/signatures"
 import { assert, zip, prepare, prepareMessage } from "@canvas-js/utils"
 
+import type { NetworkClient } from "@canvas-js/gossiplog"
 import type { NetworkConfig, ServiceMap } from "@canvas-js/gossiplog/libp2p"
 import { AbortError, MessageNotFoundError, MissingParentError } from "@canvas-js/gossiplog/errors"
 import * as sync from "@canvas-js/gossiplog/sync"
@@ -132,8 +133,8 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		})
 	}
 
-	public async connect(url: string, options: { signal?: AbortSignal } = {}): Promise<void> {
-		await target.connect(this, url, options)
+	public async connect(url: string, options: { signal?: AbortSignal } = {}): Promise<NetworkClient<any>> {
+		return await target.connect(this, url, options)
 	}
 
 	public async listen(port: number, options: { signal?: AbortSignal } = {}): Promise<void> {

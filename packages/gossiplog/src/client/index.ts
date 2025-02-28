@@ -3,7 +3,6 @@ import { logger } from "@libp2p/logger"
 import { yamux } from "@chainsafe/libp2p-yamux"
 import { ProtocolStream, select, handle } from "@libp2p/multistream-select"
 
-import WebSocket from "it-ws/web-socket"
 import { connect } from "it-ws/client"
 import { pipe } from "it-pipe"
 import { pushable } from "it-pushable"
@@ -31,7 +30,10 @@ export class NetworkClient<Payload> {
 	readonly sourceURL: string
 	readonly eventSource = pushable<Event>({ objectMode: true })
 
-	constructor(readonly gossipLog: AbstractGossipLog<Payload>, readonly addr: string) {
+	constructor(
+		readonly gossipLog: AbstractGossipLog<Payload>,
+		readonly addr: string,
+	) {
 		this.pushProtocol = getPushProtocol(gossipLog.topic)
 		this.syncProtocol = getSyncProtocol(gossipLog.topic)
 		this.sourceURL = addr
@@ -94,7 +96,8 @@ export class NetworkClient<Payload> {
 	}
 
 	public isConnected(): boolean {
-		return this.duplex.socket.readyState === WebSocket.OPEN
+		// hardcode Websocket.OPEN === 1, because class isn't available in the browser
+		return this.duplex.socket.readyState === 1
 	}
 
 	private push(event: Event) {

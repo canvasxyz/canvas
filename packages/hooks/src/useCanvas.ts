@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from "react"
-import { Canvas, ModelSchema as Models, Config, Snapshot, Actions, hashContract } from "@canvas-js/core"
+import { Canvas, NetworkClient, ModelSchema as Models, Config, Snapshot, Actions, hashContract } from "@canvas-js/core"
 
 export const useCanvas = <ModelsT extends Models = Models, ActionsT extends Actions<ModelsT> = Actions<ModelsT>>(
 	url: string | null,
 	config: Config<ModelsT, ActionsT>,
 ) => {
 	const [app, setApp] = useState<Canvas<ModelsT, ActionsT>>()
+	const [networkClient, setNetworkClient] = useState<NetworkClient<any>>()
 	const [error, setError] = useState<Error>()
 
 	// TODO: ensure effect hook re-runs on signer change
@@ -21,7 +22,10 @@ export const useCanvas = <ModelsT extends Models = Models, ActionsT extends Acti
 
 		function setupApp(appUrl: string | null, app: Canvas<ModelsT, ActionsT>) {
 			if (url) {
-				app.connect(url).then(() => setApp(app))
+				app.connect(url).then((networkClient) => {
+					setApp(app)
+					setNetworkClient(networkClient)
+				})
 			} else {
 				setApp(app)
 			}
@@ -51,5 +55,5 @@ export const useCanvas = <ModelsT extends Models = Models, ActionsT extends Acti
 		hashRef.current = contractHash
 	}, [url, contractHash])
 
-	return { app, error }
+	return { app, ws: networkClient, error }
 }
