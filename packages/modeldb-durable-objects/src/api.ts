@@ -57,7 +57,7 @@ export class ModelAPI {
 	// Queries
 	readonly #selectAll: Query
 	readonly #select: Query
-	// readonly #count: Query<{ count: number }>
+	readonly #count: Query<{ count: number }>
 
 	readonly properties: Record<string, Property>
 	readonly relations: Record<string, RelationAPI>
