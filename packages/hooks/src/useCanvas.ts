@@ -25,6 +25,9 @@ export const useCanvas = <ModelsT extends Models = Models, ActionsT extends Acti
 				app.connect(url).then((networkClient) => {
 					setApp(app)
 					setNetworkClient(networkClient)
+				}).catch((err) => {
+					setApp(app)
+					setTimeout(() => setupApp(appUrl, app), 2000)
 				})
 			} else {
 				setApp(app)
