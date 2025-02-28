@@ -57,6 +57,7 @@ export class ModelAPI {
 	// Queries
 	readonly #selectAll: Query
 	readonly #select: Query
+	// eslint-disable-next-line @typescript-eslint/no-unused-expressions
 	readonly #count: Query<{ count: number }>
 
 	readonly properties: Record<string, Property>
@@ -68,7 +69,11 @@ export class ModelAPI {
 	readonly codecs: Record<string, PropertyAPI<SqlitePrimitiveValue>>
 	readonly codecNames: string[]
 
-	public constructor(readonly db: SqlStorage, readonly config: Config, readonly model: Model) {
+	public constructor(
+		readonly db: SqlStorage,
+		readonly config: Config,
+		readonly model: Model,
+	) {
 		// in the cloudflare runtime, `this` cannot be used when assigning default values to private properties
 		this.#table = model.name
 		this.properties = Object.fromEntries(model.properties.map((property) => [property.name, property]))
@@ -663,7 +668,11 @@ export class RelationAPI {
 	readonly #delete: Method
 	readonly #clear: Method
 
-	public constructor(readonly db: SqlStorage, readonly config: Config, readonly relation: Relation) {
+	public constructor(
+		readonly db: SqlStorage,
+		readonly config: Config,
+		readonly relation: Relation,
+	) {
 		this.table = `${relation.source}/${relation.sourceProperty}`
 		this.sourceIndex = `${relation.source}/${relation.sourceProperty}/source`
 		this.targetIndex = `${relation.source}/${relation.sourceProperty}/target`
