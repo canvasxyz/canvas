@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useState } from "react"
 import { bytesToHex } from "@noble/hashes/utils"
 
 import type { CanvasEvents } from "@canvas-js/core"
+import { MessageId } from "@canvas-js/gossiplog"
 
 import { AppContext } from "./AppContext.js"
 
@@ -51,6 +52,7 @@ export const LogStatus: React.FC<LogStatusProps> = ({}) => {
 						{heads.map((head) => (
 							<li key={head}>
 								<code className="text-sm">{head}</code>
+								<span className="text-sm ml-2 text-gray-500">(clock: {MessageId.encode(head).clock})</span>
 							</li>
 						))}
 					</ul>

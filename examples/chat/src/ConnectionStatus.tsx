@@ -38,7 +38,8 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({ topic, ws })
 				<span className="text-sm">Connection</span>
 			</div>
 			<div>
-				<code className="text-sm">{import.meta.env.VITE_CANVAS_WS_URL} - {ws.isConnected() ? 'Connected' : 'Disconnected'}</code>
+				<code className="text-sm">{import.meta.env.VITE_CANVAS_WS_URL}</code>
+				<span className="text-sm ml-2 text-gray-500">({ws.isConnected() ? 'Connected' : 'Disconnected'})</span>
 			</div>
 		</div>
 	)
