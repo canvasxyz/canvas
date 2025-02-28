@@ -7,7 +7,6 @@ import { AppContext } from "../AppContext.js"
 import { fromBech32 } from "@cosmjs/encoding"
 
 declare global {
-	// eslint-disable-next-line @typescript-eslint/no-empty-interface
 	interface Window extends KeplrWindow {}
 }
 

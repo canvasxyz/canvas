@@ -26,18 +26,18 @@ function getSidebarItems(
 					? {
 							text: (fileName.charAt(0).toUpperCase() + fileName.slice(1)).replaceAll("-", " "),
 							items,
-					  }
+						}
 					: null!
 			} else if (e.endsWith(".md") && e[0] !== "_") {
 				// Assume the file starts with an <h1> and use that as the sidebar title
 				const file = fs.readFileSync(childDir, { encoding: "utf8", flag: "r" })
-				const titleMatches = file.match(/^\#.*/)
+				const titleMatches = file.match(/^#.*/)
 				const title = titleMatches[0]
 					? titleMatches[0].replace(/# /, "")
 					: (e.charAt(0).toUpperCase() + e.slice(1)).slice(0, -3).replaceAll("-", " ")
 
 				const lines = file.slice(0, 10000).trim().split(/\n/g)
-				const dateLine = (lines[1] || lines[2]).replace(/[\#_\*]/g, "").split(" - ")
+				const dateLine = (lines[1] || lines[2]).replace(/[#_*]/g, "").split(" - ")
 				const dateString = dateLine[dateLine.length - 1]
 
 				const text = `<span class="VPSidebarBlogItem"><span class="VPSidebarBlogItemTitle">${title}</span><br/><small class="VPSidebarBlogItemDate">${dateString}</small></span>`

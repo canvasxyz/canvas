@@ -8,7 +8,6 @@ import { CosmosSigner } from "@canvas-js/chain-cosmos"
 import { AppContext } from "../AppContext.js"
 
 declare global {
-	// eslint-disable-next-line @typescript-eslint/no-empty-interface
 	interface Window extends KeplrWindow {}
 }
 

@@ -64,7 +64,6 @@ export class ExecutionContext {
 
 		let upperBound = `${model}/${keyHash}/${this.id}`
 
-		// eslint-disable-next-line no-constant-condition
 		while (true) {
 			const results = await this.db.query<{ key: string; value: Uint8Array; clock: number }>("$effects", {
 				select: { key: true, value: true, clock: true },

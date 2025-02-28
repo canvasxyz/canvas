@@ -57,7 +57,7 @@ export class ModelAPI {
 	// Queries
 	readonly #selectAll: Query<[]>
 	readonly #select: Query
-	readonly #count: Query<[], { count: number }>
+	// readonly #count: Query<[], { count: number }>
 
 	readonly properties: Record<string, Property>
 	readonly relations: Record<string, RelationAPI>
@@ -101,8 +101,6 @@ export class ModelAPI {
 
 				const target = config.models.find((model) => model.name === property.target)
 				assert(target !== undefined)
-
-				config.primaryKeys[target.name]
 
 				if (target.primaryKey.length === 1) {
 					const [targetProperty] = config.primaryKeys[target.name]

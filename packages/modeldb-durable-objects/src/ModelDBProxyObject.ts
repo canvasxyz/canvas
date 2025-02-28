@@ -69,7 +69,6 @@ export class ModelDBProxyObject {
 				return new Response("null")
 			} else {
 				if (!this.db) throw new Error("uninitialized")
-				// eslint-disable-next-line @typescript-eslint/ban-types
 				const callFn = (this.db as any)[call] as Function
 				const result = await callFn.apply(this.db, args)
 				return new Response(json.stringify(result ?? null))
