@@ -34,7 +34,7 @@ function validateMessageTuple(messageTuple: unknown): asserts messageTuple is Me
 	assert(typeof clock === "number", 'expected typeof clock === "number"')
 	assert(Array.isArray(parents), "expected Array.isArray(parents)")
 	for (const parent of parents) {
-		assert(parent instanceof Uint8Array), "expected parent instanceof Uint8Array"
+		assert(parent instanceof Uint8Array, "expected parent instanceof Uint8Array")
 		assert(parent.length === KEY_LENGTH, "expected parent.length === KEY_LENGTH")
 	}
 

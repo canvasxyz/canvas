@@ -275,8 +275,8 @@ describe("Contract_Test", function () {
 					sessionMessageSignature.signature,
 					actionMessageForContract,
 					actionMessageSignature.signature,
-				),
-					expect.fail()
+				)
+				expect.fail()
 			} catch (e: any) {
 				expect(e.message).to.equal(
 					"VM Exception while processing transaction: reverted with reason string 'Action has already been processed'",

@@ -80,8 +80,6 @@ export class ModelAPI {
 				const target = config.models.find((model) => model.name === property.target)
 				assert(target !== undefined)
 
-				config.primaryKeys[target.name]
-
 				if (target.primaryKey.length === 1) {
 					const [targetProperty] = config.primaryKeys[target.name]
 					columns.push(getColumn(property.name, targetProperty.type, false))
@@ -182,6 +180,7 @@ export class ModelAPI {
 	readonly #select: Query
 	readonly #selectAll: Query
 	// readonly #selectMany: Query
+	// eslint-disable-next-line @typescript-eslint/no-unused-expressions
 	readonly #count: Query<{ count: number }>
 
 	readonly codecNames: string[]
