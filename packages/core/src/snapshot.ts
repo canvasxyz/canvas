@@ -3,13 +3,13 @@ import { bytesToHex } from "@noble/hashes/utils"
 import * as cbor from "@ipld/dag-cbor"
 
 import { Snapshot } from "@canvas-js/interfaces"
-import type { IndexInit, PropertyType } from "@canvas-js/modeldb"
+import type { PropertyType } from "@canvas-js/modeldb"
 
 import { Canvas } from "./Canvas.js"
 import { Contract } from "./types.js"
 
 // typeguards
-export const isIndexInit = (value: unknown): value is IndexInit[] => typeof value === "string" || Array.isArray(value)
+export const isIndexInit = (value: unknown): value is string[] => Array.isArray(value)
 export const isPropertyTypish = (value: unknown): value is PropertyType => typeof value === "string"
 
 export function hashContract<T extends Contract<any>>(contract: T | string): string {

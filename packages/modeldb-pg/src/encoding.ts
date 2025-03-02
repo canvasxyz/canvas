@@ -14,6 +14,16 @@ import { signalInvalidType } from "@canvas-js/utils"
 
 export type PostgresPrimitiveValue = string | number | boolean | Buffer | null | boolean
 
+export const columnTypes = {
+	integer: "BIGINT",
+	float: "DOUBLE PRECISION",
+	number: "DOUBLE PRECISION",
+	string: "TEXT",
+	bytes: "BYTEA",
+	boolean: "BOOLEAN",
+	json: "JSONB",
+} satisfies Record<PrimitiveType, string>
+
 const fromBuffer = (data: Buffer): Uint8Array => new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
 const toBuffer = (data: Uint8Array) => Buffer.from(data.buffer, data.byteOffset, data.byteLength)
 

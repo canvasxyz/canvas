@@ -1,6 +1,6 @@
-import { testOnModelDB } from "./utils.js"
+import { testPlatforms } from "./utils.js"
 
-testOnModelDB("get many (simple table)", async (t, openDB) => {
+testPlatforms("get many (simple table)", async (t, openDB) => {
 	const db = await openDB(t, {
 		user: { id: "primary", is_moderator: "boolean", name: "string?" },
 	})
@@ -28,7 +28,7 @@ testOnModelDB("get many (simple table)", async (t, openDB) => {
 	])
 })
 
-testOnModelDB("get many (with relations)", async (t, openDB) => {
+testPlatforms("get many (with relations)", async (t, openDB) => {
 	const db = await openDB(t, {
 		user: { address: "primary" },
 		room: {

@@ -27,11 +27,11 @@ test("simulate a randomly partitioned network, logs on disk", async (t) => {
 	t.timeout(60 * 1000)
 	const topic = nanoid()
 
-	const logs: AbstractGossipLog<string>[] = [
-		new GossipLog({ directory: getDirectory(t), topic, apply }),
-		new GossipLog({ directory: getDirectory(t), topic, apply }),
-		new GossipLog({ directory: getDirectory(t), topic, apply }),
-	]
+	const logs: AbstractGossipLog<string>[] = await Promise.all([
+		GossipLog.open(getDirectory(t), { topic, apply }),
+		GossipLog.open(getDirectory(t), { topic, apply }),
+		GossipLog.open(getDirectory(t), { topic, apply }),
+	])
 
 	// const maxMessageCount = 2048
 	// const maxChainLength = 6

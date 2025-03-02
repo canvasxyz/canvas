@@ -1,6 +1,7 @@
 // These are "init types" for the `models` value used to initialize the database.
 
-import { JSONValue } from "@canvas-js/utils"
+import type { JSONValue } from "@canvas-js/utils"
+import type { Awaitable } from "./utils.js"
 
 export type PrimaryKeyType = "primary"
 export type PrimitiveType = "integer" | "float" | "number" | "string" | "bytes" | "boolean" | "json"
@@ -19,8 +20,8 @@ export type PropertyType =
 
 /** property name, or property names joined by slashes */
 export type IndexInit = string
-
-export type ModelSchema = Record<string, { $indexes?: IndexInit[]; $primary?: string } | Record<string, PropertyType>>
+export type ModelInit = { $indexes?: IndexInit[]; $primary?: string } | Record<string, PropertyType>
+export type ModelSchema = Record<string, ModelInit>
 
 // These are more structured representations of the schema defined by ModelSchema that are easier
 // to work with at runtime
@@ -157,4 +158,34 @@ export interface PropertyAPI<T> {
 	columns: string[]
 	encode: (value: PropertyValue) => T[]
 	decode: (record: Record<string, T>) => PropertyValue
+}
+
+export interface DatabaseAPI {
+	get<T extends ModelValue<any> = ModelValue<any>>(
+		modelName: string,
+		key: PrimaryKeyValue | PrimaryKeyValue[],
+	): Awaitable<T | null>
+	getAll<T extends ModelValue<any> = ModelValue<any>>(modelName: string): Awaitable<T[]>
+	getMany<T extends ModelValue<any> = ModelValue<any>>(
+		modelName: string,
+		key: PrimaryKeyValue[] | PrimaryKeyValue[][],
+	): Awaitable<(T | null)[]>
+	iterate<T extends ModelValue<any> = ModelValue<any>>(modelName: string, query?: QueryParams): AsyncIterable<T>
+	query<T extends ModelValue<any> = ModelValue<any>>(modelName: string, query?: QueryParams): Awaitable<T[]>
+	count(modelName: string, where?: WhereCondition): Awaitable<number>
+	clear(modelName: string): Awaitable<void>
+	apply(effects: Effect[]): Awaitable<void>
+	set<T extends ModelValue<any> = ModelValue<any>>(modelName: string, value: T): Awaitable<void>
+	delete(modelName: string, key: PrimaryKeyValue | PrimaryKeyValue[]): Awaitable<void>
+}
+
+export interface DatabaseUpgradeAPI extends DatabaseAPI {
+	createModel(name: string, init: ModelInit): Awaitable<void>
+	deleteModel(name: string): Awaitable<void>
+
+	addProperty(modelName: string, propertyName: string, propertyType: PropertyType): Awaitable<void>
+	removeProperty(modelName: string, propertyName: string): Awaitable<void>
+
+	addIndex(modelName: string, index: string): Awaitable<void>
+	removeIndex(modelName: string, index: string): Awaitable<void>
 }

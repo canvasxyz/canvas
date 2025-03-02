@@ -45,7 +45,7 @@ export const App: React.FC<{}> = ({}) => {
 
 	const topicRef = useRef(topic)
 
-	const { app } = useCanvas(wsURL, {
+	const { app, ws } = useCanvas(wsURL, {
 		topic: topicRef.current,
 		contract,
 		signers: [
@@ -62,10 +62,10 @@ export const App: React.FC<{}> = ({}) => {
 	return (
 		<AppContext.Provider value={{ address, setAddress, sessionSigner, setSessionSigner, app: app ?? null }}>
 			<AuthKitProvider config={config}>
-				{app ? (
+				{app && ws ? (
 					<main>
 						<div className="flex flex-row gap-4 h-full">
-							<div className="min-w-[480px] flex-1 flex flex-col justify-stretch gap-2">
+							<div className="sm:min-w-[300px] md:min-w-[480px] flex-1 flex flex-col justify-stretch gap-2">
 								<div className="flex-1 border rounded px-2 overflow-y-scroll">
 									<Messages address={address} />
 								</div>
@@ -74,7 +74,7 @@ export const App: React.FC<{}> = ({}) => {
 							<div className="flex flex-col gap-4 w-[480px] break-all">
 								<Connect />
 								<SessionStatus />
-								<ConnectionStatus topic={topicRef.current} />
+								<ConnectionStatus topic={topicRef.current} ws={ws} />
 								<LogStatus />
 								<ControlPanel />
 							</div>

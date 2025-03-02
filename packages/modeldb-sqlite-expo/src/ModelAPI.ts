@@ -10,30 +10,19 @@ import {
 	PrimitiveType,
 	QueryParams,
 	WhereCondition,
+	PrimitiveProperty,
+	Config,
+	PrimaryKeyValue,
+	PropertyAPI,
 	isNotExpression,
 	isLiteralExpression,
 	isRangeExpression,
 	validateModelValue,
-	PrimitiveProperty,
-	Config,
-	PrimaryKeyValue,
-	PropertyValue,
-	PropertyAPI,
 } from "@canvas-js/modeldb"
 
-import { SqlitePrimitiveValue, Encoder, Decoder } from "./encoding.js"
-
-import { Method, Query } from "./utils.js"
-
-const columnTypes = {
-	integer: "INTEGER",
-	float: "FLOAT",
-	number: "FLOAT",
-	string: "TEXT",
-	bytes: "BLOB",
-	boolean: "INTEGER",
-	json: "TEXT",
-} satisfies Record<PrimitiveType, string>
+import { RelationAPI } from "./RelationAPI.js"
+import { SqlitePrimitiveValue, Encoder, Decoder, columnTypes } from "./encoding.js"
+import { Method, Query, quote } from "./utils.js"
 
 function getColumn(name: string, type: PrimitiveType, nullable: boolean) {
 	if (nullable) {
@@ -43,167 +32,200 @@ function getColumn(name: string, type: PrimitiveType, nullable: boolean) {
 	}
 }
 
-const quote = (name: string) => `"${name}"`
-
-export class ModelAPI {
-	readonly #table: string
-
+type Statements = {
 	// Methods
-	readonly #insert: Method
-	readonly #update: Method | null
-	readonly #delete: Method
-	readonly #clear: Method<[]>
+	insert: Method
+	update: Method | null
+	delete: Method
+	clear: Method<[]>
 
 	// Queries
-	readonly #selectAll: Query<[]>
-	readonly #select: Query
-	readonly #count: Query<[], { count: number }>
+	selectAll: Query<[]>
+	select: Query
+	count: Query<[], { count: number }>
+}
 
-	readonly properties: Record<string, Property>
-	readonly relations: Record<string, RelationAPI>
-	readonly relationNames: string[]
+export class ModelAPI {
+	readonly table: string
+
+	#statements: Statements
+
+	readonly properties: Record<string, Property> = {}
+	readonly relations: Record<string, RelationAPI> = {}
+	readonly relationNames: string[] = []
+
 	readonly primaryProperties: PrimitiveProperty[]
 	readonly mutableProperties: Property[]
+
 	readonly codecs: Record<string, PropertyAPI<SqlitePrimitiveValue>> = {}
-	readonly codecNames: string[]
+	readonly codecNames: string[] = []
+
+	/** unquoted column names for non-relation properties */
+	readonly columnNames: string[]
 
 	public constructor(readonly db: SQLiteDatabase, readonly config: Config, readonly model: Model) {
-		this.#table = model.name
-		this.properties = Object.fromEntries(model.properties.map((property) => [property.name, property]))
-		this.relations = {}
-		this.primaryProperties = config.primaryKeys[model.name]
-		this.mutableProperties = []
-
-		/** SQL column declarations */
-		const columns: string[] = []
-
-		/** unquoted column names for non-relation properties */
-		const columnNames: string[] = []
-
+		this.table = model.name
 		for (const property of model.properties) {
-			if (property.kind === "primitive") {
-				const { name, type, nullable } = property
-				columns.push(getColumn(name, type, nullable))
-				columnNames.push(name)
-
-				const propertyName = `${model.name}/${name}`
-				this.codecs[property.name] = {
-					columns: [property.name],
-					encode: (value) => [Encoder.encodePrimitiveValue(propertyName, type, nullable, value)],
-					decode: (record) => Decoder.decodePrimitiveValue(propertyName, type, nullable, record[property.name]),
-				}
-
-				if (!model.primaryKey.includes(property.name)) {
-					this.mutableProperties.push(property)
-				}
-			} else if (property.kind === "reference") {
-				const propertyName = `${model.name}/${property.name}`
-
-				const target = config.models.find((model) => model.name === property.target)
-				assert(target !== undefined)
-
-				config.primaryKeys[target.name]
-
-				if (target.primaryKey.length === 1) {
-					const [targetProperty] = config.primaryKeys[target.name]
-					columns.push(getColumn(property.name, targetProperty.type, false))
-					columnNames.push(property.name)
-
-					this.codecs[property.name] = {
-						columns: [property.name],
-						encode: (value) => Encoder.encodeReferenceValue(propertyName, [targetProperty], property.nullable, value),
-						decode: (record) =>
-							Decoder.decodeReferenceValue(propertyName, property.nullable, [targetProperty], [record[property.name]]),
-					}
-				} else {
-					const refNames: string[] = []
-
-					for (const targetProperty of config.primaryKeys[target.name]) {
-						const refName = `${property.name}/${targetProperty.name}`
-						columns.push(getColumn(refName, targetProperty.type, false))
-						columnNames.push(refName)
-						refNames.push(refName)
-					}
-
-					this.codecs[property.name] = {
-						columns: refNames,
-
-						encode: (value) =>
-							Encoder.encodeReferenceValue(propertyName, config.primaryKeys[target.name], property.nullable, value),
-
-						decode: (record) =>
-							Decoder.decodeReferenceValue(
-								propertyName,
-								property.nullable,
-								config.primaryKeys[target.name],
-								refNames.map((name) => record[name]),
-							),
-					}
-				}
-
-				this.mutableProperties.push(property)
-			} else if (property.kind === "relation") {
-				const relation = config.relations.find(
-					(relation) => relation.source === model.name && relation.sourceProperty === property.name,
-				)
-				assert(relation !== undefined, "internal error - relation not found")
-				this.relations[property.name] = new RelationAPI(db, config, relation)
-
-				this.mutableProperties.push(property)
-			} else {
-				signalInvalidType(property)
-			}
+			this.properties[property.name] = property
 		}
 
-		this.codecNames = Object.keys(this.codecs)
-		this.relationNames = Object.keys(this.relations)
+		this.primaryProperties = config.primaryKeys[model.name]
+		this.mutableProperties = []
+		this.columnNames = []
+
+		/** SQL column declarations */
+		const columnDefinitions: string[] = []
+
+		for (const property of model.properties) {
+			this.prepareProperty(property, columnDefinitions, this.columnNames)
+		}
 
 		// Create record table
 		const primaryKeyConstraint = `PRIMARY KEY (${model.primaryKey.map(quote).join(", ")})`
-		const tableSchema = [...columns, primaryKeyConstraint].join(", ")
-		db.execSync(`CREATE TABLE IF NOT EXISTS "${this.#table}" (${tableSchema})`)
+		const tableSchema = [...columnDefinitions, primaryKeyConstraint].join(", ")
+		db.execSync(`CREATE TABLE IF NOT EXISTS "${this.table}" (${tableSchema})`)
 
 		// Create indexes
 		for (const index of model.indexes) {
+			if (index.length === 1 && index[0] in this.relations) {
+				continue
+			}
+
 			const indexName = [model.name, ...index].join("/")
 			const indexColumnNames = index.flatMap((name) => this.codecs[name].columns)
 			const indexColumns = indexColumnNames.map(quote).join(", ")
-			db.execSync(`CREATE INDEX IF NOT EXISTS "${indexName}" ON "${this.#table}" (${indexColumns})`)
+			db.execSync(`CREATE INDEX IF NOT EXISTS "${indexName}" ON "${this.table}" (${indexColumns})`)
 		}
 
+		this.#statements = this.prepareStatements()
+	}
+
+	private prepareStatements(): Statements {
 		// Prepare methods
 
-		const quotedColumnNames = columnNames.map(quote).join(", ")
+		const quotedColumnNames = this.columnNames.map(quote).join(", ")
 
-		const insertParams = Array.from({ length: columnNames.length }).fill("?").join(", ")
-		this.#insert = new Method(
-			db,
-			`INSERT OR IGNORE INTO "${this.#table}" (${quotedColumnNames}) VALUES (${insertParams})`,
+		const insertParams = Array.from({ length: this.columnNames.length }).fill("?").join(", ")
+		const insert = new Method(
+			this.db,
+			`INSERT OR IGNORE INTO "${this.table}" (${quotedColumnNames}) VALUES (${insertParams})`,
 		)
 
-		const primaryKeyEquals = model.primaryKey.map((name) => `"${name}" = ?`)
+		const primaryKeyEquals = this.model.primaryKey.map((name) => `"${name}" = ?`)
 		const wherePrimaryKeyEquals = `WHERE ${primaryKeyEquals.join(" AND ")}`
 
-		const updateNames = columnNames.filter((name) => !model.primaryKey.includes(name))
+		let update: Method | null = null
+		const updateNames = this.columnNames.filter((name) => !this.model.primaryKey.includes(name))
 		if (updateNames.length > 0) {
 			const updateEntries = updateNames.map((name) => `"${name}" = ?`)
-			this.#update = new Method(db, `UPDATE "${this.#table}" SET ${updateEntries.join(", ")} ${wherePrimaryKeyEquals}`)
+			update = new Method(this.db, `UPDATE "${this.table}" SET ${updateEntries.join(", ")} ${wherePrimaryKeyEquals}`)
 		} else {
-			this.#update = null
+			update = null
 		}
 
-		this.#delete = new Method(db, `DELETE FROM "${this.#table}" ${wherePrimaryKeyEquals}`)
-		this.#clear = new Method(db, `DELETE FROM "${this.#table}"`)
+		const _delete = new Method(this.db, `DELETE FROM "${this.table}" ${wherePrimaryKeyEquals}`)
+		const clear = new Method(this.db, `DELETE FROM "${this.table}"`)
 
 		// Prepare queries
-		this.#count = new Query<[], { count: number }>(this.db, `SELECT COUNT(*) AS count FROM "${this.#table}"`)
-		this.#select = new Query(this.db, `SELECT ${quotedColumnNames} FROM "${this.#table}" ${wherePrimaryKeyEquals}`)
+		const count = new Query<[], { count: number }>(this.db, `SELECT COUNT(*) AS count FROM "${this.table}"`)
+		const select = new Query(this.db, `SELECT ${quotedColumnNames} FROM "${this.table}" ${wherePrimaryKeyEquals}`)
 
-		const orderByPrimaryKey = model.primaryKey.map((name) => `"${name}" ASC`).join(", ")
-		this.#selectAll = new Query(
+		const orderByPrimaryKey = this.model.primaryKey.map((name) => `"${name}" ASC`).join(", ")
+		const selectAll = new Query(
 			this.db,
-			`SELECT ${quotedColumnNames} FROM "${this.#table}" ORDER BY ${orderByPrimaryKey}`,
+			`SELECT ${quotedColumnNames} FROM "${this.table}" ORDER BY ${orderByPrimaryKey}`,
 		)
+
+		return { insert, update, delete: _delete, clear, count, select, selectAll }
+	}
+
+	private prepareProperty(property: Property, columnDefinitions: string[], columnNames: string[]) {
+		if (property.kind === "primitive") {
+			const { name, type, nullable } = property
+			columnDefinitions.push(getColumn(name, type, nullable))
+			columnNames.push(name)
+
+			const propertyName = `${this.model.name}/${name}`
+			this.addCodec(property.name, {
+				columns: [property.name],
+				encode: (value) => [Encoder.encodePrimitiveValue(propertyName, type, nullable, value)],
+				decode: (record) => Decoder.decodePrimitiveValue(propertyName, type, nullable, record[property.name]),
+			})
+
+			if (!this.model.primaryKey.includes(property.name)) {
+				this.mutableProperties.push(property)
+			}
+		} else if (property.kind === "reference") {
+			const propertyName = `${this.model.name}/${property.name}`
+
+			const target = this.config.models.find((model) => model.name === property.target)
+			assert(target !== undefined)
+
+			this.config.primaryKeys[target.name]
+
+			if (target.primaryKey.length === 1) {
+				const [targetProperty] = this.config.primaryKeys[target.name]
+				columnDefinitions.push(getColumn(property.name, targetProperty.type, false))
+				columnNames.push(property.name)
+
+				this.addCodec(property.name, {
+					columns: [property.name],
+					encode: (value) => Encoder.encodeReferenceValue(propertyName, [targetProperty], property.nullable, value),
+					decode: (record) =>
+						Decoder.decodeReferenceValue(propertyName, property.nullable, [targetProperty], [record[property.name]]),
+				})
+			} else {
+				const refNames: string[] = []
+
+				for (const targetProperty of this.config.primaryKeys[target.name]) {
+					const refName = `${property.name}/${targetProperty.name}`
+					columnDefinitions.push(getColumn(refName, targetProperty.type, false))
+					columnNames.push(refName)
+					refNames.push(refName)
+				}
+
+				this.addCodec(property.name, {
+					columns: refNames,
+
+					encode: (value) =>
+						Encoder.encodeReferenceValue(propertyName, this.config.primaryKeys[target.name], property.nullable, value),
+
+					decode: (record) =>
+						Decoder.decodeReferenceValue(
+							propertyName,
+							property.nullable,
+							this.config.primaryKeys[target.name],
+							refNames.map((name) => record[name]),
+						),
+				})
+			}
+
+			this.mutableProperties.push(property)
+		} else if (property.kind === "relation") {
+			const relation = this.config.relations.find(
+				(relation) => relation.source === this.model.name && relation.sourceProperty === property.name,
+			)
+			assert(relation !== undefined, "internal error - relation not found")
+			this.addRelation(relation)
+			this.mutableProperties.push(property)
+		} else {
+			signalInvalidType(property)
+		}
+	}
+
+	private addCodec(name: string, codec: PropertyAPI<SqlitePrimitiveValue>) {
+		this.codecs[name] = codec
+		this.codecNames.push(name)
+	}
+
+	private addRelation(relation: Relation) {
+		this.relations[relation.sourceProperty] = new RelationAPI(this.db, this.config, relation)
+		this.relationNames.push(relation.sourceProperty)
+	}
+
+	public drop() {
+		Object.values(this.relations).forEach((relation) => relation.drop())
+		this.db.execSync(`DROP TABLE "${this.table}"`)
 	}
 
 	public get(key: PrimaryKeyValue | PrimaryKeyValue[]): ModelValue | null {
@@ -216,7 +238,7 @@ export class ModelAPI {
 			Encoder.encodePrimitiveValue(name, type, nullable, wrappedKey[i]),
 		)
 
-		const record = this.#select.get(encodedKey)
+		const record = this.#statements.select.get(encodedKey)
 		if (record === null) {
 			return null
 		}
@@ -249,7 +271,7 @@ export class ModelAPI {
 	}
 
 	public getAll(): ModelValue[] {
-		return this.#selectAll.all([]).map((row) => this.parseRecord(row, this.codecNames, this.relationNames))
+		return this.#statements.selectAll.all([]).map((row) => this.parseRecord(row, this.codecNames, this.relationNames))
 	}
 
 	public getMany(keys: PrimaryKeyValue[] | PrimaryKeyValue[][]): (ModelValue | null)[] {
@@ -263,13 +285,13 @@ export class ModelAPI {
 			Encoder.encodePrimitiveValue(name, type, nullable, value[name]),
 		)
 
-		const existingRecord = this.#select.get(encodedKey)
+		const existingRecord = this.#statements.select.get(encodedKey)
 		if (existingRecord === null) {
 			const params = this.encodeProperties(this.model.properties, value)
-			this.#insert.run(params)
-		} else if (this.#update !== null) {
+			this.#statements.insert.run(params)
+		} else if (this.#statements.update !== null) {
 			const params = this.encodeProperties(this.mutableProperties, value)
-			this.#update.run([...params, ...encodedKey])
+			this.#statements.update.run([...params, ...encodedKey])
 		}
 
 		for (const [name, relation] of Object.entries(this.relations)) {
@@ -315,14 +337,14 @@ export class ModelAPI {
 			Encoder.encodePrimitiveValue(name, type, nullable, wrappedKey[i]),
 		)
 
-		this.#delete.run(encodedKey)
+		this.#statements.delete.run(encodedKey)
 		for (const relation of Object.values(this.relations)) {
 			relation.delete(encodedKey)
 		}
 	}
 
 	public clear() {
-		this.#clear.run([])
+		this.#statements.clear.run([])
 		for (const relation of Object.values(this.relations)) {
 			relation.clear()
 		}
@@ -333,7 +355,7 @@ export class ModelAPI {
 		const params: SqlitePrimitiveValue[] = []
 
 		// SELECT
-		sql.push(`SELECT COUNT(*) AS count FROM "${this.#table}"`)
+		sql.push(`SELECT COUNT(*) AS count FROM "${this.table}"`)
 
 		// WHERE
 		const [whereExpression, whereParams] = this.getWhereExpression(where)
@@ -343,27 +365,37 @@ export class ModelAPI {
 			params.push(...whereParams)
 		}
 
-		const { count } = new Query(this.db, sql.join(" ")).get(params) ?? {}
-		assert(typeof count === "number")
-		return count
+		const stmt = new Query<SqlitePrimitiveValue[], { count: number }>(this.db, sql.join(" "))
+		try {
+			const result = stmt.get(params)
+			assert(result !== null && typeof result.count === "number")
+			return result.count
+		} finally {
+			stmt.finalize()
+		}
 	}
 
 	public query(query: QueryParams): ModelValue[] {
 		const [sql, properties, relations, params] = this.parseQuery(query)
-		const results: ModelValue[] = []
 
-		for (const row of new Query(this.db, sql).iterate(params)) {
-			results.push(this.parseRecord(row, properties, relations))
+		const stmt = new Query(this.db, sql)
+		try {
+			return stmt.all(params).map((row) => this.parseRecord(row, properties, relations))
+		} finally {
+			stmt.finalize()
 		}
-
-		return results
 	}
 
 	public *iterate(query: QueryParams): Iterable<ModelValue> {
 		const [sql, properties, relations, params] = this.parseQuery(query)
 
-		for (const row of new Query(this.db, sql).iterate(params)) {
-			yield this.parseRecord(row, properties, relations)
+		const stmt = new Query(this.db, sql)
+		try {
+			for (const row of stmt.iterate(params)) {
+				yield this.parseRecord(row, properties, relations)
+			}
+		} finally {
+			stmt.finalize()
 		}
 	}
 
@@ -405,7 +437,7 @@ export class ModelAPI {
 		// SELECT
 		const select = query.select ?? mapValues(this.properties, () => true)
 		const [selectExpression, selectProperties, selectRelations] = this.getSelectExpression(select)
-		sql.push(`SELECT ${selectExpression} FROM "${this.#table}"`)
+		sql.push(`SELECT ${selectExpression} FROM "${this.table}"`)
 
 		// WHERE
 		const [where, whereParams] = this.getWhereExpression(query.where)
@@ -423,6 +455,7 @@ export class ModelAPI {
 			const index = indexName.split("/")
 
 			for (const name of index) {
+				assert(name in this.properties, "invalid orderBy index")
 				if (this.properties[name].kind === "relation") {
 					throw new Error("cannot order by relation properties")
 				}
@@ -647,103 +680,5 @@ export class ModelAPI {
 		} else {
 			return [`${filters.map((filter) => `(${filter})`).join(" AND ")}`, params]
 		}
-	}
-}
-
-export class RelationAPI {
-	public readonly table: string
-	public readonly sourceIndex: string
-	public readonly targetIndex: string
-
-	readonly sourceColumnNames: string[]
-	readonly targetColumnNames: string[]
-
-	readonly #select: Query
-	readonly #insert: Method
-	readonly #delete: Method
-	readonly #clear: Method<[]>
-
-	public constructor(readonly db: SQLiteDatabase, readonly config: Config, readonly relation: Relation) {
-		this.table = `${relation.source}/${relation.sourceProperty}`
-		this.sourceIndex = `${relation.source}/${relation.sourceProperty}/source`
-		this.targetIndex = `${relation.source}/${relation.sourceProperty}/target`
-
-		this.sourceColumnNames = []
-		this.targetColumnNames = []
-
-		const sourcePrimaryKey = config.primaryKeys[relation.source]
-		const targetPrimaryKey = config.primaryKeys[relation.target]
-
-		{
-			const columns: string[] = []
-
-			if (sourcePrimaryKey.length === 1) {
-				const [{ type }] = sourcePrimaryKey
-				columns.push(`_source ${columnTypes[type]} NOT NULL`)
-				this.sourceColumnNames.push("_source")
-			} else {
-				for (const [i, { type }] of sourcePrimaryKey.entries()) {
-					const columnName = `_source/${i}`
-					columns.push(`"${columnName}" ${columnTypes[type]} NOT NULL`)
-					this.sourceColumnNames.push(columnName)
-				}
-			}
-
-			if (targetPrimaryKey.length === 1) {
-				const [{ type }] = targetPrimaryKey
-				columns.push(`_target ${columnTypes[type]} NOT NULL`)
-				this.targetColumnNames.push("_target")
-			} else {
-				for (const [i, { type }] of targetPrimaryKey.entries()) {
-					const columnName = `_target/${i}`
-					columns.push(`"${columnName}" ${columnTypes[type]} NOT NULL`)
-					this.targetColumnNames.push(columnName)
-				}
-			}
-
-			db.execSync(`CREATE TABLE IF NOT EXISTS "${this.table}" (${columns.join(", ")})`)
-		}
-
-		const sourceColumns = this.sourceColumnNames.map(quote).join(", ")
-		const targetColumns = this.targetColumnNames.map(quote).join(", ")
-
-		db.execSync(`CREATE INDEX IF NOT EXISTS "${this.sourceIndex}" ON "${this.table}" (${sourceColumns})`)
-
-		if (relation.indexed) {
-			db.execSync(`CREATE INDEX IF NOT EXISTS "${this.targetIndex}" ON "${this.table}" (${targetColumns})`)
-		}
-
-		// Prepare methods
-		const insertColumns = [...this.sourceColumnNames, ...this.targetColumnNames].map(quote).join(", ")
-		const insertParamCount = this.sourceColumnNames.length + this.targetColumnNames.length
-		const insertParams = Array.from({ length: insertParamCount }).fill("?").join(", ")
-		this.#insert = new Method(this.db, `INSERT INTO "${this.table}" (${insertColumns}) VALUES (${insertParams})`)
-
-		const selectBySource = this.sourceColumnNames.map((name) => `"${name}" = ?`).join(" AND ")
-
-		this.#delete = new Method(this.db, `DELETE FROM "${this.table}" WHERE ${selectBySource}`)
-		this.#clear = new Method(this.db, `DELETE FROM "${this.table}"`)
-
-		// Prepare queries
-		this.#select = new Query(this.db, `SELECT ${targetColumns} FROM "${this.table}" WHERE ${selectBySource}`)
-	}
-
-	public get(sourceKey: SqlitePrimitiveValue[]): SqlitePrimitiveValue[][] {
-		const targets = this.#select.all(sourceKey)
-		return targets.map((record) => this.targetColumnNames.map((name) => record[name]))
-	}
-
-	public add(sourceKey: SqlitePrimitiveValue[], targetKeys: SqlitePrimitiveValue[][]) {
-		for (const targetKey of targetKeys) {
-			this.#insert.run([...sourceKey, ...targetKey])
-		}
-	}
-
-	public delete(sourceKey: SqlitePrimitiveValue[]) {
-		this.#delete.run(sourceKey)
-	}
-
-	public clear() {
-		this.#clear.run([])
 	}
 }

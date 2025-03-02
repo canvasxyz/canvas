@@ -1,7 +1,7 @@
 import { nanoid } from "nanoid"
-import { testOnModelDB } from "./utils.js"
+import { testPlatforms } from "./utils.js"
 
-// testOnModelDB("set and get reference and relation values", async (t, openDB) => {
+// testPlatforms("set and get reference and relation values", async (t, openDB) => {
 // 	const db = await openDB(t, {
 // 		user: { address: "primary" },
 // 		room: {
@@ -21,7 +21,7 @@ import { testOnModelDB } from "./utils.js"
 // 	t.deepEqual(await db.get("room", roomId), { id: roomId, creator: "a", members: ["a", "b"] })
 // })
 
-// testOnModelDB("set and get reference and relation values using integer primary keys", async (t, openDB) => {
+// testPlatforms("set and get reference and relation values using integer primary keys", async (t, openDB) => {
 // 	const db = await openDB(t, {
 // 		user: { $primary: "id", id: "integer" },
 // 		room: {
@@ -41,7 +41,7 @@ import { testOnModelDB } from "./utils.js"
 // 	t.deepEqual(await db.get("room", roomId), { id: roomId, creator: 0, members: [0, 1] })
 // })
 
-// testOnModelDB("select reference and relation values", async (t, openDB) => {
+// testPlatforms("select reference and relation values", async (t, openDB) => {
 // 	const db = await openDB(t, {
 // 		user: { address: "primary" },
 // 		room: {
@@ -77,7 +77,7 @@ import { testOnModelDB } from "./utils.js"
 // 	])
 // })
 
-// testOnModelDB("query reference values", async (t, openDB) => {
+// testPlatforms("query reference values", async (t, openDB) => {
 // 	const db = await openDB(t, {
 // 		user: { address: "primary" },
 // 		room: {
@@ -106,7 +106,7 @@ import { testOnModelDB } from "./utils.js"
 // 	])
 // })
 
-// testOnModelDB("query filtering on relation values", async (t, openDB) => {
+// testPlatforms("query filtering on relation values", async (t, openDB) => {
 // 	const db = await openDB(t, {
 // 		user: { address: "primary" },
 // 		room: {
@@ -181,7 +181,7 @@ import { testOnModelDB } from "./utils.js"
 // 	t.deepEqual(await db.query("room", { where: { members: { neq: ["a", "c"] } } }), [])
 // })
 
-// testOnModelDB(
+// testPlatforms(
 // 	"select nested reference and relation values (without include)",
 // 	async (t, openDB) => {
 // 		const db = await openDB(t, {
@@ -242,7 +242,7 @@ import { testOnModelDB } from "./utils.js"
 // 	{ sqliteWasm: true, sqlite: true, idb: false, pg: true, do: true, expo: true },
 // )
 
-testOnModelDB(
+testPlatforms(
 	"select nested reference and relation values (with include)",
 	async (t, openDB) => {
 		const db = await openDB(t, {

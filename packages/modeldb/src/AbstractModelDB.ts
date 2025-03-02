@@ -1,6 +1,6 @@
 import { Logger, logger } from "@libp2p/logger"
 
-import { assert } from "@canvas-js/utils"
+import { assert, deepEqual } from "@canvas-js/utils"
 
 import { Config } from "./config.js"
 import {
@@ -11,6 +11,7 @@ import {
 	WhereCondition,
 	ModelValueWithIncludes,
 	PrimaryKeyValue,
+	DatabaseAPI,
 } from "./types.js"
 import { getFilter } from "./query.js"
 import { Awaitable, getModelsFromInclude, mergeModelValues, updateModelValues } from "./utils.js"
@@ -31,18 +32,130 @@ export type ModelDBBackend =
 	| "sqlite-expo"
 	| "sqlite-durable-objects"
 
-export abstract class AbstractModelDB {
+export abstract class AbstractModelDB implements DatabaseAPI {
+	public static namespace = "modeldb"
+	public static version = 1
+
 	public readonly models: Record<string, Model>
 
 	protected readonly log: Logger
 	protected readonly subscriptions = new Map<number, Subscription>()
 	#subscriptionId = 0
 
-	protected constructor(public readonly config: Config) {
+	protected constructor(public readonly config: Config, public readonly version: Record<string, number>) {
 		this.log = logger(`canvas:modeldb`)
 		this.models = {}
 		for (const model of config.models) {
 			this.models[model.name] = model
+		}
+	}
+
+	protected static async initialize(
+		baseModelDB: DatabaseAPI,
+		newConfig: Config,
+		newVersion: Record<string, number>,
+		upgrade: (oldConfig: Config, oldVersion: Record<string, number>) => Promise<void>,
+	) {
+		const timestamp = new Date().toISOString()
+
+		const baseEffects: Effect[] = []
+
+		const [oldModelDBVersion = null] = await baseModelDB.query<{ namespace: string; version: number }>("$versions", {
+			select: { namespace: true, version: true },
+			limit: 1,
+			where: { namespace: AbstractModelDB.namespace },
+			orderBy: { "namespace/version": "desc" },
+		})
+
+		if (oldModelDBVersion === null) {
+			const versionValue = { namespace: AbstractModelDB.namespace, version: AbstractModelDB.version, timestamp }
+			baseEffects.push({ model: "$versions", operation: "set", value: versionValue })
+
+			for (const [name, model] of Object.entries(Config.baseModels)) {
+				baseEffects.push({ model: "$models", operation: "set", value: { name, model } })
+			}
+
+			for (const model of newConfig.models) {
+				baseEffects.push({ model: "$models", operation: "set", value: { name: model.name, model } })
+			}
+		} else if (oldModelDBVersion.version < AbstractModelDB.version) {
+			// FUTURE: ModelDB internal upgrades (to $versions and $models) go here
+			throw new Error(`unsupported modeldb version`)
+		} else if (oldModelDBVersion.version > AbstractModelDB.version) {
+			throw new Error(`unsupported modeldb version`)
+		}
+
+		await baseModelDB.apply(baseEffects)
+
+		const existingVersions = await baseModelDB.getAll<{ namespace: string; version: number; timestamp: string }>(
+			"$versions",
+		)
+		const oldVersion: Record<string, number> = {}
+		for (const { namespace, version } of existingVersions) {
+			assert(Number.isSafeInteger(version) && version >= 0, "internal error - found invalid version number")
+			oldVersion[namespace] = Math.max(oldVersion[namespace] ?? 0, version)
+		}
+
+		const oldModels = await baseModelDB.getAll<{ name: string; model: Model }>("$models")
+		const oldConfig = new Config(oldModels.map(({ model }) => model))
+		const newEntries = Object.entries(newVersion).map(([namespace, version]) => ({ namespace, version, timestamp }))
+
+		if (deepEqual(newVersion, oldVersion)) {
+			// strict version equality
+			// assert strict config equality
+			Config.assertEqual(newConfig, oldConfig)
+		} else if (newEntries.every(({ namespace, version }) => oldVersion[namespace] === version)) {
+			// soft version equality
+			// assert soft config equality
+			for (const newModel of newConfig.models) {
+				const oldModel = oldConfig.models.find((model) => model.name === newModel.name)
+				if (oldModel === undefined) {
+					throw new Error(`schema conflict - missing model ${newModel.name}`)
+				} else {
+					Config.assertEqualModel(newModel, oldModel)
+				}
+			}
+		} else {
+			// check for conflict
+			for (const { namespace, version } of newEntries) {
+				if (namespace in oldVersion && version < oldVersion[namespace]) {
+					const given = `${namespace} = ${version}`
+					const found = `${namespace} = ${oldVersion[namespace]}`
+					throw new Error(`version conflict - given ${given}, found ${found}`)
+				}
+			}
+
+			// upgrade required
+			const upgradeEntries = newEntries.filter(
+				({ namespace, version }) => oldVersion[namespace] === undefined || oldVersion[namespace] < version,
+			)
+
+			// sanity check assert
+			assert(upgradeEntries.length > 0, "internal error - expected upgrade")
+
+			await upgrade(oldConfig, oldVersion)
+
+			// now we expect that existingConfig has been mutated to match config
+			if (Object.entries(oldVersion).every(([namespace]) => namespace in newVersion)) {
+				// assert strict equality
+				Config.assertEqual(oldConfig, newConfig)
+			} else {
+				// assert soft equality
+				for (const newModel of newConfig.models) {
+					const oldModel = oldConfig.models.find((model) => model.name === newModel.name)
+					if (oldModel === undefined) {
+						throw new Error(`schema conflict - missing model ${newModel.name}`)
+					} else {
+						Config.assertEqualModel(oldModel, newModel)
+					}
+				}
+			}
+
+			await baseModelDB.apply(
+				newEntries
+					.filter(({ namespace, version }) => oldVersion[namespace] === undefined || oldVersion[namespace] < version)
+					.map((value) => ({ model: "$versions", operation: "set", value })),
+			)
 		}
 	}
 
@@ -53,14 +166,14 @@ export abstract class AbstractModelDB {
 	abstract get<T extends ModelValue<any> = ModelValue<any>>(
 		modelName: string,
 		key: PrimaryKeyValue | PrimaryKeyValue[],
-	): Awaitable<T | null>
+	): Promise<T | null>
 
-	abstract getAll<T extends ModelValue<any> = ModelValue<any>>(modelName: string): Awaitable<T[]>
+	abstract getAll<T extends ModelValue<any> = ModelValue<any>>(modelName: string): Promise<T[]>
 
 	abstract getMany<T extends ModelValue<any> = ModelValue<any>>(
 		modelName: string,
 		key: PrimaryKeyValue[] | PrimaryKeyValue[][],
-	): Awaitable<(T | null)[]>
+	): Promise<(T | null)[]>
 
 	abstract iterate<T extends ModelValue<any> = ModelValue<any>>(
 		modelName: string,
@@ -75,7 +188,7 @@ export abstract class AbstractModelDB {
 
 	// Batch effect API
 
-	public abstract apply(effects: Effect[]): Awaitable<void>
+	public abstract apply(effects: Effect[]): Promise<void>
 
 	// Model operations
 
@@ -115,15 +228,15 @@ export abstract class AbstractModelDB {
 
 		return {
 			id,
-			results: this.query(modelName, query).then((results) =>
-				Promise.resolve(callback(results)).then(
-					() => results,
-					(err) => {
-						this.log.error(err)
-						return results
-					},
-				),
-			),
+			results: this.query(modelName, query).then(async (results) => {
+				try {
+					await callback(results)
+				} catch (err) {
+					this.log.error(err)
+				}
+
+				return results
+			}),
 		}
 	}
 

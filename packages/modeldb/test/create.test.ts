@@ -1,14 +1,14 @@
 import type { ModelSchema } from "@canvas-js/modeldb"
 
-import { testOnModelDB } from "./utils.js"
+import { testPlatforms } from "./utils.js"
 
-testOnModelDB("create modeldb with no models", async (t, openDB) => {
+testPlatforms("create modeldb with no models", async (t, openDB) => {
 	await t.notThrowsAsync(async () => {
 		await openDB(t, {})
 	})
 })
 
-testOnModelDB("create modeldb with a model with valid fields", async (t, openDB) => {
+testPlatforms("create modeldb with a model with valid fields", async (t, openDB) => {
 	const models = {
 		room: {
 			id: "primary",
@@ -25,7 +25,7 @@ testOnModelDB("create modeldb with a model with valid fields", async (t, openDB)
 	})
 })
 
-testOnModelDB("create modeldb with a model with invalid fields should fail", async (t, openDB) => {
+testPlatforms("create modeldb with a model with invalid fields should fail", async (t, openDB) => {
 	// @ts-ignore
 	const models = {
 		room: {
@@ -36,7 +36,7 @@ testOnModelDB("create modeldb with a model with invalid fields should fail", asy
 	await t.throwsAsync(() => openDB(t, models), { message: `error defining room: invalid property "unsupported"` })
 })
 
-testOnModelDB("create a model without a primary key", async (t, openDB) => {
+testPlatforms("create a model without a primary key", async (t, openDB) => {
 	const models = {
 		room: {
 			name: "string",
@@ -46,7 +46,7 @@ testOnModelDB("create a model without a primary key", async (t, openDB) => {
 	await t.throwsAsync(() => openDB(t, models))
 })
 
-testOnModelDB("create a model with two primary keys", async (t, openDB) => {
+testPlatforms("create a model with two primary keys", async (t, openDB) => {
 	const models = {
 		user: {
 			id: "primary",
@@ -58,7 +58,7 @@ testOnModelDB("create a model with two primary keys", async (t, openDB) => {
 	await t.throwsAsync(() => openDB(t, models))
 })
 
-testOnModelDB("create a model with an integer primary key", async (t, openDB) => {
+testPlatforms("create a model with an integer primary key", async (t, openDB) => {
 	const models = {
 		user: { $primary: "id", id: "integer", name: "string?" },
 	} satisfies ModelSchema
@@ -66,7 +66,7 @@ testOnModelDB("create a model with an integer primary key", async (t, openDB) =>
 	await t.notThrowsAsync(() => openDB(t, models))
 })
 
-testOnModelDB("create a model with a composite primary key", async (t, openDB) => {
+testPlatforms("create a model with a composite primary key", async (t, openDB) => {
 	const models = {
 		user: { $primary: "key/index", key: "string", index: "integer", name: "string?" },
 	} satisfies ModelSchema
@@ -74,7 +74,7 @@ testOnModelDB("create a model with a composite primary key", async (t, openDB) =
 	await t.notThrowsAsync(() => openDB(t, models))
 })
 
-testOnModelDB("create a model with a reference to a composite primary key", async (t, openDB) => {
+testPlatforms("create a model with a reference to a composite primary key", async (t, openDB) => {
 	const models = {
 		user: { $primary: "key/index", key: "string", index: "integer", name: "string?" },
 		room: { $primary: "key/index", key: "string", index: "integer", name: "string?", creator: "@user" },
@@ -83,7 +83,7 @@ testOnModelDB("create a model with a reference to a composite primary key", asyn
 	await t.notThrowsAsync(() => openDB(t, models))
 })
 
-testOnModelDB("create a model with a relation on a composite primary key", async (t, openDB) => {
+testPlatforms("create a model with a relation on a composite primary key", async (t, openDB) => {
 	const models = {
 		user: { $primary: "key/index", key: "string", index: "integer", name: "string?" },
 		room: {

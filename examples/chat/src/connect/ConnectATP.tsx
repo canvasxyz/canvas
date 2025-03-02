@@ -65,7 +65,7 @@ export const ConnectATP: React.FC<ConnectATPProps> = ({}) => {
 				onClick={() => disconnect()}
 				className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200"
 			>
-				Disconnect BlueSky account
+				Disconnect Bluesky account
 			</button>
 		)
 	} else if (showLoginForm) {
@@ -120,7 +120,7 @@ export const ConnectATP: React.FC<ConnectATPProps> = ({}) => {
 				onClick={() => connect()}
 				className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200"
 			>
-				Connect BlueSky account
+				Connect Bluesky account
 			</button>
 		)
 	}

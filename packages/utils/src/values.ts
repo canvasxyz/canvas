@@ -115,3 +115,40 @@ export function update(from: JSValue, into: JSValue): JSValue {
 		return result
 	}
 }
+
+export function deepEqual(a: JSONValue, b: JSONValue): boolean {
+	// null
+	if (a === null) {
+		return b === null
+	} else if (b === null) {
+		return false
+	}
+
+	// primitives
+	if (typeof a !== "object" && typeof b !== "object") {
+		return a === b
+	}
+
+	// arrays
+	if (Array.isArray(a) && Array.isArray(b)) {
+		if (a.length !== b.length) {
+			return false
+		}
+
+		return a.every((item, i) => deepEqual(item, b[i]))
+	}
+
+	// objects
+	if (!Array.isArray(a) && !Array.isArray(b) && typeof a === "object" && typeof b === "object") {
+		const aKeys = Object.keys(a)
+		const bKeys = Object.keys(b)
+
+		if (aKeys.length !== bKeys.length) {
+			return false
+		}
+
+		return aKeys.every((key) => b[key] !== undefined && deepEqual(a[key], b[key]))
+	}
+
+	return false
+}

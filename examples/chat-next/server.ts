@@ -53,22 +53,20 @@ nextApp.prepare().then(async () => {
 	expressApp.use(express.json())
 	expressApp.set("json spaces", 2)
 
-	expressApp.get("/read", (req, res) => {
-		canvasApp.db
-			.query("message", {})
-			.then((results) => {
-				// const connections = canvasApp.libp2p.getConnections()
+	expressApp.get("/read", async (req, res) => {
+		try {
+			const results = await canvasApp.db.query("message", {})
+			// const connections = canvasApp.libp2p.getConnections()
 
-				return res.json({
-					messages: results,
-					// status: canvasApp.status,
-					// connectionsLength: connections.length,
-					// connections,
-				})
+			return res.json({
+				messages: results,
+				// status: canvasApp.status,
+				// connectionsLength: connections.length,
+				// connections,
 			})
-			.catch((err) => {
-				return res.status(400).json({ error: "[Canvas] query failed" })
-			})
+		} catch (err) {
+			return res.status(400).json({ error: "[Canvas] query failed" })
+		}
 	})
 
 	expressApp.all("*", (req, res) => {

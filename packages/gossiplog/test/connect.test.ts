@@ -12,7 +12,7 @@ test("wait for initial connection events", async (t) => {
 	const topic = randomUUID()
 	const apply: GossipLogConsumer<string> = (i) => {}
 
-	const network = await createNetwork(t, () => new GossipLog({ topic, apply }), {
+	const network = await createNetwork(t, () => GossipLog.open(null, { topic, apply }), {
 		a: { port: 9990 },
 		b: { port: 9991, peers: ["a"] },
 	})

@@ -442,10 +442,10 @@ test("get a value set by another action", async (t) => {
 
 	const compareIDs = ({ id: a }: { id: string }, { id: b }: { id: string }) => (a < b ? -1 : a === b ? 0 : 1)
 
+	const results = await app.db.getAll<{ id: string; from: string; content: string }>("post")
+
 	t.deepEqual(
-		await app.db
-			.query<{ id: string; from: string; content: string }>("post", {})
-			.then((results) => results.sort(compareIDs)),
+		results.sort(compareIDs),
 		[
 			{ id: a, from: `did:pkh:eip155:1:${wallet.address}`, content: "foo" },
 			{ id: b, from: `did:pkh:eip155:1:${wallet.address}`, content: "bar" },

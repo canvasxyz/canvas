@@ -10,3 +10,4 @@ export type { BranchMergeRecord } from "./BranchMergeIndex.js"
 export type { AncestorRecord } from "./AncestorIndex.js"
 
 export { gossiplogTopicPattern } from "./utils.js"
+export { NetworkClient } from "./client/index.js"

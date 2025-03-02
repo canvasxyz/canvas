@@ -1,6 +1,6 @@
-import { testOnModelDB } from "./utils.js"
+import { testPlatforms } from "./utils.js"
 
-testOnModelDB("query (indexed where)", async (t, openDB) => {
+testPlatforms("query (indexed where)", async (t, openDB) => {
 	const db = await openDB(t, {
 		user: { address: "primary", name: "string?", $indexes: ["address", "name"] },
 	})
@@ -60,7 +60,7 @@ testOnModelDB("query (indexed where)", async (t, openDB) => {
 	])
 })
 
-testOnModelDB("query (indexed order by)", async (t, openDB) => {
+testPlatforms("query (indexed order by)", async (t, openDB) => {
 	const db = await openDB(t, {
 		user: { address: "primary", name: "string?", $indexes: ["address", "name"] },
 	})
@@ -91,7 +91,7 @@ testOnModelDB("query (indexed order by)", async (t, openDB) => {
 	])
 })
 
-testOnModelDB("composite index", async (t, openDB) => {
+testPlatforms("composite index", async (t, openDB) => {
 	const db = await openDB(t, {
 		user: {
 			id: "primary",

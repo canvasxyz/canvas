@@ -1,69 +1,32 @@
 import "fake-indexeddb/auto"
+import os from "node:os"
+import fs from "node:fs"
 import path from "node:path"
-import test, { ExecutionContext } from "ava"
-import puppeteer from "puppeteer"
-import { nanoid } from "nanoid"
 
-import { fileURLToPath } from "node:url"
-import { createServer, ViteDevServer } from "vite"
+import test, { ExecutionContext } from "ava"
+import { nanoid } from "nanoid"
 
 import { unstable_dev } from "wrangler"
 import type { Unstable_DevWorker } from "wrangler"
-
-const __dirname = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "..")
 
 import type { AbstractModelDB, ModelSchema } from "@canvas-js/modeldb"
 import { ModelDB as ModelDBSqlite } from "@canvas-js/modeldb-sqlite"
 import { ModelDB as ModelDBIdb } from "@canvas-js/modeldb-idb"
 import { ModelDB as ModelDBPostgres } from "@canvas-js/modeldb-pg"
 import { ModelDBProxy as ModelDBDurableObjectsProxy } from "@canvas-js/modeldb-durable-objects"
+import { ModelDB as ModelDBSqliteWasm } from "@canvas-js/modeldb-sqlite-wasm"
 import { ModelDB as ModelDBSqliteExpo } from "@canvas-js/modeldb-sqlite-expo"
 
-let browser: puppeteer.Browser
-let page: puppeteer.Page
-let server: ViteDevServer
 let worker: Unstable_DevWorker
 
 test.before(async (t) => {
-	server = await createServer({
-		root: path.resolve(__dirname, "server"),
-	})
-
-	await server.listen()
-
-	browser = await puppeteer.launch({
-		dumpio: true,
-		headless: true,
-		args: [
-			"--no-sandbox",
-			"--disable-setuid-sandbox",
-			"--disable-extensions",
-			"--enable-chrome-browser-cloud-management",
-		],
-	})
-	page = await browser.newPage()
-
-	page.on("workercreated", (worker) => t.log("Worker created: " + worker.url()))
-	page.on("workerdestroyed", (worker) => t.log("Worker destroyed: " + worker.url()))
-
-	page.on("console", async (e) => {
-		const args = await Promise.all(e.args().map((a) => a.jsonValue()))
-		t.log(...args)
-	})
-
-	const { port } = server.config.server
-	await page.goto(`http://localhost:${port}`)
-
-	worker = await unstable_dev("test/worker.ts", {
+	worker = await unstable_dev("test/worker-durable-objects.ts", {
 		experimental: { disableExperimentalWarning: true },
 		logLevel: "error",
 	})
 })
 
 test.after(async (t) => {
-	await page.close()
-	await browser.close()
-	await server.close()
 	await worker.stop()
 })
 
@@ -82,30 +45,22 @@ function getConnectionConfig() {
 	}
 }
 
-export const testOnModelDBNoWasm = (
-	name: string,
-	run: (
-		t: ExecutionContext<unknown>,
-		openDB: (t: ExecutionContext, models: ModelSchema) => Promise<AbstractModelDB>,
-	) => void,
-) => {
-	return testOnModelDB(name, run, { sqliteWasm: false, sqlite: true, idb: true, pg: true, do: true, expo: true })
+export type PlatformConfig = {
+	sqliteWasm?: boolean
+	sqlite?: boolean
+	idb?: boolean
+	pg?: boolean
+	do?: boolean
+	expo?: boolean
 }
 
-export const testOnModelDB = (
+export const testPlatforms = (
 	name: string,
 	run: (
 		t: ExecutionContext<unknown>,
 		openDB: (t: ExecutionContext, models: ModelSchema) => Promise<AbstractModelDB>,
 	) => void,
-	platforms: { sqliteWasm?: boolean; sqlite?: boolean; idb?: boolean; pg?: boolean; do?: boolean; expo?: boolean } = {
-		sqliteWasm: true,
-		sqlite: true,
-		idb: true,
-		pg: true,
-		do: true,
-		expo: true,
-	},
+	platforms: PlatformConfig = { sqliteWasm: true, sqlite: true, idb: true, pg: true, do: true, expo: true },
 ) => {
 	const macro = test.macro(run)
 
@@ -113,7 +68,7 @@ export const testOnModelDB = (
 
 	if (platforms.sqlite) {
 		test(`Sqlite - ${name}`, macro, async (t, models) => {
-			const mdb = new ModelDBSqlite({ path: null, models })
+			const mdb = await ModelDBSqlite.open({ path: null, models })
 			t.teardown(() => mdb.close())
 			return mdb
 		})
@@ -121,7 +76,7 @@ export const testOnModelDB = (
 
 	if (platforms.idb) {
 		test(`IDB - ${name}`, macro, async (t, models) => {
-			const mdb = await ModelDBIdb.initialize({ name: nanoid(), models })
+			const mdb = await ModelDBIdb.open({ name: nanoid(), models })
 			t.teardown(() => mdb.close())
 			return mdb
 		})
@@ -129,7 +84,7 @@ export const testOnModelDB = (
 
 	if (platforms.pg) {
 		test.serial(`Postgres - ${name}`, macro, async (t, models) => {
-			const mdb = await ModelDBPostgres.initialize({ connectionConfig, models, clear: true })
+			const mdb = await ModelDBPostgres.open(connectionConfig, { models, clear: true })
 			t.teardown(() => mdb.close())
 			return mdb
 		})
@@ -152,49 +107,10 @@ export const testOnModelDB = (
 	}
 
 	if (platforms.sqliteWasm) {
-		test(`Sqlite Wasm Opfs - ${name}`, async (t) => {
-			const testResult = await page.evaluate(async (run) => {
-				// @ts-ignore
-				const ctx = new InnerExecutionContext()
-				const testFunc = eval(`(${run})`)
-				try {
-					// @ts-ignore
-					await testFunc(ctx, openOpfsDB)
-					return { result: "passed" }
-				} catch (error: any) {
-					return { result: "failed", error: error.message }
-				} finally {
-					if (ctx.teardownFunction) ctx.teardownFunction()
-				}
-			}, run.toString())
-
-			if (testResult.result === "passed") {
-				t.pass()
-			} else {
-				t.fail(testResult.error)
-			}
-		})
-		test(`Sqlite Wasm Transient - ${name}`, async (t) => {
-			const testResult = await page.evaluate(async (run) => {
-				// @ts-ignore
-				const ctx = new InnerExecutionContext()
-				const testFunc = eval(`(${run})`)
-				try {
-					// @ts-ignore
-					await testFunc(ctx, openTransientDB)
-					return { result: "passed" }
-				} catch (error: any) {
-					return { result: "failed", error: error.message }
-				} finally {
-					if (ctx.teardownFunction) ctx.teardownFunction()
-				}
-			}, run.toString())
-
-			if (testResult.result === "passed") {
-				t.pass()
-			} else {
-				t.fail(testResult.error)
-			}
+		test.serial(`Sqlite Wasm - ${name}`, macro, async (t, models) => {
+			const mdb = await ModelDBSqliteWasm.open({ models, path: null })
+			t.teardown(() => mdb.close())
+			return mdb
 		})
 	}
 }
@@ -213,4 +129,15 @@ export async function collect<T>(iter: AsyncIterable<T>): Promise<T[]> {
 		values.push(value)
 	}
 	return values
+}
+
+export function getDirectory(t: ExecutionContext<unknown>): string {
+	const directory = path.resolve(os.tmpdir(), nanoid())
+	fs.mkdirSync(directory)
+	t.log("Created temporary directory", directory)
+	t.teardown(() => {
+		fs.rmSync(directory, { recursive: true })
+		t.log("Removed temporary directory", directory)
+	})
+	return directory
 }

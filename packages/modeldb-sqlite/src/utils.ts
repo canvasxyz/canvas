@@ -1,6 +1,8 @@
 import type sqlite from "better-sqlite3"
 import { SqlitePrimitiveValue } from "./encoding.js"
 
+export const quote = (name: string) => `"${name}"`
+
 export class Query<P = SqlitePrimitiveValue[], R = Record<string, SqlitePrimitiveValue>> {
 	private readonly statement: sqlite.Statement
 

@@ -1,6 +1,6 @@
-import { testOnModelDB } from "./utils.js"
+import { testPlatforms } from "./utils.js"
 
-testOnModelDB(
+testPlatforms(
 	"query (select)",
 	async (t, openDB) => {
 		const db = await openDB(t, {
@@ -30,7 +30,7 @@ testOnModelDB(
 	{ sqliteWasm: true },
 )
 
-testOnModelDB("query (where)", async (t, openDB) => {
+testPlatforms("query (where)", async (t, openDB) => {
 	const db = await openDB(t, {
 		user: { address: "primary", name: "string?" },
 	})
@@ -88,7 +88,7 @@ testOnModelDB("query (where)", async (t, openDB) => {
 	])
 })
 
-testOnModelDB("query (order by)", async (t, openDB) => {
+testPlatforms("query (order by)", async (t, openDB) => {
 	const db = await openDB(t, {
 		user: { address: "primary", name: "string?", $indexes: ["name"] },
 	})
@@ -133,7 +133,7 @@ testOnModelDB("query (order by)", async (t, openDB) => {
 	])
 })
 
-testOnModelDB("query should not be able to query on json fields", async (t, openDB) => {
+testPlatforms("query should not be able to query on json fields", async (t, openDB) => {
 	const db = await openDB(t, {
 		user: { address: "primary", metadata: "json" },
 	})
@@ -142,7 +142,7 @@ testOnModelDB("query should not be able to query on json fields", async (t, open
 	})
 })
 
-testOnModelDB("query should ignore undefined expressions", async (t, openDB) => {
+testPlatforms("query should ignore undefined expressions", async (t, openDB) => {
 	const db = await openDB(t, {
 		user: { address: "primary", name: "string?" },
 	})
@@ -168,7 +168,7 @@ testOnModelDB("query should ignore undefined expressions", async (t, openDB) => 
 	])
 })
 
-testOnModelDB("query filtering on composite reference targets", async (t, openDB) => {
+testPlatforms("query filtering on composite reference targets", async (t, openDB) => {
 	const db = await openDB(t, {
 		user: { $primary: "key/index", key: "string", index: "integer", name: "string?" },
 		room: {
@@ -198,7 +198,7 @@ testOnModelDB("query filtering on composite reference targets", async (t, openDB
 	)
 })
 
-testOnModelDB("query filtering on composite relation targets", async (t, openDB) => {
+testPlatforms("query filtering on composite relation targets", async (t, openDB) => {
 	const db = await openDB(t, {
 		user: { $primary: "key/index", key: "string", index: "integer", name: "string?" },
 		room: {

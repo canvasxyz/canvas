@@ -10,13 +10,13 @@ const topic = "com.example.test"
 const apply: GossipLogConsumer<string> = ({}) => {}
 
 test("append messages (in-memory, linear, 100)", async (t) => {
-	const log = new GossipLog({ topic, apply })
+	const log = await GossipLog.open(null, { topic, apply })
 	t.teardown(() => log.close())
 	await append(t, log, 100)
 })
 
 test("append messages (on-disk, linear, 100)", async (t) => {
-	const log = new GossipLog({ directory: getDirectory(t), topic, apply })
+	const log = await GossipLog.open(getDirectory(t), { topic, apply })
 	t.teardown(() => log.close())
 	await append(t, log, 100)
 })

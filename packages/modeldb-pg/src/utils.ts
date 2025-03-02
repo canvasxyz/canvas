@@ -3,6 +3,8 @@ import Cursor from "pg-cursor"
 
 import { PostgresPrimitiveValue } from "./encoding.js"
 
+export const quote = (name: string) => `"${name}"`
+
 export class Query<R extends Record<string, PostgresPrimitiveValue> = Record<string, PostgresPrimitiveValue>> {
 	constructor(private readonly client: pg.Client, private readonly sql: string) {}
 
