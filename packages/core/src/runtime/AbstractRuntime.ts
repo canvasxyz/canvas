@@ -76,7 +76,7 @@ export abstract class AbstractRuntime {
 			csx: "integer",
 		},
 
-		$versions: { id: "primary", model: "string", key: "json", version: "string" },
+		$records: { id: "primary", model: "string", key: "json", version: "string" },
 	} satisfies ModelSchema
 
 	protected static revertModel = {
@@ -195,7 +195,7 @@ export abstract class AbstractRuntime {
 				await messageLog.db.apply([
 					{ model: modelName, operation: "set", value: modelValue },
 					{ model: "$writes", operation: "set", value: writeRecord },
-					{ model: "$versions", operation: "set", value: versionRecord },
+					{ model: "$records", operation: "set", value: versionRecord },
 				])
 			}
 		}
@@ -355,7 +355,7 @@ export abstract class AbstractRuntime {
 					csx: null,
 				}
 
-				effects.push({ model: "$versions", operation: "set", value: versionValue })
+				effects.push({ model: "$records", operation: "set", value: versionValue })
 			} else {
 				// Transactional write
 
@@ -434,7 +434,7 @@ export abstract class AbstractRuntime {
 					csx: csx,
 				}
 
-				conditionalEffects.push({ model: "$versions", operation: "set", value: versionValue })
+				conditionalEffects.push({ model: "$records", operation: "set", value: versionValue })
 			}
 		}
 
@@ -505,19 +505,19 @@ export abstract class AbstractRuntime {
 			for (const effectId of revertEffects) {
 				this.log.trace("checking for values currently referencing reverted effect %s", effectId)
 
-				const versions = await db.query<VersionRecord>("$versions", { where: { version: effectId } })
+				const versions = await db.query<VersionRecord>("$records", { where: { version: effectId } })
 				this.log.trace("found %d existing records referencing the reverted action %s", versions.length, effectId)
 				for (const { id, model, key } of versions) {
 					const read = await currentView.getLastValueTransactional(id, revertEffects)
 					if (read === null) {
 						this.log.trace("no other versions of record %s found", id)
-						effects.push({ model: "$versions", operation: "delete", key: id })
+						effects.push({ model: "$records", operation: "delete", key: id })
 						effects.push({ model, operation: "delete", key })
 					} else {
 						const { value, csx, version } = read
 						this.log.trace("got new version %s of record %s (csx %d)", version, id, csx)
 						effects.push({
-							model: "$versions",
+							model: "$records",
 							operation: "set",
 							value: { id, model, key, version, csx } satisfies VersionRecord,
 						})

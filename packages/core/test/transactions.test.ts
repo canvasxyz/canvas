@@ -182,7 +182,7 @@ test("increment a counter, reading inside the transaction", async (t) => {
 	await compare(t, app1.db, app2.db, "$writes", ":")
 	await compare(t, app1.db, app2.db, "$reads", ":")
 	await compare(t, app1.db, app2.db, "$reverts", ":")
-	await compare(t, app1.db, app2.db, "$versions", ":")
+	await compare(t, app1.db, app2.db, "$records", ":")
 	await compare(t, app1.db, app2.db, "counter", ":")
 
 	t.log("total", total)
