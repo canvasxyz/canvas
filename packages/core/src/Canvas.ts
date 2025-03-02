@@ -88,6 +88,8 @@ export class Canvas<
 	ModelsT extends ModelSchema = ModelSchema,
 	ActionsT extends Actions<ModelsT> = Actions<ModelsT>,
 > extends TypedEventEmitter<CanvasEvents> {
+	public static namespace = "canvas"
+	public static version = 1
 	public static async initialize<ModelsT extends ModelSchema, ActionsT extends Actions<ModelsT> = Actions<ModelsT>>(
 		config: Config<ModelsT, ActionsT>,
 	): Promise<Canvas<ModelsT, ActionsT>> {
@@ -113,6 +115,8 @@ export class Canvas<
 				validatePayload: validatePayload,
 				verifySignature: verifySignature,
 				schema: { ...config.schema, ...runtime.schema },
+
+				version: { [Canvas.namespace]: Canvas.version },
 			},
 		)
 

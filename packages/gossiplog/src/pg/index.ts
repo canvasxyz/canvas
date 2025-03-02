@@ -18,6 +18,9 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 		const db = await ModelDB.open(uri, {
 			models: { ...init.schema, ...AbstractGossipLog.schema },
 			clear: clear,
+			version: Object.assign(init.version ?? {}, {
+				[AbstractGossipLog.namespace]: AbstractGossipLog.version,
+			}),
 		})
 
 		const messageCount = await db.count("$messages")

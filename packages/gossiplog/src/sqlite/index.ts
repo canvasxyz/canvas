@@ -17,6 +17,9 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 			const db = await ModelDB.open({
 				path: null,
 				models: { ...init.schema, ...AbstractGossipLog.schema },
+				version: Object.assign(init.version ?? {}, {
+					[AbstractGossipLog.namespace]: AbstractGossipLog.version,
+				}),
 			})
 
 			const tree = new MemoryTree({ mode: Mode.Index })
@@ -30,6 +33,9 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 			const db = await ModelDB.open({
 				path: `${directory}/db.sqlite`,
 				models: { ...init.schema, ...AbstractGossipLog.schema },
+				version: Object.assign(init.version ?? {}, {
+					[AbstractGossipLog.namespace]: AbstractGossipLog.version,
+				}),
 			})
 
 			const tree = new PersistentTree(`${directory}/message-index`, {

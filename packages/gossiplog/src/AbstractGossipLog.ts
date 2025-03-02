@@ -38,6 +38,7 @@ export interface GossipLogInit<Payload = unknown, Result = any> {
 
 	/** add extra tables to the local database for private use */
 	schema?: ModelSchema
+	version?: Record<string, number>
 }
 
 export type GossipLogEvents<Payload = unknown, Result = any> = {
@@ -60,6 +61,8 @@ export type MessageRecord<Payload> = {
 export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends TypedEventEmitter<
 	GossipLogEvents<Payload, Result>
 > {
+	public static namespace = "gossiplog"
+	public static version = 1
 	public static schema = {
 		$messages: {
 			id: "primary",

@@ -10,16 +10,16 @@ import { MerkleIndex } from "../MerkleIndex.js"
 
 export interface Options {
 	name?: string
-	version?: number
 }
 
 export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
-	public static namespace = "gossiplog"
 	public static async open<Payload>({ name, ...init }: GossipLogInit<Payload> & Options) {
 		const db = await ModelDB.open({
 			name: name ?? `canvas/v1/${init.topic}`,
 			models: { ...init.schema, ...AbstractGossipLog.schema },
-			version: { [GossipLog.namespace]: 1 },
+			version: Object.assign(init.version ?? {}, {
+				[AbstractGossipLog.namespace]: AbstractGossipLog.version,
+			}),
 		})
 
 		const messageCount = await db.count("$messages")

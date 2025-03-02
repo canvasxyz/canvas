@@ -41,7 +41,9 @@ export class ModelDB extends AbstractModelDB {
 			[AbstractModelDB.namespace]: AbstractModelDB.version,
 		})
 
+		console.log("opening modeldb-idb")
 		const sum = Object.values(newVersion).reduce((sum, value) => sum + value, 0)
+		console.log("got version sum", sum)
 		const db = await openDB(name, sum, {
 			async upgrade(
 				db: IDBPDatabase<unknown>,

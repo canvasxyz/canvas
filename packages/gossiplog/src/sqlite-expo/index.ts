@@ -13,6 +13,9 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 		const db = await ModelDB.open({
 			path: null,
 			models: { ...init.schema, ...AbstractGossipLog.schema },
+			version: Object.assign(init.version ?? {}, {
+				[AbstractGossipLog.namespace]: AbstractGossipLog.version,
+			}),
 			// clear: init.clear,
 		})
 
