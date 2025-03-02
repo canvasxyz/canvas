@@ -334,7 +334,7 @@ export async function handler(args: Args) {
 		console.log(`└ POST ${origin}/api/session`)
 		console.log(`└ POST ${origin}/api/sessions/count`)
 
-		const { models, actions } = app.getApplicationData()
+		const { models, actions } = await app.getApplicationData()
 		for (const name of Object.keys(models)) {
 			console.log(`└ GET  ${origin}/api/models/${name}`)
 			console.log(`└ GET  ${origin}/api/models/${name}/:key`)
