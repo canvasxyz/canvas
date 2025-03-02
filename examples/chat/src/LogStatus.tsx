@@ -12,19 +12,21 @@ export const LogStatus: React.FC<LogStatusProps> = ({}) => {
 	const { app } = useContext(AppContext)
 
 	const [root, setRoot] = useState<string | null>(null)
-	const [heads, setHeads] = useState<string[] | null>(null)
+	const [heads, setHeads] = useState<MessageId[] | null>(null)
 	useEffect(() => {
 		if (app === null) {
 			return
 		}
 
 		app.messageLog.tree.read((txn) => txn.getRoot()).then((root) => setRoot(`${root.level}:${bytesToHex(root.hash)}`))
-		app.db.getAll<{ id: string }>("$heads").then((records) => setHeads(records.map((record) => record.id)))
+		app.db
+			.getAll<{ id: string }>("$heads")
+			.then((records) => setHeads(records.map((record) => MessageId.encode(record.id))))
 
 		const handleCommit = ({ detail: { root, heads } }: CanvasEvents["commit"]) => {
 			const rootValue = `${root.level}:${bytesToHex(root.hash)}`
 			setRoot(rootValue)
-			setHeads(heads)
+			setHeads(heads.map(MessageId.encode))
 		}
 
 		app.addEventListener("commit", handleCommit)
@@ -50,9 +52,9 @@ export const LogStatus: React.FC<LogStatusProps> = ({}) => {
 				{heads !== null ? (
 					<ul className="list-disc pl-4">
 						{heads.map((head) => (
-							<li key={head}>
-								<code className="text-sm">{head}</code>
-								<span className="text-sm ml-2 text-gray-500">(clock: {MessageId.encode(head).clock})</span>
+							<li key={head.id}>
+								<code className="text-sm">{head.id}</code>
+								<span className="text-sm ml-2 text-gray-500">(clock: {head.clock})</span>
 							</li>
 						))}
 					</ul>
