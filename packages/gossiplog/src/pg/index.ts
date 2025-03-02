@@ -12,13 +12,15 @@ import { MerkleIndex } from "../MerkleIndex.js"
 
 export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 	public static async open<Payload>(
-		connectionConfig: string | pg.ConnectionConfig,
+		uri: string | pg.ConnectionConfig,
 		{ clear, ...init }: GossipLogInit<Payload> & { clear?: boolean },
 	) {
-		const db = await ModelDB.initialize({
-			connectionConfig,
+		const db = await ModelDB.open(uri, {
 			models: { ...init.schema, ...AbstractGossipLog.schema },
 			clear: clear,
+			version: Object.assign(init.version ?? {}, {
+				[AbstractGossipLog.namespace]: AbstractGossipLog.version,
+			}),
 		})
 
 		const messageCount = await db.count("$messages")

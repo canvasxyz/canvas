@@ -1,4 +1,8 @@
 import "fake-indexeddb/auto"
+import os from "node:os"
+import fs from "node:fs"
+import path from "node:path"
+
 import test, { ExecutionContext } from "ava"
 import { nanoid } from "nanoid"
 
@@ -64,7 +68,7 @@ export const testPlatforms = (
 
 	if (platforms.sqlite) {
 		test(`Sqlite - ${name}`, macro, async (t, models) => {
-			const mdb = new ModelDBSqlite({ path: null, models })
+			const mdb = await ModelDBSqlite.open({ path: null, models })
 			t.teardown(() => mdb.close())
 			return mdb
 		})
@@ -72,7 +76,7 @@ export const testPlatforms = (
 
 	if (platforms.idb) {
 		test(`IDB - ${name}`, macro, async (t, models) => {
-			const mdb = await ModelDBIdb.initialize({ name: nanoid(), models })
+			const mdb = await ModelDBIdb.open({ name: nanoid(), models })
 			t.teardown(() => mdb.close())
 			return mdb
 		})
@@ -80,7 +84,7 @@ export const testPlatforms = (
 
 	if (platforms.pg) {
 		test.serial(`Postgres - ${name}`, macro, async (t, models) => {
-			const mdb = await ModelDBPostgres.initialize({ connectionConfig, models, clear: true })
+			const mdb = await ModelDBPostgres.open(connectionConfig, { models, clear: true })
 			t.teardown(() => mdb.close())
 			return mdb
 		})
@@ -104,7 +108,7 @@ export const testPlatforms = (
 
 	if (platforms.sqliteWasm) {
 		test.serial(`Sqlite Wasm - ${name}`, macro, async (t, models) => {
-			const mdb = await ModelDBSqliteWasm.initialize({ models, path: null })
+			const mdb = await ModelDBSqliteWasm.open({ models, path: null })
 			t.teardown(() => mdb.close())
 			return mdb
 		})
@@ -125,4 +129,15 @@ export async function collect<T>(iter: AsyncIterable<T>): Promise<T[]> {
 		values.push(value)
 	}
 	return values
+}
+
+export function getDirectory(t: ExecutionContext<unknown>): string {
+	const directory = path.resolve(os.tmpdir(), nanoid())
+	fs.mkdirSync(directory)
+	t.log("Created temporary directory", directory)
+	t.teardown(() => {
+		fs.rmSync(directory, { recursive: true })
+		t.log("Removed temporary directory", directory)
+	})
+	return directory
 }

@@ -2,6 +2,8 @@ import { OpfsDatabase, PreparedStatement } from "@sqlite.org/sqlite-wasm"
 
 import { SqlitePrimitiveValue } from "./encoding.js"
 
+export const quote = (name: string) => `"${name}"`
+
 export class Query<
 	P extends SqlitePrimitiveValue[] = SqlitePrimitiveValue[],
 	R extends Record<string, SqlitePrimitiveValue> = Record<string, SqlitePrimitiveValue>,

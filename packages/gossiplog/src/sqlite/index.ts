@@ -9,35 +9,46 @@ import { ModelDB } from "@canvas-js/modeldb-sqlite"
 import { AbstractGossipLog, GossipLogInit } from "../AbstractGossipLog.js"
 
 export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
-	public readonly db: ModelDB
-	public readonly tree: Tree
-
-	public constructor({ directory = null, ...init }: { directory?: string | null } & GossipLogInit<Payload>) {
-		super(init)
-
+	public static async open<Payload>(
+		directory: string | null,
+		init: GossipLogInit<Payload>,
+	): Promise<GossipLog<Payload>> {
 		if (directory === null) {
-			this.tree = new MemoryTree({ mode: Mode.Index })
-			this.db = new ModelDB({
+			const db = await ModelDB.open({
 				path: null,
 				models: { ...init.schema, ...AbstractGossipLog.schema },
+				version: Object.assign(init.version ?? {}, {
+					[AbstractGossipLog.namespace]: AbstractGossipLog.version,
+				}),
 			})
+
+			const tree = new MemoryTree({ mode: Mode.Index })
+
+			return new GossipLog(db, tree, init)
 		} else {
 			if (!fs.existsSync(directory)) {
 				fs.mkdirSync(directory, { recursive: true })
 			}
+
+			const db = await ModelDB.open({
+				path: `${directory}/db.sqlite`,
+				models: { ...init.schema, ...AbstractGossipLog.schema },
+				version: Object.assign(init.version ?? {}, {
+					[AbstractGossipLog.namespace]: AbstractGossipLog.version,
+				}),
+			})
 
 			const tree = new PersistentTree(`${directory}/message-index`, {
 				mode: Mode.Index,
 				mapSize: 0xffffffff,
 			})
 
-			this.tree = tree
-
-			this.db = new ModelDB({
-				path: `${directory}/db.sqlite`,
-				models: { ...init.schema, ...AbstractGossipLog.schema },
-			})
+			return new GossipLog(db, tree, init)
 		}
+	}
+
+	private constructor(public readonly db: ModelDB, public readonly tree: Tree, init: GossipLogInit<Payload>) {
+		super(init)
 	}
 
 	protected async rebuildMerkleIndex(): Promise<void> {

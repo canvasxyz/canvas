@@ -25,7 +25,7 @@ const peerId = peerIdFromPrivateKey(privateKey)
 
 const directory = `data/${bytesToHex(randomBytes(8))}`
 console.log("[server] Using directory", directory)
-const gossipLog = new GossipLog<string>({ directory, topic, apply: () => {} })
+const gossipLog = await GossipLog.open<string>(directory, { topic, apply: () => {} })
 
 const socket = await Socket.open(`ws://dashboard:8000`, peerId, gossipLog)
 

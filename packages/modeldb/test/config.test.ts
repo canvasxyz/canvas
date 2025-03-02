@@ -30,6 +30,7 @@ test("parse config", (t) => {
 	})
 
 	t.deepEqual(config.models, [
+		...Object.values(Config.baseModels),
 		{
 			name: "user",
 			indexes: [],
@@ -43,7 +44,7 @@ test("parse config", (t) => {
 		},
 		{
 			name: "room",
-			indexes: [["id", "creator"]],
+			indexes: [["members"], ["id", "creator"]],
 			primaryKey: ["id"],
 			properties: [
 				{ name: "id", kind: "primitive", type: "string", nullable: false },
