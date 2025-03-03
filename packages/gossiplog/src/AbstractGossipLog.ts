@@ -4,7 +4,7 @@ import { equals, toString } from "uint8arrays"
 
 import { Node, Tree, ReadWriteTransaction, hashEntry } from "@canvas-js/okra"
 import type { Signature, Signer, Message, Awaitable } from "@canvas-js/interfaces"
-import type { AbstractModelDB, ModelSchema, Effect } from "@canvas-js/modeldb"
+import type { AbstractModelDB, ModelSchema, Effect, DatabaseUpgradeAPI } from "@canvas-js/modeldb"
 import { ed25519 } from "@canvas-js/signatures"
 import { assert, zip, prepare, prepareMessage } from "@canvas-js/utils"
 
@@ -40,6 +40,11 @@ export interface GossipLogInit<Payload = unknown, Result = any> {
 	/** add extra tables to the local database for private use */
 	schema?: ModelSchema
 	version?: Record<string, number>
+	upgrade?: (
+		upgradeAPI: DatabaseUpgradeAPI,
+		oldVersion: Record<string, number>,
+		newVersion: Record<string, number>,
+	) => Awaitable<void>
 }
 
 export type GossipLogEvents<Payload = unknown, Result = any> = {
