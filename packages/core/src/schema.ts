@@ -39,15 +39,14 @@ type Snapshot struct {
   effects   [SnapshotEffect]
 }
 
-type Update = {
-	model: string
-	key: string
-	diff: Uint8Array
+type Update struct {
+  model     String
+  key       String
+  diff      Bytes
 }
 
-type Updates = {
-	type: "updates"
-	updates: Update[]
+type Updates struct {
+  updates   [Update]
 }
 
 type Payload union {
