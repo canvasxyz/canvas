@@ -241,7 +241,11 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		payload: T,
 		{ signer = this.signer }: { signer?: Signer<Payload> } = {},
 	): Promise<SignedMessage<T, Result> & { result: Result }> {
-		const { signedMessage, applyResult } = await this.tree.write(async (txn) => {
+		let root: Node | null = null
+		let heads: string[] | null = null
+		let result: Result | undefined = undefined
+
+		const signedMessage = await this.tree.write(async (txn) => {
 			const [clock, parents] = await this.getClock()
 
 			const message: Message<T> = {
@@ -258,12 +262,17 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 
 			const applyResult = await this.apply(txn, signedMessage)
 
-			return { signedMessage, applyResult }
+			root = applyResult.root
+			heads = applyResult.heads
+			result = applyResult.result
+
+			return signedMessage
 		})
 
-		assert(applyResult.root !== null && applyResult.heads !== null, "failed to commit transaction")
-		this.dispatchEvent(new CustomEvent("commit", { detail: { root: applyResult.root, heads: applyResult.heads } }))
+		assert(root !== null && heads !== null, "failed to commit transaction")
+		this.dispatchEvent(new CustomEvent("commit", { detail: { root, heads } }))
 
+		signedMessage.result = result
 		return signedMessage as SignedMessage<T, Result> & { result: Result }
 	}
 
@@ -302,7 +311,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 	private async apply(
 		txn: ReadWriteTransaction,
 		signedMessage: SignedMessage<Payload>,
-	): Promise<{ root: Node; heads: string[]; result: Result | void }> {
+	): Promise<{ root: Node; heads: string[]; result: Result }> {
 		const { id, signature, message, key, value } = signedMessage
 		this.log.trace("applying %s %O", id, message)
 
