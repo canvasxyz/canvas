@@ -29,7 +29,7 @@ export type ReadRecord = {
 }
 
 export type VersionRecord = {
-	id: string
+	record_id: string
 	model: string
 	key: PrimaryKeyValue[]
 	version: string
@@ -57,7 +57,7 @@ export type ActionRecord = {
 }
 
 export abstract class AbstractRuntime {
-	protected static effectsModel = {
+	public static effectsModel = {
 		$writes: {
 			$primary: "record_id/message_id",
 			$indexes: ["record_id/csx/message_id", "message_id/record_id/csx"],
@@ -76,16 +76,14 @@ export abstract class AbstractRuntime {
 			csx: "integer",
 		},
 
-		$records: { id: "primary", model: "string", key: "json", version: "string" },
-	} satisfies ModelSchema
-
-	protected static revertModel = {
 		$reverts: {
 			$primary: "cause_id/effect_id",
 			$indexes: ["effect_id/cause_id"],
 			effect_id: "string",
 			cause_id: "string",
 		},
+
+		$records: { id: "primary", model: "string", key: "json", version: "string" },
 	} satisfies ModelSchema
 
 	protected static sessionsModel = {
@@ -119,7 +117,6 @@ export abstract class AbstractRuntime {
 			...AbstractRuntime.sessionsModel,
 			...AbstractRuntime.actionsModel,
 			...AbstractRuntime.effectsModel,
-			...AbstractRuntime.revertModel,
 			...AbstractRuntime.usersModel,
 		}
 	}
@@ -184,8 +181,9 @@ export abstract class AbstractRuntime {
 					csx: 0,
 				}
 
+				// TODO: update primaryKey type
 				const versionRecord: VersionRecord = {
-					id: recordId,
+					record_id: recordId,
 					model: modelName,
 					key: primaryKey,
 					version: MIN_MESSAGE_ID,
@@ -347,8 +345,9 @@ export abstract class AbstractRuntime {
 					effects.push({ model, operation: "set", value })
 				}
 
+				// TODO: update primaryKey value
 				const versionValue: VersionRecord = {
-					id: recordId,
+					record_id: recordId,
 					model,
 					key: Array.isArray(key) ? key : [key],
 					version: id,
@@ -426,8 +425,9 @@ export abstract class AbstractRuntime {
 					conditionalEffects.push({ model, operation: "set", value })
 				}
 
+				// TODO: update key value
 				const versionValue: VersionRecord = {
-					id: recordId,
+					record_id: recordId,
 					model: model,
 					key: Array.isArray(key) ? key : [key],
 					version: id,
@@ -507,19 +507,19 @@ export abstract class AbstractRuntime {
 
 				const versions = await db.query<VersionRecord>("$records", { where: { version: effectId } })
 				this.log.trace("found %d existing records referencing the reverted action %s", versions.length, effectId)
-				for (const { id, model, key } of versions) {
-					const read = await currentView.getLastValueTransactional(id, revertEffects)
+				for (const { record_id, model, key } of versions) {
+					const read = await currentView.getLastValueTransactional(record_id, revertEffects)
 					if (read === null) {
-						this.log.trace("no other versions of record %s found", id)
-						effects.push({ model: "$records", operation: "delete", key: id })
+						this.log.trace("no other versions of record %s found", record_id)
+						effects.push({ model: "$records", operation: "delete", key: record_id })
 						effects.push({ model, operation: "delete", key })
 					} else {
 						const { value, csx, version } = read
-						this.log.trace("got new version %s of record %s (csx %d)", version, id, csx)
+						this.log.trace("got new version %s of record %s (csx %d)", version, record_id, csx)
 						effects.push({
 							model: "$records",
 							operation: "set",
-							value: { id, model, key, version, csx } satisfies VersionRecord,
+							value: { record_id, model, key, version, csx } satisfies VersionRecord,
 						})
 
 						if (value === null) {
