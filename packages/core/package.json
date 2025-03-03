@@ -69,7 +69,8 @@
 		"quickjs-emscripten": "^0.31.0",
 		"uint8arraylist": "^2.4.8",
 		"uint8arrays": "^5.1.0",
-		"ws": "^8.18.0"
+		"ws": "^8.18.0",
+		"yjs": "^13.6.23"
 	},
 	"devDependencies": {
 		"@canvas-js/chain-cosmos": "0.14.0-next.1",

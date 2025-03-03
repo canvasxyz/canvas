@@ -1,14 +1,26 @@
 import * as cbor from "@ipld/dag-cbor"
 import { blake3 } from "@noble/hashes/blake3"
 import { bytesToHex } from "@noble/hashes/utils"
+import * as Y from "yjs"
 
-import type { Action, MessageType } from "@canvas-js/interfaces"
+import type { Action, MessageType, Updates } from "@canvas-js/interfaces"
 
 import { ModelValue, PropertyValue, validateModelValue, updateModelValues, mergeModelValues } from "@canvas-js/modeldb"
 import { AbstractGossipLog, SignedMessage, MessageId } from "@canvas-js/gossiplog"
 import { assert, mapValues } from "@canvas-js/utils"
 
 export const getKeyHash = (key: string) => bytesToHex(blake3(key, { dkLen: 16 }))
+type YjsCallInsert = {
+	call: "insert"
+	index: number
+	content: string
+}
+type YjsCallDelete = {
+	call: "delete"
+	index: number
+	length: number
+}
+export type YjsCall = YjsCallInsert | YjsCallDelete
 
 export class ExecutionContext {
 	// // recordId -> { version, value }
@@ -18,6 +30,7 @@ export class ExecutionContext {
 	// public readonly writes: Record<string, Effect> = {}
 
 	public readonly modelEntries: Record<string, Record<string, ModelValue | null>>
+	public readonly yjsCalls: Record<string, Record<string, YjsCall[]>> = {}
 	public readonly root: MessageId[]
 
 	constructor(
@@ -136,5 +149,48 @@ export class ExecutionContext {
 		const result = mergeModelValues(value, previousValue)
 		validateModelValue(this.db.models[model], result)
 		this.modelEntries[model][key] = result
+	}
+
+	public async getYDoc(modelName: string, id: string): Promise<Y.Doc | null> {
+		const existingStateEntries = await this.db.query<{ id: string; content: Uint8Array }>(`${modelName}:state`, {
+			where: { id: id },
+			limit: 1,
+		})
+		if (existingStateEntries.length > 0) {
+			const doc = new Y.Doc()
+			Y.applyUpdate(doc, existingStateEntries[0].content)
+			return doc
+		} else {
+			return null
+		}
+	}
+
+	public async generateAdditionalUpdates(): Promise<Updates[]> {
+		const updates = []
+		for (const [model, modelCalls] of Object.entries(this.yjsCalls)) {
+			for (const [key, calls] of Object.entries(modelCalls)) {
+				const doc = (await this.getYDoc(model, key)) || new Y.Doc()
+				// get the initial state of the document
+				const beforeState = Y.encodeStateAsUpdate(doc)
+				for (const call of calls) {
+					if (call.call === "insert") {
+						doc.getText().insert(call.index, call.content)
+					} else if (call.call === "delete") {
+						doc.getText().delete(call.index, call.length)
+					} else {
+						throw new Error("unexpected call type")
+					}
+				}
+				// diff the document with the initial state
+				const afterState = Y.encodeStateAsUpdate(doc)
+				const diff = Y.diffUpdate(afterState, Y.encodeStateVectorFromUpdate(beforeState))
+				updates.push({ model, key, diff })
+			}
+		}
+		if (updates.length > 0) {
+			return [{ type: "updates", updates }]
+		} else {
+			return []
+		}
 	}
 }

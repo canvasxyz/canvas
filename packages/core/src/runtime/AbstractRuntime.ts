@@ -1,14 +1,15 @@
 import * as cbor from "@ipld/dag-cbor"
 import { logger } from "@libp2p/logger"
+import * as Y from "yjs"
 
-import type { Action, Session, Snapshot, SignerCache, Awaitable, MessageType } from "@canvas-js/interfaces"
+import type { Action, Session, Snapshot, SignerCache, Awaitable, MessageType, Updates } from "@canvas-js/interfaces"
 
 import { AbstractModelDB, Effect, ModelSchema } from "@canvas-js/modeldb"
 import { GossipLogConsumer, MAX_MESSAGE_ID, AbstractGossipLog, SignedMessage } from "@canvas-js/gossiplog"
 import { assert } from "@canvas-js/utils"
 
 import { ExecutionContext, getKeyHash } from "../ExecutionContext.js"
-import { isAction, isSession, isSnapshot } from "../utils.js"
+import { isAction, isSession, isSnapshot, isUpdates } from "../utils.js"
 
 export type EffectRecord = { key: string; value: Uint8Array | null; branch: number; clock: number }
 
@@ -63,8 +64,32 @@ export abstract class AbstractRuntime {
 	} satisfies ModelSchema
 
 	protected static getModelSchema(schema: ModelSchema): ModelSchema {
+		const outputSchema: ModelSchema = {}
+		for (const [modelName, modelSchema] of Object.entries(schema)) {
+			// @ts-ignore
+			if (modelSchema.content === "yjs-doc") {
+				if (
+					Object.entries(modelSchema).length !== 2 &&
+					// @ts-ignore
+					modelSchema.id !== "primary"
+				) {
+					// not valid
+					throw new Error("yjs-doc tables must have two columns, one of which is 'id'")
+				} else {
+					// this table stores the current state of the Yjs document
+					// we just need one entry per document because updates are commutative
+					outputSchema[`${modelName}:state`] = {
+						id: "primary",
+						content: "bytes",
+					}
+				}
+			} else {
+				outputSchema[modelName] = modelSchema
+			}
+		}
+
 		return {
-			...schema,
+			...outputSchema,
 			...AbstractRuntime.sessionsModel,
 			...AbstractRuntime.actionsModel,
 			...AbstractRuntime.effectsModel,
@@ -76,6 +101,8 @@ export abstract class AbstractRuntime {
 	public abstract readonly signers: SignerCache
 	public abstract readonly schema: ModelSchema
 	public abstract readonly actionNames: string[]
+
+	public readonly additionalUpdates = new Map<string, Updates[]>()
 
 	protected readonly log = logger("canvas:runtime")
 	#db: AbstractModelDB | null = null
@@ -99,6 +126,7 @@ export abstract class AbstractRuntime {
 		const handleSession = this.handleSession.bind(this)
 		const handleAction = this.handleAction.bind(this)
 		const handleSnapshot = this.handleSnapshot.bind(this)
+		const handleUpdates = this.handleUpdates.bind(this)
 
 		return async function (this: AbstractGossipLog<MessageType>, signedMessage) {
 			if (isSession(signedMessage)) {
@@ -107,6 +135,8 @@ export abstract class AbstractRuntime {
 				return await handleAction(signedMessage, this)
 			} else if (isSnapshot(signedMessage)) {
 				return await handleSnapshot(signedMessage, this)
+			} else if (isUpdates(signedMessage)) {
+				return await handleUpdates(signedMessage, this)
 			} else {
 				throw new Error("invalid message payload type")
 			}
@@ -247,6 +277,33 @@ export abstract class AbstractRuntime {
 			throw err
 		}
 
+		this.additionalUpdates.set(id, await executionContext.generateAdditionalUpdates())
+
 		return result
+	}
+
+	private async handleUpdates(signedMessage: SignedMessage<Updates>, messageLog: AbstractGossipLog<MessageType>) {
+		const effects: Effect[] = []
+		for (const { model, key, diff } of signedMessage.message.payload.updates) {
+			const existingStateEntries = await this.db.query<{ id: string; content: Uint8Array }>(`${model}:state`, {
+				where: { id: key },
+				limit: 1,
+			})
+
+			// apply the diff to the doc
+			const doc = new Y.Doc()
+			if (existingStateEntries.length > 0) {
+				Y.applyUpdate(doc, existingStateEntries[0].content)
+			}
+			Y.applyUpdate(doc, diff)
+			const newContent = Y.encodeStateAsUpdate(doc)
+
+			effects.push({
+				model: `${model}:state`,
+				operation: "set",
+				value: { id: key, content: newContent },
+			})
+		}
+		await this.db.apply(effects)
 	}
 }

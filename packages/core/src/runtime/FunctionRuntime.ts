@@ -173,6 +173,16 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 					this.releaseLock()
 				}
 			},
+			yjsInsert: async (model: string, key: string, index: number, content: string) => {
+				this.context.yjsCalls[model] ||= {}
+				this.context.yjsCalls[model][key] ||= []
+				this.context.yjsCalls[model][key].push({ call: "insert", index, content })
+			},
+			yjsDelete: async (model: string, key: string, index: number, length: number) => {
+				this.context.yjsCalls[model] ||= {}
+				this.context.yjsCalls[model][key] ||= []
+				this.context.yjsCalls[model][key].push({ call: "delete", index, length })
+			},
 		}
 	}
 

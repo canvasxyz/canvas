@@ -11,16 +11,7 @@ import {
 
 import { AbiCoder } from "ethers/abi"
 
-import type {
-	Action,
-	Message,
-	Session,
-	Snapshot,
-	Signature,
-	SignatureScheme,
-	Signer,
-	MessageType,
-} from "@canvas-js/interfaces"
+import type { Message, Signature, SignatureScheme, Signer, MessageType } from "@canvas-js/interfaces"
 import { decodeURI, encodeURI } from "@canvas-js/signatures"
 import { assert, prepareMessage, signalInvalidType } from "@canvas-js/utils"
 
@@ -137,6 +128,8 @@ export class Secp256k1DelegateSigner implements Signer<MessageType<Eip712Session
 		} else if (payload.type === "snapshot") {
 			throw new Error("snapshots not supported for Secp256k1DelegateSigner")
 			// snapshots must be in an EVM-friendly onchain data format before we can support them here
+		} else if (payload.type === "updates") {
+			throw new Error("updates not supported for Secp256k1DelegateSigner")
 		} else {
 			signalInvalidType(payload)
 		}
@@ -253,6 +246,8 @@ export const Secp256k1SignatureScheme: SignatureScheme<MessageType<Eip712Session
 			assert(recoveredAddress === sessionAddress, "invalid EIP-712 session signature")
 		} else if (payload.type === "snapshot") {
 			throw new Error("snapshots not supported for Secp256k1DelegateSigner")
+		} else if (payload.type === "updates") {
+			throw new Error("updates not supported for Secp256k1DelegateSigner")
 		} else {
 			signalInvalidType(payload)
 		}

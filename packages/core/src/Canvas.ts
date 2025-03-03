@@ -5,16 +5,7 @@ import type pg from "pg"
 import type { SqlStorage } from "@cloudflare/workers-types"
 import { bytesToHex } from "@noble/hashes/utils"
 
-import {
-	Signature,
-	Action,
-	Session,
-	Message,
-	Snapshot,
-	SessionSigner,
-	SignerCache,
-	MessageType,
-} from "@canvas-js/interfaces"
+import { Signature, Action, Message, Snapshot, SessionSigner, SignerCache, MessageType } from "@canvas-js/interfaces"
 import { AbstractModelDB, Model, ModelSchema, Effect } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { AbstractGossipLog, GossipLogEvents, NetworkClient, SignedMessage } from "@canvas-js/gossiplog"
@@ -192,6 +183,8 @@ export class Canvas<
 						app.log("indexing user %s (did: %s)", publicKey, did)
 						const record = { did }
 						effects.push({ operation: "set", model: "$dids", value: record })
+					} else if (message.payload.type === "updates") {
+						// TODO: handle updates
 					}
 					start = id
 				}
@@ -293,6 +286,14 @@ export class Canvas<
 
 				this.log("applied action %s", id)
 
+				for (const additionalUpdate of this.runtime.additionalUpdates.get(id) || []) {
+					await this.messageLog.append(additionalUpdate)
+				}
+
+				this.runtime.additionalUpdates.delete(id)
+
+				this.log("applied additional updates for action %s", id)
+
 				return { id, signature, message, result }
 			}
 
@@ -377,7 +378,7 @@ export class Canvas<
 
 	public async getApplicationData(): Promise<ApplicationData> {
 		const models = Object.fromEntries(Object.entries(this.db.models).filter(([name]) => !name.startsWith("$")))
-		const root = (await this.messageLog.tree.read((txn) => txn.getRoot()))
+		const root = await this.messageLog.tree.read((txn) => txn.getRoot())
 		const heads = await this.db.query<{ id: string }>("$heads").then((records) => records.map((record) => record.id))
 
 		return {
