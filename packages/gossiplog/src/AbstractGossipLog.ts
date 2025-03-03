@@ -19,7 +19,7 @@ import type { SyncSnapshot } from "./interface.js"
 import { AncestorIndex } from "./AncestorIndex.js"
 import { BranchMergeIndex } from "./BranchMergeIndex.js"
 import { MessageSource, SignedMessage } from "./SignedMessage.js"
-import { decodeId, encodeId, MessageId, messageIdPattern } from "./MessageId.js"
+import { decodeId, encodeId, messageIdPattern, MessageId } from "./MessageId.js"
 import { getNextClock } from "./schema.js"
 import { gossiplogTopicPattern } from "./utils.js"
 
@@ -83,10 +83,6 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		...AncestorIndex.schema,
 		...BranchMergeIndex.schema,
 	} satisfies ModelSchema
-
-	// protected static 				version: Object.assign(init.version ?? {}, {
-	// 	[AbstractGossipLog.namespace]: AbstractGossipLog.version,
-	// }),
 
 	protected static async upgrade(
 		upgradeAPI: DatabaseUpgradeAPI,

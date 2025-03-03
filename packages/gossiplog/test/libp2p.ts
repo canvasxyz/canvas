@@ -155,21 +155,19 @@ export async function waitForInitialSync<Payload>(
 	await Promise.all(links.map(([source, target]) => [wait(source, target), wait(target, source)]).flat())
 }
 
-type Result = { id: string; signature: Signature; message: Message }
-
 export async function waitForMessageDelivery<Payload>(
 	t: ExecutionContext<unknown>,
 	network: Record<string, NetworkNode<Payload>>,
-	match: (id: string, signature: Signature, message: Message) => boolean,
-): Promise<Result> {
+	match: (signedMessage: SignedMessage) => boolean,
+): Promise<SignedMessage> {
 	const results = await Promise.all(
 		Object.entries(network).map(([name, { messageLog, libp2p }]) => {
 			const peerId = libp2p.peerId.toString()
-			const deferred = pDefer<Result>()
-			const handler = ({ detail: { id, signature, message } }: CustomEvent<SignedMessage>) => {
-				if (match(id, signature, message)) {
-					t.log(`delivered ${id} to peer ${name} (${peerId})`)
-					deferred.resolve({ id, signature, message })
+			const deferred = pDefer<SignedMessage>()
+			const handler = ({ detail: signedMessage }: CustomEvent<SignedMessage>) => {
+				if (match(signedMessage)) {
+					t.log(`delivered ${signedMessage.id} to peer ${name} (${peerId})`)
+					deferred.resolve(signedMessage)
 				}
 			}
 
