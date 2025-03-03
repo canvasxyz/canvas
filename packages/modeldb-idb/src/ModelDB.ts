@@ -308,6 +308,7 @@ export class ModelDB extends AbstractModelDB {
 
 	private async createModel(txn: IDBPTransaction<unknown, string[], "versionchange">, name: string, init: ModelInit) {
 		const model = this.config.createModel(name, init)
+		ModelDB.createModel(this.db, model)
 		this.models[name] = model
 		this.#models[name] = new ModelAPI(model)
 		await this.#models.$models.set(txn, { name, model })
