@@ -292,7 +292,9 @@ export abstract class AbstractRuntime {
 
 			// apply the diff to the doc
 			const doc = new Y.Doc()
-			Y.applyUpdate(doc, existingStateEntries[0].content)
+			if (existingStateEntries.length > 0) {
+				Y.applyUpdate(doc, existingStateEntries[0].content)
+			}
 			Y.applyUpdate(doc, diff)
 			const newContent = Y.encodeStateAsUpdate(doc)
 
