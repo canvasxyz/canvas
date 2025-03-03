@@ -1,7 +1,7 @@
 import * as json from "@ipld/dag-json"
 import { StatusCodes } from "http-status-codes"
 
-import type { Action, Message, MessageType, Session, SessionSigner, Signer } from "@canvas-js/interfaces"
+import type { Message, MessageType, SessionSigner, Signer } from "@canvas-js/interfaces"
 import { assert } from "@canvas-js/utils"
 
 export class Client {

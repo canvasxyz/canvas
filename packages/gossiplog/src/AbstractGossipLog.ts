@@ -8,6 +8,7 @@ import type { AbstractModelDB, ModelSchema, Effect } from "@canvas-js/modeldb"
 import { ed25519 } from "@canvas-js/signatures"
 import { assert, zip, prepare, prepareMessage } from "@canvas-js/utils"
 
+import type { NetworkClient } from "@canvas-js/gossiplog"
 import type { NetworkConfig, ServiceMap } from "@canvas-js/gossiplog/libp2p"
 import { AbortError, MessageNotFoundError, MissingParentError } from "@canvas-js/gossiplog/errors"
 import * as sync from "@canvas-js/gossiplog/sync"
@@ -39,6 +40,7 @@ export interface GossipLogInit<Payload = unknown, Result = any> {
 
 	/** add extra tables to the local database for private use */
 	schema?: ModelSchema
+	version?: Record<string, number>
 }
 
 export type GossipLogEvents<Payload = unknown, Result = any> = {
@@ -61,6 +63,8 @@ export type MessageRecord<Payload> = {
 export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends TypedEventEmitter<
 	GossipLogEvents<Payload, Result>
 > {
+	public static namespace = "gossiplog"
+	public static version = 1
 	public static schema = {
 		$messages: {
 			id: "primary",
@@ -133,8 +137,8 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		})
 	}
 
-	public async connect(url: string, options: { signal?: AbortSignal } = {}): Promise<void> {
-		await target.connect(this, url, options)
+	public async connect(url: string, options: { signal?: AbortSignal } = {}): Promise<NetworkClient<any>> {
+		return await target.connect(this, url, options)
 	}
 
 	public async listen(port: number, options: { signal?: AbortSignal } = {}): Promise<void> {
@@ -176,7 +180,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 	}
 
 	public async getClock(): Promise<[clock: number, heads: string[]]> {
-		const heads = await this.db.query<{ id: string }>("$heads", { orderBy: { id: "asc" } })
+		const heads = await this.db.getAll<{ id: string }>("$heads")
 		const ids = heads.map(({ id }) => id)
 		const clock = getNextClock(ids.map(encodeId))
 		return [clock, ids]
@@ -198,16 +202,19 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		return this.encode(signature, message, { branch })
 	}
 
-	public getMessages(
+	public async getMessages(
 		range: { lt?: string; lte?: string; gt?: string; gte?: string; reverse?: boolean; limit?: number } = {},
 	): Promise<{ id: string; signature: Signature; message: Message<Payload>; branch: number }[]> {
 		const { reverse = false, limit, ...where } = range
-		return this.db.query<{ id: string; signature: Signature; message: Message<Payload>; branch: number }>("$messages", {
-			where: { id: where },
-			select: { id: true, signature: true, message: true, branch: true },
-			orderBy: { id: reverse ? "desc" : "asc" },
-			limit,
-		})
+		return await this.db.query<{ id: string; signature: Signature; message: Message<Payload>; branch: number }>(
+			"$messages",
+			{
+				where: { id: where },
+				select: { id: true, signature: true, message: true, branch: true },
+				orderBy: { id: reverse ? "desc" : "asc" },
+				limit,
+			},
+		)
 	}
 
 	public async *iterate(
@@ -345,9 +352,9 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		const messageRecord: MessageRecord<Payload> = { id, signature, message, hash, branch, clock: message.clock }
 
 		const heads: string[] = await this.db
-			.query<{ id: string }>("$heads", { select: { id: true } })
+			.getAll<{ id: string }>("$heads")
+			.then((heads) => heads.filter((head) => message.parents.includes(head.id)))
 			.then((heads) => heads.map((head) => head.id))
-			.then((heads) => heads.filter((head) => message.parents.includes(head)))
 
 		await this.db.apply([
 			...heads.map<Effect>((head) => ({ model: "$heads", operation: "delete", key: head })),

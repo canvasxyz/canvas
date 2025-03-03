@@ -35,7 +35,7 @@ const target: PlatformTarget = {
 	) {
 		if (location.path === null) {
 			const { GossipLog: SqliteGossipLog } = await import("@canvas-js/gossiplog/sqlite")
-			return new SqliteGossipLog(init)
+			return await SqliteGossipLog.open(null, init)
 		} else if (isPostgres(location.path)) {
 			const { GossipLog: PostgresGossipLog } = await import("@canvas-js/gossiplog/pg")
 			return await PostgresGossipLog.open(location.path as string | pg.ConnectionConfig, {
@@ -45,7 +45,7 @@ const target: PlatformTarget = {
 		} else {
 			assert(typeof location.path === "string", 'expected typeof location.path === "string"')
 			const { GossipLog: SqliteGossipLog } = await import("@canvas-js/gossiplog/sqlite")
-			const gossipLog = new SqliteGossipLog({ directory: location.path, ...init })
+			const gossipLog = await SqliteGossipLog.open(location.path, init)
 
 			const manifestPath = path.resolve(location.path, "canvas.json")
 			try {

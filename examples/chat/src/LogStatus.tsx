@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useState } from "react"
 import { bytesToHex } from "@noble/hashes/utils"
 
 import type { CanvasEvents } from "@canvas-js/core"
+import { MessageId } from "@canvas-js/gossiplog"
 
 import { AppContext } from "./AppContext.js"
 
@@ -11,19 +12,21 @@ export const LogStatus: React.FC<LogStatusProps> = ({}) => {
 	const { app } = useContext(AppContext)
 
 	const [root, setRoot] = useState<string | null>(null)
-	const [heads, setHeads] = useState<string[] | null>(null)
+	const [heads, setHeads] = useState<MessageId[] | null>(null)
 	useEffect(() => {
 		if (app === null) {
 			return
 		}
 
 		app.messageLog.tree.read((txn) => txn.getRoot()).then((root) => setRoot(`${root.level}:${bytesToHex(root.hash)}`))
-		app.db.query<{ id: string }>("$heads").then((records) => setHeads(records.map((record) => record.id)))
+		app.db
+			.getAll<{ id: string }>("$heads")
+			.then((records) => setHeads(records.map((record) => MessageId.encode(record.id))))
 
 		const handleCommit = ({ detail: { root, heads } }: CanvasEvents["commit"]) => {
 			const rootValue = `${root.level}:${bytesToHex(root.hash)}`
 			setRoot(rootValue)
-			setHeads(heads)
+			setHeads(heads.map(MessageId.encode))
 		}
 
 		app.addEventListener("commit", handleCommit)
@@ -49,8 +52,9 @@ export const LogStatus: React.FC<LogStatusProps> = ({}) => {
 				{heads !== null ? (
 					<ul className="list-disc pl-4">
 						{heads.map((head) => (
-							<li key={head}>
-								<code className="text-sm">{head}</code>
+							<li key={head.id}>
+								<code className="text-sm">{head.id}</code>
+								<span className="text-sm ml-2 text-gray-500">(clock: {head.clock})</span>
 							</li>
 						))}
 					</ul>

@@ -14,6 +14,16 @@ import { assert, signalInvalidType } from "@canvas-js/utils"
 
 export type SqlitePrimitiveValue = null | number | string | Uint8Array
 
+export const columnTypes = {
+	integer: "INTEGER",
+	float: "FLOAT",
+	number: "FLOAT",
+	string: "TEXT",
+	bytes: "BLOB",
+	boolean: "INTEGER",
+	json: "TEXT",
+} satisfies Record<PrimitiveType, string>
+
 export const Encoder = {
 	encodePrimitiveValue(
 		propertyName: string,

@@ -1,8 +1,8 @@
 import type { ModelValue, ModelValueWithIncludes } from "@canvas-js/modeldb"
 
-import { testOnModelDB } from "./utils.js"
+import { testPlatforms } from "./utils.js"
 
-testOnModelDB("subscriptions", async (t, openDB) => {
+testPlatforms("subscriptions", async (t, openDB) => {
 	const db = await openDB(t, {
 		user: { address: "primary" },
 		room: {
@@ -30,7 +30,7 @@ testOnModelDB("subscriptions", async (t, openDB) => {
 	])
 })
 
-testOnModelDB("subscriptions (filtering on model and query)", async (t, openDB) => {
+testPlatforms("subscriptions (filtering on model and query)", async (t, openDB) => {
 	const db = await openDB(t, {
 		user: { address: "primary" },
 		room: {
@@ -71,7 +71,7 @@ testOnModelDB("subscriptions (filtering on model and query)", async (t, openDB) 
 	])
 })
 
-// testOnModelDB(
+// testPlatforms(
 // 	"subscriptions (with include query param)",
 // 	async (t, openDB) => {
 // 		const db = await openDB(t, {

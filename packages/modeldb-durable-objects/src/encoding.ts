@@ -16,6 +16,16 @@ import { assert, signalInvalidType } from "@canvas-js/utils"
 
 export type SqlitePrimitiveValue = SqlStorageValue
 
+export const columnTypes = {
+	integer: "INTEGER",
+	float: "FLOAT",
+	number: "FLOAT",
+	string: "TEXT",
+	bytes: "BLOB",
+	boolean: "INTEGER",
+	json: "TEXT",
+} satisfies Record<PrimitiveType, string>
+
 export function toArrayBuffer(data: Uint8Array): ArrayBuffer {
 	if (data.byteOffset === 0 && data.byteLength === data.buffer.byteLength) {
 		return data.buffer

@@ -1,59 +1,100 @@
+/// <reference lib="webworker" />
+
+import sqlite3InitModule, { Database, Sqlite3Static } from "@sqlite.org/sqlite-wasm"
 import { logger } from "@libp2p/logger"
-import * as Comlink from "comlink"
-import sqlite3InitModule from "@sqlite.org/sqlite-wasm"
 import {
-	Config,
 	AbstractModelDB,
 	ModelDBBackend,
+	Config,
 	Effect,
 	ModelValue,
 	ModelSchema,
 	QueryParams,
 	WhereCondition,
+	DatabaseUpgradeAPI,
+	ModelInit,
+	PropertyType,
 } from "@canvas-js/modeldb"
-import { InnerModelDB } from "./InnerModelDB.js"
-import "./worker.js"
+import { signalInvalidType } from "@canvas-js/utils"
+
+import { ModelAPI } from "./ModelAPI.js"
 
 export interface ModelDBOptions {
-	path?: string
+	sqlite3?: Sqlite3Static
+	path?: string | null
 	models: ModelSchema
+
+	version?: Record<string, number>
+	upgrade?: (
+		upgradeAPI: DatabaseUpgradeAPI,
+		oldVersion: Record<string, number>,
+		newVersion: Record<string, number>,
+	) => void | Promise<void>
 }
 
-export class ModelDB extends AbstractModelDB {
-	private readonly worker: Worker | null
-	private readonly wrappedDB: Comlink.Remote<InnerModelDB> | InnerModelDB
+const isWorker = typeof WorkerGlobalScope !== "undefined" && self instanceof WorkerGlobalScope
 
-	public static async initialize({ path, models }: ModelDBOptions) {
-		const config = Config.parse(models)
-		let worker, wrappedDB
-		if (path) {
-			worker = new Worker(new URL("./worker.js", import.meta.url), { type: "module" })
-			const initializeDB = Comlink.wrap(worker) as any
-			const logProxy = Comlink.proxy(logger("canvas:modeldb:worker"))
-			wrappedDB = (await initializeDB(path, config, logProxy)) as Comlink.Remote<InnerModelDB>
-		} else {
-			worker = null
-			const sqlite3 = await sqlite3InitModule({ print: console.log, printErr: console.error })
-			const db = new sqlite3.oo1.DB()
-			const log = logger("canvas:modeldb:transient")
-			wrappedDB = new InnerModelDB(db, config, log)
+export class ModelDB extends AbstractModelDB {
+	#models: Record<string, ModelAPI> = {}
+	protected readonly log = logger("canvas:modeldb")
+
+	public static async open({ sqlite3, path, models, version, upgrade }: ModelDBOptions) {
+		if (sqlite3 === undefined) {
+			sqlite3 = await sqlite3InitModule({
+				print: console.log,
+				printErr: console.error,
+			})
 		}
 
-		return new ModelDB({ worker: worker, wrappedDB, config })
+		const newConfig = Config.parse(models)
+		const newVersion = Object.assign(version ?? {}, {
+			[AbstractModelDB.namespace]: AbstractModelDB.version,
+		})
+
+		let db: Database
+		if (path === null || path === undefined) {
+			db = new sqlite3.oo1.DB(":memory:")
+		} else if (isWorker) {
+			if ("opfs" in sqlite3) {
+				db = new sqlite3.oo1.OpfsDb(path, "c")
+			} else {
+				throw new Error("cannot open persistent database: missing OPFS API support")
+			}
+		} else {
+			throw new Error("cannot open persistent database: persistent databases are only available in worker threads")
+		}
+
+		// calling this constructor will create empty $versions and $models
+		// tables if they do not already exist
+		const baseModelDB = new ModelDB(sqlite3, db, Config.baseConfig, {
+			[AbstractModelDB.namespace]: AbstractModelDB.version,
+		})
+
+		await AbstractModelDB.initialize(baseModelDB, newConfig, newVersion, async (oldConfig, oldVersion) => {
+			if (upgrade !== undefined) {
+				const existingDB = new ModelDB(sqlite3, db, oldConfig, oldVersion)
+				const upgradeAPI = existingDB.getUpgradeAPI()
+				await upgrade(upgradeAPI, oldVersion, newVersion)
+			}
+		})
+
+		newConfig.freeze()
+		return new ModelDB(sqlite3, db, newConfig, newVersion)
 	}
 
-	private constructor({
-		worker,
-		wrappedDB,
-		config,
-	}: {
-		worker: Worker | null
-		wrappedDB: Comlink.Remote<InnerModelDB> | InnerModelDB
-		config: Config
-	}) {
-		super(config)
-		this.worker = worker
-		this.wrappedDB = wrappedDB
+	private constructor(
+		public readonly sqlite3: Sqlite3Static,
+		public readonly db: Database,
+		config: Config,
+		version: Record<string, number>,
+	) {
+		super(config, version)
+
+		this.log("Running SQLite3 version %s", sqlite3.version.libVersion)
+
+		for (const model of Object.values(this.config.models)) {
+			this.#models[model.name] = new ModelAPI(this.db, this.config, model)
+		}
 	}
 
 	public getType(): ModelDBBackend {
@@ -61,52 +102,166 @@ export class ModelDB extends AbstractModelDB {
 	}
 
 	public async close() {
-		this.log("closing")
-		await this.wrappedDB.close()
-		if (this.worker !== null) {
-			this.worker.terminate()
-		}
+		this.db.close()
 	}
 
 	public async apply(effects: Effect[]) {
-		await this.wrappedDB.apply(effects)
+		this.db.transaction(() => {
+			for (const effect of effects) {
+				const model = this.#models[effect.model]
+				if (model === undefined) {
+					throw new Error(`model ${effect.model} not found`)
+				}
 
-		for (const { model, query, filter, callback } of this.subscriptions.values()) {
-			if (effects.some(filter)) {
-				try {
-					const queryRes = await this.query(model, query)
-					callback(queryRes)
-				} catch (err) {
-					console.error(err)
+				if (effect.operation === "set") {
+					this.#models[effect.model].set(effect.value)
+				} else if (effect.operation === "delete") {
+					this.#models[effect.model].delete(effect.key)
+				} else {
+					signalInvalidType(effect)
 				}
 			}
-		}
+
+			for (const { model, query, filter, callback } of this.subscriptions.values()) {
+				if (effects.some(filter)) {
+					const api = this.#models[model]
+					if (api === undefined) {
+						throw new Error(`model ${model} not found`)
+					}
+
+					try {
+						const results = api.query(query)
+						Promise.resolve(callback(results)).catch((err) => this.log.error(err))
+					} catch (err) {
+						this.log.error(err)
+					}
+				}
+			}
+		})
 	}
 
 	public async get<T extends ModelValue>(modelName: string, key: string): Promise<T | null> {
-		// @ts-ignore
-		return this.wrappedDB.get(modelName, key)
+		const api = this.#models[modelName]
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
+		return api.get(key) as T | null
+	}
+
+	public async getAll<T extends ModelValue>(modelName: string): Promise<T[]> {
+		const api = this.#models[modelName]
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
+		return api.getAll() as T[]
 	}
 
 	public async getMany<T extends ModelValue>(modelName: string, keys: string[]): Promise<(T | null)[]> {
-		// @ts-ignore
-		return this.wrappedDB.getMany(modelName, keys)
-	}
+		const api = this.#models[modelName]
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
 
-	public async *iterate<T extends ModelValue<any> = ModelValue<any>>(modelName: string): AsyncIterable<T> {
-		return this.wrappedDB.iterate(modelName) as AsyncIterable<T>
+		return api.getMany(keys) as (T | null)[]
 	}
 
 	public async count(modelName: string, where?: WhereCondition): Promise<number> {
-		return this.wrappedDB.count(modelName, where)
+		const api = this.#models[modelName]
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
+		return api.count(where)
 	}
 
 	public async clear(modelName: string): Promise<void> {
-		return this.wrappedDB.clear(modelName)
+		const api = this.#models[modelName]
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
+		return api.clear()
 	}
 
 	public async query<T extends ModelValue = ModelValue>(modelName: string, query: QueryParams = {}): Promise<T[]> {
-		// @ts-ignore
-		return this.wrappedDB.query(modelName, query)
+		const api = this.#models[modelName]
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
+		return api.query(query) as T[]
+	}
+
+	public async *iterate<T extends ModelValue = ModelValue>(
+		modelName: string,
+		query: QueryParams = {},
+	): AsyncIterable<T> {
+		const api = this.#models[modelName]
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
+		for await (const value of api.iterate(query)) {
+			yield value as T
+		}
+	}
+
+	private createModel(name: string, init: ModelInit) {
+		const model = this.config.createModel(name, init)
+		this.models[name] = model
+		this.#models[name] = new ModelAPI(this.db, this.config, model)
+		this.#models.$models.set({ name, model })
+	}
+
+	private deleteModel(name: string) {
+		this.config.deleteModel(name)
+		this.#models[name].drop()
+		delete this.#models[name]
+		delete this.models[name]
+		this.#models.$models.delete(name)
+	}
+
+	private addProperty(modelName: string, propertyName: string, propertyType: PropertyType) {
+		const property = this.config.addProperty(modelName, propertyName, propertyType)
+		throw new Error("not implemented")
+	}
+
+	private removeProperty(modelName: string, propertyName: string) {
+		this.config.removeProperty(modelName, propertyName)
+		throw new Error("not implemented")
+	}
+
+	private addIndex(modelName: string, index: string) {
+		const propertyNames = this.config.addIndex(modelName, index)
+		throw new Error("not implemented")
+	}
+
+	private removeIndex(modelName: string, index: string) {
+		this.config.removeIndex(modelName, index)
+		throw new Error("not implemented")
+	}
+
+	private getUpgradeAPI() {
+		return {
+			get: this.get.bind(this),
+			getAll: this.getAll.bind(this),
+			getMany: this.getMany.bind(this),
+			iterate: this.iterate.bind(this),
+			query: this.query.bind(this),
+			count: this.count.bind(this),
+			clear: this.clear.bind(this),
+			apply: this.apply.bind(this),
+			set: this.set.bind(this),
+			delete: this.delete.bind(this),
+
+			createModel: this.createModel.bind(this),
+			deleteModel: this.deleteModel.bind(this),
+			addProperty: this.addProperty.bind(this),
+			removeProperty: this.removeProperty.bind(this),
+			addIndex: this.addIndex.bind(this),
+			removeIndex: this.removeIndex.bind(this),
+		} satisfies DatabaseUpgradeAPI
 	}
 }

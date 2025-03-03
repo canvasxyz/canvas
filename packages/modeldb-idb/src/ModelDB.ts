@@ -10,46 +10,86 @@ import {
 	ModelSchema,
 	QueryParams,
 	WhereCondition,
-	getModelsFromInclude,
 	PrimaryKeyValue,
 	Config,
-	updateModelValues,
-	mergeModelValues,
+	Model,
+	DatabaseUpgradeAPI,
+	ModelInit,
+	PropertyType,
+	getModelsFromInclude,
 } from "@canvas-js/modeldb"
 
-import { ModelAPI } from "./api.js"
-import { getIndexName, checkForMissingObjectStores } from "./utils.js"
+import { ModelAPI } from "./ModelAPI.js"
+import { getIndexName } from "./utils.js"
 
 export interface ModelDBOptions {
 	name: string
 	models: ModelSchema
-	version?: number
+
+	version?: Record<string, number>
+	upgrade?: (
+		upgradeAPI: DatabaseUpgradeAPI,
+		oldVersion: Record<string, number>,
+		newVersion: Record<string, number>,
+	) => void | Promise<void>
 }
 
 export class ModelDB extends AbstractModelDB {
-	public static async initialize({ name, models, version = 1 }: ModelDBOptions) {
-		const config = Config.parse(models)
-		const db = await openDB(name, version, {
-			upgrade(db: IDBPDatabase<unknown>, oldVersion: number, newVersion: number | null) {
-				// create missing object stores
-				const storeNames = new Set(db.objectStoreNames)
-				for (const model of config.models) {
-					if (storeNames.has(model.name)) {
-						continue
+	public static async open({ name, models, version, upgrade }: ModelDBOptions) {
+		const newConfig = Config.parse(models)
+		const newVersion = Object.assign(version ?? {}, {
+			[AbstractModelDB.namespace]: AbstractModelDB.version,
+		})
+
+		console.log("opening modeldb-idb")
+		const sum = Object.values(newVersion).reduce((sum, value) => sum + value, 0)
+		console.log("got version sum", sum)
+		const db = await openDB(name, sum, {
+			async upgrade(
+				db: IDBPDatabase<unknown>,
+				oldSum,
+				newSum,
+				txn: IDBPTransaction<unknown, string[], "versionchange">,
+			) {
+				// create missing base model object stores
+				for (const [name, model] of Object.entries(Config.baseModels)) {
+					if (!db.objectStoreNames.contains(name)) {
+						ModelDB.createModel(db, model)
 					}
+				}
 
-					const keyPath = model.primaryKey.length === 1 ? model.primaryKey[0] : model.primaryKey
-					const recordObjectStore = db.createObjectStore(model.name, { keyPath })
+				const baseModelDB = new ModelDB(db, Config.baseConfig, {
+					[AbstractModelDB.namespace]: AbstractModelDB.version,
+				})
 
-					for (const index of model.indexes) {
-						const keyPath = index.length === 1 ? index[0] : index
-						recordObjectStore.createIndex(getIndexName(index), keyPath)
+				const upgradeAPI = baseModelDB.getUpgradeAPI(txn)
+				await AbstractModelDB.initialize(upgradeAPI, newConfig, newVersion, async (oldConfig, oldVersion) => {
+					if (upgrade !== undefined) {
+						await upgrade(upgradeAPI, oldVersion, newVersion)
+					}
+				})
+
+				for (const model of newConfig.models) {
+					if (!db.objectStoreNames.contains(model.name)) {
+						ModelDB.createModel(db, model)
 					}
 				}
 			},
 		})
 
-		return new ModelDB(db, config)
+		return new ModelDB(db, newConfig, newVersion)
+	}
+
+	private static getKeyPath = (index: string[]) => (index.length === 1 ? index[0] : index)
+
+	private static createModel(db: IDBPDatabase<unknown>, model: Model) {
+		const keyPath = ModelDB.getKeyPath(model.primaryKey)
+		const recordObjectStore = db.createObjectStore(model.name, { keyPath })
+
+		for (const index of model.indexes) {
+			const keyPath = ModelDB.getKeyPath(index)
+			recordObjectStore.createIndex(getIndexName(index), keyPath)
+		}
 	}
 
 	readonly #models: Record<string, ModelAPI> = {}
@@ -58,8 +98,8 @@ export class ModelDB extends AbstractModelDB {
 		return "idb"
 	}
 
-	private constructor(public readonly db: IDBPDatabase, config: Config) {
-		super(config)
+	private constructor(public readonly db: IDBPDatabase, config: Config, version: Record<string, number>) {
+		super(config, version)
 
 		for (const model of config.models) {
 			this.#models[model.name] = new ModelAPI(model)
@@ -92,7 +132,6 @@ export class ModelDB extends AbstractModelDB {
 		fn: (txn: IDBPTransaction<any, any, "readonly">) => T | Promise<T>,
 		objectStoreNames: string[] = [...this.db.objectStoreNames],
 	) {
-		checkForMissingObjectStores(this.db, objectStoreNames)
 		const txn = this.db.transaction(objectStoreNames, "readonly")
 		return await fn(txn)
 	}
@@ -121,10 +160,11 @@ export class ModelDB extends AbstractModelDB {
 		query: QueryParams = {},
 	): AsyncIterable<T> {
 		const api = this.#models[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
 
 		// TODO: re-open the transaction if the caller awaits on other promises between yields
-		checkForMissingObjectStores(this.db, [api.storeName])
 		const txn = this.db.transaction([api.storeName], "readonly", {})
 		yield* api.iterate(txn, query) as AsyncIterable<T>
 	}
@@ -134,8 +174,20 @@ export class ModelDB extends AbstractModelDB {
 		key: PrimaryKeyValue | PrimaryKeyValue[],
 	): Promise<T | null> {
 		const api = this.#models[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
 		return await this.read((txn) => api.get(txn, key) as Promise<T | null>, [api.storeName])
+	}
+
+	public async getAll<T extends ModelValue>(modelName: string): Promise<T[]> {
+		const api = this.#models[modelName]
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
+		return await this.read((txn) => api.getAll(txn) as Promise<T[]>, [api.storeName])
 	}
 
 	public async getMany<T extends ModelValue>(
@@ -143,7 +195,10 @@ export class ModelDB extends AbstractModelDB {
 		keys: PrimaryKeyValue[] | PrimaryKeyValue[][],
 	): Promise<(T | null)[]> {
 		const api = this.#models[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
 		return await this.read((txn) => api.getMany(txn, keys) as Promise<(T | null)[]>, [api.storeName])
 	}
 
@@ -153,7 +208,10 @@ export class ModelDB extends AbstractModelDB {
 		}
 
 		const api = this.#models[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
 		const result = await this.read((txn) => api.query(txn, query), [api.storeName])
 		return result as T[]
 	}
@@ -162,13 +220,20 @@ export class ModelDB extends AbstractModelDB {
 		modelName: string,
 		query: QueryParams = {},
 	): Promise<T[]> {
-		assert(query.include)
+		assert(query.include, "internal error")
 		const api = this.#models[modelName]
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
 		const modelNames = Array.from(
 			new Set([modelName, ...getModelsFromInclude(this.config.models, modelName, query.include)]),
 		)
+
 		for (const modelName of modelNames) {
-			assert(this.#models[modelName] !== undefined, `model ${modelName} not found`)
+			if (this.#models[modelName] === undefined) {
+				throw new Error(`model ${modelName} not found`)
+			}
 		}
 
 		const result = await this.read(
@@ -179,38 +244,35 @@ export class ModelDB extends AbstractModelDB {
 		return result as T[]
 	}
 
-	public async count(modelName: string, where?: WhereCondition): Promise<number> {
+	public async count(modelName: string, where: WhereCondition = {}): Promise<number> {
 		const api = this.#models[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
-		checkForMissingObjectStores(this.db, [api.storeName])
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
 
 		return await this.read((txn) => api.count(txn, where), [api.storeName])
 	}
 
 	public async clear(modelName: string): Promise<void> {
 		const api = this.#models[modelName]
-		assert(api !== undefined, `model ${modelName} not found`)
+		if (api === undefined) {
+			throw new Error(`model ${modelName} not found`)
+		}
+
 		return await this.write((txn) => api.clear(txn))
 	}
 
 	public async apply(effects: Effect[]): Promise<void> {
 		await this.write(async (txn) => {
-			for (const effect of effects) {
-				const api = this.#models[effect.model]
-				assert(api !== undefined, `model ${effect.model} not found`)
-				if (effect.operation === "set") {
-					await api.set(txn, effect.value)
-				} else if (effect.operation === "delete") {
-					await api.delete(txn, effect.key)
-				} else {
-					signalInvalidType(effect)
-				}
-			}
+			await this.#apply(txn, effects)
 
 			await Promise.all(
 				[...this.subscriptions.values()].map(async ({ model, query, filter, callback }) => {
 					const api = this.#models[model]
-					assert(api !== undefined, `model ${model} not found`)
+					if (api === undefined) {
+						throw new Error(`model ${model} not found`)
+					}
+
 					if (effects.some((effect) => filter(effect))) {
 						try {
 							// const results = query.include
@@ -225,5 +287,102 @@ export class ModelDB extends AbstractModelDB {
 				}),
 			)
 		})
+	}
+
+	async #apply(txn: IDBPTransaction<unknown, string[], "versionchange" | "readwrite">, effects: Effect[]) {
+		for (const effect of effects) {
+			const api = this.#models[effect.model]
+			if (api === undefined) {
+				throw new Error(`model ${effect.model} not found`)
+			}
+
+			if (effect.operation === "set") {
+				await api.set(txn, effect.value)
+			} else if (effect.operation === "delete") {
+				await api.delete(txn, effect.key)
+			} else {
+				signalInvalidType(effect)
+			}
+		}
+	}
+
+	private async createModel(txn: IDBPTransaction<unknown, string[], "versionchange">, name: string, init: ModelInit) {
+		const model = this.config.createModel(name, init)
+		this.models[name] = model
+		this.#models[name] = new ModelAPI(model)
+		await this.#models.$models.set(txn, { name, model })
+	}
+
+	private async deleteModel(txn: IDBPTransaction<unknown, string[], "versionchange">, name: string) {
+		this.config.deleteModel(name)
+		this.db.deleteObjectStore(name)
+		delete this.#models[name]
+		delete this.models[name]
+		await this.#models.$models.delete(txn, name)
+	}
+
+	private async addProperty(
+		txn: IDBPTransaction<unknown, string[], "versionchange">,
+		modelName: string,
+		propertyName: string,
+		propertyType: PropertyType,
+	) {
+		// const property = this.config.addProperty(modelName, propertyName, propertyType)
+		throw new Error("not implemented")
+	}
+
+	private async removeProperty(
+		txn: IDBPTransaction<unknown, string[], "versionchange">,
+		modelName: string,
+		propertyName: string,
+	) {
+		// this.config.removeProperty(modelName, propertyName)
+		throw new Error("not implemented")
+	}
+
+	private async addIndex(txn: IDBPTransaction<unknown, string[], "versionchange">, modelName: string, index: string) {
+		// const propertyNames = this.config.addIndex(modelName, index)
+		throw new Error("not implemented")
+	}
+
+	private async removeIndex(
+		txn: IDBPTransaction<unknown, string[], "versionchange">,
+		modelName: string,
+		index: string,
+	) {
+		// this.config.removeIndex(modelName, index)
+		throw new Error("not implemented")
+	}
+
+	private getUpgradeAPI(txn: IDBPTransaction<unknown, string[], "versionchange">): DatabaseUpgradeAPI {
+		return {
+			get: <T>(modelName: string, key: PrimaryKeyValue | PrimaryKeyValue[]) =>
+				this.#models[modelName].get(txn, key) as Promise<T>,
+
+			getAll: <T>(modelName: string) => this.#models[modelName].getAll(txn) as Promise<T[]>,
+
+			getMany: <T>(modelName: string, keys: PrimaryKeyValue[] | PrimaryKeyValue[][]) =>
+				this.#models[modelName].getMany(txn, keys) as Promise<(T | null)[]>,
+
+			iterate: <T>(modelName: string, query: QueryParams = {}) =>
+				this.#models[modelName].iterate(txn, query) as AsyncIterable<T>,
+
+			query: <T>(modelName: string, query: QueryParams = {}) =>
+				this.#models[modelName].query(txn, query) as Promise<T[]>,
+
+			count: (modelName: string, where: WhereCondition = {}) => this.#models[modelName].count(txn, where),
+			clear: (modelName) => this.#models[modelName].clear(txn),
+			apply: (effects) => this.#apply(txn, effects),
+			set: (modelName, value) => this.#models[modelName].set(txn, value),
+			delete: (modelName, key) => this.#models[modelName].delete(txn, key),
+
+			createModel: (name, init) => this.createModel(txn, name, init),
+			deleteModel: (name) => this.deleteModel(txn, name),
+			addProperty: (modelName, propertyName, propertyInit) =>
+				this.addProperty(txn, modelName, propertyName, propertyInit),
+			removeProperty: (modelName, propertyName) => this.removeProperty(txn, modelName, propertyName),
+			addIndex: (modelName, index) => this.addIndex(txn, modelName, index),
+			removeIndex: (modelName, index) => this.removeIndex(txn, modelName, index),
+		}
 	}
 }

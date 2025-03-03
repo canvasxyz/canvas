@@ -23,6 +23,8 @@ const target: PlatformTarget = {
 		const signal = anySignal([gossipLog.controller.signal, options.signal])
 		signal.addEventListener("abort", () => client.close())
 		await client.duplex.connected()
+
+		return client
 	},
 
 	async listen(gossipLog, port, options = {}) {

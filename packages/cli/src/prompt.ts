@@ -5,8 +5,8 @@ import { Canvas } from "@canvas-js/core"
 
 const indirectEval = eval
 
-export const startActionPrompt = (app: Canvas) => {
-	const { models, actions } = app.getApplicationData()
+export const startActionPrompt = async (app: Canvas) => {
+	const { models, actions } = await app.getApplicationData()
 
 	console.log(chalk.gray("You can run actions from the command line here:"))
 	console.log(chalk.gray(`> ${actions[0]}({ foo: 1, bar: "2" })`))

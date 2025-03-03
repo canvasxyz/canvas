@@ -1,12 +1,10 @@
-import { signalInvalidType, merge, update, JSONValue, assert, JSValue } from "@canvas-js/utils"
+import { signalInvalidType, merge, update, assert } from "@canvas-js/utils"
 
 import type {
 	IncludeExpression,
 	Model,
-	ModelSchema,
 	ModelValue,
 	PrimaryKeyValue,
-	PrimitiveProperty,
 	PrimitiveValue,
 	Property,
 	PropertyValue,
@@ -29,7 +27,9 @@ export const isPrimaryKey = (value: unknown): value is PrimaryKeyValue => {
 }
 
 export function isReferenceValue(value: unknown): value is ReferenceValue {
-	if (Array.isArray(value)) {
+	if (value === null) {
+		return true
+	} else if (Array.isArray(value)) {
 		return value.every(isPrimaryKey)
 	} else {
 		return isPrimaryKey(value)
@@ -37,11 +37,7 @@ export function isReferenceValue(value: unknown): value is ReferenceValue {
 }
 
 export function isRelationValue(value: unknown): value is RelationValue {
-	if (Array.isArray(value)) {
-		return value.every(isReferenceValue)
-	} else {
-		return false
-	}
+	return Array.isArray(value) && value.every(isReferenceValue)
 }
 
 // eslint-disable-next-line no-useless-escape

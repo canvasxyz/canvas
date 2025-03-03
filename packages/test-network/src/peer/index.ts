@@ -7,7 +7,7 @@ import { Socket } from "../socket.js"
 import { bootstrapList, listen, announce, topic, delay, interval } from "./config.js"
 
 async function start() {
-	const gossipLog = new GossipLog<string>({ directory: "data", topic, apply: () => {} })
+	const gossipLog = await GossipLog.open<string>("./data", { topic, apply: () => {} })
 
 	const libp2p = await gossipLog.startLibp2p({ start: false, listen, announce, bootstrapList })
 

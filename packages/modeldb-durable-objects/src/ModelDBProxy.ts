@@ -36,7 +36,9 @@ export class ModelDBProxy extends AbstractModelDB {
 	subscriptions: Map<number, Subscription>
 
 	constructor(worker: Unstable_DevWorker, models: ModelSchema, baseUrl?: string, uuid?: string) {
-		super(Config.parse(models))
+		super(Config.parse(models), {
+			[AbstractModelDB.namespace]: AbstractModelDB.version,
+		})
 
 		this.worker = worker
 		this.baseUrl = baseUrl ?? "http://example.com"
@@ -103,18 +105,22 @@ export class ModelDBProxy extends AbstractModelDB {
 		this.initialized = false
 	}
 
-	get<T extends ModelValue<any> = ModelValue<any>>(
+	async get<T extends ModelValue<any> = ModelValue<any>>(
 		modelName: string,
 		key: PrimaryKeyValue | PrimaryKeyValue[],
-	): Awaitable<T | null> {
-		return this.proxyFetch("get", [modelName, key])
+	): Promise<T | null> {
+		return await this.proxyFetch("get", [modelName, key])
 	}
 
-	getMany<T extends ModelValue<any> = ModelValue<any>>(
+	async getAll<T extends ModelValue<any> = ModelValue<any>>(modelName: string): Promise<T[]> {
+		return await this.proxyFetch("getAll", [modelName])
+	}
+
+	async getMany<T extends ModelValue<any> = ModelValue<any>>(
 		modelName: string,
 		keys: PrimaryKeyValue[] | PrimaryKeyValue[][],
-	): Awaitable<(T | null)[]> {
-		return this.proxyFetch("getMany", [modelName, keys])
+	): Promise<(T | null)[]> {
+		return await this.proxyFetch("getMany", [modelName, keys])
 	}
 
 	async *iterate<T extends ModelValue<any> = ModelValue<any>>(
@@ -127,20 +133,20 @@ export class ModelDBProxy extends AbstractModelDB {
 		}
 	}
 
-	query<T extends ModelValue<any> = ModelValue<any>>(modelName: string, query?: QueryParams): Promise<T[]> {
-		return this.proxyFetch("query", query ? [modelName, prepare(query)] : [modelName])
+	async query<T extends ModelValue<any> = ModelValue<any>>(modelName: string, query?: QueryParams): Promise<T[]> {
+		return await this.proxyFetch("query", query ? [modelName, prepare(query)] : [modelName])
 	}
 
-	count(modelName: string, where?: WhereCondition): Promise<number> {
-		return this.proxyFetch("count", where ? [modelName, where] : [modelName])
+	async count(modelName: string, where?: WhereCondition): Promise<number> {
+		return await this.proxyFetch("count", where ? [modelName, where] : [modelName])
 	}
 
-	clear(modelName: string): Promise<void> {
-		return this.proxyFetch("clear", [modelName])
+	async clear(modelName: string): Promise<void> {
+		await this.proxyFetch("clear", [modelName])
 	}
 
-	apply(effects: Effect[]): Promise<void> {
-		return this.proxyFetch("apply", [effects])
+	async apply(effects: Effect[]): Promise<void> {
+		await this.proxyFetch("apply", [effects])
 	}
 
 	subscribe(

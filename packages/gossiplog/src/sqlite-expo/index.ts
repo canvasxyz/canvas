@@ -5,22 +5,28 @@ import { ModelDB } from "@canvas-js/modeldb-sqlite-expo"
 import { AbstractGossipLog, GossipLogInit } from "../AbstractGossipLog.js"
 
 export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
-	public readonly db: ModelDB
-	public readonly tree: Tree
-
-	public constructor({
+	public static async open<Payload>({
 		directory = null,
 		...init
 	}: { directory?: string | null; clear?: boolean } & GossipLogInit<Payload>) {
+		const tree = new MemoryTree({ mode: Mode.Index })
+		const db = await ModelDB.open({
+			path: null,
+			models: { ...init.schema, ...AbstractGossipLog.schema },
+			version: Object.assign(init.version ?? {}, {
+				[AbstractGossipLog.namespace]: AbstractGossipLog.version,
+			}),
+			// clear: init.clear,
+		})
+
+		return new GossipLog(db, tree, init)
+	}
+
+	private constructor(public readonly db: ModelDB, public readonly tree: Tree, init: GossipLogInit<Payload>) {
 		super(init)
 
 		// if (directory === null) {
-		this.tree = new MemoryTree({ mode: Mode.Index })
-		this.db = new ModelDB({
-			path: null,
-			models: { ...init.schema, ...AbstractGossipLog.schema },
-			clear: init.clear,
-		})
+
 		// } else {
 		// 	if (!fs.existsSync(directory)) {
 		// 		fs.mkdirSync(directory, { recursive: true })

@@ -6,7 +6,7 @@ import { ed25519 } from "@canvas-js/signatures"
 import { SIWESignerViem, validateSessionData } from "@canvas-js/chain-ethereum-viem"
 
 test("create and verify session", async (t) => {
-	const topic = "example:signer"
+	const topic = "com.example.app"
 	const signer = new SIWESignerViem()
 	const { payload: session, signer: delegateSigner } = await signer.newSession(topic)
 	t.notThrows(() => signer.verifySession(topic, session))
@@ -17,7 +17,7 @@ test("create and verify session", async (t) => {
 })
 
 test("create and verify session and action", async (t) => {
-	const topic = "example:signer"
+	const topic = "com.example.app"
 	const signer = new SIWESignerViem()
 	const { payload: session, signer: delegateSigner } = await signer.newSession(topic)
 	t.notThrows(() => signer.verifySession(topic, session))
@@ -42,7 +42,7 @@ test("create and verify session and action", async (t) => {
 })
 
 test("reject corrupt session signature", async (t) => {
-	const topic = "example:signer"
+	const topic = "com.example.app"
 	const signer = new SIWESignerViem()
 	const { payload: session } = await signer.newSession(topic)
 
@@ -54,11 +54,11 @@ test("reject corrupt session signature", async (t) => {
 })
 
 test("reject session signature for wrong topic", async (t) => {
-	const topic = "example:signer"
-	const topic2 = "example:signer2"
+	const topic1 = "com.example.app-1"
+	const topic2 = "com.example.app-2"
 	const signer = new SIWESignerViem()
-	const { payload: session } = await signer.newSession(topic)
+	const { payload: session1 } = await signer.newSession(topic1)
 	const { payload: session2 } = await signer.newSession(topic2)
 
-	await t.throwsAsync(async () => signer.verifySession(topic, session2))
+	await t.throwsAsync(async () => signer.verifySession(topic1, session2))
 })

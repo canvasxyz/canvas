@@ -1,8 +1,8 @@
 import { nanoid } from "nanoid"
 
-import { testOnModelDB } from "./utils.js"
+import { testPlatforms } from "./utils.js"
 
-testOnModelDB("get fields of all types", async (t, openDB) => {
+testPlatforms("get fields of all types", async (t, openDB) => {
 	const db = await openDB(t, {
 		foo: {
 			id: "primary",
@@ -44,7 +44,7 @@ testOnModelDB("get fields of all types", async (t, openDB) => {
 	})
 })
 
-testOnModelDB("update a value", async (t, openDB) => {
+testPlatforms("update a value", async (t, openDB) => {
 	const db = await openDB(t, {
 		user: {
 			id: "primary",
@@ -60,7 +60,7 @@ testOnModelDB("update a value", async (t, openDB) => {
 	t.deepEqual(await db.get("user", id), { id, isModerator: true, name: "John Doe" })
 })
 
-testOnModelDB("delete a value ", async (t, openDB) => {
+testPlatforms("delete a value ", async (t, openDB) => {
 	const db = await openDB(t, {
 		user: { id: "primary", name: "string" },
 	})
@@ -79,7 +79,7 @@ testOnModelDB("delete a value ", async (t, openDB) => {
 	t.is(await db.count("user"), 0)
 })
 
-testOnModelDB("set and get an integer primary key", async (t, openDB) => {
+testPlatforms("set and get an integer primary key", async (t, openDB) => {
 	const db = await openDB(t, {
 		user: { $primary: "id", id: "integer", name: "string?" },
 	})
@@ -95,7 +95,7 @@ testOnModelDB("set and get an integer primary key", async (t, openDB) => {
 	])
 })
 
-testOnModelDB("set and get a composite primary key", async (t, openDB) => {
+testPlatforms("set and get a composite primary key", async (t, openDB) => {
 	const db = await openDB(t, {
 		user: { $primary: "key/index", key: "string", index: "integer", name: "string?" },
 	})
@@ -116,7 +116,7 @@ testOnModelDB("set and get a composite primary key", async (t, openDB) => {
 	])
 })
 
-testOnModelDB("set and get a reference to a composite primary key", async (t, openDB) => {
+testPlatforms("set and get a reference to a composite primary key", async (t, openDB) => {
 	const db = await openDB(t, {
 		user: { $primary: "key/index", key: "string", index: "integer", name: "string?" },
 		room: { $primary: "key/index", key: "string", index: "integer", creator: "@user" },
@@ -143,7 +143,7 @@ testOnModelDB("set and get a reference to a composite primary key", async (t, op
 	])
 })
 
-testOnModelDB("set and get a relation on a composite primary key", async (t, openDB) => {
+testPlatforms("set and get a relation on a composite primary key", async (t, openDB) => {
 	const db = await openDB(t, {
 		user: { $primary: "key/index", key: "string", index: "integer", name: "string?" },
 		room: { $primary: "key/index", key: "string", index: "integer", creator: "@user", members: "@room[]" },
@@ -204,11 +204,27 @@ testOnModelDB("set and get a relation on a composite primary key", async (t, ope
 	})
 })
 
-testOnModelDB("set and get top-level string JSON values", async (t, openDB) => {
+testPlatforms("set and get top-level string JSON values", async (t, openDB) => {
 	const db = await openDB(t, {
 		foo: { id: "primary", value: "json" },
 	})
 
 	await db.set("foo", { id: "abc", value: "hello world" })
 	t.deepEqual(await db.get("foo", "abc"), { id: "abc", value: "hello world" })
+})
+
+testPlatforms("get all values", async (t, openDB) => {
+	const db = await openDB(t, {
+		user: { $primary: "id/index", id: "integer", index: "integer", name: "string?" },
+	})
+
+	await db.set("user", { id: 3, index: 9, name: null })
+	await db.set("user", { id: 10, index: 9, name: "John Doe" })
+	await db.set("user", { id: 0, index: 9, name: null })
+
+	t.deepEqual(await db.getAll("user"), [
+		{ id: 0, index: 9, name: null },
+		{ id: 3, index: 9, name: null },
+		{ id: 10, index: 9, name: "John Doe" },
+	])
 })

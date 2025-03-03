@@ -1,5 +1,7 @@
 import { SqlStorage, SqlStorageValue } from "@cloudflare/workers-types"
 
+export const quote = (name: string) => `"${name}"`
+
 export class Query<R = Record<string, SqlStorageValue>> {
 	constructor(private readonly db: SqlStorage, private readonly sql: string) {}
 

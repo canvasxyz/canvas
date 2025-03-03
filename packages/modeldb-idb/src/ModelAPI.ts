@@ -20,10 +20,11 @@ import {
 	isLiteralExpression,
 	isRangeExpression,
 	validateModelValue,
+	Config,
 } from "@canvas-js/modeldb"
 
 import { IDBValue, encodePropertyValue, decodePropertyValue } from "./encoding.js"
-import { equalIndex, getIndexName } from "./utils.js"
+import { getIndexName } from "./utils.js"
 
 type ObjectValue = Record<string, IDBValue>
 
@@ -58,6 +59,11 @@ export class ModelAPI {
 		}
 	}
 
+	public async getAll<Mode extends IDBTransactionMode>(txn: IDBPTransaction<any, any, Mode>): Promise<ModelValue[]> {
+		const objects = await this.getStore(txn).getAll()
+		return objects.map((value) => this.decodeObject(value))
+	}
+
 	public async getMany<Mode extends IDBTransactionMode>(
 		txn: IDBPTransaction<any, any, Mode>,
 		keys: PrimaryKeyValue[] | PrimaryKeyValue[][],
@@ -70,21 +76,24 @@ export class ModelAPI {
 		return results
 	}
 
-	async set(txn: IDBPTransaction<any, any, "readwrite">, value: ModelValue): Promise<void> {
+	async set(txn: IDBPTransaction<any, any, "readwrite" | "versionchange">, value: ModelValue): Promise<void> {
 		validateModelValue(this.model, value)
 		const object = this.encodeObject(value)
 		await this.getStore(txn).put(object)
 	}
 
-	async delete(txn: IDBPTransaction<any, any, "readwrite">, key: PrimaryKeyValue | PrimaryKeyValue[]): Promise<void> {
+	async delete(
+		txn: IDBPTransaction<any, any, "readwrite" | "versionchange">,
+		key: PrimaryKeyValue | PrimaryKeyValue[],
+	): Promise<void> {
 		await this.getStore(txn).delete(key)
 	}
 
-	async clear(txn: IDBPTransaction<any, any, "readwrite">) {
+	async clear(txn: IDBPTransaction<any, any, "readwrite" | "versionchange">) {
 		await this.getStore(txn).clear()
 	}
 
-	async count(txn: IDBPTransaction<any, any, IDBTransactionMode>, where: WhereCondition = {}): Promise<number> {
+	async count(txn: IDBPTransaction<any, any, IDBTransactionMode>, where: WhereCondition): Promise<number> {
 		const store = this.getStore(txn)
 
 		if (Object.keys(where).length === 0) {
@@ -265,11 +274,11 @@ export class ModelAPI {
 	}
 
 	private getStoreIndex(store: IDBPObjectStore<any, any, string, "readonly">, index: string[]): StoreIndex | null {
-		if (equalIndex(index, this.model.primaryKey)) {
+		if (Config.equalIndex(index, this.model.primaryKey)) {
 			return store
 		}
 
-		if (this.model.indexes.some((i) => equalIndex(index, i))) {
+		if (this.model.indexes.some((i) => Config.equalIndex(index, i))) {
 			return store.index(getIndexName(index))
 		}
 
@@ -430,6 +439,9 @@ export class ModelAPI {
 			assert(entries.length === 1, "expected exactly one entry in query.orderBy")
 			const [[indexName, direction]] = entries
 			const index = indexName.split("/")
+			for (const name of index) {
+				assert(name in this.properties, "invalid orderBy index")
+			}
 
 			const storeIndex = this.getStoreIndex(store, index)
 			assert(storeIndex !== null, "orderBy properties must be indexed")
