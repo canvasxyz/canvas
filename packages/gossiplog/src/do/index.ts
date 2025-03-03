@@ -1,8 +1,6 @@
-import fs from "node:fs"
-
 import { toString } from "uint8arrays"
 
-import { Tree, Mode } from "@canvas-js/okra"
+import { Mode } from "@canvas-js/okra"
 import { Tree as MemoryTree } from "@canvas-js/okra-memory"
 
 import { ModelDB, ModelDBProxy } from "@canvas-js/modeldb-durable-objects"
