@@ -187,6 +187,10 @@ export class ExecutionContext {
 				updates.push({ model, key, diff })
 			}
 		}
-		return [{ type: "updates", updates }]
+		if (updates.length > 0) {
+			return [{ type: "updates", updates }]
+		} else {
+			return []
+		}
 	}
 }
