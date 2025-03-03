@@ -4,7 +4,7 @@ import { equals, toString } from "uint8arrays"
 
 import { Node, Tree, ReadWriteTransaction, hashEntry } from "@canvas-js/okra"
 import type { Signature, Signer, Message, Awaitable } from "@canvas-js/interfaces"
-import type { AbstractModelDB, ModelSchema, Effect } from "@canvas-js/modeldb"
+import type { AbstractModelDB, ModelSchema, Effect, DatabaseUpgradeAPI } from "@canvas-js/modeldb"
 import { ed25519 } from "@canvas-js/signatures"
 import { assert, zip, prepare, prepareMessage } from "@canvas-js/utils"
 
@@ -19,7 +19,7 @@ import type { SyncSnapshot } from "./interface.js"
 import { AncestorIndex } from "./AncestorIndex.js"
 import { BranchMergeIndex } from "./BranchMergeIndex.js"
 import { MessageSource, SignedMessage } from "./SignedMessage.js"
-import { decodeId, encodeId, MessageId, messageIdPattern } from "./MessageId.js"
+import { decodeId, encodeId, messageIdPattern, MessageId } from "./MessageId.js"
 import { getNextClock } from "./schema.js"
 import { gossiplogTopicPattern } from "./utils.js"
 
@@ -40,6 +40,11 @@ export interface GossipLogInit<Payload = unknown, Result = any> {
 	/** add extra tables to the local database for private use */
 	schema?: ModelSchema
 	version?: Record<string, number>
+	upgrade?: (
+		upgradeAPI: DatabaseUpgradeAPI,
+		oldVersion: Record<string, number>,
+		newVersion: Record<string, number>,
+	) => Awaitable<void>
 }
 
 export type GossipLogEvents<Payload = unknown, Result = any> = {
@@ -78,6 +83,18 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		...AncestorIndex.schema,
 		...BranchMergeIndex.schema,
 	} satisfies ModelSchema
+
+	protected static async upgrade(
+		upgradeAPI: DatabaseUpgradeAPI,
+		oldVersion: Record<string, number>,
+		newVersion: Record<string, number>,
+	) {
+		const version = oldVersion[AbstractGossipLog.namespace]
+		if (version !== undefined && version < AbstractGossipLog.version) {
+			// GossipLog migrations go here
+			throw new Error("unexpected GossipLog version")
+		}
+	}
 
 	public readonly topic: string
 	public readonly signer: Signer<Payload>
