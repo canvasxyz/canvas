@@ -20,6 +20,11 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 			version: Object.assign(init.version ?? {}, {
 				[AbstractGossipLog.namespace]: AbstractGossipLog.version,
 			}),
+
+			upgrade: async (upgradeAPI, oldVersion, newVersion) => {
+				await AbstractGossipLog.upgrade(upgradeAPI, oldVersion, newVersion)
+				await init.upgrade?.(upgradeAPI, oldVersion, newVersion)
+			},
 		})
 
 		const messageCount = await db.count("$messages")

@@ -84,6 +84,22 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		...BranchMergeIndex.schema,
 	} satisfies ModelSchema
 
+	// protected static 				version: Object.assign(init.version ?? {}, {
+	// 	[AbstractGossipLog.namespace]: AbstractGossipLog.version,
+	// }),
+
+	protected static async upgrade(
+		upgradeAPI: DatabaseUpgradeAPI,
+		oldVersion: Record<string, number>,
+		newVersion: Record<string, number>,
+	) {
+		const version = oldVersion[AbstractGossipLog.namespace]
+		if (version !== undefined && version < AbstractGossipLog.version) {
+			// GossipLog migrations go here
+			throw new Error("unexpected GossipLog version")
+		}
+	}
+
 	public readonly topic: string
 	public readonly signer: Signer<Payload>
 	public readonly controller = new AbortController()
