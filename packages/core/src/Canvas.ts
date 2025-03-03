@@ -286,6 +286,14 @@ export class Canvas<
 
 				this.log("applied action %s", id)
 
+				for (const additionalUpdate of this.runtime.additionalUpdates.get(id) || []) {
+					await this.messageLog.append(additionalUpdate)
+				}
+
+				this.runtime.additionalUpdates.delete(id)
+
+				this.log("applied additional updates for action %s", id)
+
 				return { id, signature, message, result }
 			}
 
@@ -370,7 +378,7 @@ export class Canvas<
 
 	public async getApplicationData(): Promise<ApplicationData> {
 		const models = Object.fromEntries(Object.entries(this.db.models).filter(([name]) => !name.startsWith("$")))
-		const root = (await this.messageLog.tree.read((txn) => txn.getRoot()))
+		const root = await this.messageLog.tree.read((txn) => txn.getRoot())
 		const heads = await this.db.query<{ id: string }>("$heads").then((records) => records.map((record) => record.id))
 
 		return {

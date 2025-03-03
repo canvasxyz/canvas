@@ -7,7 +7,7 @@ import { ed25519 } from "@canvas-js/signatures"
 import type { GossipLogConsumer } from "@canvas-js/gossiplog"
 import { testPlatforms } from "./utils.js"
 
-const apply: GossipLogConsumer<string, string> = ({ message: { payload } }) => ({ result: bytesToHex(sha256(payload)) })
+const apply: GossipLogConsumer<string, string> = ({ message: { payload } }) => bytesToHex(sha256(payload))
 
 testPlatforms(
 	"get apply result",

@@ -3,7 +3,7 @@ import { blake3 } from "@noble/hashes/blake3"
 import { bytesToHex } from "@noble/hashes/utils"
 import * as Y from "yjs"
 
-import type { Action, MessageType } from "@canvas-js/interfaces"
+import type { Action, MessageType, Updates } from "@canvas-js/interfaces"
 
 import { ModelValue, PropertyValue, validateModelValue, updateModelValues, mergeModelValues } from "@canvas-js/modeldb"
 import { AbstractGossipLog, SignedMessage, MessageId } from "@canvas-js/gossiplog"
@@ -165,7 +165,7 @@ export class ExecutionContext {
 		}
 	}
 
-	public async generateAdditionalMessages(): Promise<MessageType[]> {
+	public async generateAdditionalUpdates(): Promise<Updates[]> {
 		const updates = []
 		for (const [model, modelCalls] of Object.entries(this.yjsCalls)) {
 			for (const [key, calls] of Object.entries(modelCalls)) {

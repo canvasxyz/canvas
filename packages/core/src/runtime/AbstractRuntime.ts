@@ -102,6 +102,8 @@ export abstract class AbstractRuntime {
 	public abstract readonly schema: ModelSchema
 	public abstract readonly actionNames: string[]
 
+	public readonly additionalUpdates = new Map<string, Updates[]>()
+
 	protected readonly log = logger("canvas:runtime")
 	#db: AbstractModelDB | null = null
 
@@ -126,11 +128,11 @@ export abstract class AbstractRuntime {
 		const handleSnapshot = this.handleSnapshot.bind(this)
 		const handleUpdates = this.handleUpdates.bind(this)
 
-		return async function (this: AbstractGossipLog<MessageType>, signedMessage, isAppend) {
+		return async function (this: AbstractGossipLog<MessageType>, signedMessage) {
 			if (isSession(signedMessage)) {
 				return await handleSession(signedMessage)
 			} else if (isAction(signedMessage)) {
-				return await handleAction(signedMessage, isAppend, this)
+				return await handleAction(signedMessage, this)
 			} else if (isSnapshot(signedMessage)) {
 				return await handleSnapshot(signedMessage, this)
 			} else if (isUpdates(signedMessage)) {
@@ -192,11 +194,7 @@ export abstract class AbstractRuntime {
 		await this.db.apply(effects)
 	}
 
-	private async handleAction(
-		signedMessage: SignedMessage<Action>,
-		isAppend: boolean,
-		messageLog: AbstractGossipLog<MessageType>,
-	) {
+	private async handleAction(signedMessage: SignedMessage<Action>, messageLog: AbstractGossipLog<MessageType>) {
 		const { id, signature, message } = signedMessage
 		const { did, name, context } = message.payload
 
@@ -279,9 +277,9 @@ export abstract class AbstractRuntime {
 			throw err
 		}
 
-		const additionalMessages = isAppend ? await executionContext.generateAdditionalMessages() : []
+		this.additionalUpdates.set(id, await executionContext.generateAdditionalUpdates())
 
-		return { result, additionalMessages }
+		return result
 	}
 
 	private async handleUpdates(signedMessage: SignedMessage<Updates>, messageLog: AbstractGossipLog<MessageType>) {
