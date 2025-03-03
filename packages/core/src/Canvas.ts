@@ -55,19 +55,15 @@ export type Config<ModelsT extends ModelSchema = any, ActionsT extends Actions<M
 	snapshot?: Snapshot | null
 }
 
-export type ActionResult<Result = any> = { id: string; signature: Signature; message: Message<Action>; result: Result }
-
-export type ActionAPI<Args extends Array<any> = any, Result = any> = (...args: Args) => Promise<ActionResult<Result>>
+export type ActionAPI<Args extends Array<any> = any, Result = any> = (
+	...args: Args
+) => Promise<SignedMessage<Action, Result>>
 
 export interface CanvasEvents extends GossipLogEvents<MessageType> {
 	stop: Event
 }
 
-export type CanvasLogEvent = CustomEvent<{
-	id: string
-	signature: unknown
-	message: Message<MessageType>
-}>
+export type CanvasLogEvent = CustomEvent<SignedMessage<MessageType>>
 
 export type ApplicationData = {
 	networkConfig: {
@@ -286,14 +282,14 @@ export class Canvas<
 					await this.messageLog.append(session.payload, { signer: session.signer })
 				}
 
-				const { id, signature, message, result } = await this.messageLog.append<Action>(
+				const signedMessage = await this.messageLog.append<Action>(
 					{ type: "action", did: session.payload.did, name, args: args ?? null, context: { timestamp } },
 					{ signer: session.signer },
 				)
 
-				this.log("applied action %s", id)
+				this.log("applied action %s", signedMessage.id)
 
-				return { id, signature, message, result }
+				return signedMessage
 			}
 
 			Object.assign(actionCache, { [name]: action })
