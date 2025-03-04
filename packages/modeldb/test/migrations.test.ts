@@ -11,7 +11,7 @@ import { ModelDB as ModelDBIdb } from "@canvas-js/modeldb-idb"
 import { getDirectory } from "./utils.js"
 
 test("Initialize empty database (SQLite)", async (t) => {
-	const db = await ModelDBSqlite.open({ path: null, models: {} })
+	const db = await ModelDBSqlite.open(null, { models: {} })
 
 	const models = await db.getAll<{ name: string; model: Model }>("$models")
 	const versions = await db.query<{}>("$versions", {
@@ -26,7 +26,7 @@ test("Initialize empty database (SQLite)", async (t) => {
 
 test("Initialize empty database (IDB)", async (t) => {
 	const name = randomUUID()
-	const db = await ModelDBIdb.open({ name, models: {} })
+	const db = await ModelDBIdb.open(name, { models: {} })
 
 	const models = await db.getAll<{ name: string; model: Model }>("$models")
 	const versions = await db.query<{}>("$versions", {
@@ -40,8 +40,7 @@ test("Initialize empty database (IDB)", async (t) => {
 })
 
 test("Initialize example database", async (t) => {
-	const db = await ModelDBSqlite.open({
-		path: null,
+	const db = await ModelDBSqlite.open(null, {
 		models: {
 			users: { $primary: "id", id: "integer", address: "string" },
 		},

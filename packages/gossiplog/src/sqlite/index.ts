@@ -14,17 +14,15 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 		init: GossipLogInit<Payload>,
 	): Promise<GossipLog<Payload>> {
 		if (directory === null) {
-			const db = await ModelDB.open({
-				path: null,
+			const db = await ModelDB.open(null, {
 				models: { ...init.schema, ...AbstractGossipLog.schema },
-				version: Object.assign(init.version ?? {}, {
-					[AbstractGossipLog.namespace]: AbstractGossipLog.version,
-				}),
-
+				version: Object.assign(init.version ?? {}, AbstractGossipLog.baseVersion),
 				upgrade: async (upgradeAPI, oldVersion, newVersion) => {
 					await AbstractGossipLog.upgrade(upgradeAPI, oldVersion, newVersion)
 					await init.upgrade?.(upgradeAPI, oldVersion, newVersion)
 				},
+				initialUpgradeSchema: Object.assign(init.initialUpgradeSchema ?? {}, AbstractGossipLog.schema),
+				initialUpgradeVersion: Object.assign(init.initialUpgradeVersion ?? {}, AbstractGossipLog.baseVersion),
 			})
 
 			const tree = new MemoryTree({ mode: Mode.Index })
@@ -35,17 +33,15 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 				fs.mkdirSync(directory, { recursive: true })
 			}
 
-			const db = await ModelDB.open({
-				path: `${directory}/db.sqlite`,
+			const db = await ModelDB.open(`${directory}/db.sqlite`, {
 				models: { ...init.schema, ...AbstractGossipLog.schema },
-				version: Object.assign(init.version ?? {}, {
-					[AbstractGossipLog.namespace]: AbstractGossipLog.version,
-				}),
-
+				version: Object.assign(init.version ?? {}, AbstractGossipLog.baseVersion),
 				upgrade: async (upgradeAPI, oldVersion, newVersion) => {
 					await AbstractGossipLog.upgrade(upgradeAPI, oldVersion, newVersion)
 					await init.upgrade?.(upgradeAPI, oldVersion, newVersion)
 				},
+				initialUpgradeSchema: Object.assign(init.initialUpgradeSchema ?? {}, AbstractGossipLog.schema),
+				initialUpgradeVersion: Object.assign(init.initialUpgradeVersion ?? {}, AbstractGossipLog.baseVersion),
 			})
 
 			const tree = new PersistentTree(`${directory}/message-index`, {

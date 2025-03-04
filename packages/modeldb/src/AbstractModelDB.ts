@@ -35,6 +35,9 @@ export type ModelDBBackend =
 export abstract class AbstractModelDB implements DatabaseAPI {
 	public static namespace = "modeldb"
 	public static version = 1
+	protected static baseVersion = {
+		[AbstractModelDB.namespace]: AbstractModelDB.version,
+	}
 
 	public readonly models: Record<string, Model>
 
@@ -52,48 +55,58 @@ export abstract class AbstractModelDB implements DatabaseAPI {
 
 	protected static async initialize(
 		baseModelDB: DatabaseAPI,
-		newConfig: Config,
-		newVersion: Record<string, number>,
-		upgrade: (oldConfig: Config, oldVersion: Record<string, number>) => Promise<void>,
+		timestamp: string,
+		initialVersion: Record<string, number>,
+		initialConfig: Config,
 	) {
-		const timestamp = new Date().toISOString()
-
-		const baseEffects: Effect[] = []
-
-		const [oldModelDBVersion = null] = await baseModelDB.query<{ namespace: string; version: number }>("$versions", {
-			select: { namespace: true, version: true },
-			limit: 1,
-			where: { namespace: AbstractModelDB.namespace },
-			orderBy: { "namespace/version": "desc" },
-		})
-
-		if (oldModelDBVersion === null) {
-			const versionValue = { namespace: AbstractModelDB.namespace, version: AbstractModelDB.version, timestamp }
-			baseEffects.push({ model: "$versions", operation: "set", value: versionValue })
-
-			for (const [name, model] of Object.entries(Config.baseModels)) {
-				baseEffects.push({ model: "$models", operation: "set", value: { name, model } })
-			}
-
-			for (const model of newConfig.models) {
-				baseEffects.push({ model: "$models", operation: "set", value: { name: model.name, model } })
-			}
-		} else if (oldModelDBVersion.version < AbstractModelDB.version) {
-			// FUTURE: ModelDB internal upgrades (to $versions and $models) go here
-			throw new Error(`unsupported modeldb version`)
-		} else if (oldModelDBVersion.version > AbstractModelDB.version) {
-			throw new Error(`unsupported modeldb version`)
+		const log = logger("canvas:modeldb:initialize")
+		log("setting initial version %o", initialVersion)
+		const initialEffects: Effect[] = []
+		for (const [namespace, version] of Object.entries(initialVersion)) {
+			initialEffects.push({ model: "$versions", operation: "set", value: { namespace, version, timestamp } })
 		}
 
-		await baseModelDB.apply(baseEffects)
+		for (const model of initialConfig.models) {
+			log("creating initial model %s", model.name)
+			initialEffects.push({ model: "$models", operation: "set", value: { name: model.name, model } })
+		}
 
-		const existingVersions = await baseModelDB.getAll<{ namespace: string; version: number; timestamp: string }>(
-			"$versions",
-		)
-		const oldVersion: Record<string, number> = {}
-		for (const { namespace, version } of existingVersions) {
+		log.trace("applying %o", initialEffects)
+		await baseModelDB.apply(initialEffects)
+	}
+
+	protected static async getVersion(baseModelDB: DatabaseAPI) {
+		const result: Record<string, number> = {}
+		const versions = await baseModelDB.getAll<{ namespace: string; version: number }>("$versions")
+		for (const { namespace, version } of versions) {
 			assert(Number.isSafeInteger(version) && version >= 0, "internal error - found invalid version number")
-			oldVersion[namespace] = Math.max(oldVersion[namespace] ?? 0, version)
+			result[namespace] = Math.max(result[namespace] ?? 0, version)
+		}
+
+		return result
+	}
+
+	protected static async upgrade(
+		baseModelDB: DatabaseAPI,
+		timestamp: string,
+		newVersion: Record<string, number>,
+		newConfig: Config,
+		upgrade: (oldConfig: Config, oldVersion: Record<string, number>) => Promise<void>,
+	) {
+		const log = logger(`canvas:modeldb:upgrade`)
+		log("opening version %o", newVersion)
+
+		const oldVersion = await AbstractModelDB.getVersion(baseModelDB)
+		log("found existing version %o", oldVersion)
+
+		const oldModelDBVersion = oldVersion[AbstractModelDB.namespace]
+		if (oldModelDBVersion === undefined) {
+			throw new Error(`internal error - missing modeldb version`)
+		} else if (oldModelDBVersion < AbstractModelDB.version) {
+			// FUTURE: ModelDB internal upgrades (to $versions and $models) go here
+			throw new Error(`unsupported modeldb version`)
+		} else if (oldModelDBVersion > AbstractModelDB.version) {
+			throw new Error(`unsupported modeldb version`)
 		}
 
 		const oldModels = await baseModelDB.getAll<{ name: string; model: Model }>("$models")
@@ -101,12 +114,12 @@ export abstract class AbstractModelDB implements DatabaseAPI {
 		const newEntries = Object.entries(newVersion).map(([namespace, version]) => ({ namespace, version, timestamp }))
 
 		if (deepEqual(newVersion, oldVersion)) {
-			// strict version equality
-			// assert strict config equality
+			// strict version equality -> assert strict config equality
+			log("existing version is strictly equal to the provided version")
 			Config.assertEqual(newConfig, oldConfig)
 		} else if (newEntries.every(({ namespace, version }) => oldVersion[namespace] === version)) {
-			// soft version equality
-			// assert soft config equality
+			// soft version equality -> assert soft config equality
+			log("existing version is compatible with the provided version")
 			for (const newModel of newConfig.models) {
 				const oldModel = oldConfig.models.find((model) => model.name === newModel.name)
 				if (oldModel === undefined) {
@@ -130,6 +143,8 @@ export abstract class AbstractModelDB implements DatabaseAPI {
 				({ namespace, version }) => oldVersion[namespace] === undefined || oldVersion[namespace] < version,
 			)
 
+			log("upgrade required for entries %o", upgradeEntries)
+
 			// sanity check assert
 			assert(upgradeEntries.length > 0, "internal error - expected upgrade")
 
@@ -151,12 +166,23 @@ export abstract class AbstractModelDB implements DatabaseAPI {
 				}
 			}
 
-			await baseModelDB.apply(
-				newEntries
-					.filter(({ namespace, version }) => oldVersion[namespace] === undefined || oldVersion[namespace] < version)
-					.map((value) => ({ model: "$versions", operation: "set", value })),
-			)
+			await baseModelDB.apply(upgradeEntries.map((value) => ({ model: "$versions", operation: "set", value })))
 		}
+
+		log("upgrade complete")
+	}
+
+	protected abstract hasModel(model: Model): Awaitable<boolean>
+
+	protected async satisfies(config: Config) {
+		for (const model of config.models) {
+			const hasModel = await this.hasModel(model)
+			if (!hasModel) {
+				return false
+			}
+		}
+
+		return true
 	}
 
 	abstract getType(): ModelDBBackend

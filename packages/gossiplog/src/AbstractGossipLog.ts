@@ -45,6 +45,8 @@ export interface GossipLogInit<Payload = unknown, Result = any> {
 		oldVersion: Record<string, number>,
 		newVersion: Record<string, number>,
 	) => Awaitable<void>
+	initialUpgradeSchema?: ModelSchema
+	initialUpgradeVersion?: Record<string, number>
 }
 
 export type GossipLogEvents<Payload = unknown, Result = any> = {
@@ -69,6 +71,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 > {
 	public static namespace = "gossiplog"
 	public static version = 1
+
 	public static schema = {
 		$messages: {
 			id: "primary",
@@ -84,13 +87,14 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		...BranchMergeIndex.schema,
 	} satisfies ModelSchema
 
+	protected static baseVersion = { [AbstractGossipLog.namespace]: AbstractGossipLog.version }
 	protected static async upgrade(
 		upgradeAPI: DatabaseUpgradeAPI,
 		oldVersion: Record<string, number>,
 		newVersion: Record<string, number>,
 	) {
-		const version = oldVersion[AbstractGossipLog.namespace]
-		if (version !== undefined && version < AbstractGossipLog.version) {
+		const version = oldVersion[AbstractGossipLog.namespace] ?? 0
+		if (version < AbstractGossipLog.version) {
 			// GossipLog migrations go here
 			throw new Error("unexpected GossipLog version")
 		}

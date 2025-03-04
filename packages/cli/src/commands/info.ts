@@ -22,7 +22,7 @@ export async function handler(args: Args) {
 
 	try {
 		const app = await Canvas.initialize({ topic, path: location, contract })
-		const { models } = app.getApplicationData()
+		const { models } = await app.getApplicationData()
 		console.log(`topic: ${app.topic}\n`)
 		console.log(chalk.green("===== models ====="))
 		console.log(`${JSON.stringify(Object.values(models), null, "  ")}\n`)

@@ -30,16 +30,15 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 			mdb = new ModelDBProxy(worker, { ...init.schema, ...AbstractGossipLog.schema })
 			await mdb.initialize()
 		} else if (!useTestProxy && db) {
-			mdb = await ModelDB.open({
-				db,
+			mdb = await ModelDB.open(db, {
 				models: { ...init.schema, ...AbstractGossipLog.schema },
-				version: Object.assign(init.version ?? {}, {
-					[AbstractGossipLog.namespace]: AbstractGossipLog.version,
-				}),
+				version: Object.assign(init.version ?? {}, AbstractGossipLog.baseVersion),
 				upgrade: async (upgradeAPI, oldVersion, newVersion) => {
 					await AbstractGossipLog.upgrade(upgradeAPI, oldVersion, newVersion)
 					await init.upgrade?.(upgradeAPI, oldVersion, newVersion)
 				},
+				initialUpgradeSchema: Object.assign(init.initialUpgradeSchema ?? {}, AbstractGossipLog.schema),
+				initialUpgradeVersion: Object.assign(init.initialUpgradeVersion ?? {}, AbstractGossipLog.baseVersion),
 			})
 		} else {
 			throw new Error("must provide db or worker && useTestProxy")

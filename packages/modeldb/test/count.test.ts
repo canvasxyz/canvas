@@ -1,7 +1,3 @@
-import test from "ava"
-
-// test for the `count` function in the ModelDB class
-
 import { nanoid } from "nanoid"
 import { testPlatforms } from "./utils.js"
 

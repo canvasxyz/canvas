@@ -18,7 +18,9 @@ export interface APIOptions {}
 export function createAPI(app: Canvas): express.Express {
 	const api = createBaseAPI(app.messageLog)
 
-	api.get("/", (req, res) => void res.json(app.getApplicationData()))
+	api.get("/", async (req, res) => {
+		res.json(await app.getApplicationData())
+	})
 
 	api.get("/actions/count", async (req, res) => {
 		const range = getRange(req)

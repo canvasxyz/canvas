@@ -18,12 +18,9 @@ export class ModelDBProxyObject {
 		this.subscriptionResults = []
 	}
 
-	async initialize(modelSchema: ModelSchema) {
+	async initialize(models: ModelSchema) {
 		if (this.db) throw new Error("already initialized")
-		this.db = await ModelDB.open({
-			db: this.state.storage.sql,
-			models: modelSchema,
-		})
+		this.db = await ModelDB.open(this.state.storage.sql, { models })
 	}
 
 	async fetch(request: Request): Promise<Response> {

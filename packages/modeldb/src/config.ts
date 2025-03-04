@@ -29,7 +29,7 @@ export class Config {
 
 	public static baseConfig = new Config(Object.values(Config.baseModels))
 
-	public static parse(init: ModelSchema): Config {
+	public static parse(init: ModelSchema, options: { freeze?: boolean } = {}): Config {
 		const models: Model[] = Object.values(Config.baseModels)
 
 		for (const [modelName, modelInit] of Object.entries(init)) {
@@ -41,7 +41,7 @@ export class Config {
 			models.push(model)
 		}
 
-		return new Config(models)
+		return new Config(models, options)
 	}
 
 	private static parseModel(modelName: string, init: ModelInit): Model {
@@ -154,7 +154,7 @@ export class Config {
 
 	#frozen = false
 
-	public constructor(public models: Model[]) {
+	public constructor(public models: Model[], options: { freeze?: boolean } = {}) {
 		this.primaryKeys = {}
 		for (const model of models) {
 			this.primaryKeys[model.name] = model.primaryKey.map((name) => {
@@ -187,6 +187,10 @@ export class Config {
 					})
 				}
 			}
+		}
+
+		if (options.freeze) {
+			this.freeze()
 		}
 	}
 

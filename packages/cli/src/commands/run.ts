@@ -317,6 +317,9 @@ export async function handler(args: Args) {
 			console.log(`Serving network explorer: ${chalk.bold(origin)}/explorer`)
 		} else if (args["network-explorer"] !== undefined) {
 			console.log(`Serving network explorer: ${chalk.bold(origin)}`)
+			api.get('/explorer', (req, res) => {
+				res.redirect('/')
+			})
 		}
 
 		const wsAPI = `ws://localhost:${args.port}`
@@ -334,7 +337,7 @@ export async function handler(args: Args) {
 		console.log(`└ POST ${origin}/api/session`)
 		console.log(`└ POST ${origin}/api/sessions/count`)
 
-		const { models, actions } = app.getApplicationData()
+		const { models, actions } = await app.getApplicationData()
 		for (const name of Object.keys(models)) {
 			console.log(`└ GET  ${origin}/api/models/${name}`)
 			console.log(`└ GET  ${origin}/api/models/${name}/:key`)

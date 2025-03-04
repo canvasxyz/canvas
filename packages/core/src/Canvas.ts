@@ -3,6 +3,7 @@ import { logger } from "@libp2p/logger"
 
 import type pg from "pg"
 import type { SqlStorage } from "@cloudflare/workers-types"
+import { bytesToHex } from "@noble/hashes/utils"
 
 import {
 	Signature,
@@ -74,6 +75,8 @@ export type ApplicationData = {
 		listen?: number
 		connect?: string
 	}
+	root: string | null
+	heads: string[]
 	database: string
 	topic: string
 	models: Record<string, Model>
@@ -86,6 +89,7 @@ export class Canvas<
 > extends TypedEventEmitter<CanvasEvents> {
 	public static namespace = "canvas"
 	public static version = 1
+
 	public static async initialize<ModelsT extends ModelSchema, ActionsT extends Actions<ModelsT> = Actions<ModelsT>>(
 		config: Config<ModelsT, ActionsT>,
 	): Promise<Canvas<ModelsT, ActionsT>> {
@@ -367,8 +371,11 @@ export class Canvas<
 		this.dispatchEvent(new Event("stop"))
 	}
 
-	public getApplicationData(): ApplicationData {
+	public async getApplicationData(): Promise<ApplicationData> {
 		const models = Object.fromEntries(Object.entries(this.db.models).filter(([name]) => !name.startsWith("$")))
+		const root = await this.messageLog.tree.read((txn) => txn.getRoot())
+		const heads = await this.db.query<{ id: string }>("$heads").then((records) => records.map((record) => record.id))
+
 		return {
 			networkConfig: {
 				bootstrapList: this.networkConfig?.bootstrapList,
@@ -379,6 +386,8 @@ export class Canvas<
 				connect: this.wsConnect?.url,
 				listen: this.wsListen?.port,
 			},
+			root: root ? `${root.level}:${bytesToHex(root.hash)}` : null,
+			heads,
 			database: this.db.getType(),
 			topic: this.topic,
 			models: models,
