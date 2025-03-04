@@ -89,6 +89,7 @@ export class Canvas<
 > extends TypedEventEmitter<CanvasEvents> {
 	public static namespace = "canvas"
 	public static version = 1
+
 	public static async initialize<ModelsT extends ModelSchema, ActionsT extends Actions<ModelsT> = Actions<ModelsT>>(
 		config: Config<ModelsT, ActionsT>,
 	): Promise<Canvas<ModelsT, ActionsT>> {
@@ -373,7 +374,7 @@ export class Canvas<
 
 	public async getApplicationData(): Promise<ApplicationData> {
 		const models = Object.fromEntries(Object.entries(this.db.models).filter(([name]) => !name.startsWith("$")))
-		const root = (await this.messageLog.tree.read((txn) => txn.getRoot()))
+		const root = await this.messageLog.tree.read((txn) => txn.getRoot())
 		const heads = await this.db.query<{ id: string }>("$heads").then((records) => records.map((record) => record.id))
 
 		return {
