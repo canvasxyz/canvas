@@ -12,6 +12,7 @@ import {
 	WhereCondition,
 	Config,
 	PrimaryKeyValue,
+	Model,
 } from "@canvas-js/modeldb"
 import { Awaitable } from "@canvas-js/interfaces"
 import { assert, prepare } from "@canvas-js/utils"
@@ -62,6 +63,10 @@ export class ModelDBProxy extends AbstractModelDB {
 				}
 			})
 		})
+	}
+
+	public async hasModel(model: Model): Promise<boolean> {
+		return await this.proxyFetch("hasModel", [model])
 	}
 
 	public getType(): ModelDBBackend {

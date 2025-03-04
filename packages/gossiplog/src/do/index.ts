@@ -30,8 +30,7 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 			mdb = new ModelDBProxy(worker, { ...init.schema, ...AbstractGossipLog.schema })
 			await mdb.initialize()
 		} else if (!useTestProxy && db) {
-			mdb = await ModelDB.open({
-				db,
+			mdb = await ModelDB.open(db, {
 				models: { ...init.schema, ...AbstractGossipLog.schema },
 				version: Object.assign(init.version ?? {}, {
 					[AbstractGossipLog.namespace]: AbstractGossipLog.version,

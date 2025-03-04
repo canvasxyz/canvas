@@ -68,7 +68,7 @@ export const testPlatforms = (
 
 	if (platforms.sqlite) {
 		test(`Sqlite - ${name}`, macro, async (t, models) => {
-			const mdb = await ModelDBSqlite.open({ path: null, models })
+			const mdb = await ModelDBSqlite.open(null, { models })
 			t.teardown(() => mdb.close())
 			return mdb
 		})
@@ -76,7 +76,7 @@ export const testPlatforms = (
 
 	if (platforms.idb) {
 		test(`IDB - ${name}`, macro, async (t, models) => {
-			const mdb = await ModelDBIdb.open({ name: nanoid(), models })
+			const mdb = await ModelDBIdb.open(nanoid(), { models })
 			t.teardown(() => mdb.close())
 			return mdb
 		})
@@ -108,7 +108,7 @@ export const testPlatforms = (
 
 	if (platforms.sqliteWasm) {
 		test.serial(`Sqlite Wasm - ${name}`, macro, async (t, models) => {
-			const mdb = await ModelDBSqliteWasm.open({ models, path: null })
+			const mdb = await ModelDBSqliteWasm.open(null, { models })
 			t.teardown(() => mdb.close())
 			return mdb
 		})

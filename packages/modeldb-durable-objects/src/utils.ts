@@ -1,3 +1,4 @@
+import { Model } from "@canvas-js/modeldb"
 import { SqlStorage, SqlStorageValue } from "@cloudflare/workers-types"
 
 export const quote = (name: string) => `"${name}"`

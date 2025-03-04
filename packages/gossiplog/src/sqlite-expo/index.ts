@@ -10,8 +10,7 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 		...init
 	}: { directory?: string | null; clear?: boolean } & GossipLogInit<Payload>) {
 		const tree = new MemoryTree({ mode: Mode.Index })
-		const db = await ModelDB.open({
-			path: null,
+		const db = await ModelDB.open(null, {
 			models: { ...init.schema, ...AbstractGossipLog.schema },
 			version: Object.assign(init.version ?? {}, {
 				[AbstractGossipLog.namespace]: AbstractGossipLog.version,
