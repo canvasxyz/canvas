@@ -43,9 +43,11 @@ export class ModelDB extends AbstractModelDB {
 			// 2) we are opening a pre-migration-system database for the first time
 
 			baseModelDB.log("no version records found")
-			const initialUpgradeVersion = init.initialUpgradeVersion ?? newVersion
-			const initialUpgradeConfig =
-				init.initialUpgradeSchema === undefined ? newConfig : Config.parse(init.initialUpgradeSchema)
+			const initialUpgradeVersion = Object.assign(
+				init.initialUpgradeVersion ?? init.version ?? {},
+				AbstractModelDB.baseVersion,
+			)
+			const initialUpgradeConfig = init.initialUpgradeSchema ? Config.parse(init.initialUpgradeSchema) : newConfig
 
 			// we distinguish between these cases using baseModelDB.satisfies(...).
 			const isSatisfied = await baseModelDB.satisfies(initialUpgradeConfig)
