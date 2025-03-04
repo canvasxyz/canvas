@@ -1,4 +1,4 @@
-# Common Network Explorer
+# Network Explorer
 
 ## Setup
 

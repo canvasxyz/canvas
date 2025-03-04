@@ -66,6 +66,8 @@ export interface CanvasEvents extends GossipLogEvents<MessageType> {
 export type CanvasLogEvent = CustomEvent<SignedMessage<MessageType>>
 
 export type ApplicationData = {
+	peerId: string | null
+	connections: Record<string, { status: string; direction: string; rtt: number | undefined }>
 	networkConfig: {
 		bootstrapList?: string[]
 		listen?: string[]
@@ -107,6 +109,9 @@ export class Canvas<
 
 		const runtime = await createRuntime(topic, signers, contract, { runtimeMemoryLimit })
 		const gossipTopic = config.snapshot ? `${topic}#${hashSnapshot(config.snapshot)}` : topic // topic for peering
+
+		console.log("SCHEMA", JSON.stringify({ ...config.schema, ...runtime.schema }, null, "  "))
+
 		const messageLog = await target.openGossipLog(
 			{ topic: gossipTopic, path, clear: config.reset },
 			{
@@ -222,6 +227,8 @@ export class Canvas<
 	private readonly controller = new AbortController()
 	private readonly log = logger("canvas:core")
 
+	private peerId: string | null = null
+	private libp2p: Libp2p | null = null
 	private networkConfig: NetworkConfig | null = null
 	private wsListen: { port: number } | null = null
 	private wsConnect: { url: string } | null = null
@@ -316,8 +323,10 @@ export class Canvas<
 	}
 
 	public async startLibp2p(config: NetworkConfig): Promise<Libp2p<ServiceMap<MessageType>>> {
+		const libp2p = await this.messageLog.startLibp2p(config)
+		this.libp2p = libp2p
 		this.networkConfig = config
-		return await this.messageLog.startLibp2p(config)
+		return libp2p
 	}
 
 	/**
@@ -376,7 +385,15 @@ export class Canvas<
 		const root = await this.messageLog.tree.read((txn) => txn.getRoot())
 		const heads = await this.db.query<{ id: string }>("$heads").then((records) => records.map((record) => record.id))
 
+		const connections: Record<string, { status: string; direction: string; rtt: number | undefined }> = {}
+		for (const conn of this.libp2p?.getConnections() ?? []) {
+			const addr = conn.remoteAddr.toString()
+			connections[addr] = { status: conn.status, direction: conn.direction, rtt: conn.rtt }
+		}
+
 		return {
+			connections,
+			peerId: this.libp2p ? this.libp2p.peerId.toString() : null,
 			networkConfig: {
 				bootstrapList: this.networkConfig?.bootstrapList,
 				listen: this.networkConfig?.listen,
