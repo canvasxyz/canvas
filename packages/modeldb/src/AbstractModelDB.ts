@@ -166,11 +166,7 @@ export abstract class AbstractModelDB implements DatabaseAPI {
 				}
 			}
 
-			await baseModelDB.apply(
-				newEntries
-					.filter(({ namespace, version }) => oldVersion[namespace] === undefined || oldVersion[namespace] < version)
-					.map((value) => ({ model: "$versions", operation: "set", value })),
-			)
+			await baseModelDB.apply(upgradeEntries.map((value) => ({ model: "$versions", operation: "set", value })))
 		}
 
 		log("upgrade complete")
