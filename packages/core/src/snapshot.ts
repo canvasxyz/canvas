@@ -34,7 +34,7 @@ export function hashSnapshot(snapshot: Snapshot): string {
 
 export async function createSnapshot(app: Canvas): Promise<Snapshot> {
 	const snapshot: Snapshot = { type: "snapshot", models: {} }
-	const { models } = app.getApplicationData()
+	const { models } = await app.getApplicationData()
 
 	for (const modelName of Object.keys(models)) {
 		if (modelName.startsWith("$")) {

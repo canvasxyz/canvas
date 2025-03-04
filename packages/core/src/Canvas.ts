@@ -57,7 +57,7 @@ export type Config<ModelsT extends ModelSchema = any, ActionsT extends Actions<M
 
 export type ActionAPI<Args extends Array<any> = any, Result = any> = (
 	...args: Args
-) => Promise<SignedMessage<Action, Result>>
+) => Promise<SignedMessage<Action, Result> & { result: Result }>
 
 export interface CanvasEvents extends GossipLogEvents<MessageType> {
 	stop: Event
