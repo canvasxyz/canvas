@@ -66,10 +66,12 @@ export interface CanvasEvents extends GossipLogEvents<MessageType> {
 export type CanvasLogEvent = CustomEvent<SignedMessage<MessageType>>
 
 export type ApplicationData = {
+	peerId: string | null
 	networkConfig: {
 		bootstrapList?: string[]
 		listen?: string[]
 		announce?: string[]
+		
 	}
 	wsConfig: {
 		listen?: number
@@ -223,6 +225,7 @@ export class Canvas<
 	private readonly controller = new AbortController()
 	private readonly log = logger("canvas:core")
 
+	private peerId: string | null = null
 	private networkConfig: NetworkConfig | null = null
 	private wsListen: { port: number } | null = null
 	private wsConnect: { url: string } | null = null
@@ -317,8 +320,10 @@ export class Canvas<
 	}
 
 	public async startLibp2p(config: NetworkConfig): Promise<Libp2p<ServiceMap<MessageType>>> {
+		const libp2p = await this.messageLog.startLibp2p(config)
 		this.networkConfig = config
-		return await this.messageLog.startLibp2p(config)
+		this.peerId = libp2p.peerId.toString()
+		return libp2p
 	}
 
 	/**
@@ -378,6 +383,7 @@ export class Canvas<
 		const heads = await this.db.query<{ id: string }>("$heads").then((records) => records.map((record) => record.id))
 
 		return {
+			peerId: this.peerId,
 			networkConfig: {
 				bootstrapList: this.networkConfig?.bootstrapList,
 				listen: this.networkConfig?.listen,
