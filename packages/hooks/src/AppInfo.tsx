@@ -233,38 +233,47 @@ export const AppInfo: React.FC<{ app: Canvas | null | undefined; ws: NetworkClie
 									</ul>
 									<hr style={{ margin: "0.5rem 0" }} />
 									<div>Remote message heads</div>
-									{remoteInfo.heads.length > 0 && (
-										<ul style={{ listStyleType: "disc", paddingLeft: "1rem" }}>
-											{remoteInfo.heads.map((head: string) => {
-												return (
-													<li key={head}>
-														<code
-															style={{
-																lineHeight: "1.25rem",
-															}}
-														>
-															{head}
-														</code>
-														<br />
-														<span style={{ color: "#6b7280" }}>(clock: {MessageId.encode(head).clock})</span>
-													</li>
-												)
-											})}
-											{remoteInfo.heads.length === 0 && (
-												<li>
+									<ul style={{ listStyleType: "disc", paddingLeft: "1rem" }}>
+										{remoteInfo.heads.map((head: string) => {
+											return (
+												<li key={head}>
 													<code
 														style={{
 															lineHeight: "1.25rem",
 														}}
 													>
-														None
+														{head}
 													</code>
 													<br />
-													<span style={{ color: "#6b7280" }}>(clock: 0)</span>
+													<span style={{ color: "#6b7280" }}>(clock: {MessageId.encode(head).clock})</span>
 												</li>
-											)}
-										</ul>
-									)}
+											)
+										})}
+										{remoteInfo.heads.length === 0 && (
+											<li>
+												<code
+													style={{
+														lineHeight: "1.25rem",
+													}}
+												>
+													None
+												</code>
+												<br />
+												<span style={{ color: "#6b7280" }}>(clock: 0)</span>
+											</li>
+										)}
+									</ul>
+								</div>
+								<hr style={{ margin: "0.5rem 0" }} />
+								<div
+									style={{
+										lineHeight: "1.25rem",
+									}}
+								>
+									Remote storage
+								</div>
+								<div style={{ marginTop: "0.25rem" }}>
+									<code>{remoteInfo.database}</code>
 								</div>
 							</div>
 						)}
