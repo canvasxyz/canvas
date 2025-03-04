@@ -67,16 +67,11 @@ export type CanvasLogEvent = CustomEvent<SignedMessage<MessageType>>
 
 export type ApplicationData = {
 	peerId: string | null
-	connections: Record<string, {
-		status: string
-		direction: string
-		rtt: number | undefined
-	}>,
+	connections: Record<string, { status: string; direction: string; rtt: number | undefined }>
 	networkConfig: {
 		bootstrapList?: string[]
 		listen?: string[]
 		announce?: string[]
-		
 	}
 	wsConfig: {
 		listen?: number
@@ -114,6 +109,9 @@ export class Canvas<
 
 		const runtime = await createRuntime(topic, signers, contract, { runtimeMemoryLimit })
 		const gossipTopic = config.snapshot ? `${topic}#${hashSnapshot(config.snapshot)}` : topic // topic for peering
+
+		console.log("SCHEMA", JSON.stringify({ ...config.schema, ...runtime.schema }, null, "  "))
+
 		const messageLog = await target.openGossipLog(
 			{ topic: gossipTopic, path, clear: config.reset },
 			{
@@ -388,7 +386,11 @@ export class Canvas<
 		const root = await this.messageLog.tree.read((txn) => txn.getRoot())
 		const heads = await this.db.query<{ id: string }>("$heads").then((records) => records.map((record) => record.id))
 
-		const connections = this.libp2p ? Object.fromEntries((await this.libp2p.getConnections()).map((conn) => [conn.remoteAddr.toString(), { status: conn.status, direction: conn.direction, rtt: conn.rtt }])) : {}
+		const connections: Record<string, { status: string; direction: string; rtt: number | undefined }> = {}
+		for (const conn of this.libp2p?.getConnections() ?? []) {
+			const addr = conn.remoteAddr.toString()
+			connections[addr] = { status: conn.status, direction: conn.direction, rtt: conn.rtt }
+		}
 
 		return {
 			connections,
