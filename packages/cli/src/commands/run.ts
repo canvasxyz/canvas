@@ -317,6 +317,9 @@ export async function handler(args: Args) {
 			console.log(`Serving network explorer: ${chalk.bold(origin)}/explorer`)
 		} else if (args["network-explorer"] !== undefined) {
 			console.log(`Serving network explorer: ${chalk.bold(origin)}`)
+			api.get('/explorer', (req, res) => {
+				res.redirect('/')
+			})
 		}
 
 		const wsAPI = `ws://localhost:${args.port}`
