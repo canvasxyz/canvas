@@ -17,7 +17,7 @@ import target from "#target"
 
 import type { Contract, Actions, ActionImplementation, ModelAPI, DeriveModelTypes } from "./types.js"
 import { Runtime, createRuntime } from "./runtime/index.js"
-import { ActionRecord } from "./runtime/AbstractRuntime.js"
+import { ActionRecord, updatesToEffects } from "./runtime/AbstractRuntime.js"
 import { validatePayload } from "./schema.js"
 import { createSnapshot, hashSnapshot } from "./snapshot.js"
 import { topicPattern } from "./utils.js"
@@ -184,7 +184,9 @@ export class Canvas<
 						const record = { did }
 						effects.push({ operation: "set", model: "$dids", value: record })
 					} else if (message.payload.type === "updates") {
-						// TODO: handle updates
+						for (const effect of await updatesToEffects(message.payload, db)) {
+							effects.push(effect)
+						}
 					}
 					start = id
 				}

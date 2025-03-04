@@ -136,7 +136,7 @@ export abstract class AbstractRuntime {
 			} else if (isSnapshot(signedMessage)) {
 				return await handleSnapshot(signedMessage, this)
 			} else if (isUpdates(signedMessage)) {
-				return await handleUpdates(signedMessage, this)
+				return await handleUpdates(signedMessage)
 			} else {
 				throw new Error("invalid message payload type")
 			}
@@ -282,28 +282,46 @@ export abstract class AbstractRuntime {
 		return result
 	}
 
-	private async handleUpdates(signedMessage: SignedMessage<Updates>, messageLog: AbstractGossipLog<MessageType>) {
-		const effects: Effect[] = []
-		for (const { model, key, diff } of signedMessage.message.payload.updates) {
-			const existingStateEntries = await this.db.query<{ id: string; content: Uint8Array }>(`${model}:state`, {
+	private async handleUpdates(signedMessage: SignedMessage<Updates>) {
+		const effects = await updatesToEffects(signedMessage.message.payload, this.db)
+		await this.db.apply(effects)
+	}
+}
+
+export const updatesToEffects = async (payload: Updates, db: AbstractModelDB) => {
+	const updatedEntries: Record<string, Record<string, Y.Doc>> = {}
+
+	for (const { model, key, diff } of payload.updates) {
+		let doc = (updatedEntries[model] || {})[key]
+
+		if (!doc) {
+			const existingStateEntries = await db.query<{ id: string; content: Uint8Array }>(`${model}:state`, {
 				where: { id: key },
 				limit: 1,
 			})
-
-			// apply the diff to the doc
-			const doc = new Y.Doc()
+			doc = new Y.Doc()
 			if (existingStateEntries.length > 0) {
 				Y.applyUpdate(doc, existingStateEntries[0].content)
 			}
-			Y.applyUpdate(doc, diff)
-			const newContent = Y.encodeStateAsUpdate(doc)
+		}
+
+		// apply the diff to the doc
+		Y.applyUpdate(doc, diff)
+
+		updatedEntries[model] = { ...updatedEntries[model], [key]: doc }
+	}
+
+	const effects: Effect[] = []
+	for (const [model, entries] of Object.entries(updatedEntries)) {
+		for (const [key, doc] of Object.entries(entries)) {
+			const diff = Y.encodeStateAsUpdate(doc)
 
 			effects.push({
 				model: `${model}:state`,
 				operation: "set",
-				value: { id: key, content: newContent },
+				value: { id: key, content: diff },
 			})
 		}
-		await this.db.apply(effects)
 	}
+	return effects
 }
