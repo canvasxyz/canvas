@@ -83,7 +83,12 @@ export abstract class AbstractRuntime {
 			cause_id: "string",
 		},
 
-		$records: { id: "primary", model: "string", key: "json", version: "string" },
+		$records: {
+			record_id: "primary",
+			model: "string",
+			key: "json",
+			version: "string",
+		},
 	} satisfies ModelSchema
 
 	protected static sessionsModel = {
