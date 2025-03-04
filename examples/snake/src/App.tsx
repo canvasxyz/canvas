@@ -1,6 +1,6 @@
 import "./App.css"
 
-import { useCanvas, useLiveQuery, useTick } from "@canvas-js/hooks"
+import { useCanvas, useLiveQuery, useTick, AppInfo } from "@canvas-js/hooks"
 import { MouseEventHandler, useState } from "react"
 
 import { contract, Direction, maxX, maxY, TilesList } from "./contract.js"
@@ -8,13 +8,13 @@ import { contract, Direction, maxX, maxY, TilesList } from "./contract.js"
 function App() {
 	const [ticking, setTicking] = useState(() => localStorage.getItem("ticking") === "true")
 
-	const { app } = useCanvas(null, {
+	const { app, ws } = useCanvas(null, {
 		topic: "canvas-example-chat-global",
 		contract,
 	})
 
 	const stateQuery = useLiveQuery<typeof contract.models, "state">(app, "state")
-	const state = stateQuery && stateQuery[0] as { tiles: string, tickCount: number, gameOver: boolean }
+	const state = stateQuery && (stateQuery[0] as { tiles: string; tickCount: number; gameOver: boolean })
 	const tiles = state?.tiles && (JSON.parse(state.tiles) as TilesList)
 	useTick(app, ticking, 400)
 
@@ -32,6 +32,7 @@ function App() {
 
 	return (
 		<div>
+			<AppInfo app={app} ws={ws} />
 			<button onClick={() => turn("n")}>{"^"}</button>
 			<button onClick={() => turn("w")}>{"<"}</button>
 			<button onClick={() => turn("e")}>{">"}</button>

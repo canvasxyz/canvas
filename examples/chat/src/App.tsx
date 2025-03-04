@@ -9,7 +9,7 @@ import { SolanaSigner } from "@canvas-js/chain-solana"
 
 import type { Contract } from "@canvas-js/core"
 
-import { useCanvas } from "@canvas-js/hooks"
+import { useCanvas, AppInfo } from "@canvas-js/hooks"
 
 import { AuthKitProvider } from "@farcaster/auth-kit"
 import { JsonRpcProvider } from "ethers"
@@ -64,6 +64,7 @@ export const App: React.FC<{}> = ({}) => {
 			<AuthKitProvider config={config}>
 				{app && ws ? (
 					<main>
+						<AppInfo app={app} ws={ws} />
 						<div className="flex flex-row gap-4 h-full">
 							<div className="sm:min-w-[300px] md:min-w-[480px] flex-1 flex flex-col justify-stretch gap-2">
 								<div className="flex-1 border rounded px-2 overflow-y-scroll">
