@@ -27,7 +27,7 @@ export const Sidebar = ({ tables }: { tables: TableDef[] }) => {
 		>
 			<Box px="2" pt="10px" pb="9px">
 				<Link href="#/" size="3" highContrast color="gray" underline="none" weight="bold">
-					Network Explorer
+					Application Explorer
 				</Link>
 			</Box>
 			<Box px="2" py="0.5" pb="2">
