@@ -190,7 +190,7 @@ export class ExecutionContext {
 					} else if (call.call === "delete") {
 						doc.getText().delete(call.index, call.length)
 					} else if (call.call === "applyDelta") {
-						doc.getText().applyDelta(call.delta)
+						doc.getText().applyDelta(call.delta.ops)
 					} else {
 						throw new Error("unexpected call type")
 					}
