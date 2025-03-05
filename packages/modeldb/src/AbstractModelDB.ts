@@ -18,7 +18,7 @@ import {
 import { getFilter } from "./query.js"
 import { getModelsFromInclude, mergeModelValues, updateModelValues } from "./utils.js"
 
-type Subscription = {
+export type Subscription = {
 	model: string
 	query: QueryParams
 	filter: (effect: Effect) => boolean
