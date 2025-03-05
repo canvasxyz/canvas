@@ -174,14 +174,13 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 				}
 			},
 			yjsInsert: async (model: string, key: string, index: number, content: string) => {
-				this.context.yjsCalls[model] ||= {}
-				this.context.yjsCalls[model][key] ||= []
-				this.context.yjsCalls[model][key].push({ call: "insert", index, content })
+				this.context.pushYjsCall(model, key, { call: "insert", index, content })
 			},
 			yjsDelete: async (model: string, key: string, index: number, length: number) => {
-				this.context.yjsCalls[model] ||= {}
-				this.context.yjsCalls[model][key] ||= []
-				this.context.yjsCalls[model][key].push({ call: "delete", index, length })
+				this.context.pushYjsCall(model, key, { call: "delete", index, length })
+			},
+			yjsApplyDelta: async (model: string, key: string, delta: any) => {
+				this.context.pushYjsCall(model, key, { call: "applyDelta", delta })
 			},
 		}
 	}

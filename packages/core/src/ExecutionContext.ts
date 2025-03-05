@@ -20,7 +20,13 @@ type YjsCallDelete = {
 	index: number
 	length: number
 }
-export type YjsCall = YjsCallInsert | YjsCallDelete
+type YjsCallApplyDelta = {
+	call: "applyDelta"
+	// we don't have a declared type for Quill Deltas
+	delta: any
+}
+
+export type YjsCall = YjsCallInsert | YjsCallDelete | YjsCallApplyDelta
 
 export class ExecutionContext {
 	// // recordId -> { version, value }
@@ -149,6 +155,12 @@ export class ExecutionContext {
 		const result = mergeModelValues(value, previousValue)
 		validateModelValue(this.db.models[model], result)
 		this.modelEntries[model][key] = result
+	}
+
+	public pushYjsCall(modelName: string, id: string, call: YjsCall) {
+		this.yjsCalls[modelName] ||= {}
+		this.yjsCalls[modelName][id] ||= []
+		this.yjsCalls[modelName][id].push(call)
 	}
 
 	public async getYDoc(modelName: string, id: string): Promise<Y.Doc | null> {

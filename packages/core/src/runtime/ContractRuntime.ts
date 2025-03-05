@@ -140,18 +140,20 @@ export class ContractRuntime extends AbstractRuntime {
 					const key = vm.context.getString(keyHandle)
 					const index = vm.context.getNumber(indexHandle)
 					const content = vm.context.getString(contentHandle)
-					this.context.yjsCalls[model] ||= {}
-					this.context.yjsCalls[model][key] ||= []
-					this.context.yjsCalls[model][key].push({ call: "insert", index, content })
+					this.context.pushYjsCall(model, key, { call: "insert", index, content })
 				}),
 				yjsDelete: vm.context.newFunction("yjsDelete", (modelHandle, keyHandle, indexHandle, lengthHandle) => {
 					const model = vm.context.getString(modelHandle)
 					const key = vm.context.getString(keyHandle)
 					const index = vm.context.getNumber(indexHandle)
 					const length = vm.context.getNumber(lengthHandle)
-					this.context.yjsCalls[model] ||= {}
-					this.context.yjsCalls[model][key] ||= []
-					this.context.yjsCalls[model][key].push({ call: "delete", index, length })
+					this.context.pushYjsCall(model, key, { call: "delete", index, length })
+				}),
+				yjsApplyDelta: vm.context.newFunction("yjsApplyDelta", (modelHandle, keyHandle, deltaHandle) => {
+					const model = vm.context.getString(modelHandle)
+					const key = vm.context.getString(keyHandle)
+					const delta = vm.unwrapValue(deltaHandle)
+					this.context.pushYjsCall(model, key, { call: "applyDelta", delta })
 				}),
 			})
 			.consume(vm.cache)
