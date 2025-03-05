@@ -56,7 +56,7 @@ export type ModelAPI<ModelTypes extends Record<string, ModelValue>> = {
 		index: number,
 		length: number,
 	) => Promise<void>
-	yjsApplyDelta: <T extends keyof ModelTypes & string>(model: T, key: string, delta: any) => Promise<void>
+	yjsApplyDelta: <T extends keyof ModelTypes & string>(model: T, key: string, delta: string) => Promise<void>
 }
 
 export type ActionContext<T extends Record<string, ModelValue>> = {

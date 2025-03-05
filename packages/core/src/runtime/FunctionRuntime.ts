@@ -180,7 +180,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 				this.context.pushYjsCall(model, key, { call: "delete", index, length })
 			},
 			yjsApplyDelta: async (model: string, key: string, delta: any) => {
-				this.context.pushYjsCall(model, key, { call: "applyDelta", delta })
+				this.context.pushYjsCall(model, key, { call: "applyDelta", delta: JSON.parse(delta) })
 			},
 		}
 	}

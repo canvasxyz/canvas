@@ -152,8 +152,8 @@ export class ContractRuntime extends AbstractRuntime {
 				yjsApplyDelta: vm.context.newFunction("yjsApplyDelta", (modelHandle, keyHandle, deltaHandle) => {
 					const model = vm.context.getString(modelHandle)
 					const key = vm.context.getString(keyHandle)
-					const delta = vm.unwrapValue(deltaHandle)
-					this.context.pushYjsCall(model, key, { call: "applyDelta", delta })
+					const delta = vm.context.getString(deltaHandle)
+					this.context.pushYjsCall(model, key, { call: "applyDelta", delta: JSON.parse(delta) })
 				}),
 			})
 			.consume(vm.cache)
