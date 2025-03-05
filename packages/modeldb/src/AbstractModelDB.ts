@@ -1,10 +1,9 @@
 import { Logger, logger } from "@libp2p/logger"
 
-import { assert, deepEqual } from "@canvas-js/utils"
+import { Awaitable, assert, deepEqual } from "@canvas-js/utils"
 
 import { Config } from "./config.js"
 import {
-	Awaitable,
 	ModelValue,
 	Effect,
 	Model,
@@ -19,7 +18,7 @@ import {
 import { getFilter } from "./query.js"
 import { getModelsFromInclude, mergeModelValues, updateModelValues } from "./utils.js"
 
-type Subscription = {
+export type Subscription = {
 	model: string
 	query: QueryParams
 	filter: (effect: Effect) => boolean
@@ -40,7 +39,7 @@ export type DatabaseUpgradeCallback = (
 	oldConfig: Config,
 	oldVersion: Record<string, number>,
 	newVersion: Record<string, number>,
-) => void | Promise<void>
+) => Awaitable<void>
 
 export interface ModelDBInit {
 	models: ModelSchema
