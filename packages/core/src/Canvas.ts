@@ -1,21 +1,11 @@
 import { Libp2p, TypedEventEmitter } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
-import * as cbor from "@ipld/dag-cbor"
 import type pg from "pg"
 import type { SqlStorage } from "@cloudflare/workers-types"
 import { bytesToHex } from "@noble/hashes/utils"
 
-import {
-	Signature,
-	Action,
-	Session,
-	Message,
-	Snapshot,
-	SessionSigner,
-	SignerCache,
-	MessageType,
-} from "@canvas-js/interfaces"
-import { AbstractModelDB, Model, ModelSchema, Effect, isPrimaryKey } from "@canvas-js/modeldb"
+import { Signature, Action, Message, Snapshot, SessionSigner, SignerCache, MessageType } from "@canvas-js/interfaces"
+import { AbstractModelDB, Model, ModelSchema, Effect } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { AbstractGossipLog, GossipLogEvents, NetworkClient, SignedMessage } from "@canvas-js/gossiplog"
 import type { ServiceMap, NetworkConfig } from "@canvas-js/gossiplog/libp2p"
@@ -24,12 +14,12 @@ import { assert, mapValues } from "@canvas-js/utils"
 
 import target from "#target"
 
-import type { Contract, Actions, ActionImplementation, ModelAPI, DeriveModelTypes, ModelValue } from "./types.js"
+import type { Contract, Actions, ActionImplementation, ModelAPI, DeriveModelTypes } from "./types.js"
 import { Runtime, createRuntime } from "./runtime/index.js"
-import { AbstractRuntime, ActionRecord, WriteRecord } from "./runtime/AbstractRuntime.js"
+import { AbstractRuntime, ActionRecord } from "./runtime/AbstractRuntime.js"
 import { validatePayload } from "./schema.js"
 import { createSnapshot, hashSnapshot } from "./snapshot.js"
-import { getRecordId, initialUpgradeSchema, topicPattern } from "./utils.js"
+import { initialUpgradeSchema, topicPattern } from "./utils.js"
 
 export type { Model } from "@canvas-js/modeldb"
 export type { PeerId } from "@libp2p/interface"
@@ -123,17 +113,19 @@ export class Canvas<
 
 				version: { [Canvas.namespace]: Canvas.version },
 				upgrade: async (upgradeAPI, oldConfig, oldVersion, newVersion) => {
-					// create the new models
+					const log = logger("canvas:runtime:upgrade")
+					log("beginning migration")
+
 					for (const [modelName, modelInit] of Object.entries(AbstractRuntime.effectsModel)) {
+						log("creating model %s", modelName)
 						await upgradeAPI.createModel(modelName, modelInit)
 					}
 
-					console.log("created new models")
-
+					log("deleting model %s", "$effects")
 					await upgradeAPI.deleteModel("$effects")
-					console.log("deleted $effects model!")
 
 					replayRequired = true
+					log("migration complete")
 				},
 
 				initialUpgradeSchema: { ...runtime.models, ...initialUpgradeSchema },
