@@ -63,8 +63,7 @@ export class ContractRuntime extends AbstractRuntime {
 			"contract model names cannot start with '$'",
 		)
 
-		const schema = AbstractRuntime.getModelSchema(modelSchema)
-		return new ContractRuntime(topic, signers, schema, vm, actions)
+		return new ContractRuntime(topic, signers, vm, modelSchema, actions)
 	}
 
 	readonly #databaseAPI: QuickJSHandle
@@ -76,11 +75,11 @@ export class ContractRuntime extends AbstractRuntime {
 	constructor(
 		public readonly topic: string,
 		public readonly signers: SignerCache,
-		public readonly schema: ModelSchema,
 		public readonly vm: VM,
+		modelSchema: ModelSchema,
 		public readonly actions: Record<string, QuickJSHandle>,
 	) {
-		super()
+		super(modelSchema)
 		this.#databaseAPI = vm
 			.wrapObject({
 				get: vm.wrapFunction(async (model, key) => {

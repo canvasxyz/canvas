@@ -1,6 +1,6 @@
 import { Libp2p, TypedEventEmitter } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
-
+import * as cbor from "@ipld/dag-cbor"
 import type pg from "pg"
 import type { SqlStorage } from "@cloudflare/workers-types"
 import { bytesToHex } from "@noble/hashes/utils"
@@ -15,7 +15,7 @@ import {
 	SignerCache,
 	MessageType,
 } from "@canvas-js/interfaces"
-import { AbstractModelDB, Model, ModelSchema, Effect } from "@canvas-js/modeldb"
+import { AbstractModelDB, Model, ModelSchema, Effect, isPrimaryKey } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { AbstractGossipLog, GossipLogEvents, NetworkClient, SignedMessage } from "@canvas-js/gossiplog"
 import type { ServiceMap, NetworkConfig } from "@canvas-js/gossiplog/libp2p"
@@ -24,12 +24,12 @@ import { assert, mapValues } from "@canvas-js/utils"
 
 import target from "#target"
 
-import type { Contract, Actions, ActionImplementation, ModelAPI, DeriveModelTypes } from "./types.js"
+import type { Contract, Actions, ActionImplementation, ModelAPI, DeriveModelTypes, ModelValue } from "./types.js"
 import { Runtime, createRuntime } from "./runtime/index.js"
-import { ActionRecord } from "./runtime/AbstractRuntime.js"
+import { AbstractRuntime, ActionRecord, WriteRecord } from "./runtime/AbstractRuntime.js"
 import { validatePayload } from "./schema.js"
 import { createSnapshot, hashSnapshot } from "./snapshot.js"
-import { topicPattern } from "./utils.js"
+import { getRecordId, initialUpgradeSchema, topicPattern } from "./utils.js"
 
 export type { Model } from "@canvas-js/modeldb"
 export type { PeerId } from "@libp2p/interface"
@@ -90,7 +90,7 @@ export class Canvas<
 	ActionsT extends Actions<ModelsT> = Actions<ModelsT>,
 > extends TypedEventEmitter<CanvasEvents> {
 	public static namespace = "canvas"
-	public static version = 1
+	public static version = 2
 
 	public static async initialize<ModelsT extends ModelSchema, ActionsT extends Actions<ModelsT> = Actions<ModelsT>>(
 		config: Config<ModelsT, ActionsT>,
@@ -120,6 +120,85 @@ export class Canvas<
 				schema: { ...config.schema, ...runtime.schema },
 
 				version: { [Canvas.namespace]: Canvas.version },
+				upgrade: async (upgradeAPI, oldConfig, oldVersion, newVersion) => {
+					const effects = await upgradeAPI.getAll<{ key: string; value: Uint8Array | null }>("$effects")
+					const oldModels = Object.fromEntries(oldConfig.models.map((model) => [model.name, model]))
+
+					// collect keyHash -> recordIds mapping
+					const recordIds = new Map<string, string>()
+					for (const effect of effects) {
+						if (effect.value === null) {
+							continue
+						}
+
+						const record = cbor.decode<null | ModelValue>(effect.value)
+						if (record === null) {
+							continue
+						}
+
+						const [modelName, keyHash, messageId] = effect.key.split("/")
+						if (recordIds.has(keyHash)) {
+							continue
+						}
+
+						if (oldModels[modelName] === undefined) {
+							throw new Error(`migration failure - model ${modelName} not found in oldConfig`)
+						}
+
+						const primaryKey = oldModels[modelName].primaryKey.map((key) => {
+							if (record[key] === undefined || !isPrimaryKey(record[key])) {
+								throw new Error(`migration failure - invalid model value found in $effects`)
+							}
+
+							return record[key]
+						})
+
+						recordIds.set(keyHash, getRecordId(modelName, primaryKey))
+					}
+
+					console.log("indexed recordIds for all effects", recordIds.size)
+
+					// create the new models
+					for (const [modelName, modelInit] of Object.entries(AbstractRuntime.effectsModel)) {
+						await upgradeAPI.createModel(modelName, modelInit)
+					}
+
+					console.log("created new models")
+
+					// populate $writes with migrated effects
+					const writes: Effect[] = []
+					for (const effect of effects) {
+						const [modelName, keyHash, messageId] = effect.key.split("/")
+						if (oldModels[modelName] === undefined) {
+							throw new Error(`migration failure - model ${modelName} not found in oldConfig`)
+						}
+
+						const recordId = recordIds.get(keyHash)
+						if (recordId === undefined) {
+							throw new Error(`migration failure - unrecoverable effect key hash ${keyHash}`)
+						}
+
+						const value = {
+							record_id: recordId,
+							message_id: messageId,
+							value: effect.value,
+							csx: null,
+						} satisfies WriteRecord
+						writes.push({ model: "$writes", operation: "set", value })
+					}
+
+					console.log("collected new $writes effects", writes.length)
+
+					await upgradeAPI.apply(writes)
+
+					console.log("applied new $writes")
+
+					await upgradeAPI.deleteModel("$effects")
+					console.log("deleted $effects model!")
+				},
+
+				initialUpgradeSchema: { ...runtime.models, ...initialUpgradeSchema },
+				initialUpgradeVersion: { [Canvas.namespace]: 1 },
 			},
 		)
 

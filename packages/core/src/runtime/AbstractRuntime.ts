@@ -116,24 +116,22 @@ export abstract class AbstractRuntime {
 		$dids: { did: "primary" },
 	} satisfies ModelSchema
 
-	protected static getModelSchema(schema: ModelSchema): ModelSchema {
-		return {
-			...schema,
+	public abstract readonly topic: string
+	public abstract readonly signers: SignerCache
+	public abstract readonly actionNames: string[]
+	public readonly schema: ModelSchema
+
+	protected readonly log = logger("canvas:runtime")
+
+	protected constructor(public readonly models: ModelSchema) {
+		this.schema = {
+			...models,
 			...AbstractRuntime.sessionsModel,
 			...AbstractRuntime.actionsModel,
 			...AbstractRuntime.effectsModel,
 			...AbstractRuntime.usersModel,
 		}
 	}
-
-	public abstract readonly topic: string
-	public abstract readonly signers: SignerCache
-	public abstract readonly schema: ModelSchema
-	public abstract readonly actionNames: string[]
-
-	protected readonly log = logger("canvas:runtime")
-
-	protected constructor() {}
 
 	protected abstract execute(context: ExecutionContext): Promise<void | any>
 

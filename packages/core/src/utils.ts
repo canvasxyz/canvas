@@ -5,8 +5,8 @@ import { utf8ToBytes } from "@noble/hashes/utils"
 import { base64 } from "multiformats/bases/base64"
 
 import { Action, MessageType, Session, Snapshot } from "@canvas-js/interfaces"
-import { SignedMessage } from "@canvas-js/gossiplog"
-import { PrimaryKeyValue } from "@canvas-js/modeldb"
+import { AbstractGossipLog, SignedMessage } from "@canvas-js/gossiplog"
+import { AbstractModelDB, ModelSchema, PrimaryKeyValue } from "@canvas-js/modeldb"
 
 export const isAction = (signedMessage: SignedMessage<MessageType>): signedMessage is SignedMessage<Action> =>
 	signedMessage.message.payload.type === "action"
@@ -101,3 +101,30 @@ function writeArgument(majorType: number, argument: number): Uint8Array {
 		return arrays[4]
 	}
 }
+
+export const initialUpgradeSchema = {
+	$sessions: {
+		message_id: "primary",
+		did: "string",
+		public_key: "string",
+		address: "string",
+		expiration: "integer?",
+		$indexes: ["did", "public_key"],
+	},
+	$actions: {
+		message_id: "primary",
+		did: "string",
+		name: "string",
+		timestamp: "integer",
+		$indexes: ["did", "name"],
+	},
+	$effects: {
+		key: "primary",
+		value: "bytes?",
+		branch: "integer",
+		clock: "integer",
+	},
+	$dids: {
+		did: "primary",
+	},
+} satisfies ModelSchema
