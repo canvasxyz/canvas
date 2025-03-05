@@ -9,18 +9,21 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 		directory = null,
 		...init
 	}: { directory?: string | null; clear?: boolean } & GossipLogInit<Payload>) {
-		const tree = new MemoryTree({ mode: Mode.Index })
+		const models = { ...init.schema, ...AbstractGossipLog.schema }
+		const version = Object.assign(init.version ?? {}, AbstractGossipLog.baseVersion)
+
 		const db = await ModelDB.open(null, {
-			models: { ...init.schema, ...AbstractGossipLog.schema },
-			version: Object.assign(init.version ?? {}, AbstractGossipLog.baseVersion),
+			models: models,
+			version: version,
 			upgrade: async (upgradeAPI, oldConfig, oldVersion, newVersion) => {
 				await AbstractGossipLog.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion)
 				await init.upgrade?.(upgradeAPI, oldConfig, oldVersion, newVersion)
 			},
-			initialUpgradeSchema: Object.assign(init.initialUpgradeSchema ?? {}, AbstractGossipLog.schema),
-			initialUpgradeVersion: Object.assign(init.initialUpgradeVersion ?? {}, AbstractGossipLog.baseVersion),
+			initialUpgradeSchema: Object.assign(init.initialUpgradeSchema ?? models, AbstractGossipLog.schema),
+			initialUpgradeVersion: Object.assign(init.initialUpgradeVersion ?? version, AbstractGossipLog.baseVersion),
 		})
 
+		const tree = new MemoryTree({ mode: Mode.Index })
 		return new GossipLog(db, tree, init)
 	}
 
