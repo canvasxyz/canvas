@@ -85,7 +85,7 @@ export class ModelDB extends AbstractModelDB {
 					async (oldConfig, oldVersion) => {
 						if (init.upgrade !== undefined) {
 							const upgradeAPI = new ModelDB(db, oldConfig, oldVersion).getUpgradeAPI(txn)
-							await init.upgrade(upgradeAPI, oldVersion, newVersion)
+							await init.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion)
 						}
 					},
 				)

@@ -229,6 +229,18 @@ export class Config {
 			}
 		}
 
+		this.primaryKeys[name] = model.primaryKey.map((name) => {
+			const property = model.properties.find((property) => property.name === name)
+			assert(property !== undefined, "internal error - failed to find primary property")
+			assert(property.kind === "primitive", "error parsing model schema - primary properties must be primitive types")
+			assert(
+				property.type === "integer" || property.type === "string" || property.type === "bytes",
+				"error parsing model schema - primary properties must be integer | string | bytes types",
+			)
+			assert(property.nullable === false, "error parsing model schema - primary properties cannot be nullable")
+			return property
+		})
+
 		this.models.push(model)
 		return model
 	}
@@ -245,6 +257,7 @@ export class Config {
 
 		this.models = this.models.filter((model) => model.name !== name)
 		this.relations = this.relations.filter((relation) => relation.source !== name)
+		delete this.primaryKeys[name]
 	}
 
 	public addProperty(modelName: string, propertyName: string, propertyType: PropertyType): Property {

@@ -15,7 +15,7 @@ import {
 	WhereCondition,
 } from "./types.js"
 
-import { isPrimaryKey, isReferenceValue, validatePropertyValue } from "./utils.js"
+import { isReferenceValue, validatePropertyValue } from "./utils.js"
 
 export function lessThan(a: Uint8Array | null, b: Uint8Array | null) {
 	if (a === null || b === null) {

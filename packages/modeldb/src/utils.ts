@@ -12,8 +12,6 @@ import type {
 	RelationValue,
 } from "./types.js"
 
-export type Awaitable<T> = T | Promise<T>
-
 export const isPrimaryKey = (value: unknown): value is PrimaryKeyValue => {
 	if (typeof value === "number") {
 		return Number.isSafeInteger(value)

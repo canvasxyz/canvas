@@ -4,6 +4,7 @@ import { assert, deepEqual } from "@canvas-js/utils"
 
 import { Config } from "./config.js"
 import {
+	Awaitable,
 	ModelValue,
 	Effect,
 	Model,
@@ -12,9 +13,11 @@ import {
 	ModelValueWithIncludes,
 	PrimaryKeyValue,
 	DatabaseAPI,
+	DatabaseUpgradeAPI,
+	ModelSchema,
 } from "./types.js"
 import { getFilter } from "./query.js"
-import { Awaitable, getModelsFromInclude, mergeModelValues, updateModelValues } from "./utils.js"
+import { getModelsFromInclude, mergeModelValues, updateModelValues } from "./utils.js"
 
 type Subscription = {
 	model: string
@@ -31,6 +34,24 @@ export type ModelDBBackend =
 	| "sqlite-wasm"
 	| "sqlite-expo"
 	| "sqlite-durable-objects"
+
+export type DatabaseUpgradeCallback = (
+	upgradeAPI: DatabaseUpgradeAPI,
+	oldConfig: Config,
+	oldVersion: Record<string, number>,
+	newVersion: Record<string, number>,
+) => void | Promise<void>
+
+export interface ModelDBInit {
+	models: ModelSchema
+
+	version?: Record<string, number>
+	upgrade?: DatabaseUpgradeCallback
+	initialUpgradeVersion?: Record<string, number>
+	initialUpgradeSchema?: ModelSchema
+
+	clear?: boolean
+}
 
 export abstract class AbstractModelDB implements DatabaseAPI {
 	public static namespace = "modeldb"

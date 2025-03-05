@@ -110,8 +110,6 @@ export class Canvas<
 		const runtime = await createRuntime(topic, signers, contract, { runtimeMemoryLimit })
 		const gossipTopic = config.snapshot ? `${topic}#${hashSnapshot(config.snapshot)}` : topic // topic for peering
 
-		console.log("SCHEMA", JSON.stringify({ ...config.schema, ...runtime.schema }, null, "  "))
-
 		const messageLog = await target.openGossipLog(
 			{ topic: gossipTopic, path, clear: config.reset },
 			{
