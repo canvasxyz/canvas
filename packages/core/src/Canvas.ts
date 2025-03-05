@@ -142,6 +142,10 @@ export class Canvas<
 		)
 
 		if (replayRequired) {
+			for (const [name] of Object.entries(runtime.models)) {
+				await messageLog.db.clear(name)
+			}
+
 			await messageLog.replay()
 		}
 
