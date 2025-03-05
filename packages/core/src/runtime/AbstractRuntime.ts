@@ -3,7 +3,7 @@ import { logger } from "@libp2p/logger"
 
 import type { Action, Session, Snapshot, SignerCache, Awaitable, MessageType } from "@canvas-js/interfaces"
 
-import { Effect, ModelValue, ModelSchema, PrimaryKeyValue, isPrimaryKey } from "@canvas-js/modeldb"
+import { Effect, ModelValue, ModelSchema, PrimaryKeyValue, isPrimaryKey, Model, Config } from "@canvas-js/modeldb"
 
 import { GossipLogConsumer, AbstractGossipLog, SignedMessage, MessageId, MIN_MESSAGE_ID } from "@canvas-js/gossiplog"
 
@@ -11,7 +11,7 @@ import { assert } from "@canvas-js/utils"
 
 import { ExecutionContext } from "../ExecutionContext.js"
 
-import { getRecordId, isAction, isSession, isSnapshot } from "../utils.js"
+import { encodeRecordKey, getRecordId, isAction, isSession, isSnapshot } from "../utils.js"
 import { View } from "../View.js"
 
 export type WriteRecord = {
@@ -28,10 +28,10 @@ export type ReadRecord = {
 	csx: number
 }
 
-export type VersionRecord = {
+export type RecordRecord = {
 	record_id: string
 	model: string
-	key: PrimaryKeyValue[]
+	key: string
 	version: string
 	csx: number | null
 }
@@ -84,9 +84,10 @@ export abstract class AbstractRuntime {
 		},
 
 		$records: {
+			$indexes: ["model/key"],
 			record_id: "primary",
 			model: "string",
-			key: "json",
+			key: "string",
 			version: "string",
 		},
 	} satisfies ModelSchema
@@ -184,11 +185,10 @@ export abstract class AbstractRuntime {
 					csx: 0,
 				}
 
-				// TODO: update primaryKey type
-				const versionRecord: VersionRecord = {
+				const versionRecord: RecordRecord = {
 					record_id: recordId,
 					model: modelName,
-					key: primaryKey,
+					key: encodeRecordKey(messageLog.db.config, modelName, primaryKey),
 					version: MIN_MESSAGE_ID,
 					csx: 0,
 				}
@@ -349,15 +349,15 @@ export abstract class AbstractRuntime {
 				}
 
 				// TODO: update primaryKey value
-				const versionValue: VersionRecord = {
+				const recordValue: RecordRecord = {
 					record_id: recordId,
 					model,
-					key: Array.isArray(key) ? key : [key],
+					key: encodeRecordKey(db.config, model, key),
 					version: id,
 					csx: null,
 				}
 
-				effects.push({ model: "$records", operation: "set", value: versionValue })
+				effects.push({ model: "$records", operation: "set", value: recordValue })
 			} else {
 				// Transactional write
 
@@ -428,16 +428,15 @@ export abstract class AbstractRuntime {
 					conditionalEffects.push({ model, operation: "set", value })
 				}
 
-				// TODO: update key value
-				const versionValue: VersionRecord = {
+				const recordValue: RecordRecord = {
 					record_id: recordId,
 					model: model,
-					key: Array.isArray(key) ? key : [key],
+					key: encodeRecordKey(db.config, model, key),
 					version: id,
 					csx: csx,
 				}
 
-				conditionalEffects.push({ model: "$records", operation: "set", value: versionValue })
+				conditionalEffects.push({ model: "$records", operation: "set", value: recordValue })
 			}
 		}
 
@@ -508,7 +507,7 @@ export abstract class AbstractRuntime {
 			for (const effectId of revertEffects) {
 				this.log.trace("checking for values currently referencing reverted effect %s", effectId)
 
-				const versions = await db.query<VersionRecord>("$records", { where: { version: effectId } })
+				const versions = await db.query<RecordRecord>("$records", { where: { version: effectId } })
 				this.log.trace("found %d existing records referencing the reverted action %s", versions.length, effectId)
 				for (const { record_id, model, key } of versions) {
 					const read = await currentView.getLastValueTransactional(record_id, revertEffects)
@@ -522,7 +521,7 @@ export abstract class AbstractRuntime {
 						effects.push({
 							model: "$records",
 							operation: "set",
-							value: { record_id, model, key, version, csx } satisfies VersionRecord,
+							value: { record_id, model, key, version, csx } satisfies RecordRecord,
 						})
 
 						if (value === null) {

@@ -110,6 +110,8 @@ export class Canvas<
 		const runtime = await createRuntime(topic, signers, contract, { runtimeMemoryLimit })
 		const gossipTopic = config.snapshot ? `${topic}#${hashSnapshot(config.snapshot)}` : topic // topic for peering
 
+		let replayRequired = false
+
 		const messageLog = await target.openGossipLog(
 			{ topic: gossipTopic, path, clear: config.reset },
 			{
@@ -121,43 +123,6 @@ export class Canvas<
 
 				version: { [Canvas.namespace]: Canvas.version },
 				upgrade: async (upgradeAPI, oldConfig, oldVersion, newVersion) => {
-					const effects = await upgradeAPI.getAll<{ key: string; value: Uint8Array | null }>("$effects")
-					const oldModels = Object.fromEntries(oldConfig.models.map((model) => [model.name, model]))
-
-					// collect keyHash -> recordIds mapping
-					const recordIds = new Map<string, string>()
-					for (const effect of effects) {
-						if (effect.value === null) {
-							continue
-						}
-
-						const record = cbor.decode<null | ModelValue>(effect.value)
-						if (record === null) {
-							continue
-						}
-
-						const [modelName, keyHash, messageId] = effect.key.split("/")
-						if (recordIds.has(keyHash)) {
-							continue
-						}
-
-						if (oldModels[modelName] === undefined) {
-							throw new Error(`migration failure - model ${modelName} not found in oldConfig`)
-						}
-
-						const primaryKey = oldModels[modelName].primaryKey.map((key) => {
-							if (record[key] === undefined || !isPrimaryKey(record[key])) {
-								throw new Error(`migration failure - invalid model value found in $effects`)
-							}
-
-							return record[key]
-						})
-
-						recordIds.set(keyHash, getRecordId(modelName, primaryKey))
-					}
-
-					console.log("indexed recordIds for all effects", recordIds.size)
-
 					// create the new models
 					for (const [modelName, modelInit] of Object.entries(AbstractRuntime.effectsModel)) {
 						await upgradeAPI.createModel(modelName, modelInit)
@@ -165,42 +130,20 @@ export class Canvas<
 
 					console.log("created new models")
 
-					// populate $writes with migrated effects
-					const writes: Effect[] = []
-					for (const effect of effects) {
-						const [modelName, keyHash, messageId] = effect.key.split("/")
-						if (oldModels[modelName] === undefined) {
-							throw new Error(`migration failure - model ${modelName} not found in oldConfig`)
-						}
-
-						const recordId = recordIds.get(keyHash)
-						if (recordId === undefined) {
-							throw new Error(`migration failure - unrecoverable effect key hash ${keyHash}`)
-						}
-
-						const value = {
-							record_id: recordId,
-							message_id: messageId,
-							value: effect.value,
-							csx: null,
-						} satisfies WriteRecord
-						writes.push({ model: "$writes", operation: "set", value })
-					}
-
-					console.log("collected new $writes effects", writes.length)
-
-					await upgradeAPI.apply(writes)
-
-					console.log("applied new $writes")
-
 					await upgradeAPI.deleteModel("$effects")
 					console.log("deleted $effects model!")
+
+					replayRequired = true
 				},
 
 				initialUpgradeSchema: { ...runtime.models, ...initialUpgradeSchema },
 				initialUpgradeVersion: { [Canvas.namespace]: 1 },
 			},
 		)
+
+		if (replayRequired) {
+			await messageLog.replay()
+		}
 
 		for (const model of Object.values(messageLog.db.models)) {
 			if (model.name.startsWith("$")) {
