@@ -19,9 +19,9 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 			models: { ...init.schema, ...AbstractGossipLog.schema },
 			clear: clear,
 			version: Object.assign(init.version ?? {}, AbstractGossipLog.baseVersion),
-			upgrade: async (upgradeAPI, oldVersion, newVersion) => {
-				await AbstractGossipLog.upgrade(upgradeAPI, oldVersion, newVersion)
-				await init.upgrade?.(upgradeAPI, oldVersion, newVersion)
+			upgrade: async (upgradeAPI, oldConfig, oldVersion, newVersion) => {
+				await AbstractGossipLog.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion)
+				await init.upgrade?.(upgradeAPI, oldConfig, oldVersion, newVersion)
 			},
 			initialUpgradeSchema: Object.assign(init.initialUpgradeSchema ?? {}, AbstractGossipLog.schema),
 			initialUpgradeVersion: Object.assign(init.initialUpgradeVersion ?? {}, AbstractGossipLog.baseVersion),

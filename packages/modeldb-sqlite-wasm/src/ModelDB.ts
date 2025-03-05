@@ -89,7 +89,7 @@ export class ModelDB extends AbstractModelDB {
 			if (init.upgrade !== undefined) {
 				const existingDB = new ModelDB(sqlite3, db, oldConfig, oldVersion)
 				const upgradeAPI = existingDB.getUpgradeAPI()
-				await init.upgrade(upgradeAPI, oldVersion, newVersion)
+				await init.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion)
 			}
 		})
 

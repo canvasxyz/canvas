@@ -1,7 +1,6 @@
 // These are "init types" for the `models` value used to initialize the database.
 
 import type { JSONValue } from "@canvas-js/utils"
-import type { Awaitable } from "./utils.js"
 
 export type PrimaryKeyType = "primary"
 export type PrimitiveType = "integer" | "float" | "number" | "string" | "bytes" | "boolean" | "json"
@@ -9,6 +8,8 @@ export type NullablePrimitiveType = `${PrimitiveType}?`
 export type ReferenceType = `@${string}`
 export type NullableReferenceType = `@${string}?`
 export type RelationType = `@${string}[]`
+
+export type Awaitable<T> = T | Promise<T>
 
 export type PropertyType =
 	| PrimaryKeyType
@@ -22,23 +23,6 @@ export type PropertyType =
 export type IndexInit = string
 export type ModelInit = { $indexes?: IndexInit[]; $primary?: string } | Record<string, PropertyType>
 export type ModelSchema = Record<string, ModelInit>
-
-export type DatabaseUpgradeCallback = (
-	upgradeAPI: DatabaseUpgradeAPI,
-	oldVersion: Record<string, number>,
-	newVersion: Record<string, number>,
-) => void | Promise<void>
-
-export interface ModelDBInit {
-	models: ModelSchema
-
-	version?: Record<string, number>
-	upgrade?: DatabaseUpgradeCallback
-	initialUpgradeVersion?: Record<string, number>
-	initialUpgradeSchema?: ModelSchema
-
-	clear?: boolean
-}
 
 // These are more structured representations of the schema defined by ModelSchema that are easier
 // to work with at runtime

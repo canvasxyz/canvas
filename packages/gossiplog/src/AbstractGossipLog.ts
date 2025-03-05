@@ -4,7 +4,7 @@ import { equals, toString } from "uint8arrays"
 
 import { Node, Tree, ReadWriteTransaction, hashEntry } from "@canvas-js/okra"
 import type { Signature, Signer, Message, Awaitable } from "@canvas-js/interfaces"
-import type { AbstractModelDB, ModelSchema, Effect, DatabaseUpgradeAPI } from "@canvas-js/modeldb"
+import type { AbstractModelDB, ModelSchema, Effect, DatabaseUpgradeAPI, Config } from "@canvas-js/modeldb"
 import { ed25519 } from "@canvas-js/signatures"
 import { assert, zip, prepare, prepareMessage } from "@canvas-js/utils"
 
@@ -42,6 +42,7 @@ export interface GossipLogInit<Payload = unknown, Result = any> {
 	version?: Record<string, number>
 	upgrade?: (
 		upgradeAPI: DatabaseUpgradeAPI,
+		oldConfig: Config,
 		oldVersion: Record<string, number>,
 		newVersion: Record<string, number>,
 	) => Awaitable<void>
@@ -90,6 +91,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 	protected static baseVersion = { [AbstractGossipLog.namespace]: AbstractGossipLog.version }
 	protected static async upgrade(
 		upgradeAPI: DatabaseUpgradeAPI,
+		oldConfig: Config,
 		oldVersion: Record<string, number>,
 		newVersion: Record<string, number>,
 	) {

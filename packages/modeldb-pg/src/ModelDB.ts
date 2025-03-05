@@ -92,7 +92,7 @@ export class ModelDB extends AbstractModelDB {
 					}
 
 					const upgradeAPI = existingDB.getUpgradeAPI()
-					await init.upgrade(upgradeAPI, oldVersion, newVersion)
+					await init.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion)
 				}
 			})
 
