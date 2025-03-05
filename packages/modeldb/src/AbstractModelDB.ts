@@ -1,10 +1,9 @@
 import { Logger, logger } from "@libp2p/logger"
 
-import { assert, deepEqual } from "@canvas-js/utils"
+import { Awaitable, assert, deepEqual } from "@canvas-js/utils"
 
 import { Config } from "./config.js"
 import {
-	Awaitable,
 	ModelValue,
 	Effect,
 	Model,
@@ -40,7 +39,7 @@ export type DatabaseUpgradeCallback = (
 	oldConfig: Config,
 	oldVersion: Record<string, number>,
 	newVersion: Record<string, number>,
-) => void | Promise<void>
+) => Awaitable<void>
 
 export interface ModelDBInit {
 	models: ModelSchema

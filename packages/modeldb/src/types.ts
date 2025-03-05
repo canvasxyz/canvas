@@ -1,6 +1,6 @@
 // These are "init types" for the `models` value used to initialize the database.
 
-import type { JSONValue } from "@canvas-js/utils"
+import type { JSONValue, Awaitable } from "@canvas-js/utils"
 
 export type PrimaryKeyType = "primary"
 export type PrimitiveType = "integer" | "float" | "number" | "string" | "bytes" | "boolean" | "json"
@@ -8,8 +8,6 @@ export type NullablePrimitiveType = `${PrimitiveType}?`
 export type ReferenceType = `@${string}`
 export type NullableReferenceType = `@${string}?`
 export type RelationType = `@${string}[]`
-
-export type Awaitable<T> = T | Promise<T>
 
 export type PropertyType =
 	| PrimaryKeyType
