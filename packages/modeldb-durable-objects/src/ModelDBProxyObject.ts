@@ -1,5 +1,6 @@
+import { encode, decode } from "microcbor"
+import { assert } from "@canvas-js/utils"
 import { Effect, ModelSchema, ModelValue, ModelValueWithIncludes, QueryParams } from "@canvas-js/modeldb"
-import * as json from "@ipld/dag-json"
 
 import { Env } from "./ModelDBProxyWorker.js"
 import { ModelDB } from "./ModelDB.js"
@@ -24,17 +25,17 @@ export class ModelDBProxyObject {
 	}
 
 	async fetch(request: Request): Promise<Response> {
-		if (request.method !== "POST") throw new Error("invalid method")
-		const url = new URL(request.url)
+		assert(request.method === "POST", 'expected request.method === "POST"')
 
+		const url = new URL(request.url)
 		const [root, objectId, call] = url.pathname.split("/")
-		const args = call === "fetchSubscriptions" ? null : json.decode(await request.bytes())
+		const args = call === "fetchSubscriptions" ? null : decode(await request.bytes())
 
 		try {
 			if (call === "initialize") {
 				const [modelSchema] = args as ModelSchema[]
 				this.initialize(modelSchema)
-				return new Response(json.stringify({ status: "Success" }))
+				return new Response(encode({ status: "Success" }))
 			} else if (call === "iterate") {
 				if (!this.db) throw new Error("uninitialized")
 				const iterateArgs = args as [string, QueryParams | undefined]
@@ -42,7 +43,7 @@ export class ModelDBProxyObject {
 				for await (const item of this.db.iterate(...iterateArgs)) {
 					result.push(item)
 				}
-				return new Response(json.stringify(result))
+				return new Response(encode(result))
 			} else if (call === "subscribe") {
 				if (!this.db) throw new Error("uninitialized")
 				const [modelName, query, subscriptionId] = args as [
@@ -53,9 +54,9 @@ export class ModelDBProxyObject {
 				this.db.subscribe(modelName, query, (results: ModelValue[] | ModelValueWithIncludes[]) => {
 					this.subscriptionResults.push({ subscriptionId, results })
 				})
-				return new Response(json.stringify(this.subscriptionResults))
+				return new Response(encode(this.subscriptionResults))
 			} else if (call === "fetchSubscriptions") {
-				const result = json.stringify(this.subscriptionResults)
+				const result = encode(this.subscriptionResults)
 				this.subscriptionResults = []
 				return new Response(result)
 			} else if (call === "apply") {
@@ -69,7 +70,7 @@ export class ModelDBProxyObject {
 				// eslint-disable-next-line @typescript-eslint/ban-types
 				const callFn = (this.db as any)[call] as Function
 				const result = await callFn.apply(this.db, args)
-				return new Response(json.stringify(result ?? null))
+				return new Response(encode(result ?? null))
 			}
 		} catch (err) {
 			const errorMessage = err instanceof Error ? err.message : err
