@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta charset="utf-8" />
+		<title>Canvas Chat</title>
+		<script type="module" src="/src/index.tsx"></script>
+
+    <meta
+      name="fc:frame"
+      content='{
+      "version": "next",
+      "imageUrl": "https://chat-example.canvas.xyz/image.png",
+      "button":{
+        "title": "Canvas Chat",
+        "action": {
+          "type": "launch_frame",
+          "name": "Open chat",
+          "url": "https://chat-example.canvas.xyz",
+          "splashImageUrl": "https://chat-example.canvas.xyz/image.png",
+          "splashBackgroundColor": "#ddd"
+        }
+      }
+    }'
+    />
+	</head>
+	<body>
+		<div id="root"></div>
+	</body>
+</html>
