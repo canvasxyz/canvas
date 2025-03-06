@@ -25,7 +25,7 @@
 		"@farcaster/auth-kit": "^0.6.0",
 		"@farcaster/frame-sdk": "^0.0.26",
 		"@keplr-wallet/types": "^0.11.64",
-		"@libp2p/interface": "^2.5.0",
+		"@libp2p/interface": "^2.7.0",
 		"@magic-ext/auth": "^4.3.2",
 		"@metamask/providers": "^14.0.2",
 		"@multiformats/multiaddr": "^12.3.5",
