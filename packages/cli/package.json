@@ -21,7 +21,7 @@
 		"@canvas-js/interfaces": "0.14.0-next.1",
 		"@canvas-js/network-explorer": "0.14.0-next.1",
 		"@ipld/dag-json": "^10.2.3",
-		"@libp2p/peer-id": "^5.0.12",
+		"@libp2p/peer-id": "^5.0.16",
 		"@multiformats/multiaddr": "^12.3.5",
 		"@multiformats/multiaddr-matcher": "^1.6.0",
 		"@noble/hashes": "^1.7.1",
