@@ -12,7 +12,10 @@ import { sha256 } from "@noble/hashes/sha256"
 import { logger } from "@libp2p/logger"
 
 import { Awaitable } from "@canvas-js/interfaces"
-import { JSFunction, JSFunctionAsync, JSValue, assert, mapValues } from "@canvas-js/utils"
+import { JSValue, assert } from "@canvas-js/utils"
+
+export type JSFunction = (...args: JSValue[]) => undefined | JSValue
+export type JSFunctionAsync = (...args: JSValue[]) => Promise<undefined | JSValue>
 
 import { VMError } from "./error.js"
 
