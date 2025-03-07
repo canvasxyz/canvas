@@ -7,10 +7,15 @@ kill_timeout = '30s'
 
 [env]
 ANNOUNCE = '/dns4/canvas-bootstrap-p0.fly.dev/tcp/443/wss'
-DEBUG = 'canvas:rendezvous:*'
-LISTEN = '/ip4/127.0.0.1/tcp/8080/ws'
-DATABASE_PATH = 'db.sqlite'
+DEBUG = 'canvas:rendezvous:server,libp2p:*'
+LISTEN = '/ip4/0.0.0.0/tcp/8080/ws'
+DATABASE_PATH = '/data/db.sqlite'
 PORT = '8000'
+
+[mounts]
+source = "data"
+destination = "/data"
+initial_size = "1gb"
 
 [[services]]
 protocol = 'tcp'
