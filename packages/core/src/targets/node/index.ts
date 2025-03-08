@@ -3,6 +3,7 @@ import path from "node:path"
 import http from "node:http"
 import express from "express"
 import cors from "cors"
+import { anySignal } from "any-signal"
 
 import type pg from "pg"
 import { WebSocketServer } from "ws"
@@ -13,18 +14,28 @@ import { createAPI } from "@canvas-js/core/api"
 import type { SqlStorage } from "@cloudflare/workers-types"
 
 import type { PlatformTarget } from "../interface.js"
-import { anySignal } from "any-signal"
 
-const isPostgresConnectionConfig = (
+function isPostgresConnectionConfig(
 	path: string | pg.ConnectionConfig | SqlStorage | null,
-): path is pg.ConnectionConfig =>
-	path !== null &&
-	typeof path === "object" &&
-	("connectionString" in path || ("user" in path && "host" in path && "database" in path))
+): path is pg.ConnectionConfig {
+	if (path === null || typeof path !== "object") {
+		return false
+	} else if ("connectionString" in path) {
+		return true
+	} else {
+		return "user" in path && "host" in path && "database" in path
+	}
+}
 
-const isPostgres = (path: string | pg.ConnectionConfig | SqlStorage): boolean =>
-	isPostgresConnectionConfig(path) ||
-	(typeof path === "string" && (path.startsWith("postgres://") || path.startsWith("postgresql://")))
+function isPostgres(path: string | pg.ConnectionConfig | SqlStorage): boolean {
+	if (isPostgresConnectionConfig(path)) {
+		return true
+	} else if (typeof path === "string") {
+		return path.startsWith("postgres://") || path.startsWith("postgresql://")
+	} else {
+		return false
+	}
+}
 
 const isError = (error: unknown): error is NodeJS.ErrnoException => error instanceof Error
 
