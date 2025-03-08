@@ -1,5 +1,5 @@
 app = 'canvas-testnet-p1'
-primary_region = 'ewr'
+primary_region = 'ams'
 kill_signal = 'SIGINT'
 kill_timeout = '30s'
 
@@ -9,17 +9,7 @@ kill_timeout = '30s'
 ANNOUNCE = '/dns4/canvas-testnet-p1.fly.dev/tcp/443/wss'
 DEBUG = 'canvas:*,libp2p:*'
 LISTEN = '/ip4/127.0.0.1/tcp/8080/ws'
-DATABASE_PATH = 'db.sqlite'
 PORT = '8000'
-
-[[services]]
-protocol = 'tcp'
-internal_port = 8080
-processes = ['app']
-
-[[services.ports]]
-port = 443
-handlers = ['tls', 'http']
 
 [services.concurrency]
 type = 'connections'
