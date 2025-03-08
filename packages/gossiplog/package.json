@@ -45,7 +45,7 @@
 	},
 	"dependencies": {
 		"@canvas-js/interfaces": "0.14.0-next.1",
-		"@canvas-js/libp2p-rendezvous": "^0.2.5",
+		"@canvas-js/libp2p-rendezvous": "^0.2.6",
 		"@canvas-js/modeldb": "0.14.0-next.1",
 		"@canvas-js/modeldb-durable-objects": "0.14.0-next.1",
 		"@canvas-js/modeldb-idb": "0.14.0-next.1",
