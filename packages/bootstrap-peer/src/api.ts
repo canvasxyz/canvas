@@ -48,7 +48,7 @@ export function createAPI(libp2p: Libp2p<ServiceMap>): Express {
 			cursor = id
 		}
 
-		res.json({ cursor, registrations })
+		res.json({ cursor: parseInt(cursor.toString()), registrations })
 	})
 
 	api.get("/metrics", async (req, res) => {
