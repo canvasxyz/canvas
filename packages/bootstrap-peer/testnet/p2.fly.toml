@@ -6,15 +6,15 @@ kill_timeout = '30s'
 [build]
 
 [env]
-ANNOUNCE = '/dns4/canvas-testnet-p2.fly.dev/tcp/443/wss'
+ANNOUNCE = '/dns6/canvas-testnet-p2.internal/tcp/8080/ws'
 DEBUG = 'canvas:*,libp2p:*'
 LISTEN = '/ip4/127.0.0.1/tcp/8080/ws'
 PORT = '8000'
 
 [services.concurrency]
 type = 'connections'
-hard_limit = 1024
-soft_limit = 512
+hard_limit = 64
+soft_limit = 48
 
 [[vm]]
 memory = '1gb'
