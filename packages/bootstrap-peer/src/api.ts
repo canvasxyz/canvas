@@ -22,7 +22,7 @@ export function createAPI(libp2p: Libp2p<ServiceMap>): Express {
 		return res.json(connections)
 	})
 
-	const numericPattern = /^[0-9]+$/
+	const hexPattern = /^[a-f0-9]+$/
 
 	api.get("/api/registrations", async (req, res) => {
 		let namespace: string | undefined = undefined
@@ -31,8 +31,8 @@ export function createAPI(libp2p: Libp2p<ServiceMap>): Express {
 		}
 
 		let cursor: bigint = 0n
-		if (typeof req.query.cursor === "string" && numericPattern.test(req.query.cursor)) {
-			cursor = BigInt(req.query.cursor)
+		if (typeof req.query.cursor === "string" && hexPattern.test(req.query.cursor)) {
+			cursor = BigInt("0x" + req.query.cursor)
 		}
 
 		const { rendezvous } = libp2p.services
@@ -48,7 +48,7 @@ export function createAPI(libp2p: Libp2p<ServiceMap>): Express {
 			cursor = id
 		}
 
-		res.json({ cursor: parseInt(cursor.toString()), registrations })
+		res.json({ cursor: cursor.toString(16), registrations })
 	})
 
 	api.get("/metrics", async (req, res) => {
