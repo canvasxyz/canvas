@@ -5,6 +5,9 @@ import express from "express"
 import cors from "cors"
 import { anySignal } from "any-signal"
 
+import esbuild from "esbuild"
+import chalk from "chalk"
+
 import type pg from "pg"
 import { WebSocketServer } from "ws"
 
@@ -96,6 +99,26 @@ const target: PlatformTarget = {
 		})
 
 		await new Promise<void>((resolve) => server.listen(port, resolve))
+	},
+
+	buildContract(location: string) {
+		const bundle = esbuild.buildSync({
+			bundle: true,
+			platform: "node",
+			format: "esm",
+			write: false,
+			entryPoints: [location],
+		})
+		if (!bundle.outputFiles || bundle.outputFiles.length === 0) {
+			console.error(chalk.yellow("[canvas] Building .ts contract produced no files"))
+			process.exit(1)
+		} else if (bundle.outputFiles && bundle.outputFiles.length > 1) {
+			console.warn(chalk.yellow("[canvas] Building .ts contract produced more than one file, likely will not run"))
+			return bundle.outputFiles[0].text
+		} else {
+			console.log(chalk.yellow("[canvas] Bundled .ts contract:"), `${bundle.outputFiles[0].contents.byteLength} bytes`)
+			return bundle.outputFiles[0].text
+		}
 	},
 }
 

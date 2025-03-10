@@ -92,6 +92,10 @@ export class Canvas<
 	public static namespace = "canvas"
 	public static version = 1
 
+	public static buildContract(location: string) {
+		return target.buildContract(location)
+	}
+
 	public static async initialize<ModelsT extends ModelSchema, ActionsT extends Actions<ModelsT> = Actions<ModelsT>>(
 		config: Config<ModelsT, ActionsT>,
 	): Promise<Canvas<ModelsT, ActionsT>> {

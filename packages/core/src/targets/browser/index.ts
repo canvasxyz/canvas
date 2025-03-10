@@ -10,6 +10,10 @@ const target: PlatformTarget = {
 	async listen(app, port, options) {
 		throw new Error("Cannot start API server in the browser")
 	},
+
+	buildContract(location: string): string {
+		throw new Error("Unimplemented: buildContract in the browser")
+	},
 }
 
 export default target

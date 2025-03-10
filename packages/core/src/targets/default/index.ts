@@ -8,6 +8,10 @@ const target: PlatformTarget = {
 	async listen(app, port, options) {
 		throw new Error("Unsupported platform")
 	},
+
+	buildContract(location) {
+		throw new Error("Unsupported platform")
+	},
 }
 
 export default target
