@@ -8,13 +8,13 @@ kill_timeout = '30s'
 [env]
 ANNOUNCE = '/dns6/canvas-testnet-p1.internal/tcp/8080/ws'
 DEBUG = 'canvas:*,libp2p:*'
-LISTEN = '/ip4/127.0.0.1/tcp/8080/ws'
+LISTEN = '/ip6/::/tcp/8080/ws'
 PORT = '8000'
 
-[services.concurrency]
-type = 'connections'
-hard_limit = 64
-soft_limit = 48
+[[services]]
+protocol = 'tcp'
+internal_port = 8080
+processes = ['app']
 
 [[vm]]
 memory = '1gb'
