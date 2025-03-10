@@ -11,7 +11,7 @@ export const CodeSelector = ({ option }: { option: "view" | "edit" | "admin" }) 
 
 	let iconType, to, label
 
-	if (option == "view") {
+	if (option === "view") {
 		iconType = LuBinary
 		to = "/contract/view"
 		label = "Contract Code"
