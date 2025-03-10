@@ -225,24 +225,32 @@ export class ModelAPI {
 		this.#count = new Query<{ count: number }>(this.client, `SELECT COUNT(*) AS count FROM "${this.table}"`)
 
 		const selectWhere = model.primaryKey.map((name, i) => `"${name}" = $${i + 1}`).join(" AND ")
-		this.#select = new Query(this.client, `SELECT ${quotedColumnNames} FROM "${this.table}" WHERE ${selectWhere}`)
+		const selectColumnNames = model.properties.flatMap((property) => {
+			// if (model.primaryKey.includes(property.name)) {
+			// 	return []
+			// }
+
+			if (property.kind === "primitive") {
+				if (property.type === "json") {
+					return [`"${property.name}"::jsonb`]
+				} else {
+					return [quote(property.name)]
+				}
+			} else if (property.kind === "reference") {
+				return this.codecs[property.name].columns.map(quote)
+			} else if (property.kind === "relation") {
+				return []
+			} else {
+				signalInvalidType(property)
+			}
+		})
+		this.#select = new Query(this.client, `SELECT ${selectColumnNames} FROM "${this.table}" WHERE ${selectWhere}`)
 
 		const orderByPrimaryKey = model.primaryKey.map((name) => `"${name}" ASC`).join(", ")
 		this.#selectAll = new Query(
 			this.client,
-			`SELECT ${quotedColumnNames} FROM "${this.table}" ORDER BY ${orderByPrimaryKey}`,
+			`SELECT ${selectColumnNames} FROM "${this.table}" ORDER BY ${orderByPrimaryKey}`,
 		)
-
-		// this.#selectMany = new QUery(this.client, `SELECT ${selectColumns} FROM "${this.#table}" WHERE "${this.#primaryKeyName}" = ANY($1)`)
-
-		// const updateParams = columnNames.map((name: string, i: number) => `$${i + 1}`)
-		// const updateEntries = Array.from(zip(columnNames, updateParams)).map(([name, param]) => `${name} = ${param}`)
-		// const updateWhere = `"${this.#primaryKeyName}" = $${updateParams.length + 1}`
-		// this.#update = `UPDATE "${this.#table}" SET ${updateEntries.join(", ")} WHERE ${updateWhere}`
-
-		// const selectColumns = this.#columnNames.join(", ")
-		// this.#select = `SELECT ${selectColumns} FROM "${this.#table}" WHERE "${this.#primaryKeyName}" = $1`
-		// this.#selectMany = `SELECT ${selectColumns} FROM "${this.#table}" WHERE "${this.#primaryKeyName}" = ANY($1)`
 	}
 
 	public async drop() {
