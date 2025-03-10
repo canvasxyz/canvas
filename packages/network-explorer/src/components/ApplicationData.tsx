@@ -1,8 +1,8 @@
-import packageJson from "../package.json"
+import packageJson from "../../package.json"
 
 import { Box, Grid, Text, Popover, IconButton } from "@radix-ui/themes"
-import { useApplicationData } from "./hooks/useApplicationData.js"
-import { BASE_URL } from "./utils.js"
+import { useApplicationData } from "../hooks/useApplicationData.js"
+import { BASE_URL } from "../utils.js"
 import { LuUnplug } from "react-icons/lu"
 
 const ConnectionPopover = ({ children }: { children: React.ReactNode }) => {
@@ -26,7 +26,7 @@ const ConnectionPopover = ({ children }: { children: React.ReactNode }) => {
 	)
 }
 
-export const ApplicationDataBox = () => {
+export const ApplicationData = () => {
 	const applicationInfo = useApplicationData()
 
 	return (
