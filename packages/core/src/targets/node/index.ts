@@ -101,8 +101,8 @@ const target: PlatformTarget = {
 		await new Promise<void>((resolve) => server.listen(port, resolve))
 	},
 
-	buildContract(location: string) {
-		const bundle = esbuild.buildSync({
+	async buildContract(location: string) {
+		const bundle = await esbuild.build({
 			bundle: true,
 			platform: "node",
 			format: "esm",
@@ -110,13 +110,11 @@ const target: PlatformTarget = {
 			entryPoints: [location],
 		})
 		if (!bundle.outputFiles || bundle.outputFiles.length === 0) {
-			console.error(chalk.yellow("[canvas] Building .ts contract produced no files"))
-			process.exit(1)
+			throw new Error("building .ts contract produced no files")
 		} else if (bundle.outputFiles && bundle.outputFiles.length > 1) {
-			console.warn(chalk.yellow("[canvas] Building .ts contract produced more than one file, likely will not run"))
+			// unexpected
 			return bundle.outputFiles[0].text
 		} else {
-			console.log(chalk.yellow("[canvas] Bundled .ts contract:"), `${bundle.outputFiles[0].contents.byteLength} bytes`)
 			return bundle.outputFiles[0].text
 		}
 	},

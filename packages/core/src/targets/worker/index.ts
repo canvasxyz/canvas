@@ -35,7 +35,7 @@ const target: PlatformTarget = {
 		throw new Error("Unimplemented: libp2p listen on Cloudflare Workers")
 	},
 
-	buildContract(location: string): string {
+	buildContract(location: string) {
 		throw new Error("Unimplemented: buildContract on Cloudflare Workers")
 	},
 }

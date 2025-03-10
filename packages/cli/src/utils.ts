@@ -12,11 +12,16 @@ import { Canvas } from "@canvas-js/core"
 export const CONTRACT_FILENAME = "contract.canvas.js"
 export const MANIFEST_FILENAME = "canvas.json"
 
-export function getContractLocation(args: { path: string; topic?: string; init?: string; memory?: boolean }): {
+export async function getContractLocation(args: {
+	path: string
+	topic?: string
+	init?: string
+	memory?: boolean
+}): Promise<{
 	topic: string
 	contract: string
 	location: string | null
-} {
+}> {
 	const location = path.resolve(args.path)
 	const contractPath = path.resolve(location, CONTRACT_FILENAME)
 	const manifestPath = path.resolve(location, MANIFEST_FILENAME)
@@ -34,7 +39,9 @@ export function getContractLocation(args: { path: string; topic?: string; init?:
 			if (args.init.endsWith(".js")) {
 				fs.copyFileSync(args.init, contractPath)
 			} else {
-				fs.writeFileSync(contractPath, Canvas.buildContract(args.init))
+				const contractText = await Canvas.buildContract(args.init)
+				console.log(chalk.yellow("[canvas] Bundled .ts contract:"), `${contractText.length} chars`)
+				fs.writeFileSync(contractPath, contractText)
 			}
 			console.log(`[canvas] Creating ${manifestPath}`)
 			fs.writeFileSync(manifestPath, JSON.stringify({ version: 1, topic: args.topic }, null, "  "))
@@ -71,7 +78,8 @@ export function getContractLocation(args: { path: string; topic?: string; init?:
 		let contract = fs.readFileSync(location, "utf-8")
 
 		if (location.endsWith(".ts")) {
-			contract = Canvas.buildContract(location)
+			contract = await Canvas.buildContract(location)
+			console.log(chalk.yellow("[canvas] Bundled .ts contract:"), `${contract.length} chars`)
 		}
 
 		const topic = args.topic ?? `${bytesToHex(sha256(contract)).slice(0, 16)}.p2p.app`

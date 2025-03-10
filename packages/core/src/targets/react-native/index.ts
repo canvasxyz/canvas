@@ -20,7 +20,7 @@ const target: PlatformTarget = {
 		throw new Error("Unimplemented: libp2p listen on react-native")
 	},
 
-	buildContract(location: string): string {
+	buildContract(location: string) {
 		throw new Error("Unimplemented: buildContract on react-native")
 	},
 }
