@@ -175,7 +175,7 @@ test("reject an invalid message", async (t) => {
 
 	const signature = scheme.sign(invalidMessage)
 	await t.throwsAsync(() => app.insert(signature, invalidMessage as any), {
-		message: "error encoding message (invalid payload)",
+		message: "error encoding message: invalid payload",
 	})
 })
 
