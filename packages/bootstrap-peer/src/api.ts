@@ -23,8 +23,14 @@ export function createAPI(libp2p: Libp2p<ServiceMap>): Express {
 	})
 
 	const hexPattern = /^[a-f0-9]+$/
+	const decimalPattern = /^[0-9]+$/
 
 	api.get("/api/registrations", async (req, res) => {
+		let limit = 100
+		if (typeof req.query.limit === "string" && decimalPattern.test(req.query.limit)) {
+			limit = parseInt(req.query.limit)
+		}
+
 		let namespace: string | undefined = undefined
 		if (typeof req.query.namespace === "string") {
 			namespace = decodeURIComponent(req.query.namespace)
@@ -39,13 +45,16 @@ export function createAPI(libp2p: Libp2p<ServiceMap>): Express {
 		const registrations: { peerId: string; multiaddrs: string[]; expiration: number; namespace: string }[] = []
 		for await (const registration of rendezvous.store.iterate({ cursor, namespace })) {
 			const { id, peerId, multiaddrs, expiration, namespace } = registration
-			registrations.push({
+			const count = registrations.push({
 				peerId: peerId.toString(),
 				multiaddrs: multiaddrs.map((addr) => addr.toString()),
 				expiration: parseInt(expiration.toString()),
 				namespace,
 			})
 			cursor = id
+			if (count >= limit) {
+				break
+			}
 		}
 
 		res.json({ cursor: cursor.toString(16), registrations })
