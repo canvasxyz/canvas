@@ -1,16 +1,15 @@
 import { createLibp2p } from "libp2p"
+import { generateKeyPair } from "@libp2p/crypto/keys"
 import { Libp2p, MultiaddrConnection, PeerId, PrivateKey, PubSub } from "@libp2p/interface"
 import { Identify, identify } from "@libp2p/identify"
 import { webSockets } from "@libp2p/websockets"
-import { all } from "@libp2p/websockets/filters"
+import { bootstrap } from "@libp2p/bootstrap"
 import { yamux } from "@chainsafe/libp2p-yamux"
 import { noise } from "@chainsafe/libp2p-noise"
-import { bootstrap } from "@libp2p/bootstrap"
 import { KadDHT, kadDHT } from "@libp2p/kad-dht"
 import { PingService, ping as pingService } from "@libp2p/ping"
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
 import { GossipsubEvents, gossipsub } from "@chainsafe/libp2p-gossipsub"
-
 export { GossipSub } from "@chainsafe/libp2p-gossipsub"
 
 import type { Registry } from "prom-client"
@@ -22,7 +21,6 @@ import { AbstractGossipLog } from "@canvas-js/gossiplog"
 import { defaultBootstrapList } from "@canvas-js/gossiplog/bootstrap"
 
 import { GossipLogService, gossipLogService } from "./service.js"
-import { generateKeyPair } from "@libp2p/crypto/keys"
 
 export interface NetworkConfig {
 	/** start libp2p on initialization (default: true) */
@@ -36,6 +34,7 @@ export interface NetworkConfig {
 	announce?: string[]
 
 	bootstrapList?: string[]
+	rendezvousPoints?: string[]
 	denyDialMultiaddr?(multiaddr: Multiaddr): Promise<boolean> | boolean
 	denyInboundConnection?(maConn: MultiaddrConnection): Promise<boolean> | boolean
 
@@ -63,7 +62,8 @@ export async function getLibp2p<Payload>(
 		privateKey = await generateKeyPair("Ed25519")
 	}
 
-	const bootstrapList = config.bootstrapList ?? defaultBootstrapList
+	const bootstrapList = config.bootstrapList ?? []
+	const rendezvousPoints = config.rendezvousPoints ?? defaultBootstrapList
 	const listen = config.listen ?? ["/ip4/127.0.0.1/tcp/8080/ws"]
 	const announce = config.announce ?? ["/ip4/127.0.0.1/tcp/8080/ws"]
 
@@ -71,7 +71,7 @@ export async function getLibp2p<Payload>(
 		privateKey: privateKey,
 		start: config.start ?? true,
 		addresses: { listen, announce },
-		transports: [webSockets({ filter: all })],
+		transports: [webSockets({})],
 		connectionGater: {
 			denyDialMultiaddr: config.denyDialMultiaddr ?? ((addr: Multiaddr) => false),
 			denyInboundConnection: config.denyInboundConnection ?? ((maConn: MultiaddrConnection) => false),
@@ -86,7 +86,6 @@ export async function getLibp2p<Payload>(
 		connectionMonitor: { enabled: false, protocolPrefix: "canvas" },
 
 		peerDiscovery: bootstrapList.length > 0 ? [bootstrap({ list: bootstrapList })] : [],
-
 		streamMuxers: [yamux()],
 		connectionEncrypters: [noise({})],
 
@@ -110,7 +109,10 @@ export async function getLibp2p<Payload>(
 			gossipLog: gossipLogService({ gossipLog: gossipLog }),
 
 			rendezvous: rendezvousClient({
-				autoRegister: [gossipLog.topic],
+				autoRegister: {
+					multiaddrs: rendezvousPoints,
+					namespaces: [gossipLog.topic],
+				},
 				autoDiscover: true,
 			}),
 		},
