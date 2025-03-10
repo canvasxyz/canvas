@@ -62,7 +62,6 @@
 		"@chainsafe/libp2p-yamux": "^7.0.1",
 		"@ipld/dag-cbor": "^9.2.2",
 		"@ipld/dag-json": "^10.2.3",
-		"@libp2p/bootstrap": "^11.0.30",
 		"@libp2p/crypto": "^5.0.15",
 		"@libp2p/identify": "^3.0.25",
 		"@libp2p/interface": "^2.7.0",
