@@ -72,7 +72,7 @@ export class ModelAPI {
 
 				if (target.primaryKey.length === 1) {
 					const [targetProperty] = config.primaryKeys[target.name]
-					columns.push(getColumn(property.name, targetProperty.type, false))
+					columns.push(getColumn(property.name, targetProperty.type, property.nullable))
 					columnNames.push(property.name)
 
 					codecs[property.name] = {
@@ -86,7 +86,7 @@ export class ModelAPI {
 
 					for (const targetProperty of config.primaryKeys[target.name]) {
 						const refName = `${property.name}/${targetProperty.name}`
-						columns.push(getColumn(refName, targetProperty.type, false))
+						columns.push(getColumn(refName, targetProperty.type, property.nullable))
 						columnNames.push(refName)
 						refNames.push(refName)
 					}
