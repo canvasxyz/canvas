@@ -18,7 +18,7 @@ export const builder = (yargs: Argv) =>
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
-	const { topic, contract, location } = getContractLocation(args)
+	const { topic, contract, location } = await getContractLocation(args)
 
 	try {
 		const app = await Canvas.initialize({ topic, path: location, contract })

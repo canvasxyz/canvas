@@ -127,7 +127,7 @@ export const builder = (yargs: Argv) =>
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
-	const { topic, contract, location: location_ } = getContractLocation(args)
+	const { topic, contract, location: location_ } = await getContractLocation(args)
 	let location = location_
 
 	if (process.env.DATABASE_URL) {
@@ -317,8 +317,8 @@ export async function handler(args: Args) {
 			console.log(`Serving network explorer: ${chalk.bold(origin)}/explorer`)
 		} else if (args["network-explorer"] !== undefined) {
 			console.log(`Serving network explorer: ${chalk.bold(origin)}`)
-			api.get('/explorer', (req, res) => {
-				res.redirect('/')
+			api.get("/explorer", (req, res) => {
+				res.redirect("/")
 			})
 		}
 
