@@ -5,6 +5,7 @@ import { ModelValue, ModelSchema } from "@canvas-js/modeldb"
 import { VM } from "@canvas-js/vm"
 import { assert, mapValues } from "@canvas-js/utils"
 
+import { Contract } from "../types.js"
 import { ExecutionContext } from "../ExecutionContext.js"
 import { AbstractRuntime } from "./AbstractRuntime.js"
 
@@ -64,7 +65,7 @@ export class ContractRuntime extends AbstractRuntime {
 		)
 
 		const schema = AbstractRuntime.getModelSchema(modelSchema)
-		return new ContractRuntime(topic, signers, schema, vm, actions)
+		return new ContractRuntime(topic, signers, schema, vm, actions, contract)
 	}
 
 	readonly #databaseAPI: QuickJSHandle
@@ -77,6 +78,7 @@ export class ContractRuntime extends AbstractRuntime {
 		public readonly schema: ModelSchema,
 		public readonly vm: VM,
 		public readonly actions: Record<string, QuickJSHandle>,
+		public readonly contract: string | Contract<any, any>,
 	) {
 		super()
 		this.#databaseAPI = vm

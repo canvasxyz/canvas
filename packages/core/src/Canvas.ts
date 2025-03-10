@@ -328,6 +328,10 @@ export class Canvas<
 		return libp2p
 	}
 
+	public getContract() {
+		return this.runtime.contract
+	}
+
 	/**
 	 * Get existing sessions
 	 */

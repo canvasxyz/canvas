@@ -9,6 +9,7 @@ import { assert } from "@canvas-js/utils"
 
 import { ExecutionContext, getKeyHash } from "../ExecutionContext.js"
 import { isAction, isSession, isSnapshot } from "../utils.js"
+import { Contract } from "../types.js"
 
 export type EffectRecord = { key: string; value: Uint8Array | null; branch: number; clock: number }
 
@@ -76,6 +77,7 @@ export abstract class AbstractRuntime {
 	public abstract readonly signers: SignerCache
 	public abstract readonly schema: ModelSchema
 	public abstract readonly actionNames: string[]
+	public abstract readonly contract: string | Contract<any, any>
 
 	protected readonly log = logger("canvas:runtime")
 	#db: AbstractModelDB | null = null

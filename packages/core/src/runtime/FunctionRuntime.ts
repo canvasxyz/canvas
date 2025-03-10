@@ -22,7 +22,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 		)
 
 		const schema = AbstractRuntime.getModelSchema(contract.models)
-		return new FunctionRuntime(topic, signers, schema, contract.actions)
+		return new FunctionRuntime(topic, signers, schema, contract.actions, contract)
 	}
 
 	#context: ExecutionContext | null = null
@@ -51,6 +51,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 		public readonly signers: SignerCache,
 		public readonly schema: ModelSchema,
 		public readonly actions: Record<string, ActionImplementation<ModelsT, any>>,
+		public readonly contract: string | Contract<ModelsT, any>,
 	) {
 		super()
 
