@@ -1,5 +1,4 @@
 import test from "ava"
-import * as Y from "yjs"
 
 import { Canvas, Config } from "@canvas-js/core"
 
@@ -65,9 +64,7 @@ test("snapshot persists data across apps", async (t) => {
 	t.is(await app2.db.get("posts", "d"), null)
 	t.is(await app2.db.get("posts", "e"), null)
 
-	const docDiff1 = await app2.db.get("documents:state", "e")
-	const doc1 = new Y.Doc()
-	Y.applyUpdate(doc1, docDiff1!.content)
+	const doc1 = app2.getYDoc("documents", "e")
 	t.is(doc1.getText().toJSON(), "Hello")
 
 	await app2.actions.createPost({ id: "a", content: "1" })
@@ -86,9 +83,7 @@ test("snapshot persists data across apps", async (t) => {
 	t.is(await app2.db.get("posts", "d"), null)
 	t.is((await app2.db.get("posts", "e"))?.content, "3")
 	t.is((await app2.db.get("posts", "f"))?.content, "4")
-	const docDiff2 = await app2.db.get("documents:state", "e")
-	const doc2 = new Y.Doc()
-	Y.applyUpdate(doc2, docDiff2!.content)
+	const doc2 = app2.getYDoc("documents", "e")
 	t.is(doc2.getText().toJSON(), "Hello?")
 
 	// snapshot a second time
@@ -102,9 +97,7 @@ test("snapshot persists data across apps", async (t) => {
 	t.is((await app3.db.get("posts", "e"))?.content, "3")
 	t.is((await app3.db.get("posts", "f"))?.content, "4")
 	t.is(await app3.db.get("posts", "g"), null)
-	const docDiff3 = await app3.db.get("documents:state", "e")
-	const doc3 = new Y.Doc()
-	Y.applyUpdate(doc3, docDiff3!.content)
+	const doc3 = app3.getYDoc("documents", "e")
 	t.is(doc3.getText().toJSON(), "Hello?")
 
 	const [clock3] = await app3.messageLog.getClock()

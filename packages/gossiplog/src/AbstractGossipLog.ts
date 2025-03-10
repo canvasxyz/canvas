@@ -26,6 +26,7 @@ import { gossiplogTopicPattern } from "./utils.js"
 export type GossipLogConsumer<Payload = unknown, Result = any> = (
 	this: AbstractGossipLog<Payload, Result>,
 	signedMessage: SignedMessage<Payload, Result>,
+	isAppend: boolean,
 ) => Awaitable<Result>
 
 export interface GossipLogInit<Payload = unknown, Result = any> {
@@ -131,7 +132,8 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 				const { signature, message, branch } = record
 				const signedMessage = this.encode(signature, message, { branch })
 				assert(signedMessage.id === id)
-				await this.#apply.apply(this, [signedMessage])
+				// TODO: should isAppend be true or false?
+				await this.#apply.apply(this, [signedMessage, true])
 			}
 		})
 	}
@@ -260,7 +262,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 			const signedMessage = this.encode(signature, message)
 			this.log("appending message %s at clock %d with parents %o", signedMessage.id, clock, parents)
 
-			const applyResult = await this.apply(txn, signedMessage)
+			const applyResult = await this.apply(txn, signedMessage, true)
 
 			root = applyResult.root
 			heads = applyResult.heads
@@ -298,7 +300,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 				return null
 			}
 
-			return await this.apply(txn, signedMessage)
+			return await this.apply(txn, signedMessage, false)
 		})
 
 		if (result !== null) {
@@ -311,6 +313,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 	private async apply(
 		txn: ReadWriteTransaction,
 		signedMessage: SignedMessage<Payload>,
+		isAppend: boolean,
 	): Promise<{ root: Node; heads: string[]; result: Result }> {
 		const { id, signature, message, key, value } = signedMessage
 		this.log.trace("applying %s %O", id, message)
@@ -328,7 +331,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 
 		const branch = await this.getBranch(id, parentMessageRecords)
 		signedMessage.branch = branch
-		const result = await this.#apply.apply(this, [signedMessage])
+		const result = await this.#apply.apply(this, [signedMessage, isAppend])
 
 		const hash = toString(hashEntry(key, value), "hex")
 

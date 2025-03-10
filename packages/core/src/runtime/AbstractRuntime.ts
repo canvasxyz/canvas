@@ -2,7 +2,16 @@ import * as cbor from "@ipld/dag-cbor"
 import { logger } from "@libp2p/logger"
 import * as Y from "yjs"
 
-import type { Action, Session, Snapshot, SignerCache, Awaitable, MessageType, Updates } from "@canvas-js/interfaces"
+import type {
+	Action,
+	Session,
+	Snapshot,
+	SignerCache,
+	Awaitable,
+	MessageType,
+	Updates,
+	Message,
+} from "@canvas-js/interfaces"
 
 import { AbstractModelDB, Effect, ModelSchema } from "@canvas-js/modeldb"
 import { GossipLogConsumer, MAX_MESSAGE_ID, AbstractGossipLog, SignedMessage } from "@canvas-js/gossiplog"
@@ -75,13 +84,6 @@ export abstract class AbstractRuntime {
 				) {
 					// not valid
 					throw new Error("yjs-doc tables must have two columns, one of which is 'id'")
-				} else {
-					// this table stores the current state of the Yjs document
-					// we just need one entry per document because updates are commutative
-					outputSchema[`${modelName}:state`] = {
-						id: "primary",
-						content: "bytes",
-					}
 				}
 			} else {
 				outputSchema[modelName] = modelSchema
@@ -103,6 +105,8 @@ export abstract class AbstractRuntime {
 	public abstract readonly actionNames: string[]
 
 	public readonly additionalUpdates = new Map<string, Updates[]>()
+
+	private readonly docs: Record<string, Record<string, Y.Doc>> = {}
 
 	protected readonly log = logger("canvas:runtime")
 	#db: AbstractModelDB | null = null
@@ -128,15 +132,15 @@ export abstract class AbstractRuntime {
 		const handleSnapshot = this.handleSnapshot.bind(this)
 		const handleUpdates = this.handleUpdates.bind(this)
 
-		return async function (this: AbstractGossipLog<MessageType>, signedMessage) {
+		return async function (this: AbstractGossipLog<MessageType>, signedMessage, isAppend: boolean) {
 			if (isSession(signedMessage)) {
 				return await handleSession(signedMessage)
 			} else if (isAction(signedMessage)) {
-				return await handleAction(signedMessage, this)
+				return await handleAction(signedMessage, this, isAppend)
 			} else if (isSnapshot(signedMessage)) {
 				return await handleSnapshot(signedMessage, this)
 			} else if (isUpdates(signedMessage)) {
-				return await handleUpdates(signedMessage)
+				return handleUpdates(signedMessage.message, isAppend)
 			} else {
 				throw new Error("invalid message payload type")
 			}
@@ -194,7 +198,11 @@ export abstract class AbstractRuntime {
 		await this.db.apply(effects)
 	}
 
-	private async handleAction(signedMessage: SignedMessage<Action>, messageLog: AbstractGossipLog<MessageType>) {
+	private async handleAction(
+		signedMessage: SignedMessage<Action>,
+		messageLog: AbstractGossipLog<MessageType>,
+		isAppend: boolean,
+	) {
 		const { id, signature, message } = signedMessage
 		const { did, name, context } = message.payload
 
@@ -277,51 +285,52 @@ export abstract class AbstractRuntime {
 			throw err
 		}
 
-		this.additionalUpdates.set(id, await executionContext.generateAdditionalUpdates())
+		if (isAppend) {
+			const updates = []
+			for (const [model, modelCalls] of Object.entries(executionContext.yjsCalls)) {
+				for (const [key, calls] of Object.entries(modelCalls)) {
+					const doc = this.getYDoc(model, key)
+					// get the initial state of the document
+					const beforeState = Y.encodeStateAsUpdate(doc)
+					for (const call of calls) {
+						if (call.call === "insert") {
+							doc.getText().insert(call.index, call.content)
+						} else if (call.call === "delete") {
+							doc.getText().delete(call.index, call.length)
+						} else if (call.call === "applyDelta") {
+							doc.getText().applyDelta(call.delta.ops)
+						} else {
+							throw new Error("unexpected call type")
+						}
+					}
+					// diff the document with the initial state
+					const afterState = Y.encodeStateAsUpdate(doc)
+					const diff = Y.diffUpdate(afterState, Y.encodeStateVectorFromUpdate(beforeState))
+					updates.push({ model, key, diff })
+				}
+			}
+			if (updates.length > 0) {
+				this.additionalUpdates.set(id, [{ type: "updates", updates }])
+			} else {
+				this.additionalUpdates.set(id, [])
+			}
+		}
 
 		return result
 	}
 
-	private async handleUpdates(signedMessage: SignedMessage<Updates>) {
-		const effects = await updatesToEffects(signedMessage.message.payload, this.db)
-		await this.db.apply(effects)
+	public getYDoc(model: string, key: string) {
+		this.docs[model] ||= {}
+		this.docs[model][key] ||= new Y.Doc()
+		return this.docs[model][key]
 	}
-}
 
-export const updatesToEffects = async (payload: Updates, db: AbstractModelDB) => {
-	const updatedEntries: Record<string, Record<string, Y.Doc>> = {}
-
-	for (const { model, key, diff } of payload.updates) {
-		let doc = (updatedEntries[model] || {})[key]
-
-		if (!doc) {
-			const existingStateEntries = await db.query<{ id: string; content: Uint8Array }>(`${model}:state`, {
-				where: { id: key },
-				limit: 1,
-			})
-			doc = new Y.Doc()
-			if (existingStateEntries.length > 0) {
-				Y.applyUpdate(doc, existingStateEntries[0].content)
+	public handleUpdates(message: Message<Updates>, isAppend: boolean) {
+		if (!isAppend) {
+			for (const { model, key, diff } of message.payload.updates) {
+				// apply the diff to the doc
+				Y.applyUpdate(this.getYDoc(model, key), diff)
 			}
 		}
-
-		// apply the diff to the doc
-		Y.applyUpdate(doc, diff)
-
-		updatedEntries[model] = { ...updatedEntries[model], [key]: doc }
 	}
-
-	const effects: Effect[] = []
-	for (const [model, entries] of Object.entries(updatedEntries)) {
-		for (const [key, doc] of Object.entries(entries)) {
-			const diff = Y.encodeStateAsUpdate(doc)
-
-			effects.push({
-				model: `${model}:state`,
-				operation: "set",
-				value: { id: key, content: diff },
-			})
-		}
-	}
-	return effects
 }

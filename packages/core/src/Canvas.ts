@@ -5,7 +5,16 @@ import type pg from "pg"
 import type { SqlStorage } from "@cloudflare/workers-types"
 import { bytesToHex } from "@noble/hashes/utils"
 
-import { Signature, Action, Message, Snapshot, SessionSigner, SignerCache, MessageType } from "@canvas-js/interfaces"
+import {
+	Signature,
+	Action,
+	Message,
+	Snapshot,
+	SessionSigner,
+	SignerCache,
+	MessageType,
+	Updates,
+} from "@canvas-js/interfaces"
 import { AbstractModelDB, Model, ModelSchema, Effect } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { AbstractGossipLog, GossipLogEvents, NetworkClient, SignedMessage } from "@canvas-js/gossiplog"
@@ -17,7 +26,7 @@ import target from "#target"
 
 import type { Contract, Actions, ActionImplementation, ModelAPI, DeriveModelTypes } from "./types.js"
 import { Runtime, createRuntime } from "./runtime/index.js"
-import { ActionRecord, updatesToEffects } from "./runtime/AbstractRuntime.js"
+import { ActionRecord } from "./runtime/AbstractRuntime.js"
 import { validatePayload } from "./schema.js"
 import { createSnapshot, hashSnapshot } from "./snapshot.js"
 import { topicPattern } from "./utils.js"
@@ -184,9 +193,7 @@ export class Canvas<
 						const record = { did }
 						effects.push({ operation: "set", model: "$dids", value: record })
 					} else if (message.payload.type === "updates") {
-						for (const effect of await updatesToEffects(message.payload, db)) {
-							effects.push(effect)
-						}
+						runtime.handleUpdates(message as Message<Updates>, true)
 					}
 					start = id
 				}
@@ -457,6 +464,10 @@ export class Canvas<
 		} else {
 			return sessions[0].message_id
 		}
+	}
+
+	public getYDoc(model: string, key: string) {
+		return this.runtime.getYDoc(model, key)
 	}
 
 	public async createSnapshot(): Promise<Snapshot> {
