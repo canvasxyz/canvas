@@ -53,6 +53,7 @@ export async function createNetwork<T extends NetworkNodeInit, Payload>(
 				listen: [address],
 				announce: [address],
 				bootstrapList,
+				// rendezvousPoints: [],
 			})
 
 			libp2p.addEventListener("start", () => log("[%p] started", peerIds[name]))
