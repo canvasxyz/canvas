@@ -34,7 +34,6 @@ export interface NetworkConfig {
 	announce?: string[]
 
 	bootstrapList?: string[]
-	rendezvousPoints?: string[]
 	denyDialMultiaddr?(multiaddr: Multiaddr): Promise<boolean> | boolean
 	denyInboundConnection?(maConn: MultiaddrConnection): Promise<boolean> | boolean
 
@@ -62,8 +61,7 @@ export async function getLibp2p<Payload>(
 		privateKey = await generateKeyPair("Ed25519")
 	}
 
-	const bootstrapList = config.bootstrapList ?? []
-	const rendezvousPoints = config.rendezvousPoints ?? defaultBootstrapList
+	const bootstrapList = config.bootstrapList ?? defaultBootstrapList
 	const listen = config.listen ?? ["/ip4/127.0.0.1/tcp/8080/ws"]
 	const announce = config.announce ?? ["/ip4/127.0.0.1/tcp/8080/ws"]
 
@@ -85,7 +83,6 @@ export async function getLibp2p<Payload>(
 
 		connectionMonitor: { enabled: false, protocolPrefix: "canvas" },
 
-		peerDiscovery: bootstrapList.length > 0 ? [bootstrap({ list: bootstrapList })] : [],
 		streamMuxers: [yamux()],
 		connectionEncrypters: [noise({})],
 
@@ -110,7 +107,7 @@ export async function getLibp2p<Payload>(
 
 			rendezvous: rendezvousClient({
 				autoRegister: {
-					multiaddrs: rendezvousPoints,
+					multiaddrs: bootstrapList,
 					namespaces: [gossipLog.topic],
 				},
 				autoDiscover: true,
