@@ -182,15 +182,15 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		context: { source?: MessageSource; branch?: number } = {},
 	): SignedMessage<T, Result> {
 		if (this.topic !== message.topic) {
+			this.log.error("invalid message: %O", message)
 			throw new Error(`cannot encode message: expected topic ${this.topic}, found topic ${message.topic}`)
 		}
 
 		const preparedMessage = prepareMessage(message)
-		assert(
-			this.validatePayload(preparedMessage.payload),
-			"error encoding message (invalid payload)",
-			preparedMessage.payload,
-		)
+		if (!this.validatePayload(preparedMessage.payload)) {
+			this.log.error("invalid message: %O", message)
+			throw new Error(`error encoding message: invalid payload`)
+		}
 
 		return SignedMessage.encode(signature, preparedMessage, context)
 	}
@@ -202,10 +202,15 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		const signedMessage = SignedMessage.decode<Payload, Result>(value, context)
 		const { topic, payload } = signedMessage.message
 		if (this.topic !== topic) {
+			this.log.error("invalid message: %O", signedMessage.message)
 			throw new Error(`cannot decode message: expected topic ${this.topic}, found topic ${topic}`)
 		}
 
-		assert(this.validatePayload(payload), "error decoding message (invalid payload)")
+		if (!this.validatePayload(payload)) {
+			this.log.error("invalid message: %O", signedMessage.message)
+			throw new Error(`error decoding message: invalid payload`)
+		}
+
 		return signedMessage
 	}
 
