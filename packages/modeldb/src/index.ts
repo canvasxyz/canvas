@@ -13,4 +13,6 @@ export {
 	isPrimaryKey,
 	isReferenceValue,
 	isRelationValue,
+	equalPrimaryKeys,
+	equalReferences,
 } from "./utils.js"
