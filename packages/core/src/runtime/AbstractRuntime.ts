@@ -1,6 +1,5 @@
 import * as cbor from "@ipld/dag-cbor"
 import { logger } from "@libp2p/logger"
-import * as Y from "yjs"
 
 import type {
 	Action,
