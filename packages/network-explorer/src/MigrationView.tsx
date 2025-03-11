@@ -8,6 +8,7 @@ export const MigrationView = () => {
 	const textareaRef = useRef<HTMLTextAreaElement>(null)
 	const [error, setError] = useState<string>()
 	const [newSchema, setNewSchema] = useState<ModelSchema>()
+	const [currentSchema, setCurrentSchema] = useState<ModelSchema>()
 
 	return (
 		<Box px="7" py="6" flexGrow="1">
@@ -17,69 +18,90 @@ export const MigrationView = () => {
 			{contractData === null ? (
 				<>Loading...</>
 			) : (
-				<Box style={{ width: "100%" }}>
-					<TextArea
-						ref={textareaRef}
-						size="2"
-						variant="classic"
-						resize="none"
-						style={{ padding: "4px 20px", fontFamily: "monospace", minHeight: "50vh" }}
-					>
-						{contractData.contract}
-					</TextArea>
-				</Box>
+				<>
+					<Box style={{ width: "100%" }}>
+						<TextArea
+							ref={textareaRef}
+							size="2"
+							variant="classic"
+							resize="none"
+							style={{ padding: "4px 20px", fontFamily: "monospace", minHeight: "50vh" }}
+						>
+							{contractData.contract}
+						</TextArea>
+					</Box>
+					<Box mt="4">
+						<Button
+							size="2"
+							variant="solid"
+							onClick={async () => {
+								const value = textareaRef.current?.value
+								if (!value) {
+									setError("No contract content")
+									return
+								}
+
+								setError(undefined)
+								setNewSchema(undefined)
+
+								try {
+									const newContract = await Canvas.buildContract(value, { wasmURL: "./esbuild.wasm" })
+
+									const app = await Canvas.initialize({ contract: contractData.contract, topic: "test.a" })
+									const newApp = await Canvas.initialize({ contract: newContract, topic: "test.b" })
+									setCurrentSchema(app.getSchema())
+									setNewSchema(newApp.getSchema())
+								} catch (err: any) {
+									if ("message" in err && typeof err.message === "string") {
+										setError(err.message)
+									} else {
+										setError(err.toString())
+									}
+								}
+							}}
+						>
+							Build
+						</Button>
+						{error && (
+							<Box mt="2">
+								<Text size="2" color="red">
+									{error}
+								</Text>
+							</Box>
+						)}
+						{newSchema && (
+							<Box mt="2">
+								<Text size="2" color="green">
+									Success: Built contract ({textareaRef.current?.value?.length} chars)
+									<br />
+									<Box style={{ width: "100%" }}>
+										<TextArea
+											size="2"
+											variant="classic"
+											resize="none"
+											style={{ padding: "4px 20px", fontFamily: "monospace", minHeight: "20vh" }}
+										>
+											{JSON.stringify(currentSchema, null, 2)}
+										</TextArea>
+										<TextArea
+											size="2"
+											variant="classic"
+											resize="none"
+											style={{ padding: "4px 20px", fontFamily: "monospace", minHeight: "20vh" }}
+										>
+											{JSON.stringify(newSchema, null, 2)}
+										</TextArea>
+									</Box>
+								</Text>
+							</Box>
+						)}
+					</Box>
+					<Heading size="3" mb="4" mt="5">
+						Run Migration
+					</Heading>
+					TODO
+				</>
 			)}
-			<Box mt="4">
-				<Button
-					size="2"
-					variant="solid"
-					onClick={async () => {
-						const value = textareaRef.current?.value
-						if (!value) {
-							setError("No contract content")
-							return
-						}
-
-						setError(undefined)
-						setNewSchema(undefined)
-
-						try {
-							const contract = await Canvas.buildContract(value, { wasmURL: "./esbuild.wasm" })
-							const newApp = await Canvas.initialize({ contract, topic: "test" })
-							const newSchema = newApp.getSchema()
-							setNewSchema(newSchema)
-						} catch (err: any) {
-							if ("message" in err && typeof err.message === "string") {
-								setError(err.message)
-							} else {
-								setError(err.toString())
-							}
-						}
-					}}
-				>
-					Build
-				</Button>
-				{error && (
-					<Box mt="2">
-						<Text size="2" color="red">
-							{error}
-						</Text>
-					</Box>
-				)}
-				{newSchema && (
-					<Box mt="2">
-						<Text size="2" color="green">
-							Success: Built contract ({textareaRef.current?.value?.length} chars)
-							<br />
-							<pre>{JSON.stringify(newSchema)}</pre>
-						</Text>
-					</Box>
-				)}
-			</Box>
-			<Heading size="3" mb="4" mt="5">
-				Run Migration
-			</Heading>
-			TODO
 		</Box>
 	)
 }

@@ -336,8 +336,13 @@ export class Canvas<
 		return this.runtime.contract
 	}
 
-	public getSchema() {
-		return this.runtime.schema
+	public getSchema(internal?: false) {
+		if (internal) {
+			return this.runtime.schema
+		} else {
+			const entries = Object.entries(this.runtime.schema).filter(([t]) => !t.startsWith("$"))
+			return Object.fromEntries(entries)
+		}
 	}
 
 	/**
