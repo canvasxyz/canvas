@@ -7,6 +7,7 @@ import { assert, mapValues } from "@canvas-js/utils"
 
 import { ExecutionContext } from "../ExecutionContext.js"
 import { AbstractRuntime } from "./AbstractRuntime.js"
+import { DocumentStore } from "../DocumentStore.js"
 
 export class ContractRuntime extends AbstractRuntime {
 	public static async init(

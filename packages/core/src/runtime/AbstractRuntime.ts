@@ -19,6 +19,7 @@ import { assert } from "@canvas-js/utils"
 
 import { ExecutionContext, getKeyHash } from "../ExecutionContext.js"
 import { isAction, isSession, isSnapshot, isUpdates } from "../utils.js"
+import { DocumentStore } from "../DocumentStore.js"
 
 export type EffectRecord = { key: string; value: Uint8Array | null; branch: number; clock: number }
 
@@ -96,6 +97,7 @@ export abstract class AbstractRuntime {
 			...AbstractRuntime.actionsModel,
 			...AbstractRuntime.effectsModel,
 			...AbstractRuntime.usersModel,
+			...DocumentStore.schema,
 		}
 	}
 
@@ -106,10 +108,9 @@ export abstract class AbstractRuntime {
 
 	public readonly additionalUpdates = new Map<string, Updates[]>()
 
-	private readonly docs: Record<string, Record<string, Y.Doc>> = {}
-
 	protected readonly log = logger("canvas:runtime")
 	#db: AbstractModelDB | null = null
+	#documentStore = new DocumentStore()
 
 	protected constructor() {}
 
@@ -140,7 +141,7 @@ export abstract class AbstractRuntime {
 			} else if (isSnapshot(signedMessage)) {
 				return await handleSnapshot(signedMessage, this)
 			} else if (isUpdates(signedMessage)) {
-				return handleUpdates(signedMessage.message, isAppend)
+				return await handleUpdates(signedMessage.id, signedMessage.message, isAppend)
 			} else {
 				throw new Error("invalid message payload type")
 			}
@@ -289,24 +290,8 @@ export abstract class AbstractRuntime {
 			const updates = []
 			for (const [model, modelCalls] of Object.entries(executionContext.yjsCalls)) {
 				for (const [key, calls] of Object.entries(modelCalls)) {
-					const doc = this.getYDoc(model, key)
-					// get the initial state of the document
-					const beforeState = Y.encodeStateAsUpdate(doc)
-					for (const call of calls) {
-						if (call.call === "insert") {
-							doc.getText().insert(call.index, call.content)
-						} else if (call.call === "delete") {
-							doc.getText().delete(call.index, call.length)
-						} else if (call.call === "applyDelta") {
-							doc.getText().applyDelta(call.delta.ops)
-						} else {
-							throw new Error("unexpected call type")
-						}
-					}
-					// diff the document with the initial state
-					const afterState = Y.encodeStateAsUpdate(doc)
-					const diff = Y.diffUpdate(afterState, Y.encodeStateVectorFromUpdate(beforeState))
-					updates.push({ model, key, diff })
+					const update = await this.#documentStore.applyYjsCalls(this.db, model, key, id, calls)
+					updates.push(update)
 				}
 			}
 			if (updates.length > 0) {
@@ -320,17 +305,16 @@ export abstract class AbstractRuntime {
 	}
 
 	public getYDoc(model: string, key: string) {
-		this.docs[model] ||= {}
-		this.docs[model][key] ||= new Y.Doc()
-		return this.docs[model][key]
+		return this.#documentStore.getYDoc(model, key)
 	}
 
-	public handleUpdates(message: Message<Updates>, isAppend: boolean) {
+	public async loadSavedDocuments() {
+		await this.#documentStore.loadSavedDocuments(this.db)
+	}
+
+	public async handleUpdates(id: string, message: Message<Updates>, isAppend: boolean) {
 		if (!isAppend) {
-			for (const { model, key, diff } of message.payload.updates) {
-				// apply the diff to the doc
-				Y.applyUpdate(this.getYDoc(model, key), diff)
-			}
+			return await this.#documentStore.consumeUpdatesMessage(this.db, message, id)
 		}
 	}
 }

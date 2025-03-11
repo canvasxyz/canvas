@@ -12,7 +12,6 @@ import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
 import { AuthKitProvider } from "@farcaster/auth-kit"
 import { JsonRpcProvider } from "ethers"
 import Quill from "quill/core"
-import * as Y from "yjs"
 
 import { AppContext } from "./AppContext.js"
 import { ControlPanel } from "./ControlPanel.js"
@@ -42,6 +41,8 @@ export const App: React.FC<{}> = ({}) => {
 	const [sessionSigner, setSessionSigner] = useState<SessionSigner | null>(null)
 	const [address, setAddress] = useState<string | null>(null)
 
+	const [cursor, setCursor] = useState("documents/0/")
+
 	const quillRef = useRef<Quill>()
 
 	const topicRef = useRef(topic)
@@ -60,20 +61,20 @@ export const App: React.FC<{}> = ({}) => {
 		],
 	})
 
-	const existingStateEntries = useLiveQuery(app, "documents:state", {
-		where: { id: "0" },
-		limit: 1,
-	}) as { id: string; content: Uint8Array }[]
+	// TODO: encapsulate this in a library function to ship with canvas-js/hooks
+	const results = useLiveQuery(app, "$document_operations", {
+		where: { id: { gt: cursor, lt: "documents/1" }, isAppend: false },
+	}) as { id: string; key: string; data: string }[] | null
 
 	useEffect(() => {
-		if (existingStateEntries && existingStateEntries.length > 0) {
-			const doc = new Y.Doc()
-			Y.applyUpdate(doc, existingStateEntries[0].content)
-			// doc.getText().toJSON()
-			console.log("doc.getText().toJSON():", doc.getText().toJSON())
-			quillRef.current?.setText(doc.getText().toJSON(), "silent")
+		if (!results) return
+		for (const message of results) {
+			const { data } = message
+			quillRef.current?.updateContents(data)
 		}
-	}, [existingStateEntries])
+		// set the cursor to the id of the last item
+		if (results.length > 0) setCursor(results[results.length - 1].id)
+	}, [results])
 
 	return (
 		<AppContext.Provider value={{ address, setAddress, sessionSigner, setSessionSigner, app: app ?? null }}>
@@ -90,8 +91,10 @@ export const App: React.FC<{}> = ({}) => {
 									readOnly={false}
 									defaultValue={null}
 									onSelectionChange={() => {}}
-									onTextChange={async (delta) => {
-										await app.actions.applyDeltaToDoc(JSON.stringify(delta))
+									onTextChange={async (delta, oldContents, source) => {
+										if (source === "user") {
+											await app.actions.applyDeltaToDoc(JSON.stringify(delta))
+										}
 									}}
 								/>
 							</div>

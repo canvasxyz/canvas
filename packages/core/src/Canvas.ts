@@ -30,6 +30,7 @@ import { ActionRecord } from "./runtime/AbstractRuntime.js"
 import { validatePayload } from "./schema.js"
 import { createSnapshot, hashSnapshot } from "./snapshot.js"
 import { topicPattern } from "./utils.js"
+import { YTextEvent } from "yjs"
 
 export type { Model } from "@canvas-js/modeldb"
 export type { PeerId } from "@libp2p/interface"
@@ -152,6 +153,8 @@ export class Canvas<
 			await messageLog.append(config.snapshot)
 		}
 
+		await runtime.loadSavedDocuments()
+
 		const app = new Canvas<ModelsT, ActionsT>(signers, messageLog, runtime)
 
 		// Check to see if the $actions table is empty and populate it if necessary
@@ -192,8 +195,6 @@ export class Canvas<
 						app.log("indexing user %s (did: %s)", publicKey, did)
 						const record = { did }
 						effects.push({ operation: "set", model: "$dids", value: record })
-					} else if (message.payload.type === "updates") {
-						runtime.handleUpdates(message as Message<Updates>, true)
 					}
 					start = id
 				}
