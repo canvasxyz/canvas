@@ -336,6 +336,10 @@ export class Canvas<
 		return this.runtime.contract
 	}
 
+	public getSchema() {
+		return this.runtime.schema
+	}
+
 	/**
 	 * Get existing sessions
 	 */
