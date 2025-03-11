@@ -1,5 +1,6 @@
 import { defineConfig } from "vite"
 import react from "@vitejs/plugin-react"
+import { viteStaticCopy } from "vite-plugin-static-copy"
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -7,5 +8,15 @@ export default defineConfig({
 		emptyOutDir: false,
 	},
 	base: "./",
-	plugins: [react()],
+	plugins: [
+		viteStaticCopy({
+			targets: [
+				{
+					src: "../../node_modules/esbuild-wasm/esbuild.wasm",
+					dest: "",
+				},
+			],
+		}),
+		react(),
+	],
 })

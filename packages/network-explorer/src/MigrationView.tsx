@@ -1,13 +1,13 @@
 import { useState, useRef } from "react"
 import { Button, Box, Heading, Text, TextArea } from "@radix-ui/themes"
 import { useContractData } from "./hooks/useContractData.js"
-import { Canvas } from "@canvas-js/core"
+import { Canvas, type ModelSchema } from "@canvas-js/core"
 
 export const MigrationView = () => {
 	const contractData = useContractData()
 	const textareaRef = useRef<HTMLTextAreaElement>(null)
 	const [error, setError] = useState<string>()
-	const [success, setSuccess] = useState<string>()
+	const [newSchema, setNewSchema] = useState<ModelSchema>()
 
 	return (
 		<Box px="7" py="6" flexGrow="1">
@@ -41,13 +41,13 @@ export const MigrationView = () => {
 						}
 
 						setError(undefined)
-						setSuccess(undefined)
+						setNewSchema(undefined)
 
 						try {
-							const contract = await Canvas.buildContract(value)
+							const contract = await Canvas.buildContract(value, { wasmURL: "./esbuild.wasm" })
 							const newApp = await Canvas.initialize({ contract, topic: "test" })
-							const result = JSON.stringify(newApp.getSchema())
-							setSuccess(result)
+							const newSchema = newApp.getSchema()
+							setNewSchema(newSchema)
 						} catch (err: any) {
 							if ("message" in err && typeof err.message === "string") {
 								setError(err.message)
@@ -66,12 +66,12 @@ export const MigrationView = () => {
 						</Text>
 					</Box>
 				)}
-				{success && (
+				{newSchema && (
 					<Box mt="2">
 						<Text size="2" color="green">
 							Success: Built contract ({textareaRef.current?.value?.length} chars)
 							<br />
-							<pre>{JSON.stringify(success)}</pre>
+							<pre>{JSON.stringify(newSchema)}</pre>
 						</Text>
 					</Box>
 				)}
