@@ -228,29 +228,26 @@ export class ModelAPI {
 		this.#count = new Query<{ count: number }>(this.client, `SELECT COUNT(*) AS count FROM "${this.table}"`)
 
 		const selectWhere = model.primaryKey.map((name, i) => `"${name}" = $${i + 1}`).join(" AND ")
-		const selectColumnNames = model.properties
-			.flatMap((property) => {
-				// if (model.primaryKey.includes(property.name)) {
-				// 	return []
-				// }
-
-				if (property.kind === "primitive") {
-					if (property.type === "json") {
-						return [`"${property.name}"::jsonb`]
-					} else {
-						return [quote(property.name)]
-					}
-				} else if (property.kind === "reference") {
-					return this.codecs[property.name].columns.map(quote)
-				} else if (property.kind === "relation") {
-					return []
+		const selectColumnNames = model.properties.flatMap((property) => {
+			if (property.kind === "primitive") {
+				if (property.type === "json") {
+					return [`"${property.name}"::jsonb`]
 				} else {
-					signalInvalidType(property)
+					return [quote(property.name)]
 				}
-			})
-			.join(", ")
+			} else if (property.kind === "reference") {
+				return this.codecs[property.name].columns.map(quote)
+			} else if (property.kind === "relation") {
+				return []
+			} else {
+				signalInvalidType(property)
+			}
+		})
 
-		this.#select = new Query(this.client, `SELECT ${selectColumnNames} FROM "${this.table}" WHERE ${selectWhere}`)
+		this.#select = new Query(
+			this.client,
+			`SELECT ${selectColumnNames.join(", ")} FROM "${this.table}" WHERE ${selectWhere}`,
+		)
 
 		const orderByPrimaryKey = model.primaryKey.map((name) => `"${name}" ASC`).join(", ")
 		this.#selectAll = new Query(
@@ -262,8 +259,18 @@ export class ModelAPI {
 			.map(({ type }, i) => `$${i + 1}::${columnTypes[type].toLowerCase()}[]`)
 			.join(", ")
 
-		const match = model.primaryKey.map((name) => `"/table"."${name}" = "/keys"."${name}"`).join(" AND ")
+		const match = model.primaryKey.map((name) => `"${this.table}"."${name}" = "/keys"."${name}"`).join(" AND ")
 		const primaryKeyNames = model.primaryKey.map(quote).join(", ")
+		// const mutablePropertyNames = this.mutableProperties.flatMap((property) => {
+		// 	if (property.kind === "primitive") {
+		// 	} else if (property.kind === "reference") {
+		// 	} else if (property.kind === "relation") {
+		// 		return []
+		// 	} else {
+		// 		signalInvalidType(property)
+		// 	}
+		// })
+
 		this.#selectMany = new Query(
 			this.client,
 			`
@@ -272,8 +279,8 @@ export class ModelAPI {
 				FROM unnest(${unnest})
 				WITH ORDINALITY AS t(${primaryKeyNames}, "/index")
 			)
-			SELECT "/keys"."/index", "/table".* FROM "/keys"
-			  LEFT JOIN "${this.table}" "/table" ON ${match}
+			SELECT "/keys"."/index", ${selectColumnNames.map((c) => `"${this.table}".${c}`)} FROM "/keys"
+			  LEFT JOIN "${this.table}" ON ${match}
 			ORDER BY "/keys"."/index"
 			`,
 		)
