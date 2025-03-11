@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react"
+import React, { useRef, useState } from "react"
 
 import type { SessionSigner } from "@canvas-js/interfaces"
 import { Eip712Signer, SIWESigner, SIWFSigner } from "@canvas-js/chain-ethereum"
@@ -7,7 +7,7 @@ import { CosmosSigner } from "@canvas-js/chain-cosmos"
 import { SolanaSigner } from "@canvas-js/chain-solana"
 import { SubstrateSigner } from "@canvas-js/chain-substrate"
 
-import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
+import { useCanvas } from "@canvas-js/hooks"
 
 import { AuthKitProvider } from "@farcaster/auth-kit"
 import { JsonRpcProvider } from "ethers"
@@ -21,6 +21,7 @@ import { ConnectionStatus } from "./ConnectionStatus.js"
 import { LogStatus } from "./LogStatus.js"
 import * as contract from "./contract.js"
 import { Editor } from "./Editor.js"
+import { useDelta } from "./useDelta.js"
 
 export const topic = "document-example.canvas.xyz"
 
@@ -41,8 +42,6 @@ export const App: React.FC<{}> = ({}) => {
 	const [sessionSigner, setSessionSigner] = useState<SessionSigner | null>(null)
 	const [address, setAddress] = useState<string | null>(null)
 
-	const [cursor, setCursor] = useState("documents/0/")
-
 	const quillRef = useRef<Quill>()
 
 	const topicRef = useRef(topic)
@@ -61,20 +60,9 @@ export const App: React.FC<{}> = ({}) => {
 		],
 	})
 
-	// TODO: encapsulate this in a library function to ship with canvas-js/hooks
-	const results = useLiveQuery(app, "$document_operations", {
-		where: { id: { gt: cursor, lt: "documents/1" }, isAppend: false },
-	}) as { id: string; key: string; data: string }[] | null
-
-	useEffect(() => {
-		if (!results) return
-		for (const message of results) {
-			const { data } = message
-			quillRef.current?.updateContents(data)
-		}
-		// set the cursor to the id of the last item
-		if (results.length > 0) setCursor(results[results.length - 1].id)
-	}, [results])
+	useDelta<(typeof contract)["models"]>(app, "documents", "0", (deltas) => {
+		quillRef.current?.updateContents(deltas)
+	})
 
 	return (
 		<AppContext.Provider value={{ address, setAddress, sessionSigner, setSessionSigner, app: app ?? null }}>
