@@ -17,7 +17,7 @@
 		"./libp2p": "./lib/libp2p.js"
 	},
 	"dependencies": {
-		"@canvas-js/libp2p-rendezvous": "^0.4.3",
+		"@canvas-js/libp2p-rendezvous": "^0.4.4",
 		"@chainsafe/libp2p-noise": "^16.0.3",
 		"@chainsafe/libp2p-yamux": "^7.0.1",
 		"@ipld/dag-cbor": "^9.2.2",
