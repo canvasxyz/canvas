@@ -1,8 +1,6 @@
-import fs from "node:fs"
-
 import { toString } from "uint8arrays"
 
-import { Tree, Mode } from "@canvas-js/okra"
+import { Mode } from "@canvas-js/okra"
 import { Tree as MemoryTree } from "@canvas-js/okra-memory"
 
 import { ModelDB, ModelDBProxy } from "@canvas-js/modeldb-durable-objects"
@@ -32,7 +30,19 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 			mdb = new ModelDBProxy(worker, { ...init.schema, ...AbstractGossipLog.schema })
 			await mdb.initialize()
 		} else if (!useTestProxy && db) {
-			mdb = await ModelDB.open({ db, models: { ...init.schema, ...AbstractGossipLog.schema } })
+			const models = { ...init.schema, ...AbstractGossipLog.schema }
+			const version = Object.assign(init.version ?? {}, AbstractGossipLog.baseVersion)
+
+			mdb = await ModelDB.open(db, {
+				models: models,
+				version: version,
+				upgrade: async (upgradeAPI, oldConfig, oldVersion, newVersion) => {
+					await AbstractGossipLog.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion)
+					await init.upgrade?.(upgradeAPI, oldConfig, oldVersion, newVersion)
+				},
+				initialUpgradeSchema: Object.assign(init.initialUpgradeSchema ?? models, AbstractGossipLog.schema),
+				initialUpgradeVersion: Object.assign(init.initialUpgradeVersion ?? version, AbstractGossipLog.baseVersion),
+			})
 		} else {
 			throw new Error("must provide db or worker && useTestProxy")
 		}

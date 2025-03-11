@@ -3,7 +3,7 @@ import { encryptSafely, decryptSafely, getEncryptionPublicKey, EthEncryptedData 
 import { ethers } from "ethers"
 
 import type { Canvas } from "@canvas-js/core"
-import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
+import { useCanvas, useLiveQuery, AppInfo } from "@canvas-js/hooks"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 
 import { usePrivkey } from "./components/privkeys"
@@ -20,7 +20,7 @@ const getGroupId = (address1: string, address2: string) => {
 }
 
 const useChat = (topic: string, wallet: ethers.Wallet) => {
-	const { app } = useCanvas(wsURL, {
+	const { app, ws } = useCanvas(wsURL, {
 		topic,
 		signers: [new SIWESigner({ signer: wallet })],
 		contract,
@@ -33,6 +33,7 @@ const useChat = (topic: string, wallet: ethers.Wallet) => {
 	return {
 		wallet,
 		app,
+		ws,
 		people,
 		registerEncryptionKey: async (privateKey: string) => {
 			if (!app) throw new Error()
@@ -103,7 +104,7 @@ function Wrapper() {
 }
 
 function App({ wallet1, wallet2 }: { wallet1: ethers.Wallet; wallet2: ethers.Wallet }) {
-	const { app, people, registerEncryptionKey, createEncryptionGroup, sendPrivateMessage } = useChat(
+	const { app, ws, people, registerEncryptionKey, createEncryptionGroup, sendPrivateMessage } = useChat(
 		"chat-encrypted.canvas.xyz",
 		wallet1,
 	)
@@ -121,6 +122,7 @@ function App({ wallet1, wallet2 }: { wallet1: ethers.Wallet; wallet2: ethers.Wal
 
 	return (
 		<div style={{ height: "100vh" }}>
+			<AppInfo app={app} ws={ws} />
 			<div style={{ display: "flex", height: "calc(100vh - 120px)" }}>
 				{/* conversation selector */}
 				<div style={{ width: 200 }}>

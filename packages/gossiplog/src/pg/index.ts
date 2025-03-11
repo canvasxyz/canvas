@@ -15,12 +15,19 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 		uri: string | pg.ConnectionConfig,
 		{ clear, ...init }: GossipLogInit<Payload> & { clear?: boolean },
 	) {
+		const models = { ...init.schema, ...AbstractGossipLog.schema }
+		const version = Object.assign(init.version ?? {}, AbstractGossipLog.baseVersion)
+
 		const db = await ModelDB.open(uri, {
-			models: { ...init.schema, ...AbstractGossipLog.schema },
+			models: models,
+			version: version,
+			upgrade: async (upgradeAPI, oldConfig, oldVersion, newVersion) => {
+				await AbstractGossipLog.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion)
+				await init.upgrade?.(upgradeAPI, oldConfig, oldVersion, newVersion)
+			},
+			initialUpgradeSchema: Object.assign(init.initialUpgradeSchema ?? models, AbstractGossipLog.schema),
+			initialUpgradeVersion: Object.assign(init.initialUpgradeVersion ?? version, AbstractGossipLog.baseVersion),
 			clear: clear,
-			version: Object.assign(init.version ?? {}, {
-				[AbstractGossipLog.namespace]: AbstractGossipLog.version,
-			}),
 		})
 
 		const messageCount = await db.count("$messages")

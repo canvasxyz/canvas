@@ -28,6 +28,52 @@ testPlatforms("get many (simple table)", async (t, openDB) => {
 	])
 })
 
+testPlatforms("get many (composite primary key)", async (t, openDB) => {
+	const db = await openDB(t, {
+		user: {
+			$primary: "id/index",
+			id: "string",
+			index: "integer",
+			name: "string?",
+		},
+	})
+
+	const [a, b, c] = ["a", "b", "c"]
+	const d = "d"
+	await db.set("user", { id: a, index: 0, name: "John Doe" })
+	await db.set("user", { id: b, index: 0, name: null })
+	await db.set("user", { id: b, index: 1, name: null })
+
+	t.deepEqual(await db.getMany("user", []), [])
+	t.deepEqual(await db.getMany("user", [[d, 0]]), [null])
+	t.deepEqual(
+		await db.getMany("user", [
+			[d, 0],
+			[a, 1],
+		]),
+		[null, null],
+	)
+	t.deepEqual(
+		await db.getMany("user", [
+			[a, 0],
+			[b, 0],
+		]),
+		[
+			{ id: a, index: 0, name: "John Doe" },
+			{ id: b, index: 0, name: null },
+		],
+	)
+	t.deepEqual(
+		await db.getMany("user", [
+			[a, 0],
+			[a, 1],
+			[b, 0],
+			[b, 1],
+		]),
+		[{ id: a, index: 0, name: "John Doe" }, null, { id: b, index: 0, name: null }, { id: b, index: 1, name: null }],
+	)
+})
+
 testPlatforms("get many (with relations)", async (t, openDB) => {
 	const db = await openDB(t, {
 		user: { address: "primary" },

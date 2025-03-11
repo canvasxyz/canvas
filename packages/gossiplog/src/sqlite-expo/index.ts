@@ -9,41 +9,26 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 		directory = null,
 		...init
 	}: { directory?: string | null; clear?: boolean } & GossipLogInit<Payload>) {
-		const tree = new MemoryTree({ mode: Mode.Index })
-		const db = await ModelDB.open({
-			path: null,
-			models: { ...init.schema, ...AbstractGossipLog.schema },
-			version: Object.assign(init.version ?? {}, {
-				[AbstractGossipLog.namespace]: AbstractGossipLog.version,
-			}),
-			// clear: init.clear,
+		const models = { ...init.schema, ...AbstractGossipLog.schema }
+		const version = Object.assign(init.version ?? {}, AbstractGossipLog.baseVersion)
+
+		const db = await ModelDB.open(null, {
+			models: models,
+			version: version,
+			upgrade: async (upgradeAPI, oldConfig, oldVersion, newVersion) => {
+				await AbstractGossipLog.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion)
+				await init.upgrade?.(upgradeAPI, oldConfig, oldVersion, newVersion)
+			},
+			initialUpgradeSchema: Object.assign(init.initialUpgradeSchema ?? models, AbstractGossipLog.schema),
+			initialUpgradeVersion: Object.assign(init.initialUpgradeVersion ?? version, AbstractGossipLog.baseVersion),
 		})
 
+		const tree = new MemoryTree({ mode: Mode.Index })
 		return new GossipLog(db, tree, init)
 	}
 
 	private constructor(public readonly db: ModelDB, public readonly tree: Tree, init: GossipLogInit<Payload>) {
 		super(init)
-
-		// if (directory === null) {
-
-		// } else {
-		// 	if (!fs.existsSync(directory)) {
-		// 		fs.mkdirSync(directory, { recursive: true })
-		// 	}
-
-		// 	const tree = new PersistentTree(`${directory}/message-index`, {
-		// 		mode: Mode.Index,
-		// 		mapSize: 0xffffffff,
-		// 	})
-
-		// 	this.tree = tree
-
-		// 	this.db = new ModelDB({
-		// 		path: `${directory}/db.sqlite`,
-		// 		models: { ...init.schema, ...AbstractGossipLog.schema },
-		// 	})
-		// }
 	}
 
 	protected async rebuildMerkleIndex(): Promise<void> {

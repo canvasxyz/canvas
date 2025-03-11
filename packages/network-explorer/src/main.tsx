@@ -7,13 +7,16 @@ import { HashRouter } from "react-router-dom"
 import "./index.css"
 import { App } from "./App.js"
 import { ApplicationDataProvider } from "./hooks/useApplicationData.js"
+import { ContractDataProvider } from "./hooks/useContractData.js"
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
 	<React.StrictMode>
 		<HashRouter>
 			<Theme>
 				<ApplicationDataProvider>
-					<App />
+					<ContractDataProvider>
+						<App />
+					</ContractDataProvider>
 				</ApplicationDataProvider>
 			</Theme>
 		</HashRouter>

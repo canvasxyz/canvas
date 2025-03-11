@@ -17,9 +17,10 @@ import { AbstractModelDB, Effect, ModelSchema } from "@canvas-js/modeldb"
 import { GossipLogConsumer, MAX_MESSAGE_ID, AbstractGossipLog, SignedMessage } from "@canvas-js/gossiplog"
 import { assert } from "@canvas-js/utils"
 
-import { ExecutionContext, getKeyHash } from "../ExecutionContext.js"
-import { isAction, isSession, isSnapshot, isUpdates } from "../utils.js"
 import { DocumentStore } from "../DocumentStore.js"
+import { ExecutionContext, getKeyHash } from "../ExecutionContext.js"
+import { Contract } from "../types.js"
+import { isAction, isSession, isSnapshot, isUpdates } from "../utils.js"
 
 export type EffectRecord = { key: string; value: Uint8Array | null; branch: number; clock: number }
 
@@ -105,6 +106,7 @@ export abstract class AbstractRuntime {
 	public abstract readonly signers: SignerCache
 	public abstract readonly schema: ModelSchema
 	public abstract readonly actionNames: string[]
+	public abstract readonly contract: string | Contract<any, any>
 
 	public readonly additionalUpdates = new Map<string, Updates[]>()
 

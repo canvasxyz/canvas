@@ -18,7 +18,7 @@ export const builder = (yargs: Argv) =>
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
-	const { topic, location, contract } = getContractLocation(args)
+	const { topic, location, contract } = await getContractLocation(args)
 	if (location === null) {
 		throw new Error("Expected path to application directory, found path to contract file")
 	}

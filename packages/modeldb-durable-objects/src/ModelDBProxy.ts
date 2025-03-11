@@ -1,5 +1,7 @@
-import * as json from "@ipld/dag-json"
 import { Unstable_DevWorker } from "wrangler"
+import { encode, decode } from "microcbor"
+
+import { Awaitable, assert } from "@canvas-js/utils"
 
 import {
 	AbstractModelDB,
@@ -12,18 +14,11 @@ import {
 	WhereCondition,
 	Config,
 	PrimaryKeyValue,
+	Model,
+	Subscription,
 } from "@canvas-js/modeldb"
-import { Awaitable } from "@canvas-js/interfaces"
-import { assert, prepare } from "@canvas-js/utils"
 
 import { randomUUID } from "./utils.js"
-
-type Subscription = {
-	model: string
-	query: QueryParams
-	filter: (effect: Effect) => boolean
-	callback: (results: ModelValue[] | ModelValueWithIncludes[]) => Awaitable<void>
-}
 
 // A mock ModelDB that proxies requests to a Durable Objects via a ModelDBProxyWorker.
 // Use this for testing only, it makes extra requests to fetch subscriptions.
@@ -64,27 +59,47 @@ export class ModelDBProxy extends AbstractModelDB {
 		})
 	}
 
+	public async hasModel(model: Model): Promise<boolean> {
+		return await this.proxyFetch("hasModel", [model])
+	}
+
 	public getType(): ModelDBBackend {
 		return "sqlite-durable-objects"
 	}
 
 	async proxyFetch<T>(call: string, args: any[]): Promise<T> {
-		if (!this.initialized && call !== "initialize") throw new Error("uninitialized")
-		const body = json.stringify(args)
-		const response = await this.worker.fetch(`${this.baseUrl}/${this.uuid}/${call}`, { method: "POST", body })
-		if (!response.body) throw new Error("unexpected")
-		if (!response.ok) throw new Error(await response.text())
-		const result = json.decode(await response.arrayBuffer()) as T
+		assert(this.initialized || call === "initialize", "uninitialized")
+
+		const url = `${this.baseUrl}/${this.uuid}/${call}`
+		const res = await this.worker.fetch(url, {
+			method: "POST",
+			headers: { accept: "application/cbor", "content-type": "application/cbor" },
+			body: encode(args),
+		})
+
+		assert(res.ok, "expected response.ok")
+		assert(res.body !== null, "expected response.body !== null")
+
+		const body = await res.arrayBuffer()
+		const result = decode(new Uint8Array(body)) as T
 
 		// Update subscriptions. Could cause a race condition because of
 		// the async call to /fetchSubscriptions.
 		if (this.subscriptions.size > 0) {
-			const subscriptionResponse = await this.worker.fetch(`${this.baseUrl}/${this.uuid}/fetchSubscriptions`, {
-				method: "POST",
-			})
-			const subscriptionResults = json.decode<Array<{ subscriptionId: number; results: ModelValue[] }>>(
-				await subscriptionResponse.arrayBuffer(),
-			)
+			const url = `${this.baseUrl}/${this.uuid}/fetchSubscriptions`
+			const subscriptionRes = await this.worker.fetch(url, { method: "POST" })
+			if (!subscriptionRes.ok) {
+				const err = await subscriptionRes.text()
+				throw new Error(err)
+			}
+
+			assert(subscriptionRes.body !== null, "expected subscriptionRes.body !== null")
+			const subscriptionBody = await subscriptionRes.arrayBuffer()
+			const subscriptionResults = decode(new Uint8Array(subscriptionBody)) as {
+				subscriptionId: number
+				results: ModelValue[]
+			}[]
+
 			for (const { subscriptionId, results } of subscriptionResults) {
 				this.subscriptions.get(subscriptionId)?.callback(results)
 			}
@@ -94,11 +109,15 @@ export class ModelDBProxy extends AbstractModelDB {
 	}
 
 	async fetchSubscriptions(): Promise<ModelValue[]> {
-		const response = await this.worker.fetch(`${this.baseUrl}/${this.uuid}/fetchSubscriptions`, { method: "POST" })
-		if (!response.body) throw new Error("unexpected")
-		if (!response.ok) throw new Error(await response.text())
-		const results = json.decode(await response.arrayBuffer()) as ModelValue[]
-		return results
+		const res = await this.worker.fetch(`${this.baseUrl}/${this.uuid}/fetchSubscriptions`, { method: "POST" })
+		if (!res.ok) {
+			const err = await res.text()
+			throw new Error(err)
+		}
+
+		assert(res.body !== null, "expected response.body !== null")
+		const body = await res.arrayBuffer()
+		return decode(new Uint8Array(body)) as ModelValue[]
 	}
 
 	async close(): Promise<void> {
@@ -127,14 +146,14 @@ export class ModelDBProxy extends AbstractModelDB {
 		modelName: string,
 		query?: QueryParams,
 	): AsyncIterable<T> {
-		const items: T[] = await this.proxyFetch("iterate", query ? [modelName, prepare(query)] : [modelName])
+		const items: T[] = await this.proxyFetch("iterate", query ? [modelName, query] : [modelName])
 		for (const item of items) {
 			yield item
 		}
 	}
 
 	async query<T extends ModelValue<any> = ModelValue<any>>(modelName: string, query?: QueryParams): Promise<T[]> {
-		return await this.proxyFetch("query", query ? [modelName, prepare(query)] : [modelName])
+		return await this.proxyFetch("query", query ? [modelName, query] : [modelName])
 	}
 
 	async count(modelName: string, where?: WhereCondition): Promise<number> {
@@ -163,7 +182,7 @@ export class ModelDBProxy extends AbstractModelDB {
 
 		return {
 			id,
-			results: this.proxyFetch("subscribe", [modelName, prepare(query), id]).then(() => []),
+			results: this.proxyFetch("subscribe", [modelName, query, id]).then(() => []),
 		}
 	}
 

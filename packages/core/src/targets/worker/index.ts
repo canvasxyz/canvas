@@ -32,26 +32,11 @@ const target: PlatformTarget = {
 	},
 
 	async listen(app, port, options = {}) {
-		throw new Error("Unimplemented for Cloudflare Workers")
+		throw new Error("Unimplemented: libp2p listen on Cloudflare Workers")
+	},
 
-		// const api = express()
-		// api.use(cors())
-		// api.use("/api", createAPI(app))
-
-		// // TODO: add metrics API
-
-		// const server = http.createServer(api)
-		// const network = new NetworkServer(app.messageLog)
-		// const wss = new WebSocketServer({ server, perMessageDeflate: false })
-		// wss.on("connection", network.handleConnection)
-
-		// const signal = anySignal([app.messageLog.controller.signal, options.signal])
-		// signal.addEventListener("abort", () => {
-		// 	network.close()
-		// 	wss.close(() => server.close())
-		// })
-
-		// await new Promise<void>((resolve) => server.listen(port, resolve))
+	buildContract(location: string) {
+		throw new Error("Unimplemented: buildContract on Cloudflare Workers")
 	},
 }
 

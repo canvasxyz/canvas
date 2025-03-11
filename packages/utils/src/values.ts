@@ -12,11 +12,6 @@ export interface JSObject {
 	[key: string]: JSValue
 }
 
-// Functions
-
-export type JSFunction = (...args: JSValue[]) => undefined | JSValue
-export type JSFunctionAsync = (...args: JSValue[]) => Promise<undefined | JSValue>
-
 // Utilities
 
 export function typeOf(value: JSValue) {

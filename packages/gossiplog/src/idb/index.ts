@@ -14,12 +14,17 @@ export interface Options {
 
 export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 	public static async open<Payload>({ name, ...init }: GossipLogInit<Payload> & Options) {
-		const db = await ModelDB.open({
-			name: name ?? `canvas/v1/${init.topic}`,
-			models: { ...init.schema, ...AbstractGossipLog.schema },
-			version: Object.assign(init.version ?? {}, {
-				[AbstractGossipLog.namespace]: AbstractGossipLog.version,
-			}),
+		const models = { ...init.schema, ...AbstractGossipLog.schema }
+		const version = Object.assign(init.version ?? {}, AbstractGossipLog.baseVersion)
+		const db = await ModelDB.open(name ?? `canvas/v1/${init.topic}`, {
+			models: models,
+			version: version,
+			upgrade: async (upgradeAPI, oldConfig, oldVersion, newVersion) => {
+				await AbstractGossipLog.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion)
+				await init.upgrade?.(upgradeAPI, oldConfig, oldVersion, newVersion)
+			},
+			initialUpgradeSchema: Object.assign(init.initialUpgradeSchema ?? models, AbstractGossipLog.schema),
+			initialUpgradeVersion: Object.assign(init.initialUpgradeVersion ?? version, AbstractGossipLog.baseVersion),
 		})
 
 		const messageCount = await db.count("$messages")

@@ -1,55 +1,42 @@
 /// <reference lib="webworker" />
 
 import sqlite3InitModule, { Database, Sqlite3Static } from "@sqlite.org/sqlite-wasm"
-import { logger } from "@libp2p/logger"
+
 import {
 	AbstractModelDB,
 	ModelDBBackend,
 	Config,
 	Effect,
 	ModelValue,
-	ModelSchema,
 	QueryParams,
 	WhereCondition,
 	DatabaseUpgradeAPI,
 	ModelInit,
 	PropertyType,
+	Model,
+	ModelDBInit,
 } from "@canvas-js/modeldb"
 import { signalInvalidType } from "@canvas-js/utils"
 
 import { ModelAPI } from "./ModelAPI.js"
+import { Query } from "./utils.js"
 
 export interface ModelDBOptions {
 	sqlite3?: Sqlite3Static
-	path?: string | null
-	models: ModelSchema
-
-	version?: Record<string, number>
-	upgrade?: (
-		upgradeAPI: DatabaseUpgradeAPI,
-		oldVersion: Record<string, number>,
-		newVersion: Record<string, number>,
-	) => void | Promise<void>
 }
 
 const isWorker = typeof WorkerGlobalScope !== "undefined" && self instanceof WorkerGlobalScope
 
 export class ModelDB extends AbstractModelDB {
 	#models: Record<string, ModelAPI> = {}
-	protected readonly log = logger("canvas:modeldb")
+	#selectTable: Query<[string], { name: string }>
+	#selectIndex: Query<[string, string], { name: string }>
 
-	public static async open({ sqlite3, path, models, version, upgrade }: ModelDBOptions) {
-		if (sqlite3 === undefined) {
-			sqlite3 = await sqlite3InitModule({
-				print: console.log,
-				printErr: console.error,
-			})
-		}
+	public static async open(path: string | null, init: ModelDBInit, { sqlite3 }: ModelDBOptions = {}) {
+		sqlite3 ??= await sqlite3InitModule({ print: console.log, printErr: console.error })
 
-		const newConfig = Config.parse(models)
-		const newVersion = Object.assign(version ?? {}, {
-			[AbstractModelDB.namespace]: AbstractModelDB.version,
-		})
+		const newConfig = Config.parse(init.models, { freeze: true })
+		const newVersion = Object.assign(init.version ?? {}, AbstractModelDB.baseVersion)
 
 		let db: Database
 		if (path === null || path === undefined) {
@@ -64,21 +51,48 @@ export class ModelDB extends AbstractModelDB {
 			throw new Error("cannot open persistent database: persistent databases are only available in worker threads")
 		}
 
+		const timestamp = new Date().toISOString()
+
 		// calling this constructor will create empty $versions and $models
 		// tables if they do not already exist
-		const baseModelDB = new ModelDB(sqlite3, db, Config.baseConfig, {
-			[AbstractModelDB.namespace]: AbstractModelDB.version,
-		})
+		const baseModelDB = new ModelDB(sqlite3, db, Config.baseConfig, AbstractModelDB.baseVersion)
+		const versionRecordCount = await baseModelDB.count("$versions")
+		if (versionRecordCount === 0) {
+			// this means one of two things:
+			// 1) we are initializing a new database, or
+			// 2) we are opening a pre-migration-system database for the first time
 
-		await AbstractModelDB.initialize(baseModelDB, newConfig, newVersion, async (oldConfig, oldVersion) => {
-			if (upgrade !== undefined) {
+			baseModelDB.log("no version records found")
+			const initialUpgradeVersion = Object.assign(
+				init.initialUpgradeVersion ?? init.version ?? {},
+				AbstractModelDB.baseVersion,
+			)
+			const initialUpgradeConfig = init.initialUpgradeSchema ? Config.parse(init.initialUpgradeSchema) : newConfig
+
+			// we distinguish between these cases using baseModelDB.satisfies(...).
+			const isSatisfied = await baseModelDB.satisfies(initialUpgradeConfig)
+			if (isSatisfied) {
+				baseModelDB.log("existing database satisfies initial upgrade config")
+				// now we write initialUpgradeConfig entries to $models
+				// and write initialUpgradeVersion entries to $versions
+				await AbstractModelDB.initialize(baseModelDB, timestamp, initialUpgradeVersion, initialUpgradeConfig)
+			} else {
+				baseModelDB.log("existing database not satisfied by initial upgrade config")
+				// we ignore initialUpgradeVersion / initialUpgradeConfig and just
+				// initialize directly with newVersion / newConfig
+				await AbstractModelDB.initialize(baseModelDB, timestamp, newVersion, newConfig)
+			}
+		}
+
+		// now means we proceed with the regular upgrade check
+		await AbstractModelDB.upgrade(baseModelDB, timestamp, newVersion, newConfig, async (oldConfig, oldVersion) => {
+			if (init.upgrade !== undefined) {
 				const existingDB = new ModelDB(sqlite3, db, oldConfig, oldVersion)
 				const upgradeAPI = existingDB.getUpgradeAPI()
-				await upgrade(upgradeAPI, oldVersion, newVersion)
+				await init.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion)
 			}
 		})
 
-		newConfig.freeze()
 		return new ModelDB(sqlite3, db, newConfig, newVersion)
 	}
 
@@ -89,12 +103,33 @@ export class ModelDB extends AbstractModelDB {
 		version: Record<string, number>,
 	) {
 		super(config, version)
-
 		this.log("Running SQLite3 version %s", sqlite3.version.libVersion)
+
+		this.#selectTable = new Query(db, `SELECT name FROM sqlite_schema WHERE type = 'table' AND name = ?`)
+		this.#selectIndex = new Query(
+			db,
+			`SELECT name FROM sqlite_schema WHERE type = 'index' AND name = ? AND tbl_name = ?`,
+		)
 
 		for (const model of Object.values(this.config.models)) {
 			this.#models[model.name] = new ModelAPI(this.db, this.config, model)
 		}
+	}
+
+	protected hasModel(model: Model): boolean {
+		const tableName = model.name
+		if (this.#selectTable.get([tableName]) === null) {
+			return false
+		}
+
+		for (const index of model.indexes) {
+			const indexName = [model.name, ...index].join("/")
+			if (this.#selectIndex.get([indexName, tableName]) === null) {
+				return false
+			}
+		}
+
+		return true
 	}
 
 	public getType(): ModelDBBackend {

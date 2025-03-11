@@ -28,7 +28,7 @@ export async function* decodeRequests(
 }
 
 export class Server implements Duplex<Pushable<Sync.Response>, AsyncIterable<Sync.Request>> {
-	public static timeout = 2 * SECONDS
+	public static timeout = 10 * SECONDS
 
 	public static async handleStream(txn: SyncSnapshot, stream: Stream) {
 		const server = new Server(txn, stream)
@@ -53,10 +53,7 @@ export class Server implements Duplex<Pushable<Sync.Response>, AsyncIterable<Syn
 
 	#ended = false
 
-	private constructor(
-		private readonly txn: SyncSnapshot,
-		stream: Stream,
-	) {
+	private constructor(private readonly txn: SyncSnapshot, stream: Stream) {
 		this.log = logger(`canvas:sync:server:${stream.id}`)
 	}
 

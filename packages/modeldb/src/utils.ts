@@ -11,8 +11,7 @@ import type {
 	ReferenceValue,
 	RelationValue,
 } from "./types.js"
-
-export type Awaitable<T> = T | Promise<T>
+import { equals } from "uint8arrays"
 
 export const isPrimaryKey = (value: unknown): value is PrimaryKeyValue => {
 	if (typeof value === "number") {
@@ -24,6 +23,20 @@ export const isPrimaryKey = (value: unknown): value is PrimaryKeyValue => {
 	} else {
 		return false
 	}
+}
+
+export function equalPrimaryKeys(a: PrimaryKeyValue, b: PrimaryKeyValue) {
+	if (a instanceof Uint8Array && b instanceof Uint8Array) {
+		return equals(a, b)
+	} else {
+		return a === b
+	}
+}
+
+export function equalReferences(a: PrimaryKeyValue | PrimaryKeyValue[], b: PrimaryKeyValue | PrimaryKeyValue[]) {
+	const wrappedA = Array.isArray(a) ? a : [a]
+	const wrappedB = Array.isArray(b) ? b : [b]
+	return wrappedA.length === wrappedB.length && wrappedA.every((keyA, i) => equalPrimaryKeys(keyA, wrappedB[i]))
 }
 
 export function isReferenceValue(value: unknown): value is ReferenceValue {

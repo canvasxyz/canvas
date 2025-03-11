@@ -1,6 +1,7 @@
 import { Box, Container, Flex, Heading, Link, Text } from "@radix-ui/themes"
 import useSWR from "swr"
 import { stringifyRequestParams } from "./components/Table.js"
+import { ApplicationData } from "./components/ApplicationData.js"
 import { fetchAndIpldParseJson } from "./utils.js"
 import { ReactNode } from "react"
 
@@ -107,6 +108,11 @@ export const LandingPage = () => {
 							</Link>
 						</Text>
 					</Flex>
+				</Box>
+
+				<Heading size="5">Configuration</Heading>
+				<Box style={{ border: "solid var(--gray-4) 1px", lineHeight: 1.25 }} mb="4">
+					<ApplicationData />
 				</Box>
 			</Flex>
 		</Container>

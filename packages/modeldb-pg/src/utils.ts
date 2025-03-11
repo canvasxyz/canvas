@@ -8,19 +8,19 @@ export const quote = (name: string) => `"${name}"`
 export class Query<R extends Record<string, PostgresPrimitiveValue> = Record<string, PostgresPrimitiveValue>> {
 	constructor(private readonly client: pg.Client, private readonly sql: string) {}
 
-	public async get(params: PostgresPrimitiveValue[]): Promise<R | null> {
-		const { rows } = await this.client.query<R, PostgresPrimitiveValue[]>(this.sql, params)
+	public async get(params: PostgresPrimitiveValue[] | PostgresPrimitiveValue[][]): Promise<R | null> {
+		const { rows } = await this.client.query<R, PostgresPrimitiveValue[] | PostgresPrimitiveValue[][]>(this.sql, params)
 		const [result = null] = rows
 		return result
 	}
 
-	public async all(params: PostgresPrimitiveValue[]): Promise<R[]> {
-		const { rows } = await this.client.query<R, PostgresPrimitiveValue[]>(this.sql, params)
+	public async all(params: PostgresPrimitiveValue[] | PostgresPrimitiveValue[][]): Promise<R[]> {
+		const { rows } = await this.client.query<R, PostgresPrimitiveValue[] | PostgresPrimitiveValue[][]>(this.sql, params)
 		return rows
 	}
 
 	public async *iterate(
-		params: PostgresPrimitiveValue[],
+		params: PostgresPrimitiveValue[] | PostgresPrimitiveValue[][],
 		options: { pageSize?: number } = {},
 	): AsyncIterableIterator<R> {
 		const maxRows = options.pageSize ?? 512

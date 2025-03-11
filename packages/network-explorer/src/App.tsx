@@ -1,12 +1,17 @@
+import { Suspense, useState } from "react"
 import { Flex } from "@radix-ui/themes"
+import { Route, Routes } from "react-router-dom"
+
 import { Sidebar } from "./components/Sidebar.js"
 import { Table } from "./components/Table.js"
-import { Route, Routes } from "react-router-dom"
 import { tables } from "./tables.js"
-import { Suspense, useState } from "react"
+
+import { LandingPage } from "./LandingPage.js"
 import { ModelTable } from "./ModelTable.js"
 import { ActionsTable } from "./ActionsTable.js"
-import { LandingPage } from "./LandingPage.js"
+import { ContractView } from "./ContractView.js"
+import { MigrationView } from "./MigrationView.js"
+import { AdminView } from "./AdminView.js"
 
 export const App = () => {
 	const [showSidebar, setShowSidebar] = useState(true)
@@ -19,7 +24,7 @@ export const App = () => {
 
 				<Route
 					key={"$actions"}
-					path={`/$actions`}
+					path={`/tables/$actions`}
 					element={
 						<Suspense>
 							<ActionsTable setShowSidebar={setShowSidebar} showSidebar={showSidebar} />
@@ -30,7 +35,7 @@ export const App = () => {
 				{tables.map(({ tableName, defaultColumns, enableDownload, defaultSortColumn, defaultSortDirection }, key) => (
 					<Route
 						key={key}
-						path={`/${tableName}`}
+						path={`/tables/${tableName}`}
 						element={
 							<Suspense>
 								<Table
@@ -46,6 +51,7 @@ export const App = () => {
 						}
 					/>
 				))}
+
 				<Route
 					key={"models"}
 					path={`/models/:model`}
@@ -55,6 +61,40 @@ export const App = () => {
 						</Suspense>
 					}
 				/>
+
+				<Route
+					key={"contract"}
+					path="/contract/view"
+					element={
+						<Suspense>
+							<ContractView />
+						</Suspense>
+					}
+				/>
+
+				{window.location.hostname === 'localhost' && (
+					<>
+						<Route
+							key={"contract"}
+							path="/contract/edit"
+							element={
+								<Suspense>
+									<MigrationView />
+								</Suspense>
+							}
+						/>
+
+						<Route
+							key={"contract"}
+							path="/contract/admin"
+							element={
+								<Suspense>
+									<AdminView />
+								</Suspense>
+							}
+						/>
+					</>
+				)}
 			</Routes>
 		</Flex>
 	)

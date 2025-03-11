@@ -8,80 +8,120 @@ import {
 	Config,
 	Effect,
 	ModelValue,
-	ModelSchema,
 	QueryParams,
 	WhereCondition,
 	DatabaseUpgradeAPI,
 	ModelInit,
 	PropertyType,
+	Model,
+	ModelDBInit,
 } from "@canvas-js/modeldb"
 
 import { ModelAPI } from "./ModelAPI.js"
-
-export interface ModelDBOptions {
-	models: ModelSchema
-	clear?: boolean
-
-	version?: Record<string, number>
-	upgrade?: (
-		upgradeAPI: DatabaseUpgradeAPI,
-		oldVersion: Record<string, number>,
-		newVersion: Record<string, number>,
-	) => void | Promise<void>
-}
+import { Query } from "./utils.js"
 
 export class ModelDB extends AbstractModelDB {
 	#models: Record<string, ModelAPI> = {}
 	#transaction: (effects: Effect[]) => Promise<void>
+	#selectTable: Query<{ name: string }>
+	#selectIndex: Query<{ name: string }>
 
-	public static async open(uri: string | pg.ConnectionConfig, { models, version, upgrade, clear }: ModelDBOptions) {
-		const newConfig = Config.parse(models)
-		const newVersion = Object.assign(version ?? {}, {
-			[AbstractModelDB.namespace]: AbstractModelDB.version,
-		})
+	public static async open(uri: string | pg.ConnectionConfig, init: ModelDBInit) {
+		const newConfig = Config.parse(init.models, { freeze: true })
+		const newVersion = Object.assign(init.version ?? {}, AbstractModelDB.baseVersion)
 
 		const client = new pg.Client(uri)
 		await client.connect()
 
-		try {
-			const baseModelDB = new ModelDB(client, Config.baseConfig, {
-				[AbstractModelDB.namespace]: AbstractModelDB.version,
-			})
+		if (init.clear) {
+			try {
+				const modelDB = new ModelDB(client, newConfig, newVersion)
+				for (const model of newConfig.models) {
+					modelDB.#models[model.name] = await ModelAPI.create(client, newConfig, model, true)
+				}
 
+				return modelDB
+			} catch (err) {
+				await client.end()
+				throw err
+			}
+		}
+
+		const timestamp = new Date().toISOString()
+
+		try {
+			const baseModelDB = new ModelDB(client, Config.baseConfig, AbstractModelDB.baseVersion)
 			for (const model of Config.baseConfig.models) {
-				baseModelDB.#models[model.name] = await ModelAPI.create(client, newConfig, model, clear)
+				baseModelDB.#models[model.name] = await ModelAPI.create(client, newConfig, model)
 			}
 
-			await AbstractModelDB.initialize(baseModelDB, newConfig, newVersion, async (oldConfig, oldVersion) => {
-				if (upgrade !== undefined) {
+			const versionRecordCount = await baseModelDB.count("$versions")
+			if (versionRecordCount === 0) {
+				// this means one of two things:
+				// 1) we are initializing a new database, or
+				// 2) we are opening a pre-migration-system database for the first time
+
+				baseModelDB.log("no version records found")
+				const initialUpgradeVersion = Object.assign(
+					init.initialUpgradeVersion ?? init.version ?? {},
+					AbstractModelDB.baseVersion,
+				)
+				const initialUpgradeConfig = init.initialUpgradeSchema ? Config.parse(init.initialUpgradeSchema) : newConfig
+
+				// we distinguish between these cases using baseModelDB.satisfies(...).
+				const isSatisfied = await baseModelDB.satisfies(initialUpgradeConfig)
+				if (isSatisfied) {
+					baseModelDB.log("existing database satisfies initial upgrade config")
+					// now we write initialUpgradeConfig entries to $models
+					// and write initialUpgradeVersion entries to $versions
+					await AbstractModelDB.initialize(baseModelDB, timestamp, initialUpgradeVersion, initialUpgradeConfig)
+				} else {
+					baseModelDB.log("existing database not satisfied by initial upgrade config")
+					// we ignore initialUpgradeVersion / initialUpgradeConfig and just
+					// initialize directly with newVersion / newConfig
+					await AbstractModelDB.initialize(baseModelDB, timestamp, newVersion, newConfig)
+				}
+			}
+
+			// now means we proceed with the regular upgrade check
+			await AbstractModelDB.upgrade(baseModelDB, timestamp, newVersion, newConfig, async (oldConfig, oldVersion) => {
+				if (init.upgrade !== undefined) {
 					const existingDB = new ModelDB(client, oldConfig, oldVersion)
 					for (const model of oldConfig.models) {
-						existingDB.#models[model.name] = await ModelAPI.create(client, oldConfig, model, clear)
+						existingDB.#models[model.name] = await ModelAPI.create(client, oldConfig, model)
 					}
 
 					const upgradeAPI = existingDB.getUpgradeAPI()
-					await upgrade(upgradeAPI, oldVersion, newVersion)
+					await init.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion)
 				}
 			})
 
-			newConfig.freeze()
-
 			const modelDB = new ModelDB(client, newConfig, newVersion)
 			for (const model of newConfig.models) {
-				modelDB.#models[model.name] = await ModelAPI.create(client, newConfig, model, clear)
+				modelDB.#models[model.name] = await ModelAPI.create(client, newConfig, model)
 			}
 
 			return modelDB
-		} catch (e) {
+		} catch (err) {
 			await client.end()
-			throw e
+			throw err
 		}
 	}
 
 	private constructor(public readonly client: pg.Client, config: Config, version: Record<string, number>) {
 		super(config, version)
 
+		this.#selectTable = new Query(
+			client,
+			`SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename = $1`,
+		)
+		this.#selectIndex = new Query(
+			client,
+			`SELECT indexname FROM pg_indexes WHERE schemaname = 'public' AND indexname = $1 AND tablename = $2`,
+		)
+
 		this.#transaction = async (effects: Effect[]) => {
+			this.log.trace("beginning transaction")
 			await client.query("BEGIN")
 			try {
 				for (const effect of effects) {
@@ -99,11 +139,30 @@ export class ModelDB extends AbstractModelDB {
 					}
 				}
 				await client.query("COMMIT")
+				this.log.trace("transaction committed")
 			} catch (e) {
 				await client.query("ROLLBACK")
 				throw e
 			}
 		}
+	}
+
+	protected async hasModel(model: Model): Promise<boolean> {
+		const tableName = model.name
+		const tableResult = await this.#selectTable.get([tableName])
+		if (tableResult === null) {
+			return false
+		}
+
+		for (const index of model.indexes) {
+			const indexName = [model.name, ...index].join("/")
+			const indexResult = await this.#selectIndex.get([indexName, tableName])
+			if (indexResult === null) {
+				return false
+			}
+		}
+
+		return true
 	}
 
 	public getType(): ModelDBBackend {

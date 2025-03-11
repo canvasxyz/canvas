@@ -4,7 +4,7 @@ import { equals, toString } from "uint8arrays"
 
 import { Node, Tree, ReadWriteTransaction, hashEntry } from "@canvas-js/okra"
 import type { Signature, Signer, Message, Awaitable } from "@canvas-js/interfaces"
-import type { AbstractModelDB, ModelSchema, Effect } from "@canvas-js/modeldb"
+import type { AbstractModelDB, ModelSchema, Effect, DatabaseUpgradeAPI, Config } from "@canvas-js/modeldb"
 import { ed25519 } from "@canvas-js/signatures"
 import { assert, zip, prepare, prepareMessage } from "@canvas-js/utils"
 
@@ -19,7 +19,7 @@ import type { SyncSnapshot } from "./interface.js"
 import { AncestorIndex } from "./AncestorIndex.js"
 import { BranchMergeIndex } from "./BranchMergeIndex.js"
 import { MessageSource, SignedMessage } from "./SignedMessage.js"
-import { decodeId, encodeId, MessageId, messageIdPattern } from "./MessageId.js"
+import { decodeId, encodeId, messageIdPattern, MessageId } from "./MessageId.js"
 import { getNextClock } from "./schema.js"
 import { gossiplogTopicPattern } from "./utils.js"
 
@@ -41,6 +41,14 @@ export interface GossipLogInit<Payload = unknown, Result = any> {
 	/** add extra tables to the local database for private use */
 	schema?: ModelSchema
 	version?: Record<string, number>
+	upgrade?: (
+		upgradeAPI: DatabaseUpgradeAPI,
+		oldConfig: Config,
+		oldVersion: Record<string, number>,
+		newVersion: Record<string, number>,
+	) => Awaitable<void>
+	initialUpgradeSchema?: ModelSchema
+	initialUpgradeVersion?: Record<string, number>
 }
 
 export type GossipLogEvents<Payload = unknown, Result = any> = {
@@ -65,6 +73,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 > {
 	public static namespace = "gossiplog"
 	public static version = 1
+
 	public static schema = {
 		$messages: {
 			id: "primary",
@@ -79,6 +88,21 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		...AncestorIndex.schema,
 		...BranchMergeIndex.schema,
 	} satisfies ModelSchema
+
+	protected static baseVersion = { [AbstractGossipLog.namespace]: AbstractGossipLog.version }
+
+	protected static async upgrade(
+		upgradeAPI: DatabaseUpgradeAPI,
+		oldConfig: Config,
+		oldVersion: Record<string, number>,
+		newVersion: Record<string, number>,
+	) {
+		const version = oldVersion[AbstractGossipLog.namespace] ?? 0
+		if (version < AbstractGossipLog.version) {
+			// GossipLog migrations go here
+			throw new Error("unexpected GossipLog version")
+		}
+	}
 
 	public readonly topic: string
 	public readonly signer: Signer<Payload>
@@ -159,13 +183,16 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		message: Message<T>,
 		context: { source?: MessageSource; branch?: number } = {},
 	): SignedMessage<T, Result> {
-		assert(this.topic === message.topic, "expected this.topic === topic")
+		if (this.topic !== message.topic) {
+			this.log.error("invalid message: %O", message)
+			throw new Error(`cannot encode message: expected topic ${this.topic}, found topic ${message.topic}`)
+		}
+
 		const preparedMessage = prepareMessage(message)
-		assert(
-			this.validatePayload(preparedMessage.payload),
-			"error encoding message (invalid payload)",
-			preparedMessage.payload,
-		)
+		if (!this.validatePayload(preparedMessage.payload)) {
+			this.log.error("invalid message: %O", message)
+			throw new Error(`error encoding message: invalid payload`)
+		}
 
 		return SignedMessage.encode(signature, preparedMessage, context)
 	}
@@ -175,8 +202,17 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		context: { source?: MessageSource; branch?: number } = {},
 	): SignedMessage<Payload, Result> {
 		const signedMessage = SignedMessage.decode<Payload, Result>(value, context)
-		assert(this.topic === signedMessage.message.topic, "expected this.topic === topic")
-		assert(this.validatePayload(signedMessage.message.payload), "error decoding message (invalid payload)")
+		const { topic, payload } = signedMessage.message
+		if (this.topic !== topic) {
+			this.log.error("invalid message: %O", signedMessage.message)
+			throw new Error(`cannot decode message: expected topic ${this.topic}, found topic ${topic}`)
+		}
+
+		if (!this.validatePayload(payload)) {
+			this.log.error("invalid message: %O", signedMessage.message)
+			throw new Error(`error decoding message: invalid payload`)
+		}
+
 		return signedMessage
 	}
 

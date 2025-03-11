@@ -7,7 +7,6 @@ import {
 	ModelDBBackend,
 	Effect,
 	ModelValue,
-	ModelSchema,
 	QueryParams,
 	WhereCondition,
 	PrimaryKeyValue,
@@ -16,34 +15,21 @@ import {
 	DatabaseUpgradeAPI,
 	ModelInit,
 	PropertyType,
+	ModelDBInit,
 	getModelsFromInclude,
 } from "@canvas-js/modeldb"
 
 import { ModelAPI } from "./ModelAPI.js"
 import { getIndexName } from "./utils.js"
 
-export interface ModelDBOptions {
-	name: string
-	models: ModelSchema
-
-	version?: Record<string, number>
-	upgrade?: (
-		upgradeAPI: DatabaseUpgradeAPI,
-		oldVersion: Record<string, number>,
-		newVersion: Record<string, number>,
-	) => void | Promise<void>
-}
-
 export class ModelDB extends AbstractModelDB {
-	public static async open({ name, models, version, upgrade }: ModelDBOptions) {
-		const newConfig = Config.parse(models)
-		const newVersion = Object.assign(version ?? {}, {
+	public static async open(name: string, init: ModelDBInit) {
+		const newConfig = Config.parse(init.models, { freeze: true })
+		const newVersion = Object.assign(init.version ?? {}, {
 			[AbstractModelDB.namespace]: AbstractModelDB.version,
 		})
 
-		console.log("opening modeldb-idb")
 		const sum = Object.values(newVersion).reduce((sum, value) => sum + value, 0)
-		console.log("got version sum", sum)
 		const db = await openDB(name, sum, {
 			async upgrade(
 				db: IDBPDatabase<unknown>,
@@ -51,6 +37,8 @@ export class ModelDB extends AbstractModelDB {
 				newSum,
 				txn: IDBPTransaction<unknown, string[], "versionchange">,
 			) {
+				const timestamp = new Date().toISOString()
+
 				// create missing base model object stores
 				for (const [name, model] of Object.entries(Config.baseModels)) {
 					if (!db.objectStoreNames.contains(name)) {
@@ -58,16 +46,49 @@ export class ModelDB extends AbstractModelDB {
 					}
 				}
 
-				const baseModelDB = new ModelDB(db, Config.baseConfig, {
-					[AbstractModelDB.namespace]: AbstractModelDB.version,
-				})
+				const baseModelDB = new ModelDB(db, Config.baseConfig, AbstractModelDB.baseVersion)
+				const baseUpgradeAPI = baseModelDB.getUpgradeAPI(txn)
 
-				const upgradeAPI = baseModelDB.getUpgradeAPI(txn)
-				await AbstractModelDB.initialize(upgradeAPI, newConfig, newVersion, async (oldConfig, oldVersion) => {
-					if (upgrade !== undefined) {
-						await upgrade(upgradeAPI, oldVersion, newVersion)
+				const versionRecordCount = await baseUpgradeAPI.count("$versions")
+				if (versionRecordCount === 0) {
+					// this means one of two things:
+					// 1) we are initializing a new database, or
+					// 2) we are opening a pre-migration-system database for the first time
+
+					baseModelDB.log("no version records found")
+					const initialUpgradeVersion = Object.assign(
+						init.initialUpgradeVersion ?? init.version ?? {},
+						AbstractModelDB.baseVersion,
+					)
+					const initialUpgradeConfig = init.initialUpgradeSchema ? Config.parse(init.initialUpgradeSchema) : newConfig
+
+					// we distinguish between these cases using baseModelDB.satisfies(...).
+					const isSatisfied = await baseModelDB.satisfies(initialUpgradeConfig)
+					if (isSatisfied) {
+						baseModelDB.log("existing database satisfies initial upgrade config")
+						// now we write initialUpgradeConfig entries to $models
+						// and write initialUpgradeVersion entries to $versions
+						await AbstractModelDB.initialize(baseUpgradeAPI, timestamp, initialUpgradeVersion, initialUpgradeConfig)
+					} else {
+						baseModelDB.log("existing database not satisfied by initial upgrade config")
+						// we ignore initialUpgradeVersion / initialUpgradeConfig and just
+						// initialize directly with newVersion / newConfig
+						await AbstractModelDB.initialize(baseUpgradeAPI, timestamp, newVersion, newConfig)
 					}
-				})
+				}
+
+				await AbstractModelDB.upgrade(
+					baseUpgradeAPI,
+					timestamp,
+					newVersion,
+					newConfig,
+					async (oldConfig, oldVersion) => {
+						if (init.upgrade !== undefined) {
+							const upgradeAPI = new ModelDB(db, oldConfig, oldVersion).getUpgradeAPI(txn)
+							await init.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion)
+						}
+					},
+				)
 
 				for (const model of newConfig.models) {
 					if (!db.objectStoreNames.contains(model.name)) {
@@ -121,6 +142,10 @@ export class ModelDB extends AbstractModelDB {
 				return
 			}
 		})
+	}
+
+	protected hasModel(model: Model): boolean {
+		return this.db.objectStoreNames.contains(model.name)
 	}
 
 	public async close() {
@@ -308,6 +333,7 @@ export class ModelDB extends AbstractModelDB {
 
 	private async createModel(txn: IDBPTransaction<unknown, string[], "versionchange">, name: string, init: ModelInit) {
 		const model = this.config.createModel(name, init)
+		ModelDB.createModel(this.db, model)
 		this.models[name] = model
 		this.#models[name] = new ModelAPI(model)
 		await this.#models.$models.set(txn, { name, model })

@@ -56,21 +56,19 @@ export type Config<ModelsT extends ModelSchema = any, ActionsT extends Actions<M
 	snapshot?: Snapshot | null
 }
 
-export type ActionResult<Result = any> = { id: string; signature: Signature; message: Message<Action>; result: Result }
-
-export type ActionAPI<Args extends Array<any> = any, Result = any> = (...args: Args) => Promise<ActionResult<Result>>
+export type ActionAPI<Args extends Array<any> = any, Result = any> = (
+	...args: Args
+) => Promise<SignedMessage<Action, Result>>
 
 export interface CanvasEvents extends GossipLogEvents<MessageType> {
 	stop: Event
 }
 
-export type CanvasLogEvent = CustomEvent<{
-	id: string
-	signature: unknown
-	message: Message<MessageType>
-}>
+export type CanvasLogEvent = CustomEvent<SignedMessage<MessageType>>
 
 export type ApplicationData = {
+	peerId: string | null
+	connections: Record<string, { status: string; direction: string; rtt: number | undefined }>
 	networkConfig: {
 		bootstrapList?: string[]
 		listen?: string[]
@@ -94,6 +92,11 @@ export class Canvas<
 > extends TypedEventEmitter<CanvasEvents> {
 	public static namespace = "canvas"
 	public static version = 1
+
+	public static async buildContract(location: string) {
+		return await target.buildContract(location)
+	}
+
 	public static async initialize<ModelsT extends ModelSchema, ActionsT extends Actions<ModelsT> = Actions<ModelsT>>(
 		config: Config<ModelsT, ActionsT>,
 	): Promise<Canvas<ModelsT, ActionsT>> {
@@ -111,6 +114,7 @@ export class Canvas<
 
 		const runtime = await createRuntime(topic, signers, contract, { runtimeMemoryLimit })
 		const gossipTopic = config.snapshot ? `${topic}#${hashSnapshot(config.snapshot)}` : topic // topic for peering
+
 		const messageLog = await target.openGossipLog(
 			{ topic: gossipTopic, path, clear: config.reset },
 			{
@@ -229,6 +233,8 @@ export class Canvas<
 	private readonly controller = new AbortController()
 	private readonly log = logger("canvas:core")
 
+	private peerId: string | null = null
+	private libp2p: Libp2p | null = null
 	private networkConfig: NetworkConfig | null = null
 	private wsListen: { port: number } | null = null
 	private wsConnect: { url: string } | null = null
@@ -289,22 +295,20 @@ export class Canvas<
 					await this.messageLog.append(session.payload, { signer: session.signer })
 				}
 
-				const { id, signature, message, result } = await this.messageLog.append<Action>(
+				const signedMessage = await this.messageLog.append<Action>(
 					{ type: "action", did: session.payload.did, name, args: args ?? null, context: { timestamp } },
 					{ signer: session.signer },
 				)
 
-				this.log("applied action %s", id)
+				this.log("applied action %s", signedMessage.id)
 
-				for (const additionalUpdate of this.runtime.additionalUpdates.get(id) || []) {
+				for (const additionalUpdate of this.runtime.additionalUpdates.get(signedMessage.id) || []) {
 					await this.messageLog.append(additionalUpdate)
 				}
+				this.runtime.additionalUpdates.delete(signedMessage.id)
+				this.log("applied additional updates for action %s", signedMessage.id)
 
-				this.runtime.additionalUpdates.delete(id)
-
-				this.log("applied additional updates for action %s", id)
-
-				return { id, signature, message, result }
+				return signedMessage
 			}
 
 			Object.assign(actionCache, { [name]: action })
@@ -331,8 +335,14 @@ export class Canvas<
 	}
 
 	public async startLibp2p(config: NetworkConfig): Promise<Libp2p<ServiceMap<MessageType>>> {
+		const libp2p = await this.messageLog.startLibp2p(config)
+		this.libp2p = libp2p
 		this.networkConfig = config
-		return await this.messageLog.startLibp2p(config)
+		return libp2p
+	}
+
+	public getContract() {
+		return this.runtime.contract
 	}
 
 	/**
@@ -391,7 +401,15 @@ export class Canvas<
 		const root = await this.messageLog.tree.read((txn) => txn.getRoot())
 		const heads = await this.db.query<{ id: string }>("$heads").then((records) => records.map((record) => record.id))
 
+		const connections: Record<string, { status: string; direction: string; rtt: number | undefined }> = {}
+		for (const conn of this.libp2p?.getConnections() ?? []) {
+			const addr = conn.remoteAddr.toString()
+			connections[addr] = { status: conn.status, direction: conn.direction, rtt: conn.rtt }
+		}
+
 		return {
+			connections,
+			peerId: this.libp2p ? this.libp2p.peerId.toString() : null,
 			networkConfig: {
 				bootstrapList: this.networkConfig?.bootstrapList,
 				listen: this.networkConfig?.listen,

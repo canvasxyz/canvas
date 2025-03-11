@@ -8,61 +8,84 @@ import {
 	Config,
 	Effect,
 	ModelValue,
-	ModelSchema,
 	QueryParams,
 	WhereCondition,
 	DatabaseUpgradeAPI,
 	ModelInit,
 	PropertyType,
 	PrimaryKeyValue,
+	Model,
+	ModelDBInit,
 } from "@canvas-js/modeldb"
 
 import { ModelAPI } from "./ModelAPI.js"
-
-export interface ModelDBOptions {
-	path: string | null
-	models: ModelSchema
-
-	version?: Record<string, number>
-	upgrade?: (
-		upgradeAPI: DatabaseUpgradeAPI,
-		oldVersion: Record<string, number>,
-		newVersion: Record<string, number>,
-	) => void | Promise<void>
-}
+import { Query } from "./utils.js"
 
 export class ModelDB extends AbstractModelDB {
 	#models: Record<string, ModelAPI> = {}
 	#transaction: sqlite.Transaction<(effects: Effect[]) => void>
+	#selectTable: Query<[string], { name: string }>
+	#selectIndex: Query<[string, string], { name: string }>
 
-	public static async open({ path, models, version, upgrade }: ModelDBOptions): Promise<ModelDB> {
-		const newConfig = Config.parse(models)
-		const newVersion = Object.assign(version ?? {}, {
-			[AbstractModelDB.namespace]: AbstractModelDB.version,
-		})
+	public static async open(path: string | null, init: ModelDBInit): Promise<ModelDB> {
+		const newConfig = Config.parse(init.models, { freeze: true })
+		const newVersion = Object.assign(init.version ?? {}, AbstractModelDB.baseVersion)
 
 		const db = new Database(path ?? ":memory:")
 
+		const timestamp = new Date().toISOString()
+
 		// calling this constructor will create empty $versions and $models
 		// tables if they do not already exist
-		const baseModelDB = new ModelDB(db, Config.baseConfig, {
-			[AbstractModelDB.namespace]: AbstractModelDB.version,
-		})
+		const baseModelDB = new ModelDB(db, Config.baseConfig, AbstractModelDB.baseVersion)
+		const versionRecordCount = await baseModelDB.count("$versions")
+		if (versionRecordCount === 0) {
+			// this means one of two things:
+			// 1) we are initializing a new database, or
+			// 2) we are opening a pre-migration-system database for the first time
 
-		await AbstractModelDB.initialize(baseModelDB, newConfig, newVersion, async (oldConfig, oldVersion) => {
-			if (upgrade !== undefined) {
+			baseModelDB.log("no version records found")
+			const initialUpgradeVersion = Object.assign(
+				init.initialUpgradeVersion ?? init.version ?? {},
+				AbstractModelDB.baseVersion,
+			)
+			const initialUpgradeConfig = init.initialUpgradeSchema ? Config.parse(init.initialUpgradeSchema) : newConfig
+
+			// we distinguish between these cases using baseModelDB.satisfies(...).
+			const isSatisfied = await baseModelDB.satisfies(initialUpgradeConfig)
+			if (isSatisfied) {
+				baseModelDB.log("existing database satisfies initial upgrade config")
+				// now we write initialUpgradeConfig entries to $models
+				// and write initialUpgradeVersion entries to $versions
+				await AbstractModelDB.initialize(baseModelDB, timestamp, initialUpgradeVersion, initialUpgradeConfig)
+			} else {
+				baseModelDB.log("existing database not satisfied by initial upgrade config")
+				// we ignore initialUpgradeVersion / initialUpgradeConfig and just
+				// initialize directly with newVersion / newConfig
+				await AbstractModelDB.initialize(baseModelDB, timestamp, newVersion, newConfig)
+			}
+		}
+
+		// now means we proceed with the regular upgrade check
+		await AbstractModelDB.upgrade(baseModelDB, timestamp, newVersion, newConfig, async (oldConfig, oldVersion) => {
+			if (init.upgrade !== undefined) {
 				const existingDB = new ModelDB(db, oldConfig, oldVersion)
 				const upgradeAPI = existingDB.getUpgradeAPI()
-				await upgrade(upgradeAPI, oldVersion, newVersion)
+				await init.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion)
 			}
 		})
 
-		newConfig.freeze()
 		return new ModelDB(db, newConfig, newVersion)
 	}
 
 	private constructor(public readonly db: sqlite.Database, config: Config, version: Record<string, number>) {
 		super(config, version)
+
+		this.#selectTable = new Query(db, `SELECT name FROM sqlite_schema WHERE type = 'table' AND name = ?`)
+		this.#selectIndex = new Query(
+			db,
+			`SELECT name FROM sqlite_schema WHERE type = 'index' AND name = ? AND tbl_name = ?`,
+		)
 
 		for (const model of Object.values(this.models)) {
 			this.#models[model.name] = new ModelAPI(this.db, this.config, model)
@@ -84,6 +107,22 @@ export class ModelDB extends AbstractModelDB {
 				}
 			}
 		})
+	}
+
+	protected hasModel(model: Model): boolean {
+		const tableName = model.name
+		if (this.#selectTable.get([tableName]) === null) {
+			return false
+		}
+
+		for (const index of model.indexes) {
+			const indexName = [model.name, ...index].join("/")
+			if (this.#selectIndex.get([indexName, tableName]) === null) {
+				return false
+			}
+		}
+
+		return true
 	}
 
 	public getType(): ModelDBBackend {

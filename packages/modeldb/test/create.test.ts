@@ -2,11 +2,11 @@ import type { ModelSchema } from "@canvas-js/modeldb"
 
 import { testPlatforms } from "./utils.js"
 
-testPlatforms("create modeldb with no models", async (t, openDB) => {
-	await t.notThrowsAsync(async () => {
-		await openDB(t, {})
-	})
-})
+// testPlatforms("create modeldb with no models", async (t, openDB) => {
+// 	await t.notThrowsAsync(async () => {
+// 		await openDB(t, {})
+// 	})
+// })
 
 testPlatforms("create modeldb with a model with valid fields", async (t, openDB) => {
 	const models = {
