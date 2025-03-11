@@ -384,17 +384,24 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 
 		const messageRecord: MessageRecord<Payload> = { id, signature, message, hash, branch, clock: message.clock }
 
-		const heads: string[] = await this.db
-			.getAll<{ id: string }>("$heads")
-			.then((heads) => heads.filter((head) => message.parents.includes(head.id)))
-			.then((heads) => heads.map((head) => head.id))
-
-		await this.db.apply([
-			...heads.map<Effect>((head) => ({ model: "$heads", operation: "delete", key: head })),
+		const effects: Effect[] = [
 			{ model: "$heads", operation: "set", value: { id } },
 			{ model: "$messages", operation: "set", value: messageRecord },
-		])
+		]
 
+		const newHeads = [id]
+		const oldHeads = await this.db.getAll<{ id: string }>("$heads")
+		for (const head of oldHeads) {
+			if (message.parents.includes(head.id)) {
+				effects.push({ model: "$heads", operation: "delete", key: head.id })
+			} else {
+				newHeads.push(head.id)
+			}
+		}
+
+		newHeads.sort()
+
+		await this.db.apply(effects)
 		txn.set(key, value)
 
 		await new AncestorIndex(this.db).indexAncestors(id, message.parents)
@@ -402,7 +409,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		this.dispatchEvent(new CustomEvent("message", { detail: signedMessage }))
 
 		const root = txn.getRoot()
-		return { root, heads, result }
+		return { root, heads: newHeads, result }
 	}
 
 	private async newBranch() {
