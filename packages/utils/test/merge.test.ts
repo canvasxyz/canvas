@@ -1,6 +1,6 @@
 import test from "ava"
 
-import { merge } from "../src/index.js"
+import { merge } from "@canvas-js/utils"
 
 test("merging non-objects always overwrites the receiving value", async (t) => {
 	t.deepEqual(merge([1, 2, 3], [4, 5, 6]), [1, 2, 3])
