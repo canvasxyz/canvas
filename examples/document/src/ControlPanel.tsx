@@ -73,9 +73,9 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({}) => {
 	if (app === null) {
 		return (
 			<div className="flex flex-row gap-4">
-				<button disabled className={`${button} ${disabled}`}>
+				{/* <button disabled className={`${button} ${disabled}`}>
 					Spam
-				</button>
+				</button> */}
 				<button disabled className={`${button} ${disabled}`}>
 					Clear data
 				</button>
@@ -84,13 +84,13 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({}) => {
 	} else if (isStarted) {
 		return (
 			<div className="flex flex-row gap-4">
-				<button
+				{/* <button
 					disabled={sessionSigner === null}
 					onClick={() => spam()}
 					className={`${button} ${sessionSigner === null ? disabled : enabledYellow}`}
 				>
 					Spam
-				</button>
+				</button> */}
 				<button disabled className={`${button} ${disabled}`}>
 					Clear data
 				</button>
@@ -99,13 +99,13 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({}) => {
 	} else {
 		return (
 			<div className="flex flex-row gap-4">
-				<button
+				{/* <button
 					disabled={sessionSigner === null}
 					onClick={() => spam()}
 					className={`${button} ${sessionSigner === null ? disabled : enabledYellow}`}
 				>
 					Spam
-				</button>
+				</button> */}
 				<button onClick={() => clear()} className={`${button} ${enabledRed}`}>
 					Clear data
 				</button>
