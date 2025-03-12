@@ -180,13 +180,16 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		message: Message<T>,
 		context: { source?: MessageSource; branch?: number } = {},
 	): SignedMessage<T, Result> {
-		assert(this.topic === message.topic, "expected this.topic === topic")
+		if (this.topic !== message.topic) {
+			this.log.error("invalid message: %O", message)
+			throw new Error(`cannot encode message: expected topic ${this.topic}, found topic ${message.topic}`)
+		}
+
 		const preparedMessage = prepareMessage(message)
-		assert(
-			this.validatePayload(preparedMessage.payload),
-			"error encoding message (invalid payload)",
-			preparedMessage.payload,
-		)
+		if (!this.validatePayload(preparedMessage.payload)) {
+			this.log.error("invalid message: %O", message)
+			throw new Error(`error encoding message: invalid payload`)
+		}
 
 		return SignedMessage.encode(signature, preparedMessage, context)
 	}
@@ -196,8 +199,17 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		context: { source?: MessageSource; branch?: number } = {},
 	): SignedMessage<Payload, Result> {
 		const signedMessage = SignedMessage.decode<Payload, Result>(value, context)
-		assert(this.topic === signedMessage.message.topic, "expected this.topic === topic")
-		assert(this.validatePayload(signedMessage.message.payload), "error decoding message (invalid payload)")
+		const { topic, payload } = signedMessage.message
+		if (this.topic !== topic) {
+			this.log.error("invalid message: %O", signedMessage.message)
+			throw new Error(`cannot decode message: expected topic ${this.topic}, found topic ${topic}`)
+		}
+
+		if (!this.validatePayload(payload)) {
+			this.log.error("invalid message: %O", signedMessage.message)
+			throw new Error(`error decoding message: invalid payload`)
+		}
+
 		return signedMessage
 	}
 
@@ -371,17 +383,24 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 
 		const messageRecord: MessageRecord<Payload> = { id, signature, message, hash, branch, clock: message.clock }
 
-		const heads: string[] = await this.db
-			.getAll<{ id: string }>("$heads")
-			.then((heads) => heads.filter((head) => message.parents.includes(head.id)))
-			.then((heads) => heads.map((head) => head.id))
-
-		await this.db.apply([
-			...heads.map<Effect>((head) => ({ model: "$heads", operation: "delete", key: head })),
+		const effects: Effect[] = [
 			{ model: "$heads", operation: "set", value: { id } },
 			{ model: "$messages", operation: "set", value: messageRecord },
-		])
+		]
 
+		const newHeads = [id]
+		const oldHeads = await this.db.getAll<{ id: string }>("$heads")
+		for (const head of oldHeads) {
+			if (message.parents.includes(head.id)) {
+				effects.push({ model: "$heads", operation: "delete", key: head.id })
+			} else {
+				newHeads.push(head.id)
+			}
+		}
+
+		newHeads.sort()
+
+		await this.db.apply(effects)
 		txn.set(key, value)
 
 		await new AncestorIndex(this.db).indexAncestors(id, message.parents)
@@ -389,7 +408,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		this.dispatchEvent(new CustomEvent("message", { detail: signedMessage }))
 
 		const root = txn.getRoot()
-		return { root, heads, result }
+		return { root, heads: newHeads, result }
 	}
 
 	private async newBranch() {

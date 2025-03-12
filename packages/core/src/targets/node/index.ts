@@ -3,6 +3,10 @@ import path from "node:path"
 import http from "node:http"
 import express from "express"
 import cors from "cors"
+import { anySignal } from "any-signal"
+
+import esbuild from "esbuild"
+import chalk from "chalk"
 
 import type pg from "pg"
 import { WebSocketServer } from "ws"
@@ -13,18 +17,28 @@ import { createAPI } from "@canvas-js/core/api"
 import type { SqlStorage } from "@cloudflare/workers-types"
 
 import type { PlatformTarget } from "../interface.js"
-import { anySignal } from "any-signal"
 
-const isPostgresConnectionConfig = (
+function isPostgresConnectionConfig(
 	path: string | pg.ConnectionConfig | SqlStorage | null,
-): path is pg.ConnectionConfig =>
-	path !== null &&
-	typeof path === "object" &&
-	("connectionString" in path || ("user" in path && "host" in path && "database" in path))
+): path is pg.ConnectionConfig {
+	if (path === null || typeof path !== "object") {
+		return false
+	} else if ("connectionString" in path) {
+		return true
+	} else {
+		return "user" in path && "host" in path && "database" in path
+	}
+}
 
-const isPostgres = (path: string | pg.ConnectionConfig | SqlStorage): boolean =>
-	isPostgresConnectionConfig(path) ||
-	(typeof path === "string" && (path.startsWith("postgres://") || path.startsWith("postgresql://")))
+function isPostgres(path: string | pg.ConnectionConfig | SqlStorage): boolean {
+	if (isPostgresConnectionConfig(path)) {
+		return true
+	} else if (typeof path === "string") {
+		return path.startsWith("postgres://") || path.startsWith("postgresql://")
+	} else {
+		return false
+	}
+}
 
 const isError = (error: unknown): error is NodeJS.ErrnoException => error instanceof Error
 
@@ -85,6 +99,24 @@ const target: PlatformTarget = {
 		})
 
 		await new Promise<void>((resolve) => server.listen(port, resolve))
+	},
+
+	async buildContract(location: string) {
+		const bundle = await esbuild.build({
+			bundle: true,
+			platform: "node",
+			format: "esm",
+			write: false,
+			entryPoints: [location],
+		})
+		if (!bundle.outputFiles || bundle.outputFiles.length === 0) {
+			throw new Error("building .ts contract produced no files")
+		} else if (bundle.outputFiles && bundle.outputFiles.length > 1) {
+			// unexpected
+			return bundle.outputFiles[0].text
+		} else {
+			return bundle.outputFiles[0].text
+		}
 	},
 }
 

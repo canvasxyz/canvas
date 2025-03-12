@@ -89,7 +89,6 @@ export class Client implements SyncSnapshot {
 
 		if (done) {
 			this.log.error("stream %s ended prematurely: %O", this.stream.id, res)
-			console.trace("stream ended prematurely")
 			throw new Error("stream ended prematurely")
 		}
 

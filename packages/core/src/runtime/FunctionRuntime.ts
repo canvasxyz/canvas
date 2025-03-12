@@ -21,8 +21,11 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 			"contract model names cannot start with '$'",
 		)
 
-		return new FunctionRuntime(topic, signers, contract.models, contract.actions)
+		return new FunctionRuntime(topic, signers, contract)
 	}
+
+	public readonly contract: string
+	public readonly actions: Record<string, ActionImplementation<ModelsT, any>>
 
 	#context: ExecutionContext | null = null
 	#transaction: boolean = false
@@ -30,13 +33,10 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 	#queue = new PQueue({ concurrency: 1 })
 	#db: ModelAPI<DeriveModelTypes<ModelsT>>
 
-	constructor(
-		public readonly topic: string,
-		public readonly signers: SignerCache,
-		modelSchema: ModelSchema,
-		public readonly actions: Record<string, ActionImplementation<ModelsT, any>>,
-	) {
-		super(modelSchema)
+	constructor(public readonly topic: string, public readonly signers: SignerCache, contract: Contract<ModelsT>) {
+		super(contract.models)
+		this.contract = contract.toString()
+		this.actions = contract.actions
 
 		this.#db = {
 			get: async <T extends keyof DeriveModelTypes<ModelsT> & string>(model: T, key: string) => {

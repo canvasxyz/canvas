@@ -10,6 +10,7 @@ import { GossipLogConsumer, AbstractGossipLog, SignedMessage, MessageId, MIN_MES
 import { assert } from "@canvas-js/utils"
 
 import { ExecutionContext } from "../ExecutionContext.js"
+import { Contract } from "../types.js"
 
 import { encodeRecordKey, getRecordId, isAction, isSession, isSnapshot } from "../utils.js"
 import { View } from "../View.js"
@@ -134,8 +135,23 @@ export abstract class AbstractRuntime {
 		}
 	}
 
+	// <<<<<<< HEAD
+	// =======
+	// 	public abstract readonly topic: string
+	// 	public abstract readonly signers: SignerCache
+	// 	public abstract readonly schema: ModelSchema
+	// 	public abstract readonly actionNames: string[]
+	// 	public abstract readonly contract: string | Contract<any, any>
+
+	// 	protected readonly log = logger("canvas:runtime")
+	// 	#db: AbstractModelDB | null = null
+
+	// 	protected constructor() {}
+
+	// >>>>>>> main
 	protected abstract execute(context: ExecutionContext): Promise<void | any>
 
+	public abstract readonly contract: string
 	public abstract close(): Awaitable<void>
 
 	public getConsumer(): GossipLogConsumer<Action | Session | Snapshot> {

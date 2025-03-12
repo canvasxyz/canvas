@@ -5,6 +5,7 @@ import { ModelValue, ModelSchema } from "@canvas-js/modeldb"
 import { VM } from "@canvas-js/vm"
 import { assert, mapValues } from "@canvas-js/utils"
 
+import { Contract } from "../types.js"
 import { ExecutionContext } from "../ExecutionContext.js"
 import { AbstractRuntime } from "./AbstractRuntime.js"
 
@@ -63,8 +64,11 @@ export class ContractRuntime extends AbstractRuntime {
 			"contract model names cannot start with '$'",
 		)
 
-		return new ContractRuntime(topic, signers, vm, modelSchema, actions)
+		return new ContractRuntime(topic, signers, vm, contract, modelSchema, actions)
 	}
+
+	public readonly contract: string
+	public readonly actions: Record<string, QuickJSHandle>
 
 	readonly #databaseAPI: QuickJSHandle
 
@@ -76,10 +80,13 @@ export class ContractRuntime extends AbstractRuntime {
 		public readonly topic: string,
 		public readonly signers: SignerCache,
 		public readonly vm: VM,
+		contract: string,
 		modelSchema: ModelSchema,
-		public readonly actions: Record<string, QuickJSHandle>,
+		actions: Record<string, QuickJSHandle>,
 	) {
 		super(modelSchema)
+		this.contract = contract
+		this.actions = actions
 		this.#databaseAPI = vm
 			.wrapObject({
 				get: vm.wrapFunction(async (model, key) => {

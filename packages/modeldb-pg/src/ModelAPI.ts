@@ -1,6 +1,6 @@
 import pg from "pg"
 
-import { assert, signalInvalidType, mapValues } from "@canvas-js/utils"
+import { assert, signalInvalidType, mapValues, zip } from "@canvas-js/utils"
 
 import {
 	Property,
@@ -18,6 +18,9 @@ import {
 	isLiteralExpression,
 	isRangeExpression,
 	validateModelValue,
+	isPrimaryKey,
+	equalPrimaryKeys,
+	equalReferences,
 } from "@canvas-js/modeldb"
 
 import { RelationAPI } from "./RelationAPI.js"
@@ -72,7 +75,7 @@ export class ModelAPI {
 
 				if (target.primaryKey.length === 1) {
 					const [targetProperty] = config.primaryKeys[target.name]
-					columns.push(getColumn(property.name, targetProperty.type, false))
+					columns.push(getColumn(property.name, targetProperty.type, property.nullable))
 					columnNames.push(property.name)
 
 					codecs[property.name] = {
@@ -86,7 +89,7 @@ export class ModelAPI {
 
 					for (const targetProperty of config.primaryKeys[target.name]) {
 						const refName = `${property.name}/${targetProperty.name}`
-						columns.push(getColumn(refName, targetProperty.type, false))
+						columns.push(getColumn(refName, targetProperty.type, property.nullable))
 						columnNames.push(refName)
 						refNames.push(refName)
 					}
@@ -173,7 +176,7 @@ export class ModelAPI {
 	// Queries
 	readonly #select: Query
 	readonly #selectAll: Query
-	// readonly #selectMany: Query
+	readonly #selectMany: Query
 	readonly #count: Query<{ count: number }>
 
 	readonly codecNames: string[]
@@ -225,24 +228,62 @@ export class ModelAPI {
 		this.#count = new Query<{ count: number }>(this.client, `SELECT COUNT(*) AS count FROM "${this.table}"`)
 
 		const selectWhere = model.primaryKey.map((name, i) => `"${name}" = $${i + 1}`).join(" AND ")
-		this.#select = new Query(this.client, `SELECT ${quotedColumnNames} FROM "${this.table}" WHERE ${selectWhere}`)
+		const selectColumnNames = model.properties.flatMap((property) => {
+			if (property.kind === "primitive") {
+				if (property.type === "json") {
+					return [`"${property.name}"::jsonb`]
+				} else {
+					return [quote(property.name)]
+				}
+			} else if (property.kind === "reference") {
+				return this.codecs[property.name].columns.map(quote)
+			} else if (property.kind === "relation") {
+				return []
+			} else {
+				signalInvalidType(property)
+			}
+		})
+
+		this.#select = new Query(
+			this.client,
+			`SELECT ${selectColumnNames.join(", ")} FROM "${this.table}" WHERE ${selectWhere}`,
+		)
 
 		const orderByPrimaryKey = model.primaryKey.map((name) => `"${name}" ASC`).join(", ")
 		this.#selectAll = new Query(
 			this.client,
-			`SELECT ${quotedColumnNames} FROM "${this.table}" ORDER BY ${orderByPrimaryKey}`,
+			`SELECT ${selectColumnNames} FROM "${this.table}" ORDER BY ${orderByPrimaryKey}`,
 		)
 
-		// this.#selectMany = new QUery(this.client, `SELECT ${selectColumns} FROM "${this.#table}" WHERE "${this.#primaryKeyName}" = ANY($1)`)
+		const unnest = this.primaryProperties
+			.map(({ type }, i) => `$${i + 1}::${columnTypes[type].toLowerCase()}[]`)
+			.join(", ")
 
-		// const updateParams = columnNames.map((name: string, i: number) => `$${i + 1}`)
-		// const updateEntries = Array.from(zip(columnNames, updateParams)).map(([name, param]) => `${name} = ${param}`)
-		// const updateWhere = `"${this.#primaryKeyName}" = $${updateParams.length + 1}`
-		// this.#update = `UPDATE "${this.#table}" SET ${updateEntries.join(", ")} WHERE ${updateWhere}`
+		const match = model.primaryKey.map((name) => `"${this.table}"."${name}" = "/keys"."${name}"`).join(" AND ")
+		const primaryKeyNames = model.primaryKey.map(quote).join(", ")
+		// const mutablePropertyNames = this.mutableProperties.flatMap((property) => {
+		// 	if (property.kind === "primitive") {
+		// 	} else if (property.kind === "reference") {
+		// 	} else if (property.kind === "relation") {
+		// 		return []
+		// 	} else {
+		// 		signalInvalidType(property)
+		// 	}
+		// })
 
-		// const selectColumns = this.#columnNames.join(", ")
-		// this.#select = `SELECT ${selectColumns} FROM "${this.#table}" WHERE "${this.#primaryKeyName}" = $1`
-		// this.#selectMany = `SELECT ${selectColumns} FROM "${this.#table}" WHERE "${this.#primaryKeyName}" = ANY($1)`
+		this.#selectMany = new Query(
+			this.client,
+			`
+			WITH "/keys" AS (
+			  SELECT ${primaryKeyNames}, "/index"::integer
+				FROM unnest(${unnest})
+				WITH ORDINALITY AS t(${primaryKeyNames}, "/index")
+			)
+			SELECT "/keys"."/index", ${selectColumnNames.map((c) => `"${this.table}".${c}`)} FROM "/keys"
+			  LEFT JOIN "${this.table}" ON ${match}
+			ORDER BY "/keys"."/index"
+			`,
+		)
 	}
 
 	public async drop() {
@@ -297,7 +338,82 @@ export class ModelAPI {
 	}
 
 	public async getMany(keys: PrimaryKeyValue[] | PrimaryKeyValue[][]): Promise<(ModelValue | null)[]> {
-		return await Promise.all(keys.map((key) => this.get(key)))
+		if (keys.length === 0) {
+			return []
+		}
+
+		const wrappedKeys = keys.map((key) => {
+			const wrappedKey = Array.isArray(key) ? key : [key]
+			if (wrappedKey.length !== this.primaryProperties.length) {
+				throw new TypeError(`${this.model.name}: expected primary key with ${this.primaryProperties.length} components`)
+			}
+
+			return wrappedKey
+		})
+
+		const encodedKeys = wrappedKeys.map((wrappedKey) =>
+			this.primaryProperties.map(({ name, type, nullable }, i) =>
+				Encoder.encodePrimitiveValue(name, type, nullable, wrappedKey[i]),
+			),
+		)
+
+		const columns = this.primaryProperties.map<PostgresPrimitiveValue[]>(({ name, type, nullable }, i) =>
+			wrappedKeys.map<PostgresPrimitiveValue>((wrappedKey) =>
+				Encoder.encodePrimitiveValue(name, type, nullable, wrappedKey[i]),
+			),
+		)
+
+		const rows = await this.#selectMany.all(columns)
+		assert(rows.length === wrappedKeys.length, "internal error - expected rows.length === wrappedKeys.length")
+
+		const results = new Array<ModelValue | null>(wrappedKeys.length).fill(null)
+
+		for (const [wrappedKey, encodedKey, row, i] of zip(wrappedKeys, encodedKeys, rows)) {
+			assert(typeof row["/index"] === "number", "expected integer row index")
+			const index = row["/index"] - 1
+			assert(index < results.length, "internal error - result index out of range")
+			assert(index === i, "internal error - expeected index === i")
+
+			if (this.model.primaryKey.every((name) => row[name] === null)) {
+				continue
+			}
+
+			const result: ModelValue = {}
+
+			for (const [name, wrappedValue, encodedValue] of zip(this.model.primaryKey, wrappedKey, encodedKey)) {
+				// isEqualPostgresPrimitiveValue
+				if (Buffer.isBuffer(encodedValue) && Buffer.isBuffer(row[name])) {
+					assert(encodedValue.equals(row[name]), "internal error - expected matching record")
+				} else {
+					assert(encodedValue === row[name], "internal error - expected matching record")
+				}
+
+				result[name] = wrappedValue
+			}
+
+			for (const property of this.mutableProperties) {
+				if (property.kind === "primitive") {
+					const { name, type, nullable } = property
+					result[name] = Decoder.decodePrimitiveValue(name, type, nullable, row[name])
+				} else if (property.kind === "reference") {
+					const { name, nullable, target } = property
+					const values = this.codecs[name].columns.map((name) => row[name])
+					result[name] = Decoder.decodeReferenceValue(name, nullable, this.config.primaryKeys[target], values)
+				} else if (property.kind === "relation") {
+					const { name, target } = property
+					const targets = await this.relations[name].get(encodedKey)
+					result[name] = targets.map((key) =>
+						Decoder.decodeReferenceValue(name, false, this.config.primaryKeys[target], key),
+					) as PrimaryKeyValue[] | PrimaryKeyValue[][]
+				} else {
+					signalInvalidType(property)
+				}
+			}
+
+			results[index] = result
+		}
+
+		return results
 	}
 
 	public async getAll(): Promise<ModelValue[]> {
@@ -430,7 +546,7 @@ export class ModelAPI {
 		for (const name of relations) {
 			const api = this.relations[name]
 			const { sourceProperty, target } = api.relation
-			const encodedKey = this.config.primaryKeys[this.model.name].map(({ name }) => {
+			const encodedKey = this.primaryProperties.map(({ name }) => {
 				assert(row[name] !== undefined, "cannot select relation properties without selecting the primary key")
 				return row[name]
 			})
