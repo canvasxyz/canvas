@@ -6,8 +6,8 @@ export * from "./AbstractModelDB.js"
 export {
 	validateModelValue,
 	validatePropertyValue,
-	mergeModelValues,
-	updateModelValues,
+	mergeModelValue,
+	updateModelValue,
 	isPrimitiveValue,
 	getModelsFromInclude,
 	isPrimaryKey,
@@ -15,4 +15,6 @@ export {
 	isRelationValue,
 	equalPrimaryKeys,
 	equalReferences,
+	merge,
+	update,
 } from "./utils.js"

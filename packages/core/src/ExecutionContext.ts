@@ -4,7 +4,7 @@ import { bytesToHex } from "@noble/hashes/utils"
 
 import type { Action, MessageType } from "@canvas-js/interfaces"
 
-import { ModelValue, PropertyValue, validateModelValue, updateModelValues, mergeModelValues } from "@canvas-js/modeldb"
+import { ModelValue, PropertyValue, validateModelValue, updateModelValue, mergeModelValue } from "@canvas-js/modeldb"
 import { AbstractGossipLog, SignedMessage, MessageId } from "@canvas-js/gossiplog"
 import { assert, mapValues } from "@canvas-js/utils"
 
@@ -121,7 +121,7 @@ export class ExecutionContext {
 		} = this.db.models[model]
 		const key = value[primaryKey] as string
 		const previousValue = await this.getModelValue(model, key)
-		const result = updateModelValues(value, previousValue)
+		const result = updateModelValue(value, previousValue)
 		validateModelValue(this.db.models[model], result)
 		this.modelEntries[model][key] = result
 	}
@@ -133,7 +133,7 @@ export class ExecutionContext {
 		} = this.db.models[model]
 		const key = value[primaryKey] as string
 		const previousValue = await this.getModelValue(model, key)
-		const result = mergeModelValues(value, previousValue)
+		const result = mergeModelValue(value, previousValue)
 		validateModelValue(this.db.models[model], result)
 		this.modelEntries[model][key] = result
 	}

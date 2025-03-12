@@ -1,16 +1,16 @@
 import test from "ava"
 
-import { merge } from "@canvas-js/utils"
+import { merge } from "@canvas-js/modeldb"
 
 test("merging non-objects always overwrites the receiving value", async (t) => {
-	t.deepEqual(merge([1, 2, 3], [4, 5, 6]), [1, 2, 3])
-	t.deepEqual(merge(null, [4, 5, 6]), null)
-	t.deepEqual(merge("foo", [4, 5, 6]), "foo")
-	t.deepEqual(merge(-89, [4, 5, 6]), -89)
-	t.deepEqual(merge(Infinity, [4, 5, 6]), Infinity)
-	t.deepEqual(merge([[], [[]], [[[]]], [[[[]]]]], [4, 5, 6]), [[], [[]], [[[]]], [[[[]]]]])
-	t.deepEqual(merge(1, null), 1)
-	t.deepEqual(merge(null, 2), null)
+	t.deepEqual(merge({ a: [1, 2, 3] }, { a: [4, 5, 6] }), { a: [1, 2, 3] })
+	t.deepEqual(merge({ a: null }, { a: [4, 5, 6] }), { a: null })
+	t.deepEqual(merge({ a: "foo" }, { a: [4, 5, 6] }), { a: "foo" })
+	t.deepEqual(merge({ a: -89 }, { a: [4, 5, 6] }), { a: -89 })
+	t.deepEqual(merge({ a: Infinity }, { a: [4, 5, 6] }), { a: Infinity })
+	t.deepEqual(merge({ a: [[], [[]], [[[]]], [[[[]]]]] }, { a: [4, 5, 6] }), { a: [[], [[]], [[[]]], [[[[]]]]] })
+	t.deepEqual(merge({ a: 1 }, { a: null }), { a: 1 })
+	t.deepEqual(merge({ a: null }, { a: 2 }), { a: null })
 })
 
 test("merging objects overwrites fields in the object", async (t) => {
