@@ -44,6 +44,7 @@
 		{ "path": "./packages/utils/test" },
 		{ "path": "./examples/chat" },
 		{ "path": "./examples/chat-next" },
+		{ "path": "./examples/document" },
 		{ "path": "./examples/encrypted-chat" },
 		{ "path": "./examples/snake" }
 	]

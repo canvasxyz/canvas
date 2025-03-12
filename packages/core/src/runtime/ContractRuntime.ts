@@ -8,6 +8,7 @@ import { assert, mapValues } from "@canvas-js/utils"
 import { Contract } from "../types.js"
 import { ExecutionContext } from "../ExecutionContext.js"
 import { AbstractRuntime } from "./AbstractRuntime.js"
+import { DocumentStore } from "../DocumentStore.js"
 
 export class ContractRuntime extends AbstractRuntime {
 	public static async init(
@@ -135,6 +136,27 @@ export class ContractRuntime extends AbstractRuntime {
 					const model = vm.context.getString(modelHandle)
 					const key = vm.context.getString(keyHandle)
 					this.context.deleteModelValue(model, key)
+				}),
+
+				yjsInsert: vm.context.newFunction("yjsInsert", (modelHandle, keyHandle, indexHandle, contentHandle) => {
+					const model = vm.context.getString(modelHandle)
+					const key = vm.context.getString(keyHandle)
+					const index = vm.context.getNumber(indexHandle)
+					const content = vm.context.getString(contentHandle)
+					this.context.pushYjsCall(model, key, { call: "insert", index, content })
+				}),
+				yjsDelete: vm.context.newFunction("yjsDelete", (modelHandle, keyHandle, indexHandle, lengthHandle) => {
+					const model = vm.context.getString(modelHandle)
+					const key = vm.context.getString(keyHandle)
+					const index = vm.context.getNumber(indexHandle)
+					const length = vm.context.getNumber(lengthHandle)
+					this.context.pushYjsCall(model, key, { call: "delete", index, length })
+				}),
+				yjsApplyDelta: vm.context.newFunction("yjsApplyDelta", (modelHandle, keyHandle, deltaHandle) => {
+					const model = vm.context.getString(modelHandle)
+					const key = vm.context.getString(keyHandle)
+					const delta = vm.context.getString(deltaHandle)
+					this.context.pushYjsCall(model, key, { call: "applyDelta", delta: JSON.parse(delta) })
 				}),
 			})
 			.consume(vm.cache)

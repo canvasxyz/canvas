@@ -5,16 +5,7 @@ import type pg from "pg"
 import type { SqlStorage } from "@cloudflare/workers-types"
 import { bytesToHex } from "@noble/hashes/utils"
 
-import {
-	Signature,
-	Action,
-	Session,
-	Message,
-	Snapshot,
-	SessionSigner,
-	SignerCache,
-	MessageType,
-} from "@canvas-js/interfaces"
+import { Signature, Action, Message, Snapshot, SessionSigner, SignerCache, MessageType } from "@canvas-js/interfaces"
 import { AbstractModelDB, Model, ModelSchema, Effect } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { AbstractGossipLog, GossipLogEvents, NetworkClient, SignedMessage } from "@canvas-js/gossiplog"
@@ -155,6 +146,8 @@ export class Canvas<
 			}
 			await messageLog.append(config.snapshot)
 		}
+
+		await runtime.loadSavedDocuments()
 
 		const app = new Canvas<ModelsT, ActionsT>(signers, messageLog, runtime)
 
@@ -298,6 +291,12 @@ export class Canvas<
 				)
 
 				this.log("applied action %s", signedMessage.id)
+
+				for (const additionalUpdate of this.runtime.additionalUpdates.get(signedMessage.id) || []) {
+					await this.messageLog.append(additionalUpdate)
+				}
+				this.runtime.additionalUpdates.delete(signedMessage.id)
+				this.log("applied additional updates for action %s", signedMessage.id)
 
 				return signedMessage
 			}
@@ -474,6 +473,10 @@ export class Canvas<
 		} else {
 			return sessions[0].message_id
 		}
+	}
+
+	public getYDoc(model: string, key: string) {
+		return this.runtime.getYDoc(model, key)
 	}
 
 	public async createSnapshot(): Promise<Snapshot> {
