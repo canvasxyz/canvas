@@ -14,27 +14,27 @@ import { EffectRecord } from "./runtime/AbstractRuntime.js"
 export const isIndexInit = (value: unknown): value is string[] => Array.isArray(value)
 export const isPropertyTypish = (value: unknown): value is PropertyType => typeof value === "string"
 
-export type Migration =
+export type Changeset =
 	| {
-			migration: "create_table"
+			change: "create_table"
 			table: string
 	  }
 	| {
-			migration: "drop_table"
+			change: "drop_table"
 			table: string
 	  }
 	| {
-			migration: "add_column"
-			table: string
-			column: string
-	  }
-	| {
-			migration: "remove_column"
+			change: "add_column"
 			table: string
 			column: string
 	  }
 	| {
-			migration: "make_optional_column"
+			change: "remove_column"
+			table: string
+			column: string
+	  }
+	| {
+			change: "make_optional_column"
 			table: string
 			column: string
 	  }
@@ -62,13 +62,12 @@ export function hashSnapshot(snapshot: Snapshot): string {
 /**
  * Create a `Snapshot` of the application's current database state.
  *
- * If migrations are provided, then apply those migrations to the
- * snapshotted tables, so the new snapshot can be loaded and used
- * with a contract matching those migrations immediately.
+ * If changesets are provided, then apply them to snapshotted tables, so
+ * the new snapshot can be used with a contract matching them immediately.
  */
 export async function createSnapshot<T extends Contract<any>>(
 	app: Canvas,
-	migrations?: Migration[],
+	changesets?: Changeset[],
 ): Promise<Snapshot> {
 	// flatten models
 	const modelData: Record<string, Uint8Array[]> = {}
@@ -104,20 +103,20 @@ export async function createSnapshot<T extends Contract<any>>(
 	}
 }
 
-export const generateMigrations = (before: ModelSchema, after: ModelSchema) => {
-	const migrations: Migration[] = []
+export const generateChangesets = (before: ModelSchema, after: ModelSchema) => {
+	const changesets: Changeset[] = []
 
 	const addedTables = Object.keys(after).filter((table) => !(table in before))
 	addedTables.forEach((table) => {
-		migrations.push({
-			migration: "create_table",
+		changesets.push({
+			change: "create_table",
 			table,
 		})
 	})
 	const deletedTables = Object.keys(before).filter((table) => !(table in after))
 	deletedTables.forEach((table) => {
-		migrations.push({
-			migration: "drop_table",
+		changesets.push({
+			change: "drop_table",
 			table,
 		})
 	})
@@ -129,16 +128,16 @@ export const generateMigrations = (before: ModelSchema, after: ModelSchema) => {
 
 		const addedColumns = Object.keys(afterTable).filter((column) => !(column in beforeTable))
 		addedColumns.forEach((column) => {
-			migrations.push({
-				migration: "add_column",
+			changesets.push({
+				change: "add_column",
 				table: table,
 				column,
 			})
 		})
 		const removedColumns = Object.keys(beforeTable).filter((column) => !(column in afterTable))
 		removedColumns.forEach((column) => {
-			migrations.push({
-				migration: "remove_column",
+			changesets.push({
+				change: "remove_column",
 				table: table,
 				column,
 			})
@@ -149,7 +148,7 @@ export const generateMigrations = (before: ModelSchema, after: ModelSchema) => {
 				// const beforeIndexes = beforeTable["$indexes"] as string[]
 				// const afterIndexes = afterTable["$indexes"] as string[]
 
-				// we don't need to generate migrations for indexes
+				// we don't need to generate changes for indexes
 				// because tables will be repopulated from empty anyway
 				return
 			} else if (column === "$primary") {
@@ -160,8 +159,8 @@ export const generateMigrations = (before: ModelSchema, after: ModelSchema) => {
 				if (beforeType === afterType) {
 					return
 				} else if (beforeType + "?" === afterType) {
-					migrations.push({
-						migration: "make_optional_column",
+					changesets.push({
+						change: "make_optional_column",
 						table,
 						column,
 					})
@@ -172,5 +171,5 @@ export const generateMigrations = (before: ModelSchema, after: ModelSchema) => {
 		})
 	}
 
-	return migrations
+	return changesets
 }

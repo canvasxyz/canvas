@@ -302,8 +302,8 @@ export async function handler(args: Args) {
 		if (args["admin"] !== undefined) {
 			console.log("binding snapshot")
 			api.post("/api/snapshot", (req, res) => {
-				const { migrations } = req.body ?? {}
-				console.log("snapshot requested, migrations:", migrations)
+				const { changesets } = req.body ?? {}
+				console.log("snapshot requested, changesets:", changesets)
 
 				app
 					.createSnapshot()

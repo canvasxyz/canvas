@@ -1,15 +1,15 @@
 import { useState, useRef } from "react"
 import { Button, Box, Heading, Text, TextArea } from "@radix-ui/themes"
 import { useContractData } from "./hooks/useContractData.js"
-import { Canvas, generateMigrations, Migration } from "@canvas-js/core"
+import { Canvas, generateChangesets, Changeset } from "@canvas-js/core"
 
 export const MigrationView = () => {
 	const contractData = useContractData()
 	const textareaRef = useRef<HTMLTextAreaElement>(null)
 	const [error, setError] = useState<string>()
-	const [migrations, setMigrations] = useState<Migration[]>()
+	const [changesets, setChangesets] = useState<Changeset[]>()
 
-	const updateMigrations = async () => {
+	const updateChangesets = async () => {
 		const value = textareaRef.current?.value
 		if (!value || !contractData) {
 			setError("No contract content")
@@ -17,14 +17,14 @@ export const MigrationView = () => {
 		}
 
 		setError(undefined)
-		setMigrations(undefined)
+		setChangesets(undefined)
 
 		try {
 			const newContract = await Canvas.buildContract(value, { wasmURL: "./esbuild.wasm" })
 
 			const app = await Canvas.initialize({ contract: contractData.contract, topic: "test.a" })
 			const newApp = await Canvas.initialize({ contract: newContract, topic: "test.b" })
-			setMigrations(generateMigrations(app.getSchema(), newApp.getSchema()))
+			setChangesets(generateChangesets(app.getSchema(), newApp.getSchema()))
 		} catch (err: any) {
 			if ("message" in err && typeof err.message === "string") {
 				setError(err.message)
@@ -35,7 +35,7 @@ export const MigrationView = () => {
 	}
 
 	const runMigrations = async () => {
-		if (!migrations) {
+		if (!changesets) {
 			setError("No migrations to run")
 			return
 		}
@@ -45,7 +45,7 @@ export const MigrationView = () => {
 			headers: {
 				"Content-Type": "application/json",
 			},
-			body: JSON.stringify({ migrations }),
+			body: JSON.stringify({ migrations: changesets }),
 		})
 
 		return snapshot
@@ -72,7 +72,7 @@ export const MigrationView = () => {
 						</TextArea>
 					</Box>
 					<Box mt="4">
-						<Button size="2" variant="solid" onClick={updateMigrations}>
+						<Button size="2" variant="solid" onClick={updateChangesets}>
 							Build
 						</Button>
 						{error && (
@@ -82,7 +82,7 @@ export const MigrationView = () => {
 								</Text>
 							</Box>
 						)}
-						{migrations && (
+						{changesets && (
 							<Box mt="2">
 								<Text size="2" color="green">
 									Success: Built contract ({textareaRef.current?.value?.length} chars)
@@ -94,7 +94,7 @@ export const MigrationView = () => {
 											resize="none"
 											style={{ padding: "4px 20px", fontFamily: "monospace", minHeight: "20vh" }}
 										>
-											{JSON.stringify(migrations, null, 2)}
+											{JSON.stringify(changesets, null, 2)}
 										</TextArea>
 									</Box>
 								</Text>
