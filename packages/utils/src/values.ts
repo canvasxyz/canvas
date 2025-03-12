@@ -1,40 +1,4 @@
-// Values
-
-export type JSONValue = null | boolean | number | string | JSONArray | JSONObject
-export interface JSONArray extends Array<JSONValue> {}
-export interface JSONObject {
-	[key: string]: JSONValue
-}
-
-export type JSValue = undefined | null | boolean | number | string | Uint8Array | JSArray | JSObject
-export interface JSArray extends Array<JSValue> {}
-export interface JSObject {
-	[key: string]: JSValue
-}
-
-// Utilities
-
-export function typeOf(value: JSValue) {
-	if (value === null) {
-		return "null"
-	} else if (typeof value === "boolean") {
-		return "boolean"
-	} else if (typeof value === "number") {
-		return "number"
-	} else if (typeof value === "string") {
-		return "string"
-	} else if (value instanceof Uint8Array) {
-		return "Uint8Array"
-	} else if (Array.isArray(value)) {
-		return "Array"
-	} else {
-		return "Object"
-	}
-}
-
-export function isObject(value: JSValue): value is JSObject {
-	return typeOf(value) === "Object"
-}
+import { JSValue, isObject, isArray } from "./JSValue.js"
 
 export function merge(from: JSValue, into: JSValue): JSValue {
 	if (from === null) {
@@ -49,7 +13,7 @@ export function merge(from: JSValue, into: JSValue): JSValue {
 		return from
 	} else if (from instanceof Uint8Array) {
 		return from
-	} else if (Array.isArray(from)) {
+	} else if (isArray(from)) {
 		return from
 	} else {
 		// only merge objects
@@ -109,41 +73,4 @@ export function update(from: JSValue, into: JSValue): JSValue {
 		}
 		return result
 	}
-}
-
-export function deepEqual(a: JSONValue, b: JSONValue): boolean {
-	// null
-	if (a === null) {
-		return b === null
-	} else if (b === null) {
-		return false
-	}
-
-	// primitives
-	if (typeof a !== "object" && typeof b !== "object") {
-		return a === b
-	}
-
-	// arrays
-	if (Array.isArray(a) && Array.isArray(b)) {
-		if (a.length !== b.length) {
-			return false
-		}
-
-		return a.every((item, i) => deepEqual(item, b[i]))
-	}
-
-	// objects
-	if (!Array.isArray(a) && !Array.isArray(b) && typeof a === "object" && typeof b === "object") {
-		const aKeys = Object.keys(a)
-		const bKeys = Object.keys(b)
-
-		if (aKeys.length !== bKeys.length) {
-			return false
-		}
-
-		return aKeys.every((key) => b[key] !== undefined && deepEqual(a[key], b[key]))
-	}
-
-	return false
 }
