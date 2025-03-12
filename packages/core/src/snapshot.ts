@@ -7,12 +7,37 @@ import { Snapshot, SnapshotEffect } from "@canvas-js/interfaces"
 import type { PropertyType } from "@canvas-js/modeldb"
 
 import { Canvas } from "./Canvas.js"
-import { Contract } from "./types.js"
+import { Contract, ModelSchema } from "./types.js"
 import { EffectRecord } from "./runtime/AbstractRuntime.js"
 
 // typeguards
 export const isIndexInit = (value: unknown): value is string[] => Array.isArray(value)
 export const isPropertyTypish = (value: unknown): value is PropertyType => typeof value === "string"
+
+export type Migration =
+	| {
+			migration: "create_table"
+			table: string
+	  }
+	| {
+			migration: "drop_table"
+			table: string
+	  }
+	| {
+			migration: "add_column"
+			table: string
+			column: string
+	  }
+	| {
+			migration: "remove_column"
+			table: string
+			column: string
+	  }
+	| {
+			migration: "make_optional_column"
+			table: string
+			column: string
+	  }
 
 export function hashContract<T extends Contract<any>>(contract: T | string): string {
 	if (typeof contract === "string") {
@@ -67,4 +92,75 @@ export async function createSnapshot<T extends Contract<any>>(app: Canvas): Prom
 		models,
 		effects,
 	}
+}
+
+export const generateMigrations = (before: ModelSchema, after: ModelSchema) => {
+	const migrations: Migration[] = []
+
+	const addedTables = Object.keys(after).filter((table) => !(table in before))
+	addedTables.forEach((table) => {
+		migrations.push({
+			migration: "create_table",
+			table,
+		})
+	})
+	const deletedTables = Object.keys(before).filter((table) => !(table in after))
+	deletedTables.forEach((table) => {
+		migrations.push({
+			migration: "drop_table",
+			table,
+		})
+	})
+
+	const existingTables = Object.keys(before).filter((table) => table in after)
+	for (const table of existingTables) {
+		const beforeTable = before[table]
+		const afterTable = after[table]
+
+		const addedColumns = Object.keys(afterTable).filter((column) => !(column in beforeTable))
+		addedColumns.forEach((column) => {
+			migrations.push({
+				migration: "add_column",
+				table: table,
+				column,
+			})
+		})
+		const removedColumns = Object.keys(beforeTable).filter((column) => !(column in afterTable))
+		removedColumns.forEach((column) => {
+			migrations.push({
+				migration: "remove_column",
+				table: table,
+				column,
+			})
+		})
+		const existingColumns = Object.keys(beforeTable).filter((column) => column in afterTable)
+		existingColumns.forEach((column) => {
+			if (column === "$indexes") {
+				// const beforeIndexes = beforeTable["$indexes"] as string[]
+				// const afterIndexes = afterTable["$indexes"] as string[]
+
+				// we don't need to generate migrations for indexes
+				// because tables will be repopulated from empty anyway
+				return
+			} else if (column === "$primary") {
+				throw new Error(`can't change primary key of ${table}`)
+			} else {
+				const beforeType = (beforeTable as Record<string, PropertyType>)[column]
+				const afterType = (afterTable as Record<string, PropertyType>)[column]
+				if (beforeType === afterType) {
+					return
+				} else if (beforeType + "?" === afterType) {
+					migrations.push({
+						migration: "make_optional_column",
+						table,
+						column,
+					})
+				} else {
+					throw new Error(`can't change column ${table} from ${beforeType} to ${afterType}`)
+				}
+			}
+		})
+	}
+
+	return migrations
 }

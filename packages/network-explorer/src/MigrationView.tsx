@@ -1,14 +1,13 @@
 import { useState, useRef } from "react"
 import { Button, Box, Heading, Text, TextArea } from "@radix-ui/themes"
 import { useContractData } from "./hooks/useContractData.js"
-import { Canvas, type ModelSchema } from "@canvas-js/core"
+import { Canvas, generateMigrations, Migration } from "@canvas-js/core"
 
 export const MigrationView = () => {
 	const contractData = useContractData()
 	const textareaRef = useRef<HTMLTextAreaElement>(null)
 	const [error, setError] = useState<string>()
-	const [newSchema, setNewSchema] = useState<ModelSchema>()
-	const [currentSchema, setCurrentSchema] = useState<ModelSchema>()
+	const [migrations, setMigrations] = useState<Migration[]>()
 
 	return (
 		<Box px="7" py="6" flexGrow="1">
@@ -42,16 +41,16 @@ export const MigrationView = () => {
 								}
 
 								setError(undefined)
-								setNewSchema(undefined)
+								setMigrations(undefined)
 
 								try {
 									const newContract = await Canvas.buildContract(value, { wasmURL: "./esbuild.wasm" })
 
 									const app = await Canvas.initialize({ contract: contractData.contract, topic: "test.a" })
 									const newApp = await Canvas.initialize({ contract: newContract, topic: "test.b" })
-									setCurrentSchema(app.getSchema())
-									setNewSchema(newApp.getSchema())
+									setMigrations(generateMigrations(app.getSchema(), newApp.getSchema()))
 								} catch (err: any) {
+									console.log(err)
 									if ("message" in err && typeof err.message === "string") {
 										setError(err.message)
 									} else {
@@ -69,7 +68,7 @@ export const MigrationView = () => {
 								</Text>
 							</Box>
 						)}
-						{newSchema && (
+						{migrations && (
 							<Box mt="2">
 								<Text size="2" color="green">
 									Success: Built contract ({textareaRef.current?.value?.length} chars)
@@ -81,15 +80,7 @@ export const MigrationView = () => {
 											resize="none"
 											style={{ padding: "4px 20px", fontFamily: "monospace", minHeight: "20vh" }}
 										>
-											{JSON.stringify(currentSchema, null, 2)}
-										</TextArea>
-										<TextArea
-											size="2"
-											variant="classic"
-											resize="none"
-											style={{ padding: "4px 20px", fontFamily: "monospace", minHeight: "20vh" }}
-										>
-											{JSON.stringify(newSchema, null, 2)}
+											{JSON.stringify(migrations, null, 2)}
 										</TextArea>
 									</Box>
 								</Text>
