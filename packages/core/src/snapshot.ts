@@ -59,7 +59,17 @@ export function hashSnapshot(snapshot: Snapshot): string {
 	return bytesToHex(hash).slice(0, 16)
 }
 
-export async function createSnapshot<T extends Contract<any>>(app: Canvas): Promise<Snapshot> {
+/**
+ * Create a `Snapshot` of the application's current database state.
+ *
+ * If migrations are provided, then apply those migrations to the
+ * snapshotted tables, so the new snapshot can be loaded and used
+ * with a contract matching those migrations immediately.
+ */
+export async function createSnapshot<T extends Contract<any>>(
+	app: Canvas,
+	migrations?: Migration[],
+): Promise<Snapshot> {
 	// flatten models
 	const modelData: Record<string, Uint8Array[]> = {}
 	for (const [modelName, modelSchema] of Object.entries(app.db.models)) {

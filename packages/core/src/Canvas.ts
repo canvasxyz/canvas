@@ -28,7 +28,7 @@ import type { Contract, Actions, ActionImplementation, ModelAPI, DeriveModelType
 import { Runtime, createRuntime } from "./runtime/index.js"
 import { ActionRecord } from "./runtime/AbstractRuntime.js"
 import { validatePayload } from "./schema.js"
-import { createSnapshot, hashSnapshot } from "./snapshot.js"
+import { createSnapshot, hashSnapshot, Migration } from "./snapshot.js"
 import { topicPattern } from "./utils.js"
 
 export type { Model } from "@canvas-js/modeldb"
@@ -485,7 +485,7 @@ export class Canvas<
 		}
 	}
 
-	public async createSnapshot(): Promise<Snapshot> {
-		return createSnapshot(this)
+	public async createSnapshot(migrations?: Migration[]): Promise<Snapshot> {
+		return createSnapshot(this, migrations)
 	}
 }

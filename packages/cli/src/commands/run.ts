@@ -119,6 +119,10 @@ export const builder = (yargs: Argv) =>
 			type: "boolean",
 			desc: "Serve the network explorer web interface",
 		})
+		.option("admin", {
+			type: "boolean",
+			desc: "Allow an admin address to update the running application",
+		})
 		.option("connect", {
 			type: "string",
 			desc: "Connect GossipLog directly to this WebSocket URL. If this is enabled, libp2p is disabled.",
@@ -294,6 +298,24 @@ export async function handler(args: Args) {
 			}
 		}
 
+		// TODO: move to createAPI
+		if (args["admin"] !== undefined) {
+			console.log("binding snapshot")
+			api.post("/api/snapshot", (req, res) => {
+				const { migrations } = req.body ?? {}
+				console.log("snapshot requested, migrations:", migrations)
+
+				app
+					.createSnapshot()
+					.then((snapshot) => {
+						res.json({ snapshot })
+					})
+					.catch((error) => {
+						res.status(500).end()
+					})
+			})
+		}
+
 		const server = stoppable(http.createServer(api))
 		const network = new NetworkServer(app.messageLog)
 		const wss = new WebSocketServer({ server, perMessageDeflate: false })
@@ -341,6 +363,10 @@ export async function handler(args: Args) {
 		for (const name of Object.keys(models)) {
 			console.log(`└ GET  ${origin}/api/models/${name}`)
 			console.log(`└ GET  ${origin}/api/models/${name}/:key`)
+		}
+
+		if (args["admin"] !== undefined) {
+			console.log(`└ POST ${origin}/api/snapshot`)
 		}
 
 		console.log("")

@@ -9,6 +9,48 @@ export const MigrationView = () => {
 	const [error, setError] = useState<string>()
 	const [migrations, setMigrations] = useState<Migration[]>()
 
+	const updateMigrations = async () => {
+		const value = textareaRef.current?.value
+		if (!value || !contractData) {
+			setError("No contract content")
+			return
+		}
+
+		setError(undefined)
+		setMigrations(undefined)
+
+		try {
+			const newContract = await Canvas.buildContract(value, { wasmURL: "./esbuild.wasm" })
+
+			const app = await Canvas.initialize({ contract: contractData.contract, topic: "test.a" })
+			const newApp = await Canvas.initialize({ contract: newContract, topic: "test.b" })
+			setMigrations(generateMigrations(app.getSchema(), newApp.getSchema()))
+		} catch (err: any) {
+			if ("message" in err && typeof err.message === "string") {
+				setError(err.message)
+			} else {
+				setError(err.toString())
+			}
+		}
+	}
+
+	const runMigrations = async () => {
+		if (!migrations) {
+			setError("No migrations to run")
+			return
+		}
+
+		const snapshot = await fetch("/api/snapshot", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ migrations }),
+		})
+
+		return snapshot
+	}
+
 	return (
 		<Box px="7" py="6" flexGrow="1">
 			<Heading size="3" mb="4">
@@ -30,35 +72,7 @@ export const MigrationView = () => {
 						</TextArea>
 					</Box>
 					<Box mt="4">
-						<Button
-							size="2"
-							variant="solid"
-							onClick={async () => {
-								const value = textareaRef.current?.value
-								if (!value) {
-									setError("No contract content")
-									return
-								}
-
-								setError(undefined)
-								setMigrations(undefined)
-
-								try {
-									const newContract = await Canvas.buildContract(value, { wasmURL: "./esbuild.wasm" })
-
-									const app = await Canvas.initialize({ contract: contractData.contract, topic: "test.a" })
-									const newApp = await Canvas.initialize({ contract: newContract, topic: "test.b" })
-									setMigrations(generateMigrations(app.getSchema(), newApp.getSchema()))
-								} catch (err: any) {
-									console.log(err)
-									if ("message" in err && typeof err.message === "string") {
-										setError(err.message)
-									} else {
-										setError(err.toString())
-									}
-								}
-							}}
-						>
+						<Button size="2" variant="solid" onClick={updateMigrations}>
 							Build
 						</Button>
 						{error && (
@@ -90,7 +104,11 @@ export const MigrationView = () => {
 					<Heading size="3" mb="4" mt="5">
 						Run Migration
 					</Heading>
-					TODO
+					<Box mt="4">
+						<Button size="2" variant="solid" onClick={runMigrations}>
+							Run
+						</Button>
+					</Box>
 				</>
 			)}
 		</Box>
