@@ -3,9 +3,9 @@ import * as cbor from "@ipld/dag-cbor"
 import type { MessageType, SessionSigner } from "@canvas-js/interfaces"
 
 import { Action } from "@canvas-js/interfaces"
-import { ModelValue, PropertyValue, validateModelValue, updateModelValues, mergeModelValues } from "@canvas-js/modeldb"
-import { AbstractGossipLog, SignedMessage } from "@canvas-js/gossiplog"
-import { assert } from "@canvas-js/utils"
+import { ModelValue, PropertyValue, validateModelValue, updateModelValue, mergeModelValue } from "@canvas-js/modeldb"
+import { AbstractGossipLog, SignedMessage, MessageId } from "@canvas-js/gossiplog"
+import { assert, mapValues } from "@canvas-js/utils"
 
 import { getRecordId } from "./utils.js"
 
@@ -145,7 +145,7 @@ export class ExecutionContext extends View {
 		} = this.db.models[model]
 		const key = value[primaryKey] as string
 		const previousValue = await this.getModelValue(model, key, transactional)
-		const result = updateModelValues(value, previousValue)
+		const result = updateModelValue(value, previousValue)
 		await this.setModelValue(model, result, transactional)
 	}
 
@@ -162,8 +162,9 @@ export class ExecutionContext extends View {
 			primaryKey: [primaryKey],
 		} = this.db.models[model]
 		const key = value[primaryKey] as string
+
 		const previousValue = await this.getModelValue(model, key, transactional)
-		const result = mergeModelValues(value, previousValue)
+		const result = mergeModelValue(value, previousValue)
 		await this.setModelValue(model, result, transactional)
 	}
 }
