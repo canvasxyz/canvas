@@ -195,7 +195,7 @@ export function mergeModelValue(from: Record<string, PropertyValue | undefined>,
 	return merge(from, into ?? {}) as ModelValue
 }
 
-export function merge(from: JSObject, into: JSObject): JSObject {
+function merge(from: JSObject, into: JSObject): JSObject {
 	const result: Record<string, JSValue> = {}
 	for (const key of new Set([...Object.keys(from), ...Object.keys(into as {})])) {
 		if (isObject(from[key]) && isObject(into[key])) {
@@ -213,7 +213,7 @@ export function updateModelValue(from: Record<string, PropertyValue | undefined>
 	return update(from, into ?? {}) as ModelValue
 }
 
-export function update(from: JSObject, into: JSObject): JSObject {
+function update(from: JSObject, into: JSObject): JSObject {
 	const result: Record<string, JSValue> = { ...into }
 	for (const key of Object.keys(from)) {
 		if (from[key] === undefined) {

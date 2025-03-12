@@ -15,6 +15,4 @@ export {
 	isRelationValue,
 	equalPrimaryKeys,
 	equalReferences,
-	merge,
-	update,
 } from "./utils.js"
