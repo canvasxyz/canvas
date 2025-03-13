@@ -138,6 +138,7 @@ type AppConfig = {
 	offline: boolean
 	replay: boolean
 	memory: boolean
+	admin?: boolean
 
 	/* api */
 	metrics: boolean
@@ -433,9 +434,16 @@ async function setupApp(topic: string, contract: string, location_: string | nul
 		console.log("")
 		startActionPrompt(app)
 	}
+
+	return {
+		stop: () => new Promise<void>((resolve) => {
+			app.addEventListener("stop", () => resolve(), { once: true })
+			controller.abort()
+		}),
+	}
 }
 
 export async function handler(args: Args) {
 	const { topic, contract, location } = await getContractLocation(args)
-	setupApp(topic, contract, location, args)
+	const { stop } = await setupApp(topic, contract, location, args)	
 }
