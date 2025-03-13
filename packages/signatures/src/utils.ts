@@ -1,7 +1,8 @@
 import { varint } from "multiformats"
 import { base58btc } from "multiformats/bases/base58"
 
-import { assert } from "@canvas-js/utils"
+import { Message } from "@canvas-js/interfaces"
+import { assert, stripUndefined, replaceUndefined } from "@canvas-js/utils"
 
 export const didKeyPattern = /^did:key:(z[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+)$/
 
@@ -32,37 +33,10 @@ export function encodeURI(type: string, publicKey: Uint8Array) {
 	return `did:key:${base58btc.encode(bytes)}`
 }
 
-export function deepEquals<T>(obj1: T, obj2: T) {
-	if (obj1 === obj2) {
-		return true
-	}
-
-	if (typeof obj1 !== "object" || typeof obj2 !== "object" || obj1 === null || obj2 === null) {
-		return false
-	}
-
-	if (obj1 instanceof Uint8Array && obj2 instanceof Uint8Array) {
-		return Buffer.compare(Buffer.from(obj1), Buffer.from(obj2)) === 0
-	}
-
-	const keys1 = Object.keys(obj1)
-	const keys2 = Object.keys(obj2)
-
-	if (keys1.length !== keys2.length) {
-		return false
-	}
-
-	for (const key of keys1) {
-		if (!keys2.includes(key)) {
-			return false
-		}
-
-		const val1 = (obj1 as any)[key]
-		const val2 = (obj2 as any)[key]
-		if (!deepEquals(val1, val2)) {
-			return false
-		}
-	}
-
-	return true
+/** strip `undefined` object properties, and replace `undefined` with `null` in arrays */
+export function prepareMessage<T>(message: Message<T>): Message<T> {
+	let payload = message.payload
+	payload = stripUndefined(message.payload as any, false) as T
+	payload = replaceUndefined(payload as any, true) as T
+	return { ...message, payload }
 }

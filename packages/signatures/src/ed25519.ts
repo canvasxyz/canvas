@@ -3,9 +3,9 @@ import * as cbor from "@ipld/dag-cbor"
 import * as json from "@ipld/dag-json"
 
 import type { Message, Signature, SignatureScheme, Signer } from "@canvas-js/interfaces"
-import { assert, prepareMessage } from "@canvas-js/utils"
+import { assert } from "@canvas-js/utils"
 
-import { decodeURI, encodeURI } from "./utils.js"
+import { decodeURI, encodeURI, prepareMessage } from "./utils.js"
 
 const codecs = { cbor: "dag-cbor", json: "dag-json" }
 
