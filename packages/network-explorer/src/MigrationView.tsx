@@ -1,14 +1,17 @@
 import { useState, useRef } from "react"
 import { Button, Box, Heading, Text, TextArea } from "@radix-ui/themes"
 import { useContractData } from "./hooks/useContractData.js"
+import { useApplicationData } from "./hooks/useApplicationData.js"
 import { Canvas, generateChangesets, Changeset } from "@canvas-js/core"
 
 export const MigrationView = () => {
 	const contractData = useContractData()
+	const applicationData = useApplicationData()
 	const textareaRef = useRef<HTMLTextAreaElement>(null)
 	const [error, setError] = useState<string>()
 	const [changesets, setChangesets] = useState<Changeset[]>()
 	const [newContract, setNewContract] = useState<string>()
+	const [waitingForCommit, setWaitingForCommit] = useState<boolean>()
 
 	const updateChangesets = async () => {
 		const value = textareaRef.current?.value
@@ -20,6 +23,7 @@ export const MigrationView = () => {
 		setError(undefined)
 		setNewContract(undefined)
 		setChangesets(undefined)
+		setWaitingForCommit(undefined)
 
 		try {
 			const newContract = await Canvas.buildContract(value, { wasmURL: "./esbuild.wasm" })
@@ -37,6 +41,11 @@ export const MigrationView = () => {
 		}
 	}
 
+	const cancelMigrations = async () => {
+		setChangesets(undefined)
+		setNewContract(undefined)
+	}
+
 	const runMigrations = async () => {
 		if (!changesets || !newContract) {
 			setError("No migrations to run")
@@ -49,15 +58,18 @@ export const MigrationView = () => {
 				"Content-Type": "application/json",
 			},
 			body: JSON.stringify({ contract: newContract, changesets }),
+		}).then(async () => {
+			setChangesets(undefined)
+			setNewContract(undefined)
+			setWaitingForCommit(true)
+
+			// Refresh both data contexts
+			await Promise.all([contractData?.refetch(), applicationData?.refetch()])
+
+			setWaitingForCommit(false)
 		})
 
 		return snapshot
-	}
-
-	const runFlatten = async () => {
-		await fetch("/api/flatten", {
-			method: "POST",
-		})
 	}
 
 	return (
@@ -110,19 +122,22 @@ export const MigrationView = () => {
 							</Box>
 						)}
 					</Box>
-					<Heading size="3" mb="4" mt="5">
-						Run Migration
-					</Heading>
-					<Box mt="4">
-						<Button size="2" variant="solid" onClick={runMigrations}>
-							Run
-						</Button>
-					</Box>
-					<Box mt="4">
-						<Button size="2" variant="solid" onClick={runFlatten}>
-							Flatten
-						</Button>
-					</Box>
+					{changesets && newContract && (
+						<Box mt="4">
+							<Button size="2" variant="solid" onClick={runMigrations}>
+								Commit Changes
+							</Button>
+							&nbsp;
+							<Button size="2" variant="outline" onClick={cancelMigrations}>
+								Cancel
+							</Button>
+						</Box>
+					)}
+					{waitingForCommit && (
+						<Box mt="4">
+							<Text size="2">Waiting for server...</Text>
+						</Box>
+					)}
 				</>
 			)}
 		</Box>
