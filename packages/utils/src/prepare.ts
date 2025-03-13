@@ -1,7 +1,10 @@
 import { Message } from "@canvas-js/interfaces"
-import { JSValue } from "./values.js"
+import { JSValue } from "./JSValue.js"
 
-export function prepareMessage<T>(message: Message<T>, options: { replaceUndefined?: boolean } = { replaceUndefined: true }): Message<T> {
+export function prepareMessage<T>(
+	message: Message<T>,
+	options: { replaceUndefined?: boolean } = { replaceUndefined: true },
+): Message<T> {
 	return { ...message, payload: prepare(message.payload, options) }
 }
 

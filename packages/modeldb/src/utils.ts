@@ -1,4 +1,5 @@
-import { signalInvalidType, merge, update, assert } from "@canvas-js/utils"
+import { equals } from "uint8arrays"
+import { assert, signalInvalidType, JSValue, isObject, isArray, JSObject } from "@canvas-js/utils"
 
 import type {
 	IncludeExpression,
@@ -24,6 +25,20 @@ export const isPrimaryKey = (value: unknown): value is PrimaryKeyValue => {
 	}
 }
 
+export function equalPrimaryKeys(a: PrimaryKeyValue, b: PrimaryKeyValue) {
+	if (a instanceof Uint8Array && b instanceof Uint8Array) {
+		return equals(a, b)
+	} else {
+		return a === b
+	}
+}
+
+export function equalReferences(a: PrimaryKeyValue | PrimaryKeyValue[], b: PrimaryKeyValue | PrimaryKeyValue[]) {
+	const wrappedA = Array.isArray(a) ? a : [a]
+	const wrappedB = Array.isArray(b) ? b : [b]
+	return wrappedA.length === wrappedB.length && wrappedA.every((keyA, i) => equalPrimaryKeys(keyA, wrappedB[i]))
+}
+
 export function isReferenceValue(value: unknown): value is ReferenceValue {
 	if (value === null) {
 		return true
@@ -40,17 +55,6 @@ export function isRelationValue(value: unknown): value is RelationValue {
 
 // eslint-disable-next-line no-useless-escape
 export const namePattern = /^[a-zA-Z0-9$:_\-\.]+$/
-
-export function updateModelValues(
-	from: Record<string, PropertyValue | undefined>,
-	into: ModelValue | null,
-): ModelValue {
-	return update(from, into ?? {}) as ModelValue
-}
-
-export function mergeModelValues(from: Record<string, PropertyValue | undefined>, into: ModelValue | null): ModelValue {
-	return merge(from, into ?? {}) as ModelValue
-}
 
 export function* getModelsFromInclude(models: Model[], modelName: string, obj: IncludeExpression): Generator<string> {
 	const model = models.find((model) => model.name === modelName)
@@ -185,4 +189,39 @@ export function validatePropertyValue(
 	} else {
 		signalInvalidType(property)
 	}
+}
+
+export function mergeModelValue(from: Record<string, PropertyValue | undefined>, into: ModelValue | null): ModelValue {
+	return merge(from, into ?? {}) as ModelValue
+}
+
+function merge(from: JSObject, into: JSObject): JSObject {
+	const result: Record<string, JSValue> = {}
+	for (const key of new Set([...Object.keys(from), ...Object.keys(into as {})])) {
+		if (isObject(from[key]) && isObject(into[key])) {
+			result[key] = merge(from[key], into[key])
+		} else if (from[key] === undefined) {
+			result[key] = into[key]
+		} else {
+			result[key] = from[key]
+		}
+	}
+	return result
+}
+
+export function updateModelValue(from: Record<string, PropertyValue | undefined>, into: ModelValue | null): ModelValue {
+	return update(from, into ?? {}) as ModelValue
+}
+
+function update(from: JSObject, into: JSObject): JSObject {
+	const result: Record<string, JSValue> = { ...into }
+	for (const key of Object.keys(from)) {
+		if (from[key] === undefined) {
+			result[key] = into[key]
+		} else {
+			result[key] = from[key]
+		}
+	}
+
+	return result
 }

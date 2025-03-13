@@ -165,7 +165,7 @@ export class ModelAPI {
 
 			if (target.primaryKey.length === 1) {
 				const [targetProperty] = this.config.primaryKeys[target.name]
-				columnDefinitions.push(getColumn(property.name, targetProperty.type, false))
+				columnDefinitions.push(getColumn(property.name, targetProperty.type, property.nullable))
 				columnNames.push(property.name)
 
 				this.addCodec(property.name, {
@@ -179,7 +179,7 @@ export class ModelAPI {
 
 				for (const targetProperty of this.config.primaryKeys[target.name]) {
 					const refName = `${property.name}/${targetProperty.name}`
-					columnDefinitions.push(getColumn(refName, targetProperty.type, false))
+					columnDefinitions.push(getColumn(refName, targetProperty.type, property.nullable))
 					columnNames.push(refName)
 					refNames.push(refName)
 				}

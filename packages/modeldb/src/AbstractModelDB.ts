@@ -16,7 +16,7 @@ import {
 	ModelSchema,
 } from "./types.js"
 import { getFilter } from "./query.js"
-import { getModelsFromInclude, mergeModelValues, updateModelValues } from "./utils.js"
+import { getModelsFromInclude, mergeModelValue, updateModelValue } from "./utils.js"
 
 export type Subscription = {
 	model: string
@@ -249,14 +249,14 @@ export abstract class AbstractModelDB implements DatabaseAPI {
 	public async update<T extends ModelValue<any> = ModelValue<any>>(modelName: string, value: T) {
 		const key = this.models[modelName].primaryKey.map((key) => value[key])
 		const existingValue = await this.get<T>(modelName, key)
-		const updatedValue = updateModelValues(value, existingValue)
+		const updatedValue = updateModelValue(value, existingValue)
 		await this.apply([{ operation: "set", model: modelName, value: updatedValue }])
 	}
 
 	public async merge<T extends ModelValue<any> = ModelValue<any>>(modelName: string, value: T) {
 		const key = this.models[modelName].primaryKey.map((key) => value[key])
 		const existingValue = await this.get<T>(modelName, key)
-		const mergedValue = mergeModelValues(value, existingValue)
+		const mergedValue = mergeModelValue(value, existingValue)
 		await this.apply([{ operation: "set", model: modelName, value: mergedValue }])
 	}
 
