@@ -5,8 +5,8 @@ import { equals, toString } from "uint8arrays"
 import { Node, Tree, ReadWriteTransaction, hashEntry } from "@canvas-js/okra"
 import type { Signature, Signer, Message, Awaitable } from "@canvas-js/interfaces"
 import type { AbstractModelDB, ModelSchema, Effect, DatabaseUpgradeAPI, Config } from "@canvas-js/modeldb"
-import { ed25519 } from "@canvas-js/signatures"
-import { assert, zip, prepare, prepareMessage } from "@canvas-js/utils"
+import { ed25519, prepareMessage } from "@canvas-js/signatures"
+import { assert, zip } from "@canvas-js/utils"
 
 import type { NetworkClient } from "@canvas-js/gossiplog"
 import type { NetworkConfig, ServiceMap } from "@canvas-js/gossiplog/libp2p"
@@ -187,8 +187,9 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		}
 
 		const preparedMessage = prepareMessage(message)
+
 		if (!this.validatePayload(preparedMessage.payload)) {
-			this.log.error("invalid message: %O", message)
+			this.log.error("invalid message: %O", preparedMessage)
 			throw new Error(`error encoding message: invalid payload`)
 		}
 
@@ -284,15 +285,8 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		const signedMessage = await this.tree.write(async (txn) => {
 			const [clock, parents] = await this.getClock()
 
-			const message: Message<T> = {
-				topic: this.topic,
-				clock,
-				parents,
-				payload: prepare(payload, { replaceUndefined: true }),
-			}
-
+			const message = prepareMessage<T>({ topic: this.topic, clock, parents, payload })
 			const signature = await signer.sign(message)
-
 			const signedMessage = this.encode(signature, message)
 			this.log("appending message %s at clock %d with parents %o", signedMessage.id, clock, parents)
 
@@ -482,20 +476,20 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 	): Promise<{ complete: boolean; messageCount: number }> {
 		const start = performance.now()
 		let messageCount = 0
-
 		let complete = true
+		let source: MessageSource | undefined = undefined
+		if (options.peer !== undefined) {
+			source = { type: "sync", peer: options.peer }
+		}
 
-		const root = await this.tree.read(async (txn) => {
+		await this.tree.read(async (txn) => {
 			const driver = new sync.Driver(this.topic, snapshot, txn)
 			try {
 				for await (const keys of driver.sync()) {
 					const values = await snapshot.getValues(keys)
 
 					for (const [key, value] of zip(keys, values)) {
-						const signedMessage = this.decode(value, {
-							source: options.peer === undefined ? undefined : { type: "sync", peer: options.peer },
-						})
-
+						const signedMessage = this.decode(value, { source })
 						assert(equals(key, signedMessage.key), "invalid message key")
 						await this.insert(signedMessage)
 						messageCount++
@@ -508,8 +502,6 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 					throw err
 				}
 			}
-
-			return txn.getRoot()
 		})
 
 		const duration = Math.ceil(performance.now() - start)

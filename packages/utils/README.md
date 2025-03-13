@@ -53,3 +53,17 @@ export type Zip<E> = E extends Iterable<any>[] ? { [k in keyof E]: E[k] extends 
 
 export const zip = <E extends Iterable<any>[]>(...args: E): Iterable<[...Zip<E>, number]>
 ```
+
+### `replaceUndefined`
+
+```ts
+/** Recursively replace every `undefined` with `null` in ararys and objects */
+export function replaceUndefined(value: JSValue, inPlace = false): JSValue
+```
+
+### `stripUndefined`
+
+```ts
+/** Recursively remove every object entry with value `undefined` */
+export function stripUndefined(value: JSValue, inPlace = false): JSValue
+```

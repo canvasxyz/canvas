@@ -2,27 +2,18 @@ import {
 	SigningKey,
 	BaseWallet,
 	Wallet,
+	TypedDataField,
 	getBytes,
 	hexlify,
-	TypedDataField,
 	verifyTypedData,
 	computeAddress,
 } from "ethers"
 
 import { AbiCoder } from "ethers/abi"
 
-import type {
-	Action,
-	Message,
-	Session,
-	Snapshot,
-	Signature,
-	SignatureScheme,
-	Signer,
-	MessageType,
-} from "@canvas-js/interfaces"
-import { decodeURI, encodeURI } from "@canvas-js/signatures"
-import { assert, prepareMessage, signalInvalidType } from "@canvas-js/utils"
+import type { Message, Signature, SignatureScheme, Signer, MessageType } from "@canvas-js/interfaces"
+import { decodeURI, encodeURI, prepareMessage } from "@canvas-js/signatures"
+import { assert, signalInvalidType } from "@canvas-js/utils"
 
 import { Eip712SessionData } from "./types.js"
 import { parseAddress } from "./utils.js"
@@ -106,7 +97,7 @@ export class Secp256k1DelegateSigner implements Signer<MessageType<Eip712Session
 						name: payload.name,
 						args: getAbiString(payload.args),
 						userAddress: address,
-						blockhash: payload.context.blockhash || "", // TODO: consider making blockhash mandatory for EIP-712?
+						blockhash: payload.context.blockhash ?? "", // TODO: consider making blockhash mandatory for EIP-712?
 						timestamp: payload.context.timestamp,
 					},
 				},
@@ -150,15 +141,16 @@ export class Secp256k1DelegateSigner implements Signer<MessageType<Eip712Session
 /**
  * Encode an argument object `Array<any>` as an ABI-encoded bytestring.
  */
-export function getAbiString(args: Array<any>): string {
+export function getAbiString(args: any): string {
+	assert(Array.isArray(args), "eip712 signer only supports array args")
 	const { types, values } = getEIP712Args(args)
 	return new AbiCoder().encode(types, values)
 }
 
 /**
- * Convert an argument object `Array<any>` to EIP712-compatible types.
+ * Convert an argument object `any[]` to EIP712-compatible types.
  */
-export function getEIP712Args(args: Array<any>) {
+export function getEIP712Args(args: any[]) {
 	const types: string[] = []
 	const values: any[] = []
 
@@ -187,8 +179,9 @@ function getAbiTypeForValue(value: any) {
 		}
 	} else if (typeof value === "boolean") {
 		return "bool"
+	} else {
+		throw new TypeError(`invalid eip712 type ${typeof value}: ${JSON.stringify(value)}`)
 	}
-	throw new TypeError(`invalid type ${typeof value}: ${JSON.stringify(value)}`)
 }
 
 export const Secp256k1SignatureScheme: SignatureScheme<MessageType<Eip712SessionData>> = {
