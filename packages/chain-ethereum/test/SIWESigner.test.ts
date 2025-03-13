@@ -3,9 +3,8 @@ import assert from "assert"
 
 import { ed25519 } from "@canvas-js/signatures"
 
-import { SIWESigner, validateSIWESessionData } from "@canvas-js/chain-ethereum"
+import { SIWESessionData, SIWESigner, validateSIWESessionData } from "@canvas-js/chain-ethereum"
 import { Action, Session } from "@canvas-js/interfaces"
-import { SIWESessionData } from "../src/siwe/types.js"
 
 test("create and verify session", async (t) => {
 	const topic = "com.example.app"
