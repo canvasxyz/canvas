@@ -7,7 +7,6 @@ import { ed25519 } from "@canvas-js/signatures"
 
 import type { GossipLogConsumer } from "@canvas-js/gossiplog"
 import { testPlatforms, expectLogEntries } from "./utils.js"
-import { prepareMessage } from "@canvas-js/utils"
 
 const apply: GossipLogConsumer<string> = ({}) => {}
 
@@ -136,8 +135,8 @@ testPlatforms("handle undefined message when using log.encode() and signer.sign(
 	const { id: idC } = await log.insert(log.encode(signer.sign(c), c))
 
 	await expectLogEntries(t, log, [
-		[idA, signer.publicKey, prepareMessage({ topic, clock: 1, parents: [], payload: { a: [null] } })],
-		[idB, signer.publicKey, prepareMessage({ topic, clock: 2, parents: [idA], payload: { b: [null] } })],
-		[idC, signer.publicKey, prepareMessage({ topic, clock: 3, parents: [idB], payload: { foo: null } })],
+		[idA, signer.publicKey, { topic, clock: 1, parents: [], payload: { a: [null] } }],
+		[idB, signer.publicKey, { topic, clock: 2, parents: [idA], payload: { b: [null] } }],
+		[idC, signer.publicKey, { topic, clock: 3, parents: [idB], payload: { foo: null } }],
 	])
 })
