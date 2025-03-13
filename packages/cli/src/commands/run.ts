@@ -126,8 +126,36 @@ export const builder = (yargs: Argv) =>
 
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
-export async function handler(args: Args) {
-	const { topic, contract, location: location_ } = await getContractLocation(args)
+type AppConfig = {
+	path: string
+	topic?: string
+	init?: string
+	port: number
+	offline: boolean
+	replay: boolean
+	memory: boolean
+
+	/* api */
+	metrics: boolean
+	static?: string
+
+	/* services */
+	"disable-http-api"?: boolean
+	"network-explorer"?: boolean
+
+	/* application networking */
+	connect?: string
+	listen: string[] | (string | number)[]
+	announce: string[] | (string | number)[]
+	bootstrap?: (string | number)[]
+	"max-connections": number
+
+	/* etc */
+	verbose?: boolean
+	repl: boolean
+}
+
+async function setupApp(topic: string, contract: string, location_: string | null, args: AppConfig) {
 	let location = location_
 
 	if (process.env.DATABASE_URL) {
@@ -368,4 +396,9 @@ export async function handler(args: Args) {
 		console.log("")
 		startActionPrompt(app)
 	}
+}
+
+export async function handler(args: Args) {
+	const { topic, contract, location } = await getContractLocation(args)
+	setupApp(topic, contract, location, args)
 }
