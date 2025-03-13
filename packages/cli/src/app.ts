@@ -31,12 +31,7 @@ import { startActionPrompt } from "./prompt.js"
 const { BOOTSTRAP_LIST } = process.env
 
 export type AppConfig = {
-	/* app */
-	path: string
-	init?: string
 	topic?: string
-	replay: boolean
-	memory: boolean
 	verbose?: boolean
 
 	/* networking */
@@ -48,58 +43,44 @@ export type AppConfig = {
 	bootstrap?: (string | number)[]
 	"max-connections": number
 
-	/* extra */
+	/* services */
 	admin?: boolean
 	static?: string
 	"network-explorer"?: boolean
 	"disable-http-api"?: boolean
 	repl: boolean
-	// metrics: boolean
 }
 
 export class AppLauncher {
+	app: Canvas
+	verbose?: boolean
+
+	/* networking */
+	port: number
+	offline?: boolean
+	connect?: string
+	listen: string[]
+	announce: string[]
+	bootstrap?: (string | number)[]
+	maxConnections: number
+
+	/* services */
+	admin?: boolean
+	static?: string
+	networkExplorer?: boolean
+	disableHttpApi?: boolean
+	repl?: boolean
+
+	controller: AbortController
+
 	static async initialize(
 		topic: string,
 		contract: string,
-		location_: string | null,
+		location: string | null,
 		config: AppConfig,
-		requestRestart: Function,
+		requestRestart: Function, // TODO
 	) {
-		let location = location_
-
-		if (process.env.DATABASE_URL) {
-			location = process.env.DATABASE_URL
-			console.log(`[canvas] Using database at ${process.env.DATABASE_URL}`)
-		} else if (location === null) {
-			console.log(chalk.yellow(`✦ ${chalk.bold("Running app in-memory only.")} No data will be persisted.`))
-			console.log("")
-		}
-
-		const announce: string[] = []
-		for (const address of config.announce) {
-			assert(typeof address === "string", "announce address must be a string")
-			const addr = multiaddr(address)
-			assert(
-				WebSockets.exactMatch(addr) || WebSocketsSecure.exactMatch(addr),
-				"announce address must be a /ws or /wss multiaddr",
-			)
-
-			announce.push(address)
-		}
-
-		const listen: string[] = []
-		for (const address of config.listen) {
-			assert(typeof address === "string", "listen address must be a string")
-			const addr = multiaddr(address)
-			assert(
-				WebSockets.exactMatch(addr) || WebSocketsSecure.exactMatch(addr),
-				"listen address must be a /ws or /wss multiaddr",
-			)
-
-			listen.push(address)
-		}
-
-		console.log(`${chalk.gray("[canvas] Starting app on topic")} ${chalk.whiteBright(topic)}`)
+		AppLauncher.printInitialization(topic, location)
 
 		const signers = [
 			new SIWESigner(),
@@ -110,71 +91,55 @@ export class AppLauncher {
 			new SubstrateSigner(),
 			new SolanaSigner(),
 		]
-		const app = await Canvas.initialize({ path: location, topic, contract, signers })
-        const launcher = new AppLauncher(app, config)
 
-        launcher.setupLogging()
-        launcher.setupNetworking()
+		const app = await Canvas.initialize({ path: process.env.DATABASE_URL ?? location, topic, contract, signers })
+		const launcher = new AppLauncher(app, config)
 
-        if (!config["disable-http-api"]) {
-			launcher.setupHttpAPI()
+		launcher.setupLogging()
+		await launcher.setupNetworking()
+
+		if (!config["disable-http-api"]) {
+			await launcher.setupHttpAPI()
+			await launcher.printApiInfo()
 		}
-        if (config["repl"]) {
-			console.log("")
-			startActionPrompt(app)
+		if (config["repl"]) {
+			await startActionPrompt(app)
 		}
 	}
-
-	app: Canvas
-    verbose?: boolean
-    static?: string
-    networkExplorer?: boolean
-    admin?: boolean
-
-    connect?: string
-    offline?: boolean
-
-    port: number
-    listen: string[]
-	announce: string[]
-	bootstrap?: (string | number)[]
-	maxConnections: number
-
-    disableHttpApi?: boolean
-    repl?: boolean
-
-    controller: AbortController
 
 	constructor(app: Canvas, config: AppConfig) {
 		this.app = app
+		this.verbose = config.verbose
 
-        /* app */
-        // this.path = config.path
-        // this.init = config.init
-        // this.topic = config.topic
-        // this.replay = config.replay
-        // this.memory = config.memory
-        this.verbose = config.verbose
+		this.port = config.port
+		this.offline = config.offline
+		this.connect = config.connect
+		this.bootstrap = config.bootstrap
+		this.maxConnections = config["max-connections"]
+		this.announce = this.getAnnounceMultiaddrs(config)
+		this.listen = this.getListenMultiaddrs(config)
 
-        this.port = config.port
-        this.offline = config.offline
-        this.connect = config.connect
-        this.listen = config.listen.map((value) => value.toString())
-        this.announce = config.announce.map((value) => value.toString())
-        this.bootstrap = config.bootstrap
-        this.maxConnections = config["max-connections"]
+		this.admin = config.admin
+		this.static = config.static
+		this.networkExplorer = config["network-explorer"]
+		this.disableHttpApi = config["disable-http-api"]
+		this.repl = config.repl
 
-        this.admin = config.admin
-        this.static = config.static
-        this.networkExplorer = config["network-explorer"]
-        this.disableHttpApi = config["disable-http-api"]
-        this.repl = config.repl
-
-        this.controller = this.setupAbortController()
+		this.controller = this.setupAbortController()
 	}
 
-    private setupLogging() {
-        this.app.addEventListener("message", ({ detail: { id, message } }) => {
+	private static printInitialization(topic: string, location: string | null) {
+		if (process.env.DATABASE_URL) {
+			console.log(`[canvas] Using database at ${process.env.DATABASE_URL}`)
+		} else if (location === null) {
+			console.log(chalk.yellow(`✦ ${chalk.bold("Running app in-memory only.")} No data will be persisted.`))
+			console.log("")
+		}
+		console.log(`${chalk.gray("[canvas] Starting app on topic")} ${chalk.whiteBright(topic)}`)
+	}
+
+	private setupLogging() {
+		this.app.addEventListener("message", ({ detail: { id, message } }) => {
 			if (this.verbose) {
 				console.log(`[canvas] Applied message ${chalk.green(id)}`, message.payload)
 			} else {
@@ -189,10 +154,10 @@ export class AppLauncher {
 				),
 			)
 		})
-    }
+	}
 
-    private async setupNetworking() {
-        if (this.connect) {
+	private async setupNetworking() {
+		if (this.connect) {
 			await this.app.connect(this.connect)
 		} else if (!this.offline) {
 			let bootstrapList = defaultBootstrapList
@@ -240,155 +205,144 @@ export class AppLauncher {
 			this.app.addEventListener("disconnect", ({ detail: { peer } }) => {
 				console.log(chalk.gray(`[canvas] Closed connection to ${peer}`))
 			})
-		}        
-    }
+		}
+	}
 
-    private async setupHttpAPI() {
-        const api = express()
-        api.use(cors())
-        api.use("/api", createAPI(this.app))
+	private async setupHttpAPI() {
+		const api = express()
+		api.use(cors())
+		api.use("/api", createAPI(this.app))
 
-        // TODO: add metrics API
-        //
-        if (this.static !== undefined) {
-            assert(/^(.\/)?\w[\w-_/]*$/.test(this.static), "Invalid directory for static files")
-            assert(fs.existsSync(this.static), "Invalid directory for static files (path not found)")
-            api.use(express.static(this.static))
-        }
+		// TODO: add metrics API
+		//
+		if (this.static !== undefined) {
+			assert(/^(.\/)?\w[\w-_/]*$/.test(this.static), "Invalid directory for static files")
+			assert(fs.existsSync(this.static), "Invalid directory for static files (path not found)")
+			api.use(express.static(this.static))
+		}
 
-        if (this.networkExplorer !== undefined) {
-            const currentDirectory = dirname(fileURLToPath(import.meta.url)) // packages/cli/src/commands
-            const packageDirectory = packageDirectorySync({ cwd: currentDirectory })
-            assert(packageDirectory !== undefined, "Invalid directory for network explorer static files (build not found)")
+		if (this.networkExplorer !== undefined) {
+			const currentDirectory = dirname(fileURLToPath(import.meta.url)) // packages/cli/src/commands
+			const packageDirectory = packageDirectorySync({ cwd: currentDirectory })
+			assert(packageDirectory !== undefined, "Invalid directory for network explorer static files (build not found)")
 
-            const root = packageDirectorySync({ cwd: path.resolve(packageDirectory || ".", "..") })
-            if (root !== undefined) {
-                // called from development workspace
-                const localBuild = path.resolve(root, "packages/network-explorer/dist")
-                if (fs.existsSync(localBuild)) {
-                    console.log(
-                        chalk.yellow("[canvas] Using development build for network explorer, run `npm run build` to rebuild."),
-                    )
-                    api.use(this.static !== undefined ? "/explorer" : "/", express.static(localBuild))
-                } else {
-                    console.log(
-                        chalk.yellow(
-                            "[canvas] [dev] Could not find development build, try `npm run build`. Falling back to installed package...",
-                        ),
-                    )
-                    const build = path.resolve(root, "node_modules/@canvas-js/network-explorer/dist")
-                    assert(fs.existsSync(build), "Invalid directory for network explorer static files (build not found)")
-                    api.use(this.static !== undefined ? "/explorer" : "/", express.static(build))
-                }
-            } else {
-                // called from installed package
-                const networkExplorer = path.resolve(packageDirectory, "node_modules/@canvas-js/network-explorer")
-                assert(fs.existsSync(networkExplorer), "Could not find network explorer package")
-                const build = path.resolve(networkExplorer, "dist")
-                assert(fs.existsSync(build), "Invalid directory for network explorer static files (build not found)")
-                api.use(this.static !== undefined ? "/explorer" : "/", express.static(build))
-            }
-        }
+			const root = packageDirectorySync({ cwd: path.resolve(packageDirectory || ".", "..") })
+			if (root !== undefined) {
+				// called from development workspace
+				const localBuild = path.resolve(root, "packages/network-explorer/dist")
+				if (fs.existsSync(localBuild)) {
+					console.log(
+						chalk.yellow("[canvas] Using development build for network explorer, run `npm run build` to rebuild."),
+					)
+					api.use(this.static !== undefined ? "/explorer" : "/", express.static(localBuild))
+				} else {
+					console.log(
+						chalk.yellow(
+							"[canvas] [dev] Could not find development build, try `npm run build`. Falling back to installed package...",
+						),
+					)
+					const build = path.resolve(root, "node_modules/@canvas-js/network-explorer/dist")
+					assert(fs.existsSync(build), "Invalid directory for network explorer static files (build not found)")
+					api.use(this.static !== undefined ? "/explorer" : "/", express.static(build))
+				}
+			} else {
+				// called from installed package
+				const networkExplorer = path.resolve(packageDirectory, "node_modules/@canvas-js/network-explorer")
+				assert(fs.existsSync(networkExplorer), "Could not find network explorer package")
+				const build = path.resolve(networkExplorer, "dist")
+				assert(fs.existsSync(build), "Invalid directory for network explorer static files (build not found)")
+				api.use(this.static !== undefined ? "/explorer" : "/", express.static(build))
+			}
+		}
 
-        // TODO: move to createAPI
-        if (this.admin) {
-            // TODO: merge into snapshot
-            api.post("/api/flatten", (req, res) => {
-                this.app
-                    .createSnapshot()
-                    .then((snapshot) => {
-                        res.json({ snapshot })
-                        // requestRestart(snapshot, () => this.app.stop())
-                    })
-                    .catch((error) => {
-                        res.status(500).end()
-                    })
-            })
+		// TODO: move to createAPI
+		if (this.admin) {
+			api.post("/api/snapshot", (req, res) => {
+				const { changesets } = req.body ?? {}
+				console.log("snapshot requested, changesets:", changesets)
 
-            api.post("/api/snapshot", (req, res) => {
-                const { changesets } = req.body ?? {}
-                console.log("snapshot requested, changesets:", changesets)
+				this.app
+					.createSnapshot()
+					.then((snapshot) => {
+						res.json({ snapshot })
+						// requestRestart(snapshot, () => this.app.stop())
+					})
+					.catch((error) => {
+						res.status(500).end()
+					})
+			})
+		}
 
-                this.app
-                    .createSnapshot()
-                    .then((snapshot) => {
-                        res.json({ snapshot })
-                        // requestRestart(snapshot, () => this.app.stop())
-                    })
-                    .catch((error) => {
-                        res.status(500).end()
-                    })
-            })
-        }
+		const server = stoppable(http.createServer(api))
+		const network = new NetworkServer(this.app.messageLog)
+		const wss = new WebSocketServer({ server, perMessageDeflate: false })
+		wss.on("connection", network.handleConnection)
 
-        const server = stoppable(http.createServer(api))
-        const network = new NetworkServer(this.app.messageLog)
-        const wss = new WebSocketServer({ server, perMessageDeflate: false })
-        wss.on("connection", network.handleConnection)
+		this.controller.signal.addEventListener("abort", () => {
+			console.log("[canvas] Stopping HTTP API server...")
+			network.close()
+			wss.close(() => server.stop(() => console.log("[canvas] HTTP API server stopped.")))
+		})
 
-        this.controller.signal.addEventListener("abort", () => {
-            console.log("[canvas] Stopping HTTP API server...")
-            network.close()
-            wss.close(() => server.stop(() => console.log("[canvas] HTTP API server stopped.")))
-        })
+		await new Promise<void>((resolve) => server.listen(this.port, resolve))
 
-        await new Promise<void>((resolve) => server.listen(this.port, resolve))
+		console.log("")
 
-        console.log("")
+		const origin = `http://localhost:${this.port}`
+		if (this.static) {
+			console.log(`Serving static bundle: ${chalk.bold(origin)}`)
+		}
+		if (this.static && this.networkExplorer) {
+			console.log(`Serving network explorer: ${chalk.bold(origin)}/explorer`)
+		} else if (this.networkExplorer) {
+			console.log(`Serving network explorer: ${chalk.bold(origin)}`)
+			api.get("/explorer", (req, res) => {
+				res.redirect("/")
+			})
+		}
+	}
 
-        const origin = `http://localhost:${this.port}`
-        if (this.static) {
-            console.log(`Serving static bundle: ${chalk.bold(origin)}`)
-        }
-        if (this.static && this.networkExplorer) {
-            console.log(`Serving network explorer: ${chalk.bold(origin)}/explorer`)
-        } else if (this.networkExplorer) {
-            console.log(`Serving network explorer: ${chalk.bold(origin)}`)
-            api.get("/explorer", (req, res) => {
-                res.redirect("/")
-            })
-        }
+	private async printApiInfo() {
+		const wsAPI = `ws://localhost:${this.port}`
+		console.log(`Connect browser clients to ${chalk.whiteBright(wsAPI)}`)
+		console.log("")
 
-        const wsAPI = `ws://localhost:${this.port}`
-        console.log(`Connect browser clients to ${chalk.whiteBright(wsAPI)}`)
-        console.log("")
+		console.log(`Serving HTTP API:`)
+		console.log(`└ GET  ${origin}/api/`)
+		console.log(`└ GET  ${origin}/api/clock`)
+		console.log(`└ GET  ${origin}/api/messages`)
+		console.log(`└ GET  ${origin}/api/messages/:id`)
+		console.log(`└ POST ${origin}/api/messages/count`)
+		console.log(`└ POST ${origin}/api/actions`)
+		console.log(`└ POST ${origin}/api/actions/count`)
+		console.log(`└ POST ${origin}/api/session`)
+		console.log(`└ POST ${origin}/api/sessions/count`)
 
-        console.log(`Serving HTTP API:`)
-        console.log(`└ GET  ${origin}/api/`)
-        console.log(`└ GET  ${origin}/api/clock`)
-        console.log(`└ GET  ${origin}/api/messages`)
-        console.log(`└ GET  ${origin}/api/messages/:id`)
-        console.log(`└ POST ${origin}/api/messages/count`)
-        console.log(`└ POST ${origin}/api/actions`)
-        console.log(`└ POST ${origin}/api/actions/count`)
-        console.log(`└ POST ${origin}/api/session`)
-        console.log(`└ POST ${origin}/api/sessions/count`)
+		const { models, actions } = await this.app.getApplicationData()
+		for (const name of Object.keys(models)) {
+			console.log(`└ GET  ${origin}/api/models/${name}`)
+			console.log(`└ GET  ${origin}/api/models/${name}/:key`)
+		}
 
-        const { models, actions } = await this.app.getApplicationData()
-        for (const name of Object.keys(models)) {
-            console.log(`└ GET  ${origin}/api/models/${name}`)
-            console.log(`└ GET  ${origin}/api/models/${name}/:key`)
-        }
+		if (this.admin !== undefined) {
+			console.log(`└ POST ${origin}/api/snapshot`)
+		}
 
-        if (this.admin !== undefined) {
-            console.log(`└ POST ${origin}/api/snapshot`)
-        }
+		console.log("")
+		console.log("Actions:")
+		for (const action of actions) {
+			console.log(`└ ${action}`)
+		}
+	}
 
-        console.log("")
-        console.log("Actions:")
-        for (const action of actions) {
-            console.log(`└ ${action}`)
-        }
-    }
-
-    private setupAbortController() {
-        const controller = new AbortController()
+	private setupAbortController() {
+		const controller = new AbortController()
 		controller.signal.addEventListener("abort", () => {
 			console.log("[canvas] Closing app...")
 			this.app.stop().then(() => console.log("[canvas] App closed"))
 		})
 
-        let stopping = false
+		let stopping = false
 		process.on("SIGINT", async () => {
 			if (stopping) {
 				process.exit(1)
@@ -402,6 +356,36 @@ export class AppLauncher {
 			}
 		})
 
-        return controller
-    }
+		return controller
+	}
+
+	private getAnnounceMultiaddrs(config: AppConfig) {
+		const announce: string[] = []
+		for (const address of config.announce) {
+			assert(typeof address === "string", "announce address must be a string")
+			const addr = multiaddr(address)
+			assert(
+				WebSockets.exactMatch(addr) || WebSocketsSecure.exactMatch(addr),
+				"announce address must be a /ws or /wss multiaddr",
+			)
+
+			announce.push(address)
+		}
+		return announce
+	}
+
+	private getListenMultiaddrs(config: AppConfig) {
+		const listen: string[] = []
+		for (const address of config.listen) {
+			assert(typeof address === "string", "listen address must be a string")
+			const addr = multiaddr(address)
+			assert(
+				WebSockets.exactMatch(addr) || WebSocketsSecure.exactMatch(addr),
+				"listen address must be a /ws or /wss multiaddr",
+			)
+
+			listen.push(address)
+		}
+		return listen
+	}
 }

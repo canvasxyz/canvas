@@ -49,16 +49,16 @@ export const builder = (yargs: Argv) =>
 			desc: "External /ws multiaddr, e.g. /dns4/myapp.com/tcp/4444/ws",
 			default: ANNOUNCE?.split(" ") ?? [],
 		})
-		.option("replay", {
-			type: "boolean",
-			desc: "Erase and rebuild the database by replaying the action log",
-			default: false,
-		})
-		.option("memory", {
-			type: "boolean",
-			desc: "Run in-memory",
-			default: false,
-		})
+		// .option("replay", {
+		// 	type: "boolean",
+		// 	desc: "Erase and rebuild the database by replaying the action log",
+		// 	default: false,
+		// })
+		// .option("memory", {
+		// 	type: "boolean",
+		// 	desc: "Run in-memory",
+		// 	default: false,
+		// })
 		// .option("metrics", {
 		// 	type: "boolean",
 		// 	desc: "Expose Prometheus endpoint at /metrics",
