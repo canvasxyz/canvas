@@ -8,6 +8,7 @@ export const MigrationView = () => {
 	const textareaRef = useRef<HTMLTextAreaElement>(null)
 	const [error, setError] = useState<string>()
 	const [changesets, setChangesets] = useState<Changeset[]>()
+	const [newContract, setNewContract] = useState<string>()
 
 	const updateChangesets = async () => {
 		const value = textareaRef.current?.value
@@ -17,6 +18,7 @@ export const MigrationView = () => {
 		}
 
 		setError(undefined)
+		setNewContract(undefined)
 		setChangesets(undefined)
 
 		try {
@@ -24,6 +26,7 @@ export const MigrationView = () => {
 
 			const app = await Canvas.initialize({ contract: contractData.contract, topic: "test.a" })
 			const newApp = await Canvas.initialize({ contract: newContract, topic: "test.b" })
+			setNewContract(newContract)
 			setChangesets(generateChangesets(app.getSchema(), newApp.getSchema()))
 		} catch (err: any) {
 			if ("message" in err && typeof err.message === "string") {
@@ -35,7 +38,7 @@ export const MigrationView = () => {
 	}
 
 	const runMigrations = async () => {
-		if (!changesets) {
+		if (!changesets || !newContract) {
 			setError("No migrations to run")
 			return
 		}
@@ -45,7 +48,7 @@ export const MigrationView = () => {
 			headers: {
 				"Content-Type": "application/json",
 			},
-			body: JSON.stringify({ migrations: changesets }),
+			body: JSON.stringify({ contract: newContract, changesets }),
 		})
 
 		return snapshot

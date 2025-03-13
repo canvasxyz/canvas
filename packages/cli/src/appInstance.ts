@@ -51,7 +51,7 @@ export type AppConfig = {
 	repl: boolean
 }
 
-export class AppLauncher {
+export class AppInstance {
 	app: Canvas
 	verbose?: boolean
 
@@ -78,9 +78,9 @@ export class AppLauncher {
 		contract: string,
 		location: string | null,
 		config: AppConfig,
-		requestRestart: Function, // TODO
+		onUpdateApp?: (contract: string, snapshot: Snapshot) => Promise<void>,
 	) {
-		AppLauncher.printInitialization(topic, location)
+		AppInstance.printInitialization(topic, location)
 
 		const signers = [
 			new SIWESigner(),
@@ -93,14 +93,14 @@ export class AppLauncher {
 		]
 
 		const app = await Canvas.initialize({ path: process.env.DATABASE_URL ?? location, topic, contract, signers })
-		const launcher = new AppLauncher(app, config)
+		const instance = new AppInstance(app, config)
 
-		launcher.setupLogging()
-		await launcher.setupNetworking()
+		instance.setupLogging()
+		await instance.setupNetworking()
 
 		if (!config["disable-http-api"]) {
-			await launcher.setupHttpAPI()
-			await launcher.printApiInfo()
+			await instance.setupHttpAPI(onUpdateApp)
+			await instance.printApiInfo()
 		}
 		if (config["repl"]) {
 			await startActionPrompt(app)
@@ -208,9 +208,10 @@ export class AppLauncher {
 		}
 	}
 
-	private async setupHttpAPI() {
+	private async setupHttpAPI(onUpdateApp?: (contract: string, snapshot: Snapshot) => Promise<void>) {
 		const api = express()
 		api.use(cors())
+		api.use(express.json())
 		api.use("/api", createAPI(this.app))
 
 		// TODO: add metrics API
@@ -257,15 +258,28 @@ export class AppLauncher {
 
 		// TODO: move to createAPI
 		if (this.admin) {
+			if (onUpdateApp === undefined) {
+				throw new Error("must provide callback for updating the application")
+			}
+
 			api.post("/api/snapshot", (req, res) => {
-				const { changesets } = req.body ?? {}
-				console.log("snapshot requested, changesets:", changesets)
+				const { contract, changesets } = req.body ?? {}
+				console.log("snapshot requested, changesets:", contract, changesets)
 
 				this.app
 					.createSnapshot()
-					.then((snapshot) => {
+					.then(async (snapshot) => {
 						res.json({ snapshot })
-						// requestRestart(snapshot, () => this.app.stop())
+
+						if (onUpdateApp === undefined) return
+
+						console.log("[canvas] Restarting...")
+						// TODO: factor out into AppInstance.stop()
+						network.close()
+						wss.close(() => server.stop(() => console.log("[canvas] HTTP API server stopped.")))
+						await this.app.stop()
+
+						onUpdateApp(contract, snapshot)
 					})
 					.catch((error) => {
 						res.status(500).end()
@@ -303,7 +317,9 @@ export class AppLauncher {
 	}
 
 	private async printApiInfo() {
+		const origin = `http://localhost:${this.port}`
 		const wsAPI = `ws://localhost:${this.port}`
+
 		console.log(`Connect browser clients to ${chalk.whiteBright(wsAPI)}`)
 		console.log("")
 

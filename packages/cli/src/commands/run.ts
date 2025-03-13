@@ -6,7 +6,7 @@ dotenv.config()
 
 import { MAX_CONNECTIONS } from "@canvas-js/core/constants"
 import { Snapshot } from "@canvas-js/core"
-import { AppLauncher } from "../app.js"
+import { AppInstance } from "../appInstance.js"
 import { getContractLocation } from "../utils.js"
 
 export const command = "run <path>"
@@ -108,9 +108,11 @@ type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 export async function handler(args: Args) {
 	const { topic, contract, location } = await getContractLocation(args)
 
-	const restart = async (snapshot: Snapshot, stop: () => Promise<void>) => {
-		await stop()
-		await AppLauncher.initialize(topic, contract, location, args, restart)
+	const onRestartRequest = async (contract: string, snapshot: Snapshot) => {
+		setTimeout(async () => {
+			await AppInstance.initialize(topic, contract, location, args, onRestartRequest)
+		}, 0)
 	}
-	await AppLauncher.initialize(topic, contract, location, args, restart)
+
+	await AppInstance.initialize(topic, contract, location, args, onRestartRequest)
 }
