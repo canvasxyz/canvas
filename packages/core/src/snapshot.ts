@@ -14,31 +14,37 @@ import { EffectRecord } from "./runtime/AbstractRuntime.js"
 export const isIndexInit = (value: unknown): value is string[] => Array.isArray(value)
 export const isPropertyTypish = (value: unknown): value is PropertyType => typeof value === "string"
 
-export type Changeset =
-	| {
-			change: "create_table"
-			table: string
-	  }
-	| {
-			change: "drop_table"
-			table: string
-	  }
-	| {
-			change: "add_column"
-			table: string
-			column: string
-			propertyType: PropertyType
-	  }
-	| {
-			change: "remove_column"
-			table: string
-			column: string
-	  }
-	| {
-			change: "make_optional_column"
-			table: string
-			column: string
-	  }
+export type CreateTableChange = {
+	change: "create_table"
+	table: string
+}
+export type DropTableChange = {
+	change: "drop_table"
+	table: string
+}
+export type AddColumnChange = {
+	change: "add_column"
+	table: string
+	column: string
+	propertyType: PropertyType
+}
+export type RemoveColumnChange = {
+	change: "remove_column"
+	table: string
+	column: string
+}
+export type MakeOptionalColumnChange = {
+	change: "make_optional_column"
+	table: string
+	column: string
+}
+
+export type Change =
+	| CreateTableChange
+	| DropTableChange
+	| AddColumnChange
+	| RemoveColumnChange
+	| MakeOptionalColumnChange
 
 export function hashContract<T extends Contract<any>>(contract: T | string): string {
 	if (typeof contract === "string") {
@@ -68,7 +74,7 @@ export function hashSnapshot(snapshot: Snapshot): string {
  */
 export async function createSnapshot<T extends Contract<any>>(
 	app: Canvas,
-	changesets: Changeset[] = [],
+	changesets: Change[] = [],
 ): Promise<Snapshot> {
 	const createdTables = changesets.filter((ch) => ch.change === "create_table").map((ch) => ch.table)
 	const droppedTables = changesets.filter((ch) => ch.change === "drop_table").map((ch) => ch.table)
@@ -152,7 +158,7 @@ export async function createSnapshot<T extends Contract<any>>(
 }
 
 export const generateChangesets = (before: ModelSchema, after: ModelSchema) => {
-	const changesets: Changeset[] = []
+	const changesets: Change[] = []
 
 	const addedTables = Object.keys(after).filter((table) => !(table in before))
 	addedTables.forEach((table) => {
