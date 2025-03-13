@@ -108,11 +108,36 @@ type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 export async function handler(args: Args) {
 	const { topic, contract, location } = await getContractLocation(args)
 
-	const onRestartRequest = async (contract: string, snapshot: Snapshot) => {
-		setTimeout(async () => {
-			await AppInstance.initialize(topic, contract, location, args, onRestartRequest)
-		}, 0)
+	// TODO: Add authentication
+	const bindRestartAPI = (app: AppInstance) => {
+		if (!app.api) throw new Error("cannot disable api")
+
+		app.api.post("/api/migrate", (req, res) => {
+			const { contract, changesets } = req.body ?? {}
+			console.log("migrating app with changesets:", contract, changesets)
+
+			app.app
+				.createSnapshot()
+				.then(async (snapshot: Snapshot) => {
+					res.json({ status: "Success" })
+					console.log("[canvas] Restarting...")
+					await app.stop()
+
+					/** Restart the application, running the "new" contract */
+					setTimeout(async () => {
+						const instance = await AppInstance.initialize(topic, contract, location, args)
+						bindRestartAPI(instance)
+					}, 0)
+				})
+				.catch((error) => {
+					res.status(500).end()
+				})
+		})
 	}
 
-	await AppInstance.initialize(topic, contract, location, args, onRestartRequest)
+	const instance = await AppInstance.initialize(topic, contract, location, args)
+
+	if (args.admin) {
+		bindRestartAPI(instance)
+	}
 }

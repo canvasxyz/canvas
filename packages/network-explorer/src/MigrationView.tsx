@@ -52,7 +52,7 @@ export const MigrationView = () => {
 			return
 		}
 
-		const snapshot = await fetch("/api/snapshot", {
+		const snapshot = await fetch("/api/migrate", {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",

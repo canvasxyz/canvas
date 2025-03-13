@@ -53,6 +53,7 @@ export type AppConfig = {
 
 export class AppInstance {
 	app: Canvas
+	api?: express.Express
 	verbose?: boolean
 
 	/* networking */
@@ -71,7 +72,10 @@ export class AppInstance {
 	disableHttpApi?: boolean
 	repl?: boolean
 
-	controller: AbortController
+	private controller: AbortController
+	private wss?: WebSocketServer
+	private network?: NetworkServer<any>
+	private server?: http.Server & stoppable.WithStop
 
 	static async initialize(
 		topic: string,
@@ -99,12 +103,14 @@ export class AppInstance {
 		await instance.setupNetworking()
 
 		if (!config["disable-http-api"]) {
-			await instance.setupHttpAPI(onUpdateApp)
+			await instance.setupHttpAPI()
 			await instance.printApiInfo()
 		}
 		if (config["repl"]) {
 			await startActionPrompt(app)
 		}
+
+		return instance
 	}
 
 	constructor(app: Canvas, config: AppConfig) {
@@ -208,11 +214,17 @@ export class AppInstance {
 		}
 	}
 
-	private async setupHttpAPI(onUpdateApp?: (contract: string, snapshot: Snapshot) => Promise<void>) {
+	private async setupHttpAPI(): Promise<Express.Application> {
+		if (this.api !== undefined) {
+			throw new Error("express api already initialized")
+		}
+
 		const api = express()
 		api.use(cors())
 		api.use(express.json())
 		api.use("/api", createAPI(this.app))
+
+		this.api = api
 
 		// TODO: add metrics API
 		//
@@ -256,49 +268,17 @@ export class AppInstance {
 			}
 		}
 
-		// TODO: move to createAPI
-		if (this.admin) {
-			if (onUpdateApp === undefined) {
-				throw new Error("must provide callback for updating the application")
-			}
-
-			api.post("/api/snapshot", (req, res) => {
-				const { contract, changesets } = req.body ?? {}
-				console.log("snapshot requested, changesets:", contract, changesets)
-
-				this.app
-					.createSnapshot()
-					.then(async (snapshot) => {
-						res.json({ snapshot })
-
-						if (onUpdateApp === undefined) return
-
-						console.log("[canvas] Restarting...")
-						// TODO: factor out into AppInstance.stop()
-						network.close()
-						wss.close(() => server.stop(() => console.log("[canvas] HTTP API server stopped.")))
-						await this.app.stop()
-
-						onUpdateApp(contract, snapshot)
-					})
-					.catch((error) => {
-						res.status(500).end()
-					})
-			})
-		}
-
-		const server = stoppable(http.createServer(api))
-		const network = new NetworkServer(this.app.messageLog)
-		const wss = new WebSocketServer({ server, perMessageDeflate: false })
-		wss.on("connection", network.handleConnection)
+		this.server = stoppable(http.createServer(api))
+		this.network = new NetworkServer(this.app.messageLog)
+		this.wss = new WebSocketServer({ server: this.server, perMessageDeflate: false })
+		this.wss.on("connection", this.network.handleConnection)
 
 		this.controller.signal.addEventListener("abort", () => {
 			console.log("[canvas] Stopping HTTP API server...")
-			network.close()
-			wss.close(() => server.stop(() => console.log("[canvas] HTTP API server stopped.")))
+			this.stop()
 		})
 
-		await new Promise<void>((resolve) => server.listen(this.port, resolve))
+		await new Promise<void>((resolve) => this.server?.listen(this.port, resolve))
 
 		console.log("")
 
@@ -314,6 +294,8 @@ export class AppInstance {
 				res.redirect("/")
 			})
 		}
+
+		return api
 	}
 
 	private async printApiInfo() {
@@ -341,7 +323,7 @@ export class AppInstance {
 		}
 
 		if (this.admin !== undefined) {
-			console.log(`└ POST ${origin}/api/snapshot`)
+			console.log(`└ POST ${origin}/api/migrate`)
 		}
 
 		console.log("")
@@ -373,6 +355,12 @@ export class AppInstance {
 		})
 
 		return controller
+	}
+
+	public stop() {
+		this.app?.stop()
+		this.network?.close()
+		this.wss?.close(() => this.server?.stop(() => console.log("[canvas] HTTP API server stopped.")))
 	}
 
 	private getAnnounceMultiaddrs(config: AppConfig) {
