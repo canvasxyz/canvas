@@ -51,6 +51,12 @@ export const MigrationView = () => {
 		return snapshot
 	}
 
+	const runFlatten = async () => {
+		await fetch("/api/flatten", {
+			method: "POST",
+		})
+	}
+
 	return (
 		<Box px="7" py="6" flexGrow="1">
 			<Heading size="3" mb="4">
@@ -107,6 +113,11 @@ export const MigrationView = () => {
 					<Box mt="4">
 						<Button size="2" variant="solid" onClick={runMigrations}>
 							Run
+						</Button>
+					</Box>
+					<Box mt="4">
+						<Button size="2" variant="solid" onClick={runFlatten}>
+							Flatten
 						</Button>
 					</Box>
 				</>

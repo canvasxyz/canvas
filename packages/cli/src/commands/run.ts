@@ -300,7 +300,18 @@ export async function handler(args: Args) {
 
 		// TODO: move to createAPI
 		if (args["admin"] !== undefined) {
-			console.log("binding snapshot")
+			// TODO: merge into snapshot
+			api.post("/api/flatten", (req, res) => {
+				app
+					.createSnapshot()
+					.then((snapshot) => {
+						res.json({ snapshot })
+					})
+					.catch((error) => {
+						res.status(500).end()
+					})
+			})
+
 			api.post("/api/snapshot", (req, res) => {
 				const { changesets } = req.body ?? {}
 				console.log("snapshot requested, changesets:", changesets)
