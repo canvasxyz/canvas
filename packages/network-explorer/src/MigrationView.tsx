@@ -1,9 +1,9 @@
-import { useState, useRef } from "react"
+import { useState } from "react"
 import { Button, Box, Heading, Text, TextArea } from "@radix-ui/themes"
-import { useContractData } from "./hooks/useContractData.js"
-import { useApplicationData } from "./hooks/useApplicationData.js"
 import { Canvas, generateChangesets, Changeset } from "@canvas-js/core"
 import { EditorState } from "@codemirror/state"
+import { useContractData } from "./hooks/useContractData.js"
+import { useApplicationData } from "./hooks/useApplicationData.js"
 import { Editor } from "./components/Editor.js"
 
 export const MigrationView = () => {
