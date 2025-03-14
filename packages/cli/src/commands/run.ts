@@ -6,7 +6,7 @@ dotenv.config()
 
 import { MAX_CONNECTIONS } from "@canvas-js/core/constants"
 import { Snapshot } from "@canvas-js/core"
-import { AppInstance } from "../appInstance.js"
+import { AppInstance } from "../AppInstance.js"
 import { getContractLocation } from "../utils.js"
 
 export const command = "run <path>"
