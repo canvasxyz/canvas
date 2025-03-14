@@ -1,4 +1,4 @@
-import { Box, Heading, Text } from "@radix-ui/themes"
+import { Box, Heading } from "@radix-ui/themes"
 import { useContractData } from "./hooks/useContractData.js"
 import { Editor } from "./components/Editor.js"
 
@@ -14,7 +14,7 @@ export const ContractView = () => {
 			{contractData === null ? (
 				<>Loading...</>
 			) : (
-				<Box style={{ border: "1px solid var(--gray-6)", borderRadius: "6px", width: "100%" }}>
+				<Box style={{ border: "1px solid var(--gray-6)", borderRadius: "2px", width: "100%" }}>
 					<Editor initialValue={contractData.contract} readOnly />
 				</Box>
 			)}
