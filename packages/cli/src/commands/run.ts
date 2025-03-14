@@ -111,36 +111,10 @@ type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 export async function handler(args: Args) {
 	const { topic, contract, location } = await getContractLocation(args)
 
-	// TODO: Add authentication
-	const bindRestartAPI = (instance: AppInstance) => {
-		if (!instance.api) return
-		instance.api.post("/api/migrate", (req, res) => {
-			const { contract, changesets } = req.body ?? {}
-			console.log("migrating app with changesets:", contract, changesets)
-
-			instance.app
-				.createSnapshot()
-				.then(async (snapshot: Snapshot) => {
-					res.json({ status: "Success" })
-					console.log("[canvas] Restarting...")
-					await instance.stop()
-
-					/** Restart the application, running the "new" contract */
-					setTimeout(async () => {
-						const instance = await AppInstance.initialize(topic, contract, location, args)
-						bindRestartAPI(instance)
-					}, 0)
-				})
-				.catch((error) => {
-					res.status(500).end()
-				})
-		})
-	}
-
-	const instance = await AppInstance.initialize(topic, contract, location, args)
-
-	if (instance.api) {
+	const bindInstanceAPIs = (instance: AppInstance) => {
 		// AppInstance should always have an api unless it was initialized with --disable-http-api
+		if (!instance.api) return
+
 		instance.api.get("/api/contract", async (req, res) => {
 			res.json({
 				contract: instance.app.getContract().toString(),
@@ -149,7 +123,31 @@ export async function handler(args: Args) {
 		})
 
 		if (args.admin) {
-			bindRestartAPI(instance)
+			instance.api.post("/api/migrate", (req, res) => {
+				const { contract, changesets } = req.body ?? {}
+				console.log("migrating app with changesets:", contract, changesets)
+
+				instance.app
+					.createSnapshot()
+					.then(async (snapshot: Snapshot) => {
+						res.json({ status: "Success" })
+						console.log("[canvas] Restarting...")
+						await instance.stop()
+
+						/** Restart the application, running the "new" contract */
+						setTimeout(async () => {
+							const instance = await AppInstance.initialize(topic, contract, location, args)
+							bindInstanceAPIs(instance)
+						}, 0)
+					})
+					.catch((error) => {
+						res.status(500).end()
+					})
+			})
 		}
 	}
+
+	const instance = await AppInstance.initialize(topic, contract, location, args)
+
+	bindInstanceAPIs(instance)
 }
