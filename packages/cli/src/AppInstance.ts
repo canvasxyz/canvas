@@ -44,7 +44,7 @@ export type AppConfig = {
 	"max-connections": number
 
 	/* services */
-	admin?: boolean
+	admin?: string
 	static?: string
 	"network-explorer"?: boolean
 	"disable-http-api"?: boolean

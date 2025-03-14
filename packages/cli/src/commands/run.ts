@@ -1,6 +1,9 @@
 import process from "node:process"
 import type { Argv } from "yargs"
 import dotenv from "dotenv"
+import crypto from "node:crypto"
+import { SiweMessage } from "siwe"
+import { verifyMessage } from "ethers"
 
 dotenv.config()
 
@@ -98,8 +101,8 @@ export const builder = (yargs: Argv) =>
 			desc: "Serve the network explorer web interface",
 		})
 		.option("admin", {
-			type: "boolean",
-			desc: "Allow an admin address to update the running application",
+			type: "string",
+			desc: "Allow an admin address (Ethereum address or 'any') to update the running application",
 		})
 		.option("connect", {
 			type: "string",
@@ -111,38 +114,91 @@ type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 export async function handler(args: Args) {
 	const { topic, contract, location } = await getContractLocation(args)
 
+	// Validate admin address if provided
+	if (args.admin && args.admin !== "any") {
+		// Ethereum address validation (0x followed by 40 hex characters)
+		const ethAddressRegex = /^0x[a-fA-F0-9]{40}$/
+		if (!ethAddressRegex.test(args.admin)) {
+			console.error("Error: --admin must be a valid Ethereum address or 'any'")
+			process.exit(1)
+		}
+	}
+
 	const bindInstanceAPIs = (instance: AppInstance) => {
 		// AppInstance should always have an api unless it was initialized with --disable-http-api
 		if (!instance.api) return
 
+		const nonce = crypto.randomBytes(32).toString("hex")
+
 		instance.api.get("/api/contract", async (req, res) => {
 			res.json({
 				contract: instance.app.getContract().toString(),
-				admin: args.admin !== undefined && args.admin !== false,
+				admin: args.admin || false,
+				nonce: nonce,
 			})
 		})
 
 		if (args.admin) {
-			instance.api.post("/api/migrate", (req, res) => {
-				const { contract, changesets } = req.body ?? {}
-				console.log("migrating app with changesets:", contract, changesets)
+			instance.api.post("/api/migrate", async (req, res) => {
+				const { contract, changesets, address, signature, siweMessage } = req.body ?? {}
 
-				instance.app
-					.createSnapshot()
-					.then(async (snapshot: Snapshot) => {
-						res.json({ status: "Success" })
-						console.log("[canvas] Restarting...")
-						await instance.stop()
+				// Verify the admin address if not set to "any"
+				if (args.admin !== "any" && address !== args.admin) {
+					return res.status(403).json({
+						error: "Unauthorized: Only the configured admin address can perform migrations",
+					})
+				}
 
-						/** Restart the application, running the "new" contract */
-						setTimeout(async () => {
-							const instance = await AppInstance.initialize(topic, contract, location, args)
-							bindInstanceAPIs(instance)
-						}, 0)
+				// Verify SIWE signature
+				try {
+					if (!signature || !siweMessage) {
+						return res.status(400).json({
+							error: "Missing signature or SIWE message",
+						})
+					}
+
+					// Parse and verify the SIWE message
+					const message = new SiweMessage(siweMessage)
+
+					// Verify that the message contains the nonce
+					if (!message.nonce || message.nonce !== nonce) {
+						return res.status(403).json({
+							error: "Invalid nonce in SIWE message",
+						})
+					}
+
+					// Verify the signature matches the claimed address
+					const recoveredAddress = verifyMessage(message.prepareMessage(), signature)
+					if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
+						return res.status(403).json({
+							error: "Signature verification failed",
+						})
+					}
+
+					console.log("migrating app with changesets:", contract, changesets)
+
+					instance.app
+						.createSnapshot()
+						.then(async (snapshot: Snapshot) => {
+							res.json({ status: "Success" })
+							console.log("[canvas] Restarting...")
+							await instance.stop()
+
+							/** Restart the application, running the "new" contract */
+							setTimeout(async () => {
+								const instance = await AppInstance.initialize(topic, contract, location, args)
+								bindInstanceAPIs(instance)
+							}, 0)
+						})
+						.catch((error) => {
+							res.status(500).end()
+						})
+				} catch (error) {
+					console.error("Signature verification error:", error)
+					return res.status(403).json({
+						error: "Signature verification failed",
 					})
-					.catch((error) => {
-						res.status(500).end()
-					})
+				}
 			})
 		}
 	}

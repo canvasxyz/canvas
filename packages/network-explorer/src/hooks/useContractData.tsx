@@ -6,6 +6,7 @@ import React, { createContext, useContext, useEffect, useState } from "react"
 type ContractData = {
 	contract: string
 	admin: boolean
+	nonce: string
 	refetch: () => Promise<any>
 }
 

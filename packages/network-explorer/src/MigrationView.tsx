@@ -5,6 +5,8 @@ import { EditorState } from "@codemirror/state"
 import { useContractData } from "./hooks/useContractData.js"
 import { useApplicationData } from "./hooks/useApplicationData.js"
 import { Editor } from "./components/Editor.js"
+import { SiweMessage } from "siwe"
+import { utils } from "ethers"
 
 export const MigrationView = () => {
 	const contractData = useContractData()
@@ -54,32 +56,84 @@ export const MigrationView = () => {
 			return
 		}
 
-		const snapshot = await fetch("/api/migrate", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({ contract: newContract, changesets }),
-		})
-			.then(async (response) => {
-				if (!response.ok) {
-					throw new Error()
-				}
+		try {
+			// Check if ethereum provider is available
+			// @ts-ignore
+			if (!window.ethereum) {
+				setError("Ethereum provider not found. Please install a wallet like MetaMask.")
+				return
+			}
+			if (!contractData) {
+				setError("Must wait for contractData to load")
+				return
+			}
 
-				setChangesets(undefined)
-				setNewContract(undefined)
-				setWaitingForCommit(true)
+			// Request account access
+			// @ts-ignore
+			const accounts = await window.ethereum.request({ method: "eth_requestAccounts" })
+			const address = utils.getAddress(accounts[0])
 
-				// Refresh both data contexts
-				await Promise.all([contractData?.refetch(), applicationData?.refetch()])
+			// Create SIWE message
+			const domain = window.location.host
+			const origin = window.location.origin
+			const statement = "Sign this message to confirm the contract migration."
 
-				setWaitingForCommit(false)
+			const siweMessage = new SiweMessage({
+				domain,
+				address,
+				statement,
+				uri: origin,
+				version: "1",
+				chainId: 1, // Adjust based on your network
+				nonce: contractData.nonce,
 			})
-			.catch(() => {
-				setError("Server rejected code update")
+
+			const message = siweMessage.prepareMessage()
+
+			// Request signature from wallet
+			// @ts-ignore
+			const signature = await window.ethereum.request({
+				method: "personal_sign",
+				params: [message, address],
 			})
 
-		return snapshot
+			// Send to API with SIWE data
+			const snapshot = await fetch("/api/migrate", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					contract: newContract,
+					changesets,
+					siweMessage: message,
+					address,
+					signature,
+				}),
+			})
+				.then(async (response) => {
+					if (!response.ok) {
+						throw new Error()
+					}
+
+					setChangesets(undefined)
+					setNewContract(undefined)
+					setWaitingForCommit(true)
+
+					// Refresh both data contexts
+					await Promise.all([contractData?.refetch(), applicationData?.refetch()])
+
+					setWaitingForCommit(false)
+				})
+				.catch((err) => {
+					setError(err.message || "Server rejected code update")
+				})
+
+			return snapshot
+		} catch (err: any) {
+			console.log(err)
+			setError(err.message || "Failed to sign message with wallet")
+		}
 	}
 
 	return (
