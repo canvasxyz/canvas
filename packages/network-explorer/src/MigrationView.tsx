@@ -1,20 +1,24 @@
-import { useState, useRef } from "react"
+import { useState } from "react"
 import { Button, Box, Heading, Text, TextArea } from "@radix-ui/themes"
+import { Canvas, generateChangesets, Changeset } from "@canvas-js/core"
+import { EditorState } from "@codemirror/state"
 import { useContractData } from "./hooks/useContractData.js"
 import { useApplicationData } from "./hooks/useApplicationData.js"
-import { Canvas, generateChangesets, Changeset } from "@canvas-js/core"
+import { Editor } from "./components/Editor.js"
 
 export const MigrationView = () => {
 	const contractData = useContractData()
 	const applicationData = useApplicationData()
-	const textareaRef = useRef<HTMLTextAreaElement>(null)
+
 	const [error, setError] = useState<string>()
 	const [changesets, setChangesets] = useState<Changeset[]>()
 	const [newContract, setNewContract] = useState<string>()
 	const [waitingForCommit, setWaitingForCommit] = useState<boolean>()
 
+	const [editorState, setEditorState] = useState<EditorState | null>(null)
+
 	const updateChangesets = async () => {
-		const value = textareaRef.current?.value
+		const value = editorState?.doc.toString()
 		if (!value || !contractData) {
 			setError("No contract content")
 			return
@@ -81,16 +85,8 @@ export const MigrationView = () => {
 				<>Loading...</>
 			) : (
 				<>
-					<Box style={{ width: "100%" }}>
-						<TextArea
-							ref={textareaRef}
-							size="2"
-							variant="classic"
-							resize="none"
-							style={{ padding: "4px 20px", fontFamily: "monospace", minHeight: "50vh" }}
-						>
-							{contractData.contract}
-						</TextArea>
+					<Box style={{ border: "1px solid var(--gray-6)", borderRadius: "2px", width: "100%" }}>
+						<Editor initialValue={contractData.contract} onChange={setEditorState} />
 					</Box>
 					<Box mt="4">
 						<Button size="2" variant="solid" onClick={updateChangesets}>
@@ -106,7 +102,7 @@ export const MigrationView = () => {
 						{changesets && (
 							<Box mt="2">
 								<Text size="2" color="green">
-									Success: Built contract ({textareaRef.current?.value?.length} chars)
+									Success: Built contract ({editorState?.doc.length} chars)
 									<br />
 									<Box style={{ width: "100%" }}>
 										<TextArea

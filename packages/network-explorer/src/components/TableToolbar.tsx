@@ -1,7 +1,7 @@
 import { Box, Button, DropdownMenu, Flex, Text, TextField } from "@radix-ui/themes"
 import { ColumnFiltersState, OnChangeFn, Table as TanStackTable } from "@tanstack/react-table"
-import { BiChevronLeft, BiChevronRight, BiFilter, BiSidebar } from "react-icons/bi"
-import { LuDownload, LuRefreshCw, LuSlidersHorizontal } from "react-icons/lu"
+import { BiChevronLeft, BiChevronRight, BiFilter } from "react-icons/bi"
+import { LuDownload, LuRefreshCw, LuSlidersHorizontal, LuExpand } from "react-icons/lu"
 import { ClickableChecklistItem } from "./ClickableChecklistItem.js"
 import { TextFilterMenu } from "./TextFilterMenu.js"
 
@@ -44,10 +44,6 @@ export const TableToolbar = ({
 
 	return (
 		<Flex style={{ borderBottom: "1px solid var(--gray-3)" }} align="center" gap="2" p="2" py="3">
-			<Button color="gray" variant={showSidebar ? "outline" : "solid"} onClick={() => setShowSidebar(!showSidebar)}>
-				<BiSidebar />
-			</Button>
-
 			{tableHasFilters && (
 				<DropdownMenu.Root>
 					<DropdownMenu.Trigger>
@@ -180,6 +176,9 @@ export const TableToolbar = ({
 					<LuDownload />
 				</Button>
 			)}
+			<Button color="gray" variant={showSidebar ? "outline" : "solid"} onClick={() => setShowSidebar(!showSidebar)}>
+				<LuExpand />
+			</Button>
 		</Flex>
 	)
 }
