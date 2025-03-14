@@ -40,7 +40,7 @@ const target: PlatformTarget = {
 			console.log(`esbuild warning: ${warning.text}${location}`)
 		}
 
-		return code
+		return { contract: code, originalContract: contract }
 	},
 }
 
