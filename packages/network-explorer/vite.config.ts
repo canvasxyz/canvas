@@ -2,15 +2,11 @@ import { defineConfig } from "vite"
 import react from "@vitejs/plugin-react"
 import { viteStaticCopy } from "vite-plugin-static-copy"
 
-// debug
 import { existsSync } from "fs"
 import { resolve } from "path"
 
-const workspaceRootWasmPath = resolve(__dirname, "../../node_modules/esbuild-wasm/esbuild.wasm")
-const subpackageWasmPath = resolve(__dirname, "./node_modules/esbuild-wasm/esbuild.wasm")
-
-console.log("workspace root:", existsSync(workspaceRootWasmPath))
-console.log("subpackage path:", existsSync(subpackageWasmPath))
+// npm puts esbuild.wasm in the workspace root node_modules, pnpm puts it in the subpackage node_modules
+const inWorkspaceRoot = existsSync(resolve(__dirname, "../../node_modules/esbuild-wasm/esbuild.wasm"))
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -22,7 +18,7 @@ export default defineConfig({
 		viteStaticCopy({
 			targets: [
 				{
-					src: "../../node_modules/esbuild-wasm/esbuild.wasm",
+					src: `${inWorkspaceRoot ? "../../" : "./"}node_modules/esbuild-wasm/esbuild.wasm`,
 					dest: "",
 				},
 			],
