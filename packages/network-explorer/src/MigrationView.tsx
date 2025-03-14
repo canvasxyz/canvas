@@ -9,7 +9,7 @@ import { Editor } from "./components/Editor.js"
 export const MigrationView = () => {
 	const contractData = useContractData()
 	const applicationData = useApplicationData()
-	const textareaRef = useRef<HTMLTextAreaElement>(null)
+
 	const [error, setError] = useState<string>()
 	const [changesets, setChangesets] = useState<Changeset[]>()
 	const [newContract, setNewContract] = useState<string>()
@@ -18,7 +18,7 @@ export const MigrationView = () => {
 	const [editorState, setEditorState] = useState<EditorState | null>(null)
 
 	const updateChangesets = async () => {
-		const value = textareaRef.current?.value
+		const value = editorState?.doc.toString()
 		if (!value || !contractData) {
 			setError("No contract content")
 			return
@@ -102,7 +102,7 @@ export const MigrationView = () => {
 						{changesets && (
 							<Box mt="2">
 								<Text size="2" color="green">
-									Success: Built contract ({textareaRef.current?.value?.length} chars)
+									Success: Built contract ({editorState?.doc.length} chars)
 									<br />
 									<Box style={{ width: "100%" }}>
 										<TextArea
