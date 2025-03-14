@@ -52,25 +52,9 @@ export type AppConfig = {
 }
 
 export class AppInstance {
+	config: AppConfig
 	app: Canvas
 	api?: express.Express
-	verbose?: boolean
-
-	/* networking */
-	port: number
-	offline?: boolean
-	connect?: string
-	listen: string[]
-	announce: string[]
-	bootstrap?: (string | number)[]
-	maxConnections: number
-
-	/* services */
-	admin?: boolean
-	static?: string
-	networkExplorer?: boolean
-	disableHttpApi?: boolean
-	repl?: boolean
 
 	private controller: AbortController
 	private wss?: WebSocketServer
@@ -114,22 +98,8 @@ export class AppInstance {
 	}
 
 	constructor(app: Canvas, config: AppConfig) {
+		this.config = config
 		this.app = app
-		this.verbose = config.verbose
-
-		this.port = config.port
-		this.offline = config.offline
-		this.connect = config.connect
-		this.bootstrap = config.bootstrap
-		this.maxConnections = config["max-connections"]
-		this.announce = this.getAnnounceMultiaddrs(config)
-		this.listen = this.getListenMultiaddrs(config)
-
-		this.admin = config.admin
-		this.static = config.static
-		this.networkExplorer = config["network-explorer"]
-		this.disableHttpApi = config["disable-http-api"]
-		this.repl = config.repl
 
 		this.controller = this.setupAbortController()
 	}
@@ -146,7 +116,7 @@ export class AppInstance {
 
 	private setupLogging() {
 		this.app.addEventListener("message", ({ detail: { id, message } }) => {
-			if (this.verbose) {
+			if (this.config.verbose) {
 				console.log(`[canvas] Applied message ${chalk.green(id)}`, message.payload)
 			} else {
 				console.log(`[canvas] Applied message ${chalk.green(id)}`)
@@ -163,16 +133,16 @@ export class AppInstance {
 	}
 
 	private async setupNetworking() {
-		if (this.connect) {
-			await this.app.connect(this.connect)
-		} else if (!this.offline) {
+		if (this.config.connect) {
+			await this.app.connect(this.config.connect)
+		} else if (!this.config.offline) {
 			let bootstrapList = defaultBootstrapList
-			if (this.offline) {
+			if (this.config.offline) {
 				bootstrapList = []
-			} else if (this.bootstrap !== undefined) {
+			} else if (this.config.bootstrap !== undefined) {
 				console.log(chalk.yellowBright("[canvas] Using custom bootstrap servers"))
 				bootstrapList = []
-				for (const address of this.bootstrap) {
+				for (const address of this.config.bootstrap) {
 					assert(typeof address === "string", "bootstrap address must be a string")
 					console.log(chalk.yellowBright(`[canvas] - ${address}`))
 					bootstrapList.push(address)
@@ -187,20 +157,20 @@ export class AppInstance {
 
 			// TODO: cache peer ID in .peer-id file
 			const libp2p = await this.app.startLibp2p({
-				listen: this.listen,
-				announce: this.announce,
-				maxConnections: this.maxConnections,
+				listen: this.config.listen,
+				announce: this.config.announce,
+				maxConnections: this.config["max-connections"],
 				bootstrapList: bootstrapList,
 			})
 
 			const id = libp2p.peerId.toString()
 			console.log(chalk.gray(`[canvas] Using PeerId ${id}`))
 
-			for (const addr of this.listen) {
+			for (const addr of this.config.listen) {
 				console.log(chalk.gray(`[canvas] Listening on ${addr}/p2p/${id}`))
 			}
 
-			for (const addr of this.announce) {
+			for (const addr of this.config.announce) {
 				console.log(chalk.gray(`[canvas] Announcing on ${addr}/p2p/${id}`))
 			}
 
@@ -228,13 +198,13 @@ export class AppInstance {
 
 		// TODO: add metrics API
 		//
-		if (this.static !== undefined) {
-			assert(/^(.\/)?\w[\w-_/]*$/.test(this.static), "Invalid directory for static files")
-			assert(fs.existsSync(this.static), "Invalid directory for static files (path not found)")
-			api.use(express.static(this.static))
+		if (this.config.static !== undefined) {
+			assert(/^(.\/)?\w[\w-_/]*$/.test(this.config.static), "Invalid directory for static files")
+			assert(fs.existsSync(this.config.static), "Invalid directory for static files (path not found)")
+			api.use(express.static(this.config.static))
 		}
 
-		if (this.networkExplorer !== undefined) {
+		if (this.config["network-explorer"] !== undefined) {
 			const currentDirectory = dirname(fileURLToPath(import.meta.url)) // packages/cli/src/commands
 			const packageDirectory = packageDirectorySync({ cwd: currentDirectory })
 			assert(packageDirectory !== undefined, "Invalid directory for network explorer static files (build not found)")
@@ -247,7 +217,7 @@ export class AppInstance {
 					console.log(
 						chalk.yellow("[canvas] Using development build for network explorer, run `npm run build` to rebuild."),
 					)
-					api.use(this.static !== undefined ? "/explorer" : "/", express.static(localBuild))
+					api.use(this.config.static !== undefined ? "/explorer" : "/", express.static(localBuild))
 				} else {
 					console.log(
 						chalk.yellow(
@@ -256,7 +226,7 @@ export class AppInstance {
 					)
 					const build = path.resolve(root, "node_modules/@canvas-js/network-explorer/dist")
 					assert(fs.existsSync(build), "Invalid directory for network explorer static files (build not found)")
-					api.use(this.static !== undefined ? "/explorer" : "/", express.static(build))
+					api.use(this.config.static !== undefined ? "/explorer" : "/", express.static(build))
 				}
 			} else {
 				// called from installed package
@@ -264,7 +234,7 @@ export class AppInstance {
 				assert(fs.existsSync(networkExplorer), "Could not find network explorer package")
 				const build = path.resolve(networkExplorer, "dist")
 				assert(fs.existsSync(build), "Invalid directory for network explorer static files (build not found)")
-				api.use(this.static !== undefined ? "/explorer" : "/", express.static(build))
+				api.use(this.config.static !== undefined ? "/explorer" : "/", express.static(build))
 			}
 		}
 
@@ -278,17 +248,17 @@ export class AppInstance {
 			this.stop()
 		})
 
-		await new Promise<void>((resolve) => this.server?.listen(this.port, resolve))
+		await new Promise<void>((resolve) => this.server?.listen(this.config.port, resolve))
 
 		console.log("")
 
-		const origin = `http://localhost:${this.port}`
-		if (this.static) {
+		const origin = `http://localhost:${this.config.port}`
+		if (this.config.static) {
 			console.log(`Serving static bundle: ${chalk.bold(origin)}`)
 		}
-		if (this.static && this.networkExplorer) {
+		if (this.config.static && this.config["network-explorer"]) {
 			console.log(`Serving network explorer: ${chalk.bold(origin)}/explorer`)
-		} else if (this.networkExplorer) {
+		} else if (this.config["network-explorer"]) {
 			console.log(`Serving network explorer: ${chalk.bold(origin)}`)
 			api.get("/explorer", (req, res) => {
 				res.redirect("/")
@@ -299,8 +269,8 @@ export class AppInstance {
 	}
 
 	private async printApiInfo() {
-		const origin = `http://localhost:${this.port}`
-		const wsAPI = `ws://localhost:${this.port}`
+		const origin = `http://localhost:${this.config.port}`
+		const wsAPI = `ws://localhost:${this.config.port}`
 
 		console.log(`Connect browser clients to ${chalk.whiteBright(wsAPI)}`)
 		console.log("")
@@ -322,7 +292,7 @@ export class AppInstance {
 			console.log(`└ GET  ${origin}/api/models/${name}/:key`)
 		}
 
-		if (this.admin !== undefined) {
+		if (this.config.admin !== undefined) {
 			console.log(`└ POST ${origin}/api/migrate`)
 		}
 
