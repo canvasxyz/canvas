@@ -38,9 +38,9 @@ export type AppConfig = {
 	port: number
 	offline: boolean
 	connect?: string
-	listen: string[] | (string | number)[]
-	announce: string[] | (string | number)[]
-	bootstrap?: (string | number)[]
+	listen: string[]
+	announce: string[]
+	bootstrap?: string[]
 	"max-connections": number
 
 	/* services */

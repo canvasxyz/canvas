@@ -43,11 +43,13 @@ export const builder = (yargs: Argv) =>
 			type: "array",
 			desc: "Internal /ws multiaddr",
 			default: LISTEN?.split(" ") ?? ["/ip4/0.0.0.0/tcp/4444/ws"],
+			string: true,
 		})
 		.option("announce", {
 			type: "array",
 			desc: "External /ws multiaddr, e.g. /dns4/myapp.com/tcp/4444/ws",
 			default: ANNOUNCE?.split(" ") ?? [],
+			string: true,
 		})
 		// .option("replay", {
 		// 	type: "boolean",
@@ -71,6 +73,7 @@ export const builder = (yargs: Argv) =>
 		.option("bootstrap", {
 			type: "array",
 			desc: "Initial application peers, e.g. /dns4/myapp.com/tcp/4444/ws/p2p/12D3KooWnzt...",
+			string: true,
 		})
 		.option("max-connections", {
 			type: "number",
