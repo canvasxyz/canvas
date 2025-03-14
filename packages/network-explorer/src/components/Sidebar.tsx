@@ -4,11 +4,13 @@ import { CodeSelector } from "./CodeSelector.js"
 import { LuTable } from "react-icons/lu"
 import { TableDef } from "../tables.js"
 import { useApplicationData } from "../hooks/useApplicationData.js"
+import { useContractData } from "../hooks/useContractData.js"
 import { useState } from "react"
 
 export const Sidebar = ({ tables }: { tables: TableDef[] }) => {
 	const [tableSearchTerm, setTableSearchTerm] = useState("")
 	const applicationData = useApplicationData()
+	const contractData = useContractData()
 
 	const modelNames = applicationData ? Object.keys(applicationData.models) : []
 	modelNames.sort()
@@ -61,8 +63,12 @@ export const Sidebar = ({ tables }: { tables: TableDef[] }) => {
 				</Box>
 				<Box>
 					<CodeSelector option="view" />
-					<CodeSelector option="edit" />
-					<CodeSelector option="admin" />
+					{contractData?.admin && (
+						<>
+							<CodeSelector option="edit" />
+							<CodeSelector option="admin" />
+						</>
+					)}
 				</Box>
 			</Flex>
 		</Flex>

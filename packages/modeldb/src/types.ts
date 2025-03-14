@@ -19,6 +19,9 @@ export type PropertyType =
 
 /** property name, or property names joined by slashes */
 export type IndexInit = string
+/** This should be an intersection type or conditional mapped type, but TS 5.6 doesn't let us mix them.
+ * If you need a proper conditional type here, consider overriding ModelInit with your own type.
+ */
 export type ModelInit = { $indexes?: IndexInit[]; $primary?: string } | Record<string, PropertyType>
 export type ModelSchema = Record<string, ModelInit>
 

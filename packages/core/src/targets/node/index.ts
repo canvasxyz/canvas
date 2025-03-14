@@ -102,6 +102,7 @@ const target: PlatformTarget = {
 	},
 
 	async buildContract(location: string) {
+		const originalContract = fs.readFileSync(location, "utf-8")
 		const bundle = await esbuild.build({
 			bundle: true,
 			platform: "node",
@@ -113,9 +114,9 @@ const target: PlatformTarget = {
 			throw new Error("building .ts contract produced no files")
 		} else if (bundle.outputFiles && bundle.outputFiles.length > 1) {
 			// unexpected
-			return bundle.outputFiles[0].text
+			return { contract: bundle.outputFiles[0].text, originalContract }
 		} else {
-			return bundle.outputFiles[0].text
+			return { contract: bundle.outputFiles[0].text, originalContract }
 		}
 	},
 }
