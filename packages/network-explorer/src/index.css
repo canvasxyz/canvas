@@ -30,4 +30,5 @@ body {
 
 .editor .cm-scroller {
 	height: 600px;
+	font-size: 84%;
 }

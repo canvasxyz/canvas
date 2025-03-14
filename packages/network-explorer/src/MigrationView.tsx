@@ -30,7 +30,10 @@ export const MigrationView = () => {
 		setWaitingForCommit(undefined)
 
 		try {
-			const newContract = await Canvas.buildContract(value, { wasmURL: "./esbuild.wasm" })
+			const { contract: newContract, originalContract } = await Canvas.buildContract(value, {
+				wasmURL: "./esbuild.wasm",
+			})
+			console.log(newContract, originalContract)
 
 			const app = await Canvas.initialize({ contract: contractData.contract, topic: "test.a" })
 			const newApp = await Canvas.initialize({ contract: newContract, topic: "test.b" })
