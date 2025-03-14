@@ -8,7 +8,7 @@ export const ContractView = () => {
 	return (
 		<Box px="7" py="6" flexGrow="1">
 			<Heading size="3" mb="4">
-				Contract Code
+				View Code
 			</Heading>
 
 			{contractData === null ? (

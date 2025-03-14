@@ -5,13 +5,14 @@ import React, { createContext, useContext, useEffect, useState } from "react"
 
 type ContractData = {
 	contract: string
+	admin: boolean
 	refetch: () => Promise<any>
 }
 
 const ContractDataContext = createContext<ContractData | null>(null)
 
 export const ContractDataProvider = ({ children }: { children: React.ReactNode }) => {
-	const [content, setContent] = useState<Omit<ContractData, 'refetch'> | null>(null)
+	const [content, setContent] = useState<Omit<ContractData, "refetch"> | null>(null)
 	const { data, mutate } = useSWR(`/api/contract`, fetchAndIpldParseJson<ContractData>)
 
 	useEffect(() => {

@@ -30,14 +30,9 @@ export const MigrationView = () => {
 		setWaitingForCommit(undefined)
 
 		try {
-			const { contract: newContract, originalContract } = await Canvas.buildContract(value, {
-				wasmURL: "./esbuild.wasm",
-			})
-			console.log(newContract, originalContract)
-
 			const app = await Canvas.initialize({ contract: contractData.contract, topic: "test.a" })
-			const newApp = await Canvas.initialize({ contract: newContract, topic: "test.b" })
-			setNewContract(newContract)
+			const newApp = await Canvas.initialize({ contract: value, topic: "test.b" })
+			setNewContract(value)
 			setChangesets(generateChangesets(app.getSchema(), newApp.getSchema()))
 		} catch (err: any) {
 			if ("message" in err && typeof err.message === "string") {
@@ -65,16 +60,24 @@ export const MigrationView = () => {
 				"Content-Type": "application/json",
 			},
 			body: JSON.stringify({ contract: newContract, changesets }),
-		}).then(async () => {
-			setChangesets(undefined)
-			setNewContract(undefined)
-			setWaitingForCommit(true)
-
-			// Refresh both data contexts
-			await Promise.all([contractData?.refetch(), applicationData?.refetch()])
-
-			setWaitingForCommit(false)
 		})
+			.then(async (response) => {
+				if (!response.ok) {
+					throw new Error()
+				}
+
+				setChangesets(undefined)
+				setNewContract(undefined)
+				setWaitingForCommit(true)
+
+				// Refresh both data contexts
+				await Promise.all([contractData?.refetch(), applicationData?.refetch()])
+
+				setWaitingForCommit(false)
+			})
+			.catch(() => {
+				setError("Server rejected code update")
+			})
 
 		return snapshot
 	}
@@ -82,7 +85,7 @@ export const MigrationView = () => {
 	return (
 		<Box px="7" py="6" flexGrow="1">
 			<Heading size="3" mb="4">
-				Edit Contract
+				Update Code
 			</Heading>
 			{contractData === null ? (
 				<>Loading...</>
