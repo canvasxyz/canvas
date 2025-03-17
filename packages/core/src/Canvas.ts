@@ -5,16 +5,7 @@ import type pg from "pg"
 import type { SqlStorage } from "@cloudflare/workers-types"
 import { bytesToHex } from "@noble/hashes/utils"
 
-import {
-	Signature,
-	Action,
-	Session,
-	Message,
-	Snapshot,
-	SessionSigner,
-	SignerCache,
-	MessageType,
-} from "@canvas-js/interfaces"
+import { Signature, Action, Message, Snapshot, SessionSigner, SignerCache, MessageType } from "@canvas-js/interfaces"
 import { AbstractModelDB, Model, ModelSchema, Effect } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { AbstractGossipLog, GossipLogEvents, NetworkClient, SignedMessage } from "@canvas-js/gossiplog"
