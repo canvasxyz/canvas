@@ -11,7 +11,6 @@ import { useCanvas } from "@canvas-js/hooks"
 
 import { AuthKitProvider } from "@farcaster/auth-kit"
 import { JsonRpcProvider } from "ethers"
-import Quill from "quill/core"
 
 import { AppContext } from "./AppContext.js"
 import { ControlPanel } from "./ControlPanel.js"
@@ -21,7 +20,7 @@ import { ConnectionStatus } from "./ConnectionStatus.js"
 import { LogStatus } from "./LogStatus.js"
 import * as contract from "./contract.js"
 import { Editor } from "./Editor.js"
-import { useDelta } from "./useDelta.js"
+import { useQuill } from "./useQuill.js"
 
 export const topic = "document-example.canvas.xyz"
 
@@ -42,8 +41,6 @@ export const App: React.FC<{}> = ({}) => {
 	const [sessionSigner, setSessionSigner] = useState<SessionSigner | null>(null)
 	const [address, setAddress] = useState<string | null>(null)
 
-	const quillRef = useRef<Quill>()
-
 	const topicRef = useRef(topic)
 
 	const { app, ws } = useCanvas(wsURL, {
@@ -60,9 +57,7 @@ export const App: React.FC<{}> = ({}) => {
 		],
 	})
 
-	useDelta<(typeof contract)["models"]>(app, "documents", "0", (deltas) => {
-		quillRef.current?.updateContents(deltas)
-	})
+	const quillRef = useQuill({ modelName: "documents", modelKey: "0", app })
 
 	return (
 		<AppContext.Provider value={{ address, setAddress, sessionSigner, setSessionSigner, app: app ?? null }}>
@@ -77,7 +72,7 @@ export const App: React.FC<{}> = ({}) => {
 								<Editor
 									ref={quillRef}
 									readOnly={false}
-									defaultValue={null}
+									defaultValue={app.getYDoc("documents", "0").getText().toDelta()}
 									onSelectionChange={() => {}}
 									onTextChange={async (delta, oldContents, source) => {
 										if (source === "user") {
