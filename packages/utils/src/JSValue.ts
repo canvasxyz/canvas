@@ -5,7 +5,9 @@ export interface JSObject {
 }
 
 export function typeOf(value: JSValue) {
-	if (value === null) {
+	if (value === undefined) {
+		return "undefined"
+	} else if (value === null) {
 		return "null"
 	} else if (typeof value === "boolean") {
 		return "boolean"

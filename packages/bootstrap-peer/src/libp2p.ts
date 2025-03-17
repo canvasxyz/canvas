@@ -1,6 +1,5 @@
 import { createLibp2p } from "libp2p"
 import { webSockets } from "@libp2p/websockets"
-import { all } from "@libp2p/websockets/filters"
 import { yamux } from "@chainsafe/libp2p-yamux"
 import { noise } from "@chainsafe/libp2p-noise"
 import { Identify, identify } from "@libp2p/identify"
@@ -37,9 +36,12 @@ export async function getLibp2p(config: Partial<Config> = {}) {
 		privateKey: privateKey,
 		start: false,
 		addresses: { listen, announce },
-		transports: [webSockets({ filter: all })],
+		transports: [webSockets({})],
+		connectionGater: { denyDialMultiaddr: (addr) => false },
 		connectionManager: { maxConnections },
 		connectionMonitor: { enabled: false, protocolPrefix: "canvas" },
+
+		peerStore: { maxAddressAge: Infinity, maxPeerAge: Infinity },
 
 		streamMuxers: [yamux()],
 		connectionEncrypters: [noise({})],

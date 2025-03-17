@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
-import equal from "fast-deep-equal/es6/index.js"
 
+import { deepEqual } from "@canvas-js/utils"
 import type { AbstractModelDB, QueryParams, ModelSchema, DeriveModelTypes } from "@canvas-js/modeldb"
 
 export function useLiveQuery<Schema extends ModelSchema, K extends keyof ModelSchema>(
@@ -42,7 +42,7 @@ export function useLiveQuery<Schema extends ModelSchema, K extends keyof ModelSc
 		if (
 			dbRef.current === db &&
 			modelRef.current === modelName &&
-			equal(queryRef.current, query) &&
+			deepEqual(queryRef.current, query) &&
 			subscriptionRef.current !== null
 		) {
 			return

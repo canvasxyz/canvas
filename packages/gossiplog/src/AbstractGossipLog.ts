@@ -474,12 +474,15 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		options: { peer?: string } = {},
 	): Promise<{ complete: boolean; messageCount: number }> {
 		const start = performance.now()
+
 		let messageCount = 0
 		let complete = true
 		let source: MessageSource | undefined = undefined
 		if (options.peer !== undefined) {
 			source = { type: "sync", peer: options.peer }
 		}
+
+		let executionDuration = 0
 
 		await this.tree.read(async (txn) => {
 			const driver = new sync.Driver(this.topic, snapshot, txn)
@@ -490,7 +493,9 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 					for (const [key, value] of zip(keys, values)) {
 						const signedMessage = this.decode(value, { source })
 						assert(equals(key, signedMessage.key), "invalid message key")
+						const executionStart = performance.now()
 						await this.insert(signedMessage)
+						executionDuration += performance.now() - executionStart
 						messageCount++
 					}
 				}
@@ -504,11 +509,14 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		})
 
 		const duration = Math.ceil(performance.now() - start)
+		const peer = options.peer ?? "unknown"
 		if (complete) {
-			this.log("completed sync with %s (%d messages in %dms)", options.peer ?? "unknown", messageCount, duration)
+			this.log("completed sync with %s (%dms total)", peer, duration)
 		} else {
-			this.log("aborted sync with %s (%d messages in %dms)", options.peer ?? "unknown", messageCount, duration)
+			this.log("aborted sync with %s (%dms total)", peer, duration)
 		}
+
+		this.log("applied %d messages in %dms", messageCount, Math.ceil(executionDuration))
 
 		this.dispatchEvent(new CustomEvent("sync", { detail: { peer: options.peer, messageCount, duration } }))
 
