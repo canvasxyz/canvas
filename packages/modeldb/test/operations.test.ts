@@ -30,9 +30,7 @@ testPlatforms("get fields of all types", async (t, openDB) => {
 		exampleBytes: new Uint8Array([0, 255]),
 	})
 
-	const result = await db.get("foo", id)
-
-	t.deepEqual(result, {
+	t.deepEqual(await db.get("foo", id), {
 		id,
 		exampleStr: "hello world",
 		exampleBool: true,
@@ -42,6 +40,19 @@ testPlatforms("get fields of all types", async (t, openDB) => {
 		exampleJson: jsonValue,
 		exampleBytes: new Uint8Array([0, 255]),
 	})
+
+	t.deepEqual(await db.query("foo"), [
+		{
+			id,
+			exampleStr: "hello world",
+			exampleBool: true,
+			exampleInt: -1,
+			exampleFloat: Math.PI,
+			exampleNumber: 0.1,
+			exampleJson: jsonValue,
+			exampleBytes: new Uint8Array([0, 255]),
+		},
+	])
 })
 
 testPlatforms("update a value", async (t, openDB) => {

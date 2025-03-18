@@ -5,8 +5,8 @@ import { equals, toString } from "uint8arrays"
 import { Node, Tree, ReadWriteTransaction, hashEntry } from "@canvas-js/okra"
 import type { Signature, Signer, Message, Awaitable } from "@canvas-js/interfaces"
 import type { AbstractModelDB, ModelSchema, Effect, DatabaseUpgradeAPI, Config } from "@canvas-js/modeldb"
-import { ed25519 } from "@canvas-js/signatures"
-import { assert, zip, prepare, prepareMessage } from "@canvas-js/utils"
+import { ed25519, prepareMessage } from "@canvas-js/signatures"
+import { assert, zip } from "@canvas-js/utils"
 
 import type { NetworkClient } from "@canvas-js/gossiplog"
 import type { NetworkConfig, ServiceMap } from "@canvas-js/gossiplog/libp2p"
@@ -189,8 +189,9 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		}
 
 		const preparedMessage = prepareMessage(message)
+
 		if (!this.validatePayload(preparedMessage.payload)) {
-			this.log.error("invalid message: %O", message)
+			this.log.error("invalid message: %O", preparedMessage)
 			throw new Error(`error encoding message: invalid payload`)
 		}
 
@@ -286,15 +287,8 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		const signedMessage = await this.tree.write(async (txn) => {
 			const [clock, parents] = await this.getClock()
 
-			const message: Message<T> = {
-				topic: this.topic,
-				clock,
-				parents,
-				payload: prepare(payload, { replaceUndefined: true }),
-			}
-
+			const message = prepareMessage<T>({ topic: this.topic, clock, parents, payload })
 			const signature = await signer.sign(message)
-
 			const signedMessage = this.encode(signature, message)
 			this.log("appending message %s at clock %d with parents %o", signedMessage.id, clock, parents)
 
@@ -387,17 +381,24 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 
 		const messageRecord: MessageRecord<Payload> = { id, signature, message, hash, branch, clock: message.clock }
 
-		const heads: string[] = await this.db
-			.getAll<{ id: string }>("$heads")
-			.then((heads) => heads.filter((head) => message.parents.includes(head.id)))
-			.then((heads) => heads.map((head) => head.id))
-
-		await this.db.apply([
-			...heads.map<Effect>((head) => ({ model: "$heads", operation: "delete", key: head })),
+		const effects: Effect[] = [
 			{ model: "$heads", operation: "set", value: { id } },
 			{ model: "$messages", operation: "set", value: messageRecord },
-		])
+		]
 
+		const newHeads = [id]
+		const oldHeads = await this.db.getAll<{ id: string }>("$heads")
+		for (const head of oldHeads) {
+			if (message.parents.includes(head.id)) {
+				effects.push({ model: "$heads", operation: "delete", key: head.id })
+			} else {
+				newHeads.push(head.id)
+			}
+		}
+
+		newHeads.sort()
+
+		await this.db.apply(effects)
 		txn.set(key, value)
 
 		await new AncestorIndex(this.db).indexAncestors(id, message.parents)
@@ -405,7 +406,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		this.dispatchEvent(new CustomEvent("message", { detail: signedMessage }))
 
 		const root = txn.getRoot()
-		return { root, heads, result }
+		return { root, heads: newHeads, result }
 	}
 
 	private async newBranch() {
@@ -477,23 +478,28 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		options: { peer?: string } = {},
 	): Promise<{ complete: boolean; messageCount: number }> {
 		const start = performance.now()
+
 		let messageCount = 0
-
 		let complete = true
+		let source: MessageSource | undefined = undefined
+		if (options.peer !== undefined) {
+			source = { type: "sync", peer: options.peer }
+		}
 
-		const root = await this.tree.read(async (txn) => {
+		let executionDuration = 0
+
+		await this.tree.read(async (txn) => {
 			const driver = new sync.Driver(this.topic, snapshot, txn)
 			try {
 				for await (const keys of driver.sync()) {
 					const values = await snapshot.getValues(keys)
 
 					for (const [key, value] of zip(keys, values)) {
-						const signedMessage = this.decode(value, {
-							source: options.peer === undefined ? undefined : { type: "sync", peer: options.peer },
-						})
-
+						const signedMessage = this.decode(value, { source })
 						assert(equals(key, signedMessage.key), "invalid message key")
+						const executionStart = performance.now()
 						await this.insert(signedMessage)
+						executionDuration += performance.now() - executionStart
 						messageCount++
 					}
 				}
@@ -504,16 +510,17 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 					throw err
 				}
 			}
-
-			return txn.getRoot()
 		})
 
 		const duration = Math.ceil(performance.now() - start)
+		const peer = options.peer ?? "unknown"
 		if (complete) {
-			this.log("completed sync with %s (%d messages in %dms)", options.peer ?? "unknown", messageCount, duration)
+			this.log("completed sync with %s (%dms total)", peer, duration)
 		} else {
-			this.log("aborted sync with %s (%d messages in %dms)", options.peer ?? "unknown", messageCount, duration)
+			this.log("aborted sync with %s (%dms total)", peer, duration)
 		}
+
+		this.log("applied %d messages in %dms", messageCount, Math.ceil(executionDuration))
 
 		this.dispatchEvent(new CustomEvent("sync", { detail: { peer: options.peer, messageCount, duration } }))
 
