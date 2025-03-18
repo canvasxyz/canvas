@@ -33,23 +33,26 @@ export class ModelDB extends AbstractModelDB {
 		const client = new pg.Client(uri)
 		await client.connect()
 
-		if (init.clear) {
-			try {
+		try {
+			const timestamp = new Date().toISOString()
+
+			if (init.clear) {
 				const modelDB = new ModelDB(client, newConfig, newVersion)
 				for (const model of newConfig.models) {
 					modelDB.#models[model.name] = await ModelAPI.create(client, newConfig, model, true)
 				}
 
+				for (const model of newConfig.models) {
+					await modelDB.#models.$models.set({ name: model.name, model })
+				}
+
+				for (const [namespace, version] of Object.entries(newVersion)) {
+					await modelDB.#models.$versions.set({ namespace, version, timestamp })
+				}
+
 				return modelDB
-			} catch (err) {
-				await client.end()
-				throw err
 			}
-		}
 
-		const timestamp = new Date().toISOString()
-
-		try {
 			const baseModelDB = new ModelDB(client, Config.baseConfig, AbstractModelDB.baseVersion)
 			for (const model of Config.baseConfig.models) {
 				baseModelDB.#models[model.name] = await ModelAPI.create(client, newConfig, model)
