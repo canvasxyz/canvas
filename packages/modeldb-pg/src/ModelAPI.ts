@@ -18,9 +18,6 @@ import {
 	isLiteralExpression,
 	isRangeExpression,
 	validateModelValue,
-	isPrimaryKey,
-	equalPrimaryKeys,
-	equalReferences,
 } from "@canvas-js/modeldb"
 
 import { RelationAPI } from "./RelationAPI.js"
@@ -515,19 +512,12 @@ export class ModelAPI {
 
 	public async query(query: QueryParams): Promise<ModelValue[]> {
 		const [sql, properties, relations, params] = this.parseQuery(query)
-		const results: ModelValue[] = []
-
-		for await (const row of new Query(this.client, sql).iterate(params)) {
-			const record = await this.parseRecord(row, properties, relations)
-			results.push(record)
-		}
-
-		return results
+		const rows = await new Query(this.client, sql).all(params)
+		return await Promise.all(rows.map((row) => this.parseRecord(row, properties, relations)))
 	}
 
 	public async *iterate(query: QueryParams): AsyncIterable<ModelValue> {
 		const [sql, properties, relations, params] = this.parseQuery(query)
-
 		for await (const row of new Query(this.client, sql).iterate(params)) {
 			yield await this.parseRecord(row, properties, relations)
 		}
@@ -638,7 +628,14 @@ export class ModelAPI {
 
 			const property = this.properties[name]
 			assert(property !== undefined, "property not found")
-			if (property.kind === "primitive" || property.kind === "reference") {
+			if (property.kind === "primitive") {
+				properties.push(name)
+				if (property.type === "json") {
+					columns.push(`"${property.name}"::jsonb`)
+				} else {
+					columns.push(quote(name))
+				}
+			} else if (property.kind === "reference") {
 				properties.push(name)
 				columns.push(...this.codecs[name].columns.map(quote))
 			} else if (property.kind === "relation") {
