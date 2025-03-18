@@ -19,6 +19,16 @@ function getDeltaForYText(ytext: Y.Text, fn: () => void): Delta {
 	return delta || []
 }
 
+export type DocumentUpdateRecord = {
+	primary: string
+	model: string
+	key: string
+	id: number
+	data: Delta
+	diff: Uint8Array
+	isAppend: boolean
+}
+
 export class DocumentStore {
 	private documents: Record<string, Record<string, Y.Doc>> = {}
 	private documentIds: Record<string, Record<string, number>> = {}

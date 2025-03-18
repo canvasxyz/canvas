@@ -1,6 +1,7 @@
 import { sha256 } from "@noble/hashes/sha256"
 import { bytesToHex } from "@noble/hashes/utils"
 import * as cbor from "@ipld/dag-cbor"
+import * as Y from "yjs"
 
 import { MIN_MESSAGE_ID } from "@canvas-js/gossiplog"
 import { Snapshot, SnapshotEffect } from "@canvas-js/interfaces"
@@ -9,6 +10,7 @@ import type { PropertyType } from "@canvas-js/modeldb"
 import { Canvas } from "./Canvas.js"
 import { Contract } from "./types.js"
 import { EffectRecord } from "./runtime/AbstractRuntime.js"
+import { DocumentUpdateRecord } from "./DocumentStore.js"
 
 // typeguards
 export const isIndexInit = (value: unknown): value is string[] => Array.isArray(value)
@@ -60,6 +62,25 @@ export async function createSnapshot<T extends Contract<any>>(app: Canvas): Prom
 			effectsMap.set(recordId, { key: effectKey, value, branch, clock })
 		}
 	}
+
+	// iterate over the document updates table
+	const documentsMap = new Map<string, Y.Doc>()
+	for await (const row of app.db.iterate<DocumentUpdateRecord>("$document_updates")) {
+		const { primary, diff } = row
+
+		const doc = documentsMap.get(primary) || new Y.Doc()
+		Y.applyUpdate(doc, diff)
+		documentsMap.set(primary, doc)
+	}
+
+	modelData[`$document_updates`] = []
+	for (const [primary, doc] of documentsMap.entries()) {
+		const diff = Y.encodeStateAsUpdate(doc)
+		const [model, key, id_] = primary.split("/")
+		const row = { primary, model, key, id: 0, data: doc.getText().toDelta(), diff, isAppend: false }
+		modelData[`$document_updates`].push(cbor.encode(row))
+	}
+
 	const effects = Array.from(effectsMap.values()).map(({ key, value }: SnapshotEffect) => ({ key, value }))
 
 	return {
