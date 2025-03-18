@@ -1,4 +1,4 @@
-import type { AbstractModelDB, ModelSchema } from "@canvas-js/modeldb"
+import type { AbstractModelDB, Effect, ModelSchema } from "@canvas-js/modeldb"
 import { assert } from "@canvas-js/utils"
 
 import { decodeClock } from "./clock.js"
@@ -22,11 +22,6 @@ export class AncestorIndex {
 		}
 
 		return record.links
-	}
-
-	private async setLinks(id: string | MessageId, links: string[][]): Promise<void> {
-		const key = typeof id === "string" ? id : id.id
-		await this.db.set<AncestorRecord>("$ancestors", { id: key, links })
 	}
 
 	public async isAncestor(
@@ -62,7 +57,7 @@ export class AncestorIndex {
 		return false
 	}
 
-	public async indexAncestors(id: string, parentIds: string[]) {
+	public async indexAncestors(id: string, parentIds: string[], effects: Effect[]) {
 		const key = encodeId(id)
 		const [clock] = decodeClock(key)
 		const ancestorClocks = Array.from(getAncestorClocks(clock))
@@ -88,7 +83,8 @@ export class AncestorIndex {
 			}
 		}
 
-		await this.setLinks(id, ancestorLinks)
+		const value: AncestorRecord = { id, links: ancestorLinks }
+		effects.push({ model: "$ancestors", operation: "set", value })
 	}
 
 	public async getAncestors(

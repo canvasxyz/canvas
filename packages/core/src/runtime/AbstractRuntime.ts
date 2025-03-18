@@ -200,9 +200,6 @@ export abstract class AbstractRuntime {
 		}
 
 		const clock = message.clock
-		const branch = signedMessage.branch
-		assert(branch !== undefined, "expected branch !== undefined")
-
 		const result = await this.execute(executionContext)
 
 		const actionRecord: ActionRecord = { message_id: id, did, name, timestamp: context.timestamp }
@@ -222,7 +219,7 @@ export abstract class AbstractRuntime {
 				effects.push({
 					model: "$effects",
 					operation: "set",
-					value: { key: effectKey, value: value && cbor.encode(value), branch, clock },
+					value: { key: effectKey, value: value && cbor.encode(value), branch: 0, clock },
 				})
 
 				if (results.length > 0) {
