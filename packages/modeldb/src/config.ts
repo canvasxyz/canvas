@@ -147,7 +147,7 @@ export class Config {
 		throw new Error(`error defining ${modelName}: invalid property "${propertyType}"`)
 	}
 
-	private static parseIndex = (index: string) => index.split("/")
+	public static parseIndex = (index: string) => index.split("/")
 
 	public readonly primaryKeys: Record<string, PrimitiveProperty[]>
 	public relations: Relation[] = []
@@ -315,7 +315,7 @@ export class Config {
 		}
 	}
 
-	public addIndex(modelName: string, index: string): string[] {
+	public addIndex(modelName: string, index: string) {
 		const model = this.models.find((model) => model.name === modelName)
 		if (model === undefined) {
 			throw new Error(`failed to add index "${index}" - model "${modelName}" does not exist`)

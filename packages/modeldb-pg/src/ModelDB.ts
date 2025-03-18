@@ -1,6 +1,6 @@
 import pg from "pg"
 
-import { signalInvalidType } from "@canvas-js/utils"
+import { assert, signalInvalidType } from "@canvas-js/utils"
 
 import {
 	AbstractModelDB,
@@ -276,22 +276,48 @@ export class ModelDB extends AbstractModelDB {
 
 	private async addProperty(modelName: string, propertyName: string, propertyType: PropertyType) {
 		const property = this.config.addProperty(modelName, propertyName, propertyType)
-		throw new Error("not implemented")
+
+		const model = this.config.models.find((model) => model.name === modelName)
+		assert(model !== undefined, "internal error")
+		this.models[modelName] = model
+
+		await this.#models[modelName].addProperty(property)
+		await this.#models.$models.set({ name: modelName, model })
 	}
 
 	private async removeProperty(modelName: string, propertyName: string) {
 		this.config.removeProperty(modelName, propertyName)
-		throw new Error("not implemented")
+
+		const model = this.config.models.find((model) => model.name === modelName)
+		assert(model !== undefined, "internal error")
+		this.models[modelName] = model
+
+		await this.#models[modelName].removeProperty(propertyName)
+		await this.#models.$models.set({ name: modelName, model })
 	}
 
 	private async addIndex(modelName: string, index: string) {
-		const propertyNames = this.config.addIndex(modelName, index)
-		throw new Error("not implemented")
+		const propertyNames = Config.parseIndex(index)
+		this.config.addIndex(modelName, index)
+
+		const model = this.config.models.find((model) => model.name === modelName)
+		assert(model !== undefined, "internal error")
+		this.models[modelName] = model
+
+		await this.#models[modelName].addIndex(propertyNames)
+		await this.#models.$models.set({ name: modelName, model })
 	}
 
 	private async removeIndex(modelName: string, index: string) {
+		const propertyNames = Config.parseIndex(index)
 		this.config.removeIndex(modelName, index)
-		throw new Error("not implemented")
+
+		const model = this.config.models.find((model) => model.name === modelName)
+		assert(model !== undefined, "internal error")
+		this.models[modelName] = model
+
+		await this.#models[modelName].removeIndex(propertyNames)
+		await this.#models.$models.set({ name: modelName, model })
 	}
 
 	private getUpgradeAPI() {

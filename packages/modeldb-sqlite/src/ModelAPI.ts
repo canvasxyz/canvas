@@ -60,10 +60,7 @@ export class ModelAPI {
 	readonly codecs: Record<string, PropertyAPI<SqlitePrimitiveValue>> = {}
 	readonly codecNames: string[] = []
 
-	/** unquoted column names for non-relation properties */
-	readonly columnNames: string[]
-
-	public constructor(readonly db: Database, readonly config: Config, readonly model: Model) {
+	public constructor(readonly db: Database, readonly config: Config, readonly model: Model, clear?: boolean) {
 		this.table = model.name
 		for (const property of model.properties) {
 			this.properties[property.name] = property
@@ -71,21 +68,22 @@ export class ModelAPI {
 
 		this.primaryProperties = config.primaryKeys[model.name]
 		this.mutableProperties = []
-		this.columnNames = []
 
 		/** SQL column declarations */
 		const columnDefinitions: string[] = []
 
 		for (const property of model.properties) {
-			this.prepareProperty(property, columnDefinitions, this.columnNames)
+			this.prepareProperty(property, columnDefinitions, false)
+		}
+
+		if (clear) {
+			db.exec(`DROP TABLE IF EXISTS "${this.table}"`)
 		}
 
 		// Create record table
 		const primaryKeyConstraint = `PRIMARY KEY (${model.primaryKey.map(quote).join(", ")})`
 		const tableSchema = [...columnDefinitions, primaryKeyConstraint].join(", ")
 		db.exec(`CREATE TABLE IF NOT EXISTS "${this.table}" (${tableSchema})`)
-
-		this.#statements = this.prepareStatements()
 
 		// Create indexes
 		for (const index of model.indexes) {
@@ -98,25 +96,29 @@ export class ModelAPI {
 			const indexColumns = indexColumnNames.map(quote).join(", ")
 			db.exec(`CREATE INDEX IF NOT EXISTS "${indexName}" ON "${this.table}" (${indexColumns})`)
 		}
+
+		this.#statements = this.prepareStatements()
 	}
 
 	private prepareStatements(): Statements {
-		const quotedColumnNames = this.columnNames.map(quote).join(", ")
+		const columnNames = Object.values(this.codecs).flatMap((codec) => codec.columns)
+		const mutableColumnNames = columnNames.filter((name) => !this.model.primaryKey.includes(name))
+
+		const quotedColumnNames = columnNames.map(quote).join(", ")
 		const primaryKeyEquals = this.model.primaryKey.map((name) => `"${name}" = ?`)
 		const wherePrimaryKeyEquals = `WHERE ${primaryKeyEquals.join(" AND ")}`
 
 		// Prepare methods
-		const insertParams = Array.from({ length: this.columnNames.length }).fill("?").join(", ")
+		const insertParams = Array.from({ length: columnNames.length }).fill("?").join(", ")
 		const insert = new Method(
 			this.db,
 			`INSERT OR IGNORE INTO "${this.table}" (${quotedColumnNames}) VALUES (${insertParams})`,
 		)
 
 		let update: Method | null = null
-		const updateNames = this.columnNames.filter((name) => !this.model.primaryKey.includes(name))
-		if (updateNames.length > 0) {
-			const updateEntries = updateNames.map((name) => `"${name}" = ?`)
-			update = new Method(this.db, `UPDATE "${this.table}" SET ${updateEntries.join(", ")} ${wherePrimaryKeyEquals}`)
+		if (mutableColumnNames.length > 0) {
+			const updateEntries = mutableColumnNames.map((name) => `"${name}" = ?`).join(", ")
+			update = new Method(this.db, `UPDATE "${this.table}" SET ${updateEntries} ${wherePrimaryKeyEquals}`)
 		}
 
 		const _delete = new Method(this.db, `DELETE FROM "${this.table}" ${wherePrimaryKeyEquals}`)
@@ -135,31 +137,79 @@ export class ModelAPI {
 		return { insert, update, delete: _delete, clear, count, select, selectAll }
 	}
 
-	// public addProperty(property: Property) {
-	// 	const columnDefinitions: string[] = []
-	// 	this.prepareProperty(property, columnDefinitions, this.columnNames)
+	public async addProperty(property: Property) {
+		/** SQL column declarations */
+		const columnDefinitions: string[] = []
 
-	// 	for (const definition of columnDefinitions) {
-	// 		this.db.exec(`ALTER TABLE "${this.table}" ADD COLUMN ${definition}`)
-	// 	}
+		this.prepareProperty(property, columnDefinitions, false)
 
-	// 	this.#statements = this.prepareStatements()
-	// }
+		const alter = columnDefinitions.map((column) => `ADD COLUMN ${column}`)
+		this.db.exec(`ALTER TABLE "${this.table}" ${alter.join(", ")}`)
 
-	// public removeProperty(propertyName: string) {
-	// 	const property = this.properties[propertyName]
-	// 	if (property.kind === "relation") {
-	// 		this.relations[propertyName].drop()
-	// 		delete this.relations[propertyName]
-	// 		delete this.properties[propertyName]
-	// 	}
-	// }
+		this.#statements = this.prepareStatements()
+	}
 
-	private prepareProperty(property: Property, columnDefinitions: string[], columnNames: string[]) {
+	public removeProperty(propertyName: string) {
+		const property = this.properties[propertyName]
+		assert(property !== undefined, "internal error - expected property !== undefined")
+		delete this.properties[propertyName]
+
+		const index = this.mutableProperties.indexOf(property)
+		assert(index !== -1, "internal error - expected index !== -1")
+		this.mutableProperties.splice(index, 1)
+
+		if (property.kind === "primitive" || property.kind === "reference") {
+			const codec = this.codecs[propertyName]
+			assert(codec !== undefined, "internal error - codec !== undefined")
+			const alter = codec.columns.map((column) => `DROP COLUMN "${column}"`)
+			this.db.exec(`ALTER TABLE "${this.table}" ${alter.join(", ")}`)
+			this.removeCodec(propertyName)
+		} else if (property.kind === "relation") {
+			this.removeRelation(propertyName)
+		} else {
+			signalInvalidType(property)
+		}
+
+		this.#statements = this.prepareStatements()
+	}
+
+	public addIndex(propertyNames: string[]) {
+		if (propertyNames.length === 1 && propertyNames[0] in this.relations) {
+			const [propertyName] = propertyNames
+			const relation = this.relations[propertyName]
+			const targetIndex = `${this.table}/${propertyName}/target`
+			const targetColumns = relation.targetColumnNames.map(quote).join(", ")
+			this.db.exec(`CREATE INDEX IF NOT EXISTS "${targetIndex}" ON "${this.table}" (${targetColumns})`)
+			return
+		}
+
+		assert(
+			propertyNames.every((name) => this.relations[name] === undefined),
+			"cannot index relation properties",
+		)
+
+		const indexName = [this.model.name, ...propertyNames].join("/")
+		const indexColumnNames = propertyNames.flatMap((name) => this.codecs[name].columns)
+		const indexColumns = indexColumnNames.map(quote).join(", ")
+		this.db.exec(`CREATE INDEX IF NOT EXISTS "${indexName}" ON "${this.table}" (${indexColumns})`)
+	}
+
+	public removeIndex(propertyNames: string[]) {
+		if (propertyNames.length === 1 && propertyNames[0] in this.relations) {
+			const [propertyName] = propertyNames
+			const targetIndex = `${this.table}/${propertyName}/target`
+			this.db.exec(`DROP INDEX IF EXISTS "${targetIndex}"`)
+			return
+		}
+
+		const indexName = [this.model.name, ...propertyNames].join("/")
+		this.db.exec(`DROP INDEX IF EXISTS "${indexName}"`)
+	}
+
+	private prepareProperty(property: Property, columnDefinitions: string[], clear?: boolean) {
 		if (property.kind === "primitive") {
 			const { name, type, nullable } = property
 			columnDefinitions.push(getColumn(name, type, nullable))
-			columnNames.push(name)
 
 			const propertyName = `${this.model.name}/${name}`
 			this.addCodec(property.name, {
@@ -182,7 +232,6 @@ export class ModelAPI {
 			if (target.primaryKey.length === 1) {
 				const [targetProperty] = this.config.primaryKeys[target.name]
 				columnDefinitions.push(getColumn(property.name, targetProperty.type, property.nullable))
-				columnNames.push(property.name)
 
 				this.addCodec(property.name, {
 					columns: [property.name],
@@ -196,7 +245,6 @@ export class ModelAPI {
 				for (const targetProperty of this.config.primaryKeys[target.name]) {
 					const refName = `${property.name}/${targetProperty.name}`
 					columnDefinitions.push(getColumn(refName, targetProperty.type, property.nullable))
-					columnNames.push(refName)
 					refNames.push(refName)
 				}
 
@@ -222,7 +270,7 @@ export class ModelAPI {
 				(relation) => relation.source === this.model.name && relation.sourceProperty === property.name,
 			)
 			assert(relation !== undefined, "internal error - relation not found")
-			this.addRelation(relation)
+			this.addRelation(relation, clear)
 			this.mutableProperties.push(property)
 		} else {
 			signalInvalidType(property)
@@ -234,9 +282,29 @@ export class ModelAPI {
 		this.codecNames.push(name)
 	}
 
-	private addRelation(relation: Relation) {
-		this.relations[relation.sourceProperty] = new RelationAPI(this.db, this.config, relation)
+	private removeCodec(name: string) {
+		delete this.codecs[name]
+		const index = this.codecNames.indexOf(name)
+		assert(index !== -1, "internal error - expected index !== -1")
+		this.codecNames.splice(index, 1)
+	}
+
+	private addRelation(relation: Relation, clear?: boolean) {
+		const relationAPI = new RelationAPI(this.db, this.config, relation, clear)
+		this.relations[relation.sourceProperty] = relationAPI
 		this.relationNames.push(relation.sourceProperty)
+	}
+
+	private removeRelation(propertyName: string) {
+		const relationAPI = this.relations[propertyName]
+		assert(relationAPI !== undefined, "internal error - expected relationAPI !== undefined")
+		delete this.relations[propertyName]
+
+		const index = this.relationNames.indexOf(propertyName)
+		assert(index !== -1, "internal error - expected index !== -1")
+		this.relationNames.splice(index, 1)
+
+		relationAPI.drop()
 	}
 
 	public drop() {

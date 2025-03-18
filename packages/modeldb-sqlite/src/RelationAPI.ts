@@ -17,7 +17,7 @@ export class RelationAPI {
 	readonly #delete: Method
 	readonly #clear: Method<[]>
 
-	public constructor(readonly db: Database, readonly config: Config, readonly relation: Relation) {
+	public constructor(readonly db: Database, readonly config: Config, readonly relation: Relation, clear?: boolean) {
 		this.table = `${relation.source}/${relation.sourceProperty}`
 		this.sourceIndex = `${relation.source}/${relation.sourceProperty}/source`
 		this.targetIndex = `${relation.source}/${relation.sourceProperty}/target`
@@ -53,6 +53,10 @@ export class RelationAPI {
 					columns.push(`"${columnName}" ${columnTypes[type]} NOT NULL`)
 					this.targetColumnNames.push(columnName)
 				}
+			}
+
+			if (clear) {
+				db.exec(`DROP TABLE IF EXISTS "${this.table}"`)
 			}
 
 			db.exec(`CREATE TABLE IF NOT EXISTS "${this.table}" (${columns.join(", ")})`)
