@@ -78,7 +78,6 @@ export const useQuill = ({
 
 		subscriptionRef.current = id
 
-		console.log("subscribed to", modelName, modelKey, id)
 		return () => {
 			if (dbRef.current !== null && subscriptionRef.current !== null) dbRef.current.unsubscribe(subscriptionRef.current)
 			dbRef.current = null
