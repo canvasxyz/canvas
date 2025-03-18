@@ -126,6 +126,7 @@ export abstract class AbstractRuntime {
 
 	public set db(db: AbstractModelDB) {
 		this.#db = db
+		this.#documentStore.db = db
 	}
 
 	public getConsumer(): GossipLogConsumer<MessageType> {
@@ -291,7 +292,7 @@ export abstract class AbstractRuntime {
 			const updates = []
 			for (const [model, modelCalls] of Object.entries(executionContext.yjsCalls)) {
 				for (const [key, calls] of Object.entries(modelCalls)) {
-					const update = await this.#documentStore.applyYjsCalls(this.db, model, key, calls)
+					const update = await this.#documentStore.applyYjsCalls(model, key, calls)
 					updates.push(update)
 				}
 			}
@@ -314,12 +315,12 @@ export abstract class AbstractRuntime {
 	}
 
 	public async loadSavedDocuments() {
-		await this.#documentStore.loadSavedDocuments(this.db)
+		await this.#documentStore.loadSavedDocuments()
 	}
 
 	public async handleUpdates(message: Message<Updates>, isAppend: boolean) {
 		if (!isAppend) {
-			return await this.#documentStore.consumeUpdatesMessage(this.db, message)
+			return await this.#documentStore.consumeUpdatesMessage(message)
 		}
 	}
 }

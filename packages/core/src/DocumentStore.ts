@@ -2,6 +2,7 @@ import { Message, Updates } from "@canvas-js/interfaces"
 import { AbstractModelDB, ModelSchema } from "@canvas-js/modeldb"
 import * as Y from "yjs"
 import { YjsCall } from "./ExecutionContext.js"
+import { assert } from "@canvas-js/utils"
 
 type Delta = Y.YTextEvent["changes"]["delta"]
 
@@ -37,16 +38,28 @@ export class DocumentStore {
 		},
 	} satisfies ModelSchema
 
+	#db: AbstractModelDB | null = null
+
+	public get db() {
+		assert(this.#db !== null, "internal error - expected this.#db !== null")
+		return this.#db
+	}
+
+	public set db(db: AbstractModelDB) {
+		this.#db = db
+	}
+
 	public getYDoc(model: string, key: string) {
 		this.documents[model] ||= {}
 		this.documents[model][key] ||= new Y.Doc()
 		return this.documents[model][key]
 	}
 
-	public async loadSavedDocuments(db: AbstractModelDB) {
+	public async loadSavedDocuments() {
+		assert(this.#db !== null, "internal error - expected this.#db !== null")
 		// iterate over the past document operations
 		// and create the yjs documents
-		for await (const operation of db.iterate("$document_updates")) {
+		for await (const operation of this.#db.iterate("$document_updates")) {
 			const doc = this.getYDoc(operation.model, operation.key)
 			Y.applyUpdate(doc, operation.diff)
 			const existingId = this.getId(operation.model, operation.key)
@@ -70,7 +83,9 @@ export class DocumentStore {
 		return this.getId(model, key) + 1
 	}
 
-	public async applyYjsCalls(db: AbstractModelDB, model: string, key: string, calls: YjsCall[]) {
+	public async applyYjsCalls(model: string, key: string, calls: YjsCall[]) {
+		assert(this.#db !== null, "internal error - expected this.#db !== null")
+
 		const doc = this.getYDoc(model, key)
 
 		// get the initial state of the document
@@ -95,12 +110,14 @@ export class DocumentStore {
 		const afterState = Y.encodeStateAsUpdate(doc)
 		const diff = Y.diffUpdate(afterState, Y.encodeStateVectorFromUpdate(beforeState))
 
-		await this.writeDocumentUpdate(db, model, key, delta || [], diff, true)
+		await this.writeDocumentUpdate(model, key, delta || [], diff, true)
 
 		return { model, key, diff }
 	}
 
-	public async consumeUpdatesMessage(db: AbstractModelDB, message: Message<Updates>) {
+	public async consumeUpdatesMessage(message: Message<Updates>) {
+		assert(this.#db !== null, "internal error - expected this.#db !== null")
+
 		for (const { model, key, diff } of message.payload.updates) {
 			// apply the diff to the doc
 			const doc = this.getYDoc(model, key)
@@ -109,22 +126,16 @@ export class DocumentStore {
 			})
 
 			// save the observed update to the db
-			await this.writeDocumentUpdate(db, model, key, delta, diff, false)
+			await this.writeDocumentUpdate(model, key, delta, diff, false)
 		}
 	}
 
-	private async writeDocumentUpdate(
-		db: AbstractModelDB,
-		model: string,
-		key: string,
-		data: Delta,
-		diff: Uint8Array,
-		isAppend: boolean,
-	) {
+	private async writeDocumentUpdate(model: string, key: string, data: Delta, diff: Uint8Array, isAppend: boolean) {
+		assert(this.#db !== null, "internal error - expected this.#db !== null")
 		const id = this.getNextId(model, key)
 		this.setId(model, key, id)
 
-		await db.set(`$document_updates`, {
+		await this.#db.set(`$document_updates`, {
 			primary: `${model}/${key}/${id}`,
 			model,
 			key,
