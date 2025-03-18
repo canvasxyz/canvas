@@ -6,6 +6,11 @@ import { AppContext } from "./AppContext.js"
 
 export interface ControlPanelProps {}
 
+// this is used for debugging in development
+// when the database schema changes between page loads
+// @ts-ignore
+window.deleteDB = deleteDB
+
 export const ControlPanel: React.FC<ControlPanelProps> = ({}) => {
 	const { app, sessionSigner } = useContext(AppContext)
 
