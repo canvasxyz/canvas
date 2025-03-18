@@ -30,6 +30,7 @@ export class ModelDB extends AbstractModelDB {
 		})
 
 		const sum = Object.values(newVersion).reduce((sum, value) => sum + value, 0)
+
 		const db = await openDB(name, sum, {
 			async upgrade(
 				db: IDBPDatabase<unknown>,
@@ -96,9 +97,33 @@ export class ModelDB extends AbstractModelDB {
 					}
 				}
 			},
+			blocked(currentVersion, blockedVersion, event) {},
+			blocking(currentVersion, blockedVersion, event) {
+				// TODO: what is the right action here?
+				const db = event.target as IDBDatabase
+				db.close()
+			},
+			terminated() {
+				console.error("database connection terminated")
+			},
 		})
 
-		return new ModelDB(db, newConfig, newVersion)
+		const modelDB = new ModelDB(db, newConfig, newVersion)
+
+		const models = await modelDB
+			.getAll<{ name: string; model: Model }>("$models")
+			.then((models) => Object.fromEntries(models.map(({ name, model }) => [name, model])))
+
+		for (const model of newConfig.models) {
+			const oldModel = models[model.name]
+			if (oldModel === undefined) {
+				throw new Error(`missing model "${model.name}"`)
+			}
+
+			Config.assertEqualModel(oldModel, model)
+		}
+
+		return modelDB
 	}
 
 	private static getKeyPath = (index: string[]) => (index.length === 1 ? index[0] : index)
@@ -128,20 +153,21 @@ export class ModelDB extends AbstractModelDB {
 
 		db.addEventListener("error", (event) => this.log("db: error", event))
 		db.addEventListener("close", (event) => this.log("db: close", event))
-		db.addEventListener("versionchange", (event) => {
-			this.log("db: versionchange", event)
-			if (event.oldVersion === null && event.newVersion !== null) {
-				// create
-				return
-			} else if (event.oldVersion !== null && event.newVersion !== null) {
-				// update
-				return
-			} else if (event.oldVersion !== null && event.newVersion === null) {
-				// delete
-				db.close()
-				return
-			}
-		})
+
+		// db.addEventListener("versionchange", (event) => {
+		// 	this.log("db: versionchange", event.oldVersion, event.newVersion)
+		// 	if (event.oldVersion === null && event.newVersion !== null) {
+		// 		// create
+		// 		return
+		// 	} else if (event.oldVersion !== null && event.newVersion !== null) {
+		// 		// update
+		// 		return
+		// 	} else if (event.oldVersion !== null && event.newVersion === null) {
+		// 		// delete
+		// 		db.close()
+		// 		return
+		// 	}
+		// })
 	}
 
 	protected hasModel(model: Model): boolean {
@@ -353,8 +379,22 @@ export class ModelDB extends AbstractModelDB {
 		propertyName: string,
 		propertyType: PropertyType,
 	) {
-		// const property = this.config.addProperty(modelName, propertyName, propertyType)
-		throw new Error("not implemented")
+		const property = this.config.addProperty(modelName, propertyName, propertyType)
+
+		const model = this.config.models.find((model) => model.name === modelName)
+		assert(model !== undefined, "internal error")
+		this.models[modelName] = model
+
+		const store = txn.objectStore(modelName)
+		const source = { [propertyName]: [] }
+		this.log("adding property to existing records...")
+		for await (const cursor of store.iterate()) {
+			await store.put(Object.assign(cursor.value, source))
+		}
+		this.log("finished adding property to existing records")
+
+		this.#models[modelName].addProperty(property)
+		await this.#models.$models.set(txn, { name: modelName, model })
 	}
 
 	private async removeProperty(
@@ -362,13 +402,37 @@ export class ModelDB extends AbstractModelDB {
 		modelName: string,
 		propertyName: string,
 	) {
-		// this.config.removeProperty(modelName, propertyName)
-		throw new Error("not implemented")
+		this.config.removeProperty(modelName, propertyName)
+
+		const model = this.config.models.find((model) => model.name === modelName)
+		assert(model !== undefined, "internal error")
+		this.models[modelName] = model
+
+		const store = txn.objectStore(modelName)
+		this.log("removing property from existing records...")
+		for await (const cursor of store.iterate()) {
+			const { [propertyName]: _, ...value } = cursor.value
+			await store.put(value)
+		}
+		this.log("finished removing property from existing records")
+
+		this.#models[modelName].removeProperty(propertyName)
+		await this.#models.$models.set(txn, { name: modelName, model })
 	}
 
 	private async addIndex(txn: IDBPTransaction<unknown, string[], "versionchange">, modelName: string, index: string) {
-		// const propertyNames = this.config.addIndex(modelName, index)
-		throw new Error("not implemented")
+		const propertyNames = Config.parseIndex(index)
+		this.config.addIndex(modelName, index)
+
+		const model = this.config.models.find((model) => model.name === modelName)
+		assert(model !== undefined, "internal error")
+		this.models[modelName] = model
+
+		const store = txn.objectStore(modelName)
+		const keyPath = ModelDB.getKeyPath(propertyNames)
+		store.createIndex(getIndexName(propertyNames), keyPath)
+
+		await this.#models.$models.set(txn, { name: modelName, model })
 	}
 
 	private async removeIndex(
@@ -376,8 +440,17 @@ export class ModelDB extends AbstractModelDB {
 		modelName: string,
 		index: string,
 	) {
-		// this.config.removeIndex(modelName, index)
-		throw new Error("not implemented")
+		const propertyNames = Config.parseIndex(index)
+		this.config.removeIndex(modelName, index)
+
+		const model = this.config.models.find((model) => model.name === modelName)
+		assert(model !== undefined, "internal error")
+		this.models[modelName] = model
+
+		const store = txn.objectStore(modelName)
+		store.deleteIndex(getIndexName(propertyNames))
+
+		await this.#models.$models.set(txn, { name: modelName, model })
 	}
 
 	private getUpgradeAPI(txn: IDBPTransaction<unknown, string[], "versionchange">): DatabaseUpgradeAPI {

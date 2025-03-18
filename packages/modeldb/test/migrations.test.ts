@@ -2,77 +2,71 @@ import "fake-indexeddb/auto"
 import { resolve } from "node:path"
 import { randomUUID } from "node:crypto"
 
-import test from "ava"
+import test, { ExecutionContext } from "ava"
 
-import { AbstractModelDB, Config, Model } from "@canvas-js/modeldb"
+import { AbstractModelDB, Config, Model, ModelDBInit, ModelInit, ModelSchema } from "@canvas-js/modeldb"
 import { ModelDB as ModelDBSqlite } from "@canvas-js/modeldb-sqlite"
+import { ModelDB as ModelDBPostgres } from "@canvas-js/modeldb-pg"
 import { ModelDB as ModelDBIdb } from "@canvas-js/modeldb-idb"
 
-import { getDirectory } from "./utils.js"
+import { getConnectionConfig, getDirectory } from "./utils.js"
 
-// test("Initialize empty database (SQLite)", async (t) => {
-// 	const db = await ModelDBSqlite.open(null, { models: {} })
+const testPlatforms = (
+	name: string,
+	run: (t: ExecutionContext, openDB: (t: ExecutionContext, init: ModelDBInit) => Promise<AbstractModelDB>) => void,
+) => {
+	const macro = test.macro(run)
 
-// 	const models = await db.getAll<{ name: string; model: Model }>("$models")
-// 	const versions = await db.query<{}>("$versions", {
-// 		select: { namespace: true, version: true },
-// 		orderBy: { "namespace/version": "asc" },
-// 	})
+	const paths = new WeakMap<ExecutionContext, string>()
+	test.serial(`Sqlite - ${name}`, macro, async (t, init) => {
+		if (!paths.has(t)) {
+			const path = resolve(getDirectory(t), "db.sqlite")
+			paths.set(t, path)
+		}
 
-// 	t.deepEqual(Object.fromEntries(models.map(({ name, model }) => [name, model])), Config.baseModels)
+		return await ModelDBSqlite.open(paths.get(t)!, init)
+	})
 
-// 	t.deepEqual(versions, [{ namespace: AbstractModelDB.namespace, version: AbstractModelDB.version }])
-// })
+	const names = new WeakMap<ExecutionContext, string>()
+	test.serial(`IDB - ${name}`, macro, async (t, init) => {
+		if (!names.has(t)) {
+			const name = randomUUID()
+			names.set(t, name)
+		}
 
-// test("Initialize empty database (IDB)", async (t) => {
-// 	const name = randomUUID()
-// 	const db = await ModelDBIdb.open(name, { models: {} })
+		return await ModelDBIdb.open(names.get(t)!, init)
+	})
 
-// 	const models = await db.getAll<{ name: string; model: Model }>("$models")
-// 	const versions = await db.query<{}>("$versions", {
-// 		select: { namespace: true, version: true },
-// 		orderBy: { "namespace/version": "asc" },
-// 	})
+	const connectionConfig = getConnectionConfig()
+	let clear = true
+	test.serial(`Postgres - ${name}`, macro, async (t, init) => {
+		try {
+			return await ModelDBPostgres.open(connectionConfig, { ...init, clear })
+		} finally {
+			clear = false
+		}
+	})
+}
 
-// 	t.deepEqual(Object.fromEntries(models.map(({ name, model }) => [name, model])), Config.baseModels)
+testPlatforms("Initialize empty database", async (t, openDB) => {
+	const db = await openDB(t, { models: {} })
 
-// 	t.deepEqual(versions, [{ namespace: AbstractModelDB.namespace, version: AbstractModelDB.version }])
-// })
+	const models = await db.getAll<{ name: string; model: Model }>("$models")
+	const versions = await db.query<{}>("$versions", {
+		select: { namespace: true, version: true },
+		orderBy: { "namespace/version": "asc" },
+	})
 
-// test("Initialize example database", async (t) => {
-// 	const db = await ModelDBSqlite.open(null, {
-// 		models: {
-// 			users: { $primary: "id", id: "integer", address: "string" },
-// 		},
-// 	})
+	t.deepEqual(Object.fromEntries(models.map(({ name, model }) => [name, model])), Config.baseModels)
 
-// 	const models = await db.getAll<{ name: string; model: Model }>("$models")
-// 	const versions = await db.query<{}>("$versions", {
-// 		select: { namespace: true, version: true },
-// 		orderBy: { "namespace/version": "asc" },
-// 	})
+	t.deepEqual(versions, [{ namespace: AbstractModelDB.namespace, version: AbstractModelDB.version }])
 
-// 	t.deepEqual(Object.fromEntries(models.map(({ name, model }) => [name, model])), {
-// 		...Config.baseModels,
-// 		users: {
-// 			name: "users",
-// 			primaryKey: ["id"],
-// 			properties: [
-// 				{ name: "id", kind: "primitive", type: "integer", nullable: false },
-// 				{ name: "address", kind: "primitive", type: "string", nullable: false },
-// 			],
-// 			indexes: [],
-// 		},
-// 	})
+	await db.close()
+})
 
-// 	t.deepEqual(versions, [{ namespace: AbstractModelDB.namespace, version: AbstractModelDB.version }])
-// })
-
-test("Add models between versions", async (t) => {
-	const path = resolve(getDirectory(t), "db.sqlite")
-
+testPlatforms("Add models between versions", async (t, openDB) => {
 	{
-		const db = await ModelDBSqlite.open(path, {
+		const db = await openDB(t, {
 			models: {
 				users: { $primary: "id", id: "integer", address: "string" },
 			},
@@ -82,7 +76,7 @@ test("Add models between versions", async (t) => {
 	}
 
 	await t.throwsAsync(() =>
-		ModelDBSqlite.open(path, {
+		openDB(t, {
 			models: {
 				users: { $primary: "id", id: "integer", address: "string" },
 				users2: { $primary: "id", id: "integer", address: "string" },
@@ -91,7 +85,7 @@ test("Add models between versions", async (t) => {
 	)
 
 	{
-		const db = await ModelDBSqlite.open(path, {
+		const db = await openDB(t, {
 			models: {
 				users: { $primary: "id", id: "integer", address: "string" },
 				users2: { $primary: "id", id: "integer", address: "string" },
@@ -114,11 +108,9 @@ test("Add models between versions", async (t) => {
 	}
 })
 
-test("Add property", async (t) => {
-	const path = resolve(getDirectory(t), "db.sqlite")
-
+testPlatforms("Add property", async (t, openDB) => {
 	{
-		const db = await ModelDBSqlite.open(path, {
+		const db = await openDB(t, {
 			models: {
 				users: { $primary: "id", id: "integer" },
 			},
@@ -128,7 +120,7 @@ test("Add property", async (t) => {
 	}
 
 	{
-		const db = await ModelDBSqlite.open(path, {
+		const db = await openDB(t, {
 			models: {
 				users: {
 					$primary: "id",
