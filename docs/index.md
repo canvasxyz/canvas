@@ -42,7 +42,7 @@ const contract = {
 const { app } = useCanvas({ topic: "demo.canvas.xyz", contract })   // [!code highlight]
 ```
 
-```ts [Node.js]
+```ts [Node.js + WASM]
 export const contract = {
   models: {
     messages: {
