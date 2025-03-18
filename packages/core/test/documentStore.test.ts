@@ -18,3 +18,12 @@ test("save and load a document using the document store", async (t) => {
 
 	t.deepEqual(doc.getText().toDelta(), delta.ops)
 })
+
+test("get and set id", async (t) => {
+	const ds = new DocumentStore()
+
+	t.is(ds.getId("documents", "0"), -1)
+	ds.setId("documents", "0", 42)
+	t.is(ds.getId("documents", "0"), 42)
+	t.is(ds.getNextId("documents", "0"), 43)
+})

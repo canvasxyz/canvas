@@ -74,12 +74,12 @@ export class DocumentStore {
 		return this.documentIds[model][key] ?? -1
 	}
 
-	private setId(model: string, key: string, id: number) {
+	public setId(model: string, key: string, id: number) {
 		this.documentIds[model] ||= {}
 		this.documentIds[model][key] = id
 	}
 
-	private getNextId(model: string, key: string) {
+	public getNextId(model: string, key: string) {
 		return this.getId(model, key) + 1
 	}
 
