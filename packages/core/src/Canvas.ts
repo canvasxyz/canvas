@@ -306,6 +306,17 @@ export class Canvas<
 		}
 	}
 
+	public async replay() {
+		for (const name of Object.keys(this.db.models)) {
+			if (!name.startsWith("$")) {
+				this.log("clearing model %s", name)
+				await this.messageLog.db.clear(name)
+			}
+		}
+
+		await this.messageLog.replay()
+	}
+
 	public async connect(url: string, options: { signal?: AbortSignal } = {}): Promise<NetworkClient<any>> {
 		this.wsConnect = { url }
 		return await this.messageLog.connect(url, options)
