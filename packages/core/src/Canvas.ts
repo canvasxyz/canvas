@@ -479,6 +479,10 @@ export class Canvas<
 		return this.runtime.getYDoc(model, key)
 	}
 
+	public getYDocId(model: string, key: string) {
+		return this.runtime.getYDocId(model, key)
+	}
+
 	public async createSnapshot(): Promise<Snapshot> {
 		return createSnapshot(this)
 	}

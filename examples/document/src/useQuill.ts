@@ -1,5 +1,4 @@
 import { Canvas } from "@canvas-js/core"
-import { MAX_MESSAGE_ID, MIN_MESSAGE_ID } from "@canvas-js/gossiplog"
 import { AbstractModelDB } from "@canvas-js/modeldb"
 import Quill from "quill"
 import { useEffect, useRef } from "react"
@@ -11,7 +10,6 @@ export const useQuill = ({
 }: {
 	modelName: string
 	modelKey: string
-	// db: AbstractModelDB | undefined
 	app: Canvas | undefined
 }) => {
 	const db = app?.db
@@ -19,7 +17,7 @@ export const useQuill = ({
 	const subscriptionRef = useRef<number | null>(null)
 	const quillRef = useRef<Quill>()
 
-	const seenCursorsRef = useRef(new Set<string>())
+	const cursorRef = useRef(-1)
 
 	useEffect(() => {
 		// Unsubscribe from the cached database handle, if necessary
@@ -39,12 +37,10 @@ export const useQuill = ({
 			}
 
 			dbRef.current = db ?? null
-			console.log("exit1")
 			return
 		}
 
 		if (dbRef.current === db && subscriptionRef.current !== null) {
-			console.log("exit2")
 			return
 		}
 
@@ -56,18 +52,24 @@ export const useQuill = ({
 		const initialContents = app.getYDoc(modelName, modelKey).getText().toDelta()
 		quillRef.current?.updateContents(initialContents)
 
+		// get the initial value for cursorRef
+		const startId = app.getYDocId(modelName, modelKey)
 		const query = {
 			where: {
-				id: { gt: `${modelName}/${modelKey}/${MIN_MESSAGE_ID}`, lt: `${modelName}/${modelKey}/${MAX_MESSAGE_ID}` },
+				model: modelName,
+				key: modelKey,
 				isAppend: false,
+				id: { gt: startId },
 			},
+			limit: 1,
+			orderBy: { id: "desc" as const },
 		}
-		const { id } = db.subscribe("$document_operations", query, (results) => {
+
+		const { id } = db.subscribe("$document_updates", query, (results) => {
 			for (const result of results) {
-				const resultId = result.id as string
-				if (!seenCursorsRef.current.has(resultId)) {
-					console.log(result.data)
-					seenCursorsRef.current.add(resultId)
+				const resultId = result.id as number
+				if (cursorRef.current < resultId) {
+					cursorRef.current = resultId
 					quillRef.current?.updateContents(result.data)
 				}
 			}

@@ -20,16 +20,20 @@ function getDeltaForYText(ytext: Y.Text, fn: () => void): Delta {
 
 export class DocumentStore {
 	private documents: Record<string, Record<string, Y.Doc>> = {}
+	private documentIds: Record<string, Record<string, number>> = {}
 
 	public static schema = {
-		$document_operations: {
-			// ${model}/${key}/${messageId}
-			id: "primary",
+		$document_updates: {
+			primary: "primary",
+			model: "string",
+			key: "string",
+			id: "number",
 			// applyDelta, insert or delete
 			data: "json",
 			// yjs document diff
 			diff: "bytes",
 			isAppend: "boolean",
+			$indexes: ["id"],
 		},
 	} satisfies ModelSchema
 
@@ -42,14 +46,31 @@ export class DocumentStore {
 	public async loadSavedDocuments(db: AbstractModelDB) {
 		// iterate over the past document operations
 		// and create the yjs documents
-		for await (const operation of db.iterate("$document_operations")) {
-			const [model, key, _messageId] = operation.id.split("/")
-			const doc = this.getYDoc(model, key)
+		for await (const operation of db.iterate("$document_updates")) {
+			const doc = this.getYDoc(operation.model, operation.key)
 			Y.applyUpdate(doc, operation.diff)
+			const existingId = this.getId(operation.model, operation.key)
+			if (operation.id > existingId) {
+				this.setId(operation.model, operation.key, operation.id)
+			}
 		}
 	}
 
-	public async applyYjsCalls(db: AbstractModelDB, model: string, key: string, messageId: string, calls: YjsCall[]) {
+	public getId(model: string, key: string) {
+		this.documentIds[model] ||= {}
+		return this.documentIds[model][key] ?? -1
+	}
+
+	private setId(model: string, key: string, id: number) {
+		this.documentIds[model] ||= {}
+		this.documentIds[model][key] = id
+	}
+
+	private getNextId(model: string, key: string) {
+		return this.getId(model, key) + 1
+	}
+
+	public async applyYjsCalls(db: AbstractModelDB, model: string, key: string, calls: YjsCall[]) {
 		const doc = this.getYDoc(model, key)
 
 		// get the initial state of the document
@@ -74,18 +95,12 @@ export class DocumentStore {
 		const afterState = Y.encodeStateAsUpdate(doc)
 		const diff = Y.diffUpdate(afterState, Y.encodeStateVectorFromUpdate(beforeState))
 
-		await db.set(`$document_operations`, {
-			id: `${model}/${key}/${messageId}`,
-			key,
-			data: delta || [],
-			diff,
-			isAppend: true,
-		})
+		await this.writeDocumentUpdate(db, model, key, delta || [], diff, true)
 
 		return { model, key, diff }
 	}
 
-	public async consumeUpdatesMessage(db: AbstractModelDB, message: Message<Updates>, id: string) {
+	public async consumeUpdatesMessage(db: AbstractModelDB, message: Message<Updates>) {
 		for (const { model, key, diff } of message.payload.updates) {
 			// apply the diff to the doc
 			const doc = this.getYDoc(model, key)
@@ -94,13 +109,29 @@ export class DocumentStore {
 			})
 
 			// save the observed update to the db
-			await db.set(`$document_operations`, {
-				id: `${model}/${key}/${id}`,
-				key,
-				data: delta,
-				diff,
-				isAppend: false,
-			})
+			await this.writeDocumentUpdate(db, model, key, delta, diff, false)
 		}
+	}
+
+	private async writeDocumentUpdate(
+		db: AbstractModelDB,
+		model: string,
+		key: string,
+		data: Delta,
+		diff: Uint8Array,
+		isAppend: boolean,
+	) {
+		const id = this.getNextId(model, key)
+		this.setId(model, key, id)
+
+		await db.set(`$document_updates`, {
+			primary: `${model}/${key}/${id}`,
+			model,
+			key,
+			id,
+			data,
+			diff,
+			isAppend,
+		})
 	}
 }

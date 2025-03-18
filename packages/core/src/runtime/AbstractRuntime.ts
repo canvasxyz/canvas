@@ -142,7 +142,7 @@ export abstract class AbstractRuntime {
 			} else if (isSnapshot(signedMessage)) {
 				return await handleSnapshot(signedMessage, this)
 			} else if (isUpdates(signedMessage)) {
-				return await handleUpdates(signedMessage.id, signedMessage.message, isAppend)
+				return await handleUpdates(signedMessage.message, isAppend)
 			} else {
 				throw new Error("invalid message payload type")
 			}
@@ -291,7 +291,7 @@ export abstract class AbstractRuntime {
 			const updates = []
 			for (const [model, modelCalls] of Object.entries(executionContext.yjsCalls)) {
 				for (const [key, calls] of Object.entries(modelCalls)) {
-					const update = await this.#documentStore.applyYjsCalls(this.db, model, key, id, calls)
+					const update = await this.#documentStore.applyYjsCalls(this.db, model, key, calls)
 					updates.push(update)
 				}
 			}
@@ -309,13 +309,17 @@ export abstract class AbstractRuntime {
 		return this.#documentStore.getYDoc(model, key)
 	}
 
+	public getYDocId(model: string, key: string) {
+		return this.#documentStore.getId(model, key)
+	}
+
 	public async loadSavedDocuments() {
 		await this.#documentStore.loadSavedDocuments(this.db)
 	}
 
-	public async handleUpdates(id: string, message: Message<Updates>, isAppend: boolean) {
+	public async handleUpdates(message: Message<Updates>, isAppend: boolean) {
 		if (!isAppend) {
-			return await this.#documentStore.consumeUpdatesMessage(this.db, message, id)
+			return await this.#documentStore.consumeUpdatesMessage(this.db, message)
 		}
 	}
 }
