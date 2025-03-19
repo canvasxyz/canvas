@@ -147,6 +147,8 @@ export class Canvas<
 			await messageLog.append(config.snapshot)
 		}
 
+		await runtime.loadSavedDocuments()
+
 		const app = new Canvas<ModelsT, ActionsT>(signers, messageLog, runtime)
 
 		// Check to see if the $actions table is empty and populate it if necessary
@@ -289,6 +291,12 @@ export class Canvas<
 				)
 
 				this.log("applied action %s", signedMessage.id)
+
+				for (const additionalUpdate of this.runtime.additionalUpdates.get(signedMessage.id) || []) {
+					await this.messageLog.append(additionalUpdate)
+				}
+				this.runtime.additionalUpdates.delete(signedMessage.id)
+				this.log("applied additional updates for action %s", signedMessage.id)
 
 				return signedMessage
 			}
@@ -476,6 +484,14 @@ export class Canvas<
 		} else {
 			return sessions[0].message_id
 		}
+	}
+
+	public getYDoc(model: string, key: string) {
+		return this.runtime.getYDoc(model, key)
+	}
+
+	public getYDocId(model: string, key: string) {
+		return this.runtime.getYDocId(model, key)
 	}
 
 	public async createSnapshot(): Promise<Snapshot> {

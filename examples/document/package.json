@@ -1,0 +1,51 @@
+{
+	"private": true,
+	"name": "@canvas-js/document",
+	"version": "0.14.0-next.1",
+	"type": "module",
+	"scripts": {
+		"build": "npx vite build",
+		"dev": "npx vite",
+		"dev:server": "canvas run --port 8080 --static dist --network-explorer --topic document-example.canvas.xyz src/contract.ts"
+	},
+	"dependencies": {
+		"@canvas-js/chain-atp": "0.14.0-next.1",
+		"@canvas-js/chain-cosmos": "0.14.0-next.1",
+		"@canvas-js/chain-ethereum": "0.14.0-next.1",
+		"@canvas-js/chain-ethereum-viem": "0.14.0-next.1",
+		"@canvas-js/chain-solana": "0.14.0-next.1",
+		"@canvas-js/chain-substrate": "0.14.0-next.1",
+		"@canvas-js/cli": "0.14.0-next.1",
+		"@canvas-js/core": "0.14.0-next.1",
+		"@canvas-js/gossiplog": "0.14.0-next.1",
+		"@canvas-js/hooks": "0.14.0-next.1",
+		"@canvas-js/interfaces": "0.14.0-next.1",
+		"@canvas-js/modeldb-sqlite-wasm": "0.14.0-next.1",
+		"@farcaster/auth-kit": "^0.6.0",
+		"@farcaster/frame-sdk": "^0.0.26",
+		"@libp2p/interface": "^2.7.0",
+		"@multiformats/multiaddr": "^12.3.5",
+		"@noble/hashes": "^1.7.1",
+		"@types/react": "^18.3.9",
+		"@types/react-dom": "^18.3.0",
+		"buffer": "^6.0.3",
+		"comlink": "^4.4.1",
+		"ethers": "^6.13.5",
+		"idb": "^8.0.2",
+		"multiformats": "^13.3.2",
+		"near-api-js": "^2.1.4",
+		"process": "^0.11.10",
+		"quill": "^2.0.3",
+		"react": "^18.3.1",
+		"react-dom": "^18.3.1",
+		"vite-plugin-wasm": "^3.3.0"
+	},
+	"devDependencies": {
+		"autoprefixer": "^10.4.19",
+		"postcss": "^8.4.38",
+		"tailwindcss": "^3.4.4",
+		"typescript": "~5.6.0",
+		"vite": "^5.4.8",
+		"vite-plugin-node-polyfills": "^0.22.0"
+	}
+}

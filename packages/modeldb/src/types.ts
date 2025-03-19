@@ -8,6 +8,7 @@ export type NullablePrimitiveType = `${PrimitiveType}?`
 export type ReferenceType = `@${string}`
 export type NullableReferenceType = `@${string}?`
 export type RelationType = `@${string}[]`
+export type YjsDocType = "yjs-doc"
 
 export type PropertyType =
 	| PrimaryKeyType
@@ -16,6 +17,7 @@ export type PropertyType =
 	| ReferenceType
 	| NullableReferenceType
 	| RelationType
+	| YjsDocType
 
 /** property name, or property names joined by slashes */
 export type IndexInit = string

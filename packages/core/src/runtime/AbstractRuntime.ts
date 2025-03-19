@@ -1,15 +1,25 @@
 import * as cbor from "@ipld/dag-cbor"
 import { logger } from "@libp2p/logger"
 
-import type { Action, Session, Snapshot, SignerCache, Awaitable, MessageType } from "@canvas-js/interfaces"
+import type {
+	Action,
+	Session,
+	Snapshot,
+	SignerCache,
+	Awaitable,
+	MessageType,
+	Updates,
+	Message,
+} from "@canvas-js/interfaces"
 
 import { AbstractModelDB, Effect, ModelSchema } from "@canvas-js/modeldb"
 import { GossipLogConsumer, MAX_MESSAGE_ID, AbstractGossipLog, SignedMessage } from "@canvas-js/gossiplog"
 import { assert } from "@canvas-js/utils"
 
+import { DocumentStore } from "../DocumentStore.js"
 import { ExecutionContext, getKeyHash } from "../ExecutionContext.js"
-import { isAction, isSession, isSnapshot } from "../utils.js"
 import { Contract } from "../types.js"
+import { isAction, isSession, isSnapshot, isUpdates } from "../utils.js"
 
 export type EffectRecord = { key: string; value: Uint8Array | null; branch: number; clock: number }
 
@@ -64,12 +74,30 @@ export abstract class AbstractRuntime {
 	} satisfies ModelSchema
 
 	protected static getModelSchema(schema: ModelSchema): ModelSchema {
+		const outputSchema: ModelSchema = {}
+		for (const [modelName, modelSchema] of Object.entries(schema)) {
+			// @ts-ignore
+			if (modelSchema.content === "yjs-doc") {
+				if (
+					Object.entries(modelSchema).length !== 2 &&
+					// @ts-ignore
+					modelSchema.id !== "primary"
+				) {
+					// not valid
+					throw new Error("yjs-doc tables must have two columns, one of which is 'id'")
+				}
+			} else {
+				outputSchema[modelName] = modelSchema
+			}
+		}
+
 		return {
-			...schema,
+			...outputSchema,
 			...AbstractRuntime.sessionsModel,
 			...AbstractRuntime.actionsModel,
 			...AbstractRuntime.effectsModel,
 			...AbstractRuntime.usersModel,
+			...DocumentStore.schema,
 		}
 	}
 
@@ -79,8 +107,11 @@ export abstract class AbstractRuntime {
 	public abstract readonly actionNames: string[]
 	public abstract readonly contract: string | Contract<any, any>
 
+	public readonly additionalUpdates = new Map<string, Updates[]>()
+
 	protected readonly log = logger("canvas:runtime")
 	#db: AbstractModelDB | null = null
+	#documentStore = new DocumentStore()
 
 	protected constructor() {}
 
@@ -95,20 +126,24 @@ export abstract class AbstractRuntime {
 
 	public set db(db: AbstractModelDB) {
 		this.#db = db
+		this.#documentStore.db = db
 	}
 
 	public getConsumer(): GossipLogConsumer<MessageType> {
 		const handleSession = this.handleSession.bind(this)
 		const handleAction = this.handleAction.bind(this)
 		const handleSnapshot = this.handleSnapshot.bind(this)
+		const handleUpdates = this.handleUpdates.bind(this)
 
-		return async function (this: AbstractGossipLog<MessageType>, signedMessage) {
+		return async function (this: AbstractGossipLog<MessageType>, signedMessage, isAppend: boolean) {
 			if (isSession(signedMessage)) {
 				return await handleSession(signedMessage)
 			} else if (isAction(signedMessage)) {
-				return await handleAction(signedMessage, this)
+				return await handleAction(signedMessage, this, isAppend)
 			} else if (isSnapshot(signedMessage)) {
 				return await handleSnapshot(signedMessage, this)
+			} else if (isUpdates(signedMessage)) {
+				return await handleUpdates(signedMessage.message, isAppend)
 			} else {
 				throw new Error("invalid message payload type")
 			}
@@ -166,7 +201,11 @@ export abstract class AbstractRuntime {
 		await this.db.apply(effects)
 	}
 
-	private async handleAction(signedMessage: SignedMessage<Action>, messageLog: AbstractGossipLog<MessageType>) {
+	private async handleAction(
+		signedMessage: SignedMessage<Action>,
+		messageLog: AbstractGossipLog<MessageType>,
+		isAppend: boolean,
+	) {
 		const { id, signature, message } = signedMessage
 		const { did, name, context } = message.payload
 
@@ -249,6 +288,39 @@ export abstract class AbstractRuntime {
 			throw err
 		}
 
+		if (isAppend) {
+			const updates = []
+			for (const [model, modelCalls] of Object.entries(executionContext.yjsCalls)) {
+				for (const [key, calls] of Object.entries(modelCalls)) {
+					const update = await this.#documentStore.applyYjsCalls(model, key, calls)
+					updates.push(update)
+				}
+			}
+			if (updates.length > 0) {
+				this.additionalUpdates.set(id, [{ type: "updates", updates }])
+			} else {
+				this.additionalUpdates.set(id, [])
+			}
+		}
+
 		return result
+	}
+
+	public getYDoc(model: string, key: string) {
+		return this.#documentStore.getYDoc(model, key)
+	}
+
+	public getYDocId(model: string, key: string) {
+		return this.#documentStore.getId(model, key)
+	}
+
+	public async loadSavedDocuments() {
+		await this.#documentStore.loadSavedDocuments()
+	}
+
+	public async handleUpdates(message: Message<Updates>, isAppend: boolean) {
+		if (!isAppend) {
+			return await this.#documentStore.consumeUpdatesMessage(message)
+		}
 	}
 }

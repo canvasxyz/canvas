@@ -174,6 +174,17 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 					this.releaseLock()
 				}
 			},
+			ytext: {
+				insert: async (model: string, key: string, index: number, content: string) => {
+					this.context.pushYjsCall(model, key, { call: "insert", index, content })
+				},
+				delete: async (model: string, key: string, index: number, length: number) => {
+					this.context.pushYjsCall(model, key, { call: "delete", index, length })
+				},
+				applyDelta: async (model: string, key: string, delta: any) => {
+					this.context.pushYjsCall(model, key, { call: "applyDelta", delta: JSON.parse(delta) })
+				},
+			},
 		}
 	}
 
