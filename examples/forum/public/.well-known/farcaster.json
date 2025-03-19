@@ -1,0 +1,17 @@
+{
+  "accountAssociation": {
+    "header": "eyJmaWQiOjE0NCwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDJiYmFFZTg5MDBiYjE2NjRCMUM4M2EzQTRGMTQyY0RCRjIyMjRmYjgifQ",
+    "payload": "eyJkb21haW4iOiJjaGF0LWV4YW1wbGUuY2FudmFzLnh5eiJ9",
+    "signature": "MHhjMmU2NjE0ODQwZWM1MTlkODA3MThlMzdkNWI2ZTdhZGVlZDZhODgzZGM5MWU3YmYwZDM3NGNhYTc2MjM2YzhiM2Q1YWFiZjlhZjkxNWQ1NGY2ODgxOTE0N2YzZThlMDkxNTRlMmEwOTAyYWZhOWIwODJmN2UxOTI1MWE1NGU2NTFi"
+  },
+  "frame": {
+    "version": "1",
+    "name": "Example Frame",
+    "iconUrl": "https://forum-example.canvas.xyz/icon.png",
+    "homeUrl": "https://forum-example.canvas.xyz",
+    "imageUrl": "https://forum-example.canvas.xyz/image.png",
+    "buttonTitle": "Check this out",
+    "splashImageUrl": "https://forum-example.canvas.xyz/splash.png",
+    "splashBackgroundColor": "#eeccff"
+  }
+}
