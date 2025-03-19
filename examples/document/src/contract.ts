@@ -9,6 +9,6 @@ export const models = {
 
 export const actions = {
 	async applyDeltaToDoc(db, delta) {
-		await db.yjsApplyDelta("documents", "0", delta)
+		await db.ytext.applyDelta("documents", "0", delta)
 	},
 } satisfies Actions<typeof models>

@@ -14,7 +14,7 @@ export const models = {
 
 export const actions = {
   async applyDeltaToDoc(db, index, text) {
-    await db.yjsApplyDelta("documents", "0", index, text)
+    await db.ytext.applyDelta("documents", "0", index, text)
   },
 }
 ```

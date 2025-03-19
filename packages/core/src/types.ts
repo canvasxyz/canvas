@@ -44,19 +44,16 @@ export type ModelAPI<ModelTypes extends Record<string, ModelValue>> = {
 	update: <T extends keyof ModelTypes & string>(model: T, value: Partial<ModelTypes[T]>) => Chainable<ModelTypes>
 	merge: <T extends keyof ModelTypes & string>(model: T, value: Partial<ModelTypes[T]>) => Chainable<ModelTypes>
 	delete: <T extends keyof ModelTypes & string>(model: T, key: string) => Promise<void>
-	yjsInsert: <T extends keyof ModelTypes & string>(
-		model: T,
-		key: string,
-		index: number,
-		content: string,
-	) => Promise<void>
-	yjsDelete: <T extends keyof ModelTypes & string>(
-		model: T,
-		key: string,
-		index: number,
-		length: number,
-	) => Promise<void>
-	yjsApplyDelta: <T extends keyof ModelTypes & string>(model: T, key: string, delta: string) => Promise<void>
+	ytext: {
+		insert: <T extends keyof ModelTypes & string>(
+			model: T,
+			key: string,
+			index: number,
+			content: string,
+		) => Promise<void>
+		delete: <T extends keyof ModelTypes & string>(model: T, key: string, index: number, length: number) => Promise<void>
+		applyDelta: <T extends keyof ModelTypes & string>(model: T, key: string, delta: string) => Promise<void>
+	}
 }
 
 export type ActionContext<T extends Record<string, ModelValue>> = {

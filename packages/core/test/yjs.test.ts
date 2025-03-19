@@ -12,13 +12,13 @@ export const models = {
 export const actions = {
   async createNewArticle(db) {
     const { id } = this
-    await db.yjsInsert("articles", id, 0, "")
+    await db.ytext.insert("articles", id, 0, "")
   },
   async insertIntoDoc(db, key, index, text) {
-    await db.yjsInsert("articles", key, index, text)
+    await db.ytext.insert("articles", key, index, text)
   },
   async deleteFromDoc(db, key, index, length) {
-    await db.yjsDelete("articles", key, index, length)
+    await db.ytext.delete("articles", key, index, length)
   }
 };
 `

@@ -24,10 +24,10 @@ test("snapshot persists data across apps", async (t) => {
 					await db.delete("posts", id)
 				},
 				async insertIntoDocument(db, key, index, text) {
-					await db.yjsInsert("documents", key, index, text)
+					await db.ytext.insert("documents", key, index, text)
 				},
 				async deleteFromDocument(db, key, index, length) {
-					await db.yjsDelete("documents", key, index, length)
+					await db.ytext.delete("documents", key, index, length)
 				},
 			},
 		},
