@@ -155,24 +155,25 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		}
 
 		await this.tree.clear()
-		await this.tree.write(async (txn) => {
-			this.log("iterating over all entries")
-			const pageSize = 4096
-			let lowerBound: RangeExpression = { gte: MIN_MESSAGE_ID }
-			while (!this.controller.signal.aborted) {
-				this.log("fetching new page")
-				const results = await this.db.query<MessageRecord<Payload>>("$messages", {
-					orderBy: { id: "asc" },
-					where: { id: lowerBound },
-					limit: pageSize,
-				})
 
-				this.log("got new page of %d records", results.length)
+		this.log("iterating over all entries")
+		const pageSize = 4096
+		let lowerBound: RangeExpression = { gte: MIN_MESSAGE_ID }
+		while (!this.controller.signal.aborted) {
+			this.log("fetching new page")
+			const results = await this.db.query<MessageRecord<Payload>>("$messages", {
+				orderBy: { id: "asc" },
+				where: { id: lowerBound },
+				limit: pageSize,
+			})
 
-				if (results.length === 0) {
-					break
-				}
+			this.log("got new page of %d records", results.length)
 
+			if (results.length === 0) {
+				break
+			}
+
+			await this.tree.write(async (txn) => {
 				for (const { id, signature, message } of results) {
 					this.log("replaying message %s", id)
 					const signedMessage = this.encode(signature, message)
@@ -182,12 +183,12 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 						return
 					}
 				}
+			})
 
-				lowerBound = { gt: results[results.length - 1].id }
-			}
+			lowerBound = { gt: results[results.length - 1].id }
+		}
 
-			this.log("finished iterating")
-		})
+		this.log("finished iterating")
 
 		// await this.tree.clear()
 		// await this.tree.write(async (txn) => {
