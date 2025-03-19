@@ -11,7 +11,7 @@ import { ExecutionContext, getKeyHash } from "../ExecutionContext.js"
 import { isAction, isSession, isSnapshot } from "../utils.js"
 import { Contract } from "../types.js"
 
-export type EffectRecord = { key: string; value: Uint8Array | null; branch: number; clock: number }
+export type EffectRecord = { key: string; value: Uint8Array | null; clock: number }
 
 export type SessionRecord = {
 	message_id: string
@@ -33,7 +33,6 @@ export abstract class AbstractRuntime {
 		$effects: {
 			key: "primary", // `${model}/${hash(key)}/${version}
 			value: "bytes?",
-			branch: "integer",
 			clock: "integer",
 		},
 	} satisfies ModelSchema
