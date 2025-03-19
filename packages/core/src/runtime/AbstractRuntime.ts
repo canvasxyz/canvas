@@ -11,7 +11,7 @@ import { ExecutionContext, getKeyHash } from "../ExecutionContext.js"
 import { isAction, isSession, isSnapshot } from "../utils.js"
 import { Contract } from "../types.js"
 
-export type EffectRecord = { key: string; value: Uint8Array | null; branch: number; clock: number }
+export type EffectRecord = { key: string; value: Uint8Array | null; clock: number }
 
 export type SessionRecord = {
 	message_id: string
@@ -33,7 +33,6 @@ export abstract class AbstractRuntime {
 		$effects: {
 			key: "primary", // `${model}/${hash(key)}/${version}
 			value: "bytes?",
-			branch: "integer",
 			clock: "integer",
 		},
 	} satisfies ModelSchema
@@ -122,8 +121,9 @@ export abstract class AbstractRuntime {
 		assert(messages.length === 0, "snapshot must be first entry on log")
 
 		for (const { key, value } of effects) {
-			await this.db.set("$effects", { key, value, branch: 0, clock: 0 })
+			await this.db.set("$effects", { key, value, clock: 0 })
 		}
+
 		for (const [model, rows] of Object.entries(models)) {
 			for (const row of rows) {
 				await this.db.set(model, cbor.decode(row) as any)
@@ -200,9 +200,6 @@ export abstract class AbstractRuntime {
 		}
 
 		const clock = message.clock
-		const branch = signedMessage.branch
-		assert(branch !== undefined, "expected branch !== undefined")
-
 		const result = await this.execute(executionContext)
 
 		const actionRecord: ActionRecord = { message_id: id, did, name, timestamp: context.timestamp }
@@ -222,7 +219,7 @@ export abstract class AbstractRuntime {
 				effects.push({
 					model: "$effects",
 					operation: "set",
-					value: { key: effectKey, value: value && cbor.encode(value), branch, clock },
+					value: { key: effectKey, value: value && cbor.encode(value), clock },
 				})
 
 				if (results.length > 0) {

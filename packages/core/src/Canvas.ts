@@ -81,7 +81,7 @@ export class Canvas<
 	ActionsT extends Actions<ModelsT> = Actions<ModelsT>,
 > extends TypedEventEmitter<CanvasEvents> {
 	public static namespace = "canvas"
-	public static version = 1
+	public static version = 2
 
 	public static async buildContract(location: string) {
 		return await target.buildContract(location)
@@ -115,6 +115,12 @@ export class Canvas<
 				schema: { ...config.schema, ...runtime.schema },
 
 				version: { [Canvas.namespace]: Canvas.version },
+				async upgrade(upgradeAPI, oldConfig, oldVersion, newVersion) {
+					const version = oldVersion[Canvas.namespace] ?? 0
+					if (version <= 1) {
+						await upgradeAPI.removeProperty("$effects", "branch")
+					}
+				},
 			},
 		)
 
