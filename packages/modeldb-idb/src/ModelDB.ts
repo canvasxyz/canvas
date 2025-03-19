@@ -98,7 +98,9 @@ export class ModelDB extends AbstractModelDB {
 			},
 		})
 
-		return new ModelDB(db, newConfig, newVersion)
+		const modelDB = new ModelDB(db, newConfig, newVersion)
+		await modelDB.validate()
+		return modelDB
 	}
 
 	private static getKeyPath = (index: string[]) => (index.length === 1 ? index[0] : index)
@@ -142,6 +144,26 @@ export class ModelDB extends AbstractModelDB {
 				return
 			}
 		})
+	}
+
+	private async validate() {
+		this.log("validating config with version %o", this.version)
+		const oldModels = await this.getAll<{ name: string; model: Model }>("$models")
+		for (const newModel of this.config.models) {
+			const oldModel = oldModels.find((model) => model.name === newModel.name)
+			if (oldModel === undefined) {
+				throw new Error(`missing model "${newModel.name}"`)
+			}
+
+			Config.assertEqualModel(oldModel.model, newModel)
+		}
+
+		const oldVersion = await AbstractModelDB.getVersion(this)
+		for (const [namespace, version] of Object.entries(this.version)) {
+			if (oldVersion[namespace] !== version) {
+				throw new Error(`migration error - expected version { ${namespace}: ${version} }`)
+			}
+		}
 	}
 
 	protected hasModel(model: Model): boolean {
