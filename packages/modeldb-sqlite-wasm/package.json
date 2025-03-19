@@ -15,7 +15,7 @@
 	"dependencies": {
 		"@canvas-js/interfaces": "0.14.0-next.1",
 		"@canvas-js/modeldb": "0.14.0-next.1",
-		"@canvas-js/utils": "0.14.0-next.1",
+		"@canvas-js/utils": "1.0.0",
 		"@ipld/dag-json": "^10.2.3",
 		"@libp2p/logger": "^5.1.8",
 		"@sqlite.org/sqlite-wasm": "^3.49.1-build2",

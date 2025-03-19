@@ -13,7 +13,6 @@
 		{ "path": "../modeldb-sqlite" },
 		{ "path": "../modeldb-sqlite-expo" },
 		{ "path": "../modeldb-durable-objects" },
-		{ "path": "../signatures" },
-		{ "path": "../utils" }
+		{ "path": "../signatures" }
 	]
 }

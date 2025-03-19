@@ -26,7 +26,7 @@
 		"wrangler": "^3.107.3"
 	},
 	"dependencies": {
-		"@canvas-js/utils": "0.14.0-next.1",
+		"@canvas-js/utils": "1.0.0",
 		"@ipld/dag-json": "^10.2.3",
 		"@libp2p/logger": "^5.1.8",
 		"uint8arrays": "^5.1.0"

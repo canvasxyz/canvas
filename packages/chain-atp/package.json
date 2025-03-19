@@ -17,7 +17,7 @@
 		"@atproto/crypto": "^0.4.4",
 		"@canvas-js/interfaces": "0.14.0-next.1",
 		"@canvas-js/signatures": "0.14.0-next.1",
-		"@canvas-js/utils": "0.14.0-next.1",
+		"@canvas-js/utils": "1.0.0",
 		"@ipld/car": "^5.4.0",
 		"@ipld/dag-cbor": "^9.2.2",
 		"@ipld/dag-json": "^10.2.3",
