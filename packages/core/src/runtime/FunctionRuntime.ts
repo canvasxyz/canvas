@@ -2,7 +2,7 @@ import PQueue from "p-queue"
 
 import type { SignerCache } from "@canvas-js/interfaces"
 import { ModelSchema, DeriveModelTypes } from "@canvas-js/modeldb"
-import { assert } from "@canvas-js/utils"
+import { assert, mapValues } from "@canvas-js/utils"
 
 import { ActionContext, ActionImplementation, Contract, ModelAPI } from "../types.js"
 import { ExecutionContext } from "../ExecutionContext.js"
@@ -35,7 +35,12 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 
 	constructor(public readonly topic: string, public readonly signers: SignerCache, contract: Contract<ModelsT>) {
 		super(contract.models)
-		this.contract = contract.toString()
+		this.contract = [
+			`export const models = ${JSON.stringify(contract.models, null, "  ")};`,
+			`export const actions = {\n${Object.entries(contract.actions)
+				.map(([name, action]) => `${name}: ${action}`)
+				.join(", \n")}};`,
+		].join("\n")
 		this.actions = contract.actions
 
 		this.#db = {

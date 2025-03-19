@@ -30,7 +30,7 @@ test.after(async (t) => {
 	await worker.stop()
 })
 
-function getConnectionConfig() {
+export function getConnectionConfig() {
 	const { POSTGRES_HOST, POSTGRES_PORT } = process.env
 	if (POSTGRES_HOST && POSTGRES_PORT) {
 		return {

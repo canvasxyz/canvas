@@ -41,6 +41,14 @@ export class ModelAPI {
 		this.properties = Object.fromEntries(model.properties.map((property) => [property.name, property]))
 	}
 
+	public addProperty(property: Property) {
+		this.properties[property.name] = property
+	}
+
+	public removeProperty(propertyName: string) {
+		delete this.properties[propertyName]
+	}
+
 	private getStore<Mode extends IDBTransactionMode>(txn: IDBPTransaction<any, any, Mode>) {
 		return txn.objectStore(this.storeName)
 	}

@@ -135,20 +135,6 @@ export abstract class AbstractRuntime {
 		}
 	}
 
-	// <<<<<<< HEAD
-	// =======
-	// 	public abstract readonly topic: string
-	// 	public abstract readonly signers: SignerCache
-	// 	public abstract readonly schema: ModelSchema
-	// 	public abstract readonly actionNames: string[]
-	// 	public abstract readonly contract: string | Contract<any, any>
-
-	// 	protected readonly log = logger("canvas:runtime")
-	// 	#db: AbstractModelDB | null = null
-
-	// 	protected constructor() {}
-
-	// >>>>>>> main
 	protected abstract execute(context: ExecutionContext): Promise<void | any>
 
 	public abstract readonly contract: string

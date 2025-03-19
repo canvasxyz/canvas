@@ -80,7 +80,7 @@ export class Canvas<
 	ActionsT extends Actions<ModelsT> = Actions<ModelsT>,
 > extends TypedEventEmitter<CanvasEvents> {
 	public static namespace = "canvas"
-	public static version = 2
+	public static version = 3
 
 	public static async buildContract(location: string) {
 		return await target.buildContract(location)
@@ -116,24 +116,34 @@ export class Canvas<
 				schema: { ...config.schema, ...runtime.schema },
 
 				version: { [Canvas.namespace]: Canvas.version },
-				upgrade: async (upgradeAPI, oldConfig, oldVersion, newVersion) => {
-					const log = logger("canvas:runtime:upgrade")
-					log("beginning migration")
-
-					for (const [modelName, modelInit] of Object.entries(AbstractRuntime.effectsModel)) {
-						log("creating model %s", modelName)
-						await upgradeAPI.createModel(modelName, modelInit)
-					}
-
-					log("deleting model %s", "$effects")
-					await upgradeAPI.deleteModel("$effects")
-
-					replayRequired = true
-					log("migration complete")
-				},
 
 				initialUpgradeSchema: { ...runtime.models, ...initialUpgradeSchema },
 				initialUpgradeVersion: { [Canvas.namespace]: 1 },
+
+				async upgrade(upgradeAPI, oldConfig, oldVersion, newVersion) {
+					const log = logger("canvas:runtime:upgrade")
+					const version = oldVersion[Canvas.namespace] ?? 0
+					if (version <= 1) {
+						log("beginning v1 migration")
+						await upgradeAPI.removeProperty("$effects", "branch")
+						log("migration v1 complete")
+					}
+
+					if (version <= 2) {
+						log("beginning v2 migration")
+
+						for (const [modelName, modelInit] of Object.entries(AbstractRuntime.effectsModel)) {
+							log("creating model %s", modelName)
+							await upgradeAPI.createModel(modelName, modelInit)
+						}
+
+						log("deleting model %s", "$effects")
+						await upgradeAPI.deleteModel("$effects")
+
+						replayRequired = true
+						log("migration v2 complete")
+					}
+				},
 			},
 		)
 
