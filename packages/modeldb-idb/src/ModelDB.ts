@@ -409,12 +409,12 @@ export class ModelDB extends AbstractModelDB {
 		this.models[modelName] = model
 
 		const store = txn.objectStore(modelName)
-		this.log("removing property from existing records...")
+		this.log("removing property %s from existing records in %s...", propertyName, modelName)
 		for await (const cursor of store.iterate()) {
 			const { [propertyName]: _, ...value } = cursor.value
 			await store.put(value)
 		}
-		this.log("finished removing property from existing records")
+		this.log("finished removing property %s from existing records in %s", propertyName, modelName)
 
 		this.#models[modelName].removeProperty(propertyName)
 		await this.#models.$models.set(txn, { name: modelName, model })
