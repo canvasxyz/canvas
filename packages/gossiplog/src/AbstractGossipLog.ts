@@ -72,11 +72,16 @@ export type MessageRecord<Payload> = {
 	clock: number
 }
 
+export type ReplayRecord = {
+	timestamp: string
+	cursor: string | null
+}
+
 export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends TypedEventEmitter<
 	GossipLogEvents<Payload, Result>
 > {
 	public static namespace = "gossiplog"
-	public static version = 2
+	public static version = 3
 
 	public static schema = {
 		$messages: {
@@ -88,6 +93,11 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 			$indexes: ["clock"],
 		},
 		$heads: { id: "primary" },
+		$replays: {
+			timestamp: "primary",
+			cursor: "string?",
+			$indexes: ["cursor"],
+		},
 		...AncestorIndex.schema,
 	} satisfies ModelSchema
 
@@ -145,8 +155,20 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		await this.db.close()
 	}
 
-	public async replay() {
-		this.log("replaying...")
+	public async replay(options: { pageSize?: number } = {}) {
+		const { pageSize = 1024 } = options
+		this.log("beginning replay")
+
+		await this.db
+			.query<ReplayRecord>("$replays", { where: { cursor: { neq: null } } })
+			.then((replays) =>
+				this.db.apply(
+					replays.map((replay) => ({ model: "$replays", operation: "set", value: { ...replay, cursor: null } })),
+				),
+			)
+
+		const timestamp = new Date().toISOString()
+		await this.db.set("$replays", { timestamp, cursor: null })
 
 		for (const name of ["$heads", ...Object.keys(AncestorIndex.schema)]) {
 			this.log("clearing model %s", name)
@@ -156,8 +178,8 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		await this.tree.clear()
 
 		this.log("iterating over all entries")
-		const pageSize = 4096
-		let lowerBound: RangeExpression = { gte: MIN_MESSAGE_ID }
+
+		const lowerBound: RangeExpression = { gt: undefined }
 		while (!this.controller.signal.aborted) {
 			this.log("fetching new page")
 			const results = await this.db.query<MessageRecord<Payload>>("$messages", {
@@ -172,53 +194,25 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 				break
 			}
 
+			let [{ id: cursor }] = results
 			await this.tree.write(async (txn) => {
 				for (const { id, signature, message } of results) {
 					this.log("replaying message %s", id)
 					const signedMessage = this.encode(signature, message)
 					assert(signedMessage.id === id, "internal error - expected signedMessage.id === id")
 					await this.apply(txn, signedMessage)
+					cursor = id
 					if (this.controller.signal.aborted) {
-						return
+						break
 					}
 				}
 			})
 
-			lowerBound = { gt: results[results.length - 1].id }
+			lowerBound.gt = cursor
+			await this.db.set("$replays", { timestamp, cursor })
 		}
 
-		this.log("finished iterating")
-
-		// await this.tree.clear()
-		// await this.tree.write(async (txn) => {
-		// 	for await (const record of this.db.iterate<MessageRecord<Payload>>("$messages", { orderBy: { id: "asc" } })) {
-		// 		const { id, signature, message } = record
-		// 		this.log("replaying message %s", id)
-
-		// 		const signedMessage = this.encode(signature, message)
-		// 		assert(signedMessage.id === id, "internal error - expected signedMessage.id === id")
-		// 		this.log("got encoded message %s", id)
-		// 		await this.apply(txn, signedMessage)
-		// 	}
-		// })
-
-		// await this.tree.read(async (txn) => {
-		// 	for (const leaf of txn.keys()) {
-		// 		const id = decodeId(leaf)
-		// 		this.log("replaying message %s", id)
-		// 		const record = await this.db.get<MessageRecord<Payload>>("$messages", id)
-
-		// 		if (record === null) {
-		// 			this.log.error("failed to get message %s from database", id)
-		// 			continue
-		// 		}
-
-		// 		const { signature, message, branch } = record
-		// 		const signedMessage = this.encode(signature, message, { branch })
-		// 		assert(signedMessage.id === id, "internal error - expected signedMessage.id === id")
-		// 		await this.#apply.apply(this, [signedMessage])
-		// 	}
-		// })
+		this.log("finished replaying")
 	}
 
 	public async connect(url: string, options: { signal?: AbortSignal } = {}): Promise<NetworkClient<any>> {
