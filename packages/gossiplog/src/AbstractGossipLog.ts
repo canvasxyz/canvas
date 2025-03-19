@@ -77,7 +77,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 	GossipLogEvents<Payload, Result>
 > {
 	public static namespace = "gossiplog"
-	public static version = 1
+	public static version = 2
 
 	public static schema = {
 		$messages: {
@@ -85,9 +85,8 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 			signature: "json",
 			message: "json",
 			hash: "string",
-			branch: "integer",
 			clock: "integer",
-			$indexes: ["branch", "clock"],
+			$indexes: ["clock"],
 		},
 		$heads: { id: "primary" },
 		...AncestorIndex.schema,
@@ -102,9 +101,11 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		newVersion: Record<string, number>,
 	) {
 		const version = oldVersion[AbstractGossipLog.namespace] ?? 0
-		if (version < AbstractGossipLog.version) {
-			// GossipLog migrations go here
-			throw new Error("unexpected GossipLog version")
+
+		if (version <= 1) {
+			await upgradeAPI.removeIndex("$messages", "branch")
+			await upgradeAPI.removeProperty("$messages", "branch")
+			await upgradeAPI.deleteModel("$branch_merges")
 		}
 	}
 
@@ -148,10 +149,6 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 
 	public async replay() {
 		this.log("replaying...")
-		// for (const name of ["$heads", ...Object.keys(AncestorIndex.schema), ...Object.keys(BranchMergeIndex.schema)]) {
-		// 	this.log("clearing model %s", name)
-		// 	await this.db.clear(name)
-		// }
 
 		for (const name of ["$heads", ...Object.keys(AncestorIndex.schema)]) {
 			this.log("clearing model %s", name)
