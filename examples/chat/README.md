@@ -49,8 +49,8 @@ Mount a volume to `/data`. Set the `PORT`, `LISTEN`, `ANNOUNCE`, and
 
 Create a Railway space based on the root of this Github workspace (e.g. canvasxyz/canvas).
 
-* Custom build command: `npm run build && VITE_CANVAS_WS_URL=wss://chat-example.canvas.xyz npm run build --workspace=@canvas-js/example-chat`
-* Custom start command: `./install-prod.sh && canvas run /tmp/canvas-example-chat --port 8080 --static examples/chat/dist --topic chat-example.canvas.xyz --init examples/chat/src/contract.ts`
+* Custom build command: `npm run build && VITE_CANVAS_WS_URL=wss://chat-example.canvas.xyz npm run build --workspace=@canvas-js/chat-example`
+* Custom start command: `./install-prod.sh && canvas run /tmp/example-chat --port 8080 --static examples/chat/dist --topic chat-example.canvas.xyz --init examples/chat/src/contract.ts`
 * Watch paths: `/examples/chat/**`
 * Public networking:
   * Add a service domain for port 8080.

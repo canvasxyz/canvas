@@ -1,6 +1,6 @@
 {
 	"private": true,
-	"name": "@canvas-js/example-chat-encrypted",
+	"name": "@canvas-js/encrypted-chat-example",
 	"version": "0.14.0-next.2",
 	"type": "module",
 	"scripts": {
