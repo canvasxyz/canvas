@@ -73,7 +73,7 @@ export class ModelAPI {
 		const columnDefinitions: string[] = []
 
 		for (const property of model.properties) {
-			this.prepareProperty(property, columnDefinitions, false)
+			this.prepareProperty(property, columnDefinitions, clear)
 		}
 
 		if (clear) {
@@ -89,6 +89,10 @@ export class ModelAPI {
 		for (const index of model.indexes) {
 			if (index.length === 1 && index[0] in this.relations) {
 				continue
+			}
+
+			for (const name of index) {
+				assert(this.relations[name] === undefined, "cannot index relation properties")
 			}
 
 			const indexName = [model.name, ...index].join("/")
@@ -137,6 +141,77 @@ export class ModelAPI {
 		return { insert, update, delete: _delete, clear, count, select, selectAll }
 	}
 
+	private prepareProperty(property: Property, columnDefinitions: string[], clear?: boolean) {
+		if (property.kind === "primitive") {
+			const { name, type, nullable } = property
+			columnDefinitions.push(getColumn(name, type, nullable))
+
+			const propertyName = `${this.model.name}/${name}`
+			this.addCodec(property.name, {
+				columns: [property.name],
+				encode: (value) => [Encoder.encodePrimitiveValue(propertyName, type, nullable, value)],
+				decode: (record) => Decoder.decodePrimitiveValue(propertyName, type, nullable, record[property.name]),
+			})
+
+			if (!this.model.primaryKey.includes(property.name)) {
+				this.mutableProperties.push(property)
+			}
+		} else if (property.kind === "reference") {
+			const propertyName = `${this.model.name}/${property.name}`
+
+			const target = this.config.models.find((model) => model.name === property.target)
+			assert(target !== undefined, "internal error - expected target !== undefined")
+
+			const targetPrimaryProperties = this.config.primaryKeys[target.name]
+
+			if (targetPrimaryProperties.length === 1) {
+				const [targetProperty] = targetPrimaryProperties
+				columnDefinitions.push(getColumn(property.name, targetProperty.type, property.nullable))
+
+				this.addCodec(property.name, {
+					columns: [property.name],
+					encode: (value) => Encoder.encodeReferenceValue(propertyName, [targetProperty], property.nullable, value),
+					decode: (record) =>
+						Decoder.decodeReferenceValue(propertyName, property.nullable, [targetProperty], [record[property.name]]),
+				})
+			} else {
+				const refNames: string[] = []
+
+				for (const targetProperty of targetPrimaryProperties) {
+					const refName = `${property.name}/${targetProperty.name}`
+					columnDefinitions.push(getColumn(refName, targetProperty.type, property.nullable))
+					refNames.push(refName)
+				}
+
+				this.addCodec(property.name, {
+					columns: refNames,
+
+					encode: (value) =>
+						Encoder.encodeReferenceValue(propertyName, targetPrimaryProperties, property.nullable, value),
+
+					decode: (record) =>
+						Decoder.decodeReferenceValue(
+							propertyName,
+							property.nullable,
+							targetPrimaryProperties,
+							refNames.map((name) => record[name]),
+						),
+				})
+			}
+
+			this.mutableProperties.push(property)
+		} else if (property.kind === "relation") {
+			const relation = this.config.relations.find(
+				(relation) => relation.source === this.model.name && relation.sourceProperty === property.name,
+			)
+			assert(relation !== undefined, "internal error - relation not found")
+			this.addRelation(relation, clear)
+			this.mutableProperties.push(property)
+		} else {
+			signalInvalidType(property)
+		}
+	}
+
 	public async addProperty(property: Property) {
 		/** SQL column declarations */
 		const columnDefinitions: string[] = []
@@ -176,17 +251,13 @@ export class ModelAPI {
 	public addIndex(propertyNames: string[]) {
 		if (propertyNames.length === 1 && propertyNames[0] in this.relations) {
 			const [propertyName] = propertyNames
-			const relation = this.relations[propertyName]
-			const targetIndex = `${this.table}/${propertyName}/target`
-			const targetColumns = relation.targetColumnNames.map(quote).join(", ")
-			this.db.exec(`CREATE INDEX IF NOT EXISTS "${targetIndex}" ON "${this.table}" (${targetColumns})`)
+			this.relations[propertyName].addTargetIndex()
 			return
 		}
 
-		assert(
-			propertyNames.every((name) => this.relations[name] === undefined),
-			"cannot index relation properties",
-		)
+		for (const name of propertyNames) {
+			assert(this.relations[name] === undefined, "cannot index relation properties")
+		}
 
 		const indexName = [this.model.name, ...propertyNames].join("/")
 		const indexColumnNames = propertyNames.flatMap((name) => this.codecs[name].columns)
@@ -197,84 +268,12 @@ export class ModelAPI {
 	public removeIndex(propertyNames: string[]) {
 		if (propertyNames.length === 1 && propertyNames[0] in this.relations) {
 			const [propertyName] = propertyNames
-			const targetIndex = `${this.table}/${propertyName}/target`
-			this.db.exec(`DROP INDEX IF EXISTS "${targetIndex}"`)
+			this.relations[propertyName].removeTargetIndex()
 			return
 		}
 
 		const indexName = [this.model.name, ...propertyNames].join("/")
 		this.db.exec(`DROP INDEX IF EXISTS "${indexName}"`)
-	}
-
-	private prepareProperty(property: Property, columnDefinitions: string[], clear?: boolean) {
-		if (property.kind === "primitive") {
-			const { name, type, nullable } = property
-			columnDefinitions.push(getColumn(name, type, nullable))
-
-			const propertyName = `${this.model.name}/${name}`
-			this.addCodec(property.name, {
-				columns: [property.name],
-				encode: (value) => [Encoder.encodePrimitiveValue(propertyName, type, nullable, value)],
-				decode: (record) => Decoder.decodePrimitiveValue(propertyName, type, nullable, record[property.name]),
-			})
-
-			if (!this.model.primaryKey.includes(property.name)) {
-				this.mutableProperties.push(property)
-			}
-		} else if (property.kind === "reference") {
-			const propertyName = `${this.model.name}/${property.name}`
-
-			const target = this.config.models.find((model) => model.name === property.target)
-			assert(target !== undefined)
-
-			this.config.primaryKeys[target.name]
-
-			if (target.primaryKey.length === 1) {
-				const [targetProperty] = this.config.primaryKeys[target.name]
-				columnDefinitions.push(getColumn(property.name, targetProperty.type, property.nullable))
-
-				this.addCodec(property.name, {
-					columns: [property.name],
-					encode: (value) => Encoder.encodeReferenceValue(propertyName, [targetProperty], property.nullable, value),
-					decode: (record) =>
-						Decoder.decodeReferenceValue(propertyName, property.nullable, [targetProperty], [record[property.name]]),
-				})
-			} else {
-				const refNames: string[] = []
-
-				for (const targetProperty of this.config.primaryKeys[target.name]) {
-					const refName = `${property.name}/${targetProperty.name}`
-					columnDefinitions.push(getColumn(refName, targetProperty.type, property.nullable))
-					refNames.push(refName)
-				}
-
-				this.addCodec(property.name, {
-					columns: refNames,
-
-					encode: (value) =>
-						Encoder.encodeReferenceValue(propertyName, this.config.primaryKeys[target.name], property.nullable, value),
-
-					decode: (record) =>
-						Decoder.decodeReferenceValue(
-							propertyName,
-							property.nullable,
-							this.config.primaryKeys[target.name],
-							refNames.map((name) => record[name]),
-						),
-				})
-			}
-
-			this.mutableProperties.push(property)
-		} else if (property.kind === "relation") {
-			const relation = this.config.relations.find(
-				(relation) => relation.source === this.model.name && relation.sourceProperty === property.name,
-			)
-			assert(relation !== undefined, "internal error - relation not found")
-			this.addRelation(relation, clear)
-			this.mutableProperties.push(property)
-		} else {
-			signalInvalidType(property)
-		}
 	}
 
 	private addCodec(name: string, codec: PropertyAPI<SqlitePrimitiveValue>) {

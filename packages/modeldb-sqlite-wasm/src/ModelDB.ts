@@ -16,13 +16,14 @@ import {
 	Model,
 	ModelDBInit,
 } from "@canvas-js/modeldb"
-import { signalInvalidType } from "@canvas-js/utils"
+import { assert, signalInvalidType } from "@canvas-js/utils"
 
 import { ModelAPI } from "./ModelAPI.js"
 import { Query } from "./utils.js"
 
 export interface ModelDBOptions {
 	sqlite3?: Sqlite3Static
+	db?: Database
 }
 
 const isWorker = typeof WorkerGlobalScope !== "undefined" && self instanceof WorkerGlobalScope
@@ -32,18 +33,17 @@ export class ModelDB extends AbstractModelDB {
 	#selectTable: Query<[string], { name: string }>
 	#selectIndex: Query<[string, string], { name: string }>
 
-	public static async open(path: string | null, init: ModelDBInit, { sqlite3 }: ModelDBOptions = {}) {
+	public static async open(path: string | null, init: ModelDBInit, { db, sqlite3 }: ModelDBOptions = {}) {
 		sqlite3 ??= await sqlite3InitModule({ print: console.log, printErr: console.error })
 
 		const newConfig = Config.parse(init.models, { freeze: true })
 		const newVersion = Object.assign(init.version ?? {}, AbstractModelDB.baseVersion)
 
-		let db: Database
-		if (path === null || path === undefined) {
-			db = new sqlite3.oo1.DB(":memory:")
+		if (path === null) {
+			db ??= new sqlite3.oo1.DB(":memory:")
 		} else if (isWorker) {
 			if ("opfs" in sqlite3) {
-				db = new sqlite3.oo1.OpfsDb(path, "c")
+				db ??= new sqlite3.oo1.OpfsDb(path, "c")
 			} else {
 				throw new Error("cannot open persistent database: missing OPFS API support")
 			}
@@ -260,22 +260,48 @@ export class ModelDB extends AbstractModelDB {
 
 	private addProperty(modelName: string, propertyName: string, propertyType: PropertyType) {
 		const property = this.config.addProperty(modelName, propertyName, propertyType)
-		throw new Error("not implemented")
+
+		const model = this.config.models.find((model) => model.name === modelName)
+		assert(model !== undefined, "internal error")
+		this.models[modelName] = model
+
+		this.#models[modelName].addProperty(property)
+		this.#models.$models.set({ name: modelName, model })
 	}
 
 	private removeProperty(modelName: string, propertyName: string) {
 		this.config.removeProperty(modelName, propertyName)
-		throw new Error("not implemented")
+
+		const model = this.config.models.find((model) => model.name === modelName)
+		assert(model !== undefined, "internal error")
+		this.models[modelName] = model
+
+		this.#models[modelName].removeProperty(propertyName)
+		this.#models.$models.set({ name: modelName, model })
 	}
 
 	private addIndex(modelName: string, index: string) {
-		const propertyNames = this.config.addIndex(modelName, index)
-		throw new Error("not implemented")
+		const propertyNames = Config.parseIndex(index)
+		this.config.addIndex(modelName, index)
+
+		const model = this.config.models.find((model) => model.name === modelName)
+		assert(model !== undefined, "internal error")
+		this.models[modelName] = model
+
+		this.#models[modelName].addIndex(propertyNames)
+		this.#models.$models.set({ name: modelName, model })
 	}
 
 	private removeIndex(modelName: string, index: string) {
+		const propertyNames = Config.parseIndex(index)
 		this.config.removeIndex(modelName, index)
-		throw new Error("not implemented")
+
+		const model = this.config.models.find((model) => model.name === modelName)
+		assert(model !== undefined, "internal error")
+		this.models[modelName] = model
+
+		this.#models[modelName].removeIndex(propertyNames)
+		this.#models.$models.set({ name: modelName, model })
 	}
 
 	private getUpgradeAPI() {
