@@ -24,7 +24,9 @@ import { Connect } from "./connect/index.js"
 import { LogStatus } from "./LogStatus.js"
 import * as contract from "./contract.js"
 
-export const topic = "chat-example.canvas.xyz"
+import { Visualization } from "./Visualization.js"
+
+export const topic = "census.canvas.xyz"
 
 const wsURL = import.meta.env.VITE_CANVAS_WS_URL ?? null
 console.log("websocket API URL:", wsURL)
@@ -66,11 +68,12 @@ export const App: React.FC<{}> = ({}) => {
 					<main>
 						<AppInfo app={app} ws={ws} />
 						<div className="flex flex-row gap-4 h-full">
-							<div className="sm:min-w-[300px] md:min-w-[480px] flex-1 flex flex-col justify-stretch gap-2">
-								<div className="flex-1 border rounded px-2 overflow-y-scroll">{/*<Messages address={address} />*/}</div>
-								{/*<MessageComposer />*/}
+							<div className="flex-1 flex flex-col justify-stretch gap-2">
+								<div className="flex-1 border rounded px-2 overflow-y-scroll">
+									<Visualization />
+								</div>
 							</div>
-							<div className="flex flex-col gap-4 w-[480px] break-all">
+							<div className="flex flex-col gap-4 w-[200px] break-all">
 								<Connect />
 								<SessionStatus />
 								<ConnectionStatus topic={topicRef.current} ws={ws} />

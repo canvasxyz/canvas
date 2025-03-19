@@ -6,7 +6,7 @@
 	"scripts": {
 		"build": "npx vite build",
 		"dev": "npx vite",
-		"dev:server": "canvas run --port 8080 --static dist --network-explorer --topic chat-example.canvas.xyz src/contract.ts"
+		"dev:server": "canvas run --port 8080 --static dist --network-explorer --topic census.canvas.xyz src/contract.ts"
 	},
 	"dependencies": {
 		"@canvas-js/chain-atp": "0.14.0-next.1",
@@ -36,6 +36,7 @@
 		"@types/react-dom": "^18.3.0",
 		"buffer": "^6.0.3",
 		"comlink": "^4.4.1",
+		"d3": "^7.9.0",
 		"ethers": "^6.13.5",
 		"idb": "^8.0.2",
 		"magic-sdk": "^21.5.0",
