@@ -18,7 +18,7 @@ export const fetchAndIpldParseJson = async <T>(path: string) => {
 	const json = await response.text()
 	return { content: parse(json) as T, responseTime }
 }
-export type Result<T> = { id: string; signature: Signature; message: Message<T>; branch: number }
+export type Result<T> = { id: string; signature: Signature; message: Message<T> }
 
 export const formatDistanceCustom = (timestamp: number) => {
 	let result = formatDistance(timestamp, new Date(), { includeSeconds: true })

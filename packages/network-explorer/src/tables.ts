@@ -68,13 +68,7 @@ export const tables: TableDef[] = [
 				enableSorting: false,
 				enableColumnFilter: false,
 			},
-			{
-				header: "branch",
-				accessorKey: "branch",
-				size: 100,
-				enableSorting: true,
-				enableColumnFilter: false,
-			},
+
 			{
 				header: "clock",
 				accessorKey: "clock",
@@ -125,13 +119,6 @@ export const tables: TableDef[] = [
 				size: 100,
 				cell: BinaryCellData,
 				enableSorting: false,
-				enableColumnFilter: false,
-			},
-			{
-				header: "branch",
-				accessorKey: "branch",
-				size: 100,
-				enableSorting: true,
 				enableColumnFilter: false,
 			},
 			{

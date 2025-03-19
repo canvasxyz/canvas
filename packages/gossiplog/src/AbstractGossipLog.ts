@@ -69,7 +69,6 @@ export type MessageRecord<Payload> = {
 	signature: Signature
 	message: Message<Payload>
 	hash: string
-	branch: number
 	clock: number
 }
 
@@ -241,7 +240,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 	public encode<T extends Payload = Payload>(
 		signature: Signature,
 		message: Message<T>,
-		context: { source?: MessageSource; branch?: number } = {},
+		context: { source?: MessageSource } = {},
 	): SignedMessage<T, Result> {
 		if (this.topic !== message.topic) {
 			this.log.error("invalid message: %O", message)
@@ -258,10 +257,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		return SignedMessage.encode(signature, preparedMessage, context)
 	}
 
-	public decode(
-		value: Uint8Array,
-		context: { source?: MessageSource; branch?: number } = {},
-	): SignedMessage<Payload, Result> {
+	public decode(value: Uint8Array, context: { source?: MessageSource } = {}): SignedMessage<Payload, Result> {
 		const signedMessage = SignedMessage.decode<Payload, Result>(value, context)
 		const { topic, payload } = signedMessage.message
 		if (this.topic !== topic) {
@@ -296,23 +292,20 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 			return null
 		}
 
-		const { signature, message, branch } = record
-		return this.encode(signature, message, { branch })
+		const { signature, message } = record
+		return this.encode(signature, message)
 	}
 
 	public async getMessages(
 		range: { lt?: string; lte?: string; gt?: string; gte?: string; reverse?: boolean; limit?: number } = {},
-	): Promise<{ id: string; signature: Signature; message: Message<Payload>; branch: number }[]> {
+	): Promise<{ id: string; signature: Signature; message: Message<Payload> }[]> {
 		const { reverse = false, limit, ...where } = range
-		return await this.db.query<{ id: string; signature: Signature; message: Message<Payload>; branch: number }>(
-			"$messages",
-			{
-				where: { id: where },
-				select: { id: true, signature: true, message: true, branch: true },
-				orderBy: { id: reverse ? "desc" : "asc" },
-				limit,
-			},
-		)
+		return await this.db.query<{ id: string; signature: Signature; message: Message<Payload> }>("$messages", {
+			where: { id: where },
+			select: { id: true, signature: true, message: true },
+			orderBy: { id: reverse ? "desc" : "asc" },
+			limit,
+		})
 	}
 
 	public async *iterate(
@@ -422,7 +415,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 
 		const hash = toString(hashEntry(key, value), "hex")
 
-		const messageRecord: MessageRecord<Payload> = { id, signature, message, hash, branch: 0, clock: message.clock }
+		const messageRecord: MessageRecord<Payload> = { id, signature, message, hash, clock: message.clock }
 
 		const effects: Effect[] = [
 			{ model: "$heads", operation: "set", value: { id } },
@@ -543,8 +536,8 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 							throw new MessageNotFoundError(ids[i])
 						}
 
-						const { signature, message, branch } = messageRecord
-						const signedMessage = this.encode(signature, message, { branch })
+						const { signature, message } = messageRecord
+						const signedMessage = this.encode(signature, message)
 
 						assert(equals(signedMessage.key, keys[i]), "invalid message key")
 						values.push(signedMessage.value)
