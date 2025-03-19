@@ -2,28 +2,27 @@
 layout: home
 ---
 
-<HeroRow text="Realtime multiplayer TypeScript applications" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }">
+<HeroRow text="Peer-to-peer sync for TypeScript applications" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }">
   <HeroAction theme="brand big" text="Guide" href="/1-introduction" />
   <HeroAction theme="brand big" text="Blog" href="/blog" />
   <HeroAction theme="alt big" text="API Docs" href="/readme-core" />
 </HeroRow>
 
-Canvas is a framework for building realtime TypeScript applications,
-that runs your core application logic in a durable state container
-similar to Redux.
+Canvas is a replicated system for instant-sync TypeScript applications,
+based on a peer-to-peer database and runtime.
 
-It's like if your React state manager implemented a smart contract,
-with verifiable state transitions and end-to-end verifiability.
+Write your core application logic in a [replicated contract](#),
+that syncs over libp2p. Users' actions are applied and sync instantly.
 
-Write your application backend as a set of [mutations](#),
-and user actions get replicated in realtime, with conflicts
-handled through rollback, CRDTs, and/or custom merge logic.
+You can handle conflicts with CRDTs, the data structures that Figma and Linear
+use to make their UI fast. Or, resolve conflicts using MMO-style optimistic
+rollback, without writing extra code.
 
-Here's an example to get started:
+It's fully open source, and built on SQLite, Postgres, and IndexedDB.
 
 ::: code-group
 
-```ts [React App]
+```ts [React app]
 import { useCanvas } from "@canvas-js/hooks"
 
 const contract = {
@@ -40,13 +39,10 @@ const contract = {
   }
 }
 
-const { app } = useCanvas({ // [!code highlight]
-  topic: "demo.canvas.xyz", // [!code highlight]
-  contract,                 // [!code highlight]
-})                          // [!code highlight]
+const { app } = useCanvas({ topic: "demo.canvas.xyz", contract })   // [!code highlight]
 ```
 
-```ts [Node.js App]
+```ts [Node.js + WASM]
 export const contract = {
   models: {
     messages: {
@@ -61,7 +57,6 @@ export const contract = {
   }
 }
 
-// From the command line: // [!code highlight]
 $ canvas run contract.ts --topic demo.canvas.xyz // [!code highlight]
 ```
 
@@ -69,20 +64,25 @@ $ canvas run contract.ts --topic demo.canvas.xyz // [!code highlight]
 
 <CodeGroupOpener />
 
-## Distributed Execution
+## A Peer-to-peer Distributed Runtime
 
-Every Canvas state container runs on a durable execution log, which stores
-a compactable history of the application.
+Every Canvas application runs on a [distributed
+log](https://joelgustafson.com/posts/2024-09-30/gossiplog-reliable-causal-broadcast-for-libp2p)
+that stores a history of users' actions.
 
 When new applications are started up, they catch up on history using
 [efficient sync](https://docs.canvas.xyz/blog/2023-05-04-merklizing-the-key-value-store.html)
 to catch up on the latest state.
 
+On top of the sync layer, we've written a peer-to-peer
+runtime that sandboxes users' actions, that executes them in a
+deterministic environment to maintain convergence and mergeability.
+
 ![Replicated log](./public/gossiplog.png)
 
-This makes it possible to develop multiplayer games, local-first
-applications like Linear, and realtime applications with higher
-responsiveness, since users don't need to wait for a network roundtrip.
+Now you can develop multiplayer games, local-first
+applications, and realtime applications with instant
+responsiveness, while maintaining strong decentralization properties.
 
 For demanding applications, you can shard an application into
 multiple state containers, and state containers can be snapshotted

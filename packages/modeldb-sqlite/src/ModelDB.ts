@@ -1,6 +1,6 @@
 import Database, * as sqlite from "better-sqlite3"
 
-import { signalInvalidType } from "@canvas-js/utils"
+import { assert, signalInvalidType } from "@canvas-js/utils"
 
 import {
 	AbstractModelDB,
@@ -31,51 +31,56 @@ export class ModelDB extends AbstractModelDB {
 		const newConfig = Config.parse(init.models, { freeze: true })
 		const newVersion = Object.assign(init.version ?? {}, AbstractModelDB.baseVersion)
 
-		const db = new Database(path ?? ":memory:")
-
 		const timestamp = new Date().toISOString()
 
-		// calling this constructor will create empty $versions and $models
-		// tables if they do not already exist
-		const baseModelDB = new ModelDB(db, Config.baseConfig, AbstractModelDB.baseVersion)
-		const versionRecordCount = await baseModelDB.count("$versions")
-		if (versionRecordCount === 0) {
-			// this means one of two things:
-			// 1) we are initializing a new database, or
-			// 2) we are opening a pre-migration-system database for the first time
+		const db = new Database(path ?? ":memory:")
 
-			baseModelDB.log("no version records found")
-			const initialUpgradeVersion = Object.assign(
-				init.initialUpgradeVersion ?? init.version ?? {},
-				AbstractModelDB.baseVersion,
-			)
-			const initialUpgradeConfig = init.initialUpgradeSchema ? Config.parse(init.initialUpgradeSchema) : newConfig
+		try {
+			// calling this constructor will create empty $versions and $models
+			// tables if they do not already exist
+			const baseModelDB = new ModelDB(db, Config.baseConfig, AbstractModelDB.baseVersion)
+			const versionRecordCount = await baseModelDB.count("$versions")
+			if (versionRecordCount === 0) {
+				// this means one of two things:
+				// 1) we are initializing a new database, or
+				// 2) we are opening a pre-migration-system database for the first time
 
-			// we distinguish between these cases using baseModelDB.satisfies(...).
-			const isSatisfied = await baseModelDB.satisfies(initialUpgradeConfig)
-			if (isSatisfied) {
-				baseModelDB.log("existing database satisfies initial upgrade config")
-				// now we write initialUpgradeConfig entries to $models
-				// and write initialUpgradeVersion entries to $versions
-				await AbstractModelDB.initialize(baseModelDB, timestamp, initialUpgradeVersion, initialUpgradeConfig)
-			} else {
-				baseModelDB.log("existing database not satisfied by initial upgrade config")
-				// we ignore initialUpgradeVersion / initialUpgradeConfig and just
-				// initialize directly with newVersion / newConfig
-				await AbstractModelDB.initialize(baseModelDB, timestamp, newVersion, newConfig)
+				baseModelDB.log("no version records found")
+				const initialUpgradeVersion = Object.assign(
+					init.initialUpgradeVersion ?? init.version ?? {},
+					AbstractModelDB.baseVersion,
+				)
+				const initialUpgradeConfig = init.initialUpgradeSchema ? Config.parse(init.initialUpgradeSchema) : newConfig
+
+				// we distinguish between these cases using baseModelDB.satisfies(...).
+				const isSatisfied = await baseModelDB.satisfies(initialUpgradeConfig)
+				if (isSatisfied) {
+					baseModelDB.log("existing database satisfies initial upgrade config")
+					// now we write initialUpgradeConfig entries to $models
+					// and write initialUpgradeVersion entries to $versions
+					await AbstractModelDB.initialize(baseModelDB, timestamp, initialUpgradeVersion, initialUpgradeConfig)
+				} else {
+					baseModelDB.log("existing database not satisfied by initial upgrade config")
+					// we ignore initialUpgradeVersion / initialUpgradeConfig and just
+					// initialize directly with newVersion / newConfig
+					await AbstractModelDB.initialize(baseModelDB, timestamp, newVersion, newConfig)
+				}
 			}
+
+			// now means we proceed with the regular upgrade check
+			await AbstractModelDB.upgrade(baseModelDB, timestamp, newVersion, newConfig, async (oldConfig, oldVersion) => {
+				if (init.upgrade !== undefined) {
+					const existingDB = new ModelDB(db, oldConfig, oldVersion)
+					const upgradeAPI = existingDB.getUpgradeAPI()
+					await init.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion)
+				}
+			})
+
+			return new ModelDB(db, newConfig, newVersion)
+		} catch (err) {
+			db.close()
+			throw err
 		}
-
-		// now means we proceed with the regular upgrade check
-		await AbstractModelDB.upgrade(baseModelDB, timestamp, newVersion, newConfig, async (oldConfig, oldVersion) => {
-			if (init.upgrade !== undefined) {
-				const existingDB = new ModelDB(db, oldConfig, oldVersion)
-				const upgradeAPI = existingDB.getUpgradeAPI()
-				await init.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion)
-			}
-		})
-
-		return new ModelDB(db, newConfig, newVersion)
 	}
 
 	private constructor(public readonly db: sqlite.Database, config: Config, version: Record<string, number>) {
@@ -243,24 +248,50 @@ export class ModelDB extends AbstractModelDB {
 		this.#models.$models.delete(name)
 	}
 
-	private addProperty(modelName: string, propertyName: string, propertyType: PropertyType) {
+	private async addProperty(modelName: string, propertyName: string, propertyType: PropertyType) {
 		const property = this.config.addProperty(modelName, propertyName, propertyType)
-		throw new Error("not implemented")
+
+		const model = this.config.models.find((model) => model.name === modelName)
+		assert(model !== undefined, "internal error")
+		this.models[modelName] = model
+
+		this.#models[modelName].addProperty(property)
+		this.#models.$models.set({ name: modelName, model })
 	}
 
 	private removeProperty(modelName: string, propertyName: string) {
 		this.config.removeProperty(modelName, propertyName)
-		throw new Error("not implemented")
+
+		const model = this.config.models.find((model) => model.name === modelName)
+		assert(model !== undefined, "internal error")
+		this.models[modelName] = model
+
+		this.#models[modelName].removeProperty(propertyName)
+		this.#models.$models.set({ name: modelName, model })
 	}
 
 	private addIndex(modelName: string, index: string) {
-		const propertyNames = this.config.addIndex(modelName, index)
-		throw new Error("not implemented")
+		const propertyNames = Config.parseIndex(index)
+		this.config.addIndex(modelName, index)
+
+		const model = this.config.models.find((model) => model.name === modelName)
+		assert(model !== undefined, "internal error")
+		this.models[modelName] = model
+
+		this.#models[modelName].addIndex(propertyNames)
+		this.#models.$models.set({ name: modelName, model })
 	}
 
 	private removeIndex(modelName: string, index: string) {
+		const propertyNames = Config.parseIndex(index)
 		this.config.removeIndex(modelName, index)
-		throw new Error("not implemented")
+
+		const model = this.config.models.find((model) => model.name === modelName)
+		assert(model !== undefined, "internal error")
+		this.models[modelName] = model
+
+		this.#models[modelName].removeIndex(propertyNames)
+		this.#models.$models.set({ name: modelName, model })
 	}
 
 	private getUpgradeAPI() {

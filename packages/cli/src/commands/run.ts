@@ -392,6 +392,10 @@ async function setupApp(topic: string, contract: string, location_: string | nul
 		}
 	})
 
+	if (args.replay) {
+		await app.replay()
+	}
+
 	if (args["repl"]) {
 		console.log("")
 		startActionPrompt(app)
