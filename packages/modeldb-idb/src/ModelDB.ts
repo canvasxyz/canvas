@@ -109,20 +109,7 @@ export class ModelDB extends AbstractModelDB {
 		})
 
 		const modelDB = new ModelDB(db, newConfig, newVersion)
-
-		const models = await modelDB
-			.getAll<{ name: string; model: Model }>("$models")
-			.then((models) => Object.fromEntries(models.map(({ name, model }) => [name, model])))
-
-		for (const model of newConfig.models) {
-			const oldModel = models[model.name]
-			if (oldModel === undefined) {
-				throw new Error(`missing model "${model.name}"`)
-			}
-
-			Config.assertEqualModel(oldModel, model)
-		}
-
+		await modelDB.validate()
 		return modelDB
 	}
 
@@ -153,21 +140,26 @@ export class ModelDB extends AbstractModelDB {
 
 		db.addEventListener("error", (event) => this.log("db: error", event))
 		db.addEventListener("close", (event) => this.log("db: close", event))
+	}
 
-		// db.addEventListener("versionchange", (event) => {
-		// 	this.log("db: versionchange", event.oldVersion, event.newVersion)
-		// 	if (event.oldVersion === null && event.newVersion !== null) {
-		// 		// create
-		// 		return
-		// 	} else if (event.oldVersion !== null && event.newVersion !== null) {
-		// 		// update
-		// 		return
-		// 	} else if (event.oldVersion !== null && event.newVersion === null) {
-		// 		// delete
-		// 		db.close()
-		// 		return
-		// 	}
-		// })
+	private async validate() {
+		this.log("validating config with version %o", this.version)
+		const oldModels = await this.getAll<{ name: string; model: Model }>("$models")
+		for (const newModel of this.config.models) {
+			const oldModel = oldModels.find((model) => model.name === newModel.name)
+			if (oldModel === undefined) {
+				throw new Error(`missing model "${newModel.name}"`)
+			}
+
+			Config.assertEqualModel(oldModel.model, newModel)
+		}
+
+		const oldVersion = await AbstractModelDB.getVersion(this)
+		for (const [namespace, version] of Object.entries(this.version)) {
+			if (oldVersion[namespace] !== version) {
+				throw new Error(`migration error - expected version { ${namespace}: ${version} }`)
+			}
+		}
 	}
 
 	protected hasModel(model: Model): boolean {

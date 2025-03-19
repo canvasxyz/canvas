@@ -4,8 +4,8 @@ on:
     branches: [main]
     paths:
       - package.json
+      - .github/**
       - docs/**
-      - docs-gossiplog/**
       - packages/*/README.md
       - examples/*/README.md
   workflow_dispatch:
@@ -45,15 +45,6 @@ jobs:
         run: |
           npm run docs:build
           touch docs/.vitepress/dist/.nojekyll
-
-      - name: Build GossipLog Docs with VitePress
-        run: |
-          npm run docs-gossiplog:build
-          touch docs-gossiplog/.vitepress/dist/.nojekyll
-
-      - name: Copy Gossiplog Docs
-        run: |
-          cp -r docs-gossiplog/.vitepress/dist docs/.vitepress/dist/gossiplog
 
       - name: Upload
         uses: actions/upload-pages-artifact@v3

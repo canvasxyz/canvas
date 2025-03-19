@@ -2,24 +2,23 @@
 layout: home
 ---
 
-<HeroRow text="Replicated TypeScript applications" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }">
+<HeroRow text="Peer-to-peer sync for TypeScript applications" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }">
   <HeroAction theme="brand big" text="Guide" href="/1-introduction" />
   <HeroAction theme="brand big" text="Blog" href="/blog" />
   <HeroAction theme="alt big" text="API Docs" href="/readme-core" />
 </HeroRow>
 
-Canvas is an toolchain for building instant-sync TypeScript applications,
-by writing your core application logic in a replicated state container.
+Canvas is a replicated system for instant-sync TypeScript applications,
+based on a peer-to-peer database and runtime.
 
-Actions in your state container are applied and sync instantly, across
-the browser and server.
+Write your core application logic in a [replicated contract](#),
+that syncs over libp2p. Users' actions are applied and sync instantly.
 
-Lots of users? Handle conflicts using CRDTs, the data structures that
-Figma and Linear use to make their UI lightning fast. Or, use optimistic
-rollback to get MMO-style sync, without any new code.
+You can handle conflicts with CRDTs, the data structures that Figma and Linear
+use to make their UI fast. Or, resolve conflicts using MMO-style optimistic
+rollback, without writing extra code.
 
-All this works the way you're used to writing web applications.
-It's all open source, too, built on SQLite, Postgres, IndexedDB, and libp2p.
+It's fully open source, and built on SQLite, Postgres, and IndexedDB.
 
 ::: code-group
 
@@ -43,7 +42,7 @@ const contract = {
 const { app } = useCanvas({ topic: "demo.canvas.xyz", contract })   // [!code highlight]
 ```
 
-```ts [Node.js]
+```ts [Node.js + WASM]
 export const contract = {
   models: {
     messages: {
