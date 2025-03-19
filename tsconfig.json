@@ -42,6 +42,7 @@
 		{ "path": "./packages/test-network" },
 		{ "path": "./packages/utils" },
 		{ "path": "./packages/utils/test" },
+		{ "path": "./examples/census" },
 		{ "path": "./examples/chat" },
 		{ "path": "./examples/chat-next" },
 		{ "path": "./examples/encrypted-chat" },
