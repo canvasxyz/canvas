@@ -116,6 +116,14 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 			await upgradeAPI.removeProperty("$messages", "branch")
 			await upgradeAPI.deleteModel("$branch_merges")
 		}
+
+		if (version <= 2) {
+			await upgradeAPI.createModel("$replays", {
+				timestamp: "primary",
+				cursor: "string?",
+				$indexes: ["cursor"],
+			})
+		}
 	}
 
 	public readonly topic: string
