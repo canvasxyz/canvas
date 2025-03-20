@@ -168,11 +168,9 @@ export class Canvas<
 			}
 		}
 
-		const db = messageLog.db
-
 		if (config.reset) {
 			for (const modelName of Object.keys({ ...config.schema, ...runtime.schema, ...AbstractGossipLog.schema })) {
-				await db.clear(modelName)
+				await messageLog.db.clear(modelName)
 			}
 		}
 
@@ -186,17 +184,17 @@ export class Canvas<
 		const app = new Canvas<ModelsT, ActionsT>(signers, messageLog, runtime)
 
 		// Check to see if the $actions table is empty and populate it if necessary
-		const messagesCount = await db.count("$messages")
+		const messagesCount = await messageLog.db.count("$messages")
 		// const sessionsCount = await db.count("$sessions")
-		const actionsCount = await db.count("$actions")
-		const usersCount = await db.count("$dids")
+		const actionsCount = await messageLog.db.count("$actions")
+		const usersCount = await messageLog.db.count("$dids")
 		if (messagesCount > 0 && (actionsCount === 0 || usersCount === 0)) {
 			app.log("indexing $actions and $dids table")
 			const limit = 4096
 			let resultCount: number
 			let start: string | undefined = undefined
 			do {
-				const results: { id: string; message: Message<MessageType> }[] = await db.query<{
+				const results: { id: string; message: Message<MessageType> }[] = await messageLog.db.query<{
 					id: string
 					message: Message<MessageType>
 				}>("$messages", {
@@ -228,7 +226,7 @@ export class Canvas<
 				}
 
 				if (effects.length > 0) {
-					await db.apply(effects)
+					await messageLog.db.apply(effects)
 				}
 			} while (resultCount > 0)
 		}
@@ -342,7 +340,7 @@ export class Canvas<
 		}
 	}
 
-	public async replay() {
+	public async replay(): Promise<boolean> {
 		for (const name of Object.keys(this.db.models)) {
 			if (!name.startsWith("$")) {
 				this.log("clearing model %s", name)
@@ -350,7 +348,7 @@ export class Canvas<
 			}
 		}
 
-		await this.messageLog.replay()
+		return await this.messageLog.replay()
 	}
 
 	public async connect(url: string, options: { signal?: AbortSignal } = {}): Promise<NetworkClient<any>> {

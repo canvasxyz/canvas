@@ -156,6 +156,31 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		this.log = logger(`canvas:gossiplog:[${this.topic}]`)
 	}
 
+	protected async initialize() {
+		const replays = await this.db.query<ReplayRecord>("$replays", {
+			where: { cursor: { neq: null } },
+			orderBy: { timestamp: "desc" },
+		})
+
+		if (replays.length > 0) {
+			const [{ timestamp, cursor }, ...rest] = replays
+			assert(cursor !== null, "internal error - expected cursor !== null")
+
+			this.log("found incomplete replay from %s at cursor %s", timestamp, cursor)
+
+			// clear existing replay records
+			await this.db.apply(
+				rest.map<Effect>(({ timestamp }) => ({
+					model: "$replays",
+					operation: "set",
+					value: { timestamp, cursor: null },
+				})),
+			)
+
+			await this.#replay(timestamp, cursor)
+		}
+	}
+
 	public async close() {
 		this.log("closing")
 		this.controller.abort()
@@ -163,17 +188,19 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		await this.db.close()
 	}
 
-	public async replay(options: { pageSize?: number } = {}) {
-		const { pageSize = 1024 } = options
+	public async replay(): Promise<boolean> {
 		this.log("beginning replay")
 
-		await this.db
-			.query<ReplayRecord>("$replays", { where: { cursor: { neq: null } } })
-			.then((replays) =>
-				this.db.apply(
-					replays.map((replay) => ({ model: "$replays", operation: "set", value: { ...replay, cursor: null } })),
-				),
-			)
+		// clear existing replay records
+		await this.db.query<ReplayRecord>("$replays", { where: { cursor: { neq: null } } }).then(async (replays) => {
+			const effects = replays.map<Effect>((replay) => ({
+				model: "$replays",
+				operation: "set",
+				value: { ...replay, cursor: null },
+			}))
+
+			await this.db.apply(effects)
+		})
 
 		const timestamp = new Date().toISOString()
 		await this.db.set("$replays", { timestamp, cursor: null })
@@ -184,10 +211,13 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		}
 
 		await this.tree.clear()
+		return await this.#replay(timestamp)
+	}
 
-		this.log("iterating over all entries")
+	async #replay(timestamp: string, cursor?: string) {
+		const pageSize = 128
 
-		const lowerBound: RangeExpression = { gt: undefined }
+		const lowerBound: RangeExpression = { gt: cursor }
 		while (!this.controller.signal.aborted) {
 			this.log("fetching new page")
 			const results = await this.db.query<MessageRecord<Payload>>("$messages", {
@@ -199,7 +229,9 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 			this.log("got new page of %d records", results.length)
 
 			if (results.length === 0) {
-				break
+				this.log("finished replaying")
+				await this.db.set("$replays", { timestamp, cursor: null })
+				return true
 			}
 
 			let [{ id: cursor }] = results
@@ -220,7 +252,8 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 			await this.db.set("$replays", { timestamp, cursor })
 		}
 
-		this.log("finished replaying")
+		this.log("replay incomplete")
+		return false
 	}
 
 	public async connect(url: string, options: { signal?: AbortSignal } = {}): Promise<NetworkClient<any>> {
