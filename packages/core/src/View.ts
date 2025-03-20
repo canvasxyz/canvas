@@ -1,13 +1,12 @@
-import * as cbor from "@ipld/dag-cbor"
-
 import { logger } from "@libp2p/logger"
 import type { MessageType } from "@canvas-js/interfaces"
 
-import { ModelValue } from "@canvas-js/modeldb"
+import { ModelValue, PrimaryKeyValue } from "@canvas-js/modeldb"
 import { AbstractGossipLog, MessageId, MIN_MESSAGE_ID } from "@canvas-js/gossiplog"
 import { assert } from "@canvas-js/utils"
 
 import { RevertRecord, WriteRecord } from "./runtime/AbstractRuntime.js"
+import { decodeRecordValue, getRecordId } from "./utils.js"
 
 export type TransactionalRead<T extends ModelValue = ModelValue> = {
 	version: string
@@ -36,7 +35,9 @@ export class View {
 	}
 
 	public async getLastValueTransactional<T extends ModelValue>(
-		recordId: string,
+		model: string,
+		key: PrimaryKeyValue | PrimaryKeyValue[],
+		recordId: string = getRecordId(model, key),
 		reverted?: Set<string>,
 	): Promise<TransactionalRead<T> | null> {
 		let [csx, messageId] = await this.getLatestConflictSet(recordId)
@@ -56,7 +57,7 @@ export class View {
 			if (!isReverted) {
 				const write = await this.db.get<WriteRecord>("$writes", [recordId, messageId])
 				assert(write !== null, "internal error - missing write record")
-				const value = write.value && cbor.decode<T>(write.value)
+				const value = decodeRecordValue<T>(this.db.config, model, write.value)
 				this.log.trace("returning write value %o", value)
 				return { version: messageId, value, csx }
 			} else if (csx > 1) {

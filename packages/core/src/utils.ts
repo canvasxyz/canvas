@@ -5,10 +5,10 @@ import { utf8ToBytes } from "@noble/hashes/utils"
 import { base64 } from "multiformats/bases/base64"
 import * as cbor from "@ipld/dag-cbor"
 
-import { assert } from "@canvas-js/utils"
+import { assert, zip } from "@canvas-js/utils"
 import { Action, MessageType, Session, Snapshot } from "@canvas-js/interfaces"
 import { SignedMessage } from "@canvas-js/gossiplog"
-import { Config, isPrimaryKey, ModelSchema, PrimaryKeyValue } from "@canvas-js/modeldb"
+import { Config, isPrimaryKey, ModelSchema, ModelValue, PrimaryKeyValue, PropertyValue } from "@canvas-js/modeldb"
 
 export const isAction = (signedMessage: SignedMessage<MessageType>): signedMessage is SignedMessage<Action> =>
 	signedMessage.message.payload.type === "action"
@@ -77,6 +77,25 @@ export function decodeRecordKey(config: Config, modelName: string, key: string):
 		assert(primaryKey.every(isPrimaryKey), "error decoding record key - expected PrimaryKeyValue[]")
 		return primaryKey.length === 1 ? primaryKey[0] : primaryKey
 	}
+}
+
+export function encodeRecordValue(config: Config, modelName: string, value: ModelValue | null): Uint8Array {
+	if (value === null) {
+		return cbor.encode(null)
+	}
+
+	const { [modelName]: propertyNames } = config.propertyNames
+	return cbor.encode(propertyNames.map((name) => value[name]))
+}
+
+export function decodeRecordValue<T = ModelValue>(config: Config, modelName: string, value: Uint8Array): T | null {
+	if (value === null) {
+		return null
+	}
+
+	const keys = config.propertyNames[modelName]
+	const values = cbor.decode<PropertyValue[]>(value)
+	return Object.fromEntries(zip(keys, values))
 }
 
 export function getRecordId(model: string, key: PrimaryKeyValue | PrimaryKeyValue[]): string {

@@ -1,24 +1,30 @@
-import * as cbor from "@ipld/dag-cbor"
 import { logger } from "@libp2p/logger"
 
 import type { Action, Session, Snapshot, SignerCache, Awaitable, MessageType } from "@canvas-js/interfaces"
 
-import { Effect, ModelValue, ModelSchema, PrimaryKeyValue, isPrimaryKey, Model, Config } from "@canvas-js/modeldb"
+import { Effect, ModelSchema, isPrimaryKey } from "@canvas-js/modeldb"
 
 import { GossipLogConsumer, AbstractGossipLog, SignedMessage, MessageId, MIN_MESSAGE_ID } from "@canvas-js/gossiplog"
 
 import { assert } from "@canvas-js/utils"
 
 import { ExecutionContext } from "../ExecutionContext.js"
-import { Contract } from "../types.js"
 
-import { encodeRecordKey, getRecordId, isAction, isSession, isSnapshot } from "../utils.js"
+import {
+	decodeRecordValue,
+	encodeRecordKey,
+	encodeRecordValue,
+	getRecordId,
+	isAction,
+	isSession,
+	isSnapshot,
+} from "../utils.js"
 import { View } from "../View.js"
 
 export type WriteRecord = {
 	record_id: string
 	message_id: string
-	value: Uint8Array | null
+	value: Uint8Array
 	csx: number | null
 }
 
@@ -64,7 +70,7 @@ export abstract class AbstractRuntime {
 			$indexes: ["record_id/csx/message_id", "message_id/record_id/csx"],
 			record_id: "string",
 			message_id: "string",
-			value: "bytes?",
+			value: "bytes",
 			csx: "integer?",
 		},
 
@@ -171,7 +177,9 @@ export abstract class AbstractRuntime {
 			const model = messageLog.db.models[modelName]
 
 			for (const value of values) {
-				const modelValue = cbor.decode<ModelValue>(value)
+				const modelValue = decodeRecordValue(messageLog.db.config, modelName, value)
+				assert(modelValue !== null, "invalid snapshot - expected modelValue !== null")
+
 				const primaryKey = model.primaryKey.map((name) => {
 					const key = modelValue[name]
 					assert(isPrimaryKey(key), "invalid primary key value")
@@ -326,7 +334,7 @@ export abstract class AbstractRuntime {
 				const writeRecord: WriteRecord = {
 					record_id: recordId,
 					message_id: id,
-					value: value && cbor.encode(value),
+					value: encodeRecordValue(db.config, model, value),
 					csx: csx,
 				}
 
@@ -366,7 +374,7 @@ export abstract class AbstractRuntime {
 				const writeRecord: WriteRecord = {
 					record_id: recordId,
 					message_id: id,
-					value: value && cbor.encode(value),
+					value: encodeRecordValue(db.config, model, value),
 					csx: csx,
 				}
 
@@ -512,7 +520,7 @@ export abstract class AbstractRuntime {
 				const versions = await db.query<RecordRecord>("$records", { where: { version: effectId } })
 				this.log.trace("found %d existing records referencing the reverted action %s", versions.length, effectId)
 				for (const { record_id, model, key } of versions) {
-					const read = await currentView.getLastValueTransactional(record_id, revertEffects)
+					const read = await currentView.getLastValueTransactional(model, key, record_id, revertEffects)
 					if (read === null) {
 						this.log.trace("no other versions of record %s found", record_id)
 						effects.push({ model: "$records", operation: "delete", key: record_id })

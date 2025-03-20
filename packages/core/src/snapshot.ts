@@ -7,6 +7,7 @@ import type { PropertyType } from "@canvas-js/modeldb"
 
 import { Canvas } from "./Canvas.js"
 import { Contract } from "./types.js"
+import { encodeRecordValue } from "./utils.js"
 
 // typeguards
 export const isIndexInit = (value: unknown): value is string[] => Array.isArray(value)
@@ -42,8 +43,8 @@ export async function createSnapshot(app: Canvas): Promise<Snapshot> {
 		}
 
 		snapshot.models[modelName] = []
-		for await (const row of app.db.iterate(modelName)) {
-			snapshot.models[modelName].push(cbor.encode(row))
+		for await (const value of app.db.iterate(modelName)) {
+			snapshot.models[modelName].push(encodeRecordValue(app.db.config, modelName, value))
 		}
 	}
 

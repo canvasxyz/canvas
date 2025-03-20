@@ -1,5 +1,3 @@
-import * as cbor from "@ipld/dag-cbor"
-
 import type { MessageType, SessionSigner } from "@canvas-js/interfaces"
 
 import { Action } from "@canvas-js/interfaces"
@@ -7,7 +5,7 @@ import { ModelValue, PropertyValue, validateModelValue, updateModelValue, mergeM
 import { AbstractGossipLog, SignedMessage, MessageId } from "@canvas-js/gossiplog"
 import { assert, mapValues } from "@canvas-js/utils"
 
-import { getRecordId } from "./utils.js"
+import { decodeRecordValue, getRecordId } from "./utils.js"
 
 import { View, TransactionalRead } from "./View.js"
 
@@ -75,7 +73,7 @@ export class ExecutionContext extends View {
 				return value as T | null
 			}
 
-			const result = await this.getLastValueTransactional<T>(recordId)
+			const result = await this.getLastValueTransactional<T>(model, key, recordId)
 			this.transactionalReads.set(recordId, result)
 			return result?.value ?? null
 		} else {
@@ -89,9 +87,9 @@ export class ExecutionContext extends View {
 				this.lwwReads.set(recordId, null)
 				return null
 			} else {
-				const value = cbor.decode<T>(write.value)
+				const value = decodeRecordValue(this.db.config, model, write.value)
 				this.lwwReads.set(recordId, value)
-				return value
+				return value as T
 			}
 		}
 	}
