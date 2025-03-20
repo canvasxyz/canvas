@@ -10,7 +10,6 @@
 		{ "path": "../bootstrap-peer" },
 		{ "path": "../gossiplog" },
 		{ "path": "../interfaces" },
-		{ "path": "../relay-server" },
-		{ "path": "../utils" }
+		{ "path": "../relay-server" }
 	]
 }

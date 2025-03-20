@@ -5,10 +5,10 @@ import { utf8ToBytes } from "@noble/hashes/utils"
 import { base64 } from "multiformats/bases/base64"
 import * as cbor from "@ipld/dag-cbor"
 
+import { assert } from "@canvas-js/utils"
 import { Action, MessageType, Session, Snapshot } from "@canvas-js/interfaces"
 import { SignedMessage } from "@canvas-js/gossiplog"
-import { Config, isPrimaryKey, ModelSchema, ModelValue, PrimaryKeyValue } from "@canvas-js/modeldb"
-import { assert } from "@canvas-js/utils"
+import { Config, isPrimaryKey, ModelSchema, PrimaryKeyValue } from "@canvas-js/modeldb"
 
 export const isAction = (signedMessage: SignedMessage<MessageType>): signedMessage is SignedMessage<Action> =>
 	signedMessage.message.payload.type === "action"

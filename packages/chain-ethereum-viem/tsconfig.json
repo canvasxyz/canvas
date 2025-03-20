@@ -5,5 +5,5 @@
 		"rootDir": "src",
 		"outDir": "lib"
 	},
-	"references": [{ "path": "../interfaces" }, { "path": "../signatures" }, { "path": "../utils" }]
+	"references": [{ "path": "../interfaces" }, { "path": "../signatures" }]
 }

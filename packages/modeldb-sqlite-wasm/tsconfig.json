@@ -6,5 +6,5 @@
 		"rootDir": "src",
 		"outDir": "lib"
 	},
-	"references": [{ "path": "../interfaces" }, { "path": "../modeldb" }, { "path": "../utils" }]
+	"references": [{ "path": "../interfaces" }, { "path": "../modeldb" }]
 }

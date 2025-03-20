@@ -40,8 +40,6 @@
 		{ "path": "./packages/hooks" },
 		{ "path": "./packages/network-explorer" },
 		{ "path": "./packages/test-network" },
-		{ "path": "./packages/utils" },
-		{ "path": "./packages/utils/test" },
 		{ "path": "./examples/chat" },
 		{ "path": "./examples/chat-next" },
 		{ "path": "./examples/encrypted-chat" },
