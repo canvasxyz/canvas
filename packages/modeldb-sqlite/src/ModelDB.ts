@@ -34,6 +34,7 @@ export class ModelDB extends AbstractModelDB {
 		const timestamp = new Date().toISOString()
 
 		const db = new Database(path ?? ":memory:")
+		db.pragma("journal_mode = WAL")
 
 		try {
 			// calling this constructor will create empty $versions and $models
