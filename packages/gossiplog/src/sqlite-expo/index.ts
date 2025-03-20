@@ -3,6 +3,7 @@ import { Tree as MemoryTree } from "@canvas-js/okra-memory"
 import { ModelDB } from "@canvas-js/modeldb-sqlite-expo"
 
 import { AbstractGossipLog, GossipLogInit } from "../AbstractGossipLog.js"
+import { initialUpgradeSchema } from "../utils.js"
 
 export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 	public static async open<Payload>({
@@ -19,8 +20,10 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 				await AbstractGossipLog.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion)
 				await init.upgrade?.(upgradeAPI, oldConfig, oldVersion, newVersion)
 			},
-			initialUpgradeSchema: Object.assign(init.initialUpgradeSchema ?? models, AbstractGossipLog.schema),
-			initialUpgradeVersion: Object.assign(init.initialUpgradeVersion ?? version, AbstractGossipLog.baseVersion),
+			initialUpgradeSchema: Object.assign(init.initialUpgradeSchema ?? models, initialUpgradeSchema),
+			initialUpgradeVersion: Object.assign(init.initialUpgradeVersion ?? version, {
+				[AbstractGossipLog.namespace]: 1,
+			}),
 		})
 
 		const tree = new MemoryTree({ mode: Mode.Index })

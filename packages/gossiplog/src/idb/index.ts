@@ -7,6 +7,7 @@ import { ModelDB } from "@canvas-js/modeldb-idb"
 
 import { AbstractGossipLog, GossipLogInit } from "../AbstractGossipLog.js"
 import { MerkleIndex } from "../MerkleIndex.js"
+import { initialUpgradeSchema } from "../utils.js"
 
 export interface Options {
 	name?: string
@@ -23,8 +24,10 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 				await AbstractGossipLog.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion)
 				await init.upgrade?.(upgradeAPI, oldConfig, oldVersion, newVersion)
 			},
-			initialUpgradeSchema: Object.assign(init.initialUpgradeSchema ?? models, AbstractGossipLog.schema),
-			initialUpgradeVersion: Object.assign(init.initialUpgradeVersion ?? version, AbstractGossipLog.baseVersion),
+			initialUpgradeSchema: Object.assign(init.initialUpgradeSchema ?? models, initialUpgradeSchema),
+			initialUpgradeVersion: Object.assign(init.initialUpgradeVersion ?? version, {
+				[AbstractGossipLog.namespace]: 1,
+			}),
 		})
 
 		const messageCount = await db.count("$messages")

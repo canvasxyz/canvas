@@ -2,6 +2,7 @@ import { Uint8ArrayList } from "uint8arraylist"
 import * as cbor from "@ipld/dag-cbor"
 
 import { Event } from "@canvas-js/gossiplog/protocols/events"
+import { ModelSchema } from "@canvas-js/modeldb"
 
 export const cborNull: Uint8Array = cbor.encode(null)
 
@@ -44,3 +45,17 @@ export async function* encodeEvents(source: AsyncIterable<Event>) {
 		yield Event.encode(event)
 	}
 }
+
+export const initialUpgradeSchema = {
+	$messages: {
+		id: "primary",
+		signature: "json",
+		message: "json",
+		hash: "string",
+		clock: "integer",
+		branch: "integer",
+		$indexes: ["clock", "branch"],
+	},
+	$heads: { id: "primary" },
+	$ancestors: { id: "primary", links: "json" },
+} satisfies ModelSchema
