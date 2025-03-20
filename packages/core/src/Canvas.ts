@@ -128,6 +128,8 @@ export class Canvas<
 			},
 		)
 
+		runtime.db = messageLog.db
+
 		for (const model of Object.values(messageLog.db.models)) {
 			if (model.name.startsWith("$")) {
 				continue

@@ -89,14 +89,14 @@ export abstract class AbstractRuntime {
 
 	public abstract close(): Awaitable<void>
 
-	// public get db() {
-	// 	assert(this.#db !== null, "internal error - expected this.#db !== null")
-	// 	return this.#db
-	// }
+	public get db() {
+		assert(this.#db !== null, "internal error - expected this.#db !== null")
+		return this.#db
+	}
 
-	// public set db(db: AbstractModelDB) {
-	// 	this.#db = db
-	// }
+	public set db(db: AbstractModelDB) {
+		this.#db = db
+	}
 
 	public getConsumer(): GossipLogConsumer<MessageType> {
 		const handleSession = this.handleSession.bind(this)
