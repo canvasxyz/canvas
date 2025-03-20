@@ -86,7 +86,7 @@ export async function getContractLocation(args: {
 	} else if (location.endsWith(".js") || location.endsWith(".ts")) {
 		// Handle if the location exists and it's a file.
 		let contract = fs.readFileSync(location, "utf-8")
-		let originalContract = contract
+		const originalContract = contract
 
 		if (location.endsWith(".ts")) {
 			contract = (await Canvas.buildContract(location)).contract
