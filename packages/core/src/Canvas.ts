@@ -20,7 +20,7 @@ import { Runtime, createRuntime } from "./runtime/index.js"
 import { ActionRecord } from "./runtime/AbstractRuntime.js"
 import { validatePayload } from "./schema.js"
 import { createSnapshot, hashSnapshot } from "./snapshot.js"
-import { topicPattern } from "./utils.js"
+import { initialUpgradeSchema, topicPattern } from "./utils.js"
 
 export type { Model } from "@canvas-js/modeldb"
 export type { PeerId } from "@libp2p/interface"
@@ -115,6 +115,10 @@ export class Canvas<
 				schema: { ...config.schema, ...runtime.schema },
 
 				version: { [Canvas.namespace]: Canvas.version },
+
+				initialUpgradeVersion: { [Canvas.namespace]: 1 },
+				initialUpgradeSchema: { ...runtime.models, ...initialUpgradeSchema },
+
 				async upgrade(upgradeAPI, oldConfig, oldVersion, newVersion) {
 					const version = oldVersion[Canvas.namespace] ?? 0
 					if (version <= 1) {

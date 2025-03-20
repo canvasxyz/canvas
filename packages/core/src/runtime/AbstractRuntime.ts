@@ -72,16 +72,18 @@ export abstract class AbstractRuntime {
 		}
 	}
 
+	public readonly schema: ModelSchema
 	public abstract readonly topic: string
 	public abstract readonly signers: SignerCache
-	public abstract readonly schema: ModelSchema
 	public abstract readonly actionNames: string[]
 	public abstract readonly contract: string | Contract<any, any>
 
 	protected readonly log = logger("canvas:runtime")
 	#db: AbstractModelDB | null = null
 
-	protected constructor() {}
+	protected constructor(public readonly models: ModelSchema) {
+		this.schema = AbstractRuntime.getModelSchema(models)
+	}
 
 	protected abstract execute(context: ExecutionContext): Promise<void | any>
 
