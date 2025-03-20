@@ -21,7 +21,7 @@
 		"@ipld/dag-cbor": "^9.2.2",
 		"@ipld/dag-json": "^10.2.3",
 		"@keplr-wallet/types": "^0.11.64",
-		"@libp2p/logger": "^5.1.8",
+		"@libp2p/logger": "^5.1.13",
 		"@noble/curves": "^1.8.1",
 		"@noble/hashes": "^1.7.1",
 		"ethers": "^6.13.5",

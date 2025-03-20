@@ -45,7 +45,7 @@
 		"@canvas-js/utils": "1.0.0",
 		"@libp2p/crypto": "^5.0.15",
 		"@libp2p/interface": "^2.7.0",
-		"@libp2p/peer-id": "^5.0.16",
+		"@libp2p/peer-id": "^5.1.0",
 		"@multiformats/multiaddr": "^12.3.5",
 		"@noble/hashes": "^1.7.1",
 		"@types/cors": "^2.8.17",
