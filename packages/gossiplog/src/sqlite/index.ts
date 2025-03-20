@@ -45,7 +45,9 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 				mapSize: 0xffffffff,
 			})
 
-			return new GossipLog(db, tree, init)
+			const gossipLog = new GossipLog(db, tree, init)
+			await gossipLog.initialize()
+			return gossipLog
 		}
 	}
 

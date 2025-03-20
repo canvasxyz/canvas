@@ -44,6 +44,7 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 			Math.round(delta),
 		)
 
+		await gossipLog.initialize()
 		return gossipLog
 	}
 

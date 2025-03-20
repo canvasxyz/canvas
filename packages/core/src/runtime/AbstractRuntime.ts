@@ -89,14 +89,14 @@ export abstract class AbstractRuntime {
 
 	public abstract close(): Awaitable<void>
 
-	public get db() {
-		assert(this.#db !== null, "internal error - expected this.#db !== null")
-		return this.#db
-	}
+	// public get db() {
+	// 	assert(this.#db !== null, "internal error - expected this.#db !== null")
+	// 	return this.#db
+	// }
 
-	public set db(db: AbstractModelDB) {
-		this.#db = db
-	}
+	// public set db(db: AbstractModelDB) {
+	// 	this.#db = db
+	// }
 
 	public getConsumer(): GossipLogConsumer<MessageType> {
 		const handleSession = this.handleSession.bind(this)
@@ -105,35 +105,35 @@ export abstract class AbstractRuntime {
 
 		return async function (this: AbstractGossipLog<MessageType>, signedMessage) {
 			if (isSession(signedMessage)) {
-				return await handleSession(signedMessage)
+				return await handleSession(this, signedMessage)
 			} else if (isAction(signedMessage)) {
-				return await handleAction(signedMessage, this)
+				return await handleAction(this, signedMessage)
 			} else if (isSnapshot(signedMessage)) {
-				return await handleSnapshot(signedMessage, this)
+				return await handleSnapshot(this, signedMessage)
 			} else {
 				throw new Error("invalid message payload type")
 			}
 		}
 	}
 
-	private async handleSnapshot(signedMessage: SignedMessage<Snapshot>, messageLog: AbstractGossipLog<MessageType>) {
+	private async handleSnapshot(messageLog: AbstractGossipLog<MessageType>, signedMessage: SignedMessage<Snapshot>) {
 		const { models, effects } = signedMessage.message.payload
 
 		const messages = await messageLog.getMessages()
 		assert(messages.length === 0, "snapshot must be first entry on log")
 
 		for (const { key, value } of effects) {
-			await this.db.set("$effects", { key, value, clock: 0 })
+			await messageLog.db.set("$effects", { key, value, clock: 0 })
 		}
 
 		for (const [model, rows] of Object.entries(models)) {
 			for (const row of rows) {
-				await this.db.set(model, cbor.decode(row) as any)
+				await messageLog.db.set(model, cbor.decode(row) as any)
 			}
 		}
 	}
 
-	private async handleSession(signedMessage: SignedMessage<Session>) {
+	private async handleSession(messageLog: AbstractGossipLog<MessageType>, signedMessage: SignedMessage<Session>) {
 		const { id, signature, message } = signedMessage
 		const {
 			publicKey,
@@ -165,10 +165,10 @@ export abstract class AbstractRuntime {
 			{ model: "$dids", operation: "set", value: { did } },
 		]
 
-		await this.db.apply(effects)
+		await messageLog.db.apply(effects)
 	}
 
-	private async handleAction(signedMessage: SignedMessage<Action>, messageLog: AbstractGossipLog<MessageType>) {
+	private async handleAction(messageLog: AbstractGossipLog<MessageType>, signedMessage: SignedMessage<Action>) {
 		const { id, signature, message } = signedMessage
 		const { did, name, context } = message.payload
 
@@ -183,7 +183,7 @@ export abstract class AbstractRuntime {
 		const address = signer.getAddressFromDid(did)
 		const executionContext = new ExecutionContext(messageLog, signedMessage, address)
 
-		const sessions = await this.db.query<{ message_id: string; expiration: number | null }>("$sessions", {
+		const sessions = await messageLog.db.query<{ message_id: string; expiration: number | null }>("$sessions", {
 			where: { public_key: signature.publicKey, did: did },
 		})
 
@@ -212,7 +212,7 @@ export abstract class AbstractRuntime {
 				const keyHash = getKeyHash(key)
 
 				const effectKey = `${model}/${keyHash}/${id}`
-				const results = await this.db.query<{ key: string }>("$effects", {
+				const results = await messageLog.db.query<{ key: string }>("$effects", {
 					select: { key: true },
 					where: { key: { gt: effectKey, lte: `${model}/${keyHash}/${MAX_MESSAGE_ID}` } },
 					limit: 1,
@@ -240,7 +240,7 @@ export abstract class AbstractRuntime {
 		this.log("applying effects %O", effects)
 
 		try {
-			await this.db.apply(effects)
+			await messageLog.db.apply(effects)
 		} catch (err) {
 			if (err instanceof Error) {
 				err.message = `${name}: ${err.message}`

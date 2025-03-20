@@ -61,7 +61,6 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 		const delta = performance.now() - start
 
 		const gossipLog = new GossipLog(mdb, tree, init)
-
 		gossipLog.log(
 			`build in-memory merkle tree (root %d:%s, %d entries, %dms)`,
 			root.level,
@@ -69,6 +68,8 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 			messageCount,
 			Math.round(delta),
 		)
+
+		await gossipLog.initialize()
 		return gossipLog
 	}
 

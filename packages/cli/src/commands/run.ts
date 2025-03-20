@@ -393,7 +393,14 @@ async function setupApp(topic: string, contract: string, location_: string | nul
 	})
 
 	if (args.replay) {
-		await app.replay()
+		console.log("[canvas] Replaying message log...")
+		await app.replay().then((complete) => {
+			if (complete) {
+				console.log("[canvas] Replay complete!")
+			} else {
+				console.log("[canvas] Replay aborted before completing and will resume the next time the app is opened.")
+			}
+		})
 	}
 
 	if (args["repl"]) {

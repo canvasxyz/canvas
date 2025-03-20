@@ -24,7 +24,9 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 		})
 
 		const tree = new MemoryTree({ mode: Mode.Index })
-		return new GossipLog(db, tree, init)
+		const gossipLog = new GossipLog(db, tree, init)
+		await gossipLog.initialize()
+		return gossipLog
 	}
 
 	private constructor(public readonly db: ModelDB, public readonly tree: Tree, init: GossipLogInit<Payload>) {
