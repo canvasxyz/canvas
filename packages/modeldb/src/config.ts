@@ -149,14 +149,16 @@ export class Config {
 
 	public static parseIndex = (index: string) => index.split("/")
 
-	public readonly primaryKeys: Record<string, PrimitiveProperty[]>
+	public readonly primaryKeys: Record<string, PrimitiveProperty[]> = {}
+	public readonly propertyNames: Record<string, string[]> = {}
 	public relations: Relation[] = []
 
 	#frozen = false
 
 	public constructor(public models: Model[], options: { freeze?: boolean } = {}) {
-		this.primaryKeys = {}
 		for (const model of models) {
+			this.propertyNames[model.name] = model.properties.map((property) => property.name).sort()
+
 			this.primaryKeys[model.name] = model.primaryKey.map((name) => {
 				const property = model.properties.find((property) => property.name === name)
 				assert(property !== undefined, "internal error - failed to find primary property")
@@ -199,9 +201,14 @@ export class Config {
 		this.#frozen = true
 		Object.freeze(this)
 		Object.freeze(this.models)
-		Object.freeze(this.relations)
 		this.models.forEach(Object.freeze)
+		Object.freeze(this.relations)
 		this.relations.forEach(Object.freeze)
+
+		Object.freeze(this.primaryKeys)
+		Object.values(this.primaryKeys).forEach(Object.freeze)
+		Object.freeze(this.propertyNames)
+		Object.values(this.propertyNames).forEach(Object.freeze)
 	}
 
 	public createModel(name: string, init: ModelInit): Model {
@@ -228,6 +235,8 @@ export class Config {
 				})
 			}
 		}
+
+		this.propertyNames[name] = model.properties.map((property) => property.name).sort()
 
 		this.primaryKeys[name] = model.primaryKey.map((name) => {
 			const property = model.properties.find((property) => property.name === name)
@@ -258,6 +267,7 @@ export class Config {
 		this.models = this.models.filter((model) => model.name !== name)
 		this.relations = this.relations.filter((relation) => relation.source !== name)
 		delete this.primaryKeys[name]
+		delete this.propertyNames[name]
 	}
 
 	public addProperty(modelName: string, propertyName: string, propertyType: PropertyType): Property {
@@ -298,6 +308,8 @@ export class Config {
 		}
 
 		model.properties.push(property)
+		this.propertyNames[modelName].push(property.name)
+		this.propertyNames[modelName].sort()
 
 		return property
 	}
@@ -318,6 +330,10 @@ export class Config {
 		}
 
 		model.properties = model.properties.filter((property) => property.name !== propertyName)
+		const index = this.propertyNames[modelName].indexOf(propertyName)
+		assert(index !== -1, "internal error - expected index !== -1")
+		this.propertyNames[modelName].splice(index, 1)
+
 		if (property.kind === "relation") {
 			this.relations = this.relations.filter(
 				(relation) => relation.source !== modelName || relation.sourceProperty !== propertyName,
