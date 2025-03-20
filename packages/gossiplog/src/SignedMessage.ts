@@ -6,7 +6,7 @@ import { decodeId, getKey } from "./MessageId.js"
 export type MessageSourceType = "pubsub" | "push" | "sync"
 export type MessageSource = { type: MessageSourceType; peer: string }
 
-export type MessageContext<Result> = { source?: MessageSource; branch?: number; result?: Result }
+export type MessageContext<Result> = { source?: MessageSource; result?: Result }
 
 export class SignedMessage<Payload = unknown, Result = any> {
 	public static decode<Payload = unknown, Result = any>(
@@ -29,7 +29,6 @@ export class SignedMessage<Payload = unknown, Result = any> {
 	public readonly id: string
 	public readonly key: Uint8Array
 	public readonly source?: MessageSource
-	public branch?: number
 	public result?: Result
 
 	private constructor(
@@ -41,7 +40,6 @@ export class SignedMessage<Payload = unknown, Result = any> {
 		this.key = getKey(message.clock, value)
 		this.id = decodeId(this.key)
 		this.source = context.source
-		this.branch = context.branch
 		this.result = context.result
 	}
 }

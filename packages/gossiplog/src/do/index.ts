@@ -10,6 +10,7 @@ import { SqlStorage } from "@cloudflare/workers-types"
 
 import { AbstractGossipLog, GossipLogInit } from "../AbstractGossipLog.js"
 import { MerkleIndex } from "../MerkleIndex.js"
+import { initialUpgradeSchema } from "../utils.js"
 
 export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 	public static async open<Payload>({
@@ -40,8 +41,10 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 					await AbstractGossipLog.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion)
 					await init.upgrade?.(upgradeAPI, oldConfig, oldVersion, newVersion)
 				},
-				initialUpgradeSchema: Object.assign(init.initialUpgradeSchema ?? models, AbstractGossipLog.schema),
-				initialUpgradeVersion: Object.assign(init.initialUpgradeVersion ?? version, AbstractGossipLog.baseVersion),
+				initialUpgradeSchema: Object.assign(init.initialUpgradeSchema ?? models, initialUpgradeSchema),
+				initialUpgradeVersion: Object.assign(init.initialUpgradeVersion ?? version, {
+					[AbstractGossipLog.namespace]: 1,
+				}),
 			})
 		} else {
 			throw new Error("must provide db or worker && useTestProxy")
@@ -61,7 +64,6 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 		const delta = performance.now() - start
 
 		const gossipLog = new GossipLog(mdb, tree, init)
-
 		gossipLog.log(
 			`build in-memory merkle tree (root %d:%s, %d entries, %dms)`,
 			root.level,
@@ -69,6 +71,8 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 			messageCount,
 			Math.round(delta),
 		)
+
+		await gossipLog.initialize()
 		return gossipLog
 	}
 

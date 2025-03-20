@@ -11,6 +11,7 @@ import { MAX_CONNECTIONS } from "@canvas-js/core/constants"
 import { Snapshot } from "@canvas-js/core"
 import { AppInstance } from "../AppInstance.js"
 import { getContractLocation } from "../utils.js"
+import { startActionPrompt } from "../prompt.js"
 
 export const command = "run <path>"
 export const desc = "Run a Canvas application"
@@ -54,11 +55,11 @@ export const builder = (yargs: Argv) =>
 			default: ANNOUNCE?.split(" ") ?? [],
 			string: true,
 		})
-		// .option("replay", {
-		// 	type: "boolean",
-		// 	desc: "Erase and rebuild the database by replaying the action log",
-		// 	default: false,
-		// })
+		.option("replay", {
+			type: "boolean",
+			desc: "Erase and rebuild the database by replaying the action log",
+			default: false,
+		})
 		// .option("memory", {
 		// 	type: "boolean",
 		// 	desc: "Run in-memory",
@@ -124,12 +125,17 @@ export async function handler(args: Args) {
 		}
 	}
 
+	// TODO: Move this into commands/run.ts?
 	const bindInstanceAPIs = (instance: AppInstance) => {
 		// AppInstance should always have an api unless it was initialized with --disable-http-api
 		if (!instance.api) return
 
 		const nonce = crypto.randomBytes(32).toString("hex")
 
+		// Serve the contract info, used to create the AppInstance.
+		// This is outside the Canvas createAPI method because it includes admin data
+		// which wouldn't make sense to pass into the Canvas object... maybe it should be
+		// named something /api/instance?
 		instance.api.get("/api/contract", async (req, res) => {
 			res.json({
 				contract: instance.app.getContract().toString(),
@@ -206,4 +212,19 @@ export async function handler(args: Args) {
 	const instance = await AppInstance.initialize(topic, contract, location, args)
 
 	bindInstanceAPIs(instance)
+
+	if (args.replay) {
+		console.log("[canvas] Replaying message log...")
+		await instance.app.replay().then((complete) => {
+			if (complete) {
+				console.log("[canvas] Replay complete!")
+			} else {
+				console.log("[canvas] Replay aborted before completing and will resume the next time the app is opened.")
+			}
+		})
+	}
+
+	if (args.repl) {
+		await startActionPrompt(instance.app)
+	}
 }

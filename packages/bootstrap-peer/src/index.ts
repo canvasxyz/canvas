@@ -5,15 +5,11 @@ const { PORT = "8000", FLY_APP_NAME } = process.env
 
 import { getLibp2p } from "./libp2p.js"
 import { createAPI } from "./api.js"
+
 const libp2p = await getLibp2p()
 
-libp2p.addEventListener("start", async () => {
-	console.log("libp2p started")
-})
-
-libp2p.addEventListener("stop", () => {
-	console.log("libp2p stopped")
-})
+libp2p.addEventListener("start", () => console.log("libp2p started"))
+libp2p.addEventListener("stop", () => console.log("libp2p stopped"))
 
 libp2p.addEventListener("connection:open", ({ detail: { remotePeer, remoteAddr } }) => {
 	console.log(`connection:open ${remotePeer} ${remoteAddr}`)

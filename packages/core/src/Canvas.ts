@@ -5,16 +5,7 @@ import type pg from "pg"
 import type { SqlStorage } from "@cloudflare/workers-types"
 import { bytesToHex } from "@noble/hashes/utils"
 
-import {
-	Signature,
-	Action,
-	Session,
-	Message,
-	Snapshot,
-	SessionSigner,
-	SignerCache,
-	MessageType,
-} from "@canvas-js/interfaces"
+import { Signature, Action, Message, Snapshot, SessionSigner, SignerCache, MessageType } from "@canvas-js/interfaces"
 import { AbstractModelDB, Model, ModelSchema, Effect } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/chain-ethereum"
 import { AbstractGossipLog, GossipLogEvents, NetworkClient, SignedMessage } from "@canvas-js/gossiplog"
@@ -29,7 +20,7 @@ import { Runtime, createRuntime } from "./runtime/index.js"
 import { ActionRecord } from "./runtime/AbstractRuntime.js"
 import { validatePayload } from "./schema.js"
 import { createSnapshot, hashSnapshot, Change } from "./snapshot.js"
-import { topicPattern } from "./utils.js"
+import { initialUpgradeSchema, topicPattern } from "./utils.js"
 
 export type { Model } from "@canvas-js/modeldb"
 export type { PeerId } from "@libp2p/interface"
@@ -90,7 +81,7 @@ export class Canvas<
 	ActionsT extends Actions<ModelsT> = Actions<ModelsT>,
 > extends TypedEventEmitter<CanvasEvents> {
 	public static namespace = "canvas"
-	public static version = 1
+	public static version = 2
 
 	public static async initialize<ModelsT extends ModelSchema, ActionsT extends Actions<ModelsT> = Actions<ModelsT>>(
 		config: Config<ModelsT, ActionsT>,
@@ -120,8 +111,20 @@ export class Canvas<
 				schema: { ...config.schema, ...runtime.schema },
 
 				version: { [Canvas.namespace]: Canvas.version },
+
+				initialUpgradeVersion: { [Canvas.namespace]: 1 },
+				initialUpgradeSchema: { ...runtime.models, ...initialUpgradeSchema },
+
+				async upgrade(upgradeAPI, oldConfig, oldVersion, newVersion) {
+					const version = oldVersion[Canvas.namespace] ?? 0
+					if (version <= 1) {
+						await upgradeAPI.removeProperty("$effects", "branch")
+					}
+				},
 			},
 		)
+
+		runtime.db = messageLog.db
 
 		for (const model of Object.values(messageLog.db.models)) {
 			if (model.name.startsWith("$")) {
@@ -136,12 +139,9 @@ export class Canvas<
 			}
 		}
 
-		const db = messageLog.db
-		runtime.db = db
-
 		if (config.reset) {
 			for (const modelName of Object.keys({ ...config.schema, ...runtime.schema, ...AbstractGossipLog.schema })) {
-				await db.clear(modelName)
+				await messageLog.db.clear(modelName)
 			}
 		}
 
@@ -155,17 +155,17 @@ export class Canvas<
 		const app = new Canvas<ModelsT, ActionsT>(signers, messageLog, runtime)
 
 		// Check to see if the $actions table is empty and populate it if necessary
-		const messagesCount = await db.count("$messages")
+		const messagesCount = await messageLog.db.count("$messages")
 		// const sessionsCount = await db.count("$sessions")
-		const actionsCount = await db.count("$actions")
-		const usersCount = await db.count("$dids")
+		const actionsCount = await messageLog.db.count("$actions")
+		const usersCount = await messageLog.db.count("$dids")
 		if (messagesCount > 0 && (actionsCount === 0 || usersCount === 0)) {
 			app.log("indexing $actions and $dids table")
 			const limit = 4096
 			let resultCount: number
 			let start: string | undefined = undefined
 			do {
-				const results: { id: string; message: Message<MessageType> }[] = await db.query<{
+				const results: { id: string; message: Message<MessageType> }[] = await messageLog.db.query<{
 					id: string
 					message: Message<MessageType>
 				}>("$messages", {
@@ -197,7 +197,7 @@ export class Canvas<
 				}
 
 				if (effects.length > 0) {
-					await db.apply(effects)
+					await messageLog.db.apply(effects)
 				}
 			} while (resultCount > 0)
 		}
@@ -242,7 +242,7 @@ export class Canvas<
 		private readonly runtime: Runtime,
 	) {
 		super()
-		this.db = runtime.db
+		this.db = messageLog.db
 
 		this.messageLog.addEventListener("message", (event) => this.safeDispatchEvent("message", event))
 		this.messageLog.addEventListener("commit", (event) => this.safeDispatchEvent("commit", event))
@@ -313,6 +313,17 @@ export class Canvas<
 					: never
 			}
 		}
+	}
+
+	public async replay(): Promise<boolean> {
+		for (const name of Object.keys(this.db.models)) {
+			if (!name.startsWith("$")) {
+				this.log("clearing model %s", name)
+				await this.messageLog.db.clear(name)
+			}
+		}
+
+		return await this.messageLog.replay()
 	}
 
 	public async connect(url: string, options: { signal?: AbortSignal } = {}): Promise<NetworkClient<any>> {

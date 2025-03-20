@@ -26,15 +26,13 @@ import { CosmosSigner } from "@canvas-js/chain-cosmos"
 import { SubstrateSigner } from "@canvas-js/chain-substrate"
 import { SolanaSigner } from "@canvas-js/chain-solana"
 
-import { startActionPrompt } from "./prompt.js"
-
 const { BOOTSTRAP_LIST } = process.env
 
 export type AppConfig = {
 	topic?: string
 	verbose?: boolean
 
-	/* networking */
+	/* networking configuration */
 	port: number
 	offline: boolean
 	connect?: string
@@ -43,12 +41,11 @@ export type AppConfig = {
 	bootstrap?: string[]
 	"max-connections": number
 
-	/* services */
+	/* service configuration */
 	admin?: string
 	static?: string
 	"network-explorer"?: boolean
 	"disable-http-api"?: boolean
-	repl: boolean
 }
 
 export class AppInstance {
@@ -89,9 +86,6 @@ export class AppInstance {
 		if (!config["disable-http-api"]) {
 			await instance.setupHttpAPI()
 			await instance.printApiInfo()
-		}
-		if (config["repl"]) {
-			await startActionPrompt(app)
 		}
 
 		return instance

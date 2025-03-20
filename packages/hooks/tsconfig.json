@@ -10,7 +10,6 @@
 		{ "path": "../core" },
 		{ "path": "../interfaces" },
 		{ "path": "../modeldb" },
-		{ "path": "../modeldb-idb" },
-		{ "path": "../utils" }
+		{ "path": "../modeldb-idb" }
 	]
 }

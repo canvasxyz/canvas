@@ -17,7 +17,12 @@ export class RelationAPI {
 	readonly #delete: Method
 	readonly #clear: Method<[]>
 
-	public constructor(readonly db: SQLiteDatabase, readonly config: Config, readonly relation: Relation) {
+	public constructor(
+		readonly db: SQLiteDatabase,
+		readonly config: Config,
+		readonly relation: Relation,
+		clear?: boolean,
+	) {
 		this.table = `${relation.source}/${relation.sourceProperty}`
 		this.sourceIndex = `${relation.source}/${relation.sourceProperty}/source`
 		this.targetIndex = `${relation.source}/${relation.sourceProperty}/target`
@@ -55,16 +60,18 @@ export class RelationAPI {
 				}
 			}
 
+			if (clear) {
+				db.execSync(`DROP TABLE IF EXISTS "${this.table}"`)
+			}
+
 			db.execSync(`CREATE TABLE IF NOT EXISTS "${this.table}" (${columns.join(", ")})`)
 		}
 
 		const sourceColumns = this.sourceColumnNames.map(quote).join(", ")
-		const targetColumns = this.targetColumnNames.map(quote).join(", ")
-
 		db.execSync(`CREATE INDEX IF NOT EXISTS "${this.sourceIndex}" ON "${this.table}" (${sourceColumns})`)
 
 		if (relation.indexed) {
-			db.execSync(`CREATE INDEX IF NOT EXISTS "${this.targetIndex}" ON "${this.table}" (${targetColumns})`)
+			this.addTargetIndex()
 		}
 
 		// Prepare methods
@@ -79,11 +86,21 @@ export class RelationAPI {
 		this.#clear = new Method(this.db, `DELETE FROM "${this.table}"`)
 
 		// Prepare queries
+		const targetColumns = this.targetColumnNames.map(quote).join(", ")
 		this.#select = new Query(this.db, `SELECT ${targetColumns} FROM "${this.table}" WHERE ${selectBySource}`)
 	}
 
 	public drop() {
 		this.db.execSync(`DROP TABLE "${this.table}"`)
+	}
+
+	public addTargetIndex() {
+		const targetColumns = this.targetColumnNames.map(quote).join(", ")
+		this.db.execSync(`CREATE INDEX IF NOT EXISTS "${this.targetIndex}" ON "${this.table}" (${targetColumns})`)
+	}
+
+	public removeTargetIndex() {
+		this.db.execSync(`DROP INDEX IF EXISTS "${this.targetIndex}"`)
 	}
 
 	public get(sourceKey: SqlitePrimitiveValue[]): SqlitePrimitiveValue[][] {

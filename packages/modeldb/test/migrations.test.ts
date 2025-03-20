@@ -1,114 +1,113 @@
 import "fake-indexeddb/auto"
-import { resolve } from "node:path"
-import { randomUUID } from "node:crypto"
-
-import test from "ava"
 
 import { AbstractModelDB, Config, Model } from "@canvas-js/modeldb"
-import { ModelDB as ModelDBSqlite } from "@canvas-js/modeldb-sqlite"
-import { ModelDB as ModelDBIdb } from "@canvas-js/modeldb-idb"
 
-import { getDirectory } from "./utils.js"
+import { testPlatformsPersistent } from "./utils.js"
 
-test("Initialize empty database (SQLite)", async (t) => {
-	const db = await ModelDBSqlite.open(null, { models: {} })
+testPlatformsPersistent("Initialize empty database", async (t, openDB) => {
+	await openDB(t, { models: {} }, async (db) => {
+		const models = await db.getAll<{ name: string; model: Model }>("$models")
+		const versions = await db.query<{}>("$versions", {
+			select: { namespace: true, version: true },
+			orderBy: { "namespace/version": "asc" },
+		})
 
-	const models = await db.getAll<{ name: string; model: Model }>("$models")
-	const versions = await db.query<{}>("$versions", {
-		select: { namespace: true, version: true },
-		orderBy: { "namespace/version": "asc" },
+		t.deepEqual(Object.fromEntries(models.map(({ name, model }) => [name, model])), Config.baseModels)
+
+		t.deepEqual(versions, [{ namespace: AbstractModelDB.namespace, version: AbstractModelDB.version }])
 	})
-
-	t.deepEqual(Object.fromEntries(models.map(({ name, model }) => [name, model])), Config.baseModels)
-
-	t.deepEqual(versions, [{ namespace: AbstractModelDB.namespace, version: AbstractModelDB.version }])
 })
 
-test("Initialize empty database (IDB)", async (t) => {
-	const name = randomUUID()
-	const db = await ModelDBIdb.open(name, { models: {} })
-
-	const models = await db.getAll<{ name: string; model: Model }>("$models")
-	const versions = await db.query<{}>("$versions", {
-		select: { namespace: true, version: true },
-		orderBy: { "namespace/version": "asc" },
-	})
-
-	t.deepEqual(Object.fromEntries(models.map(({ name, model }) => [name, model])), Config.baseModels)
-
-	t.deepEqual(versions, [{ namespace: AbstractModelDB.namespace, version: AbstractModelDB.version }])
-})
-
-test("Initialize example database", async (t) => {
-	const db = await ModelDBSqlite.open(null, {
-		models: {
-			users: { $primary: "id", id: "integer", address: "string" },
+testPlatformsPersistent("Add models between versions", async (t, openDB) => {
+	await openDB(
+		t,
+		{
+			models: {
+				users: { $primary: "id", id: "integer", address: "string" },
+			},
 		},
-	})
+		async () => {},
+	)
 
-	const models = await db.getAll<{ name: string; model: Model }>("$models")
-	const versions = await db.query<{}>("$versions", {
-		select: { namespace: true, version: true },
-		orderBy: { "namespace/version": "asc" },
-	})
+	await t.throwsAsync(() =>
+		openDB(
+			t,
+			{
+				models: {
+					users: { $primary: "id", id: "integer", address: "string" },
+					users2: { $primary: "id", id: "integer", address: "string" },
+				},
+			},
+			async () => {},
+		),
+	)
 
-	t.deepEqual(Object.fromEntries(models.map(({ name, model }) => [name, model])), {
-		...Config.baseModels,
-		users: {
-			name: "users",
-			primaryKey: ["id"],
-			properties: [
-				{ name: "id", kind: "primitive", type: "integer", nullable: false },
-				{ name: "address", kind: "primitive", type: "string", nullable: false },
-			],
-			indexes: [],
+	await openDB(
+		t,
+		{
+			models: {
+				users: { $primary: "id", id: "integer", address: "string" },
+				users2: { $primary: "id", id: "integer", address: "string" },
+			},
+
+			version: { test: 9 },
+			upgrade: async (api, oldConfig, oldVersion, newVersion) => {
+				t.deepEqual(oldVersion, { modeldb: AbstractModelDB.version })
+				t.deepEqual(newVersion, { modeldb: AbstractModelDB.version, test: 9 })
+
+				if (oldVersion.test ?? 0 < 9) {
+					await api.createModel("users2", { $primary: "id", id: "integer", address: "string" })
+				}
+			},
 		},
-	})
-
-	t.deepEqual(versions, [{ namespace: AbstractModelDB.namespace, version: AbstractModelDB.version }])
+		async (db) => void t.deepEqual(db.version, { modeldb: 1, test: 9 }),
+	)
 })
 
-// test("Add models between versions", async (t) => {
-// 	const path = resolve(getDirectory(t), "db.sqlite")
+testPlatformsPersistent("Add property", async (t, openDB) => {
+	await openDB(
+		t,
+		{
+			models: { users: { $primary: "id", id: "integer" } },
+		},
+		async () => {},
+	)
 
-// 	{
-// 		const db = await ModelDBSqlite.open({
-// 			path: path,
-// 			models: {
-// 				users: { $primary: "id", id: "integer", address: "string" },
-// 			},
-// 		})
+	await openDB(
+		t,
+		{
+			models: {
+				users: {
+					$primary: "id",
+					id: "integer",
+					address: "string?",
+				},
+			},
 
-// 		await db.close()
-// 	}
+			version: { test: 9 },
+			upgrade: async (api, oldConfig, oldVersion, newVersion) => {
+				t.deepEqual(oldVersion, { modeldb: AbstractModelDB.version })
+				t.deepEqual(newVersion, { modeldb: AbstractModelDB.version, test: 9 })
 
-// 	await t.throwsAsync(() =>
-// 		ModelDBSqlite.open({
-// 			path: path,
-// 			models: {
-// 				users: { $primary: "id", id: "integer", address: "string" },
-// 				users2: { $primary: "id", id: "integer", address: "string" },
-// 			},
-// 		}).then((db) => db.close()),
-// 	)
-
-// 	await t.notThrowsAsync(
-// 		ModelDBSqlite.open({
-// 			path: path,
-// 			models: {
-// 				users: { $primary: "id", id: "integer", address: "string" },
-// 				users2: { $primary: "id", id: "integer", address: "string" },
-// 			},
-
-// 			version: { test: 9 },
-// 			upgrade: async (api, oldVersion, newVersion) => {
-// 				// t.deepEqual(oldVersion, { modeldb: AbstractModelDB.version })
-// 				// t.deepEqual(newVersion, { modeldb: AbstractModelDB.version, test: 9 })
-
-// 				if (oldVersion.test ?? 0 < 9) {
-// 					api.createModel("users2", { $primary: "id", id: "integer", address: "string" })
-// 				}
-// 			},
-// 		}).then((db) => db.close()),
-// 	)
-// })
+				if (oldVersion.test ?? 0 < 9) {
+					await api.addProperty("users", "address", "string?")
+				}
+			},
+		},
+		async (db) => {
+			t.deepEqual(db.version, { modeldb: 1, test: 9 })
+			t.deepEqual(db.config.models, [
+				...Object.values(Config.baseModels),
+				{
+					name: "users",
+					primaryKey: ["id"],
+					properties: [
+						{ name: "id", kind: "primitive", type: "integer", nullable: false },
+						{ name: "address", kind: "primitive", type: "string", nullable: true },
+					],
+					indexes: [],
+				},
+			])
+		},
+	)
+})

@@ -1,7 +1,7 @@
 import { SQLiteDatabase } from "expo-sqlite"
 import * as SQLite from "expo-sqlite"
 
-import { signalInvalidType } from "@canvas-js/utils"
+import { assert, signalInvalidType } from "@canvas-js/utils"
 
 import {
 	AbstractModelDB,
@@ -243,22 +243,48 @@ export class ModelDB extends AbstractModelDB {
 
 	private addProperty(modelName: string, propertyName: string, propertyType: PropertyType) {
 		const property = this.config.addProperty(modelName, propertyName, propertyType)
-		throw new Error("not implemented")
+
+		const model = this.config.models.find((model) => model.name === modelName)
+		assert(model !== undefined, "internal error")
+		this.models[modelName] = model
+
+		this.#models[modelName].addProperty(property)
+		this.#models.$models.set({ name: modelName, model })
 	}
 
 	private removeProperty(modelName: string, propertyName: string) {
 		this.config.removeProperty(modelName, propertyName)
-		throw new Error("not implemented")
+
+		const model = this.config.models.find((model) => model.name === modelName)
+		assert(model !== undefined, "internal error")
+		this.models[modelName] = model
+
+		this.#models[modelName].removeProperty(propertyName)
+		this.#models.$models.set({ name: modelName, model })
 	}
 
 	private addIndex(modelName: string, index: string) {
-		const propertyNames = this.config.addIndex(modelName, index)
-		throw new Error("not implemented")
+		const propertyNames = Config.parseIndex(index)
+		this.config.addIndex(modelName, index)
+
+		const model = this.config.models.find((model) => model.name === modelName)
+		assert(model !== undefined, "internal error")
+		this.models[modelName] = model
+
+		this.#models[modelName].addIndex(propertyNames)
+		this.#models.$models.set({ name: modelName, model })
 	}
 
 	private removeIndex(modelName: string, index: string) {
+		const propertyNames = Config.parseIndex(index)
 		this.config.removeIndex(modelName, index)
-		throw new Error("not implemented")
+
+		const model = this.config.models.find((model) => model.name === modelName)
+		assert(model !== undefined, "internal error")
+		this.models[modelName] = model
+
+		this.#models[modelName].removeIndex(propertyNames)
+		this.#models.$models.set({ name: modelName, model })
 	}
 
 	private getUpgradeAPI() {

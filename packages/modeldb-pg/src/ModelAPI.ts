@@ -18,9 +18,6 @@ import {
 	isLiteralExpression,
 	isRangeExpression,
 	validateModelValue,
-	isPrimaryKey,
-	equalPrimaryKeys,
-	equalReferences,
 } from "@canvas-js/modeldb"
 
 import { RelationAPI } from "./RelationAPI.js"
@@ -35,200 +32,202 @@ function getColumn(name: string, type: PrimitiveType, nullable: boolean) {
 	}
 }
 
+type Statements = {
+	// Methods
+	insert: Method
+	update: Method | null
+	delete: Method
+	clear: Method
+
+	// Queries
+	select: Query
+	selectAll: Query
+	selectMany: Query
+	count: Query<{ count: number }>
+}
+
 export class ModelAPI {
 	public static async create(client: pg.Client, config: Config, model: Model, clear: boolean = false) {
+		const api = new ModelAPI(client, config, model)
+
 		/** SQL column declarations */
-		const columns: string[] = []
-
-		/** unquoted column names for non-relation properties */
-		const columnNames: string[] = []
-
-		const properties = Object.fromEntries(model.properties.map((property) => [property.name, property]))
-		const relations: Record<string, RelationAPI> = {}
-		const primaryProperties: PrimitiveProperty[] = config.primaryKeys[model.name]
-		const mutableProperties: Property[] = []
-		const codecs: Record<string, PropertyAPI<PostgresPrimitiveValue>> = {}
+		const columnDefinitions: string[] = []
 
 		for (const property of model.properties) {
-			if (property.kind === "primitive") {
-				const { name, type, nullable } = property
-				columns.push(getColumn(name, type, nullable))
-				columnNames.push(name)
-
-				const propertyName = `${model.name}/${name}`
-				codecs[property.name] = {
-					columns: [property.name],
-					encode: (value) => [Encoder.encodePrimitiveValue(propertyName, type, nullable, value)],
-					decode: (record) => Decoder.decodePrimitiveValue(propertyName, type, nullable, record[property.name]),
-				}
-
-				if (!model.primaryKey.includes(property.name)) {
-					mutableProperties.push(property)
-				}
-			} else if (property.kind === "reference") {
-				const propertyName = `${model.name}/${property.name}`
-
-				const target = config.models.find((model) => model.name === property.target)
-				assert(target !== undefined)
-
-				config.primaryKeys[target.name]
-
-				if (target.primaryKey.length === 1) {
-					const [targetProperty] = config.primaryKeys[target.name]
-					columns.push(getColumn(property.name, targetProperty.type, property.nullable))
-					columnNames.push(property.name)
-
-					codecs[property.name] = {
-						columns: [property.name],
-						encode: (value) => Encoder.encodeReferenceValue(propertyName, [targetProperty], property.nullable, value),
-						decode: (record) =>
-							Decoder.decodeReferenceValue(propertyName, property.nullable, [targetProperty], [record[property.name]]),
-					}
-				} else {
-					const refNames: string[] = []
-
-					for (const targetProperty of config.primaryKeys[target.name]) {
-						const refName = `${property.name}/${targetProperty.name}`
-						columns.push(getColumn(refName, targetProperty.type, property.nullable))
-						columnNames.push(refName)
-						refNames.push(refName)
-					}
-
-					codecs[property.name] = {
-						columns: refNames,
-
-						encode: (value) =>
-							Encoder.encodeReferenceValue(propertyName, config.primaryKeys[target.name], property.nullable, value),
-
-						decode: (record) =>
-							Decoder.decodeReferenceValue(
-								propertyName,
-								property.nullable,
-								config.primaryKeys[target.name],
-								refNames.map((name) => record[name]),
-							),
-					}
-				}
-
-				mutableProperties.push(property)
-			} else if (property.kind === "relation") {
-				const relation = config.relations.find(
-					(relation) => relation.source === model.name && relation.sourceProperty === property.name,
-				)
-				assert(relation !== undefined, "internal error - relation not found")
-				relations[property.name] = await RelationAPI.create(client, config, relation, clear)
-
-				mutableProperties.push(property)
-			} else {
-				signalInvalidType(property)
-			}
+			await api.prepareProperty(property, columnDefinitions, clear)
 		}
 
-		const api = new ModelAPI(
-			client,
-			config,
-			model,
-			properties,
-			relations,
-			primaryProperties,
-			mutableProperties,
-			codecs,
-			columnNames,
-		)
-
-		const queries: string[] = []
-
-		// Create record table
-
-		if (clear) {
-			queries.push(`DROP TABLE IF EXISTS "${api.table}"`)
-		}
-
-		const primaryKeyConstraint = `PRIMARY KEY (${model.primaryKey.map(quote).join(", ")})`
-		const tableSchema = [...columns, primaryKeyConstraint].join(", ")
-		queries.push(`CREATE TABLE IF NOT EXISTS "${api.table}" (${tableSchema})`)
-
-		// Create indexes
-		for (const index of model.indexes) {
-			if (index.length === 1 && index[0] in relations) {
-				continue
-			}
-
-			const indexName = [model.name, ...index].join("/")
-			const indexColumnNames = index.flatMap((name) => codecs[name].columns)
-			const indexColumns = indexColumnNames.map(quote).join(", ")
-			queries.push(`CREATE INDEX IF NOT EXISTS "${indexName}" ON "${api.table}" (${indexColumns})`)
-		}
-
-		await client.query(queries.join("; "))
+		await api.initialize(columnDefinitions, clear)
+		api.prepareStatements()
 
 		return api
 	}
 
 	readonly table: string
 
-	// Methods
-	readonly #insert: Method
-	readonly #update: Method | null
-	readonly #delete: Method
-	readonly #clear: Method
+	#statements: Statements | null = null
 
-	// Queries
-	readonly #select: Query
-	readonly #selectAll: Query
-	readonly #selectMany: Query
-	readonly #count: Query<{ count: number }>
+	readonly codecs: Record<string, PropertyAPI<PostgresPrimitiveValue>> = {}
+	readonly codecNames: string[] = []
 
-	readonly codecNames: string[]
-	readonly relationNames: string[]
+	readonly relations: Record<string, RelationAPI> = {}
+	readonly relationNames: string[] = []
 
-	constructor(
-		readonly client: pg.Client,
-		readonly config: Config,
-		readonly model: Model,
-		readonly properties: Record<string, Property>,
-		readonly relations: Record<string, RelationAPI>,
-		readonly primaryProperties: PrimitiveProperty[],
-		readonly mutableProperties: Property[],
-		readonly codecs: Record<string, PropertyAPI<PostgresPrimitiveValue>>,
-		columnNames: string[],
-	) {
+	readonly properties: Record<string, Property> = {}
+	readonly primaryProperties: PrimitiveProperty[]
+	readonly mutableProperties: Property[] = []
+
+	constructor(readonly client: pg.Client, readonly config: Config, readonly model: Model) {
 		this.table = model.name
-		this.codecNames = Object.keys(this.codecs)
-		this.relationNames = Object.keys(this.relations)
+		this.primaryProperties = config.primaryKeys[model.name]
+	}
 
-		const quotedColumnNames = columnNames.map(quote).join(", ")
+	private get statements(): Statements {
+		assert(this.#statements !== null, "internal error - unintinitalized")
+		return this.#statements
+	}
+
+	private async prepareProperty(property: Property, columnDefinitions: string[], clear?: boolean) {
+		this.properties[property.name] = property
+
+		if (property.kind === "primitive") {
+			const { name, type, nullable } = property
+			columnDefinitions.push(getColumn(name, type, nullable))
+
+			const propertyName = `${this.model.name}/${name}`
+
+			this.addCodec(property.name, {
+				columns: [property.name],
+				encode: (value) => [Encoder.encodePrimitiveValue(propertyName, type, nullable, value)],
+				decode: (record) => Decoder.decodePrimitiveValue(propertyName, type, nullable, record[property.name]),
+			})
+
+			if (!this.model.primaryKey.includes(property.name)) {
+				this.mutableProperties.push(property)
+			}
+		} else if (property.kind === "reference") {
+			const propertyName = `${this.model.name}/${property.name}`
+
+			const target = this.config.models.find((model) => model.name === property.target)
+			assert(target !== undefined, "internal error - expected target !== undefined")
+
+			const targetPrimaryProperties = this.config.primaryKeys[target.name]
+
+			if (targetPrimaryProperties.length === 1) {
+				const [targetProperty] = targetPrimaryProperties
+				columnDefinitions.push(getColumn(property.name, targetProperty.type, property.nullable))
+
+				this.addCodec(property.name, {
+					columns: [property.name],
+					encode: (value) => Encoder.encodeReferenceValue(propertyName, [targetProperty], property.nullable, value),
+					decode: (record) =>
+						Decoder.decodeReferenceValue(propertyName, property.nullable, [targetProperty], [record[property.name]]),
+				})
+			} else {
+				const refNames: string[] = []
+
+				for (const targetProperty of targetPrimaryProperties) {
+					const refName = `${property.name}/${targetProperty.name}`
+					columnDefinitions.push(getColumn(refName, targetProperty.type, property.nullable))
+					refNames.push(refName)
+				}
+
+				this.addCodec(property.name, {
+					columns: refNames,
+
+					encode: (value) =>
+						Encoder.encodeReferenceValue(propertyName, targetPrimaryProperties, property.nullable, value),
+
+					decode: (record) =>
+						Decoder.decodeReferenceValue(
+							propertyName,
+							property.nullable,
+							targetPrimaryProperties,
+							refNames.map((name) => record[name]),
+						),
+				})
+			}
+
+			this.mutableProperties.push(property)
+		} else if (property.kind === "relation") {
+			const relation = this.config.relations.find(
+				(relation) => relation.source === this.model.name && relation.sourceProperty === property.name,
+			)
+			assert(relation !== undefined, "internal error - relation not found")
+
+			await this.addRelation(relation, clear)
+			this.mutableProperties.push(property)
+		} else {
+			signalInvalidType(property)
+		}
+	}
+
+	private async initialize(columnDefinitions: string[], clear?: boolean) {
+		const queries: string[] = []
+
+		// Create record table
+
+		if (clear) {
+			queries.push(`DROP TABLE IF EXISTS "${this.table}"`)
+		}
+
+		const primaryKeyConstraint = `PRIMARY KEY (${this.model.primaryKey.map(quote).join(", ")})`
+		const tableSchema = [...columnDefinitions, primaryKeyConstraint].join(", ")
+		queries.push(`CREATE TABLE IF NOT EXISTS "${this.table}" (${tableSchema})`)
+
+		// Create indexes
+		for (const index of this.model.indexes) {
+			if (index.length === 1 && index[0] in this.relations) {
+				continue
+			} else {
+				assert(
+					index.every((name) => this.relations[name] === undefined),
+					"cannot index relation properties",
+				)
+			}
+
+			const indexName = [this.model.name, ...index].join("/")
+			const indexColumnNames = index.flatMap((name) => this.codecs[name].columns)
+			const indexColumns = indexColumnNames.map(quote).join(", ")
+			queries.push(`CREATE INDEX IF NOT EXISTS "${indexName}" ON "${this.table}" (${indexColumns})`)
+		}
+
+		await this.client.query(queries.join("; "))
+	}
+
+	private prepareStatements() {
+		const columnNames = Object.values(this.codecs).flatMap((codec) => codec.columns)
+		const mutableColumnNames = columnNames.filter((name) => !this.model.primaryKey.includes(name))
 
 		const insertParams = Array.from({ length: columnNames.length })
 			.map((_, i) => `$${i + 1}`)
 			.join(", ")
 
-		this.#insert = new Method(
-			client,
+		const quotedColumnNames = columnNames.map(quote).join(", ")
+		const insert = new Method(
+			this.client,
 			`INSERT INTO "${this.table}" (${quotedColumnNames}) VALUES (${insertParams}) ON CONFLICT DO NOTHING`,
 		)
 
-		const updateNames = columnNames.filter((name) => !model.primaryKey.includes(name))
-		if (updateNames.length > 0) {
-			const updateEntries = updateNames.map((name, i) => `"${name}" = $${i + 1}`)
-			const updateWhere = model.primaryKey
+		let update: Method | null = null
+		if (mutableColumnNames.length > 0) {
+			const updateEntries = mutableColumnNames.map((name, i) => `"${name}" = $${i + 1}`)
+			const updateWhere = this.model.primaryKey
 				.map((name, i) => `"${name}" = $${updateEntries.length + i + 1}`)
 				.join(" AND ")
 
-			this.#update = new Method(client, `UPDATE "${this.table}" SET ${updateEntries.join(", ")} WHERE ${updateWhere}`)
-		} else {
-			this.#update = null
+			update = new Method(this.client, `UPDATE "${this.table}" SET ${updateEntries.join(", ")} WHERE ${updateWhere}`)
 		}
 
-		const deleteWhere = model.primaryKey.map((name, i) => `"${name}" = $${i + 1}`).join(" AND ")
-		this.#delete = new Method(client, `DELETE FROM "${this.table}" WHERE ${deleteWhere}`)
-		this.#clear = new Method(client, `DELETE FROM "${this.table}"`)
+		const deleteWhere = this.model.primaryKey.map((name, i) => `"${name}" = $${i + 1}`).join(" AND ")
+		const _delete = new Method(this.client, `DELETE FROM "${this.table}" WHERE ${deleteWhere}`)
+		const clear = new Method(this.client, `DELETE FROM "${this.table}"`)
 
 		// Prepare queries
-		this.#count = new Query<{ count: number }>(this.client, `SELECT COUNT(*) AS count FROM "${this.table}"`)
+		const count = new Query<{ count: number }>(this.client, `SELECT COUNT(*) AS count FROM "${this.table}"`)
 
-		const selectWhere = model.primaryKey.map((name, i) => `"${name}" = $${i + 1}`).join(" AND ")
-		const selectColumnNames = model.properties.flatMap((property) => {
+		const selectWhere = this.model.primaryKey.map((name, i) => `"${name}" = $${i + 1}`).join(" AND ")
+		const selectColumnNames = this.model.properties.flatMap((property) => {
 			if (property.kind === "primitive") {
 				if (property.type === "json") {
 					return [`"${property.name}"::jsonb`]
@@ -244,13 +243,13 @@ export class ModelAPI {
 			}
 		})
 
-		this.#select = new Query(
+		const select = new Query(
 			this.client,
 			`SELECT ${selectColumnNames.join(", ")} FROM "${this.table}" WHERE ${selectWhere}`,
 		)
 
-		const orderByPrimaryKey = model.primaryKey.map((name) => `"${name}" ASC`).join(", ")
-		this.#selectAll = new Query(
+		const orderByPrimaryKey = this.model.primaryKey.map((name) => `"${name}" ASC`).join(", ")
+		const selectAll = new Query(
 			this.client,
 			`SELECT ${selectColumnNames} FROM "${this.table}" ORDER BY ${orderByPrimaryKey}`,
 		)
@@ -259,31 +258,63 @@ export class ModelAPI {
 			.map(({ type }, i) => `$${i + 1}::${columnTypes[type].toLowerCase()}[]`)
 			.join(", ")
 
-		const match = model.primaryKey.map((name) => `"${this.table}"."${name}" = "/keys"."${name}"`).join(" AND ")
-		const primaryKeyNames = model.primaryKey.map(quote).join(", ")
-		// const mutablePropertyNames = this.mutableProperties.flatMap((property) => {
-		// 	if (property.kind === "primitive") {
-		// 	} else if (property.kind === "reference") {
-		// 	} else if (property.kind === "relation") {
-		// 		return []
-		// 	} else {
-		// 		signalInvalidType(property)
-		// 	}
-		// })
+		const match = this.model.primaryKey.map((name) => `"${this.table}"."${name}" = "/keys"."${name}"`).join(" AND ")
+		const primaryKeyNames = this.model.primaryKey.map(quote).join(", ")
 
-		this.#selectMany = new Query(
+		const selectMany = new Query(
 			this.client,
 			`
-			WITH "/keys" AS (
-			  SELECT ${primaryKeyNames}, "/index"::integer
-				FROM unnest(${unnest})
-				WITH ORDINALITY AS t(${primaryKeyNames}, "/index")
-			)
-			SELECT "/keys"."/index", ${selectColumnNames.map((c) => `"${this.table}".${c}`)} FROM "/keys"
-			  LEFT JOIN "${this.table}" ON ${match}
-			ORDER BY "/keys"."/index"
-			`,
+		WITH "/keys" AS (
+		  SELECT ${primaryKeyNames}, "/index"::integer
+			FROM unnest(${unnest})
+			WITH ORDINALITY AS t(${primaryKeyNames}, "/index")
 		)
+		SELECT "/keys"."/index", ${selectColumnNames.map((c) => `"${this.table}".${c}`)} FROM "/keys"
+		  LEFT JOIN "${this.table}" ON ${match}
+		ORDER BY "/keys"."/index"
+		`,
+		)
+
+		this.#statements = {
+			insert,
+			update,
+			delete: _delete,
+			count,
+			select,
+			selectAll,
+			selectMany,
+			clear,
+		}
+	}
+
+	private addCodec(name: string, codec: PropertyAPI<PostgresPrimitiveValue>) {
+		this.codecs[name] = codec
+		this.codecNames.push(name)
+	}
+
+	private removeCodec(name: string) {
+		delete this.codecs[name]
+		const index = this.codecNames.indexOf(name)
+		assert(index !== -1, "internal error - expected index !== -1")
+		this.codecNames.splice(index, 1)
+	}
+
+	private async addRelation(relation: Relation, clear?: boolean) {
+		const relationAPI = await RelationAPI.create(this.client, this.config, relation, clear)
+		this.relations[relation.sourceProperty] = relationAPI
+		this.relationNames.push(relation.sourceProperty)
+	}
+
+	private async removeRelation(propertyName: string) {
+		const relationAPI = this.relations[propertyName]
+		assert(relationAPI !== undefined, "internal error - expected relationAPI !== undefined")
+		delete this.relations[propertyName]
+
+		const index = this.relationNames.indexOf(propertyName)
+		assert(index !== -1, "internal error - expected index !== -1")
+		this.relationNames.splice(index, 1)
+
+		await this.client.query(`DROP TABLE "${relationAPI.table}"`)
 	}
 
 	public async drop() {
@@ -296,6 +327,75 @@ export class ModelAPI {
 		await this.client.query(queries.join("\n"))
 	}
 
+	public async addProperty(property: Property) {
+		/** SQL column declarations */
+		const columnDefinitions: string[] = []
+
+		await this.prepareProperty(property, columnDefinitions, false)
+
+		const alter = columnDefinitions.map((column) => `ADD COLUMN ${column}`)
+		await this.client.query(`ALTER TABLE "${this.table}" ${alter.join(", ")}`)
+
+		this.prepareStatements()
+	}
+
+	public async removeProperty(propertyName: string) {
+		const property = this.properties[propertyName]
+		assert(property !== undefined, "internal error - expected property !== undefined")
+		delete this.properties[propertyName]
+
+		const index = this.mutableProperties.indexOf(property)
+		assert(index !== -1, "internal error - expected index !== -1")
+		this.mutableProperties.splice(index, 1)
+
+		if (property.kind === "primitive" || property.kind === "reference") {
+			const codec = this.codecs[propertyName]
+			assert(codec !== undefined, "internal error - codec !== undefined")
+			const alter = codec.columns.map((column) => `DROP COLUMN "${column}"`)
+			await this.client.query(`ALTER TABLE "${this.table}" ${alter.join(", ")}`)
+			this.removeCodec(propertyName)
+		} else if (property.kind === "relation") {
+			await this.removeRelation(propertyName)
+		} else {
+			signalInvalidType(property)
+		}
+
+		this.prepareStatements()
+	}
+
+	public async addIndex(propertyNames: string[]) {
+		if (propertyNames.length === 1 && propertyNames[0] in this.relations) {
+			const [propertyName] = propertyNames
+			const relation = this.relations[propertyName]
+			const targetIndex = `${this.table}/${propertyName}/target`
+			const targetColumns = relation.targetColumnNames.map(quote).join(", ")
+			await this.client.query(`CREATE INDEX IF NOT EXISTS "${targetIndex}" ON "${this.table}" (${targetColumns})`)
+			return
+		}
+
+		assert(
+			propertyNames.every((name) => this.relations[name] === undefined),
+			"cannot index relation properties",
+		)
+
+		const indexName = [this.model.name, ...propertyNames].join("/")
+		const indexColumnNames = propertyNames.flatMap((name) => this.codecs[name].columns)
+		const indexColumns = indexColumnNames.map(quote).join(", ")
+		await this.client.query(`CREATE INDEX IF NOT EXISTS "${indexName}" ON "${this.table}" (${indexColumns})`)
+	}
+
+	public async removeIndex(propertyNames: string[]) {
+		if (propertyNames.length === 1 && propertyNames[0] in this.relations) {
+			const [propertyName] = propertyNames
+			const targetIndex = `${this.table}/${propertyName}/target`
+			await this.client.query(`DROP INDEX IF EXISTS "${targetIndex}"`)
+			return
+		}
+
+		const indexName = [this.model.name, ...propertyNames].join("/")
+		await this.client.query(`DROP INDEX IF EXISTS "${indexName}"`)
+	}
+
 	public async get(key: PrimaryKeyValue | PrimaryKeyValue[]): Promise<ModelValue | null> {
 		const wrappedKey = Array.isArray(key) ? key : [key]
 		if (wrappedKey.length !== this.primaryProperties.length) {
@@ -306,7 +406,7 @@ export class ModelAPI {
 			Encoder.encodePrimitiveValue(name, type, nullable, wrappedKey[i]),
 		)
 
-		const record = await this.#select.get(encodedKey)
+		const record = await this.statements.select.get(encodedKey)
 		if (record === null) {
 			return null
 		}
@@ -363,7 +463,7 @@ export class ModelAPI {
 			),
 		)
 
-		const rows = await this.#selectMany.all(columns)
+		const rows = await this.statements.selectMany.all(columns)
 		assert(rows.length === wrappedKeys.length, "internal error - expected rows.length === wrappedKeys.length")
 
 		const results = new Array<ModelValue | null>(wrappedKeys.length).fill(null)
@@ -417,7 +517,7 @@ export class ModelAPI {
 	}
 
 	public async getAll(): Promise<ModelValue[]> {
-		const rows = await this.#selectAll.all([])
+		const rows = await this.statements.selectAll.all([])
 		return Promise.all(rows.map((row) => this.parseRecord(row, this.codecNames, this.relationNames)))
 	}
 
@@ -428,14 +528,16 @@ export class ModelAPI {
 			Encoder.encodePrimitiveValue(name, type, nullable, value[name]),
 		)
 
-		const existingRecord = await this.#select.get(encodedKey)
+		const { select, insert, update } = this.statements
+
+		const existingRecord = await select.get(encodedKey)
 
 		if (existingRecord === null) {
 			const params = this.encodeProperties(this.model.properties, value)
-			await this.#insert.run(params)
-		} else if (this.#update !== null) {
+			await insert.run(params)
+		} else if (update !== null) {
 			const params = this.encodeProperties(this.mutableProperties, value)
-			await this.#update.run([...params, ...encodedKey])
+			await update.run([...params, ...encodedKey])
 		}
 
 		for (const [name, relation] of Object.entries(this.relations)) {
@@ -481,14 +583,14 @@ export class ModelAPI {
 			Encoder.encodePrimitiveValue(name, type, nullable, wrappedKey[i]),
 		)
 
-		await this.#delete.run(encodedKey)
+		await this.statements.delete.run(encodedKey)
 		for (const relation of Object.values(this.relations)) {
 			await relation.delete(encodedKey)
 		}
 	}
 
 	public async clear() {
-		await this.#clear.run([])
+		await this.statements.clear.run([])
 		for (const relation of Object.values(this.relations)) {
 			await relation.clear()
 		}
@@ -515,19 +617,12 @@ export class ModelAPI {
 
 	public async query(query: QueryParams): Promise<ModelValue[]> {
 		const [sql, properties, relations, params] = this.parseQuery(query)
-		const results: ModelValue[] = []
-
-		for await (const row of new Query(this.client, sql).iterate(params)) {
-			const record = await this.parseRecord(row, properties, relations)
-			results.push(record)
-		}
-
-		return results
+		const rows = await new Query(this.client, sql).all(params)
+		return await Promise.all(rows.map((row) => this.parseRecord(row, properties, relations)))
 	}
 
 	public async *iterate(query: QueryParams): AsyncIterable<ModelValue> {
 		const [sql, properties, relations, params] = this.parseQuery(query)
-
 		for await (const row of new Query(this.client, sql).iterate(params)) {
 			yield await this.parseRecord(row, properties, relations)
 		}
@@ -638,7 +733,14 @@ export class ModelAPI {
 
 			const property = this.properties[name]
 			assert(property !== undefined, "property not found")
-			if (property.kind === "primitive" || property.kind === "reference") {
+			if (property.kind === "primitive") {
+				properties.push(name)
+				if (property.type === "json") {
+					columns.push(`"${property.name}"::jsonb`)
+				} else {
+					columns.push(quote(name))
+				}
+			} else if (property.kind === "reference") {
 				properties.push(name)
 				columns.push(...this.codecs[name].columns.map(quote))
 			} else if (property.kind === "relation") {

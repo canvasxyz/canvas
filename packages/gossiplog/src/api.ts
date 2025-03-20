@@ -7,7 +7,7 @@ import * as json from "@ipld/dag-json"
 
 import type { Signature, Message } from "@canvas-js/interfaces"
 import type { RangeExpression } from "@canvas-js/modeldb"
-import type { AbstractGossipLog } from "@canvas-js/gossiplog"
+import type { AbstractGossipLog, MessageRecord, MessageSourceType } from "@canvas-js/gossiplog"
 
 export function createAPI<Payload>(gossipLog: AbstractGossipLog<Payload>): express.Express {
 	const api = express()
@@ -41,10 +41,8 @@ export function createAPI<Payload>(gossipLog: AbstractGossipLog<Payload>): expre
 	api.get("/messages", async (req, res) => {
 		const [range, order, limit] = [getRange(req), getOrder(req), getLimit(req)]
 
-		type MessageRecord = { id: string; signature: Signature; message: Message<Payload> }
-
-		const results = await gossipLog.db.query<MessageRecord>("$messages", {
-			select: { id: true, branch: true, signature: true, message: true },
+		const results = await gossipLog.db.query<MessageRecord<MessageSourceType>>("$messages", {
+			select: { id: true, signature: true, message: true },
 			where: { id: range },
 			orderBy: { id: order },
 			limit,

@@ -125,12 +125,13 @@ export async function createSnapshot<T extends Contract<any>>(
 	// flatten $effects table
 	const effectsMap = new Map<string, EffectRecord>()
 	for await (const row of app.db.iterate<EffectRecord>("$effects")) {
-		const { key, value, branch, clock } = row
+		const { key, value, clock } = row
 		const [table, keyhash, msgid] = key.split("/")
 		const recordId = [table, keyhash].join("/")
 		const existingEffect = effectsMap.get(recordId)
 		if (!existingEffect || clock > existingEffect.clock) {
 			const effectKey = `${recordId}/${MIN_MESSAGE_ID}`
+
 			let updatedValue = value
 			if (value !== null && (addedColumns[table] || removedColumns[table])) {
 				const decodedValue = cbor.decode<ModelValue | null>(value)
@@ -145,7 +146,7 @@ export async function createSnapshot<T extends Contract<any>>(
 					}
 				}
 			}
-			effectsMap.set(recordId, { key: effectKey, value: updatedValue, branch, clock })
+			effectsMap.set(recordId, { key: effectKey, value: updatedValue, clock })
 		}
 	}
 	const effects = Array.from(effectsMap.values()).map(({ key, value }: SnapshotEffect) => ({ key, value }))

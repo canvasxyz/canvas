@@ -12,7 +12,7 @@ export class RelationAPI {
 	readonly #delete: Method
 	readonly #clear: Method
 
-	public static async create(client: pg.Client, config: Config, relation: Relation, clear: boolean) {
+	public static async create(client: pg.Client, config: Config, relation: Relation, clear: boolean = false) {
 		const sourceColumnNames: string[] = []
 		const targetColumnNames: string[] = []
 
@@ -94,11 +94,6 @@ export class RelationAPI {
 		// Prepare queries
 		const targetColumns = targetColumnNames.map(quote).join(", ")
 		this.#select = new Query(client, `SELECT ${targetColumns} FROM "${this.table}" WHERE ${selectBySource}`)
-
-		// this.#insert = `INSERT INTO "${this.table}" (_source, _target) VALUES ($1, $2)`
-		// this.#delete = `DELETE FROM "${this.table}" WHERE _source = $1`
-		// this.#select = `SELECT _source, _target FROM "${this.table}" WHERE _source = $1`
-		// this.#selectMany = `SELECT _source, _target FROM "${this.table}" WHERE _source = ANY($1)`
 	}
 
 	public async get(sourceKey: PostgresPrimitiveValue[]): Promise<PostgresPrimitiveValue[][]> {
@@ -121,6 +116,7 @@ export class RelationAPI {
 	}
 
 	public async getMany(sources: PostgresPrimitiveValue[][]): Promise<PostgresPrimitiveValue[][][]> {
+		// TODO
 		return await Promise.all(sources.map((source) => this.get(source)))
 
 		// // postgres doesn't know at planning time if the array has a single string

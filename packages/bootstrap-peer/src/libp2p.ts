@@ -1,6 +1,5 @@
 import { createLibp2p } from "libp2p"
 import { webSockets } from "@libp2p/websockets"
-import { all } from "@libp2p/websockets/filters"
 import { yamux } from "@chainsafe/libp2p-yamux"
 import { noise } from "@chainsafe/libp2p-noise"
 import { Identify, identify } from "@libp2p/identify"
@@ -17,6 +16,8 @@ export type ServiceMap = {
 	ping: PingService
 	rendezvous: RendezvousServer
 }
+
+export const maxRegistrationTTL = 2 * 60 * 60 // 2h
 
 export async function getLibp2p(config: Partial<Config> = {}) {
 	const { path, privateKey, listen, announce, maxConnections } = await getConfig(config)
@@ -37,9 +38,15 @@ export async function getLibp2p(config: Partial<Config> = {}) {
 		privateKey: privateKey,
 		start: false,
 		addresses: { listen, announce },
-		transports: [webSockets({ filter: all })],
+		transports: [webSockets({})],
+		connectionGater: { denyDialMultiaddr: (addr) => false },
 		connectionManager: { maxConnections },
 		connectionMonitor: { enabled: false, protocolPrefix: "canvas" },
+
+		peerStore: {
+			maxAddressAge: maxRegistrationTTL * 1000,
+			maxPeerAge: maxRegistrationTTL * 1000,
+		},
 
 		streamMuxers: [yamux()],
 		connectionEncrypters: [noise({})],
@@ -49,7 +56,7 @@ export async function getLibp2p(config: Partial<Config> = {}) {
 		services: {
 			identify: identify({ protocolPrefix: "canvas" }),
 			ping: ping({ protocolPrefix: "canvas" }),
-			rendezvous: rendezvousServer({ path }),
+			rendezvous: rendezvousServer({ path, maxRegistrationTTL }),
 		},
 	})
 
