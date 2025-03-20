@@ -8,15 +8,17 @@ layout: home
   <HeroAction theme="alt big" text="API Docs" href="/readme-core" />
 </HeroRow>
 
-Canvas is a replicated system for instant-sync TypeScript applications,
-based on a peer-to-peer database and runtime.
+Canvas is a replicated database with an embedded runtime, that lets
+you write multiplayer TypeScript applications with complex logic and
+instant sync.
 
 Write your core application logic in a [replicated contract](#),
-that syncs over libp2p. Users' actions are applied and sync instantly.
+that syncs over libp2p. Users' actions are applied instantly on their machine,
+and merged seamlessly with others' actions.
 
-You can handle conflicts with CRDTs, the data structures that Figma and Linear
-use to make their UI fast. Or, resolve conflicts using MMO-style optimistic
-rollback, without writing extra code.
+Handle conflicts with CRDTs, the data structures that Figma and Linear
+use to make their UI fast. Or, we also support optimistic rollback,
+for MMO-style game sync
 
 It's fully open source, and built on SQLite, Postgres, and IndexedDB.
 
