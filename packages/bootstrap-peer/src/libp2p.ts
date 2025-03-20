@@ -17,6 +17,8 @@ export type ServiceMap = {
 	rendezvous: RendezvousServer
 }
 
+export const maxRegistrationTTL = 2 * 60 * 60 // 2h
+
 export async function getLibp2p(config: Partial<Config> = {}) {
 	const { path, privateKey, listen, announce, maxConnections } = await getConfig(config)
 	const peerId = peerIdFromPrivateKey(privateKey)
@@ -41,7 +43,10 @@ export async function getLibp2p(config: Partial<Config> = {}) {
 		connectionManager: { maxConnections },
 		connectionMonitor: { enabled: false, protocolPrefix: "canvas" },
 
-		peerStore: { maxAddressAge: Infinity, maxPeerAge: Infinity },
+		peerStore: {
+			maxAddressAge: maxRegistrationTTL * 1000,
+			maxPeerAge: maxRegistrationTTL * 1000,
+		},
 
 		streamMuxers: [yamux()],
 		connectionEncrypters: [noise({})],
@@ -51,7 +56,7 @@ export async function getLibp2p(config: Partial<Config> = {}) {
 		services: {
 			identify: identify({ protocolPrefix: "canvas" }),
 			ping: ping({ protocolPrefix: "canvas" }),
-			rendezvous: rendezvousServer({ path }),
+			rendezvous: rendezvousServer({ path, maxRegistrationTTL }),
 		},
 	})
 
