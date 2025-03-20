@@ -216,7 +216,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 	}
 
 	async #replay(timestamp: string, cursor?: string) {
-		const pageSize = 1024
+		const pageSize = 128
 
 		const lowerBound: RangeExpression = { gt: cursor }
 		while (!this.controller.signal.aborted) {
