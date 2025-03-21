@@ -15,8 +15,8 @@ export class AncestorIndex {
 	constructor(private readonly db: AbstractModelDB) {}
 
 	private async getLinks(messageId: MessageId, atOrBefore: number): Promise<MessageSet> {
-		const step = messageId.clock - atOrBefore
-		const index = step <= 0xffffffff ? 0x1f - Math.clz32(step) : Math.floor(Math.log2(step))
+		const delta = messageId.clock - atOrBefore
+		const index = delta <= 0xffffffff ? 0x1f - Math.clz32(delta) : Math.floor(Math.log2(delta))
 
 		const record = await this.db.get<AncestorRecord>("$ancestors", messageId.id)
 		if (record === null) {
