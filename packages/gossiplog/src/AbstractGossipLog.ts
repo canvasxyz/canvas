@@ -492,7 +492,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		const ancestorIndex = new AncestorIndex(this.db)
 		for (const id of ids) {
 			const isAncestor = await ancestorIndex.isAncestor(
-				typeof id == "string" ? MessageId.encode(id) : id,
+				typeof id === "string" ? MessageId.encode(id) : id,
 				typeof ancestor === "string" ? MessageId.encode(ancestor) : ancestor,
 				visited,
 			)
