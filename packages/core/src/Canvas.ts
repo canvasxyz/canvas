@@ -120,8 +120,11 @@ export class Canvas<
 				initialUpgradeSchema: { ...runtime.models, ...initialUpgradeSchema },
 
 				async upgrade(upgradeAPI, oldConfig, oldVersion, newVersion) {
+					const log = logger("canvas:core:upgrade")
 					const version = oldVersion[Canvas.namespace] ?? 0
+					log("found canvas version %d", version)
 					if (version <= 1) {
+						log("removing property 'branch' from $effects", version)
 						await upgradeAPI.removeProperty("$effects", "branch")
 					}
 				},
