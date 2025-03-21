@@ -15,7 +15,7 @@ import type {
 import { ed25519, prepareMessage } from "@canvas-js/signatures"
 import { assert, zip } from "@canvas-js/utils"
 
-import type { NetworkClient } from "@canvas-js/gossiplog"
+import { MessageSet, type NetworkClient } from "@canvas-js/gossiplog"
 import type { NetworkConfig, ServiceMap } from "@canvas-js/gossiplog/libp2p"
 import { AbortError, MessageNotFoundError, MissingParentError } from "@canvas-js/gossiplog/errors"
 import * as sync from "@canvas-js/gossiplog/sync"
@@ -109,15 +109,20 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		oldVersion: Record<string, number>,
 		newVersion: Record<string, number>,
 	) {
+		const log = logger("canvas:gossiplog:upgrade")
 		const version = oldVersion[AbstractGossipLog.namespace] ?? 0
+		log("found version %d", version)
 
 		if (version <= 1) {
+			log("removing 'branch' from $messages")
 			await upgradeAPI.removeIndex("$messages", "branch")
 			await upgradeAPI.removeProperty("$messages", "branch")
+			log("deleting model $branch_merges")
 			await upgradeAPI.deleteModel("$branch_merges")
 		}
 
 		if (version <= 2) {
+			log("creating model $replays")
 			await upgradeAPI.createModel("$replays", {
 				timestamp: "primary",
 				cursor: "string?",
@@ -436,6 +441,9 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		const { id, signature, message, key, value } = signedMessage
 		this.log.trace("applying %s %O", id, message)
 
+		const messageId = new MessageId(id, key, message.clock)
+		const parentIds = new MessageSet(message.parents.map(MessageId.encode))
+
 		const parentMessageRecords: MessageRecord<Payload>[] = []
 		for (const parent of message.parents) {
 			const parentMessageRecord = await this.db.get<MessageRecord<Payload>>("$messages", parent)
@@ -470,7 +478,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 
 		newHeads.sort()
 
-		await new AncestorIndex(this.db).indexAncestors(id, message.parents, effects)
+		await new AncestorIndex(this.db).indexAncestors(messageId, parentIds, effects)
 		await this.db.apply(effects)
 		txn.set(key, value)
 
@@ -485,10 +493,15 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		ancestor: string | MessageId,
 	): Promise<boolean> {
 		const ids = Array.isArray(root) ? root : [root]
-		const visited = new Set<string>()
+		const visited = new MessageSet()
 		const ancestorIndex = new AncestorIndex(this.db)
 		for (const id of ids) {
-			const isAncestor = await ancestorIndex.isAncestor(id, ancestor, visited)
+			const isAncestor = await ancestorIndex.isAncestor(
+				typeof id == "string" ? MessageId.encode(id) : id,
+				typeof ancestor === "string" ? MessageId.encode(ancestor) : ancestor,
+				visited,
+			)
+
 			if (isAncestor) {
 				return true
 			}
