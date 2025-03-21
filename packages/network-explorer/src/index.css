@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Geist+Mono&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Geist+Mono&display=swap");
 
 body {
 	margin: 0;
@@ -16,10 +16,19 @@ body {
 }
 
 .radix-themes {
-  --cursor-button: pointer;
-  font-family: "Geist Mono", monospace;
+	--cursor-button: pointer;
+	font-family: "Geist Mono", monospace;
 }
 
-.radix-themes input, .radix-themes button, .radix-themes h1, .radix-themes h2, .radix-themes h3 {
+.radix-themes input,
+.radix-themes button,
+.radix-themes h1,
+.radix-themes h2,
+.radix-themes h3 {
 	font-family: "Geist Mono", monospace;
+}
+
+.editor .cm-scroller {
+	height: 600px;
+	font-size: 84%;
 }

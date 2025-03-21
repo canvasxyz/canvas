@@ -14,11 +14,11 @@ export const CodeSelector = ({ option }: { option: "view" | "edit" | "admin" }) 
 	if (option === "view") {
 		iconType = LuBinary
 		to = "/contract/view"
-		label = "Contract Code"
+		label = "View Code"
 	} else if (option === "edit") {
 		iconType = LuArrowBigRightDash
 		to = "/contract/edit"
-		label = "Migrate"
+		label = "Update Code"
 	} else if (option === "admin") {
 		iconType = LuWrench
 		to = "/contract/admin"
