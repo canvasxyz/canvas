@@ -444,17 +444,6 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		const messageId = new MessageId(id, key, message.clock)
 		const parentIds = new MessageSet(message.parents.map(MessageId.encode))
 
-		const parentMessageRecords: MessageRecord<Payload>[] = []
-		for (const parent of message.parents) {
-			const parentMessageRecord = await this.db.get<MessageRecord<Payload>>("$messages", parent)
-			if (parentMessageRecord === null) {
-				this.log.error("missing parent %s of message %s: %O", parent, id, message)
-				throw new MissingParentError(parent, id)
-			}
-
-			parentMessageRecords.push(parentMessageRecord)
-		}
-
 		const result = await this.#apply.apply(this, [signedMessage])
 
 		const hash = toString(hashEntry(key, value), "hex")
