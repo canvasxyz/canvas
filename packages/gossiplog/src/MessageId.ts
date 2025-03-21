@@ -44,7 +44,7 @@ export class MessageId {
 		return new MessageId(id, key, clock)
 	}
 
-	private constructor(public readonly id: string, public readonly key: Uint8Array, public readonly clock: number) {}
+	public constructor(public readonly id: string, public readonly key: Uint8Array, public readonly clock: number) {}
 
 	public equals(other: MessageId) {
 		return this.id === other.id

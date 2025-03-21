@@ -121,17 +121,15 @@ export class Canvas<
 				initialUpgradeVersion: { [Canvas.namespace]: 1 },
 
 				async upgrade(upgradeAPI, oldConfig, oldVersion, newVersion) {
-					const log = logger("canvas:runtime:upgrade")
+					const log = logger("canvas:core:upgrade")
 					const version = oldVersion[Canvas.namespace] ?? 0
+					log("found canvas version %d", version)
 					if (version <= 1) {
-						log("beginning v1 migration")
+						log("removing property 'branch' from $effects", version)
 						await upgradeAPI.removeProperty("$effects", "branch")
-						log("migration v1 complete")
 					}
 
 					if (version <= 2) {
-						log("beginning v2 migration")
-
 						for (const [modelName, modelInit] of Object.entries(AbstractRuntime.effectsModel)) {
 							log("creating model %s", modelName)
 							await upgradeAPI.createModel(modelName, modelInit)
@@ -141,7 +139,6 @@ export class Canvas<
 						await upgradeAPI.deleteModel("$effects")
 
 						replayRequired = true
-						log("migration v2 complete")
 					}
 				},
 			},
