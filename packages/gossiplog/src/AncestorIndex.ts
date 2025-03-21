@@ -24,9 +24,9 @@ export class AncestorIndex {
 	constructor(private readonly db: AbstractModelDB) {}
 
 	private async getLinks(messageId: MessageId, atOrBefore: number): Promise<MessageSet> {
-		const diff = messageId.clock - atOrBefore
-		const highestBit = 31 - Math.clz32(diff) // Find position of highest set bit
-		const clock = messageId.clock - (1 << highestBit)
+		const step = messageId.clock - atOrBefore
+		const index = step <= 0xffffffff ? 0x1f - Math.clz32(step) : Math.floor(Math.log2(step))
+		const clock = messageId.clock - (1 << index)
 
 		const record = await this.db.get<AncestorRecord>("$ancestors", [messageId.key, clock])
 		if (record === null) {
