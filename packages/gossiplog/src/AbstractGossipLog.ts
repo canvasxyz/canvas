@@ -15,17 +15,18 @@ import type {
 import { ed25519, prepareMessage } from "@canvas-js/signatures"
 import { assert, zip } from "@canvas-js/utils"
 
-import { MessageSet, type NetworkClient } from "@canvas-js/gossiplog"
-import type { NetworkConfig, ServiceMap } from "@canvas-js/gossiplog/libp2p"
+import { NetworkConfig, ServiceMap } from "@canvas-js/gossiplog/libp2p"
+import { NetworkClient } from "@canvas-js/gossiplog/client"
 import { AbortError, MessageNotFoundError, MissingParentError } from "@canvas-js/gossiplog/errors"
 import * as sync from "@canvas-js/gossiplog/sync"
 
 import target from "#target"
 
-import type { SyncSnapshot } from "./interface.js"
+import { SyncSnapshot } from "./interface.js"
 import { AncestorIndex } from "./AncestorIndex.js"
 import { MessageSource, SignedMessage } from "./SignedMessage.js"
-import { decodeId, encodeId, messageIdPattern, MessageId, MIN_MESSAGE_ID } from "./MessageId.js"
+import { MessageSet } from "./MessageSet.js"
+import { MessageId, decodeId, encodeId, messageIdPattern } from "./MessageId.js"
 import { getNextClock } from "./schema.js"
 import { gossiplogTopicPattern } from "./utils.js"
 
