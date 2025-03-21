@@ -5,6 +5,7 @@ export * from "./schema.js"
 export * from "./clock.js"
 export * from "./interface.js"
 export * from "./MessageId.js"
+export * from "./MessageSet.js"
 export * from "./SignedMessage.js"
 export type { AncestorRecord } from "./AncestorIndex.js"
 
