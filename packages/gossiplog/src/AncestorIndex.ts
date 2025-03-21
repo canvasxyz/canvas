@@ -1,10 +1,9 @@
 import type { AbstractModelDB, Effect, ModelSchema } from "@canvas-js/modeldb"
 import { assert } from "@canvas-js/utils"
 
-import { decodeClock } from "./clock.js"
-import { encodeId, MessageId } from "./MessageId.js"
-import { getAncestorClocks } from "./utils.js"
+import { MessageId } from "./MessageId.js"
 import { MessageSet } from "./MessageSet.js"
+import { getAncestorClocks } from "./utils.js"
 
 export type AncestorRecord = { id: string; links: string[][] }
 
@@ -16,7 +15,8 @@ export class AncestorIndex {
 	constructor(private readonly db: AbstractModelDB) {}
 
 	private async getLinks(messageId: MessageId, atOrBefore: number): Promise<MessageSet> {
-		const index = Math.floor(Math.log2(messageId.clock - atOrBefore))
+		const step = messageId.clock - atOrBefore
+		const index = step <= 0xffffffff ? 0x1f - Math.clz32(step) : Math.floor(Math.log2(step))
 
 		const record = await this.db.get<AncestorRecord>("$ancestors", messageId.id)
 		if (record === null) {
