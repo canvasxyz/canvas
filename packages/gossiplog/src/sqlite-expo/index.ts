@@ -10,6 +10,7 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 		directory = null,
 		...init
 	}: { directory?: string | null; clear?: boolean } & GossipLogInit<Payload>) {
+		let replayRequired = false
 		const models = { ...init.schema, ...AbstractGossipLog.schema }
 		const version = Object.assign(init.version ?? {}, AbstractGossipLog.baseVersion)
 
@@ -17,8 +18,12 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 			models: models,
 			version: version,
 			upgrade: async (upgradeAPI, oldConfig, oldVersion, newVersion) => {
-				await AbstractGossipLog.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion)
-				await init.upgrade?.(upgradeAPI, oldConfig, oldVersion, newVersion)
+				const gossiplogReplayRequired = await AbstractGossipLog.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion)
+				replayRequired ||= gossiplogReplayRequired
+				if (init.upgrade) {
+					const userReplayRequired = await init.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion)
+					replayRequired ||= userReplayRequired
+				}
 			},
 			initialUpgradeSchema: Object.assign(init.initialUpgradeSchema ?? { ...models }, initialUpgradeSchema),
 			initialUpgradeVersion: Object.assign(init.initialUpgradeVersion ?? { ...version }, {

@@ -16,6 +16,7 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 		uri: string | pg.ConnectionConfig,
 		{ clear, ...init }: GossipLogInit<Payload> & { clear?: boolean },
 	) {
+		let replayRequired = false
 		const models = { ...init.schema, ...AbstractGossipLog.schema }
 		const version = Object.assign(init.version ?? {}, AbstractGossipLog.baseVersion)
 
@@ -23,8 +24,12 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 			models: models,
 			version: version,
 			upgrade: async (upgradeAPI, oldConfig, oldVersion, newVersion) => {
-				await AbstractGossipLog.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion)
-				await init.upgrade?.(upgradeAPI, oldConfig, oldVersion, newVersion)
+				const gossiplogReplayRequired = await AbstractGossipLog.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion)
+				replayRequired ||= gossiplogReplayRequired
+				if (init.upgrade) {
+					const userReplayRequired = await init.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion)
+					replayRequired ||= userReplayRequired
+				}
 			},
 			initialUpgradeSchema: Object.assign(init.initialUpgradeSchema ?? { ...models }, initialUpgradeSchema),
 			initialUpgradeVersion: Object.assign(init.initialUpgradeVersion ?? { ...version }, {
@@ -50,7 +55,12 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 			Math.round(delta),
 		)
 
-		await gossipLog.initialize()
+		if (replayRequired) {
+			await gossipLog.replay()
+		} else {
+			await gossipLog.initialize()
+		}
+
 		return gossipLog
 	}
 

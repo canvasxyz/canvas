@@ -1,37 +1,42 @@
 import type { AbstractModelDB, Effect, ModelSchema } from "@canvas-js/modeldb"
-import { assert } from "@canvas-js/utils"
+import { assert, zip } from "@canvas-js/utils"
 
-import { decodeClock } from "./clock.js"
-import { encodeId, MessageId } from "./MessageId.js"
+import { MessageId } from "./MessageId.js"
+import { MessageSet } from "./MessageSet.js"
 import { getAncestorClocks } from "./utils.js"
 
-export type AncestorRecord = { id: string; links: string[][] }
+export type AncestorRecord = {
+	key: Uint8Array
+	clock: number
+	links: Uint8Array
+}
 
 export class AncestorIndex {
 	public static schema = {
-		$ancestors: { id: "primary", links: "json" },
+		$ancestors: {
+			$primary: "key/clock",
+			key: "bytes",
+			clock: "integer",
+			links: "bytes",
+		},
 	} satisfies ModelSchema
 
 	constructor(private readonly db: AbstractModelDB) {}
 
-	private async getLinks(id: string | MessageId): Promise<string[][]> {
-		const key = typeof id === "string" ? id : id.id
-		const record = await this.db.get<AncestorRecord>("$ancestors", key)
+	private async getLinks(id: MessageId, atOrBefore: number): Promise<MessageSet> {
+		const diff = id.clock - atOrBefore
+		const highestBit = 31 - Math.clz32(diff) // Find position of highest set bit
+		const clock = id.clock - (1 << highestBit)
+
+		const record = await this.db.get<AncestorRecord>("$ancestors", [id.key, clock])
 		if (record === null) {
-			throw new Error(`ancestor links not found for ${key}`)
+			throw new Error(`ancestor links not found for ${id} at ${clock}`)
 		}
 
-		return record.links
+		return MessageSet.decode(record.links)
 	}
 
-	public async isAncestor(
-		id: string | MessageId,
-		ancestorId: string | MessageId,
-		visited: Set<string>,
-	): Promise<boolean> {
-		id = typeof id === "string" ? MessageId.encode(id) : id
-		ancestorId = typeof ancestorId === "string" ? MessageId.encode(ancestorId) : ancestorId
-
+	public async isAncestor(id: MessageId, ancestorId: MessageId, visited: MessageSet): Promise<boolean> {
 		if (id.equals(ancestorId)) {
 			return true
 		}
@@ -40,9 +45,8 @@ export class AncestorIndex {
 			return false
 		}
 
-		const links = await this.getLinks(id)
-		const index = Math.floor(Math.log2(id.clock - ancestorId.clock))
-		for (const link of links[index]) {
+		const links = await this.getLinks(id, ancestorId.clock)
+		for (const link of links) {
 			if (visited.has(link)) {
 				continue
 			}
@@ -57,62 +61,53 @@ export class AncestorIndex {
 		return false
 	}
 
-	public async indexAncestors(id: string, parentIds: string[], effects: Effect[]) {
-		const key = encodeId(id)
-		const [clock] = decodeClock(key)
-		const ancestorClocks = Array.from(getAncestorClocks(clock))
-		const ancestorLinks: string[][] = new Array(ancestorClocks.length)
+	public async indexAncestors(id: MessageId, parentIds: MessageSet, effects: Effect[]) {
+		id = typeof id === "string" ? MessageId.encode(id) : id
+		const ancestorClocks = Array.from(getAncestorClocks(id.clock))
+		const ancestorLinks: MessageSet[] = new Array(ancestorClocks.length)
 
 		for (const [i, ancestorClock] of ancestorClocks.entries()) {
 			if (i === 0) {
 				ancestorLinks[i] = parentIds
 			} else {
-				const links = new Set<string>()
-				for (const childId of ancestorLinks[i - 1]) {
-					const childKey = encodeId(childId)
-					const [childClock] = decodeClock(childKey)
-					if (childClock <= ancestorClock) {
-						links.add(childId)
+				const links = new MessageSet()
+				for (const child of ancestorLinks[i - 1]) {
+					if (child.clock <= ancestorClock) {
+						links.add(child)
 					} else {
-						assert(childClock <= ancestorClocks[i - 1], "expected childClock <= ancestorClocks[i - 1]")
-						await this.getAncestors(childId, ancestorClock, links)
+						assert(child.clock <= ancestorClocks[i - 1], "expected childClock <= ancestorClocks[i - 1]")
+						await this.getAncestors(child, ancestorClock, links)
 					}
 				}
 
-				ancestorLinks[i] = Array.from(links).sort()
+				ancestorLinks[i] = links
 			}
 		}
 
-		const value: AncestorRecord = { id, links: ancestorLinks }
-		effects.push({ model: "$ancestors", operation: "set", value })
+		for (const [clock, links] of zip(ancestorClocks, ancestorLinks)) {
+			const value: AncestorRecord = { key: id.key, clock, links: links.encode() }
+			effects.push({ model: "$ancestors", operation: "set", value })
+		}
 	}
 
 	public async getAncestors(
-		id: string,
+		id: MessageId,
 		atOrBefore: number,
-		results = new Set<string>(),
-		visited = new Set<string>(),
-	): Promise<Set<string>> {
+		results = new MessageSet(),
+		visited = new MessageSet(),
+	): Promise<MessageSet> {
 		assert(atOrBefore > 0, "expected atOrBefore > 0")
+		assert(atOrBefore < id.clock, "expected atOrBefore < clock")
 
-		const key = encodeId(id)
-		const [clock] = decodeClock(key)
-		assert(atOrBefore < clock, "expected atOrBefore < clock")
-
-		const index = Math.floor(Math.log2(clock - atOrBefore))
-
-		const links = await this.getLinks(id)
-		for (const ancestorId of links[index]) {
-			const ancestorKey = encodeId(ancestorId)
-			const [ancestorClock] = decodeClock(ancestorKey)
-
-			if (ancestorClock <= atOrBefore) {
-				results.add(ancestorId)
-			} else if (visited.has(ancestorId)) {
+		const links = await this.getLinks(id, atOrBefore)
+		for (const ancestor of links) {
+			if (ancestor.clock <= atOrBefore) {
+				results.add(ancestor)
+			} else if (visited.has(ancestor)) {
 				break
 			} else {
-				visited.add(ancestorId)
-				await this.getAncestors(ancestorId, atOrBefore, results, visited)
+				visited.add(ancestor)
+				await this.getAncestors(ancestor, atOrBefore, results, visited)
 			}
 		}
 

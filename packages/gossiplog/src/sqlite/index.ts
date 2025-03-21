@@ -9,6 +9,7 @@ import { ModelDB } from "@canvas-js/modeldb-sqlite"
 
 import { AbstractGossipLog, GossipLogInit } from "../AbstractGossipLog.js"
 import { initialUpgradeSchema } from "../utils.js"
+import { resolve } from "node:path"
 
 export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 	public static async open<Payload>(
@@ -17,33 +18,36 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 	): Promise<GossipLog<Payload>> {
 		const models = { ...init.schema, ...AbstractGossipLog.schema }
 		const version = Object.assign(init.version ?? {}, AbstractGossipLog.baseVersion)
-		const modelDBInit: ModelDBInit = {
-			models: models,
-			version: version,
-			upgrade: async (upgradeAPI, oldConfig, oldVersion, newVersion) => {
-				console.log(oldVersion, newVersion)
-				await AbstractGossipLog.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion)
-				await init.upgrade?.(upgradeAPI, oldConfig, oldVersion, newVersion)
-			},
-
-			initialUpgradeSchema: Object.assign(init.initialUpgradeSchema ?? { ...models }, initialUpgradeSchema),
-			initialUpgradeVersion: Object.assign(init.initialUpgradeVersion ?? { ...version }, {
-				[AbstractGossipLog.namespace]: 1,
-			}),
-		}
 
 		if (directory === null) {
-			const db = await ModelDB.open(null, modelDBInit)
-
+			const db = await ModelDB.open(null, { models, version })
 			const tree = new MemoryTree({ mode: Mode.Index })
-
 			return new GossipLog(db, tree, init)
 		} else {
+			let replayRequired = false
+			const modelDBInit: ModelDBInit = {
+				models: models,
+				version: version,
+				upgrade: async (upgradeAPI, oldConfig, oldVersion, newVersion) => {
+					const gossiplogReplayRequired = await AbstractGossipLog.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion)
+					replayRequired ||= gossiplogReplayRequired
+					if (init.upgrade) {
+						const userReplayRequired = await init.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion)
+						replayRequired ||= userReplayRequired
+					}
+				},
+
+				initialUpgradeSchema: Object.assign(init.initialUpgradeSchema ?? { ...models }, initialUpgradeSchema),
+				initialUpgradeVersion: Object.assign(init.initialUpgradeVersion ?? { ...version }, {
+					[AbstractGossipLog.namespace]: 1,
+				}),
+			}
+
 			if (!fs.existsSync(directory)) {
 				fs.mkdirSync(directory, { recursive: true })
 			}
 
-			const db = await ModelDB.open(`${directory}/db.sqlite`, modelDBInit)
+			const db = await ModelDB.open(resolve(directory, "db.sqlite"), modelDBInit)
 
 			const tree = new PersistentTree(`${directory}/message-index`, {
 				mode: Mode.Index,
@@ -51,7 +55,13 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 			})
 
 			const gossipLog = new GossipLog(db, tree, init)
-			await gossipLog.initialize()
+
+			if (replayRequired) {
+				await gossipLog.replay()
+			} else {
+				await gossipLog.initialize()
+			}
+
 			return gossipLog
 		}
 	}
