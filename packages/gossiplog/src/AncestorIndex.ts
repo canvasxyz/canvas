@@ -26,16 +26,16 @@ export class AncestorIndex {
 		return new MessageSet(record.links[index].map(MessageId.encode))
 	}
 
-	public async isAncestor(id: MessageId, ancestorId: MessageId, visited: MessageSet): Promise<boolean> {
-		if (id.equals(ancestorId)) {
+	public async isAncestor(messageId: MessageId, ancestorId: MessageId, visited: MessageSet): Promise<boolean> {
+		if (messageId.equals(ancestorId)) {
 			return true
 		}
 
-		if (id.clock <= ancestorId.clock) {
+		if (messageId.clock <= ancestorId.clock) {
 			return false
 		}
 
-		const links = await this.getLinks(id, ancestorId.clock)
+		const links = await this.getLinks(messageId, ancestorId.clock)
 		for (const link of links) {
 			if (visited.has(link)) {
 				continue
