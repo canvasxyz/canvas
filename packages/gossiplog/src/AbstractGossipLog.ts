@@ -444,6 +444,12 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		const messageId = new MessageId(id, key, message.clock)
 		const parentIds = new MessageSet(message.parents.map(MessageId.encode))
 
+		for (const parentId of parentIds) {
+			if (!txn.has(parentId.key)) {
+				throw new MissingParentError(parentId.id, id)
+			}
+		}
+
 		const result = await this.#apply.apply(this, [signedMessage])
 
 		const hash = toString(hashEntry(key, value), "hex")
