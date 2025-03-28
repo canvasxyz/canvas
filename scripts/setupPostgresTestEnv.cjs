@@ -4,6 +4,7 @@
 // If you are running it in a development environment, you can use:
 // `createuser postgres --createdb`
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { Client } = require("pg")
 
 const pgclient = new Client({

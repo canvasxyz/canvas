@@ -1,5 +1,4 @@
 import Debugger from "weald"
-// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
 ;(Debugger as any).useColors = () => false
 
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
