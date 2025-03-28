@@ -21,6 +21,7 @@ export default [
 		ignores: [
 			"**/webpack.config.js",
 			"**/*.d.ts",
+			"**/.next/**",
 			"**/dist/**/*.js",
 			"**/lib/**/*.js",
 			"**/build/**/*.js",
@@ -67,12 +68,12 @@ export default [
 			"@typescript-eslint/no-non-null-assertion": "off",
 			"@typescript-eslint/no-empty-interface": "off",
 			"@typescript-eslint/ban-ts-comment": "off",
+			"@typescript-eslint/no-empty-object-type": "off",
+			"@typescript-eslint/no-unsafe-function-type": "error",
+			"@typescript-eslint/no-wrapper-object-types": "error",
 			"no-empty-pattern": "off",
 			"no-empty": "off",
 			"require-yield": "off",
-
-			"@typescript-eslint/no-empty-object-type": "off",
-			"@typescript-eslint/no-unsafe-function-type": "off",
 		},
 	},
 	{
