@@ -165,7 +165,7 @@ export const MigrationView = () => {
 						<Editor
 							initialValue={contractData.originalContract}
 							onChange={setEditorState}
-							readOnly={contractData?.admin ? true : false}
+							readOnly={contractData?.admin ? false : true}
 						/>
 					</Box>
 
