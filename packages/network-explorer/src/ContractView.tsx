@@ -15,7 +15,7 @@ export const ContractView = () => {
 				<>Loading...</>
 			) : (
 				<Box style={{ border: "1px solid var(--gray-6)", borderRadius: "2px", width: "100%" }}>
-					<Editor initialValue={contractData.contract} readOnly />
+					<Editor initialValue={contractData.originalContract} readOnly />
 				</Box>
 			)}
 		</Box>
