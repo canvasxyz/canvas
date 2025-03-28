@@ -9,7 +9,11 @@ const target: PlatformTarget = {
 		throw new Error("Unsupported platform")
 	},
 
-	buildContract(location) {
+	buildContract(contract: string) {
+		throw new Error("Unsupported platform")
+	},
+
+	buildContractByLocation(location: string) {
 		throw new Error("Unsupported platform")
 	},
 }

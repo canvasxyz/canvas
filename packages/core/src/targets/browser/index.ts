@@ -24,15 +24,19 @@ const target: PlatformTarget = {
 		}
 
 		const { code, warnings } = await esbuild.transform(contract, {
-			loader: 'tsx',
+			loader: "tsx",
 			format: "esm",
 		})
 		for (const warning of warnings) {
-			const location = warning.location ? ` (${warning.location.line}:${warning.location.column})` : ''
+			const location = warning.location ? ` (${warning.location.line}:${warning.location.column})` : ""
 			console.log(`esbuild warning: ${warning.text}${location}`)
 		}
 
 		return code
+	},
+
+	async buildContractByLocation(location: string) {
+		throw new Error("Unimplemented: buildContractByLocation in browser")
 	},
 }
 

@@ -39,7 +39,7 @@ export async function getContractLocation(args: {
 			if (args.init.endsWith(".js")) {
 				fs.copyFileSync(args.init, contractPath)
 			} else {
-				const contractText = await Canvas.buildContract(args.init)
+				const contractText = await Canvas.buildContractByLocation(args.init)
 				console.log(chalk.yellow("[canvas] Bundled .ts contract:"), `${contractText.length} chars`)
 				fs.writeFileSync(contractPath, contractText)
 			}
@@ -78,7 +78,7 @@ export async function getContractLocation(args: {
 		let contract = fs.readFileSync(location, "utf-8")
 
 		if (location.endsWith(".ts")) {
-			contract = await Canvas.buildContract(location)
+			contract = await Canvas.buildContractByLocation(location)
 			console.log(chalk.yellow("[canvas] Bundled .ts contract:"), `${contract.length} chars`)
 		}
 

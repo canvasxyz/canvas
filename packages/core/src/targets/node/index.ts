@@ -101,7 +101,11 @@ const target: PlatformTarget = {
 		await new Promise<void>((resolve) => server.listen(port, resolve))
 	},
 
-	async buildContract(location: string) {
+	async buildContract(contract: string) {
+		throw new Error("Unimplemented: buildContract on node")
+	},
+
+	async buildContractByLocation(location: string) {
 		const bundle = await esbuild.build({
 			bundle: true,
 			platform: "node",
