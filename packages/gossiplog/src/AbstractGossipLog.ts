@@ -52,7 +52,7 @@ export interface GossipLogInit<Payload = unknown, Result = any> {
 		oldConfig: Config,
 		oldVersion: Record<string, number>,
 		newVersion: Record<string, number>,
-	) => Awaitable<boolean>
+	) => Promise<boolean>
 	initialUpgradeSchema?: ModelSchema
 	initialUpgradeVersion?: Record<string, number>
 }

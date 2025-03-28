@@ -39,12 +39,13 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 				models: models,
 				version: version,
 				upgrade: async (upgradeAPI, oldConfig, oldVersion, newVersion) => {
-					const gossiplogReplayRequired = await AbstractGossipLog.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion)
-					replayRequired ||= gossiplogReplayRequired
-					if (init.upgrade) {
-						const userReplayRequired = await init.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion)
-						replayRequired ||= userReplayRequired
-					}
+					await AbstractGossipLog.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion).then((result) => {
+						replayRequired ||= result
+					})
+
+					await init.upgrade?.(upgradeAPI, oldConfig, oldVersion, newVersion).then((result) => {
+						replayRequired ||= result
+					})
 				},
 				initialUpgradeSchema: Object.assign(init.initialUpgradeSchema ?? { ...models }, initialUpgradeSchema),
 				initialUpgradeVersion: Object.assign(init.initialUpgradeVersion ?? { ...version }, {
