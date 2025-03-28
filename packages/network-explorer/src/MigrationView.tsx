@@ -155,79 +155,84 @@ export const MigrationView = () => {
 	return (
 		<Box px="7" py="6" flexGrow="1">
 			<Heading size="3" mb="4">
-				Update Code
+				Contract Code
 			</Heading>
 			{contractData === null ? (
 				<>Loading...</>
 			) : (
 				<>
 					<Box style={{ border: "1px solid var(--gray-6)", borderRadius: "2px", width: "100%" }}>
-						<Editor initialValue={contractData.originalContract} onChange={setEditorState} />
-					</Box>
-					<Box mt="4">
-						<Button size="2" variant="solid" onClick={updateChangesets}>
-							Build
-						</Button>
-						{changesets && (
-							<Box mt="2">
-								<Text size="2" color="green">
-									Success: Built contract ({editorState?.doc.length} chars)
-									<br />
-									<Box style={{ width: "100%" }}>
-										<TextArea
-											size="2"
-											variant="classic"
-											resize="none"
-											style={{ padding: "4px 20px", fontFamily: "monospace", minHeight: "20vh" }}
-										>
-											{JSON.stringify(changesets, null, 2)}
-										</TextArea>
-									</Box>
-								</Text>
-							</Box>
-						)}
+						<Editor
+							initialValue={contractData.originalContract}
+							onChange={setEditorState}
+							readOnly={contractData?.admin ? true : false}
+						/>
 					</Box>
 
-					{contractData && (
+					{contractData?.admin && (
 						<>
+							<Box mt="4">
+								<Button size="2" variant="solid" onClick={updateChangesets}>
+									Build
+								</Button>
+								{changesets && (
+									<Box mt="2">
+										<Text size="2" color="green">
+											Success: Built contract ({editorState?.doc.length} chars)
+											<br />
+											<Box style={{ width: "100%" }}>
+												<TextArea
+													size="2"
+													variant="classic"
+													resize="none"
+													style={{ padding: "4px 20px", fontFamily: "monospace", minHeight: "20vh" }}
+												>
+													{JSON.stringify(changesets, null, 2)}
+												</TextArea>
+											</Box>
+										</Text>
+									</Box>
+								)}
+							</Box>
+
 							<Box mt="4">
 								<Text size="2">Upgrade controller key: {contractData.admin}</Text>
 							</Box>
 							<Box mt="2">
 								<Text size="2">Contract stored {contractData.inMemory ? "in-memory" : "on disk"}</Text>
 							</Box>
+
+							{changesets && newContract && (
+								<Box mt="4">
+									<Button size="2" variant="solid" onClick={runMigrations}>
+										Sign and Commit Changes
+									</Button>
+									&nbsp;
+									<Button size="2" variant="outline" onClick={cancelMigrations}>
+										Cancel
+									</Button>
+								</Box>
+							)}
+							{error && (
+								<Box mt="2">
+									<Text size="2" color="red">
+										{error}
+									</Text>
+								</Box>
+							)}
+
+							{waitingForCommit && (
+								<Box mt="4">
+									<Text size="2">Waiting for server...</Text>
+								</Box>
+							)}
+
+							{commitCompleted && (
+								<Box mt="4">
+									<Text size="2">Changes committed!</Text>
+								</Box>
+							)}
 						</>
-					)}
-
-					{changesets && newContract && (
-						<Box mt="4">
-							<Button size="2" variant="solid" onClick={runMigrations}>
-								Sign and Commit Changes
-							</Button>
-							&nbsp;
-							<Button size="2" variant="outline" onClick={cancelMigrations}>
-								Cancel
-							</Button>
-						</Box>
-					)}
-					{error && (
-						<Box mt="2">
-							<Text size="2" color="red">
-								{error}
-							</Text>
-						</Box>
-					)}
-
-					{waitingForCommit && (
-						<Box mt="4">
-							<Text size="2">Waiting for server...</Text>
-						</Box>
-					)}
-
-					{commitCompleted && (
-						<Box mt="4">
-							<Text size="2">Changes committed!</Text>
-						</Box>
 					)}
 					<br />
 				</>

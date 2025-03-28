@@ -9,7 +9,6 @@ import { tables } from "./tables.js"
 import { LandingPage } from "./LandingPage.js"
 import { ModelTable } from "./ModelTable.js"
 import { ActionsTable } from "./ActionsTable.js"
-import { ContractView } from "./ContractView.js"
 import { MigrationView } from "./MigrationView.js"
 
 export const App = () => {
@@ -63,27 +62,13 @@ export const App = () => {
 
 				<Route
 					key={"contract"}
-					path="/contract/view"
+					path="/contract"
 					element={
 						<Suspense>
-							<ContractView />
+							<MigrationView />
 						</Suspense>
 					}
 				/>
-
-				{window.location.hostname === "localhost" && (
-					<>
-						<Route
-							key={"contract"}
-							path="/contract/edit"
-							element={
-								<Suspense>
-									<MigrationView />
-								</Suspense>
-							}
-						/>
-					</>
-				)}
 			</Routes>
 		</Flex>
 	)

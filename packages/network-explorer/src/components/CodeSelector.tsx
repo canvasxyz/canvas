@@ -2,34 +2,15 @@ import { useState } from "react"
 import { NavLink } from "react-router-dom"
 import { Flex, Link, Text } from "@radix-ui/themes"
 
-import { LuBinary, LuArrowBigRightDash, LuWrench } from "react-icons/lu"
+import { LuBinary } from "react-icons/lu"
 
-export const CodeSelector = ({ option }: { option: "view" | "edit" | "admin" }) => {
+export const CodeSelector = () => {
 	const [isHovered, setIsHovered] = useState(false)
-
 	const fontSize = "2"
-
-	let iconType, to, label
-
-	if (option === "view") {
-		iconType = LuBinary
-		to = "/contract/view"
-		label = "View Code"
-	} else if (option === "edit") {
-		iconType = LuArrowBigRightDash
-		to = "/contract/edit"
-		label = "Update Code"
-	} else if (option === "admin") {
-		iconType = LuWrench
-		to = "/contract/admin"
-		label = "Admin"
-	} else {
-		throw new Error("unexpected icon type")
-	}
 
 	return (
 		<Link underline="none" asChild>
-			<NavLink to={to}>
+			<NavLink to="/contract">
 				{({ isActive }) => (
 					<Flex
 						py="5px"
@@ -40,13 +21,13 @@ export const CodeSelector = ({ option }: { option: "view" | "edit" | "admin" }) 
 							borderRadius: "4px",
 							cursor: "pointer",
 							userSelect: "none",
-							color: isActive ? "var(--gray-12)" : "var(--gray-11)",
-							backgroundColor: isActive ? "var(--gray-3)" : isHovered ? "var(--gray-2)" : "transparent",
+							color: isActive ? "var(--gray-12)" : "var(--gray-12)",
+							backgroundColor: isActive ? "var(--gray-4)" : isHovered ? "var(--gray-3)" : "transparent",
 						}}
 						onMouseEnter={() => setIsHovered(true)}
 						onMouseLeave={() => setIsHovered(false)}
 					>
-						{iconType({
+						{LuBinary({
 							style: {
 								fontSize: `var(--font-size-${fontSize})`,
 								position: "relative",
@@ -55,7 +36,7 @@ export const CodeSelector = ({ option }: { option: "view" | "edit" | "admin" }) 
 							},
 						})}
 						<Text size={`${fontSize}`} weight="medium">
-							{label}
+							contract.ts
 						</Text>
 					</Flex>
 				)}
