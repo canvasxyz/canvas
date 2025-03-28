@@ -1,31 +1,25 @@
 import Prando from "prando"
 
 import test, { ExecutionContext } from "ava"
-import { customRandom } from "nanoid"
 
 import { ed25519 } from "@canvas-js/signatures"
 import { AbstractGossipLog, GossipLogConsumer } from "@canvas-js/gossiplog"
 import { GossipLog } from "@canvas-js/gossiplog/sqlite"
-// import { GossipLog as PostgresGossipLog } from "@canvas-js/gossiplog/pg"
 
 import { getDirectory } from "./utils.js"
+import { toString } from "uint8arrays"
 
 const rng = new Prando.default()
 
 const random = (n: number) => rng.nextInt(0, n - 1)
-
-const nanoid = customRandom("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-", 10, (size) => {
-	return new Uint8Array(size).map(() => rng.nextInt(0, 255))
-})
-
-const pseudoRandomEd25519 = () =>
-	ed25519.create({ type: "ed25519", privateKey: new Uint8Array(32).map(() => rng.nextInt(0, 255)) })
+const pseudoRandomBytes = (length: number) => new Uint8Array(length).map(() => rng.nextInt(0, 255))
+const pseudoRandomEd25519 = () => ed25519.create({ type: "ed25519", privateKey: pseudoRandomBytes(32) })
 
 const apply: GossipLogConsumer<string> = ({}) => {}
 
 test("simulate a randomly partitioned network, logs on disk", async (t) => {
 	t.timeout(60 * 1000)
-	const topic = nanoid()
+	const topic = "app.example.com"
 
 	const logs: AbstractGossipLog<string>[] = await Promise.all([
 		GossipLog.open(getDirectory(t), { topic, apply }),
@@ -39,36 +33,6 @@ test("simulate a randomly partitioned network, logs on disk", async (t) => {
 	const maxChainLength = 5
 	await simulateRandomNetwork(t, logs, maxMessageCount, maxChainLength)
 })
-
-// test("simulate a randomly partitioned network, logs on postgres", async (t) => {
-// 	t.timeout(240 * 1000)
-// 	const topic = nanoid()
-
-// 	const getPgConfig = (db: string) => {
-// 		const { POSTGRES_HOST, POSTGRES_PORT } = process.env
-// 		if (POSTGRES_HOST && POSTGRES_PORT) {
-// 			return {
-// 				user: "postgres",
-// 				database: db,
-// 				password: "postgres",
-// 				port: parseInt(POSTGRES_PORT),
-// 				host: POSTGRES_HOST,
-// 			}
-// 		} else {
-// 			return `postgresql://localhost:5432/${db}`
-// 		}
-// 	}
-
-// 	const logs: AbstractGossipLog<string>[] = await Promise.all([
-// 		PostgresGossipLog.open({ topic, apply }, getPgConfig("test"), true),
-// 		PostgresGossipLog.open({ topic, apply }, getPgConfig("test2"), true),
-// 		PostgresGossipLog.open({ topic, apply }, getPgConfig("test3"), true),
-// 	])
-
-// 	const maxMessageCount = 128
-// 	const maxChainLength = 5
-// 	await simulateRandomNetwork(t, topic, logs, maxMessageCount, maxChainLength)
-// })
 
 export const simulateRandomNetwork = async (
 	t: ExecutionContext<unknown>,
@@ -119,7 +83,7 @@ export const simulateRandomNetwork = async (
 		// append a chain of messages
 		const chainLength = random(maxChainLength)
 		for (let j = 0; j < chainLength && messageCount < maxMessageCount; j++) {
-			const { id } = await self.append(nanoid(), { signer: signers[selfIndex] })
+			const { id } = await self.append(toString(pseudoRandomBytes(8)), { signer: signers[selfIndex] })
 			const index = messageCount++
 			messageIndices.set(id, { index, map: new Uint8Array(bitMaps[selfIndex]) })
 			messageIDs.push(id)
@@ -136,7 +100,7 @@ export const simulateRandomNetwork = async (
 			if (getBit(map, j)) {
 				t.assert(signedMessage !== null)
 			} else {
-				t.is(signedMessage, null)
+				t.is(signedMessage, null, "missing message")
 			}
 		}
 	}
@@ -170,7 +134,7 @@ export const simulateRandomNetwork = async (
 			n++
 
 			const { index: ancestorIndex } = messageIndices.get(ancestorID)!
-			t.is(isAncestor, getBit(map, ancestorIndex))
+			t.is(isAncestor, getBit(map, ancestorIndex), "inconsistent isAncestor result")
 		}
 	}
 

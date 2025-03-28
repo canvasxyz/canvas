@@ -45,7 +45,7 @@ export async function getContractLocation(args: {
 				fs.copyFileSync(args.init, contractPath)
 				fs.copyFileSync(args.init, originalContractPath)
 			} else {
-				const { contract: contractText, originalContract } = await Canvas.buildContract(args.init)
+				const { contract: contractText, originalContract } = await Canvas.buildContractByLocation(args.init)
 				console.log(chalk.yellow("[canvas] Bundled .ts contract:"), `${contractText.length} chars`)
 				fs.writeFileSync(contractPath, contractText)
 				fs.copyFileSync(args.init, originalContractPath)
@@ -89,7 +89,7 @@ export async function getContractLocation(args: {
 		const originalContract = contract
 
 		if (location.endsWith(".ts")) {
-			contract = (await Canvas.buildContract(location)).contract
+			contract = (await Canvas.buildContractByLocation(location)).contract
 			console.log(chalk.yellow("[canvas] Bundled .ts contract:"), `${contract.length} chars`)
 		}
 

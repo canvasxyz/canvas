@@ -42,6 +42,10 @@ const target: PlatformTarget = {
 
 		return { contract: code, originalContract: contract }
 	},
+
+	async buildContractByLocation(location: string) {
+		throw new Error("Unimplemented: buildContractByLocation in browser")
+	},
 }
 
 export default target

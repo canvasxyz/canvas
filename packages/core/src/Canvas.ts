@@ -116,8 +116,11 @@ export class Canvas<
 				initialUpgradeSchema: { ...runtime.models, ...initialUpgradeSchema },
 
 				async upgrade(upgradeAPI, oldConfig, oldVersion, newVersion) {
+					const log = logger("canvas:core:upgrade")
 					const version = oldVersion[Canvas.namespace] ?? 0
+					log("found canvas version %d", version)
 					if (version <= 1) {
+						log("removing property 'branch' from $effects", version)
 						await upgradeAPI.removeProperty("$effects", "branch")
 					}
 				},
@@ -212,8 +215,12 @@ export class Canvas<
 		return app
 	}
 
-	public static async buildContract(location: string, config?: Record<string, string>) {
-		return await target.buildContract(location, config)
+	public static async buildContract(contract: string, config?: Record<string, string>) {
+		return await target.buildContract(contract, config)
+	}
+
+	public static async buildContractByLocation(location: string) {
+		return await target.buildContractByLocation(location)
 	}
 
 	public readonly db: AbstractModelDB
