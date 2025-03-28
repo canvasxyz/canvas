@@ -13,5 +13,6 @@ export interface PlatformTarget {
 
 	listen: (app: Canvas, port: number, options?: { signal?: AbortSignal }) => Promise<void>
 
-	buildContract: (location: string) => Promise<string>
+	buildContract: (contract: string) => Promise<string>
+	buildContractByLocation: (location: string) => Promise<string>
 }
