@@ -8,7 +8,7 @@ import { Editor } from "./components/Editor.js"
 import { SiweMessage } from "siwe"
 import { utils } from "ethers"
 
-export const MigrationView = () => {
+export const ContractView = () => {
 	const contractData = useContractData()
 	const applicationData = useApplicationData()
 

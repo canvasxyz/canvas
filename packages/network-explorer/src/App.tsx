@@ -9,7 +9,7 @@ import { tables } from "./tables.js"
 import { LandingPage } from "./LandingPage.js"
 import { ModelTable } from "./ModelTable.js"
 import { ActionsTable } from "./ActionsTable.js"
-import { MigrationView } from "./MigrationView.js"
+import { ContractView } from "./ContractView.js"
 
 export const App = () => {
 	const [showSidebar, setShowSidebar] = useState(true)
@@ -65,7 +65,7 @@ export const App = () => {
 					path="/contract"
 					element={
 						<Suspense>
-							<MigrationView />
+							<ContractView />
 						</Suspense>
 					}
 				/>
