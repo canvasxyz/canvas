@@ -33,7 +33,7 @@ export const MigrationView = () => {
 		setChangesets(undefined)
 		setWaitingForCommit(undefined)
 
-		const { contract: build } = await Canvas.buildContract(value, { wasmURL: "/explorer/esbuild.wasm" })
+		const { build } = await Canvas.buildContract(value, { wasmURL: "/explorer/esbuild.wasm" })
 
 		const initErrorTimer = setTimeout(() => {
 			setError(

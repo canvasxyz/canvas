@@ -13,14 +13,14 @@ export const BUNDLED_CONTRACT_FILENAME = "contract.canvas.js"
 export const ORIGINAL_CONTRACT_FILENAME = "contract.original.js"
 export const MANIFEST_FILENAME = "canvas.json"
 
-export function writeContract(args: { location: string; topic: string; originalContract: string; contract: string }) {
+export function writeContract(args: { location: string; topic: string; originalContract: string; build: string }) {
 	const location = args.location
 	const contractPath = path.resolve(location, BUNDLED_CONTRACT_FILENAME)
 	const originalContractPath = path.resolve(location, ORIGINAL_CONTRACT_FILENAME)
 	const manifestPath = path.resolve(location, MANIFEST_FILENAME)
 
 	console.log(`[canvas] Overwriting ${contractPath}`)
-	fs.writeFileSync(contractPath, args.contract)
+	fs.writeFileSync(contractPath, args.build)
 
 	console.log(`[canvas] Overwriting ${originalContractPath}`)
 	fs.writeFileSync(originalContractPath, args.originalContract)
@@ -61,7 +61,7 @@ export async function getContractLocation(args: {
 				fs.copyFileSync(args.init, contractPath)
 				fs.copyFileSync(args.init, originalContractPath)
 			} else {
-				const { contract: contractText, originalContract } = await Canvas.buildContractByLocation(args.init)
+				const { build: contractText, originalContract } = await Canvas.buildContractByLocation(args.init)
 				console.log(chalk.yellow("[canvas] Bundled .ts contract:"), `${contractText.length} chars`)
 				fs.writeFileSync(contractPath, contractText)
 				fs.copyFileSync(args.init, originalContractPath)
@@ -103,7 +103,7 @@ export async function getContractLocation(args: {
 		const originalContract = contract
 
 		if (location.endsWith(".ts")) {
-			contract = (await Canvas.buildContractByLocation(location)).contract
+			contract = (await Canvas.buildContractByLocation(location)).build
 			console.log(chalk.yellow("[canvas] Bundled .ts contract:"), `${contract.length} chars`)
 		}
 

@@ -40,7 +40,7 @@ const target: PlatformTarget = {
 			console.log(`esbuild warning: ${warning.text}${location}`)
 		}
 
-		return { contract: code, originalContract: contract }
+		return { build: code, originalContract: contract }
 	},
 
 	async buildContractByLocation(location: string) {

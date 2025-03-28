@@ -196,7 +196,7 @@ export async function handler(args: Args) {
 					}
 
 					// Build the contract provided by the user
-					const { contract } = await Canvas.buildContract(newContract)
+					const { build } = await Canvas.buildContract(newContract)
 
 					// We're trusting the client to provide a `contract` file that can be written to disk.
 					// Since contract execution is containerized, we only need to enforce max contract sizes,
@@ -205,7 +205,7 @@ export async function handler(args: Args) {
 						writeContract({
 							location,
 							topic,
-							contract,
+							build,
 							originalContract: newContract,
 						})
 					}

@@ -117,7 +117,7 @@ const target: PlatformTarget = {
 		if (!bundle.outputFiles || bundle.outputFiles.length === 0) {
 			throw new Error("building contract from string produced no files")
 		} else {
-			return { contract: bundle.outputFiles[0].text, originalContract: contract }
+			return { build: bundle.outputFiles[0].text, originalContract: contract }
 		}
 	},
 
@@ -134,9 +134,9 @@ const target: PlatformTarget = {
 			throw new Error("building .ts contract produced no files")
 		} else if (bundle.outputFiles && bundle.outputFiles.length > 1) {
 			// unexpected
-			return { contract: bundle.outputFiles[0].text, originalContract }
+			return { build: bundle.outputFiles[0].text, originalContract }
 		} else {
-			return { contract: bundle.outputFiles[0].text, originalContract }
+			return { build: bundle.outputFiles[0].text, originalContract }
 		}
 	},
 }

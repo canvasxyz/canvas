@@ -74,10 +74,10 @@ export const actions = {
 };
 `.trim()
 
-	const { contract, originalContract } = await Canvas.buildContract(contractString)
+	const { build, originalContract } = await Canvas.buildContract(contractString)
 
 	console.log(chalk.gray(`Creating ${contractPath}`))
-	fs.writeFileSync(contractPath, contract)
+	fs.writeFileSync(contractPath, build)
 
 	console.log(chalk.gray(`Creating ${originalContractPath}`))
 	fs.writeFileSync(originalContractPath, originalContract)
