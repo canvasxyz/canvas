@@ -9,9 +9,25 @@ import prompts from "prompts"
 
 import { Canvas } from "@canvas-js/core"
 
-export const CONTRACT_FILENAME = "contract.canvas.js"
+export const BUNDLED_CONTRACT_FILENAME = "contract.canvas.js"
 export const ORIGINAL_CONTRACT_FILENAME = "contract.original.js"
 export const MANIFEST_FILENAME = "canvas.json"
+
+export function writeContract(args: { location: string; topic: string; originalContract: string; contract: string }) {
+	const location = args.location
+	const contractPath = path.resolve(location, BUNDLED_CONTRACT_FILENAME)
+	const originalContractPath = path.resolve(location, ORIGINAL_CONTRACT_FILENAME)
+	const manifestPath = path.resolve(location, MANIFEST_FILENAME)
+
+	console.log(`[canvas] Overwriting ${contractPath}`)
+	fs.writeFileSync(contractPath, args.contract)
+
+	console.log(`[canvas] Overwriting ${originalContractPath}`)
+	fs.writeFileSync(originalContractPath, args.originalContract)
+
+	console.log(`[canvas] Overwriting ${manifestPath}`)
+	fs.writeFileSync(manifestPath, JSON.stringify({ version: 1, topic: args.topic }, null, "  "))
+}
 
 export async function getContractLocation(args: {
 	path: string
@@ -25,9 +41,9 @@ export async function getContractLocation(args: {
 	location: string | null
 }> {
 	const location = path.resolve(args.path)
-	const contractPath = path.resolve(location, CONTRACT_FILENAME)
-	const manifestPath = path.resolve(location, MANIFEST_FILENAME)
+	const contractPath = path.resolve(location, BUNDLED_CONTRACT_FILENAME)
 	const originalContractPath = path.resolve(location, ORIGINAL_CONTRACT_FILENAME)
+	const manifestPath = path.resolve(location, MANIFEST_FILENAME)
 
 	// Create the contract location only if --init is specified and the location
 	// doesn't already exist.
@@ -54,7 +70,6 @@ export async function getContractLocation(args: {
 			fs.writeFileSync(manifestPath, JSON.stringify({ version: 1, topic: args.topic }, null, "  "))
 		} else {
 			console.error(chalk.yellow(`${location} does not exist.`))
-			console.error(chalk.yellow(`Try initializing a new app with \`canvas init ${path.relative(".", location)}\``))
 			process.exit(1)
 		}
 	}
@@ -64,7 +79,6 @@ export async function getContractLocation(args: {
 		// Handle if the location exists and it's a directory.
 		if (!fs.existsSync(contractPath)) {
 			console.error(chalk.yellow(`No contract found at ${contractPath}`))
-			console.error(chalk.yellow(`Initialize an example contract with \`canvas init ${path.relative(".", location)}\``))
 			process.exit(1)
 		}
 

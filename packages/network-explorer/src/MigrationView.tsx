@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, MouseEvent } from "react"
 import { Button, Box, Heading, Text, TextArea } from "@radix-ui/themes"
 import { Canvas, generateChangesets, Changeset } from "@canvas-js/core"
 import { EditorState } from "@codemirror/state"
@@ -16,10 +16,12 @@ export const MigrationView = () => {
 	const [changesets, setChangesets] = useState<Changeset[]>()
 	const [newContract, setNewContract] = useState<string>()
 	const [waitingForCommit, setWaitingForCommit] = useState<boolean>()
+	const [commitCompleted, setCommitCompleted] = useState<boolean>()
 
 	const [editorState, setEditorState] = useState<EditorState | null>(null)
 
-	const updateChangesets = async () => {
+	const updateChangesets = async (e: MouseEvent) => {
+		e.preventDefault()
 		const value = editorState?.doc.toString()
 		if (!value || !contractData) {
 			setError("No contract content")
@@ -31,9 +33,18 @@ export const MigrationView = () => {
 		setChangesets(undefined)
 		setWaitingForCommit(undefined)
 
+		const { contract: build } = await Canvas.buildContract(value, { wasmURL: "/explorer/esbuild.wasm" })
+
+		const initErrorTimer = setTimeout(() => {
+			setError(
+				"Failed to initialize in-browser Canvas application. This is likely because " +
+					"of an IndexedDB bug, try closing other windows and deleting the test.a and test.b databases.",
+			)
+		}, 500)
+
 		try {
 			const app = await Canvas.initialize({ contract: contractData.contract, topic: "test.a" })
-			const newApp = await Canvas.initialize({ contract: value, topic: "test.b" })
+			const newApp = await Canvas.initialize({ contract: build, topic: "test.b" })
 			setNewContract(value)
 			setChangesets(generateChangesets(app.getSchema(), newApp.getSchema()))
 		} catch (err: any) {
@@ -42,15 +53,19 @@ export const MigrationView = () => {
 			} else {
 				setError(err.toString())
 			}
+		} finally {
+			clearTimeout(initErrorTimer)
 		}
 	}
 
-	const cancelMigrations = async () => {
+	const cancelMigrations = async (e: MouseEvent) => {
+		e.preventDefault()
 		setChangesets(undefined)
 		setNewContract(undefined)
 	}
 
-	const runMigrations = async () => {
+	const runMigrations = async (e: MouseEvent) => {
+		e.preventDefault()
 		if (!changesets || !newContract) {
 			setError("No migrations to run")
 			return
@@ -104,7 +119,7 @@ export const MigrationView = () => {
 					"Content-Type": "application/json",
 				},
 				body: JSON.stringify({
-					contract: newContract,
+					newContract: newContract,
 					changesets,
 					siweMessage: message,
 					address,
@@ -124,6 +139,7 @@ export const MigrationView = () => {
 					await Promise.all([contractData?.refetch(), applicationData?.refetch()])
 
 					setWaitingForCommit(false)
+					setCommitCompleted(true)
 				})
 				.catch((err) => {
 					setError(err.message || "Server rejected code update")
@@ -146,19 +162,12 @@ export const MigrationView = () => {
 			) : (
 				<>
 					<Box style={{ border: "1px solid var(--gray-6)", borderRadius: "2px", width: "100%" }}>
-						<Editor initialValue={contractData.contract} onChange={setEditorState} />
+						<Editor initialValue={contractData.originalContract} onChange={setEditorState} />
 					</Box>
 					<Box mt="4">
 						<Button size="2" variant="solid" onClick={updateChangesets}>
 							Build
 						</Button>
-						{error && (
-							<Box mt="2">
-								<Text size="2" color="red">
-									{error}
-								</Text>
-							</Box>
-						)}
 						{changesets && (
 							<Box mt="2">
 								<Text size="2" color="green">
@@ -178,10 +187,22 @@ export const MigrationView = () => {
 							</Box>
 						)}
 					</Box>
+
+					{contractData && (
+						<>
+							<Box mt="4">
+								<Text size="2">Upgrade controller key: {contractData.admin}</Text>
+							</Box>
+							<Box mt="2">
+								<Text size="2">Contract stored {contractData.inMemory ? "in-memory" : "on disk"}</Text>
+							</Box>
+						</>
+					)}
+
 					{changesets && newContract && (
 						<Box mt="4">
 							<Button size="2" variant="solid" onClick={runMigrations}>
-								Commit Changes
+								Sign and Commit Changes
 							</Button>
 							&nbsp;
 							<Button size="2" variant="outline" onClick={cancelMigrations}>
@@ -189,11 +210,26 @@ export const MigrationView = () => {
 							</Button>
 						</Box>
 					)}
+					{error && (
+						<Box mt="2">
+							<Text size="2" color="red">
+								{error}
+							</Text>
+						</Box>
+					)}
+
 					{waitingForCommit && (
 						<Box mt="4">
 							<Text size="2">Waiting for server...</Text>
 						</Box>
 					)}
+
+					{commitCompleted && (
+						<Box mt="4">
+							<Text size="2">Changes committed!</Text>
+						</Box>
+					)}
+					<br />
 				</>
 			)}
 		</Box>

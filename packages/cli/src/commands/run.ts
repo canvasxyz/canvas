@@ -7,10 +7,11 @@ import { verifyMessage } from "ethers"
 
 dotenv.config()
 
+import { Canvas } from "@canvas-js/core"
 import { MAX_CONNECTIONS } from "@canvas-js/core/constants"
 import { Snapshot } from "@canvas-js/core"
 import { AppInstance } from "../AppInstance.js"
-import { getContractLocation } from "../utils.js"
+import { writeContract, getContractLocation } from "../utils.js"
 import { startActionPrompt } from "../prompt.js"
 
 export const command = "run <path>"
@@ -113,7 +114,10 @@ export const builder = (yargs: Argv) =>
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
-	const { topic, contract, location } = await getContractLocation(args)
+	const { topic, contract, originalContract, location } = await getContractLocation(args)
+
+	const inMemory = location === null
+	let updatedContract = originalContract
 
 	// Validate admin address if provided
 	if (args.admin && args.admin !== "any") {
@@ -138,6 +142,8 @@ export async function handler(args: Args) {
 		// named something /api/instance?
 		instance.api.get("/api/contract", async (req, res) => {
 			res.json({
+				inMemory: location === null,
+				originalContract: updatedContract,
 				contract: instance.app.getContract().toString(),
 				admin: args.admin || false,
 				nonce: nonce,
@@ -145,11 +151,12 @@ export async function handler(args: Args) {
 		})
 
 		if (args.admin) {
+			const adminAddress = args.admin
 			instance.api.post("/api/migrate", async (req, res) => {
-				const { contract, changesets, address, signature, siweMessage } = req.body ?? {}
+				const { newContract, changesets, address, signature, siweMessage } = req.body ?? {}
 
-				// Verify the admin address if not set to "any"
-				if (args.admin !== "any" && address !== args.admin) {
+				// Verify the request comes from the expected address, unless admin is "any"
+				if (address !== adminAddress && adminAddress !== "any") {
 					return res.status(403).json({
 						error: "Unauthorized: Only the configured admin address can perform migrations",
 					})
@@ -173,7 +180,7 @@ export async function handler(args: Args) {
 						})
 					}
 
-					// Verify the signature matches the claimed address
+					// Get valid signature for the SIWE message
 					const recoveredAddress = verifyMessage(message.prepareMessage(), signature)
 					if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
 						return res.status(403).json({
@@ -181,7 +188,32 @@ export async function handler(args: Args) {
 						})
 					}
 
-					console.log("migrating app with changesets:", contract, changesets)
+					// Verify the signature matches the admin address (duplicate check)
+					if (adminAddress !== "any" && recoveredAddress.toLowerCase() !== adminAddress.toLowerCase()) {
+						return res.status(403).json({
+							error: "Signature verification failed",
+						})
+					}
+
+					// Build the contract provided by the user
+					const { contract } = await Canvas.buildContract(newContract)
+
+					// We're trusting the client to provide a `contract` file that can be written to disk.
+					// Since contract execution is containerized, we only need to enforce max contract sizes,
+					// and max heap sizes in the Node.js host, for this to be safe.
+					if (location !== null) {
+						writeContract({
+							location,
+							topic,
+							contract,
+							originalContract: newContract,
+						})
+					}
+
+					// In-memory contract changes will not be persisted, except in this updatedContract variable.
+					updatedContract = newContract
+
+					console.log("[canvas] snapshotting and migrating app with changesets:", changesets)
 
 					instance.app
 						.createSnapshot()
@@ -190,7 +222,7 @@ export async function handler(args: Args) {
 							console.log("[canvas] Restarting...")
 							await instance.stop()
 
-							/** Restart the application, running the "new" contract */
+							/** Restart the application, running the new, compiled contract */
 							setTimeout(async () => {
 								const instance = await AppInstance.initialize(topic, contract, location, args)
 								bindInstanceAPIs(instance)

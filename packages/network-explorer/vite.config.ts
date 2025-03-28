@@ -12,6 +12,7 @@ const inWorkspaceRoot = existsSync(resolve(__dirname, "../../node_modules/esbuil
 export default defineConfig({
 	build: {
 		emptyOutDir: false,
+		chunkSizeWarningLimit: 2_000_000,
 	},
 	base: "./",
 	plugins: [

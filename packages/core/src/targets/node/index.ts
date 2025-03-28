@@ -102,7 +102,23 @@ const target: PlatformTarget = {
 	},
 
 	async buildContract(contract: string) {
-		throw new Error("Unimplemented: buildContract on node")
+		const bundle = await esbuild.build({
+			bundle: true,
+			platform: "node",
+			format: "esm",
+			write: false,
+			stdin: {
+				contents: contract,
+				loader: "ts",
+				sourcefile: "virtual-contract.ts",
+			},
+		})
+
+		if (!bundle.outputFiles || bundle.outputFiles.length === 0) {
+			throw new Error("building contract from string produced no files")
+		} else {
+			return { contract: bundle.outputFiles[0].text, originalContract: contract }
+		}
 	},
 
 	async buildContractByLocation(location: string) {

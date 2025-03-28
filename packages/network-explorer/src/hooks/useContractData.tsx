@@ -4,6 +4,8 @@ import { fetchAndIpldParseJson } from "../utils.js"
 import React, { createContext, useContext, useEffect, useState } from "react"
 
 type ContractData = {
+	inMemory: boolean
+	originalContract: string
 	contract: string
 	admin: boolean
 	nonce: string

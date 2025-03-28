@@ -48,6 +48,7 @@ export type AppConfig = {
 	"disable-http-api"?: boolean
 }
 
+// A class for launching `Canvas` apps that wraps signers, API setup, and libp2p setup.
 export class AppInstance {
 	config: AppConfig
 	app: Canvas
