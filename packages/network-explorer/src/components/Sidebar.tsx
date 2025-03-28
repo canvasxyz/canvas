@@ -66,7 +66,6 @@ export const Sidebar = ({ tables }: { tables: TableDef[] }) => {
 					{contractData?.admin && (
 						<>
 							<CodeSelector option="edit" />
-							<CodeSelector option="admin" />
 						</>
 					)}
 				</Box>
