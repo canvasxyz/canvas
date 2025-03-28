@@ -4,6 +4,8 @@ import type { PlatformTarget } from "../interface.js"
 
 import esbuild from "esbuild-wasm"
 
+type BuildContractConfig = { wasmURL: string }
+
 const target: PlatformTarget = {
 	openGossipLog: ({ path }, init) => {
 		return IdbGossipLog.open(init)
@@ -13,13 +15,19 @@ const target: PlatformTarget = {
 		throw new Error("Cannot start API server in the browser")
 	},
 
-	async buildContract(contract: string) {
+	async buildContract(contract: string, extraConfig?: BuildContractConfig) {
+		if (!extraConfig || !extraConfig.wasmURL) {
+			throw new Error("must provide esbuild wasmURL to build contracts inside the browser ")
+		}
+
 		try {
+			const { wasmURL } = extraConfig
 			await esbuild.initialize({
 				worker: true,
-				wasmURL: "https://unpkg.com/esbuild-wasm@0.25.1/esbuild.wasm",
+				wasmURL,
 			})
-		} catch (err) {
+		} catch (err: any) {
+			if (err?.message?.startsWith("Failed to download")) throw err
 			// initialize should only be called once
 		}
 
@@ -32,7 +40,7 @@ const target: PlatformTarget = {
 			console.log(`esbuild warning: ${warning.text}${location}`)
 		}
 
-		return code
+		return { contract: code, originalContract: contract }
 	},
 
 	async buildContractByLocation(location: string) {

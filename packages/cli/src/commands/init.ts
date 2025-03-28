@@ -5,7 +5,8 @@ import { randomUUID } from "node:crypto"
 import chalk from "chalk"
 import type { Argv } from "yargs"
 
-import { CONTRACT_FILENAME, MANIFEST_FILENAME } from "../utils.js"
+import { Canvas } from "@canvas-js/core"
+import { ORIGINAL_CONTRACT_FILENAME, BUNDLED_CONTRACT_FILENAME, MANIFEST_FILENAME } from "../utils.js"
 
 export const command = "init <path>"
 export const desc = "Initialize a new application. Try `canvas init .` to get started."
@@ -26,7 +27,8 @@ type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
 	const location = path.resolve(args.path)
-	const contractPath = path.resolve(location, CONTRACT_FILENAME)
+	const originalContractPath = path.resolve(location, ORIGINAL_CONTRACT_FILENAME)
+	const contractPath = path.resolve(location, BUNDLED_CONTRACT_FILENAME)
 	const manifestPath = path.resolve(location, MANIFEST_FILENAME)
 
 	if (fs.existsSync(contractPath)) {
@@ -42,7 +44,7 @@ export async function handler(args: Args) {
 		fs.mkdirSync(location, { recursive: true })
 	}
 
-	const contract = `
+	const contractString = `
 // A Canvas backend for a simple chat application.
 
 export const models = {
@@ -72,8 +74,13 @@ export const actions = {
 };
 `.trim()
 
+	const { contract, originalContract } = await Canvas.buildContract(contractString)
+
 	console.log(chalk.gray(`Creating ${contractPath}`))
 	fs.writeFileSync(contractPath, contract)
+
+	console.log(chalk.gray(`Creating ${originalContractPath}`))
+	fs.writeFileSync(originalContractPath, originalContract)
 
 	console.log(chalk.gray(`Creating ${manifestPath}`))
 	fs.writeFileSync(manifestPath, JSON.stringify({ version: 1, topic }))

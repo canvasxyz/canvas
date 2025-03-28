@@ -11,7 +11,6 @@ import { ModelTable } from "./ModelTable.js"
 import { ActionsTable } from "./ActionsTable.js"
 import { ContractView } from "./ContractView.js"
 import { MigrationView } from "./MigrationView.js"
-import { AdminView } from "./AdminView.js"
 
 export const App = () => {
 	const [showSidebar, setShowSidebar] = useState(true)
@@ -72,7 +71,7 @@ export const App = () => {
 					}
 				/>
 
-				{window.location.hostname === 'localhost' && (
+				{window.location.hostname === "localhost" && (
 					<>
 						<Route
 							key={"contract"}
@@ -80,16 +79,6 @@ export const App = () => {
 							element={
 								<Suspense>
 									<MigrationView />
-								</Suspense>
-							}
-						/>
-
-						<Route
-							key={"contract"}
-							path="/contract/admin"
-							element={
-								<Suspense>
-									<AdminView />
 								</Suspense>
 							}
 						/>

@@ -9,8 +9,25 @@ import prompts from "prompts"
 
 import { Canvas } from "@canvas-js/core"
 
-export const CONTRACT_FILENAME = "contract.canvas.js"
+export const BUNDLED_CONTRACT_FILENAME = "contract.canvas.js"
+export const ORIGINAL_CONTRACT_FILENAME = "contract.original.js"
 export const MANIFEST_FILENAME = "canvas.json"
+
+export function writeContract(args: { location: string; topic: string; originalContract: string; contract: string }) {
+	const location = args.location
+	const contractPath = path.resolve(location, BUNDLED_CONTRACT_FILENAME)
+	const originalContractPath = path.resolve(location, ORIGINAL_CONTRACT_FILENAME)
+	const manifestPath = path.resolve(location, MANIFEST_FILENAME)
+
+	console.log(`[canvas] Overwriting ${contractPath}`)
+	fs.writeFileSync(contractPath, args.contract)
+
+	console.log(`[canvas] Overwriting ${originalContractPath}`)
+	fs.writeFileSync(originalContractPath, args.originalContract)
+
+	console.log(`[canvas] Overwriting ${manifestPath}`)
+	fs.writeFileSync(manifestPath, JSON.stringify({ version: 1, topic: args.topic }, null, "  "))
+}
 
 export async function getContractLocation(args: {
 	path: string
@@ -19,13 +36,17 @@ export async function getContractLocation(args: {
 	memory?: boolean
 }): Promise<{
 	topic: string
+	originalContract: string
 	contract: string
 	location: string | null
 }> {
 	const location = path.resolve(args.path)
-	const contractPath = path.resolve(location, CONTRACT_FILENAME)
+	const contractPath = path.resolve(location, BUNDLED_CONTRACT_FILENAME)
+	const originalContractPath = path.resolve(location, ORIGINAL_CONTRACT_FILENAME)
 	const manifestPath = path.resolve(location, MANIFEST_FILENAME)
 
+	// Create the contract location only if --init is specified and the location
+	// doesn't already exist.
 	if (!fs.existsSync(location)) {
 		if (!location.endsWith(".js") && !location.endsWith(".ts") && args.init) {
 			if (args.topic === undefined) {
@@ -38,25 +59,26 @@ export async function getContractLocation(args: {
 			console.log(`[canvas] Copying ${args.init} to ${contractPath}`)
 			if (args.init.endsWith(".js")) {
 				fs.copyFileSync(args.init, contractPath)
+				fs.copyFileSync(args.init, originalContractPath)
 			} else {
-				const contractText = await Canvas.buildContractByLocation(args.init)
+				const { contract: contractText, originalContract } = await Canvas.buildContractByLocation(args.init)
 				console.log(chalk.yellow("[canvas] Bundled .ts contract:"), `${contractText.length} chars`)
 				fs.writeFileSync(contractPath, contractText)
+				fs.copyFileSync(args.init, originalContractPath)
 			}
 			console.log(`[canvas] Creating ${manifestPath}`)
 			fs.writeFileSync(manifestPath, JSON.stringify({ version: 1, topic: args.topic }, null, "  "))
 		} else {
 			console.error(chalk.yellow(`${location} does not exist.`))
-			console.error(chalk.yellow(`Try initializing a new app with \`canvas init ${path.relative(".", location)}\``))
 			process.exit(1)
 		}
 	}
 
 	const stat = fs.statSync(location)
 	if (stat.isDirectory()) {
+		// Handle if the location exists and it's a directory.
 		if (!fs.existsSync(contractPath)) {
 			console.error(chalk.yellow(`No contract found at ${contractPath}`))
-			console.error(chalk.yellow(`Initialize an example contract with \`canvas init ${path.relative(".", location)}\``))
 			process.exit(1)
 		}
 
@@ -72,13 +94,16 @@ export async function getContractLocation(args: {
 
 		const contract = fs.readFileSync(contractPath, "utf-8")
 		const manifest = fs.readFileSync(manifestPath, "utf-8")
+		const originalContract = fs.readFileSync(originalContractPath, "utf-8")
 		const { topic } = JSON.parse(manifest) as { topic: string }
-		return { topic, contract, location: args.memory ? null : location }
+		return { topic, contract, originalContract, location: args.memory ? null : location }
 	} else if (location.endsWith(".js") || location.endsWith(".ts")) {
+		// Handle if the location exists and it's a file.
 		let contract = fs.readFileSync(location, "utf-8")
+		const originalContract = contract
 
 		if (location.endsWith(".ts")) {
-			contract = await Canvas.buildContractByLocation(location)
+			contract = (await Canvas.buildContractByLocation(location)).contract
 			console.log(chalk.yellow("[canvas] Bundled .ts contract:"), `${contract.length} chars`)
 		}
 
@@ -87,7 +112,7 @@ export async function getContractLocation(args: {
 			console.error(chalk.yellow(`[canvas] No --topic provided, using:`), topic)
 		}
 
-		return { topic, contract, location: null }
+		return { topic, contract, originalContract, location: null }
 	} else {
 		console.error(chalk.yellow(`Contract files must match *.js or *.ts`))
 		process.exit(1)

@@ -19,7 +19,7 @@ import type { Contract, Actions, ActionImplementation, ModelAPI, DeriveModelType
 import { Runtime, createRuntime } from "./runtime/index.js"
 import { ActionRecord } from "./runtime/AbstractRuntime.js"
 import { validatePayload } from "./schema.js"
-import { createSnapshot, hashSnapshot } from "./snapshot.js"
+import { createSnapshot, hashSnapshot, Change } from "./snapshot.js"
 import { initialUpgradeSchema, topicPattern } from "./utils.js"
 
 export type { Model } from "@canvas-js/modeldb"
@@ -82,14 +82,6 @@ export class Canvas<
 > extends TypedEventEmitter<CanvasEvents> {
 	public static namespace = "canvas"
 	public static version = 2
-
-	public static async buildContract(contract: string) {
-		return await target.buildContract(contract)
-	}
-
-	public static async buildContractByLocation(location: string) {
-		return await target.buildContractByLocation(location)
-	}
 
 	public static async initialize<ModelsT extends ModelSchema, ActionsT extends Actions<ModelsT> = Actions<ModelsT>>(
 		config: Config<ModelsT, ActionsT>,
@@ -223,6 +215,14 @@ export class Canvas<
 		return app
 	}
 
+	public static async buildContract(contract: string, config?: Record<string, string>) {
+		return await target.buildContract(contract, config)
+	}
+
+	public static async buildContractByLocation(location: string) {
+		return await target.buildContractByLocation(location)
+	}
+
 	public readonly db: AbstractModelDB
 	public readonly actions = {} as {
 		[K in keyof ActionsT]: ActionsT[K] extends ActionImplementation<ModelsT, infer Args, infer Result>
@@ -352,6 +352,15 @@ export class Canvas<
 
 	public getContract() {
 		return this.runtime.contract
+	}
+
+	public getSchema(internal?: false) {
+		if (internal) {
+			return this.runtime.schema
+		} else {
+			const entries = Object.entries(this.runtime.schema).filter(([t]) => !t.startsWith("$"))
+			return Object.fromEntries(entries)
+		}
 	}
 
 	/**
@@ -494,7 +503,7 @@ export class Canvas<
 		}
 	}
 
-	public async createSnapshot(): Promise<Snapshot> {
-		return createSnapshot(this)
+	public async createSnapshot(changesets?: Change[]): Promise<Snapshot> {
+		return createSnapshot(this, changesets)
 	}
 }
