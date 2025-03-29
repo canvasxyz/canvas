@@ -1,4 +1,4 @@
-import { useState, MouseEvent } from "react"
+import { useState, MouseEvent, useEffect } from "react"
 import { Button, Box, Heading, Text, TextArea } from "@radix-ui/themes"
 import { Canvas, generateChangesets, Changeset } from "@canvas-js/core"
 import { EditorState } from "@codemirror/state"
@@ -7,6 +7,9 @@ import { useApplicationData } from "./hooks/useApplicationData.js"
 import { Editor } from "./components/Editor.js"
 import { SiweMessage } from "siwe"
 import { utils } from "ethers"
+
+// Define a localStorage key for unsaved changes
+const UNSAVED_CHANGES_KEY = "contract-editor-unsaved-changes"
 
 export const ContractView = () => {
 	const contractData = useContractData()
@@ -19,6 +22,35 @@ export const ContractView = () => {
 	const [commitCompleted, setCommitCompleted] = useState<boolean>()
 
 	const [editorState, setEditorState] = useState<EditorState | null>(null)
+
+	const [hasRestoredContent, setHasRestoredContent] = useState(false)
+	const [editorInitialValue, setEditorInitialValue] = useState<string | null>(null)
+
+	// Load saved content from localStorage when component mounts
+	useEffect(() => {
+		if (contractData) {
+			const savedContent = localStorage.getItem(UNSAVED_CHANGES_KEY)
+
+			if (savedContent) {
+				setEditorInitialValue(savedContent)
+				setHasRestoredContent(true)
+			} else {
+				setEditorInitialValue(contractData.originalContract)
+			}
+		}
+	}, [contractData])
+
+	// Save content to localStorage when editorState changes
+	useEffect(() => {
+		if (editorState) {
+			const currentContent = editorState.doc.toString()
+
+			// Only save if the content is different from the original
+			if (contractData && currentContent !== contractData.originalContract) {
+				localStorage.setItem(UNSAVED_CHANGES_KEY, currentContent)
+			}
+		}
+	}, [editorState, contractData])
 
 	const updateChangesets = async (e: MouseEvent) => {
 		e.preventDefault()
@@ -135,6 +167,10 @@ export const ContractView = () => {
 					setNewContract(undefined)
 					setWaitingForCommit(true)
 
+					// Clear saved content from localStorage once committed
+					localStorage.removeItem(UNSAVED_CHANGES_KEY)
+					setHasRestoredContent(false)
+
 					// Refresh both data contexts
 					await Promise.all([contractData?.refetch(), applicationData?.refetch()])
 
@@ -162,12 +198,22 @@ export const ContractView = () => {
 			) : (
 				<>
 					<Box style={{ border: "1px solid var(--gray-6)", borderRadius: "2px", width: "100%" }}>
-						<Editor
-							initialValue={contractData.originalContract}
-							onChange={setEditorState}
-							readOnly={contractData?.admin ? false : true}
-						/>
+						{editorInitialValue !== null &&
+							<Editor
+								initialValue={editorInitialValue}
+								onChange={setEditorState}
+								readOnly={contractData?.admin ? false : true}
+							/>
+						}
 					</Box>
+
+					{hasRestoredContent && (
+						<Box mt="2">
+							<Text size="2" color="blue">
+								Restored unsaved changes from your previous session
+							</Text>
+						</Box>
+					)}
 
 					{contractData?.admin && (
 						<>
