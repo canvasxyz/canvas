@@ -2,7 +2,7 @@ import React, { useEffect } from "react"
 
 import type { EditorState } from "@codemirror/state"
 import { EditorView, keymap } from "@codemirror/view"
-import { defaultKeymap } from "@codemirror/commands"
+import { defaultKeymap, indentWithTab } from "@codemirror/commands"
 import { indentUnit } from "@codemirror/language"
 import { basicSetup } from "codemirror"
 
@@ -13,6 +13,7 @@ import { useCodeMirror } from "../hooks/useCodeMirror.js"
 const getExtensions = (readOnly: boolean) => [
 	indentUnit.of("\t"),
 	basicSetup,
+	keymap.of([indentWithTab]),
 	typescriptLanguage,
 	keymap.of(defaultKeymap),
 	EditorView.editable.of(!readOnly),
