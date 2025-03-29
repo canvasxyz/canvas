@@ -2,6 +2,7 @@ import { useState, MouseEvent, useEffect } from "react"
 import { Button, Box, Heading, Text, TextArea } from "@radix-ui/themes"
 import { Canvas, generateChangesets, Changeset } from "@canvas-js/core"
 import { EditorState } from "@codemirror/state"
+import { EditorView } from "@codemirror/view"
 import { useContractData } from "./hooks/useContractData.js"
 import { useApplicationData } from "./hooks/useApplicationData.js"
 import { Editor } from "./components/Editor.js"
@@ -22,6 +23,7 @@ export const ContractView = () => {
 	const [commitCompleted, setCommitCompleted] = useState<boolean>()
 
 	const [editorState, setEditorState] = useState<EditorState | null>(null)
+	const [editorView, setEditorView] = useState<EditorView | null>(null)
 
 	const [hasRestoredContent, setHasRestoredContent] = useState(false)
 	const [editorInitialValue, setEditorInitialValue] = useState<string | null>(null)
@@ -198,13 +200,20 @@ export const ContractView = () => {
 			) : (
 				<>
 					<Box style={{ border: "1px solid var(--gray-6)", borderRadius: "2px", width: "100%" }}>
-						{editorInitialValue !== null &&
+						{editorInitialValue !== null && (
 							<Editor
 								initialValue={editorInitialValue}
-								onChange={setEditorState}
+								onChange={(state, view) => {
+									setEditorState(state)
+									setEditorView(view)
+								}}
+								onLoad={(state, view) => {
+									setEditorState(state)
+									setEditorView(view)
+								}}
 								readOnly={contractData?.admin ? false : true}
 							/>
-						}
+						)}
 					</Box>
 
 					{hasRestoredContent && (
@@ -220,6 +229,33 @@ export const ContractView = () => {
 							<Box mt="4">
 								<Button size="2" variant="solid" onClick={updateChangesets}>
 									Build
+								</Button>
+								&nbsp;
+								<Button
+									size="2"
+									variant="outline"
+									color="gray"
+									onClick={(e) => {
+										e.preventDefault()
+										if (!contractData || !editorState || !editorView) {
+											return
+										}
+										// Clear the editor
+										const update = editorState.update({
+											changes: { from: 0, to: editorState.doc.length, insert: contractData.originalContract },
+										})
+										editorView?.dispatch(update)
+
+										// Clear other state
+										setEditorInitialValue(contractData.originalContract)
+										localStorage.removeItem(UNSAVED_CHANGES_KEY)
+										setHasRestoredContent(false)
+										setChangesets(undefined)
+										setNewContract(undefined)
+										setError(undefined)
+									}}
+								>
+									Revert to Original
 								</Button>
 								{changesets && (
 									<Box mt="2">
