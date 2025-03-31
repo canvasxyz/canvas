@@ -1,11 +1,10 @@
 import assert from "assert"
 import Prando from "prando"
-import * as cbor from "@ipld/dag-cbor"
 
 import test, { ExecutionContext } from "ava"
 
 import { AbstractModelDB, ModelValue } from "@canvas-js/modeldb"
-import { Actions, Canvas, ModelSchema } from "@canvas-js/core"
+import { Actions, Canvas, decodeRecordValue, ModelSchema } from "@canvas-js/core"
 import { SECONDS } from "@canvas-js/utils"
 
 import { PRNGSigner } from "./utils.js"
@@ -82,25 +81,17 @@ test("increment a counter, reading outside the transaction", async (t) => {
 	t.true(counter1!.value < total)
 	t.true(counter2!.value < total)
 
-	type WriteRecord = { record_id: string; message_id: string; csx: number | null; value: Uint8Array | null }
-
-	for await (const { csx, value } of app1.db.iterate<WriteRecord>("$writes", {
+	for await (const { csx, value } of app1.db.iterate<{ value: Uint8Array; csx: number | null }>("$writes", {
 		orderBy: { "record_id/csx/message_id": "asc" },
 	})) {
-		assert(t.truthy<Uint8Array | null>(value))
-		const record = cbor.decode<{ id: string; value: number }>(value)
-		t.is(csx, record.value)
+		t.deepEqual(decodeRecordValue(app1.db.config, "counter", value), { id: "counter", value: csx })
 	}
 
-	for await (const { csx, value } of app2.db.iterate<WriteRecord>("$writes", {
+	for await (const { csx, value } of app2.db.iterate<{ value: Uint8Array; csx: number | null }>("$writes", {
 		orderBy: { "record_id/csx/message_id": "asc" },
 	})) {
-		assert(t.truthy<Uint8Array | null>(value))
-		const record = cbor.decode<{ id: string; value: number }>(value)
-		t.is(csx, record.value)
+		t.deepEqual(decodeRecordValue(app1.db.config, "counter", value), { id: "counter", value: csx })
 	}
-
-	t.pass()
 })
 
 test("increment a counter, reading inside the transaction", async (t) => {
