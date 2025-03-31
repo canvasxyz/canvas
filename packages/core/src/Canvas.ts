@@ -123,6 +123,8 @@ export class Canvas<
 						log("removing property 'branch' from $effects", version)
 						await upgradeAPI.removeProperty("$effects", "branch")
 					}
+
+					return false
 				},
 			},
 		)

@@ -7,7 +7,13 @@ import * as json from "@ipld/dag-json"
 
 import type { Signature, Message } from "@canvas-js/interfaces"
 import type { RangeExpression } from "@canvas-js/modeldb"
-import type { AbstractGossipLog, MessageRecord, MessageSourceType } from "@canvas-js/gossiplog"
+import {
+	MessageId,
+	messageIdPattern,
+	type AbstractGossipLog,
+	type MessageRecord,
+	type MessageSourceType,
+} from "@canvas-js/gossiplog"
 
 export function createAPI<Payload>(gossipLog: AbstractGossipLog<Payload>): express.Express {
 	const api = express()
@@ -64,6 +70,14 @@ export function createAPI<Payload>(gossipLog: AbstractGossipLog<Payload>): expre
 			console.error(e)
 			return void res.status(StatusCodes.BAD_REQUEST).end(`${e}`)
 		}
+	})
+
+	api.get("/ancestors/:id", async (req, res) => {
+		assert(messageIdPattern.test(req.params.id), "invalid message ID")
+		const { key } = MessageId.encode(req.params.id)
+
+		// const links: {[]}
+		const links = await gossipLog.db.query("$ancestors", { where: { key }, orderBy: { clock: "asc" } })
 	})
 
 	const connectionURLs = new Set<string>()

@@ -26,6 +26,7 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 		clear?: boolean
 	} & GossipLogInit<Payload>) {
 		let mdb: ModelDB | ModelDBProxy
+		let replayRequired = false
 
 		if (useTestProxy && worker) {
 			mdb = new ModelDBProxy(worker, { ...init.schema, ...AbstractGossipLog.schema })
@@ -38,8 +39,13 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 				models: models,
 				version: version,
 				upgrade: async (upgradeAPI, oldConfig, oldVersion, newVersion) => {
-					await AbstractGossipLog.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion)
-					await init.upgrade?.(upgradeAPI, oldConfig, oldVersion, newVersion)
+					await AbstractGossipLog.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion).then((result) => {
+						replayRequired ||= result
+					})
+
+					await init.upgrade?.(upgradeAPI, oldConfig, oldVersion, newVersion).then((result) => {
+						replayRequired ||= result
+					})
 				},
 				initialUpgradeSchema: Object.assign(init.initialUpgradeSchema ?? { ...models }, initialUpgradeSchema),
 				initialUpgradeVersion: Object.assign(init.initialUpgradeVersion ?? { ...version }, {
@@ -72,7 +78,12 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 			Math.round(delta),
 		)
 
-		await gossipLog.initialize()
+		if (replayRequired) {
+			await gossipLog.replay()
+		} else {
+			await gossipLog.initialize()
+		}
+
 		return gossipLog
 	}
 

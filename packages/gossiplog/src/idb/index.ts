@@ -15,14 +15,20 @@ export interface Options {
 
 export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 	public static async open<Payload>({ name, ...init }: GossipLogInit<Payload> & Options) {
+		let replayRequired = false
 		const models = { ...init.schema, ...AbstractGossipLog.schema }
 		const version = Object.assign(init.version ?? {}, AbstractGossipLog.baseVersion)
 		const db = await ModelDB.open(name ?? `canvas/v1/${init.topic}`, {
 			models: models,
 			version: version,
 			upgrade: async (upgradeAPI, oldConfig, oldVersion, newVersion) => {
-				await AbstractGossipLog.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion)
-				await init.upgrade?.(upgradeAPI, oldConfig, oldVersion, newVersion)
+				await AbstractGossipLog.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion).then((result) => {
+					replayRequired ||= result
+				})
+
+				await init.upgrade?.(upgradeAPI, oldConfig, oldVersion, newVersion).then((result) => {
+					replayRequired ||= result
+				})
 			},
 			initialUpgradeSchema: Object.assign(init.initialUpgradeSchema ?? { ...models }, initialUpgradeSchema),
 			initialUpgradeVersion: Object.assign(init.initialUpgradeVersion ?? { ...version }, {
@@ -47,7 +53,12 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 			Math.round(delta),
 		)
 
-		await gossipLog.initialize()
+		if (replayRequired) {
+			await gossipLog.replay()
+		} else {
+			await gossipLog.initialize()
+		}
+
 		return gossipLog
 	}
 
