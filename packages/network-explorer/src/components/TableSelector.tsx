@@ -21,8 +21,8 @@ export const TableSelector = ({ iconType, label, to }: { iconType: IconType; lab
 							borderRadius: "4px",
 							cursor: "pointer",
 							userSelect: "none",
-							color: isActive ? "var(--gray-12)" : "var(--gray-11)",
-							backgroundColor: isActive ? "var(--gray-3)" : isHovered ? "var(--gray-2)" : "transparent",
+							color: isActive ? "var(--gray-12)" : "var(--gray-12)",
+							backgroundColor: isActive ? "var(--gray-4)" : isHovered ? "var(--gray-3)" : "transparent",
 						}}
 						onMouseEnter={() => setIsHovered(true)}
 						onMouseLeave={() => setIsHovered(false)}

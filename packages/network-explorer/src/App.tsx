@@ -10,8 +10,6 @@ import { LandingPage } from "./LandingPage.js"
 import { ModelTable } from "./ModelTable.js"
 import { ActionsTable } from "./ActionsTable.js"
 import { ContractView } from "./ContractView.js"
-import { MigrationView } from "./MigrationView.js"
-import { AdminView } from "./AdminView.js"
 
 export const App = () => {
 	const [showSidebar, setShowSidebar] = useState(true)
@@ -64,37 +62,13 @@ export const App = () => {
 
 				<Route
 					key={"contract"}
-					path="/contract/view"
+					path="/contract"
 					element={
 						<Suspense>
 							<ContractView />
 						</Suspense>
 					}
 				/>
-
-				{window.location.hostname === 'localhost' && (
-					<>
-						<Route
-							key={"contract"}
-							path="/contract/edit"
-							element={
-								<Suspense>
-									<MigrationView />
-								</Suspense>
-							}
-						/>
-
-						<Route
-							key={"contract"}
-							path="/contract/admin"
-							element={
-								<Suspense>
-									<AdminView />
-								</Suspense>
-							}
-						/>
-					</>
-				)}
 			</Routes>
 		</Flex>
 	)

@@ -1,4 +1,4 @@
-import { Box, Flex, TextField, Link } from "@radix-ui/themes"
+import { Box, Text, Flex, TextField, Link } from "@radix-ui/themes"
 import { TableSelector } from "./TableSelector.js"
 import { CodeSelector } from "./CodeSelector.js"
 import { LuTable } from "react-icons/lu"
@@ -23,7 +23,7 @@ export const Sidebar = ({ tables }: { tables: TableDef[] }) => {
 			direction="column"
 			p="2"
 			gap="2"
-			style={{ borderRight: "1px solid var(--gray-3)" }}
+			style={{ borderRight: "1px solid var(--gray-4)", background: "var(--gray-2)" }}
 		>
 			<Box px="2" pt="10px" pb="9px">
 				<Link href="#/" size="3" highContrast color="gray" underline="none" weight="bold">
@@ -39,6 +39,19 @@ export const Sidebar = ({ tables }: { tables: TableDef[] }) => {
 				/>
 			</Box>
 			<Flex overflowY="scroll" direction="column" gap="3">
+				<Box py="5px" px="2">
+					<Text size="2" style={{ color: "var(--gray-12)" }} weight="bold">
+						Application
+					</Text>
+				</Box>
+				<Box>
+					<CodeSelector />
+				</Box>
+				<Box py="5px" px="2">
+					<Text size="2" style={{ color: "var(--gray-12)" }} weight="bold">
+						Tables
+					</Text>
+				</Box>
 				<Box>
 					{modelNames
 						.filter((modelName) => modelName.toLowerCase().includes(tableSearchTerm.toLowerCase()))
@@ -51,6 +64,11 @@ export const Sidebar = ({ tables }: { tables: TableDef[] }) => {
 							/>
 						))}
 				</Box>
+				<Box py="5px" px="2">
+					<Text size="2" style={{ color: "var(--gray-12)" }} weight="bold">
+						Internal
+					</Text>
+				</Box>
 				<Box>
 					<TableSelector key={"$actions"} iconType={LuTable} label={"$actions"} to={`/tables/$actions`} />
 					{tables
@@ -58,11 +76,6 @@ export const Sidebar = ({ tables }: { tables: TableDef[] }) => {
 						.map(({ tableName }, key) => (
 							<TableSelector key={key} iconType={LuTable} label={tableName} to={`/tables/${tableName}`} />
 						))}
-				</Box>
-				<Box>
-					<CodeSelector option="view" />
-					<CodeSelector option="edit" />
-					<CodeSelector option="admin" />
 				</Box>
 			</Flex>
 		</Flex>
