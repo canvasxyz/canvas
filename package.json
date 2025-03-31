@@ -46,13 +46,16 @@
 		"@canvas-js/modeldb-sqlite-expo": "0.14.0-next.1",
 		"@canvas-js/modeldb-sqlite-wasm": "0.14.0-next.1",
 		"@canvas-js/signatures": "0.14.0-next.1",
+		"@eslint/compat": "^1.2.7",
+		"@eslint/eslintrc": "^3.3.0",
+		"@eslint/js": "^9.21.0",
 		"@types/node": "^22.13.1",
-		"@typescript-eslint/eslint-plugin": "^6.21.0",
-		"@typescript-eslint/parser": "^6.21.0",
+		"@typescript-eslint/eslint-plugin": "^8.25.0",
+		"@typescript-eslint/parser": "^8.25.0",
 		"@vueuse/motion": "^2.2.3",
 		"ava": "^6.2.0",
-		"eslint": "^8.57.0",
-		"eslint-plugin-import": "^2.29.1",
+		"eslint": "^9.21.0",
+		"eslint-plugin-import": "^2.31.0",
 		"ethers": "^6.13.2",
 		"markdown-it-footnote": "^3.0.3",
 		"markdown-it-named-code-blocks": "^0.2.0",
@@ -60,7 +63,6 @@
 		"protons": "^7.6.0",
 		"protons-runtime": "^5.5.0",
 		"react": "^18.3.1",
-		"react-chessboard": "^4.6.0",
 		"typescript": "~5.6.0",
 		"veaury": "^2.4.0",
 		"vite": "^5.3.3",
@@ -71,9 +73,5 @@
 	"optionalDependencies": {
 		"@rollup/rollup-linux-x64-gnu": "4.13.0"
 	},
-	"dependencies": {
-		"@chrisoakman/chessboardjs": "^1.0.0",
-		"chess.js": "^0.12.1",
-		"chessboardjsx": "^2.4.7"
-	}
+	"dependencies": {}
 }

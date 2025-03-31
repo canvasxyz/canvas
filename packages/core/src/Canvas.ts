@@ -18,7 +18,7 @@ import type { Contract, Actions, ActionImplementation, ModelAPI, DeriveModelType
 import { Runtime, createRuntime } from "./runtime/index.js"
 import { AbstractRuntime, ActionRecord } from "./runtime/AbstractRuntime.js"
 import { validatePayload } from "./schema.js"
-import { createSnapshot, hashSnapshot } from "./snapshot.js"
+import { createSnapshot, hashSnapshot, Change } from "./snapshot.js"
 import { initialUpgradeSchema, topicPattern } from "./utils.js"
 
 export type { Model } from "@canvas-js/modeldb"
@@ -82,10 +82,6 @@ export class Canvas<
 	public static namespace = "canvas"
 	public static version = 3
 
-	public static async buildContract(location: string) {
-		return await target.buildContract(location)
-	}
-
 	public static async initialize<ModelsT extends ModelSchema, ActionsT extends Actions<ModelsT> = Actions<ModelsT>>(
 		config: Config<ModelsT, ActionsT>,
 	): Promise<Canvas<ModelsT, ActionsT>> {
@@ -103,8 +99,6 @@ export class Canvas<
 
 		const runtime = await createRuntime(topic, signers, contract, { runtimeMemoryLimit })
 		const gossipTopic = config.snapshot ? `${topic}#${hashSnapshot(config.snapshot)}` : topic // topic for peering
-
-		let replayRequired = false
 
 		const messageLog = await target.openGossipLog(
 			{ topic: gossipTopic, path, clear: config.reset },
@@ -124,6 +118,9 @@ export class Canvas<
 					const log = logger("canvas:core:upgrade")
 					const version = oldVersion[Canvas.namespace] ?? 0
 					log("found canvas version %d", version)
+
+					let replayRequired = false
+
 					if (version <= 1) {
 						log("removing property 'branch' from $effects", version)
 						await upgradeAPI.removeProperty("$effects", "branch")
@@ -140,17 +137,17 @@ export class Canvas<
 
 						replayRequired = true
 					}
+
+					if (replayRequired) {
+						for (const name of Object.keys(runtime.models)) {
+							await upgradeAPI.clear(name)
+						}
+					}
+
+					return replayRequired
 				},
 			},
 		)
-
-		if (replayRequired) {
-			for (const [name] of Object.entries(runtime.models)) {
-				await messageLog.db.clear(name)
-			}
-
-			await messageLog.replay()
-		}
 
 		for (const model of Object.values(messageLog.db.models)) {
 			if (model.name.startsWith("$")) {
@@ -236,6 +233,14 @@ export class Canvas<
 		})
 
 		return app
+	}
+
+	public static async buildContract(contract: string, config?: Record<string, string>) {
+		return await target.buildContract(contract, config)
+	}
+
+	public static async buildContractByLocation(location: string) {
+		return await target.buildContractByLocation(location)
 	}
 
 	public readonly db: AbstractModelDB
@@ -367,6 +372,15 @@ export class Canvas<
 
 	public getContract() {
 		return this.runtime.contract
+	}
+
+	public getSchema(internal?: false) {
+		if (internal) {
+			return this.runtime.schema
+		} else {
+			const entries = Object.entries(this.runtime.schema).filter(([t]) => !t.startsWith("$"))
+			return Object.fromEntries(entries)
+		}
 	}
 
 	/**
@@ -509,7 +523,7 @@ export class Canvas<
 		}
 	}
 
-	public async createSnapshot(): Promise<Snapshot> {
-		return createSnapshot(this)
+	public async createSnapshot(changesets?: Change[]): Promise<Snapshot> {
+		return createSnapshot(this, changesets)
 	}
 }

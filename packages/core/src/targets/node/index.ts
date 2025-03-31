@@ -101,7 +101,28 @@ const target: PlatformTarget = {
 		await new Promise<void>((resolve) => server.listen(port, resolve))
 	},
 
-	async buildContract(location: string) {
+	async buildContract(contract: string) {
+		const bundle = await esbuild.build({
+			bundle: true,
+			platform: "node",
+			format: "esm",
+			write: false,
+			stdin: {
+				contents: contract,
+				loader: "ts",
+				sourcefile: "virtual-contract.ts",
+			},
+		})
+
+		if (!bundle.outputFiles || bundle.outputFiles.length === 0) {
+			throw new Error("building contract from string produced no files")
+		} else {
+			return { build: bundle.outputFiles[0].text, originalContract: contract }
+		}
+	},
+
+	async buildContractByLocation(location: string) {
+		const originalContract = fs.readFileSync(location, "utf-8")
 		const bundle = await esbuild.build({
 			bundle: true,
 			platform: "node",
@@ -113,9 +134,9 @@ const target: PlatformTarget = {
 			throw new Error("building .ts contract produced no files")
 		} else if (bundle.outputFiles && bundle.outputFiles.length > 1) {
 			// unexpected
-			return bundle.outputFiles[0].text
+			return { build: bundle.outputFiles[0].text, originalContract }
 		} else {
-			return bundle.outputFiles[0].text
+			return { build: bundle.outputFiles[0].text, originalContract }
 		}
 	},
 }

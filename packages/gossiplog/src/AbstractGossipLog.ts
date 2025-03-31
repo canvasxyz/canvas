@@ -52,7 +52,7 @@ export interface GossipLogInit<Payload = unknown, Result = any> {
 		oldConfig: Config,
 		oldVersion: Record<string, number>,
 		newVersion: Record<string, number>,
-	) => Awaitable<void>
+	) => Promise<boolean>
 	initialUpgradeSchema?: ModelSchema
 	initialUpgradeVersion?: Record<string, number>
 }
@@ -82,7 +82,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 	GossipLogEvents<Payload, Result>
 > {
 	public static namespace = "gossiplog"
-	public static version = 3
+	public static version = 4
 
 	public static schema = {
 		$messages: {
@@ -108,14 +108,17 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		oldConfig: Config,
 		oldVersion: Record<string, number>,
 		newVersion: Record<string, number>,
-	) {
+	): Promise<boolean> {
+		let replayRequired = false
 		const log = logger("canvas:gossiplog:upgrade")
+
 		const version = oldVersion[AbstractGossipLog.namespace] ?? 0
-		log("found version %d", version)
+		log("found gossiplog version %d", version)
 
 		if (version <= 1) {
-			log("removing 'branch' from $messages")
+			log("removing index 'branch' from $messages")
 			await upgradeAPI.removeIndex("$messages", "branch")
+			log("removing index 'property' from $messages")
 			await upgradeAPI.removeProperty("$messages", "branch")
 			log("deleting model $branch_merges")
 			await upgradeAPI.deleteModel("$branch_merges")
@@ -129,6 +132,22 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 				$indexes: ["cursor"],
 			})
 		}
+
+		if (version <= 3) {
+			log("deleting model $ancestors")
+			await upgradeAPI.deleteModel("$ancestors")
+			log("creating model $ancestors")
+			await upgradeAPI.createModel("$ancestors", {
+				$primary: "key/clock",
+				key: "bytes",
+				clock: "integer",
+				links: "bytes",
+			})
+
+			replayRequired = true
+		}
+
+		return replayRequired
 	}
 
 	public readonly topic: string

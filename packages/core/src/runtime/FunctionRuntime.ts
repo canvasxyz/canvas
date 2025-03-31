@@ -115,11 +115,35 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 
 			return result
 		} catch (err) {
-			console.log("dispatch action failed:", err)
+			trimActionStacktrace(err)
+			console.log("Error inside canvas action:", err)
 			throw err
 		} finally {
 			this.#context = null
 			this.#thisValue = null
 		}
 	}
+}
+
+// Remove canvas internal frames from the stack, then rebuild and return the error
+function trimActionStacktrace(err: unknown): void {
+	if (!(err instanceof Error) || typeof err.stack !== "string") {
+		return
+	}
+
+	const stack = err.stack.split("\n")
+	while (stack.length > 2) {
+		const frame = stack[stack.length - 1]
+		if (
+			frame.includes("AbstractRuntime.js") ||
+			frame.includes("AbstractGossipLog.js") ||
+			frame.includes("FunctionRuntime.js") ||
+			frame.includes("@canvas-js_okra-memory.js")
+		) {
+			stack.pop()
+		} else {
+			break
+		}
+	}
+	err.stack = stack.join("\n")
 }
