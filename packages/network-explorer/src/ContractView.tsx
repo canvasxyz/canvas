@@ -54,9 +54,9 @@ export const ContractView = () => {
 		}
 	}, [editorState, contractData])
 
-	const updateChangesets = async (e: MouseEvent) => {
+	const updateChangesets = async (e: MouseEvent, state?: EditorState) => {
 		e.preventDefault()
-		const value = editorState?.doc.toString()
+		const value = (editorState ?? state)?.doc.toString()
 		if (!value || !contractData) {
 			setError("No contract content")
 			return
@@ -212,6 +212,12 @@ export const ContractView = () => {
 									setEditorView(view)
 								}}
 								readOnly={contractData?.admin ? false : true}
+								onBuild={(state, view) => {
+									const syntheticEvent = {
+										preventDefault: () => {}
+									} as React.MouseEvent<HTMLButtonElement>;
+									updateChangesets(syntheticEvent, state);
+								}}
 							/>
 						)}
 					</Box>
