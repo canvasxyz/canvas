@@ -9,6 +9,60 @@ import { Contract } from "../types.js"
 import { ExecutionContext } from "../ExecutionContext.js"
 import { AbstractRuntime } from "./AbstractRuntime.js"
 
+/**
+ * Look for the QuickJS module in the compile stack trace.
+ * TODO: Extract all stack trace rewriting functions into a util
+ *
+ * #### JavaScriptCore
+ * baz@filename.js:10:24
+ * bar@filename.js:6:6
+ * foo@filename.js:2:6
+ * global code@filename.js:13:4
+ *
+ * #### SpiderMonkey
+ * baz@filename.js:10:15
+ * bar@filename.js:6:3
+ * foo@filename.js:2:3
+ * @filename.js:13:1
+ *
+ * #### V8
+ * Error
+ *     at baz (filename.js:10:15)
+ *     at bar (filename.js:6:3)
+ *     at foo (filename.js:2:3)
+ *     at filename.js:13:1
+ */
+const rewriteContractBuildErrors = (err: Error) => {
+	if (err.stack === undefined) return
+
+	const split = err.stack.split('\n')
+	const isV8ErrorRegexp = /^[a-zA-Z0-9]+:/
+	const isModuleErrorRegexp = /at [a-zA-Z0-9]+\.consume.*:[0-9]+:[0-9]+\)/
+	const moduleError = split.find((row) => row.match(isModuleErrorRegexp))
+
+	const isV8Error = split[0].match(isV8ErrorRegexp)
+	if (moduleError) {
+		err.stack = isV8Error ? [split[0], moduleError].join('\n') : moduleError
+	}
+}
+
+function charIndexToLinePosition(text: string, charIndex: number) {
+	// Ensure charIndex is within bounds
+	if (charIndex < 0 || charIndex > text.length) {
+		throw new Error(`Index ${charIndex} is out of bounds for text of length ${text.length}`);
+	}
+
+	const textUpToIndex = text.substring(0, charIndex);
+	const lines = textUpToIndex.split('\n');
+	const lineNumber = lines.length - 1;
+	const column = lines[lines.length - 1].length;
+
+	return {
+		line: lineNumber,
+		column: column
+	};
+}
+
 export class ContractRuntime extends AbstractRuntime {
 	public static async init(
 		topic: string,
@@ -20,12 +74,22 @@ export class ContractRuntime extends AbstractRuntime {
 
 		const vm = await VM.initialize({ runtimeMemoryLimit })
 
+		let contractInit: Record<string, QuickJSHandle>
+
+		// Rewrite contract build errors
+		try {
+			contractInit = vm.import(contract).consume(vm.unwrapObject)
+		} catch (err: any) {
+			rewriteContractBuildErrors(err)
+			throw err
+		}
+
 		const {
 			contract: contractHandle,
 			models: modelsHandle,
 			actions: actionsHandle,
 			...rest
-		} = vm.import(contract).consume(vm.unwrapObject)
+		} = contractInit
 
 		for (const [name, handle] of Object.entries(rest)) {
 			console.warn(`extraneous export ${JSON.stringify(name)}`)
