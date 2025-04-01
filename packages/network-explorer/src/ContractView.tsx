@@ -1,4 +1,5 @@
 import { useState, MouseEvent, useEffect } from "react"
+import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 import { Button, Box, Heading, Text, TextArea } from "@radix-ui/themes"
 import { Canvas, generateChangesets, Changeset } from "@canvas-js/core"
 import { EditorState } from "@codemirror/state"
@@ -77,8 +78,16 @@ export const ContractView = () => {
 		}, 500)
 
 		try {
-			const app = await Canvas.initialize({ contract: contractData.contract, topic: "test.a" })
-			const newApp = await Canvas.initialize({ contract: build, topic: "test.b" })
+			const app = await Canvas.initialize({
+				contract: contractData.contract,
+				topic: "test.a." + bytesToHex(randomBytes(32)),
+				reset: true,
+			})
+			const newApp = await Canvas.initialize({
+				contract: build,
+				topic: "test.b." + bytesToHex(randomBytes(32)),
+				reset: true,
+			})
 			setNewContract(value)
 			setChangesets(generateChangesets(app.getSchema(), newApp.getSchema()))
 		} catch (err: any) {
@@ -87,6 +96,7 @@ export const ContractView = () => {
 			} else {
 				setError(err.toString())
 			}
+			console.error(err)
 		} finally {
 			clearTimeout(initErrorTimer)
 		}
@@ -214,9 +224,9 @@ export const ContractView = () => {
 								readOnly={contractData?.admin ? false : true}
 								onBuild={(state, view) => {
 									const syntheticEvent = {
-										preventDefault: () => {}
-									} as React.MouseEvent<HTMLButtonElement>;
-									updateChangesets(syntheticEvent, state);
+										preventDefault: () => {},
+									} as React.MouseEvent<HTMLButtonElement>
+									updateChangesets(syntheticEvent, state)
 								}}
 							/>
 						)}
