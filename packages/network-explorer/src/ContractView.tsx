@@ -263,12 +263,26 @@ export const ContractView = () => {
 						)}
 					</Box>
 
-					{hasRestoredContent && (
+					{error ? (
+						<Box mt="2">
+							<Text size="2" color="red">
+								{error}
+							</Text>
+						</Box>
+					) : changesets && newContract ? (
+						<Box mt="2">
+							<Text size="2" color="green">
+								Success: Built contract ({editorState?.doc.length} chars)
+							</Text>
+						</Box>
+					) : hasRestoredContent ? (
 						<Box mt="2">
 							<Text size="2" color="blue">
 								Restored unsaved changes from your previous session
 							</Text>
 						</Box>
+					) : (
+						<></>
 					)}
 
 					{contractData?.admin && (
@@ -305,23 +319,13 @@ export const ContractView = () => {
 									Revert to Original
 								</Button>
 							</Box>
-
-							<Box mt="4">
-								<Text size="2">Upgrade controller key: {contractData.admin}</Text>
-							</Box>
-							<Box mt="2">
-								<Text size="2">Contract stored {contractData.inMemory ? "in-memory" : "on disk"}</Text>
-							</Box>
 						</>
 					)}
 
 					{contractData?.admin && (
 						<>
 							{changesets && newContract && (
-								<Box mt="2">
-									<Text size="2" color="green">
-										Success: Built contract ({editorState?.doc.length} chars)
-									</Text>
+								<Box mt="5">
 									<Box
 										mt="2"
 										style={{
@@ -339,7 +343,7 @@ export const ContractView = () => {
 										>
 											<Text size="2">Run Migrations</Text>
 										</Box>
-										<Box px="4" py="1">
+										<Box px="4" pt="1" pb="4">
 											<Text size="2">
 												<ul>
 													{changesets.map((c) => (
@@ -347,7 +351,7 @@ export const ContractView = () => {
 													))}
 												</ul>
 											</Text>
-											<Box mt="4" pt="1" pb="3">
+											<Box mt="4" pt="1">
 												<Button size="2" variant="solid" onClick={runMigrations}>
 													Sign and Commit Changes
 												</Button>
@@ -355,6 +359,17 @@ export const ContractView = () => {
 												<Button size="2" variant="outline" onClick={cancelMigrations}>
 													Cancel
 												</Button>
+											</Box>
+											<Box mt="4">
+												<Text size="2">Upgrade controller key: {contractData.admin}</Text>
+											</Box>
+											<Box mt="1">
+												<Text size="2">
+													Contract stored{" "}
+													{contractData.inMemory
+														? "in-memory. Changes will be lost when the explorer server restarts."
+														: "on disk. Changes will be persisted on the explorer server."}
+												</Text>
 											</Box>
 										</Box>
 									</Box>
@@ -375,14 +390,6 @@ export const ContractView = () => {
 						</>
 					)}
 				</>
-			)}
-
-			{error && (
-				<Box mt="2">
-					<Text size="2" color="red">
-						{error}
-					</Text>
-				</Box>
 			)}
 			<br />
 		</Box>
