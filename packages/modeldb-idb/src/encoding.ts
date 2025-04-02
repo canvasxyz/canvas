@@ -5,10 +5,10 @@ import { assert, signalInvalidType } from "@canvas-js/utils"
 import {
 	Property,
 	PropertyValue,
-	isPrimitiveValue,
-	isReferenceValue,
 	ReferenceValue,
 	RelationValue,
+	isPrimitiveValue,
+	isReferenceValue,
 	isRelationValue,
 	isPrimaryKey,
 } from "@canvas-js/modeldb"

@@ -17,10 +17,12 @@ import {
 	PropertyType,
 	ModelDBInit,
 	getModelsFromInclude,
+	PropertyValue,
 } from "@canvas-js/modeldb"
 
 import { ModelAPI } from "./ModelAPI.js"
 import { getIndexName } from "./utils.js"
+import { encodePropertyValue } from "./encoding.js"
 
 export class ModelDB extends AbstractModelDB {
 	public static async open(name: string, init: ModelDBInit) {
@@ -370,6 +372,7 @@ export class ModelDB extends AbstractModelDB {
 		modelName: string,
 		propertyName: string,
 		propertyType: PropertyType,
+		defaultPropertyValue: PropertyValue,
 	) {
 		const property = this.config.addProperty(modelName, propertyName, propertyType)
 
@@ -378,7 +381,7 @@ export class ModelDB extends AbstractModelDB {
 		this.models[modelName] = model
 
 		const store = txn.objectStore(modelName)
-		const source = { [propertyName]: [] }
+		const source = { [propertyName]: encodePropertyValue(property, defaultPropertyValue) }
 		this.log("adding property to existing records...")
 		for await (const cursor of store.iterate()) {
 			await store.put(Object.assign(cursor.value, source))
@@ -469,8 +472,8 @@ export class ModelDB extends AbstractModelDB {
 
 			createModel: (name, init) => this.createModel(txn, name, init),
 			deleteModel: (name) => this.deleteModel(txn, name),
-			addProperty: (modelName, propertyName, propertyInit) =>
-				this.addProperty(txn, modelName, propertyName, propertyInit),
+			addProperty: (modelName, propertyName, propertyType, defaultPropertyValue) =>
+				this.addProperty(txn, modelName, propertyName, propertyType, defaultPropertyValue),
 			removeProperty: (modelName, propertyName) => this.removeProperty(txn, modelName, propertyName),
 			addIndex: (modelName, index) => this.addIndex(txn, modelName, index),
 			removeIndex: (modelName, index) => this.removeIndex(txn, modelName, index),

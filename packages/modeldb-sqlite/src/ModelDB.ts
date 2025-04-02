@@ -16,6 +16,7 @@ import {
 	PrimaryKeyValue,
 	Model,
 	ModelDBInit,
+	PropertyValue,
 } from "@canvas-js/modeldb"
 
 import { ModelAPI } from "./ModelAPI.js"
@@ -249,14 +250,19 @@ export class ModelDB extends AbstractModelDB {
 		this.#models.$models.delete(name)
 	}
 
-	private async addProperty(modelName: string, propertyName: string, propertyType: PropertyType) {
+	private async addProperty(
+		modelName: string,
+		propertyName: string,
+		propertyType: PropertyType,
+		defaultPropertyValue: PropertyValue,
+	) {
 		const property = this.config.addProperty(modelName, propertyName, propertyType)
 
 		const model = this.config.models.find((model) => model.name === modelName)
 		assert(model !== undefined, "internal error")
 		this.models[modelName] = model
 
-		this.#models[modelName].addProperty(property)
+		this.#models[modelName].addProperty(property, defaultPropertyValue)
 		this.#models.$models.set({ name: modelName, model })
 	}
 
