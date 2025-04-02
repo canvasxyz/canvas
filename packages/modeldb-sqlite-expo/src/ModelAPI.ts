@@ -233,7 +233,7 @@ export class ModelAPI {
 		})
 
 		const alter = Array.from(zip(columnDefinitions, defaultValues))
-			.map((column, defaultValue) => `ADD COLUMN ${column} DEFAULT ${defaultValue}`)
+			.map(([column, defaultValue]) => `ADD COLUMN ${column} DEFAULT ${defaultValue}`)
 			.join(", ")
 
 		this.db.execSync(`ALTER TABLE "${this.table}" ${alter}`)

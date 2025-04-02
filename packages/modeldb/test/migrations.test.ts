@@ -70,7 +70,9 @@ testPlatformsPersistent("Add property", async (t, openDB) => {
 		{
 			models: { users: { $primary: "id", id: "integer" } },
 		},
-		async () => {},
+		async (db) => {
+			await db.set("users", { id: 10 })
+		},
 	)
 
 	await openDB(
@@ -81,6 +83,7 @@ testPlatformsPersistent("Add property", async (t, openDB) => {
 					$primary: "id",
 					id: "integer",
 					address: "string?",
+					reputation: "integer",
 				},
 			},
 
@@ -91,6 +94,7 @@ testPlatformsPersistent("Add property", async (t, openDB) => {
 
 				if (oldVersion.test ?? 0 < 9) {
 					await api.addProperty("users", "address", "string?", null)
+					await api.addProperty("users", "reputation", "integer", 0)
 				}
 			},
 		},
@@ -104,10 +108,13 @@ testPlatformsPersistent("Add property", async (t, openDB) => {
 					properties: [
 						{ name: "id", kind: "primitive", type: "integer", nullable: false },
 						{ name: "address", kind: "primitive", type: "string", nullable: true },
+						{ name: "reputation", kind: "primitive", type: "integer", nullable: false },
 					],
 					indexes: [],
 				},
 			])
+
+			t.deepEqual(await db.getAll("users"), [{ id: 10, address: null, reputation: 0 }])
 		},
 	)
 })
