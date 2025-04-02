@@ -1,6 +1,7 @@
 import { useState, MouseEvent, useEffect } from "react"
-import { Button, Box, Heading, Text, TextArea } from "@radix-ui/themes"
-import { Canvas, generateChangesets, Changeset } from "@canvas-js/core"
+import { bytesToHex, randomBytes } from "@noble/hashes/utils"
+import { Button, Box, Heading, Text } from "@radix-ui/themes"
+import { Canvas, generateChangesets, Changeset as ChangesetMigrationRow, Changeset } from "@canvas-js/core"
 import { EditorState } from "@codemirror/state"
 import { EditorView } from "@codemirror/view"
 import { useContractData } from "./hooks/useContractData.js"
@@ -12,12 +13,43 @@ import { utils } from "ethers"
 // Define a localStorage key for unsaved changes
 const UNSAVED_CHANGES_KEY = "contract-editor-unsaved-changes"
 
+const ChangesetMigrationRow = ({ change: c }: { change: Changeset }) => {
+	// Determine the type of changeset and render appropriate content
+	switch (c.change) {
+		case "create_table":
+			return <li>Create table: {c.table}</li>
+		case "drop_table":
+			return <li>Drop table: {c.table}</li>
+		case "add_column":
+			return (
+				<li>
+					Add column: {c.table}.{c.column} as {c.propertyType.endsWith("?") ? "nullable" : "non-nullable"}{" "}
+					{c.propertyType.replace(/\?$/, "")}
+				</li>
+			)
+		case "remove_column":
+			return (
+				<li>
+					Drop column: {c.table}.{c.column}
+				</li>
+			)
+		case "make_optional_column":
+			return (
+				<li>
+					Make column nullable: {c.table}.{c.column}
+				</li>
+			)
+		default:
+			return <li>Unknown: {JSON.stringify(c)}</li>
+	}
+}
+
 export const ContractView = () => {
 	const contractData = useContractData()
 	const applicationData = useApplicationData()
 
 	const [error, setError] = useState<string>()
-	const [changesets, setChangesets] = useState<Changeset[]>()
+	const [changesets, setChangesets] = useState<ChangesetMigrationRow[]>()
 	const [newContract, setNewContract] = useState<string>()
 	const [waitingForCommit, setWaitingForCommit] = useState<boolean>()
 	const [commitCompleted, setCommitCompleted] = useState<boolean>()
@@ -54,9 +86,9 @@ export const ContractView = () => {
 		}
 	}, [editorState, contractData])
 
-	const updateChangesets = async (e: MouseEvent) => {
+	const updateChangesets = async (e: MouseEvent, state?: EditorState) => {
 		e.preventDefault()
-		const value = editorState?.doc.toString()
+		const value = (editorState ?? state)?.doc.toString()
 		if (!value || !contractData) {
 			setError("No contract content")
 			return
@@ -77,8 +109,16 @@ export const ContractView = () => {
 		}, 500)
 
 		try {
-			const app = await Canvas.initialize({ contract: contractData.contract, topic: "test.a" })
-			const newApp = await Canvas.initialize({ contract: build, topic: "test.b" })
+			const app = await Canvas.initialize({
+				contract: contractData.contract,
+				topic: "test.a." + bytesToHex(randomBytes(32)),
+				reset: true,
+			})
+			const newApp = await Canvas.initialize({
+				contract: build,
+				topic: "test.b." + bytesToHex(randomBytes(32)),
+				reset: true,
+			})
 			setNewContract(value)
 			setChangesets(generateChangesets(app.getSchema(), newApp.getSchema()))
 		} catch (err: any) {
@@ -87,6 +127,7 @@ export const ContractView = () => {
 			} else {
 				setError(err.toString())
 			}
+			console.error(err)
 		} finally {
 			clearTimeout(initErrorTimer)
 		}
@@ -212,16 +253,36 @@ export const ContractView = () => {
 									setEditorView(view)
 								}}
 								readOnly={contractData?.admin ? false : true}
+								onBuild={(state, view) => {
+									const syntheticEvent = {
+										preventDefault: () => {},
+									} as React.MouseEvent<HTMLButtonElement>
+									updateChangesets(syntheticEvent, state)
+								}}
 							/>
 						)}
 					</Box>
 
-					{hasRestoredContent && (
+					{error ? (
+						<Box mt="2">
+							<Text size="2" color="red">
+								{error}
+							</Text>
+						</Box>
+					) : changesets && newContract ? (
+						<Box mt="2">
+							<Text size="2" color="green">
+								Success: Built contract ({editorState?.doc.length} chars)
+							</Text>
+						</Box>
+					) : hasRestoredContent ? (
 						<Box mt="2">
 							<Text size="2" color="blue">
 								Restored unsaved changes from your previous session
 							</Text>
 						</Box>
+					) : (
+						<></>
 					)}
 
 					{contractData?.admin && (
@@ -257,49 +318,61 @@ export const ContractView = () => {
 								>
 									Revert to Original
 								</Button>
-								{changesets && (
-									<Box mt="2">
-										<Text size="2" color="green">
-											Success: Built contract ({editorState?.doc.length} chars)
-											<br />
-											<Box style={{ width: "100%" }}>
-												<TextArea
-													size="2"
-													variant="classic"
-													resize="none"
-													style={{ padding: "4px 20px", fontFamily: "monospace", minHeight: "20vh" }}
-												>
-													{JSON.stringify(changesets, null, 2)}
-												</TextArea>
-											</Box>
-										</Text>
-									</Box>
-								)}
 							</Box>
+						</>
+					)}
 
-							<Box mt="4">
-								<Text size="2">Upgrade controller key: {contractData.admin}</Text>
-							</Box>
-							<Box mt="2">
-								<Text size="2">Contract stored {contractData.inMemory ? "in-memory" : "on disk"}</Text>
-							</Box>
-
+					{contractData?.admin && (
+						<>
 							{changesets && newContract && (
-								<Box mt="4">
-									<Button size="2" variant="solid" onClick={runMigrations}>
-										Sign and Commit Changes
-									</Button>
-									&nbsp;
-									<Button size="2" variant="outline" onClick={cancelMigrations}>
-										Cancel
-									</Button>
-								</Box>
-							)}
-							{error && (
-								<Box mt="2">
-									<Text size="2" color="red">
-										{error}
-									</Text>
+								<Box mt="5">
+									<Box
+										mt="2"
+										style={{
+											width: "100%",
+											border: "1px solid var(--gray-6)",
+											borderRadius: "2px",
+										}}
+									>
+										<Box
+											px="4"
+											py="3"
+											style={{
+												borderBottom: "1px solid var(--gray-6)",
+											}}
+										>
+											<Text size="2">Run Migrations</Text>
+										</Box>
+										<Box px="4" pt="1" pb="4">
+											<Text size="2">
+												<ul>
+													{changesets.map((c) => (
+														<ChangesetMigrationRow change={c} />
+													))}
+												</ul>
+											</Text>
+											<Box mt="4" pt="1">
+												<Button size="2" variant="solid" onClick={runMigrations}>
+													Sign and Commit Changes
+												</Button>
+												&nbsp;
+												<Button size="2" variant="outline" onClick={cancelMigrations}>
+													Cancel
+												</Button>
+											</Box>
+											<Box mt="4">
+												<Text size="2">Upgrade controller key: {contractData.admin}</Text>
+											</Box>
+											<Box mt="1">
+												<Text size="2">
+													Contract stored{" "}
+													{contractData.inMemory
+														? "in-memory. Changes will be lost when the explorer server restarts."
+														: "on disk. Changes will be persisted on the explorer server."}
+												</Text>
+											</Box>
+										</Box>
+									</Box>
 								</Box>
 							)}
 
@@ -316,9 +389,9 @@ export const ContractView = () => {
 							)}
 						</>
 					)}
-					<br />
 				</>
 			)}
+			<br />
 		</Box>
 	)
 }

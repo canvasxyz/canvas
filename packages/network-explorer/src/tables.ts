@@ -12,23 +12,29 @@ export type TableDef = {
 export const tables: TableDef[] = [
 	{
 		tableName: "$ancestors",
-		defaultSortColumn: "id",
+		defaultSortColumn: "key",
 		defaultSortDirection: "desc",
 		defaultColumns: [
 			{
-				header: "id",
-				accessorKey: "id",
-				size: 320,
+				header: "key",
+				accessorKey: "key",
+				size: 100,
+				cell: BinaryCellData,
 				enableSorting: true,
-				enableColumnFilter: true,
-				meta: {
-					textFilter: true,
-				},
+				enableColumnFilter: false,
+			},
+			{
+				header: "clock",
+				accessorKey: "clock",
+				size: 100,
+				enableSorting: true,
+				enableColumnFilter: false,
 			},
 			{
 				header: "links",
 				accessorKey: "links",
-				size: 500,
+				size: 100,
+				cell: BinaryCellData,
 				enableSorting: false,
 				enableColumnFilter: false,
 			},

@@ -1,6 +1,6 @@
-import React, { useEffect } from "react"
+import React, { useEffect, useRef } from "react"
 
-import type { EditorState } from "@codemirror/state"
+import { EditorState } from "@codemirror/state"
 import { EditorView, keymap } from "@codemirror/view"
 import { defaultKeymap, indentWithTab } from "@codemirror/commands"
 import { indentUnit } from "@codemirror/language"
@@ -10,28 +10,41 @@ import { typescriptLanguage } from "@codemirror/lang-javascript"
 
 import { useCodeMirror } from "../hooks/useCodeMirror.js"
 
-const getExtensions = (readOnly: boolean) => [
-	indentUnit.of("\t"),
-	basicSetup,
-	keymap.of([indentWithTab]),
-	typescriptLanguage,
-	keymap.of(defaultKeymap),
-	EditorView.editable.of(!readOnly),
-]
-
 interface EditorProps {
 	initialValue: string
 	readOnly?: boolean
 	onChange?: (state: EditorState, view: EditorView | null) => void
 	onLoad?: (state: EditorState, view: EditorView | null) => void
+	onBuild: (state: EditorState, view: EditorView | null) => void
 }
 
-/** use state.doc.toString() to get content out of the onChange callback */
-export const Editor: React.FC<EditorProps> = ({ initialValue, readOnly, onChange, onLoad }) => {
+export const Editor: React.FC<EditorProps> = ({ initialValue, readOnly, onChange, onLoad, onBuild }) => {
+	// TODO: Refactor to avoid passing EditorState through go-around ref.
+	const stateRef = useRef<EditorState | null>(null)
+
 	const [state, transaction, viewRef, element] = useCodeMirror<HTMLDivElement>({
 		doc: initialValue,
-		extensions: getExtensions(readOnly ?? false),
+		extensions: [
+			keymap.of([{
+				key: "Mod-Enter",
+				run: (view: EditorView) => {
+					if (stateRef.current === null) return false;
+					onBuild(stateRef.current, view);
+					return true;
+				}
+			}]),
+			indentUnit.of("\t"),
+			basicSetup,
+			keymap.of([indentWithTab]),
+			typescriptLanguage,
+			keymap.of(defaultKeymap),
+			EditorView.editable.of(!(readOnly ?? false)),
+		]
 	})
+
+	useEffect(() => {
+		stateRef.current = state
+	}, [state])
 
 	useEffect(() => {
 		if (onLoad !== undefined && state !== null) {
