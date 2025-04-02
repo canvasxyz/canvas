@@ -21,7 +21,7 @@ import { AbortError, MessageNotFoundError, MissingParentError } from "@canvas-js
 import * as sync from "@canvas-js/gossiplog/sync"
 
 import target from "#target"
-import { baseVersion, namespace, upgrade, version } from "#migrations"
+import { namespace, version } from "#migrations"
 
 import { SyncSnapshot } from "./interface.js"
 import { AncestorIndex } from "./AncestorIndex.js"
