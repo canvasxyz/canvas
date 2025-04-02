@@ -18,6 +18,7 @@ import {
 	isLiteralExpression,
 	isRangeExpression,
 	validateModelValue,
+	PropertyValue,
 } from "@canvas-js/modeldb"
 
 import { RelationAPI } from "./RelationAPI.js"
@@ -327,15 +328,15 @@ export class ModelAPI {
 		await this.client.query(queries.join("\n"))
 	}
 
-	public async addProperty(property: Property) {
+	public async addProperty(property: Property, defaultPropertyValue: PropertyValue) {
 		/** SQL column declarations */
 		const columnDefinitions: string[] = []
 
 		await this.prepareProperty(property, columnDefinitions, false)
 
-		const alter = columnDefinitions.map((column) => `ADD COLUMN ${column}`)
-		await this.client.query(`ALTER TABLE "${this.table}" ${alter.join(", ")}`)
-
+		const defaultValues = this.codecs[property.name].encode(defaultPropertyValue)
+		const alter = columnDefinitions.map((column, i) => `ADD COLUMN ${column} DEFAULT $${i + 1}`)
+		await this.client.query(`ALTER TABLE "${this.table}" ${alter.join(", ")}`, defaultValues)
 		this.prepareStatements()
 	}
 

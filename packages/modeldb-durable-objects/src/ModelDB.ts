@@ -14,6 +14,7 @@ import {
 	PropertyType,
 	Model,
 	ModelDBInit,
+	PropertyValue,
 } from "@canvas-js/modeldb"
 
 import { SqlStorage } from "@cloudflare/workers-types"
@@ -270,14 +271,19 @@ export class ModelDB extends AbstractModelDB {
 		this.#models.$models.delete(name)
 	}
 
-	private addProperty(modelName: string, propertyName: string, propertyType: PropertyType) {
+	private addProperty(
+		modelName: string,
+		propertyName: string,
+		propertyType: PropertyType,
+		defaultPropertyValue: PropertyValue,
+	) {
 		const property = this.config.addProperty(modelName, propertyName, propertyType)
 
 		const model = this.config.models.find((model) => model.name === modelName)
 		assert(model !== undefined, "internal error - expected model !== undefined")
 		this.models[modelName] = model
 
-		this.#models[modelName].addProperty(property)
+		this.#models[modelName].addProperty(property, defaultPropertyValue)
 		this.#models.$models.set({ name: modelName, model })
 	}
 

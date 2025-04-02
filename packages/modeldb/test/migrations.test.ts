@@ -90,7 +90,7 @@ testPlatformsPersistent("Add property", async (t, openDB) => {
 				t.deepEqual(newVersion, { modeldb: AbstractModelDB.version, test: 9 })
 
 				if (oldVersion.test ?? 0 < 9) {
-					await api.addProperty("users", "address", "string?")
+					await api.addProperty("users", "address", "string?", null)
 				}
 			},
 		},

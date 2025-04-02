@@ -185,7 +185,12 @@ export interface DatabaseUpgradeAPI extends DatabaseAPI {
 	createModel(name: string, init: ModelInit): Awaitable<void>
 	deleteModel(name: string): Awaitable<void>
 
-	addProperty(modelName: string, propertyName: string, propertyType: PropertyType): Awaitable<void>
+	addProperty(
+		modelName: string,
+		propertyName: string,
+		propertyType: PropertyType,
+		defaultPropertyValue: PropertyValue,
+	): Awaitable<void>
 	removeProperty(modelName: string, propertyName: string): Awaitable<void>
 
 	addIndex(modelName: string, index: string): Awaitable<void>
