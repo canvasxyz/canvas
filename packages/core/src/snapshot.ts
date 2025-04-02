@@ -3,11 +3,9 @@ import { bytesToHex } from "@noble/hashes/utils"
 import * as cbor from "@ipld/dag-cbor"
 
 import { Snapshot } from "@canvas-js/interfaces"
-import type { PrimitiveProperty, PrimitiveType, Property, PropertyType } from "@canvas-js/modeldb"
+import type { PrimitiveType, Property, PropertyType } from "@canvas-js/modeldb"
 
 import { Canvas } from "./Canvas.js"
-
-import { encodeRecordValue } from "./utils.js"
 
 import { Contract, ModelSchema, ModelValue } from "./types.js"
 
@@ -121,6 +119,7 @@ export async function createSnapshot<T extends Contract<any>>(
 					delete row[key]
 				}
 			}
+
 			models[modelName].push(cbor.encode(row))
 		}
 	}

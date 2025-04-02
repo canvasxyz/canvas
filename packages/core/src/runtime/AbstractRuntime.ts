@@ -1,8 +1,9 @@
+import * as cbor from "@ipld/dag-cbor"
 import { logger } from "@libp2p/logger"
 
 import type { Action, Session, Snapshot, SignerCache, Awaitable, MessageType } from "@canvas-js/interfaces"
 
-import { Effect, ModelSchema, isPrimaryKey } from "@canvas-js/modeldb"
+import { Effect, ModelSchema, ModelValue, isPrimaryKey } from "@canvas-js/modeldb"
 
 import { GossipLogConsumer, AbstractGossipLog, SignedMessage, MessageId, MIN_MESSAGE_ID } from "@canvas-js/gossiplog"
 
@@ -10,15 +11,7 @@ import { assert } from "@canvas-js/utils"
 
 import { ExecutionContext } from "../ExecutionContext.js"
 
-import {
-	decodeRecordValue,
-	encodeRecordKey,
-	encodeRecordValue,
-	getRecordId,
-	isAction,
-	isSession,
-	isSnapshot,
-} from "../utils.js"
+import { encodeRecordKey, encodeRecordValue, getRecordId, isAction, isSession, isSnapshot } from "../utils.js"
 import { View } from "../View.js"
 
 export type WriteRecord = {
@@ -177,8 +170,7 @@ export abstract class AbstractRuntime {
 			const model = messageLog.db.models[modelName]
 
 			for (const value of values) {
-				const modelValue = decodeRecordValue(messageLog.db.config, modelName, value)
-				assert(modelValue !== null, "invalid snapshot - expected modelValue !== null")
+				const modelValue = cbor.decode<ModelValue>(value)
 
 				const primaryKey = model.primaryKey.map((name) => {
 					const key = modelValue[name]
