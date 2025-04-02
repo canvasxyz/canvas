@@ -334,9 +334,47 @@ export class ModelAPI {
 
 		await this.prepareProperty(property, columnDefinitions, false)
 
-		const defaultValues = this.codecs[property.name].encode(defaultPropertyValue)
-		const alter = columnDefinitions.map((column, i) => `ADD COLUMN ${column} DEFAULT $${i + 1}`)
-		await this.client.query(`ALTER TABLE "${this.table}" ${alter.join(", ")}`, defaultValues)
+		let targetProperties: PrimitiveProperty[]
+		if (property.kind === "primitive") {
+			targetProperties = [property]
+		} else if (property.kind === "reference") {
+			targetProperties = this.config.primaryKeys[property.target]
+		} else if (property.kind === "relation") {
+			targetProperties = this.config.primaryKeys[property.target]
+		} else {
+			signalInvalidType(property)
+		}
+
+		const defaultValues = this.codecs[property.name].encode(defaultPropertyValue).map((value, i) => {
+			if (value === null) {
+				return "NULL"
+			} else if (typeof value === "boolean") {
+				return value ? "TRUE" : "FALSE"
+			} else if (typeof value === "number") {
+				return value.toString()
+			} else if (typeof value === "string") {
+				if (targetProperties[i].type === "integer") {
+					return value
+				} else if (targetProperties[i].type === "string") {
+					return quote(value.replace(/'/g, "''"))
+				} else {
+					throw new Error("internal error - unexpected string value")
+				}
+			} else if (value instanceof Uint8Array) {
+				const hex = Array.from(value)
+					.map((byte) => byte.toString(16).padStart(2, "0"))
+					.join("")
+				return `E'\\x${hex}'`
+			} else {
+				signalInvalidType(value)
+			}
+		})
+
+		const alter = Array.from(zip(columnDefinitions, defaultValues))
+			.map(([column, defaultValue]) => `ADD COLUMN ${column} DEFAULT ${defaultValue}`)
+			.join(", ")
+
+		await this.client.query(`ALTER TABLE "${this.table}" ${alter}`)
 		this.prepareStatements()
 	}
 
