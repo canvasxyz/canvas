@@ -45,26 +45,3 @@ export async function* encodeEvents(source: AsyncIterable<Event>) {
 		yield Event.encode(event)
 	}
 }
-
-export const initialUpgradeSchema = {
-	$messages: {
-		id: "primary",
-		signature: "json",
-		message: "json",
-		hash: "string",
-		clock: "integer",
-		branch: "integer",
-		$indexes: ["clock", "branch"],
-	},
-	$heads: { id: "primary" },
-	$ancestors: { id: "primary", links: "json" },
-	$branch_merges: {
-		id: "primary",
-		source_branch: "integer",
-		source_clock: "integer",
-		source_message_id: "string",
-		target_branch: "integer",
-		target_clock: "integer",
-		target_message_id: "string",
-	},
-} satisfies ModelSchema

@@ -21,6 +21,7 @@ import { AbortError, MessageNotFoundError, MissingParentError } from "@canvas-js
 import * as sync from "@canvas-js/gossiplog/sync"
 
 import target from "#target"
+import { baseVersion, namespace, upgrade, version } from "#migrations"
 
 import { SyncSnapshot } from "./interface.js"
 import { AncestorIndex } from "./AncestorIndex.js"
@@ -81,8 +82,8 @@ export type ReplayRecord = {
 export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends TypedEventEmitter<
 	GossipLogEvents<Payload, Result>
 > {
-	public static namespace = "gossiplog"
-	public static version = 4
+	public static namespace = namespace
+	public static version = version
 
 	public static schema = {
 		$messages: {
@@ -101,55 +102,6 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		},
 		...AncestorIndex.schema,
 	} satisfies ModelSchema
-
-	protected static baseVersion = { [AbstractGossipLog.namespace]: AbstractGossipLog.version }
-
-	protected static async upgrade(
-		upgradeAPI: DatabaseUpgradeAPI,
-		oldConfig: Config,
-		oldVersion: Record<string, number>,
-		newVersion: Record<string, number>,
-	): Promise<boolean> {
-		let replayRequired = false
-		const log = logger("canvas:gossiplog:upgrade")
-
-		const version = oldVersion[AbstractGossipLog.namespace] ?? 0
-		log("found gossiplog version %d", version)
-
-		if (version <= 1) {
-			log("removing index 'branch' from $messages")
-			await upgradeAPI.removeIndex("$messages", "branch")
-			log("removing index 'property' from $messages")
-			await upgradeAPI.removeProperty("$messages", "branch")
-			log("deleting model $branch_merges")
-			await upgradeAPI.deleteModel("$branch_merges")
-		}
-
-		if (version <= 2) {
-			log("creating model $replays")
-			await upgradeAPI.createModel("$replays", {
-				timestamp: "primary",
-				cursor: "string?",
-				$indexes: ["cursor"],
-			})
-		}
-
-		if (version <= 3) {
-			log("deleting model $ancestors")
-			await upgradeAPI.deleteModel("$ancestors")
-			log("creating model $ancestors")
-			await upgradeAPI.createModel("$ancestors", {
-				$primary: "key/clock",
-				key: "bytes",
-				clock: "integer",
-				links: "bytes",
-			})
-
-			replayRequired = true
-		}
-
-		return replayRequired
-	}
 
 	public readonly topic: string
 	public readonly signer: Signer<Payload>

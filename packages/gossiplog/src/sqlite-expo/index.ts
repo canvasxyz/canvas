@@ -2,8 +2,9 @@ import { Tree, Mode } from "@canvas-js/okra"
 import { Tree as MemoryTree } from "@canvas-js/okra-memory"
 import { ModelDB } from "@canvas-js/modeldb-sqlite-expo"
 
+import { baseVersion, upgrade, initialUpgradeVersion, initialUpgradeSchema } from "#migrations"
+
 import { AbstractGossipLog, GossipLogInit } from "../AbstractGossipLog.js"
-import { initialUpgradeSchema } from "../utils.js"
 
 export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 	public static async open<Payload>({
@@ -12,13 +13,13 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 	}: { directory?: string | null; clear?: boolean } & GossipLogInit<Payload>) {
 		let replayRequired = false
 		const models = { ...init.schema, ...AbstractGossipLog.schema }
-		const version = Object.assign(init.version ?? {}, AbstractGossipLog.baseVersion)
+		const version = Object.assign(init.version ?? {}, baseVersion)
 
 		const db = await ModelDB.open(null, {
 			models: models,
 			version: version,
 			upgrade: async (upgradeAPI, oldConfig, oldVersion, newVersion) => {
-				await AbstractGossipLog.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion).then((result) => {
+				await upgrade(upgradeAPI, oldConfig, oldVersion, newVersion).then((result) => {
 					replayRequired ||= result
 				})
 
@@ -27,9 +28,7 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 				})
 			},
 			initialUpgradeSchema: Object.assign(init.initialUpgradeSchema ?? { ...models }, initialUpgradeSchema),
-			initialUpgradeVersion: Object.assign(init.initialUpgradeVersion ?? { ...version }, {
-				[AbstractGossipLog.namespace]: 1,
-			}),
+			initialUpgradeVersion: Object.assign(init.initialUpgradeVersion ?? { ...version }, initialUpgradeVersion),
 		})
 
 		const tree = new MemoryTree({ mode: Mode.Index })

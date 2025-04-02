@@ -8,9 +8,10 @@ import { ModelDB, ModelDBProxy } from "@canvas-js/modeldb-durable-objects"
 import { Unstable_DevWorker } from "wrangler"
 import { SqlStorage } from "@cloudflare/workers-types"
 
+import { baseVersion, upgrade, initialUpgradeVersion, initialUpgradeSchema } from "#migrations"
+
 import { AbstractGossipLog, GossipLogInit } from "../AbstractGossipLog.js"
 import { MerkleIndex } from "../MerkleIndex.js"
-import { initialUpgradeSchema } from "../utils.js"
 
 export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 	public static async open<Payload>({
@@ -33,13 +34,13 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 			await mdb.initialize()
 		} else if (!useTestProxy && db) {
 			const models = { ...init.schema, ...AbstractGossipLog.schema }
-			const version = Object.assign(init.version ?? {}, AbstractGossipLog.baseVersion)
+			const version = Object.assign(init.version ?? {}, baseVersion)
 
 			mdb = await ModelDB.open(db, {
 				models: models,
 				version: version,
 				upgrade: async (upgradeAPI, oldConfig, oldVersion, newVersion) => {
-					await AbstractGossipLog.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion).then((result) => {
+					await upgrade(upgradeAPI, oldConfig, oldVersion, newVersion).then((result) => {
 						replayRequired ||= result
 					})
 
@@ -48,9 +49,7 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 					})
 				},
 				initialUpgradeSchema: Object.assign(init.initialUpgradeSchema ?? { ...models }, initialUpgradeSchema),
-				initialUpgradeVersion: Object.assign(init.initialUpgradeVersion ?? { ...version }, {
-					[AbstractGossipLog.namespace]: 1,
-				}),
+				initialUpgradeVersion: Object.assign(init.initialUpgradeVersion ?? { ...version }, initialUpgradeVersion),
 			})
 		} else {
 			throw new Error("must provide db or worker && useTestProxy")

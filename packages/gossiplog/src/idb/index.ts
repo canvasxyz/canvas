@@ -5,9 +5,10 @@ import { Tree as MemoryTree } from "@canvas-js/okra-memory"
 
 import { ModelDB } from "@canvas-js/modeldb-idb"
 
+import { baseVersion, upgrade, initialUpgradeVersion, initialUpgradeSchema } from "#migrations"
+
 import { AbstractGossipLog, GossipLogInit } from "../AbstractGossipLog.js"
 import { MerkleIndex } from "../MerkleIndex.js"
-import { initialUpgradeSchema } from "../utils.js"
 
 export interface Options {
 	name?: string
@@ -17,12 +18,12 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 	public static async open<Payload>({ name, ...init }: GossipLogInit<Payload> & Options) {
 		let replayRequired = false
 		const models = { ...init.schema, ...AbstractGossipLog.schema }
-		const version = Object.assign(init.version ?? {}, AbstractGossipLog.baseVersion)
+		const version = Object.assign(init.version ?? {}, baseVersion)
 		const db = await ModelDB.open(name ?? `canvas/v1/${init.topic}`, {
 			models: models,
 			version: version,
 			upgrade: async (upgradeAPI, oldConfig, oldVersion, newVersion) => {
-				await AbstractGossipLog.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion).then((result) => {
+				await upgrade(upgradeAPI, oldConfig, oldVersion, newVersion).then((result) => {
 					replayRequired ||= result
 				})
 
@@ -31,9 +32,7 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 				})
 			},
 			initialUpgradeSchema: Object.assign(init.initialUpgradeSchema ?? { ...models }, initialUpgradeSchema),
-			initialUpgradeVersion: Object.assign(init.initialUpgradeVersion ?? { ...version }, {
-				[AbstractGossipLog.namespace]: 1,
-			}),
+			initialUpgradeVersion: Object.assign(init.initialUpgradeVersion ?? { ...version }, initialUpgradeVersion),
 		})
 
 		const messageCount = await db.count("$messages")
