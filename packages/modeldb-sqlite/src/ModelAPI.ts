@@ -1,6 +1,6 @@
 import { Database } from "better-sqlite3"
 
-import { assert, signalInvalidType, mapValues } from "@canvas-js/utils"
+import { assert, signalInvalidType, mapValues, zip } from "@canvas-js/utils"
 
 import {
 	Property,
@@ -18,6 +18,7 @@ import {
 	isLiteralExpression,
 	isRangeExpression,
 	validateModelValue,
+	PropertyValue,
 } from "@canvas-js/modeldb"
 
 import { RelationAPI } from "./RelationAPI.js"
@@ -212,14 +213,34 @@ export class ModelAPI {
 		}
 	}
 
-	public async addProperty(property: Property) {
+	public async addProperty(property: Property, defaultPropertyValue: PropertyValue) {
 		/** SQL column declarations */
 		const columnDefinitions: string[] = []
 
 		this.prepareProperty(property, columnDefinitions, false)
 
-		const alter = columnDefinitions.map((column) => `ADD COLUMN ${column}`)
-		this.db.exec(`ALTER TABLE "${this.table}" ${alter.join(", ")}`)
+		const defaultValues = this.codecs[property.name].encode(defaultPropertyValue).map((value) => {
+			if (value === null) {
+				return "NULL"
+			} else if (typeof value === "number") {
+				return value.toString()
+			} else if (typeof value === "string") {
+				return quote(value.replace(/'/g, "''"))
+			} else if (value instanceof Uint8Array) {
+				const hex = Array.from(value)
+					.map((byte) => byte.toString(16).padStart(2, "0"))
+					.join("")
+				return `X'${hex}'`
+			} else {
+				signalInvalidType(value)
+			}
+		})
+
+		const alter = Array.from(zip(columnDefinitions, defaultValues))
+			.map(([column, defaultValue]) => `ADD COLUMN ${column} DEFAULT ${defaultValue}`)
+			.join(", ")
+
+		this.db.exec(`ALTER TABLE "${this.table}" ${alter}`)
 
 		this.#statements = this.prepareStatements()
 	}

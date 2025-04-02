@@ -286,14 +286,7 @@ export class Config {
 		}
 
 		if (property.kind === "primitive") {
-			if (!property.nullable) {
-				throw new Error(`failed to add property "${propertyName}" - added properties must be nullable`)
-			}
 		} else if (property.kind === "reference") {
-			if (!property.nullable) {
-				throw new Error(`failed to add property "${propertyName}" - added properties must be nullable`)
-			}
-
 			if (!this.models.some((model) => model.name === property.target)) {
 				throw new Error(`failed to add property "${propertyName}" - invalid reference target "${property.target}"`)
 			}

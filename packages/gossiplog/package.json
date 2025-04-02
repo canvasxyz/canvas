@@ -30,6 +30,7 @@
 		"./protocols/events": "./lib/protocols/events.js"
 	},
 	"imports": {
+		"#migrations": "./lib/migrations.js",
 		"#target": {
 			"browser": "./lib/targets/browser/index.js",
 			"node": "./lib/targets/node/index.js",

@@ -1,4 +1,5 @@
 import fs from "node:fs"
+import { resolve } from "node:path"
 
 import { Tree, Mode } from "@canvas-js/okra"
 import { Tree as PersistentTree } from "@canvas-js/okra-lmdb"
@@ -7,9 +8,8 @@ import { Tree as MemoryTree } from "@canvas-js/okra-memory"
 import { ModelDBInit } from "@canvas-js/modeldb"
 import { ModelDB } from "@canvas-js/modeldb-sqlite"
 
+import { upgrade, baseVersion, initialUpgradeVersion, initialUpgradeSchema } from "#migrations"
 import { AbstractGossipLog, GossipLogInit } from "../AbstractGossipLog.js"
-import { initialUpgradeSchema } from "../utils.js"
-import { resolve } from "node:path"
 
 export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 	public static async open<Payload>(
@@ -17,7 +17,7 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 		init: GossipLogInit<Payload>,
 	): Promise<GossipLog<Payload>> {
 		const models = { ...init.schema, ...AbstractGossipLog.schema }
-		const version = Object.assign(init.version ?? {}, AbstractGossipLog.baseVersion)
+		const version = Object.assign(init.version ?? {}, baseVersion)
 
 		if (directory === null) {
 			const db = await ModelDB.open(null, { models, version })
@@ -29,7 +29,7 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 				models: models,
 				version: version,
 				upgrade: async (upgradeAPI, oldConfig, oldVersion, newVersion) => {
-					await AbstractGossipLog.upgrade(upgradeAPI, oldConfig, oldVersion, newVersion).then((result) => {
+					await upgrade(upgradeAPI, oldConfig, oldVersion, newVersion).then((result) => {
 						replayRequired ||= result
 					})
 
@@ -39,9 +39,7 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 				},
 
 				initialUpgradeSchema: Object.assign(init.initialUpgradeSchema ?? { ...models }, initialUpgradeSchema),
-				initialUpgradeVersion: Object.assign(init.initialUpgradeVersion ?? { ...version }, {
-					[AbstractGossipLog.namespace]: 1,
-				}),
+				initialUpgradeVersion: Object.assign(init.initialUpgradeVersion ?? { ...version }, initialUpgradeVersion),
 			}
 
 			if (!fs.existsSync(directory)) {
