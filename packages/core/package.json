@@ -61,7 +61,7 @@
 		"esbuild-wasm": "^0.25.1",
 		"ethers": "^6.13.5",
 		"express": "^4.21.2",
-		"express-async-handler": "^1.2.0",
+		"express-async-errors": "^3.1.1",
 		"express-ipld": "^0.0.1",
 		"http-status-codes": "^2.3.0",
 		"multiformats": "^13.3.2",
