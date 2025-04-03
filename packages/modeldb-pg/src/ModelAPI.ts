@@ -14,11 +14,12 @@ import {
 	Config,
 	PrimaryKeyValue,
 	PropertyAPI,
+	PropertyValue,
 	isNotExpression,
 	isLiteralExpression,
 	isRangeExpression,
 	validateModelValue,
-	PropertyValue,
+	isRelationValue,
 } from "@canvas-js/modeldb"
 
 import { RelationAPI } from "./RelationAPI.js"
@@ -345,37 +346,44 @@ export class ModelAPI {
 			signalInvalidType(property)
 		}
 
-		const defaultValues = this.codecs[property.name].encode(defaultPropertyValue).map((value, i) => {
-			if (value === null) {
-				return "NULL"
-			} else if (typeof value === "boolean") {
-				return value ? "TRUE" : "FALSE"
-			} else if (typeof value === "number") {
-				return value.toString()
-			} else if (typeof value === "string") {
-				if (targetProperties[i].type === "integer") {
-					return value
-				} else if (targetProperties[i].type === "string") {
-					return quote(value.replace(/'/g, "''"))
+		if (property.kind === "primitive" || property.kind === "reference") {
+			const defaultValues = this.codecs[property.name].encode(defaultPropertyValue).map((value, i) => {
+				if (value === null) {
+					return "NULL"
+				} else if (typeof value === "boolean") {
+					return value ? "TRUE" : "FALSE"
+				} else if (typeof value === "number") {
+					return value.toString()
+				} else if (typeof value === "string") {
+					if (targetProperties[i].type === "integer") {
+						return value
+					} else if (targetProperties[i].type === "string") {
+						return quote(value.replace(/'/g, "''"))
+					} else {
+						throw new Error("internal error - unexpected string value")
+					}
+				} else if (value instanceof Uint8Array) {
+					const hex = Array.from(value)
+						.map((byte) => byte.toString(16).padStart(2, "0"))
+						.join("")
+					return `E'\\x${hex}'`
 				} else {
-					throw new Error("internal error - unexpected string value")
+					signalInvalidType(value)
 				}
-			} else if (value instanceof Uint8Array) {
-				const hex = Array.from(value)
-					.map((byte) => byte.toString(16).padStart(2, "0"))
-					.join("")
-				return `E'\\x${hex}'`
-			} else {
-				signalInvalidType(value)
-			}
-		})
+			})
 
-		const alter = Array.from(zip(columnDefinitions, defaultValues))
-			.map(([column, defaultValue]) => `ADD COLUMN ${column} DEFAULT ${defaultValue}`)
-			.join(", ")
+			const alter = Array.from(zip(columnDefinitions, defaultValues))
+				.map(([column, defaultValue]) => `ADD COLUMN ${column} DEFAULT ${defaultValue}`)
+				.join(", ")
 
-		await this.client.query(`ALTER TABLE "${this.table}" ${alter}`)
-		this.prepareStatements()
+			await this.client.query(`ALTER TABLE "${this.table}" ${alter}`)
+			this.prepareStatements()
+		} else if (property.kind === "relation") {
+			assert(isRelationValue(defaultPropertyValue), "invalid default value - expected array of primary keys")
+			assert(defaultPropertyValue.length === 0, "default value for relations must be the empty array")
+		} else {
+			signalInvalidType(property)
+		}
 	}
 
 	public async removeProperty(propertyName: string) {
