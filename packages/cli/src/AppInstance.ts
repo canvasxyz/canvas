@@ -59,13 +59,15 @@ export class AppInstance {
 	private network?: NetworkServer<any>
 	private server?: http.Server & stoppable.WithStop
 
-	static async initialize(
+	static async initialize({
+		topic, contract, location, config, onUpdateApp
+	}: {
 		topic: string,
 		contract: string,
 		location: string | null,
 		config: AppConfig,
 		onUpdateApp?: (contract: string, snapshot: Snapshot) => Promise<void>,
-	) {
+	}) {
 		AppInstance.printInitialization(topic, location)
 
 		const signers = [
@@ -255,7 +257,7 @@ export class AppInstance {
 			console.log(`Serving network explorer: ${chalk.bold(origin)}/explorer`)
 		} else if (this.config["network-explorer"]) {
 			console.log(`Serving network explorer: ${chalk.bold(origin)}`)
-			api.get("/explorer", (req, res) => {
+			api.get("/explorer", (_req, res) => {
 				res.redirect("/")
 			})
 		}
@@ -322,7 +324,7 @@ export class AppInstance {
 		return controller
 	}
 
-	public stop() {
+	public async stop() {
 		this.app?.stop()
 		this.network?.close()
 		this.wss?.close(() => this.server?.stop(() => console.log("[canvas] HTTP API server stopped.")))

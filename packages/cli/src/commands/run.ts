@@ -116,12 +116,10 @@ type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 export async function handler(args: Args) {
 	const { topic, contract, originalContract, location } = await getContractLocation(args)
 
-	const inMemory = location === null
-	let updatedContract = originalContract
+	// Reference used for keeping around the updated, pre-esbuild version of the running contract.
+	let updatedContract = originalContract	
 
-	// Validate admin address if provided
 	if (args.admin && args.admin !== "any") {
-		// Ethereum address validation (0x followed by 40 hex characters)
 		const ethAddressRegex = /^0x[a-fA-F0-9]{40}$/
 		if (!ethAddressRegex.test(args.admin)) {
 			console.error("Error: --admin must be a valid Ethereum address or 'any'")
@@ -129,18 +127,14 @@ export async function handler(args: Args) {
 		}
 	}
 
-	// TODO: Move this into commands/run.ts?
 	const bindInstanceAPIs = (instance: AppInstance) => {
 		// AppInstance should always have an api unless it was initialized with --disable-http-api
 		if (!instance.api) return
 
+		// Nonce for SIWE signing.
 		const nonce = crypto.randomBytes(32).toString("hex")
 
-		// Serve the contract info, used to create the AppInstance.
-		// This is outside the Canvas createAPI method because it includes admin data
-		// which wouldn't make sense to pass into the Canvas object... maybe it should be
-		// named something /api/instance?
-		instance.api.get("/api/contract", async (req, res) => {
+		instance.api.get("/api/contract", async (_req, res) => {
 			res.json({
 				inMemory: location === null,
 				originalContract: updatedContract,
@@ -155,7 +149,6 @@ export async function handler(args: Args) {
 			instance.api.post("/api/migrate", async (req, res) => {
 				const { newContract, changesets, address, signature, siweMessage } = req.body ?? {}
 
-				// Verify the request comes from the expected address, unless admin is "any"
 				if (address !== adminAddress && adminAddress !== "any") {
 					return res.status(403).json({
 						error: "Unauthorized: Only the configured admin address can perform migrations",
@@ -169,18 +162,14 @@ export async function handler(args: Args) {
 							error: "Missing signature or SIWE message",
 						})
 					}
-
-					// Parse and verify the SIWE message
 					const message = new SiweMessage(siweMessage)
 
-					// Verify that the message contains the nonce
 					if (!message.nonce || message.nonce !== nonce) {
 						return res.status(403).json({
 							error: "Invalid nonce in SIWE message",
 						})
 					}
 
-					// Get valid signature for the SIWE message
 					const recoveredAddress = verifyMessage(message.prepareMessage(), signature)
 					if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
 						return res.status(403).json({
@@ -195,12 +184,10 @@ export async function handler(args: Args) {
 						})
 					}
 
-					// Build the contract provided by the user
-					const { build } = await Canvas.buildContract(newContract)
-
 					// We're trusting the client to provide a `contract` file that can be written to disk.
 					// Since contract execution is containerized, we only need to enforce max contract sizes,
 					// and max heap sizes in the Node.js host, for this to be safe.
+					const { build } = await Canvas.buildContract(newContract)
 					if (location !== null) {
 						writeContract({
 							location,
@@ -210,7 +197,7 @@ export async function handler(args: Args) {
 						})
 					}
 
-					// In-memory contract changes will not be persisted, except in this updatedContract variable.
+					// In-memory contract changes will not be persisted, except in this variable.
 					updatedContract = newContract
 
 					console.log("[canvas] snapshotting and migrating app with changesets:", changesets)
@@ -222,13 +209,14 @@ export async function handler(args: Args) {
 							console.log("[canvas] Restarting...")
 							await instance.stop()
 
-							/** Restart the application, running the new, compiled contract */
+							// Restart the application, running the new, compiled contract.
 							setTimeout(async () => {
-								const instance = await AppInstance.initialize(topic, contract, location, args)
+								const instance = await AppInstance.initialize({ topic, contract, location, config: args })
 								bindInstanceAPIs(instance)
 							}, 0)
 						})
 						.catch((error) => {
+							console.error(error)
 							res.status(500).end()
 						})
 				} catch (error) {
@@ -241,7 +229,7 @@ export async function handler(args: Args) {
 		}
 	}
 
-	const instance = await AppInstance.initialize(topic, contract, location, args)
+	const instance = await AppInstance.initialize({ topic, contract, location, config: args })
 
 	bindInstanceAPIs(instance)
 
