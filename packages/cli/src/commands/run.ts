@@ -7,7 +7,7 @@ import { verifyMessage } from "ethers"
 
 dotenv.config()
 
-import { Canvas } from "@canvas-js/core"
+import { Canvas, hashSnapshot } from "@canvas-js/core"
 import { MAX_CONNECTIONS } from "@canvas-js/core/constants"
 import { Snapshot } from "@canvas-js/core"
 import { AppInstance } from "../AppInstance.js"
@@ -116,8 +116,9 @@ type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 export async function handler(args: Args) {
 	const { topic, contract, originalContract, location } = await getContractLocation(args)
 
-	// Reference used for keeping around the updated, pre-esbuild version of the running contract.
-	let updatedContract = originalContract	
+	let updatedContract: string = originalContract // updated, pre-esbuild version of the running contract
+	let updatedBuild: string = contract // updated, built version of the running contract
+	let updatedSnapshot: Snapshot | null = null // updated version of the snapshot
 
 	if (args.admin && args.admin !== "any") {
 		const ethAddressRegex = /^0x[a-fA-F0-9]{40}$/
@@ -141,6 +142,13 @@ export async function handler(args: Args) {
 				contract: instance.app.getContract().toString(),
 				admin: args.admin || false,
 				nonce: nonce,
+				snapshotHash: updatedSnapshot ? hashSnapshot(updatedSnapshot) : null,
+			})
+		})
+
+		instance.api.get("/api/snapshot", async (_req, res) => {
+			res.json({
+				snapshot: updatedSnapshot,
 			})
 		})
 
@@ -199,6 +207,7 @@ export async function handler(args: Args) {
 
 					// In-memory contract changes will not be persisted, except in this variable.
 					updatedContract = newContract
+					updatedBuild = build
 
 					console.log("[canvas] snapshotting and migrating app with changesets:", changesets)
 
@@ -209,9 +218,18 @@ export async function handler(args: Args) {
 							console.log("[canvas] Restarting...")
 							await instance.stop()
 
+							// TODO: persist the snapshot
+							updatedSnapshot = snapshot
+
 							// Restart the application, running the new, compiled contract.
 							setTimeout(async () => {
-								const instance = await AppInstance.initialize({ topic, contract, location, config: args })
+								const instance = await AppInstance.initialize({
+									topic,
+									contract: updatedBuild,
+									location,
+									snapshot,
+									config: args,
+								})
 								bindInstanceAPIs(instance)
 							}, 0)
 						})

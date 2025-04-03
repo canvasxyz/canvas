@@ -60,13 +60,19 @@ export class AppInstance {
 	private server?: http.Server & stoppable.WithStop
 
 	static async initialize({
-		topic, contract, location, config, onUpdateApp
+		topic,
+		contract,
+		snapshot,
+		location,
+		config,
+		onUpdateApp,
 	}: {
-		topic: string,
-		contract: string,
-		location: string | null,
-		config: AppConfig,
-		onUpdateApp?: (contract: string, snapshot: Snapshot) => Promise<void>,
+		topic: string
+		contract: string
+		snapshot?: Snapshot | null | undefined
+		location: string | null
+		config: AppConfig
+		onUpdateApp?: (contract: string, snapshot: Snapshot) => Promise<void>
 	}) {
 		AppInstance.printInitialization(topic, location)
 
@@ -80,7 +86,13 @@ export class AppInstance {
 			new SolanaSigner(),
 		]
 
-		const app = await Canvas.initialize({ path: process.env.DATABASE_URL ?? location, topic, contract, signers })
+		const app = await Canvas.initialize({
+			path: process.env.DATABASE_URL ?? location,
+			topic,
+			contract,
+			snapshot,
+			signers,
+		})
 		const instance = new AppInstance(app, config)
 
 		instance.setupLogging()
