@@ -170,22 +170,23 @@ export class Canvas<
 			let resultCount: number
 			let start: string | undefined = undefined
 			do {
-				const results: { id: string; message: Message<MessageType> }[] = await messageLog.db.query<{
-					id: string
-					message: Message<MessageType>
-				}>("$messages", {
-					limit,
-					select: { id: true, message: true },
-					where: { id: { gt: start } },
-					orderBy: { id: "asc" },
-				})
+				const results: { id: string; data: Uint8Array }[] = await messageLog.db.query<{ id: string; data: Uint8Array }>(
+					"$messages",
+					{
+						limit,
+						select: { id: true, data: true },
+						where: { id: { gt: start } },
+						orderBy: { id: "asc" },
+					},
+				)
 
 				resultCount = results.length
 
 				app.log("got page of %d messages", resultCount)
 
 				const effects: Effect[] = []
-				for (const { id, message } of results) {
+				for (const { id, data } of results) {
+					const { message } = messageLog.decode(data)
 					if (message.payload.type === "action") {
 						const { did, name, context } = message.payload
 						app.log("indexing action %s (name: %s, did: %s)", id, name, did)

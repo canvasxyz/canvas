@@ -66,10 +66,9 @@ export type GossipLogEvents<Payload = unknown, Result = any> = {
 	disconnect: CustomEvent<{ peer: string }>
 }
 
-export type MessageRecord<Payload> = {
+export type MessageRecord = {
 	id: string
-	signature: Signature
-	message: Message<Payload>
+	data: Uint8Array
 	hash: string
 	clock: number
 }
@@ -88,8 +87,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 	public static schema = {
 		$messages: {
 			id: "primary",
-			signature: "json",
-			message: "json",
+			data: "bytes",
 			hash: "string",
 			clock: "integer",
 			$indexes: ["clock"],
@@ -202,7 +200,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		const lowerBound: RangeExpression = { gt: cursor }
 		while (!this.controller.signal.aborted) {
 			this.log("fetching new page")
-			const results = await this.db.query<MessageRecord<Payload>>("$messages", {
+			const results = await this.db.query<MessageRecord>("$messages", {
 				orderBy: { id: "asc" },
 				where: { id: lowerBound },
 				limit: pageSize,
@@ -218,9 +216,9 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 
 			let [{ id: cursor }] = results
 			await this.tree.write(async (txn) => {
-				for (const { id, signature, message } of results) {
+				for (const { id, data } of results) {
 					this.log("replaying message %s", id)
-					const signedMessage = this.encode(signature, message)
+					const signedMessage = this.decode(data)
 					assert(signedMessage.id === id, "internal error - expected signedMessage.id === id")
 					await this.apply(txn, signedMessage)
 					cursor = id
@@ -304,41 +302,39 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 	}
 
 	public async get(id: string): Promise<SignedMessage<Payload, Result> | null> {
-		const record = await this.db.get<MessageRecord<Payload>>("$messages", id)
+		const record = await this.db.get<MessageRecord>("$messages", id)
 		if (record === null) {
 			return null
+		} else {
+			return this.decode(record.data)
 		}
-
-		const { signature, message } = record
-		return this.encode(signature, message)
 	}
 
 	public async getMessages(
 		range: { lt?: string; lte?: string; gt?: string; gte?: string; reverse?: boolean; limit?: number } = {},
-	): Promise<{ id: string; signature: Signature; message: Message<Payload> }[]> {
+	): Promise<SignedMessage<Payload>[]> {
 		const { reverse = false, limit, ...where } = range
-		return await this.db.query<{ id: string; signature: Signature; message: Message<Payload> }>("$messages", {
+		const records = await this.db.query<{ id: string; data: Uint8Array }>("$messages", {
 			where: { id: where },
-			select: { id: true, signature: true, message: true },
+			select: { id: true, data: true },
 			orderBy: { id: reverse ? "desc" : "asc" },
 			limit,
 		})
+
+		return records.map(({ data }) => this.decode(data))
 	}
 
 	public async *iterate(
 		range: { lt?: string; lte?: string; gt?: string; gte?: string; reverse?: boolean; limit?: number } = {},
 	): AsyncIterable<SignedMessage<Payload, Result>> {
 		const { reverse = false, limit, ...where } = range
-		for await (const row of this.db.iterate<{ id: string; signature: Signature; message: Message<Payload> }>(
-			"$messages",
-			{
-				where: { id: where },
-				select: { id: true, signature: true, message: true },
-				orderBy: { id: reverse ? "desc" : "asc" },
-				limit,
-			},
-		)) {
-			yield this.encode(row.signature, row.message)
+		for await (const row of this.db.iterate<{ id: string; data: Uint8Array }>("$messages", {
+			where: { id: where },
+			select: { id: true, data: true },
+			orderBy: { id: reverse ? "desc" : "asc" },
+			limit,
+		})) {
+			yield this.decode(row.data)
 		}
 	}
 
@@ -430,7 +426,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 
 		const hash = toString(hashEntry(key, value), "hex")
 
-		const messageRecord: MessageRecord<Payload> = { id, signature, message, hash, clock: message.clock }
+		const messageRecord: MessageRecord = { id, data: signedMessage.value, hash, clock: message.clock }
 
 		const effects: Effect[] = [
 			{ model: "$heads", operation: "set", value: { id } },
@@ -547,7 +543,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 					const values: Uint8Array[] = []
 					const ids = keys.map(decodeId)
 
-					const messageRecords = await this.db.getMany<MessageRecord<Payload>>("$messages", ids)
+					const messageRecords = await this.db.getMany<MessageRecord>("$messages", ids)
 
 					for (let i = 0; i < messageRecords.length; i++) {
 						const messageRecord = messageRecords[i]
@@ -555,11 +551,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 							throw new MessageNotFoundError(ids[i])
 						}
 
-						const { signature, message } = messageRecord
-						const signedMessage = this.encode(signature, message)
-
-						assert(equals(signedMessage.key, keys[i]), "invalid message key")
-						values.push(signedMessage.value)
+						values.push(messageRecord.data)
 					}
 
 					return values
