@@ -151,10 +151,10 @@ export class Canvas<
 		}
 
 		if (config.snapshot) {
-			if (!config.reset) {
-				throw new Error("snapshot must be provided with reset: true")
+			const [clock] = await messageLog.getClock()
+			if (clock === 0) {
+				await messageLog.append(config.snapshot)
 			}
-			await messageLog.append(config.snapshot)
 		}
 
 		const app = new Canvas<ModelsT, ActionsT>(signers, messageLog, runtime)

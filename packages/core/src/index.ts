@@ -1,6 +1,6 @@
 export * from "./Canvas.js"
 export * from "./CanvasLoadable.js"
 export * from "./types.js"
-export { Change as Changeset, hashContract, generateChangesets } from "./snapshot.js"
+export { Change as Changeset, hashContract, hashSnapshot, generateChangesets } from "./snapshot.js"
 export { Action, Session, Snapshot } from "@canvas-js/interfaces"
 export { NetworkClient } from "@canvas-js/gossiplog"
