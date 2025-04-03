@@ -63,6 +63,7 @@ export class AppInstance {
 		topic,
 		contract,
 		snapshot,
+		reset,
 		location,
 		config,
 		onUpdateApp,
@@ -70,6 +71,7 @@ export class AppInstance {
 		topic: string
 		contract: string
 		snapshot?: Snapshot | null | undefined
+		reset?: boolean
 		location: string | null
 		config: AppConfig
 		onUpdateApp?: (contract: string, snapshot: Snapshot) => Promise<void>
@@ -92,6 +94,7 @@ export class AppInstance {
 			contract,
 			snapshot,
 			signers,
+			reset,
 		})
 		const instance = new AppInstance(app, config)
 

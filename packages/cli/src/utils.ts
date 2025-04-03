@@ -14,6 +14,7 @@ export const BUNDLED_CONTRACT_FILENAME = "contract.canvas.js"
 export const ORIGINAL_CONTRACT_FILENAME = "contract.original.js"
 export const MANIFEST_FILENAME = "canvas.json"
 export const SNAPSHOT_FILENAME = "snapshot.bin"
+export const DB_FILENAME = "db.sqlite"
 
 export function writeContract(args: { location: string; topic: string; originalContract: string; build: string }) {
 	const location = args.location
@@ -31,11 +32,19 @@ export function writeContract(args: { location: string; topic: string; originalC
 	fs.writeFileSync(manifestPath, JSON.stringify({ version: 1, topic: args.topic }, null, "  "))
 }
 
-export function writeSnapshot(args: { location: string; snapshot: Snapshot }) {
+export async function writeSnapshot(args: { location: string; snapshot: Snapshot }) {
 	const location = args.location
 	const snapshotPath = path.resolve(location, SNAPSHOT_FILENAME)
+
 	console.log(`[canvas] Overwriting ${snapshotPath}`)
-	fs.writeFileSync(snapshotPath, cbor.encode(args.snapshot))
+	const encoded = cbor.encode(args.snapshot)
+
+	await new Promise((resolve) => fs.writeFile(snapshotPath, encoded, resolve))
+}
+
+export async function clearContractLocationDB(args: { location: string }) {
+	const sqlitePath = path.resolve(args.location, DB_FILENAME)
+	fs.unlinkSync(sqlitePath)
 }
 
 export async function getContractLocation(args: {
