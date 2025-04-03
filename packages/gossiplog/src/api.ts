@@ -2,6 +2,7 @@ import assert from "node:assert"
 
 import express from "express"
 import "express-async-errors"
+import * as cbor from "microcbor"
 
 import ipld from "express-ipld"
 import { StatusCodes } from "http-status-codes"
@@ -10,8 +11,12 @@ import * as json from "@ipld/dag-json"
 import type { Signature, Message } from "@canvas-js/interfaces"
 import type { RangeExpression } from "@canvas-js/modeldb"
 import {
+	AncestorRecord,
+	decodeId,
+	encodeId,
 	MessageId,
 	messageIdPattern,
+	MessageSet,
 	type AbstractGossipLog,
 	type MessageRecord,
 	type MessageSourceType,
@@ -78,8 +83,22 @@ export function createAPI<Payload>(gossipLog: AbstractGossipLog<Payload>): expre
 		assert(messageIdPattern.test(req.params.id), "invalid message ID")
 		const { key } = MessageId.encode(req.params.id)
 
-		// const links: {[]}
-		const links = await gossipLog.db.query("$ancestors", { where: { key }, orderBy: { clock: "asc" } })
+		const records = await gossipLog.db.query<AncestorRecord>("$ancestors", {
+			where: { key },
+			orderBy: { clock: "asc" },
+		})
+
+		return res.json(
+			records.map((record) => {
+				const links: string[] = []
+				for (const { id, clock } of MessageSet.decode(record.links)) {
+					assert(clock <= record.clock, "internal error - expected clock <= record.clock")
+					links.push(id)
+				}
+
+				return { clock: record.clock, links }
+			}),
+		)
 	})
 
 	const connectionURLs = new Set<string>()

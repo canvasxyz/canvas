@@ -1,4 +1,4 @@
-import * as cbor from "@ipld/dag-cbor"
+import * as cbor from "microcbor"
 
 import { MessageId } from "./MessageId.js"
 
