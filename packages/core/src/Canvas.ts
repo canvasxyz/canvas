@@ -169,10 +169,10 @@ export class Canvas<
 		}
 
 		if (config.snapshot) {
-			if (!config.reset) {
-				throw new Error("snapshot must be provided with reset: true")
+			const [clock, heads] = await messageLog.getClock()
+			if (clock === 1 && heads.length === 0) {
+				await messageLog.append(config.snapshot)
 			}
-			await messageLog.append(config.snapshot)
 		}
 
 		const app = new Canvas<ModelsT, ActionsT>(signers, messageLog, runtime)
@@ -429,7 +429,15 @@ export class Canvas<
 	public async stop() {
 		this.controller.abort()
 		await this.messageLog.close()
-		await this.runtime.close()
+
+		// Close the runtime. If we didn't manage ContractRuntime's QuickJS lifetimes correctly, it's possible
+		// this could result in an exception, which we shouldn't propagate, so we don't crash the CLI or app harness.
+		try {
+			await this.runtime.close()
+		} catch (err) {
+			console.error(err)
+		}
+
 		this.log("stopped")
 		this.dispatchEvent(new Event("stop"))
 	}

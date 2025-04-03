@@ -1,6 +1,7 @@
 import assert from "node:assert"
 
 import express from "express"
+import asyncHandler from "express-async-handler"
 import ipld from "express-ipld"
 import { StatusCodes } from "http-status-codes"
 import * as json from "@ipld/dag-json"
@@ -20,16 +21,22 @@ export function createAPI<Payload>(gossipLog: AbstractGossipLog<Payload>): expre
 
 	api.set("query parser", "simple")
 
-	api.get("/clock", async (req, res) => {
-		const [clock, parents] = await gossipLog.getClock()
-		return void res.json({ clock, parents })
-	})
+	api.get(
+		"/clock",
+		asyncHandler(async (req, res) => {
+			const [clock, parents] = await gossipLog.getClock()
+			return void res.json({ clock, parents })
+		}),
+	)
 
-	api.get("/messages/count", async (req, res) => {
-		const range = getRange(req)
-		const count = await gossipLog.db.count("$messages", { id: range })
-		return void res.json({ count })
-	})
+	api.get(
+		"/messages/count",
+		asyncHandler(async (req, res) => {
+			const range = getRange(req)
+			const count = await gossipLog.db.count("$messages", { id: range })
+			return void res.json({ count })
+		}),
+	)
 
 	api.get("/messages/:id", async (req, res) => {
 		const { id } = req.params
@@ -44,41 +51,51 @@ export function createAPI<Payload>(gossipLog: AbstractGossipLog<Payload>): expre
 		return void res.end(json.encode({ id, signature, message }))
 	})
 
-	api.get("/messages", async (req, res) => {
-		const [range, order, limit] = [getRange(req), getOrder(req), getLimit(req)]
+	api.get(
+		"/messages",
+		asyncHandler(async (req, res) => {
+			const [range, order, limit] = [getRange(req), getOrder(req), getLimit(req)]
 
-		const results = await gossipLog.db.query<MessageRecord<MessageSourceType>>("$messages", {
-			select: { id: true, signature: true, message: true },
-			where: { id: range },
-			orderBy: { id: order },
-			limit,
-		})
+			const results = await gossipLog.db.query<MessageRecord<MessageSourceType>>("$messages", {
+				select: { id: true, signature: true, message: true },
+				where: { id: range },
+				orderBy: { id: order },
+				limit,
+			})
 
-		res.writeHead(StatusCodes.OK, { "content-type": "application/json" })
-		return void res.end(json.encode(results))
-	})
+			res.writeHead(StatusCodes.OK, { "content-type": "application/json" })
+			return void res.end(json.encode(results))
+		}),
+	)
 
-	api.post("/messages", ipld(), async (req, res) => {
-		try {
-			const { signature, message }: { signature: Signature; message: Message<Payload> } = req.body
-			const signedMessage = gossipLog.encode(signature, message)
-			await gossipLog.insert(signedMessage)
-			res.status(StatusCodes.CREATED)
-			res.setHeader("Location", `messages/${signedMessage.id}`)
-			return void res.end()
-		} catch (e) {
-			console.error(e)
-			return void res.status(StatusCodes.BAD_REQUEST).end(`${e}`)
-		}
-	})
+	api.post(
+		"/messages",
+		ipld(),
+		asyncHandler(async (req, res) => {
+			try {
+				const { signature, message }: { signature: Signature; message: Message<Payload> } = req.body
+				const signedMessage = gossipLog.encode(signature, message)
+				await gossipLog.insert(signedMessage)
+				res.status(StatusCodes.CREATED)
+				res.setHeader("Location", `messages/${signedMessage.id}`)
+				return void res.end()
+			} catch (e) {
+				console.error(e)
+				return void res.status(StatusCodes.BAD_REQUEST).end(`${e}`)
+			}
+		}),
+	)
 
-	api.get("/ancestors/:id", async (req, res) => {
-		assert(messageIdPattern.test(req.params.id), "invalid message ID")
-		const { key } = MessageId.encode(req.params.id)
+	api.get(
+		"/ancestors/:id",
+		asyncHandler(async (req, res) => {
+			assert(messageIdPattern.test(req.params.id), "invalid message ID")
+			const { key } = MessageId.encode(req.params.id)
 
-		// const links: {[]}
-		const links = await gossipLog.db.query("$ancestors", { where: { key }, orderBy: { clock: "asc" } })
-	})
+			// const links: {[]}
+			const links = await gossipLog.db.query("$ancestors", { where: { key }, orderBy: { clock: "asc" } })
+		}),
+	)
 
 	const connectionURLs = new Set<string>()
 	gossipLog.addEventListener("connect", ({ detail: { peer } }) => connectionURLs.add(peer))

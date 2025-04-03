@@ -162,6 +162,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 	public async close() {
 		this.log("closing")
 		this.controller.abort()
+		await new Promise((resolve) => setTimeout(resolve, 0))
 		await this.tree.close()
 		await this.db.close()
 	}

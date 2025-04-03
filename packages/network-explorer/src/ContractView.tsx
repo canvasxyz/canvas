@@ -253,7 +253,7 @@ export const ContractView = () => {
 									setEditorView(view)
 								}}
 								readOnly={contractData?.admin ? false : true}
-								onBuild={(state, view) => {
+								onBuild={(state, _view) => {
 									const syntheticEvent = {
 										preventDefault: () => {},
 									} as React.MouseEvent<HTMLButtonElement>

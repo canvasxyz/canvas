@@ -2,16 +2,19 @@ import fs from "node:fs"
 import path from "node:path"
 import process from "node:process"
 
+import * as cbor from "@ipld/dag-cbor"
 import { bytesToHex } from "@noble/hashes/utils"
 import { sha256 } from "@noble/hashes/sha256"
 import chalk from "chalk"
 import prompts from "prompts"
 
-import { Canvas } from "@canvas-js/core"
+import { Canvas, Snapshot } from "@canvas-js/core"
 
 export const BUNDLED_CONTRACT_FILENAME = "contract.canvas.js"
 export const ORIGINAL_CONTRACT_FILENAME = "contract.original.js"
 export const MANIFEST_FILENAME = "canvas.json"
+export const SNAPSHOT_FILENAME = "snapshot.bin"
+export const DB_FILENAME = "db.sqlite"
 
 export function writeContract(args: { location: string; topic: string; originalContract: string; build: string }) {
 	const location = args.location
@@ -29,6 +32,21 @@ export function writeContract(args: { location: string; topic: string; originalC
 	fs.writeFileSync(manifestPath, JSON.stringify({ version: 1, topic: args.topic }, null, "  "))
 }
 
+export async function writeSnapshot(args: { location: string; snapshot: Snapshot }) {
+	const location = args.location
+	const snapshotPath = path.resolve(location, SNAPSHOT_FILENAME)
+
+	console.log(`[canvas] Overwriting ${snapshotPath}`)
+	const encoded = cbor.encode(args.snapshot)
+
+	await new Promise((resolve) => fs.writeFile(snapshotPath, encoded, resolve))
+}
+
+export async function clearContractLocationDB(args: { location: string }) {
+	const sqlitePath = path.resolve(args.location, DB_FILENAME)
+	fs.unlinkSync(sqlitePath)
+}
+
 export async function getContractLocation(args: {
 	path: string
 	topic?: string
@@ -39,11 +57,13 @@ export async function getContractLocation(args: {
 	originalContract: string
 	contract: string
 	location: string | null
+	snapshot?: Snapshot | null | undefined
 }> {
 	const location = path.resolve(args.path)
 	const contractPath = path.resolve(location, BUNDLED_CONTRACT_FILENAME)
 	const originalContractPath = path.resolve(location, ORIGINAL_CONTRACT_FILENAME)
 	const manifestPath = path.resolve(location, MANIFEST_FILENAME)
+	const snapshotPath = path.resolve(location, SNAPSHOT_FILENAME)
 
 	// Create the contract location only if --init is specified and the location
 	// doesn't already exist.
@@ -96,7 +116,9 @@ export async function getContractLocation(args: {
 		const manifest = fs.readFileSync(manifestPath, "utf-8")
 		const originalContract = fs.readFileSync(originalContractPath, "utf-8")
 		const { topic } = JSON.parse(manifest) as { topic: string }
-		return { topic, contract, originalContract, location: args.memory ? null : location }
+		const snapshot = fs.existsSync(snapshotPath) ? cbor.decode<Snapshot>(fs.readFileSync(snapshotPath)) : null
+
+		return { topic, contract, originalContract, location: args.memory ? null : location, snapshot }
 	} else if (location.endsWith(".js") || location.endsWith(".ts")) {
 		// Handle if the location exists and it's a file.
 		let contract = fs.readFileSync(location, "utf-8")

@@ -59,13 +59,23 @@ export class AppInstance {
 	private network?: NetworkServer<any>
 	private server?: http.Server & stoppable.WithStop
 
-	static async initialize(
-		topic: string,
-		contract: string,
-		location: string | null,
-		config: AppConfig,
-		onUpdateApp?: (contract: string, snapshot: Snapshot) => Promise<void>,
-	) {
+	static async initialize({
+		topic,
+		contract,
+		snapshot,
+		reset,
+		location,
+		config,
+		onUpdateApp,
+	}: {
+		topic: string
+		contract: string
+		snapshot?: Snapshot | null | undefined
+		reset?: boolean
+		location: string | null
+		config: AppConfig
+		onUpdateApp?: (contract: string, snapshot: Snapshot) => Promise<void>
+	}) {
 		AppInstance.printInitialization(topic, location)
 
 		const signers = [
@@ -78,7 +88,14 @@ export class AppInstance {
 			new SolanaSigner(),
 		]
 
-		const app = await Canvas.initialize({ path: process.env.DATABASE_URL ?? location, topic, contract, signers })
+		const app = await Canvas.initialize({
+			path: process.env.DATABASE_URL ?? location,
+			topic,
+			contract,
+			snapshot,
+			signers,
+			reset,
+		})
 		const instance = new AppInstance(app, config)
 
 		instance.setupLogging()
@@ -255,7 +272,7 @@ export class AppInstance {
 			console.log(`Serving network explorer: ${chalk.bold(origin)}/explorer`)
 		} else if (this.config["network-explorer"]) {
 			console.log(`Serving network explorer: ${chalk.bold(origin)}`)
-			api.get("/explorer", (req, res) => {
+			api.get("/explorer", (_req, res) => {
 				res.redirect("/")
 			})
 		}
@@ -296,6 +313,12 @@ export class AppInstance {
 		for (const action of actions) {
 			console.log(`└ ${action}`)
 		}
+
+		console.log("")
+		console.log("Models:")
+		for (const model of Object.keys(models)) {
+			console.log(`└ ${model}`)
+		}
 	}
 
 	private setupAbortController() {
@@ -322,10 +345,10 @@ export class AppInstance {
 		return controller
 	}
 
-	public stop() {
-		this.app?.stop()
-		this.network?.close()
-		this.wss?.close(() => this.server?.stop(() => console.log("[canvas] HTTP API server stopped.")))
+	public async stop() {
+		await this.app?.stop()
+		await this.network?.close()
+		await this.wss?.close(() => this.server?.stop(() => console.log("[canvas] HTTP API server stopped.")))
 	}
 
 	private getAnnounceMultiaddrs(config: AppConfig) {
