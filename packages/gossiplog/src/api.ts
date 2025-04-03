@@ -2,7 +2,6 @@ import assert from "node:assert"
 
 import express from "express"
 import "express-async-errors"
-import * as cbor from "microcbor"
 
 import ipld from "express-ipld"
 import { StatusCodes } from "http-status-codes"
@@ -11,15 +10,13 @@ import * as json from "@ipld/dag-json"
 import type { Signature, Message } from "@canvas-js/interfaces"
 import type { RangeExpression } from "@canvas-js/modeldb"
 import {
+	AbstractGossipLog,
+	MessageSourceType,
+	MessageRecord,
 	AncestorRecord,
-	decodeId,
-	encodeId,
 	MessageId,
-	messageIdPattern,
 	MessageSet,
-	type AbstractGossipLog,
-	type MessageRecord,
-	type MessageSourceType,
+	messageIdPattern,
 } from "@canvas-js/gossiplog"
 
 export function createAPI<Payload>(gossipLog: AbstractGossipLog<Payload>): express.Express {
