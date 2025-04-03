@@ -376,8 +376,6 @@ export class ModelAPI {
 				.map(([column, defaultValue]) => `ADD COLUMN ${column} DEFAULT ${defaultValue}`)
 				.join(", ")
 
-			console.log("ALTER:", alter)
-
 			await this.client.query(`ALTER TABLE "${this.table}" ${alter}`)
 			this.prepareStatements()
 		} else if (property.kind === "relation") {
