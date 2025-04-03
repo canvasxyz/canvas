@@ -16,8 +16,9 @@ import {
 	ModelInit,
 	PropertyType,
 	ModelDBInit,
-	getModelsFromInclude,
 	PropertyValue,
+	getModelsFromInclude,
+	isRelationValue,
 } from "@canvas-js/modeldb"
 
 import { ModelAPI } from "./ModelAPI.js"
@@ -375,6 +376,10 @@ export class ModelDB extends AbstractModelDB {
 		defaultPropertyValue: PropertyValue,
 	) {
 		const property = this.config.addProperty(modelName, propertyName, propertyType)
+		if (property.kind === "relation") {
+			assert(isRelationValue(defaultPropertyValue), "invalid default value - expected array of primary keys")
+			assert(defaultPropertyValue.length === 0, "default value for relations must be the empty array")
+		}
 
 		const model = this.config.models.find((model) => model.name === modelName)
 		assert(model !== undefined, "internal error")

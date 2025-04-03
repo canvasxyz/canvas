@@ -12,11 +12,12 @@ import {
 	Config,
 	PrimaryKeyValue,
 	PropertyAPI,
+	PropertyValue,
 	isNotExpression,
 	isLiteralExpression,
 	isRangeExpression,
 	validateModelValue,
-	PropertyValue,
+	isRelationValue,
 } from "@canvas-js/modeldb"
 
 import { RelationAPI } from "./RelationAPI.js"
@@ -220,30 +221,37 @@ export class ModelAPI {
 
 		this.prepareProperty(property, columnDefinitions, false)
 
-		const defaultValues = this.codecs[property.name].encode(defaultPropertyValue).map((value) => {
-			if (value === null) {
-				return "NULL"
-			} else if (typeof value === "number") {
-				return value.toString()
-			} else if (typeof value === "string") {
-				return quote(value.replace(/'/g, "''"))
-			} else if (value instanceof ArrayBuffer) {
-				const hex = Array.from(new Uint8Array(value))
-					.map((byte) => byte.toString(16).padStart(2, "0"))
-					.join("")
-				return `X'${hex}'`
-			} else {
-				signalInvalidType(value)
-			}
-		})
+		if (property.kind === "primitive" || property.kind === "reference") {
+			const defaultValues = this.codecs[property.name].encode(defaultPropertyValue).map((value) => {
+				if (value === null) {
+					return "NULL"
+				} else if (typeof value === "number") {
+					return value.toString()
+				} else if (typeof value === "string") {
+					return quote(value.replace(/'/g, "''"))
+				} else if (value instanceof ArrayBuffer) {
+					const hex = Array.from(new Uint8Array(value))
+						.map((byte) => byte.toString(16).padStart(2, "0"))
+						.join("")
+					return `X'${hex}'`
+				} else {
+					signalInvalidType(value)
+				}
+			})
 
-		const alter = Array.from(zip(columnDefinitions, defaultValues))
-			.map(([column, defaultValue]) => `ADD COLUMN ${column} DEFAULT ${defaultValue}`)
-			.join(", ")
+			const alter = Array.from(zip(columnDefinitions, defaultValues))
+				.map(([column, defaultValue]) => `ADD COLUMN ${column} DEFAULT ${defaultValue}`)
+				.join(", ")
 
-		this.db.exec(`ALTER TABLE "${this.table}" ${alter}`)
+			this.db.exec(`ALTER TABLE "${this.table}" ${alter}`)
 
-		this.#statements = this.prepareStatements()
+			this.#statements = this.prepareStatements()
+		} else if (property.kind === "relation") {
+			assert(isRelationValue(defaultPropertyValue), "invalid default value - expected array of primary keys")
+			assert(defaultPropertyValue.length === 0, "default value for relations must be the empty array")
+		} else {
+			signalInvalidType(property)
+		}
 	}
 
 	public removeProperty(propertyName: string) {
