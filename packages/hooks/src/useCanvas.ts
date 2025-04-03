@@ -3,12 +3,12 @@ import * as cbor from "@ipld/dag-cbor"
 import { Canvas, NetworkClient, ModelSchema, Config, Snapshot, Actions, hashContract } from "@canvas-js/core"
 
 /**
- * React hook for Canvas applications, using client-to-server sync.
+ * React hook for Canvas applications using client-to-server sync.
  *
  * @param url The wss:// endpoint to connect to.
  * @param config The application to run inside the hook. If `topic` and
  * `contract` are empty, this will fetch the application contract from
- * the URL, and live-update when the server contract is changed.
+ * `url`, and live-update the local app when the server contract changes.
  */
 export const useCanvas = <
 	ModelsT extends ModelSchema = ModelSchema,
@@ -23,8 +23,8 @@ export const useCanvas = <
 
 	// TODO: Ensure effect hook re-runs when signers are changed.
 	const localContractHashRef = useRef<string>() // Ref for last-rendered contractHash of a local application.
-	const remoteContractHashRef = useRef<Record<string, string>>({}) // Ref for last-rendered contractHash for remote applications.
 	const snapshotRef = useRef<Snapshot>() // Ref for caching a local application's snapshot.
+	const remoteContractHashRef = useRef<Record<string, string>>({}) // Ref for last-rendered contractHash for remote applications.
 	const renderedRef = useRef(false) // Ref for skipping extra render in React.StrictMode.
 
 	const contractHash = config && "contract" in config ? hashContract(config.contract) : null
@@ -72,10 +72,10 @@ export const useCanvas = <
 
 				const snapshot = contractInfo.snapshotHash
 					? await (async () => {
-						const response = await fetch(snapshotApi)
-						const buffer = await response.arrayBuffer()
-						return cbor.decode<Snapshot>(new Uint8Array(buffer))
-					})()
+							const response = await fetch(snapshotApi)
+							const buffer = await response.arrayBuffer()
+							return cbor.decode<Snapshot>(new Uint8Array(buffer))
+						})()
 					: null
 
 				let reset: boolean
