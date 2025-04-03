@@ -51,11 +51,16 @@ export function createAPI<Payload>(gossipLog: AbstractGossipLog<Payload>): expre
 	api.get("/messages", async (req, res) => {
 		const [range, order, limit] = [getRange(req), getOrder(req), getLimit(req)]
 
-		const results = await gossipLog.db.query<MessageRecord<MessageSourceType>>("$messages", {
-			select: { id: true, signature: true, message: true },
+		const records = await gossipLog.db.query<{ id: string; data: Uint8Array }>("$messages", {
+			select: { id: true, data: true },
 			where: { id: range },
 			orderBy: { id: order },
 			limit,
+		})
+
+		const results = records.map(({ data }) => {
+			const { id, signature, message } = gossipLog.decode(data)
+			return { id, signature, message }
 		})
 
 		res.writeHead(StatusCodes.OK, { "content-type": "application/json" })
