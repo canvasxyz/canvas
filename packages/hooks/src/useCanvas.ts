@@ -5,8 +5,9 @@ import { Canvas, NetworkClient, ModelSchema, Config, Snapshot, Actions, hashCont
  * React hook for Canvas applications, using client-to-server sync.
  *
  * @param url The wss:// endpoint to connect to.
- * @param config The application to run inside the hook. If `topic` and `contract` are left empty, this will fetch the application from the URL, and the local application will live-update when the server side application is changed.
- * @returns
+ * @param config The application to run inside the hook. If `topic` and
+ * `contract` are empty, this will fetch the application contract from
+ * the URL, and live-update when the server contract is changed.
  */
 export const useCanvas = <
 	ModelsT extends ModelSchema = ModelSchema,
@@ -31,7 +32,6 @@ export const useCanvas = <
 		if (renderedRef.current) return
 		renderedRef.current = true
 
-		// Assign a new application to the hook's state vars.
 		function assign(appUrl: string | null, app: Canvas<ModelsT, ActionsT>) {
 			if (url) {
 				app
@@ -51,7 +51,15 @@ export const useCanvas = <
 
 		if (contractHash === null) {
 			// Set up a remotely fetched application.
-			async function setupRemoteApplication([info, contractInfo]: [{ topic: string }, { contract: string }]) {
+			const httpRoot = url?.replace("ws://", "http://").replace("wss://", "https://")
+			const baseApi = `${httpRoot}/api`
+			const contractApi = `${httpRoot}/api/contract`
+			const snapshotApi = `${httpRoot}/api/snapshot`
+
+			async function setupRemoteApplication([info, contractInfo]: [
+				{ topic: string },
+				{ contract: string; snapshotHash: string },
+			]) {
 				if (config === undefined || "topic" in config || "contract" in config) {
 					console.error("Unexpected: Internal error (remote application)")
 					return
@@ -60,23 +68,31 @@ export const useCanvas = <
 				const topic = info.topic
 				const contract = contractInfo.contract
 				const remoteContractHash = hashContract(contractInfo.contract)
-				let reset: boolean
 
-				// TODO: Maybe the contract is already in IndexedDB?
-				// We should store the contract in ModelDB, and/or always include contractHash in the topic.
+				const snapshot = contractInfo.snapshotHash
+					? ((await (await fetch(snapshotApi)).json()).snapshot as Snapshot)
+					: null
+
+				let reset: boolean
 				if (remoteContractHashRef.current[topic] === undefined) {
-					reset = false
-				} else if (contractInfo.contract === remoteContractHashRef.current[topic]) {
+					// No matching contract used with this hook, but it's possible that we've run this
+					// app without this hook before, and have data in IndexedDB. Since the remote is
+					// the source of truth, clear IndexedDB and catch up to the remote using Merkle sync.
+					reset = true
+				} else if (remoteContractHashRef.current[topic] === contractInfo.contract) {
+					// A matching contract used with this hook before. We can't guarantee that IndexedDB
+					// isn't out of sync, but that's beyond our concern (something to fix in the future).
 					reset = false
 				} else {
+					// A different contract was used with this hook. Always reset IndexedDB.
 					reset = true
 				}
 
-				// TODO: Add a remote snapshot.
 				await Canvas.initialize<ModelsT, ActionsT>({
 					topic,
 					contract,
 					reset,
+					snapshot,
 					...config,
 				})
 					.then(assign.bind(null, url))
@@ -84,10 +100,6 @@ export const useCanvas = <
 						remoteContractHashRef.current[topic] = remoteContractHash
 					})
 			}
-
-			const httpRoot = url?.replace("ws://", "http://").replace("wss://", "https://")
-			const baseApi = `${httpRoot}/api`
-			const contractApi = `${httpRoot}/api/contract`
 
 			Promise.all([
 				fetch(baseApi).then((response) => response.json()),
