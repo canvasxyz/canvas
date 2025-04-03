@@ -10,8 +10,8 @@ import prompts from "prompts"
 
 import { Canvas, Snapshot } from "@canvas-js/core"
 
-export const BUNDLED_CONTRACT_FILENAME = "contract.canvas.js"
-export const ORIGINAL_CONTRACT_FILENAME = "contract.original.js"
+export const ORIGINAL_CONTRACT_FILENAME = "contract.canvas.js"
+export const BUNDLED_CONTRACT_FILENAME = "contract.build.js"
 export const MANIFEST_FILENAME = "canvas.json"
 export const SNAPSHOT_FILENAME = "snapshot.bin"
 export const DB_FILENAME = "db.sqlite"
@@ -47,6 +47,16 @@ export async function clearContractLocationDB(args: { location: string }) {
 	fs.unlinkSync(sqlitePath)
 }
 
+async function buildContract(originalContractPath: string, bundledContractPath: string) {
+	if (originalContractPath.endsWith(".js")) {
+		fs.copyFileSync(originalContractPath, bundledContractPath)
+	} else {
+		const { build: contractText, originalContract } = await Canvas.buildContractByLocation(originalContractPath)
+		console.log(chalk.yellow("[canvas] Bundled .ts contract:"), `${contractText.length} chars`)
+		fs.writeFileSync(bundledContractPath, contractText)
+	}
+}
+
 export async function getContractLocation(args: {
 	path: string
 	topic?: string
@@ -60,7 +70,7 @@ export async function getContractLocation(args: {
 	snapshot?: Snapshot | null | undefined
 }> {
 	const location = path.resolve(args.path)
-	const contractPath = path.resolve(location, BUNDLED_CONTRACT_FILENAME)
+	const bundledContractPath = path.resolve(location, BUNDLED_CONTRACT_FILENAME)
 	const originalContractPath = path.resolve(location, ORIGINAL_CONTRACT_FILENAME)
 	const manifestPath = path.resolve(location, MANIFEST_FILENAME)
 	const snapshotPath = path.resolve(location, SNAPSHOT_FILENAME)
@@ -73,19 +83,12 @@ export async function getContractLocation(args: {
 				console.error(chalk.yellow(`--topic is required upon initialization`))
 				process.exit(1)
 			}
-
 			console.log(`[canvas] Creating application directory ${location}`)
 			fs.mkdirSync(location)
-			console.log(`[canvas] Copying ${args.init} to ${contractPath}`)
-			if (args.init.endsWith(".js")) {
-				fs.copyFileSync(args.init, contractPath)
-				fs.copyFileSync(args.init, originalContractPath)
-			} else {
-				const { build: contractText, originalContract } = await Canvas.buildContractByLocation(args.init)
-				console.log(chalk.yellow("[canvas] Bundled .ts contract:"), `${contractText.length} chars`)
-				fs.writeFileSync(contractPath, contractText)
-				fs.copyFileSync(args.init, originalContractPath)
-			}
+			console.log(`[canvas] Copying ${args.init} to ${originalContractPath}`)
+			fs.copyFileSync(args.init, originalContractPath)
+			console.log(`[canvas] Building ${args.init} to ${bundledContractPath}`)
+			await buildContract(args.init, bundledContractPath)
 			console.log(`[canvas] Creating ${manifestPath}`)
 			fs.writeFileSync(manifestPath, JSON.stringify({ version: 1, topic: args.topic }, null, "  "))
 		} else {
@@ -97,9 +100,14 @@ export async function getContractLocation(args: {
 	const stat = fs.statSync(location)
 	if (stat.isDirectory()) {
 		// Handle if the location exists and it's a directory.
-		if (!fs.existsSync(contractPath)) {
-			console.error(chalk.yellow(`No contract found at ${contractPath}`))
+		if (!fs.existsSync(originalContractPath)) {
+			console.error(chalk.yellow(`No contract found at ${originalContractPath}`))
 			process.exit(1)
+		}
+
+		if (!fs.existsSync(bundledContractPath)) {
+			console.error(chalk.yellow(`No contract found at ${bundledContractPath}, rebuilding`))
+			await buildContract(originalContractPath, bundledContractPath)
 		}
 
 		if (!fs.existsSync(manifestPath)) {
@@ -107,14 +115,14 @@ export async function getContractLocation(args: {
 				console.log(`[canvas] Creating ${manifestPath}`)
 				fs.writeFileSync(manifestPath, JSON.stringify({ version: 1, topic: args.topic }))
 			} else {
-				console.error(chalk.yellow(`No manfiest found at ${manifestPath}`))
+				console.error(chalk.yellow(`No manifest found at ${manifestPath}`))
 				process.exit(1)
 			}
 		}
 
-		const contract = fs.readFileSync(contractPath, "utf-8")
-		const manifest = fs.readFileSync(manifestPath, "utf-8")
 		const originalContract = fs.readFileSync(originalContractPath, "utf-8")
+		const contract = fs.readFileSync(bundledContractPath, "utf-8")
+		const manifest = fs.readFileSync(manifestPath, "utf-8")
 		const { topic } = JSON.parse(manifest) as { topic: string }
 		const snapshot = fs.existsSync(snapshotPath) ? cbor.decode<Snapshot>(fs.readFileSync(snapshotPath)) : null
 
