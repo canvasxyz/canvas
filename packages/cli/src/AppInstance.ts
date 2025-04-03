@@ -298,6 +298,12 @@ export class AppInstance {
 		for (const action of actions) {
 			console.log(`└ ${action}`)
 		}
+
+		console.log("")
+		console.log("Models:")
+		for (const model of Object.keys(models)) {
+			console.log(`└ ${model}`)
+		}
 	}
 
 	private setupAbortController() {
@@ -325,9 +331,9 @@ export class AppInstance {
 	}
 
 	public async stop() {
-		this.app?.stop()
-		this.network?.close()
-		this.wss?.close(() => this.server?.stop(() => console.log("[canvas] HTTP API server stopped.")))
+		await this.app?.stop()
+		await this.network?.close()
+		await this.wss?.close(() => this.server?.stop(() => console.log("[canvas] HTTP API server stopped.")))
 	}
 
 	private getAnnounceMultiaddrs(config: AppConfig) {
