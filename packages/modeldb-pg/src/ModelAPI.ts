@@ -366,7 +366,7 @@ export class ModelAPI {
 					const hex = Array.from(value)
 						.map((byte) => byte.toString(16).padStart(2, "0"))
 						.join("")
-					return `E'\\x${hex}'`
+					return `'\\x${hex}'::bytea`
 				} else {
 					signalInvalidType(value)
 				}

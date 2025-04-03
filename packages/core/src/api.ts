@@ -11,7 +11,7 @@ import { createAPI as createBaseAPI, getLimit, getOrder, getRange } from "@canva
 import { assert } from "@canvas-js/utils"
 
 import { Canvas } from "./Canvas.js"
-import { SignedMessage } from "@canvas-js/gossiplog"
+import { MessageRecord, SignedMessage } from "@canvas-js/gossiplog"
 import { WhereCondition } from "@canvas-js/modeldb"
 
 export interface APIOptions {}
@@ -43,20 +43,21 @@ export function createAPI(app: Canvas): express.Express {
 		assert(did === undefined || typeof did === "string", "invalid `did` query parameter")
 		assert(name === undefined || typeof name === "string", "invalid `name` query parameter")
 
-		type MessageRecord = { id: string; signature: Signature; message: Message<Action> }
-		const results: MessageRecord[] = []
+		type ActionResult = { id: string; signature: Signature; message: Message<Action> }
+		const results: ActionResult[] = []
 
 		const where = did !== undefined || name !== undefined ? { did, name } : { message_id: range }
 
 		const messageIds: string[] = (
 			await app.db.query("$actions", { select: { message_id: true }, where, limit, orderBy: { message_id: order } })
 		).map(({ message_id }) => message_id)
-		const signedMessages = await app.db.getMany<SignedMessage<Action>>("$messages", messageIds)
 
-		for (const signedMessage of signedMessages) {
-			assert(signedMessage !== null, "internal error - missing record in $messages")
-			const { signature, message } = signedMessage
-			results.push({ id: signedMessage.id, signature, message })
+		const messageRecords = await app.db.getMany<MessageRecord>("$messages", messageIds)
+
+		for (const messageRecord of messageRecords) {
+			assert(messageRecord !== null, "internal error - missing record in $messages")
+			const { id, signature, message } = app.messageLog.decode(messageRecord.data)
+			results.push({ id, signature, message: message as Message<Action> })
 		}
 
 		res.writeHead(StatusCodes.OK, { "content-type": "application/json" })
@@ -103,8 +104,8 @@ export function createAPI(app: Canvas): express.Express {
 			assert(Number.isSafeInteger(minExpiration), "invalid `minExpiration` query parameter")
 		}
 
-		type MessageRecord = { id: string; signature: Signature; message: Message<Session> }
-		const results: MessageRecord[] = []
+		type SessionResult = { id: string; signature: Signature; message: Message<Session> }
+		const results: SessionResult[] = []
 
 		const where: WhereCondition = { message_id: range }
 		if (did !== undefined) {
@@ -148,11 +149,12 @@ export function createAPI(app: Canvas): express.Express {
 			).map(({ message_id }) => message_id)
 		}
 
-		for (const id of messageIds) {
-			const signedMessage = await app.db.get<MessageRecord>("$messages", id)
-			assert(signedMessage !== null, "internal error - missing record in $messages")
-			const { signature, message } = signedMessage
-			results.push({ id, signature, message })
+		const messageRecords = await app.db.getMany<MessageRecord>("$messages", messageIds)
+
+		for (const messageRecord of messageRecords) {
+			assert(messageRecord !== null, "internal error - missing record in $messages")
+			const { id, signature, message } = app.messageLog.decode(messageRecord.data)
+			results.push({ id, signature, message: message as Message<Session> })
 		}
 
 		res.writeHead(StatusCodes.OK, { "content-type": "application/json" })
