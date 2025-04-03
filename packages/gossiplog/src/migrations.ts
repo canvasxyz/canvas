@@ -78,7 +78,6 @@ export async function upgrade(
 			log("got new page of %d records (cursor %s)", results.length, lowerBound.gt ?? null)
 
 			for (const { id, signature, message } of results) {
-				log("re-encoding message %s", id)
 				const signedMessage = SignedMessage.encode(signature, message)
 				assert(signedMessage.id === id, "internal error - expected signedMessage.id === id")
 				const clock = signedMessage.message.clock
