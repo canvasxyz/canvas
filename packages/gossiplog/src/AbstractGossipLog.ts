@@ -107,8 +107,8 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 	public readonly signer: Signer<Payload>
 	public readonly controller = new AbortController()
 
-	public abstract db: AbstractModelDB
-	public abstract tree: Tree
+	// public abstract db: AbstractModelDB
+	// public abstract tree: Tree
 
 	protected readonly log: Logger
 
@@ -117,7 +117,11 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 
 	readonly #apply: GossipLogConsumer<Payload, Result>
 
-	protected constructor(init: GossipLogInit<Payload, Result>) {
+	protected constructor(
+		public readonly db: AbstractModelDB,
+		public readonly tree: Tree,
+		init: GossipLogInit<Payload, Result>,
+	) {
 		super()
 		assert(
 			gossiplogTopicPattern.test(init.topic),

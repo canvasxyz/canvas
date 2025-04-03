@@ -1,7 +1,7 @@
 import fs from "node:fs"
 import { resolve } from "node:path"
 
-import { Tree, Mode } from "@canvas-js/okra"
+import { Mode } from "@canvas-js/okra"
 import { Tree as PersistentTree } from "@canvas-js/okra-lmdb"
 import { Tree as MemoryTree } from "@canvas-js/okra-memory"
 
@@ -63,10 +63,6 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 
 			return gossipLog
 		}
-	}
-
-	private constructor(public readonly db: ModelDB, public readonly tree: Tree, init: GossipLogInit<Payload>) {
-		super(init)
 	}
 
 	protected async rebuildMerkleIndex(): Promise<void> {

@@ -85,12 +85,4 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 
 		return gossipLog
 	}
-
-	private constructor(
-		public readonly db: ModelDB | ModelDBProxy,
-		public readonly tree: MemoryTree,
-		init: GossipLogInit<Payload>,
-	) {
-		super(init)
-	}
 }
