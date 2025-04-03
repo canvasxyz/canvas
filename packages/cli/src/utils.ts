@@ -48,11 +48,13 @@ export async function getContractLocation(args: {
 	originalContract: string
 	contract: string
 	location: string | null
+	snapshot?: Snapshot | null | undefined
 }> {
 	const location = path.resolve(args.path)
 	const contractPath = path.resolve(location, BUNDLED_CONTRACT_FILENAME)
 	const originalContractPath = path.resolve(location, ORIGINAL_CONTRACT_FILENAME)
 	const manifestPath = path.resolve(location, MANIFEST_FILENAME)
+	const snapshotPath = path.resolve(location, SNAPSHOT_FILENAME)
 
 	// Create the contract location only if --init is specified and the location
 	// doesn't already exist.
@@ -105,7 +107,9 @@ export async function getContractLocation(args: {
 		const manifest = fs.readFileSync(manifestPath, "utf-8")
 		const originalContract = fs.readFileSync(originalContractPath, "utf-8")
 		const { topic } = JSON.parse(manifest) as { topic: string }
-		return { topic, contract, originalContract, location: args.memory ? null : location }
+		const snapshot = fs.existsSync(snapshotPath) ? cbor.decode<Snapshot>(fs.readFileSync(snapshotPath)) : null
+
+		return { topic, contract, originalContract, location: args.memory ? null : location, snapshot }
 	} else if (location.endsWith(".js") || location.endsWith(".ts")) {
 		// Handle if the location exists and it's a file.
 		let contract = fs.readFileSync(location, "utf-8")

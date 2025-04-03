@@ -114,11 +114,11 @@ export const builder = (yargs: Argv) =>
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
-	const { topic, contract, originalContract, location } = await getContractLocation(args)
+	const { topic, contract, originalContract, location, snapshot } = await getContractLocation(args)
 
 	let updatedContract: string = originalContract // updated, pre-esbuild version of the running contract
 	let updatedBuild: string = contract // updated, built version of the running contract
-	let updatedSnapshot: Snapshot | null = null // updated version of the snapshot
+	let updatedSnapshot: Snapshot | null = snapshot ?? null // updated version of the snapshot
 
 	if (args.admin && args.admin !== "any") {
 		const ethAddressRegex = /^0x[a-fA-F0-9]{40}$/
@@ -249,7 +249,7 @@ export async function handler(args: Args) {
 		}
 	}
 
-	const instance = await AppInstance.initialize({ topic, contract, location, config: args })
+	const instance = await AppInstance.initialize({ topic, contract, location, snapshot, config: args })
 
 	bindInstanceAPIs(instance)
 
