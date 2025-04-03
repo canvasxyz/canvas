@@ -55,6 +55,20 @@ testPlatforms("insert concurrent messages", async (t, openGossipLog) => {
 	)
 })
 
+testPlatforms("clear messages", async (t, openGossipLog) => {
+	const topic = randomUUID()
+	const log = await openGossipLog(t, { topic, apply })
+
+	const signer = ed25519.create()
+	const { id: idA } = await log.append("foo", { signer })
+	await expectLogEntries(t, log, [[idA, signer.publicKey, { topic, clock: 1, parents: [], payload: "foo" }]])
+
+	await log.close()
+
+	const log2 = await openGossipLog(t, { topic, apply, clear: true })
+	await expectLogEntries(t, log2, [])
+})
+
 testPlatforms("append to multiple parents", async (t, openGossipLog) => {
 	const topic = randomUUID()
 	const log = await openGossipLog(t, { topic, apply })

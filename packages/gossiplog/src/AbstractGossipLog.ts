@@ -56,6 +56,7 @@ export interface GossipLogInit<Payload = unknown, Result = any> {
 	) => Promise<boolean>
 	initialUpgradeSchema?: ModelSchema
 	initialUpgradeVersion?: Record<string, number>
+	clear?: boolean
 }
 
 export type GossipLogEvents<Payload = unknown, Result = any> = {
