@@ -16,10 +16,12 @@ export interface Options {
 
 export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 	public static async open<Payload>({ name, ...init }: GossipLogInit<Payload> & Options) {
+		const idbName = name ?? `canvas/v1/${init.topic}`
+
 		if (init.clear) {
 			await new Promise<void>((resolve, reject) => {
-				const req = indexedDB.deleteDatabase(name ?? `canvas/v1/${init.topic}`)
-				req.onsuccess = (event) => (("result" in event) && event.result === undefined) ? resolve() : reject()
+				const req = indexedDB.deleteDatabase(idbName)
+				req.onsuccess = (event) => resolve()
 				req.onerror = () => reject()
 			})
 		}
@@ -27,7 +29,7 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 		let replayRequired = false
 		const models = { ...init.schema, ...AbstractGossipLog.schema }
 		const version = Object.assign(init.version ?? {}, baseVersion)
-		const db = await ModelDB.open(name ?? `canvas/v1/${init.topic}`, {
+		const db = await ModelDB.open(idbName, {
 			models: models,
 			version: version,
 			upgrade: async (upgradeAPI, oldConfig, oldVersion, newVersion) => {
