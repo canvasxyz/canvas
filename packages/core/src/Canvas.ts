@@ -151,8 +151,8 @@ export class Canvas<
 		}
 
 		if (config.snapshot) {
-			const [clock] = await messageLog.getClock()
-			if (clock === 0) {
+			const [clock, heads] = await messageLog.getClock()
+			if (clock === 1 && heads.length === 0) {
 				await messageLog.append(config.snapshot)
 			}
 		}
