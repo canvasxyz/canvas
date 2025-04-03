@@ -1,12 +1,13 @@
+import { toString } from "uint8arrays"
+import { logger } from "@libp2p/logger"
 import * as cbor from "@ipld/dag-cbor"
+import { hashEntry } from "@canvas-js/okra"
 
 import { Config, DatabaseUpgradeAPI, ModelSchema, RangeExpression } from "@canvas-js/modeldb"
-import { logger } from "@libp2p/logger"
 import { Message, Signature } from "@canvas-js/interfaces"
-import { SignedMessage } from "./SignedMessage.js"
 import { assert } from "@canvas-js/utils"
-import { toString } from "uint8arrays"
-import { hashEntry } from "@canvas-js/okra"
+
+import { SignedMessage } from "./SignedMessage.js"
 
 export const namespace = "gossiplog"
 export const version = 5
@@ -61,7 +62,6 @@ export async function upgrade(
 		log("adding property $messages/data")
 		await upgradeAPI.addProperty("$messages", "data", "bytes", cbor.encode(null))
 		log("encoding messages into $messages/data")
-
 		const pageSize = 128
 
 		const lowerBound: RangeExpression = { gt: undefined }
