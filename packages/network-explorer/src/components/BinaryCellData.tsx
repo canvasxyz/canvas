@@ -7,6 +7,9 @@ import { LuBinary } from "react-icons/lu"
 
 export function BinaryCellData(cellContext: CellContext<any, unknown>) {
 	const encodedJsonData = useMemo(() => {
+		if (cellContext.getValue() === undefined) {
+			return "<undefined>"
+		}
 		try {
 			return json.stringify(cbor.decode(cellContext.getValue() as Uint8Array))
 		} catch (err) {
