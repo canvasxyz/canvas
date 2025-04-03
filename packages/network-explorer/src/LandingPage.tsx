@@ -72,11 +72,26 @@ export const LandingPage = () => {
 									<Td first={index === 0}>{action.did.slice(0, 30)}...</Td>
 								</tr>
 							))}
+							{(actions || []).length === 0 && (
+								<tr>
+									<td
+										colSpan={4}
+										style={{
+											padding: "20px 0 10px",
+											textAlign: "center",
+											color: "var(--gray-10)",
+											width: "100%",
+										}}
+									>
+										<Text size="2">None found</Text>
+									</td>
+								</tr>
+							)}
 						</tbody>
 					</table>
 					<Flex direction="row" justify="center" py="2" mt="2" style={{ borderTop: "solid var(--gray-4) 1px" }}>
 						<Text size="2">
-							<Link href="#/$actions" color="gray" underline="none">
+							<Link href="#/tables/$actions" color="gray" underline="none">
 								See more
 							</Link>
 						</Text>
@@ -99,11 +114,26 @@ export const LandingPage = () => {
 									<Td first={index === 0}>{session.public_key.slice(0, 30)}...</Td>
 								</tr>
 							))}
+							{(sessions || []).length === 0 && (
+								<tr>
+									<td
+										colSpan={4}
+										style={{
+											padding: "20px 0 10px",
+											textAlign: "center",
+											color: "var(--gray-10)",
+											width: "100%",
+										}}
+									>
+										<Text size="2">None found</Text>
+									</td>
+								</tr>
+							)}
 						</tbody>
 					</table>
 					<Flex direction="row" justify="center" py="2" mt="2" style={{ borderTop: "solid var(--gray-4) 1px" }}>
 						<Text size="2">
-							<Link href="#/$sessions" color="gray" underline="none">
+							<Link href="#/tables/$sessions" color="gray" underline="none">
 								See more
 							</Link>
 						</Text>

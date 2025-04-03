@@ -232,6 +232,14 @@ export const Table = <T,>({
 								position: "relative",
 							}}
 						>
+							{tanStackTable.getRowCount() === 0 && <tr style={{ display: "flex" }}>
+								<td style={{
+									paddingTop: "20px",
+									textAlign: "center",
+									color: "var(--gray-10)",
+									width: "calc(100vw - 200px)", // TODO: Extract sidebar width into CSS variable
+								}}>None found</td>
+							</tr>}
 							{tanStackTable.getRowModel().rows.map((row) => (
 								<tr key={row.id} style={{ display: "flex", overflow: "hidden", scrollbarWidth: "none" }}>
 									{row.getVisibleCells().map((cell) => (
