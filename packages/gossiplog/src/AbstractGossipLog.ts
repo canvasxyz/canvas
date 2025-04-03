@@ -107,17 +107,19 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 	public readonly signer: Signer<Payload>
 	public readonly controller = new AbortController()
 
-	public abstract db: AbstractModelDB
-	public abstract tree: Tree
-
 	protected readonly log: Logger
+	protected readonly ancestorIndex: AncestorIndex
 
 	public readonly validatePayload: (payload: unknown) => payload is Payload
 	public readonly verifySignature: (signature: Signature, message: Message<Payload>) => Awaitable<void>
 
 	readonly #apply: GossipLogConsumer<Payload, Result>
 
-	protected constructor(init: GossipLogInit<Payload, Result>) {
+	protected constructor(
+		public readonly db: AbstractModelDB,
+		public readonly tree: Tree,
+		init: GossipLogInit<Payload, Result>,
+	) {
 		super()
 		assert(
 			gossiplogTopicPattern.test(init.topic),
@@ -132,6 +134,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		this.verifySignature = init.verifySignature ?? this.signer.scheme.verify
 
 		this.log = logger(`canvas:gossiplog:[${this.topic}]`)
+		this.ancestorIndex = new AncestorIndex(db)
 	}
 
 	protected async initialize() {
@@ -446,7 +449,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 
 		newHeads.sort()
 
-		await new AncestorIndex(this.db).indexAncestors(messageId, parentIds, effects)
+		await this.ancestorIndex.indexAncestors(messageId, parentIds, effects)
 		await this.db.apply(effects)
 		txn.set(key, value)
 
@@ -462,9 +465,8 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 	): Promise<boolean> {
 		const ids = Array.isArray(root) ? root : [root]
 		const visited = new MessageSet()
-		const ancestorIndex = new AncestorIndex(this.db)
 		for (const id of ids) {
-			const isAncestor = await ancestorIndex.isAncestor(
+			const isAncestor = await this.ancestorIndex.isAncestor(
 				typeof id === "string" ? MessageId.encode(id) : id,
 				typeof ancestor === "string" ? MessageId.encode(ancestor) : ancestor,
 				visited,

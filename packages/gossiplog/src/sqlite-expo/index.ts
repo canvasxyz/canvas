@@ -1,4 +1,4 @@
-import { Tree, Mode } from "@canvas-js/okra"
+import { Mode } from "@canvas-js/okra"
 import { Tree as MemoryTree } from "@canvas-js/okra-memory"
 import { ModelDB } from "@canvas-js/modeldb-sqlite-expo"
 
@@ -35,10 +35,6 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 		const gossipLog = new GossipLog(db, tree, init)
 		await gossipLog.initialize()
 		return gossipLog
-	}
-
-	private constructor(public readonly db: ModelDB, public readonly tree: Tree, init: GossipLogInit<Payload>) {
-		super(init)
 	}
 
 	protected async rebuildMerkleIndex(): Promise<void> {
