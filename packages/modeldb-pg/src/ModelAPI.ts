@@ -366,7 +366,7 @@ export class ModelAPI {
 					const hex = Array.from(value)
 						.map((byte) => byte.toString(16).padStart(2, "0"))
 						.join("")
-					return `E'\\x${hex}'`
+					return `'\\x${hex}'::bytea`
 				} else {
 					signalInvalidType(value)
 				}
@@ -375,6 +375,8 @@ export class ModelAPI {
 			const alter = Array.from(zip(columnDefinitions, defaultValues))
 				.map(([column, defaultValue]) => `ADD COLUMN ${column} DEFAULT ${defaultValue}`)
 				.join(", ")
+
+			console.log("ALTER:", alter)
 
 			await this.client.query(`ALTER TABLE "${this.table}" ${alter}`)
 			this.prepareStatements()
