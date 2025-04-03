@@ -11,7 +11,7 @@ import { Canvas, hashSnapshot } from "@canvas-js/core"
 import { MAX_CONNECTIONS } from "@canvas-js/core/constants"
 import { Snapshot } from "@canvas-js/core"
 import { AppInstance } from "../AppInstance.js"
-import { writeContract, getContractLocation } from "../utils.js"
+import { writeContract, writeSnapshot, getContractLocation } from "../utils.js"
 import { startActionPrompt } from "../prompt.js"
 
 export const command = "run <path>"
@@ -218,7 +218,9 @@ export async function handler(args: Args) {
 							console.log("[canvas] Restarting...")
 							await instance.stop()
 
-							// TODO: persist the snapshot
+							if (location !== null) {
+								writeSnapshot({ location, snapshot })
+							}
 							updatedSnapshot = snapshot
 
 							// Restart the application, running the new, compiled contract.

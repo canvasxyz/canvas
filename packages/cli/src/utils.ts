@@ -2,16 +2,18 @@ import fs from "node:fs"
 import path from "node:path"
 import process from "node:process"
 
+import * as cbor from "@ipld/dag-cbor"
 import { bytesToHex } from "@noble/hashes/utils"
 import { sha256 } from "@noble/hashes/sha256"
 import chalk from "chalk"
 import prompts from "prompts"
 
-import { Canvas } from "@canvas-js/core"
+import { Canvas, Snapshot } from "@canvas-js/core"
 
 export const BUNDLED_CONTRACT_FILENAME = "contract.canvas.js"
 export const ORIGINAL_CONTRACT_FILENAME = "contract.original.js"
 export const MANIFEST_FILENAME = "canvas.json"
+export const SNAPSHOT_FILENAME = "snapshot.bin"
 
 export function writeContract(args: { location: string; topic: string; originalContract: string; build: string }) {
 	const location = args.location
@@ -27,6 +29,13 @@ export function writeContract(args: { location: string; topic: string; originalC
 
 	console.log(`[canvas] Overwriting ${manifestPath}`)
 	fs.writeFileSync(manifestPath, JSON.stringify({ version: 1, topic: args.topic }, null, "  "))
+}
+
+export function writeSnapshot(args: { location: string; snapshot: Snapshot }) {
+	const location = args.location
+	const snapshotPath = path.resolve(location, SNAPSHOT_FILENAME)
+	console.log(`[canvas] Overwriting ${snapshotPath}`)
+	fs.writeFileSync(snapshotPath, cbor.encode(args.snapshot))
 }
 
 export async function getContractLocation(args: {
