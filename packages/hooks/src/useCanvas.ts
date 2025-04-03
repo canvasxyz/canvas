@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react"
+import * as cbor from "@ipld/dag-cbor"
 import { Canvas, NetworkClient, ModelSchema, Config, Snapshot, Actions, hashContract } from "@canvas-js/core"
 
 /**
@@ -70,7 +71,11 @@ export const useCanvas = <
 				const remoteContractHash = hashContract(contractInfo.contract)
 
 				const snapshot = contractInfo.snapshotHash
-					? ((await (await fetch(snapshotApi)).json()).snapshot as Snapshot)
+					? await (async () => {
+						const response = await fetch(snapshotApi)
+						const buffer = await response.arrayBuffer()
+						return cbor.decode<Snapshot>(new Uint8Array(buffer))
+					})()
 					: null
 
 				let reset: boolean
