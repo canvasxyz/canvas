@@ -413,8 +413,8 @@ export class Canvas<
 		this.controller.abort()
 		await this.messageLog.close()
 
-		// Close the runtime. If we didn't manage ContractRuntime's QuickJS lifetimes correctly, it's possible
-		// this could result in an exception, which we shouldn't propagate, so we don't crash the CLI or app harness.
+		// Close the runtime. If we didn't manage ContractRuntime's
+		// QuickJS lifetimes correctly, this could throw an exception.
 		try {
 			await this.runtime.close()
 		} catch (err) {
@@ -426,6 +426,9 @@ export class Canvas<
 	}
 
 	public async getApplicationData(): Promise<ApplicationData> {
+		if (this.controller.signal.aborted) {
+			throw new Error("application closed")
+		}
 		const models = Object.fromEntries(Object.entries(this.db.models).filter(([name]) => !name.startsWith("$")))
 		const root = await this.messageLog.tree.read((txn) => txn.getRoot())
 		const heads = await this.db.query<{ id: string }>("$heads").then((records) => records.map((record) => record.id))
