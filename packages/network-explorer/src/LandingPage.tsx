@@ -4,6 +4,7 @@ import { stringifyRequestParams } from "./components/Table.js"
 import { ApplicationData } from "./components/ApplicationData.js"
 import { fetchAndIpldParseJson } from "./utils.js"
 import { ReactNode } from "react"
+import { useTheme } from "./hooks/useTheme.js"
 
 const Th = ({ children }: { children: ReactNode }) => (
 	<th style={{ padding: "8px 6px 8px 14px", textAlign: "left" }}>
@@ -17,6 +18,7 @@ const Td = ({ children, first }: { children: ReactNode; first: boolean }) => (
 )
 
 export const LandingPage = () => {
+	const { theme } = useTheme()
 	const { data: actionData } = useSWR(
 		`/api/models/$actions?${stringifyRequestParams({
 			limit: 3,
@@ -55,7 +57,7 @@ export const LandingPage = () => {
 
 				<Box style={{ border: "solid var(--gray-4) 1px", lineHeight: 1.25 }} mb="4">
 					<table style={{ borderCollapse: "collapse", width: "100%" }}>
-						<thead style={{ backgroundColor: "white" }}>
+						<thead style={{ backgroundColor: theme === 'dark' ? 'var(--gray-1)' : 'white' }}>
 							<tr style={{ width: "100%", borderBottom: "solid var(--gray-4) 1px" }}>
 								<Th>message_id</Th>
 								<Th>name</Th>
@@ -63,7 +65,7 @@ export const LandingPage = () => {
 								<Th>user</Th>
 							</tr>
 						</thead>
-						<tbody style={{ backgroundColor: "white" }}>
+						<tbody style={{ backgroundColor: theme === 'dark' ? 'var(--gray-1)' : 'white' }}>
 							{(actions || []).map((action, index) => (
 								<tr key={index}>
 									<Td first={index === 0}>{action.message_id.slice(0, 10)}...</Td>
@@ -101,13 +103,13 @@ export const LandingPage = () => {
 				<Heading size="5">Recent sessions</Heading>
 				<Box style={{ border: "solid var(--gray-4) 1px", lineHeight: 1.25 }} mb="4">
 					<table style={{ borderCollapse: "collapse", width: "100%" }}>
-						<thead style={{ backgroundColor: "white" }}>
+						<thead style={{ backgroundColor: theme === 'dark' ? 'var(--gray-1)' : 'white' }}>
 							<tr style={{ width: "100%", borderBottom: "solid var(--gray-4) 1px" }}>
 								<Th>did</Th>
 								<Th>public_key</Th>
 							</tr>
 						</thead>
-						<tbody style={{ backgroundColor: "white" }}>
+						<tbody style={{ backgroundColor: theme === 'dark' ? 'var(--gray-1)' : 'white' }}>
 							{(sessions || []).map((session, index) => (
 								<tr key={index}>
 									<Td first={index === 0}>{session.did.slice(0, 30)}...</Td>
