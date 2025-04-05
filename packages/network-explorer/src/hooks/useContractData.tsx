@@ -9,6 +9,7 @@ type ContractData = {
 	contract: string
 	admin: boolean
 	nonce: string
+	snapshotHash: string | null
 	refetch: () => Promise<any>
 }
 

@@ -2,6 +2,7 @@ import packageJson from "../../package.json"
 
 import { Box, Grid, Text, Popover, IconButton } from "@radix-ui/themes"
 import { useApplicationData } from "../hooks/useApplicationData.js"
+import { useContractData } from "../hooks/useContractData.js"
 import { BASE_URL } from "../utils.js"
 import { LuUnplug } from "react-icons/lu"
 
@@ -28,6 +29,7 @@ const ConnectionPopover = ({ children }: { children: React.ReactNode }) => {
 
 export const ApplicationData = () => {
 	const applicationInfo = useApplicationData()
+	const contractInfo = useContractData()
 
 	return (
 		<Box mt="auto">
@@ -79,6 +81,7 @@ export const ApplicationData = () => {
 					<Text weight="bold">Database</Text>{" "}
 					<Text color="gray">{applicationInfo ? applicationInfo.database : "-"}</Text>
 					<Text weight="bold">Version</Text> <Text color="gray">v{packageJson.version}</Text>
+					<Text weight="bold">Snapshot</Text> <Text color="gray">{contractInfo?.snapshotHash ?? "-"}</Text>
 				</Grid>
 			</Text>
 		</Box>
