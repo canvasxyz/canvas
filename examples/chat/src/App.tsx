@@ -63,14 +63,14 @@ export const App: React.FC<{}> = ({}) => {
 				{app && ws ? (
 					<main>
 						<AppInfo app={app} ws={ws} />
-						<div className="flex flex-row gap-4 h-full">
+						<div className="sm:flex flex-row gap-4 h-full">
 							<div className="sm:min-w-[300px] md:min-w-[480px] flex-1 flex flex-col justify-stretch gap-2">
-								<div className="flex-1 border rounded px-2 overflow-y-scroll">
+								<div className="flex-1 border rounded px-2 overflow-y-scroll max-h-[60vh] sm:max-h-none">
 									<Messages address={address} />
 								</div>
 								<MessageComposer />
 							</div>
-							<div className="flex flex-col gap-4 w-[480px] break-all">
+							<div className="flex flex-col gap-4 md:w-[480px] break-all">
 								<Connect />
 								<SessionStatus />
 								<ConnectionStatus topic={topicRef.current} ws={ws} />

@@ -19,6 +19,10 @@ export const Messages: React.FC<MessagesProps> = ({ address }) => {
 	const [listHeight, setListHeight] = useState(500)
 	const sizeMap = useRef<{ [key: string]: number }>({})
 	const rowHeightEstimator = useRef<{ [key: string]: HTMLDivElement }>({})
+	const [windowDimensions, setWindowDimensions] = useState({
+		width: window.innerWidth,
+		height: window.innerHeight,
+	})
 
 	const messages =
 		useLiveQuery<typeof models, "message">(app, "message", {
@@ -37,14 +41,12 @@ export const Messages: React.FC<MessagesProps> = ({ address }) => {
 		return () => window.removeEventListener("resize", updateHeight)
 	}, [])
 
-	// Function to measure row height
 	const setRowRef = useCallback(
 		(index: number, node: HTMLDivElement | null) => {
 			if (node && messages[index]) {
 				const messageId = messages[index].id
 				rowHeightEstimator.current[messageId] = node
 
-				// Update cache and resize list if height changed
 				const newHeight = node.getBoundingClientRect().height
 				if (sizeMap.current[messageId] !== newHeight) {
 					sizeMap.current[messageId] = newHeight
@@ -59,15 +61,13 @@ export const Messages: React.FC<MessagesProps> = ({ address }) => {
 
 	const getRowHeight = (index: number) => {
 		const message = messages[index]
-		// Use cached height or default to a reasonable estimate
 		return (
 			sizeMap.current[message.id] ||
-			// If previous message is from same user, height is smaller
 			(index > 0 && messages[index - 1]?.address === message.address ? 25 : 52)
 		)
 	}
 
-	// keep scrolled down when new messages arrive
+	// Keep scrolled down when new messages arrive
 	useEffect(() => {
 		if (listRef.current && messages.length > 0) {
 			listRef.current.scrollToItem(messages.length - 1, "end")

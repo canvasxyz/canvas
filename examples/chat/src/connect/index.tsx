@@ -28,7 +28,7 @@ export const Connect: React.FC<{}> = ({}) => {
 
 	return (
 		<>
-			<div className="grid gap-0.5 min-h-[100px] max-h-[50vh] overflow-y-auto">
+			<div className="grid gap-0.5 min-h-[100px] max-h-[15vh] sm:max-h-[50vh] overflow-y-scroll">
 				<button
 					className={`p-1 border rounded ${method === "burner" ? "bg-blue-500 text-white" : "bg-gray-100"}`}
 					onClick={() => setMethod("burner")}
