@@ -64,7 +64,7 @@ const target: PlatformTarget = {
 			const manifestPath = path.resolve(location.path, "canvas.json")
 			try {
 				const manifest: { version: number; topic: string } = JSON.parse(fs.readFileSync(manifestPath, "utf-8"))
-				if (manifest.topic !== init.topic) {
+				if (manifest.topic !== init.topic.replace(/\#[A-Za-z0-9]+$/, "")) {
 					throw new Error(`unexpected topic: expected ${init.topic} but found ${manifest.topic} in canvas.json`)
 				}
 			} catch (err) {

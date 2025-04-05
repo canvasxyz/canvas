@@ -28,7 +28,7 @@ export const builder = (yargs: Argv) =>
 			demandOption: true,
 		})
 		.option("topic", {
-			desc: "Application topic",
+			desc: "Application topic, e.g. my-app.example.com",
 			type: "string",
 		})
 		.option("init", {
@@ -115,7 +115,7 @@ export const builder = (yargs: Argv) =>
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
-	const { topic, contract, originalContract, location, snapshot } = await getContractLocation(args)
+	const { baseTopic, contract, originalContract, location, snapshot } = await getContractLocation(args)
 
 	let updatedContract: string = originalContract // updated, pre-esbuild version of the running contract
 	let updatedBuild: string = contract // updated, built version of the running contract
@@ -199,7 +199,7 @@ export async function handler(args: Args) {
 					if (location !== null) {
 						writeContract({
 							location,
-							topic,
+							baseTopic,
 							build,
 							originalContract: newContract,
 						})
@@ -230,7 +230,7 @@ export async function handler(args: Args) {
 							console.log("[canvas] Restarting...")
 							await new Promise((resolve) => setTimeout(resolve, 0))
 							const newInstance = await AppInstance.initialize({
-								topic,
+								baseTopic,
 								contract: updatedBuild,
 								location,
 								snapshot,
@@ -253,7 +253,7 @@ export async function handler(args: Args) {
 		}
 	}
 
-	const instance = await AppInstance.initialize({ topic, contract, location, snapshot, config: args })
+	const instance = await AppInstance.initialize({ baseTopic, contract, location, snapshot, config: args })
 
 	bindInstanceAPIs(instance)
 

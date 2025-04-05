@@ -88,7 +88,18 @@ export class Canvas<
 	): Promise<Canvas<ModelsT, ActionsT>> {
 		const { topic, path = null, contract, signers: initSigners = [], runtimeMemoryLimit } = config
 
-		assert(topicPattern.test(topic), "invalid topic (must match [a-zA-Z0-9\\.\\-])")
+		if (config.snapshot) {
+			assert(
+				topicPattern.test(topic) && topic.includes("#"),
+				"invalid topic, must match [a-zA-Z0-9\\.\\-]#{snapshotHash}",
+			)
+			assert(
+				topic.endsWith(`#${hashSnapshot(config.snapshot)}`),
+				`invalid topic, must match this snapshot hash: ${hashSnapshot(config.snapshot).slice(0, 5)}...`,
+			)
+		} else {
+			assert(topicPattern.test(topic), "invalid topic, must match [a-zA-Z0-9\\.\\-]")
+		}
 
 		const signers = new SignerCache(initSigners.length === 0 ? [new SIWESigner()] : initSigners)
 
@@ -99,10 +110,8 @@ export class Canvas<
 		}
 
 		const runtime = await createRuntime(topic, signers, contract, { runtimeMemoryLimit })
-		const gossipTopic = config.snapshot ? `${topic}#${hashSnapshot(config.snapshot)}` : topic // topic for peering
-
 		const messageLog = await target.openGossipLog(
-			{ topic: gossipTopic, path, clear: config.reset },
+			{ topic, path, clear: config.reset },
 			{
 				topic, // topic for signing and execution, in runtime consumer
 				apply: runtime.getConsumer(),
