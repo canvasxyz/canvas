@@ -124,20 +124,21 @@ export class AppInstance {
 					`\n${chalk.yellow("Received SIGINT, attempting to exit gracefully. ^C again to force quit.")}\n`,
 				)
 
-				this.app.stop().then(() => console.log("[canvas] App closed"))
+				this.stop().then(() => {
+					console.log("[canvas] Closed app instance.")
+				})
 			}
 		}
 		process.on("SIGINT", this.onProgramInterrupt)
 	}
 
 	public async stop() {
-		console.log("[canvas] Closing app...")
+		console.log("[canvas] Closing app instance...")
 		await this.app?.stop()
 		this.network?.close()
 		this.wss?.close()
 		this.server?.stop()
 		process.removeListener("SIGINT", this.onProgramInterrupt)
-		console.log("[canvas] HTTP API server stopped.")
 	}
 
 	private static printInitialization(topic: string, location: string | null) {

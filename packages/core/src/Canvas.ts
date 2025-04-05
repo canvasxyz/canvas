@@ -412,6 +412,7 @@ export class Canvas<
 	public async stop() {
 		this.controller.abort()
 		await this.messageLog.close()
+		await this.libp2p?.stop()
 
 		// Close the runtime. If we didn't manage ContractRuntime's
 		// QuickJS lifetimes correctly, this could throw an exception.
