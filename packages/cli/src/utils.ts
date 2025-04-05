@@ -16,7 +16,7 @@ export const MANIFEST_FILENAME = "canvas.json"
 export const SNAPSHOT_FILENAME = "snapshot.bin"
 export const DB_FILENAME = "db.sqlite"
 
-export function writeContract(args: { location: string; topic: string; originalContract: string; build: string }) {
+export function writeContract(args: { location: string; baseTopic: string; originalContract: string; build: string }) {
 	const location = args.location
 	const contractPath = path.resolve(location, BUNDLED_CONTRACT_FILENAME)
 	const originalContractPath = path.resolve(location, ORIGINAL_CONTRACT_FILENAME)
@@ -29,7 +29,7 @@ export function writeContract(args: { location: string; topic: string; originalC
 	fs.writeFileSync(originalContractPath, args.originalContract)
 
 	console.log(`[canvas] Overwriting ${manifestPath}`)
-	fs.writeFileSync(manifestPath, JSON.stringify({ version: 1, topic: args.topic }, null, "  "))
+	fs.writeFileSync(manifestPath, JSON.stringify({ version: 1, topic: args.baseTopic }, null, "  "))
 }
 
 export async function writeSnapshot(args: { location: string; snapshot: Snapshot }) {
@@ -59,11 +59,11 @@ async function buildContract(originalContractPath: string, bundledContractPath: 
 
 export async function getContractLocation(args: {
 	path: string
-	topic?: string
+	baseTopic?: string
 	init?: string
 	memory?: boolean
 }): Promise<{
-	topic: string
+	baseTopic: string
 	originalContract: string
 	contract: string
 	location: string | null
@@ -79,8 +79,12 @@ export async function getContractLocation(args: {
 	// doesn't already exist.
 	if (!fs.existsSync(location)) {
 		if (!location.endsWith(".js") && !location.endsWith(".ts") && args.init) {
-			if (args.topic === undefined) {
+			if (args.baseTopic === undefined) {
 				console.error(chalk.yellow(`--topic is required upon initialization`))
+				process.exit(1)
+			}
+			if (args.baseTopic.indexOf("#") !== -1) {
+				console.error(chalk.yellow(`--topic must be provided *without* a hash`))
 				process.exit(1)
 			}
 			console.log(`[canvas] Creating application directory ${location}`)
@@ -90,7 +94,7 @@ export async function getContractLocation(args: {
 			console.log(`[canvas] Building ${args.init} to ${bundledContractPath}`)
 			await buildContract(args.init, bundledContractPath)
 			console.log(`[canvas] Creating ${manifestPath}`)
-			fs.writeFileSync(manifestPath, JSON.stringify({ version: 1, topic: args.topic }, null, "  "))
+			fs.writeFileSync(manifestPath, JSON.stringify({ version: 1, topic: args.baseTopic }, null, "  "))
 		} else {
 			console.error(chalk.yellow(`${location} does not exist.`))
 			process.exit(1)
@@ -111,9 +115,13 @@ export async function getContractLocation(args: {
 		}
 
 		if (!fs.existsSync(manifestPath)) {
-			if (args.topic !== undefined) {
+			if (args.baseTopic !== undefined && args.baseTopic.indexOf("#") !== -1) {
+				console.error(chalk.yellow(`--topic must be provided *without* a hash`))
+				process.exit(1)
+			}
+			if (args.baseTopic !== undefined) {
 				console.log(`[canvas] Creating ${manifestPath}`)
-				fs.writeFileSync(manifestPath, JSON.stringify({ version: 1, topic: args.topic }))
+				fs.writeFileSync(manifestPath, JSON.stringify({ version: 1, topic: args.baseTopic }))
 			} else {
 				console.error(chalk.yellow(`No manifest found at ${manifestPath}`))
 				process.exit(1)
@@ -123,10 +131,10 @@ export async function getContractLocation(args: {
 		const originalContract = fs.readFileSync(originalContractPath, "utf-8")
 		const contract = fs.readFileSync(bundledContractPath, "utf-8")
 		const manifest = fs.readFileSync(manifestPath, "utf-8")
-		const { topic } = JSON.parse(manifest) as { topic: string }
+		const { topic: baseTopic } = JSON.parse(manifest) as { topic: string }
 		const snapshot = fs.existsSync(snapshotPath) ? cbor.decode<Snapshot>(fs.readFileSync(snapshotPath)) : null
 
-		return { topic, contract, originalContract, location: args.memory ? null : location, snapshot }
+		return { baseTopic, contract, originalContract, location: args.memory ? null : location, snapshot }
 	} else if (location.endsWith(".js") || location.endsWith(".ts")) {
 		// Handle if the location exists and it's a file.
 		let contract = fs.readFileSync(location, "utf-8")
@@ -137,12 +145,16 @@ export async function getContractLocation(args: {
 			console.log(chalk.yellow("[canvas] Bundled .ts contract:"), `${contract.length} chars`)
 		}
 
-		const topic = args.topic ?? `${bytesToHex(sha256(contract)).slice(0, 16)}.p2p.app`
-		if (args.topic === undefined) {
-			console.error(chalk.yellow(`[canvas] No --topic provided, using:`), topic)
+		const baseTopic = args.baseTopic ?? `${bytesToHex(sha256(contract)).slice(0, 16)}.p2p.app`
+		if (args.baseTopic !== undefined && args.baseTopic.indexOf("#") !== -1) {
+			console.error(chalk.yellow(`--topic must be provided *without* a hash`))
+			process.exit(1)
+		}
+		if (args.baseTopic === undefined) {
+			console.error(chalk.yellow(`[canvas] No --topic provided, using:`), baseTopic)
 		}
 
-		return { topic, contract, originalContract, location: null }
+		return { baseTopic, contract, originalContract, location: null }
 	} else {
 		console.error(chalk.yellow(`Contract files must match *.js or *.ts`))
 		process.exit(1)

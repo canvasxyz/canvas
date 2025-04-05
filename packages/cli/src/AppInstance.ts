@@ -14,7 +14,7 @@ import { multiaddr } from "@multiformats/multiaddr"
 import { WebSockets, WebSocketsSecure } from "@multiformats/multiaddr-matcher"
 import stoppable from "stoppable"
 
-import { Canvas, PeerId, Snapshot } from "@canvas-js/core"
+import { Canvas, PeerId, Snapshot, hashSnapshot } from "@canvas-js/core"
 import { createAPI } from "@canvas-js/core/api"
 
 import { NetworkServer } from "@canvas-js/gossiplog/server"
@@ -29,7 +29,7 @@ import { SolanaSigner } from "@canvas-js/chain-solana"
 const { BOOTSTRAP_LIST } = process.env
 
 export type AppConfig = {
-	topic?: string
+	baseTopic?: string
 	verbose?: boolean
 
 	/* networking configuration */
@@ -62,7 +62,7 @@ export class AppInstance {
 	private onProgramInterrupt: () => void
 
 	static async initialize({
-		topic,
+		baseTopic,
 		contract,
 		snapshot,
 		reset,
@@ -70,7 +70,7 @@ export class AppInstance {
 		config,
 		onUpdateApp,
 	}: {
-		topic: string
+		baseTopic: string
 		contract: string
 		snapshot?: Snapshot | null | undefined
 		reset?: boolean
@@ -78,7 +78,7 @@ export class AppInstance {
 		config: AppConfig
 		onUpdateApp?: (contract: string, snapshot: Snapshot) => Promise<void>
 	}) {
-		AppInstance.printInitialization(topic, location)
+		AppInstance.printInitialization(baseTopic, location)
 
 		const signers = [
 			new SIWESigner(),
@@ -92,7 +92,7 @@ export class AppInstance {
 
 		const app = await Canvas.initialize({
 			path: process.env.DATABASE_URL ?? location,
-			topic,
+			topic: snapshot ? `${baseTopic}#${hashSnapshot(snapshot)}` : baseTopic,
 			contract,
 			snapshot,
 			signers,
@@ -141,14 +141,14 @@ export class AppInstance {
 		process.removeListener("SIGINT", this.onProgramInterrupt)
 	}
 
-	private static printInitialization(topic: string, location: string | null) {
+	private static printInitialization(baseTopic: string, location: string | null) {
 		if (process.env.DATABASE_URL) {
 			console.log(`[canvas] Using database at ${process.env.DATABASE_URL}`)
 		} else if (location === null) {
 			console.log(chalk.yellow(`✦ ${chalk.bold("Running app in-memory only.")} No data will be persisted.`))
 			console.log("")
 		}
-		console.log(`${chalk.gray("[canvas] Starting app on topic")} ${chalk.whiteBright(topic)}`)
+		console.log(`${chalk.gray("[canvas] Starting app with base topic")} ${chalk.whiteBright(baseTopic)}`)
 	}
 
 	private setupLogging() {

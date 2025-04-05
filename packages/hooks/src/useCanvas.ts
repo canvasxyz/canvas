@@ -1,6 +1,15 @@
 import { useState, useEffect, useRef } from "react"
 import * as cbor from "@ipld/dag-cbor"
-import { Canvas, NetworkClient, ModelSchema, Config, Snapshot, Actions, hashContract } from "@canvas-js/core"
+import {
+	Canvas,
+	NetworkClient,
+	ModelSchema,
+	Config,
+	Snapshot,
+	Actions,
+	hashContract,
+	hashSnapshot,
+} from "@canvas-js/core"
 
 /**
  * React hook for Canvas applications using client-to-server sync.
@@ -94,7 +103,7 @@ export const useCanvas = <
 				}
 
 				await Canvas.initialize<ModelsT, ActionsT>({
-					topic,
+					topic: snapshot ? `${topic}#${hashSnapshot(snapshot)}` : topic,
 					contract,
 					reset,
 					snapshot,
@@ -125,15 +134,28 @@ export const useCanvas = <
 				}
 				if (!app || contractHash === localContractHashRef.current) {
 					// Application just initialized, or contract remains unchanged
-					await Canvas.initialize<ModelsT, ActionsT>(config).then(assign.bind(null, url))
+					await Canvas.initialize<ModelsT, ActionsT>({
+						...config,
+						topic: config.snapshot ? `${config.topic}#${hashSnapshot(config.snapshot)}` : config.topic,
+					}).then(assign.bind(null, url))
 				} else if ((await app.db.count("$messages")) > 1 && snapshotRef.current) {
 					// Contract changed, reuse the old snapshot
 					const snapshot = snapshotRef.current
-					await Canvas.initialize<ModelsT, ActionsT>({ ...config, reset: true, snapshot }).then(assign.bind(null, url))
+					await Canvas.initialize<ModelsT, ActionsT>({
+						...config,
+						reset: true,
+						snapshot,
+						topic: config.snapshot ? `${config.topic}#${hashSnapshot(config.snapshot)}` : config.topic,
+					}).then(assign.bind(null, url))
 				} else {
 					// Contract changed, make a new snapshot
 					const snapshot = await app.createSnapshot()
-					await Canvas.initialize<ModelsT, ActionsT>({ ...config, reset: true, snapshot }).then(assign.bind(null, url))
+					await Canvas.initialize<ModelsT, ActionsT>({
+						...config,
+						reset: true,
+						snapshot,
+						topic: config.snapshot ? `${config.topic}#${hashSnapshot(config.snapshot)}` : config.topic,
+					}).then(assign.bind(null, url))
 					snapshotRef.current = snapshot
 				}
 			}
