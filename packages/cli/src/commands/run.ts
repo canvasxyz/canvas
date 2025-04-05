@@ -148,7 +148,7 @@ export async function handler(args: Args) {
 		})
 
 		instance.api.get("/api/snapshot", async (_req, res) => {
-			res.writeHead(200, { 'Content-Type': 'application/cbor' });
+			res.writeHead(200, { "Content-Type": "application/cbor" })
 			res.end(cbor.encode(updatedSnapshot))
 		})
 
@@ -215,16 +215,19 @@ export async function handler(args: Args) {
 						.createSnapshot()
 						.then(async (snapshot: Snapshot) => {
 							res.json({ status: "Success" })
-							console.log("[canvas] Restarting...")
+							console.log("[canvas] Stopping existing instance...")
 							await instance.stop()
 
 							if (location !== null) {
+								console.log("[canvas] Rewriting application on disk...")
 								await writeSnapshot({ location, snapshot })
 								clearContractLocationDB({ location })
 							}
+
 							updatedSnapshot = snapshot
 
 							// Restart the application, running the new, compiled contract.
+							console.log("[canvas] Restarting...")
 							await new Promise((resolve) => setTimeout(resolve, 0))
 							const newInstance = await AppInstance.initialize({
 								topic,

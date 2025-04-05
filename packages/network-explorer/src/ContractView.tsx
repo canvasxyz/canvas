@@ -147,7 +147,6 @@ export const ContractView = () => {
 		}
 
 		try {
-			// Check if ethereum provider is available
 			// @ts-ignore
 			if (!window.ethereum) {
 				setError("Ethereum provider not found. Please install a wallet like MetaMask.")
@@ -157,8 +156,8 @@ export const ContractView = () => {
 				setError("Must wait for contractData to load")
 				return
 			}
+			setError(undefined)
 
-			// Request account access
 			// @ts-ignore
 			const accounts = await window.ethereum.request({ method: "eth_requestAccounts" })
 			const address = utils.getAddress(accounts[0])
@@ -213,6 +212,17 @@ export const ContractView = () => {
 					// Clear saved content from localStorage once committed
 					localStorage.removeItem(UNSAVED_CHANGES_KEY)
 					setHasRestoredContent(false)
+
+					// Wait till server is available again
+					while (true) {
+						await new Promise((resolve, reject) => setTimeout(resolve, 500))
+						const available = await new Promise((resolve) =>
+							fetch("/api/contract")
+								.then(() => resolve(true))
+								.catch(() => resolve(false)),
+						)
+						if (available) break
+					}
 
 					// Refresh both data contexts
 					await Promise.all([contractData?.refetch(), applicationData?.refetch()])
