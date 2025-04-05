@@ -1,4 +1,5 @@
-import React, { useEffect, useContext, useRef } from "react"
+import React, { useEffect, useContext, useRef, useState, useCallback } from "react"
+import { VariableSizeList, ListChildComponentProps } from "react-window"
 
 import { useLiveQuery } from "@canvas-js/hooks"
 
@@ -14,27 +15,86 @@ type Message = { id: string; address: string; content: string; timestamp: number
 export const Messages: React.FC<MessagesProps> = ({ address }) => {
 	const { app } = useContext(AppContext)
 	const scrollboxRef = useRef<HTMLDivElement | null>(null)
+	const listRef = useRef<VariableSizeList>(null)
+	const [listHeight, setListHeight] = useState(500)
+	const sizeMap = useRef<{ [key: string]: number }>({})
+	const rowHeightEstimator = useRef<{ [key: string]: HTMLDivElement }>({})
 
-	const messages = useLiveQuery<typeof models, "message">(app, "message", {
-		orderBy: { timestamp: "asc" },
-	})
+	const messages =
+		useLiveQuery<typeof models, "message">(app, "message", {
+			orderBy: { timestamp: "asc" },
+		}) || []
 
-	// keep scrolled down
+	// Calculate container height for the list
 	useEffect(() => {
-		const box = scrollboxRef.current?.parentElement
-		if (!box) return
-		if (box.scrollTop === 0) {
-			box.scrollTop = box.scrollHeight
-		} else {
-			box.scrollTo({ top: box.scrollHeight, behavior: "smooth" })
+		const updateHeight = () => {
+			if (scrollboxRef.current?.parentElement) {
+				setListHeight(scrollboxRef.current.parentElement.clientHeight)
+			}
 		}
-	}, [address, messages?.length])
+		updateHeight()
+		window.addEventListener("resize", updateHeight)
+		return () => window.removeEventListener("resize", updateHeight)
+	}, [])
+
+	// Function to measure row height
+	const setRowRef = useCallback(
+		(index: number, node: HTMLDivElement | null) => {
+			if (node && messages[index]) {
+				const messageId = messages[index].id
+				rowHeightEstimator.current[messageId] = node
+
+				// Update cache and resize list if height changed
+				const newHeight = node.getBoundingClientRect().height
+				if (sizeMap.current[messageId] !== newHeight) {
+					sizeMap.current[messageId] = newHeight
+					if (listRef.current) {
+						listRef.current.resetAfterIndex(index)
+					}
+				}
+			}
+		},
+		[messages],
+	)
+
+	const getRowHeight = (index: number) => {
+		const message = messages[index]
+		// Use cached height or default to a reasonable estimate
+		return (
+			sizeMap.current[message.id] ||
+			// If previous message is from same user, height is smaller
+			(index > 0 && messages[index - 1]?.address === message.address ? 25 : 52)
+		)
+	}
+
+	// keep scrolled down when new messages arrive
+	useEffect(() => {
+		if (listRef.current && messages.length > 0) {
+			listRef.current.scrollToItem(messages.length - 1, "end")
+		}
+	}, [address, messages.length])
+
+	// Row renderer function for the virtualized list
+	const MessageRow = ({ index, style }: ListChildComponentProps) => (
+		<div style={style} ref={(node) => setRowRef(index, node)}>
+			<MessageView message={messages[index]} previous={index === 0 ? null : messages[index - 1]} />
+		</div>
+	)
 
 	return (
 		<div className="flex-1" ref={scrollboxRef}>
-			{messages?.map((message, i) => (
-				<MessageView key={message.id} message={message} previous={i === 0 ? null : messages[i - 1]} />
-			))}
+			<VariableSizeList
+				ref={listRef}
+				height={listHeight}
+				width="100%"
+				itemCount={messages.length}
+				itemSize={getRowHeight}
+				overscanCount={5} // Number of items to render outside of the visible area
+				estimatedItemSize={25} // Reasonable default
+				itemKey={(index) => messages[index].id}
+			>
+				{MessageRow}
+			</VariableSizeList>
 		</div>
 	)
 }
@@ -59,7 +119,7 @@ interface MessageHeaderProps {
 
 const MessageHeader: React.FC<MessageHeaderProps> = ({ address }) => {
 	return (
-		<div className="mt-2">
+		<div className="pt-1">
 			<code className="text-sm text-gray-500">{address}</code>
 		</div>
 	)
