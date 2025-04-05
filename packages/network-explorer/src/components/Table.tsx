@@ -174,7 +174,9 @@ export const Table = <T,>({
 			<Box overflowX="scroll" flexGrow="1">
 				<Text size="2">
 					<table style={{ borderCollapse: "collapse", display: "grid" }}>
-						<thead style={{ display: "grid", position: "sticky", top: 0, zIndex: 1, backgroundColor: "white" }}>
+						<thead
+							style={{ display: "grid", position: "sticky", top: 0, zIndex: 1, backgroundColor: "var(--color-panel)" }}
+						>
 							{tanStackTable.getHeaderGroups().map((headerGroup) => (
 								<tr key={headerGroup.id} style={{ display: "flex", width: "100%" }}>
 									{headerGroup.headers.map((header) => (
@@ -232,14 +234,20 @@ export const Table = <T,>({
 								position: "relative",
 							}}
 						>
-							{tanStackTable.getRowCount() === 0 && <tr style={{ display: "flex" }}>
-								<td style={{
-									paddingTop: "20px",
-									textAlign: "center",
-									color: "var(--gray-10)",
-									width: "calc(100vw - 200px)", // TODO: Extract sidebar width into CSS variable
-								}}>None found</td>
-							</tr>}
+							{tanStackTable.getRowCount() === 0 && (
+								<tr style={{ display: "flex" }}>
+									<td
+										style={{
+											paddingTop: "20px",
+											textAlign: "center",
+											color: "var(--gray-10)",
+											width: "calc(100vw - 200px)", // TODO: Extract sidebar width into CSS variable
+										}}
+									>
+										None found
+									</td>
+								</tr>
+							)}
 							{tanStackTable.getRowModel().rows.map((row) => (
 								<tr key={row.id} style={{ display: "flex", overflow: "hidden", scrollbarWidth: "none" }}>
 									{row.getVisibleCells().map((cell) => (
