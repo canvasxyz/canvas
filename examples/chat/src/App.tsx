@@ -46,8 +46,6 @@ export const App: React.FC<{}> = ({}) => {
 	const topicRef = useRef(topic)
 
 	const { app, ws } = useCanvas(wsURL, {
-		topic: topicRef.current,
-		contract,
 		signers: [
 			new SIWESigner(),
 			new Eip712Signer(),
