@@ -425,6 +425,10 @@ export class Canvas<
 		this.dispatchEvent(new Event("stop"))
 	}
 
+	public get closed() {
+		return this.controller.signal.aborted
+	}
+
 	public async getApplicationData(): Promise<ApplicationData> {
 		if (this.controller.signal.aborted) {
 			throw new Error("application closed")

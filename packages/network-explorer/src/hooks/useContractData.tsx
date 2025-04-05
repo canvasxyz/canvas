@@ -19,7 +19,7 @@ export const ContractDataProvider = ({ children }: { children: React.ReactNode }
 	const { data, mutate } = useSWR(`/api/contract`, fetchAndIpldParseJson<ContractData>)
 
 	useEffect(() => {
-		if (data && data.content) {
+		if (data && data.content && !("error" in data.content)) {
 			setContent(data.content)
 		} else {
 			setContent(null)

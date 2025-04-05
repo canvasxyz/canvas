@@ -20,6 +20,9 @@ export function createAPI(app: Canvas): express.Express {
 	const api = createBaseAPI(app.messageLog)
 
 	api.get("/", async (req, res) => {
+		if (app.closed) {
+			return res.status(400).send("application closed")
+		}
 		res.json(await app.getApplicationData())
 	})
 
