@@ -36,6 +36,7 @@
 		"@terra-money/feather.js": "^2.0.4",
 		"@types/react": "^18.3.9",
 		"@types/react-dom": "^18.3.0",
+		"@types/react-window": "^1.8.8",
 		"buffer": "^6.0.3",
 		"comlink": "^4.4.1",
 		"ethers": "^6.13.5",
@@ -46,6 +47,7 @@
 		"process": "^0.11.10",
 		"react": "^18.3.1",
 		"react-dom": "^18.3.1",
+		"react-window": "^1.8.11",
 		"viem": "^2.22.21",
 		"vite-plugin-wasm": "^3.3.0",
 		"web3": "^4.10.0"

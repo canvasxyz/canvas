@@ -13,7 +13,7 @@ export const ApplicationDataProvider = ({ children }: { children: React.ReactNod
 	const { data, mutate } = useSWR(`/api/`, fetchAndIpldParseJson<ApplicationData>)
 
 	useEffect(() => {
-		if (data && data.content) {
+		if (data && data.content && !("error" in data.content)) {
 			setContent(data.content)
 		} else {
 			setContent(null)

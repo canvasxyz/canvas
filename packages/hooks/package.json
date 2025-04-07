@@ -20,7 +20,8 @@
 		"@canvas-js/interfaces": "0.14.0-next.1",
 		"@canvas-js/modeldb": "0.14.0-next.1",
 		"@canvas-js/modeldb-idb": "0.14.0-next.1",
-    "@noble/hashes": "^1.7.1"
+		"@ipld/dag-cbor": "^9.2.2",
+		"@noble/hashes": "^1.7.1"
 	},
 	"devDependencies": {
 		"@types/react": "^18.3.9",

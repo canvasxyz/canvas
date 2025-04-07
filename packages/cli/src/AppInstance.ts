@@ -54,10 +54,12 @@ export class AppInstance {
 	app: Canvas
 	api?: express.Express
 
-	private controller: AbortController
 	private wss?: WebSocketServer
 	private network?: NetworkServer<any>
 	private server?: http.Server & stoppable.WithStop
+
+	private closing = false
+	private onProgramInterrupt: () => void
 
 	static async initialize({
 		topic,
@@ -113,7 +115,30 @@ export class AppInstance {
 		this.config = config
 		this.app = app
 
-		this.controller = this.setupAbortController()
+		this.onProgramInterrupt = () => {
+			if (this.closing) {
+				process.exit(1)
+			} else {
+				this.closing = true
+				process.stdout.write(
+					`\n${chalk.yellow("Received SIGINT, attempting to exit gracefully. ^C again to force quit.")}\n`,
+				)
+
+				this.stop().then(() => {
+					console.log("[canvas] Closed app instance.")
+				})
+			}
+		}
+		process.on("SIGINT", this.onProgramInterrupt)
+	}
+
+	public async stop() {
+		console.log("[canvas] Closing app instance...")
+		await this.app?.stop()
+		this.network?.close()
+		this.wss?.close()
+		this.server?.stop()
+		process.removeListener("SIGINT", this.onProgramInterrupt)
 	}
 
 	private static printInitialization(topic: string, location: string | null) {
@@ -255,11 +280,6 @@ export class AppInstance {
 		this.wss = new WebSocketServer({ server: this.server, perMessageDeflate: false })
 		this.wss.on("connection", this.network.handleConnection)
 
-		this.controller.signal.addEventListener("abort", () => {
-			console.log("[canvas] Stopping HTTP API server...")
-			this.stop()
-		})
-
 		await new Promise<void>((resolve) => this.server?.listen(this.config.port, resolve))
 
 		console.log("")
@@ -319,36 +339,6 @@ export class AppInstance {
 		for (const model of Object.keys(models)) {
 			console.log(`└ ${model}`)
 		}
-	}
-
-	private setupAbortController() {
-		const controller = new AbortController()
-		controller.signal.addEventListener("abort", () => {
-			console.log("[canvas] Closing app...")
-			this.app.stop().then(() => console.log("[canvas] App closed"))
-		})
-
-		let stopping = false
-		process.on("SIGINT", async () => {
-			if (stopping) {
-				process.exit(1)
-			} else {
-				stopping = true
-				process.stdout.write(
-					`\n${chalk.yellow("Received SIGINT, attempting to exit gracefully. ^C again to force quit.")}\n`,
-				)
-
-				controller.abort()
-			}
-		})
-
-		return controller
-	}
-
-	public async stop() {
-		await this.app?.stop()
-		await this.network?.close()
-		await this.wss?.close(() => this.server?.stop(() => console.log("[canvas] HTTP API server stopped.")))
 	}
 
 	private getAnnounceMultiaddrs(config: AppConfig) {

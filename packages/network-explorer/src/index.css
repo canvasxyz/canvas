@@ -4,9 +4,16 @@ body {
 	margin: 0;
 }
 
+/* Light mode styles (default) */
 .rt-Card {
 	background-color: white;
 	box-shadow: 1px 1px 1px rgb(0 0 0 / 0.05);
+}
+
+/* Dark mode styles */
+.radix-themes[data-theme="dark"] .rt-Card {
+	background-color: var(--color-panel-solid);
+	box-shadow: 1px 1px 1px rgb(0 0 0 / 0.2);
 }
 
 ::-webkit-scrollbar {
@@ -31,4 +38,17 @@ body {
 .editor .cm-scroller {
 	height: 600px;
 	font-size: 84%;
+}
+
+.radix-themes[data-theme="dark"] {
+	color-scheme: dark;
+}
+
+.radix-themes[data-theme="dark"] a {
+	color: var(--gray-11);
+}
+
+.radix-themes[data-theme="dark"] .editor .cm-editor {
+	color: var(--gray-10);
+	background-color: var(--color-panel-solid);
 }

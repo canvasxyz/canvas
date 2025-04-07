@@ -1,7 +1,8 @@
 import process from "node:process"
+import crypto from "node:crypto"
+import * as cbor from "@ipld/dag-cbor"
 import type { Argv } from "yargs"
 import dotenv from "dotenv"
-import crypto from "node:crypto"
 import { SiweMessage } from "siwe"
 import { verifyMessage } from "ethers"
 
@@ -147,9 +148,8 @@ export async function handler(args: Args) {
 		})
 
 		instance.api.get("/api/snapshot", async (_req, res) => {
-			res.json({
-				snapshot: updatedSnapshot,
-			})
+			res.writeHead(200, { "Content-Type": "application/cbor" })
+			res.end(cbor.encode(updatedSnapshot))
 		})
 
 		if (args.admin) {
@@ -215,16 +215,19 @@ export async function handler(args: Args) {
 						.createSnapshot()
 						.then(async (snapshot: Snapshot) => {
 							res.json({ status: "Success" })
-							console.log("[canvas] Restarting...")
+							console.log("[canvas] Stopping existing instance...")
 							await instance.stop()
 
 							if (location !== null) {
+								console.log("[canvas] Rewriting application on disk...")
 								await writeSnapshot({ location, snapshot })
 								clearContractLocationDB({ location })
 							}
+
 							updatedSnapshot = snapshot
 
 							// Restart the application, running the new, compiled contract.
+							console.log("[canvas] Restarting...")
 							await new Promise((resolve) => setTimeout(resolve, 0))
 							const newInstance = await AppInstance.initialize({
 								topic,

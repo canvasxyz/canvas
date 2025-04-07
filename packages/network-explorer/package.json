@@ -15,6 +15,7 @@
 		"@codemirror/lang-javascript": "^6.2.3",
 		"@codemirror/language": "^6.11.0",
 		"@codemirror/state": "^6.5.2",
+		"@codemirror/theme-one-dark": "^6.1.2",
 		"@codemirror/view": "^6.36.4",
 		"@ipld/dag-cbor": "^9.2.2",
 		"@ipld/dag-json": "^10.2.3",

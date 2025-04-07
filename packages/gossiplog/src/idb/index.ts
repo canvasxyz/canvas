@@ -16,10 +16,20 @@ export interface Options {
 
 export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 	public static async open<Payload>({ name, ...init }: GossipLogInit<Payload> & Options) {
+		const idbName = name ?? `canvas/v1/${init.topic}`
+
+		if (init.clear) {
+			await new Promise<void>((resolve, reject) => {
+				const req = indexedDB.deleteDatabase(idbName)
+				req.onsuccess = (event) => resolve()
+				req.onerror = () => reject()
+			})
+		}
+
 		let replayRequired = false
 		const models = { ...init.schema, ...AbstractGossipLog.schema }
 		const version = Object.assign(init.version ?? {}, baseVersion)
-		const db = await ModelDB.open(name ?? `canvas/v1/${init.topic}`, {
+		const db = await ModelDB.open(idbName, {
 			models: models,
 			version: version,
 			upgrade: async (upgradeAPI, oldConfig, oldVersion, newVersion) => {
@@ -33,6 +43,7 @@ export class GossipLog<Payload> extends AbstractGossipLog<Payload> {
 			},
 			initialUpgradeSchema: Object.assign(init.initialUpgradeSchema ?? { ...models }, initialUpgradeSchema),
 			initialUpgradeVersion: Object.assign(init.initialUpgradeVersion ?? { ...version }, initialUpgradeVersion),
+			clear: init.clear,
 		})
 
 		const messageCount = await db.count("$messages")

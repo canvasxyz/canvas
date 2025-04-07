@@ -5,10 +5,12 @@ import { EditorView, keymap } from "@codemirror/view"
 import { defaultKeymap, indentWithTab } from "@codemirror/commands"
 import { indentUnit } from "@codemirror/language"
 import { basicSetup } from "codemirror"
-
 import { typescriptLanguage } from "@codemirror/lang-javascript"
+import { oneDark } from "@codemirror/theme-one-dark"
+import { Compartment } from "@codemirror/state"
 
 import { useCodeMirror } from "../hooks/useCodeMirror.js"
+import { useTheme } from "../hooks/useTheme.js"
 
 interface EditorProps {
 	initialValue: string
@@ -21,25 +23,30 @@ interface EditorProps {
 export const Editor: React.FC<EditorProps> = ({ initialValue, readOnly, onChange, onLoad, onBuild }) => {
 	// TODO: Refactor to avoid passing EditorState through go-around ref.
 	const stateRef = useRef<EditorState | null>(null)
+	const { theme } = useTheme()
+	const themeCompartment = useRef(new Compartment())
 
 	const [state, transaction, viewRef, element] = useCodeMirror<HTMLDivElement>({
 		doc: initialValue,
 		extensions: [
-			keymap.of([{
-				key: "Mod-Enter",
-				run: (view: EditorView) => {
-					if (stateRef.current === null) return false;
-					onBuild(stateRef.current, view);
-					return true;
-				}
-			}]),
+			keymap.of([
+				{
+					key: "Mod-Enter",
+					run: (view: EditorView) => {
+						if (stateRef.current === null) return false
+						onBuild(stateRef.current, view)
+						return true
+					},
+				},
+			]),
 			indentUnit.of("\t"),
 			basicSetup,
 			keymap.of([indentWithTab]),
 			typescriptLanguage,
 			keymap.of(defaultKeymap),
 			EditorView.editable.of(!(readOnly ?? false)),
-		]
+			themeCompartment.current.of(theme === "dark" ? oneDark : []),
+		],
 	})
 
 	useEffect(() => {
@@ -59,6 +66,14 @@ export const Editor: React.FC<EditorProps> = ({ initialValue, readOnly, onChange
 			}
 		}
 	}, [state, transaction])
+
+	useEffect(() => {
+		if (viewRef.current) {
+			viewRef.current.dispatch({
+				effects: themeCompartment.current.reconfigure(theme === "dark" ? oneDark : [])
+			})
+		}
+	}, [theme])
 
 	return <div className="editor" ref={element}></div>
 }
