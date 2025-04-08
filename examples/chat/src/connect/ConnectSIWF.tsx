@@ -6,14 +6,14 @@ import { SIWFSigner } from "@canvas-js/chain-ethereum"
 import { SignInButton, useProfile } from "@farcaster/auth-kit"
 import FrameSDK from "@farcaster/frame-sdk"
 
-import { topic } from "../App.js"
 import { AppContext } from "../AppContext.js"
 
 export interface ConnectSIWFProps {
+	topic: string
 	frame?: boolean
 }
 
-export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ frame }) => {
+export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic, frame }) => {
 	const { app, setSessionSigner, setAddress } = useContext(AppContext)
 
 	const profile = useProfile()

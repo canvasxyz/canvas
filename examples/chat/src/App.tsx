@@ -24,8 +24,6 @@ import { Connect } from "./connect/index.js"
 import { LogStatus } from "./LogStatus.js"
 import * as contract from "./contract.js"
 
-export const topic = "chat-example.canvas.xyz"
-
 const wsURL = import.meta.env.VITE_CANVAS_WS_URL ?? null
 console.log("websocket API URL:", wsURL)
 
@@ -42,8 +40,6 @@ const config = {
 export const App: React.FC<{}> = ({}) => {
 	const [sessionSigner, setSessionSigner] = useState<SessionSigner | null>(null)
 	const [address, setAddress] = useState<string | null>(null)
-
-	const topicRef = useRef(topic)
 
 	const { app, ws } = useCanvas(wsURL, {
 		signers: [
@@ -71,9 +67,9 @@ export const App: React.FC<{}> = ({}) => {
 								<MessageComposer />
 							</div>
 							<div className="flex flex-col gap-4 md:w-[480px] break-all">
-								<Connect />
+								<Connect topic={app.topic} />
 								<SessionStatus />
-								<ConnectionStatus topic={topicRef.current} ws={ws} />
+								<ConnectionStatus topic={app.topic} ws={ws} />
 								<LogStatus />
 								<ControlPanel />
 							</div>
