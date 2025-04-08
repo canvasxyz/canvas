@@ -1,6 +1,6 @@
 import test from "ava"
 
-import { Canvas, Config } from "@canvas-js/core"
+import { Canvas, Config, hashSnapshot } from "@canvas-js/core"
 
 test("snapshot persists data across apps", async (t) => {
 	const config: Config = {
@@ -44,7 +44,12 @@ test("snapshot persists data across apps", async (t) => {
 	const snapshot = await app.createSnapshot()
 	await app.stop()
 
-	const app2 = await Canvas.initialize({ reset: true, snapshot, ...config })
+	const app2 = await Canvas.initialize({
+		reset: true,
+		snapshot,
+		...config,
+		topic: `${config.topic}#${hashSnapshot(snapshot)}`,
+	})
 
 	t.is((await app2.db.get("posts", "a"))?.content, "foo")
 	t.is(await app2.db.get("posts", "b"), null)
@@ -70,7 +75,12 @@ test("snapshot persists data across apps", async (t) => {
 
 	// snapshot a second time
 	const snapshot2 = await app2.createSnapshot()
-	const app3 = await Canvas.initialize({ reset: true, snapshot: snapshot2, ...config })
+	const app3 = await Canvas.initialize({
+		reset: true,
+		snapshot: snapshot2,
+		...config,
+		topic: `${config.topic}#${hashSnapshot(snapshot2)}`,
+	})
 
 	t.is((await app3.db.get("posts", "a"))?.content, "1")
 	t.is((await app3.db.get("posts", "b"))?.content, "2")

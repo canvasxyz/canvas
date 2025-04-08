@@ -91,11 +91,11 @@ export class Canvas<
 		if (config.snapshot) {
 			assert(
 				topicPattern.test(topic) && topic.includes("#"),
-				"invalid topic, must match [a-zA-Z0-9\\.\\-]#{snapshotHash}",
+				`invalid topic ${topic}, must match the pattern [a-zA-Z0-9\\.\\-]#{snapshotHash}`,
 			)
 			assert(
 				topic.endsWith(`#${hashSnapshot(config.snapshot)}`),
-				`invalid topic, must match this snapshot hash: ${hashSnapshot(config.snapshot).slice(0, 5)}...`,
+				`invalid topic ${topic} for this exact snapshot hash: ${hashSnapshot(config.snapshot).slice(0, 5)}...`,
 			)
 		} else {
 			assert(topicPattern.test(topic), "invalid topic, must match [a-zA-Z0-9\\.\\-]")
