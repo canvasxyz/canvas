@@ -19,7 +19,8 @@ export const builder = (yargs: Argv) =>
 			type: "string",
 			demandOption: true,
 		})
-		.option("topic", {
+		.option("baseTopic", {
+			alias: "topic",
 			desc: "Application topic",
 			type: "string",
 		})

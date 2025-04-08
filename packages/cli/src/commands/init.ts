@@ -18,7 +18,8 @@ export const builder = (yargs: Argv) =>
 			type: "string",
 			default: ".",
 		})
-		.option("topic", {
+		.option("baseTopic", {
+			alias: "topic",
 			desc: "Application topic",
 			type: "string",
 		})
@@ -36,7 +37,7 @@ export async function handler(args: Args) {
 		return
 	}
 
-	const topic = args.topic ?? randomUUID()
+	const topic = args.baseTopic ?? randomUUID()
 	console.log(chalk.gray(`Creating example contract with topic ${chalk.white(topic)}`))
 
 	if (!fs.existsSync(location)) {

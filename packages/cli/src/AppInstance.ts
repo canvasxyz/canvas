@@ -78,7 +78,8 @@ export class AppInstance {
 		config: AppConfig
 		onUpdateApp?: (contract: string, snapshot: Snapshot) => Promise<void>
 	}) {
-		AppInstance.printInitialization(baseTopic, location)
+		const topic = snapshot ? `${baseTopic}#${hashSnapshot(snapshot)}` : baseTopic
+		AppInstance.printInitialization(topic, location)
 
 		const signers = [
 			new SIWESigner(),
@@ -92,7 +93,7 @@ export class AppInstance {
 
 		const app = await Canvas.initialize({
 			path: process.env.DATABASE_URL ?? location,
-			topic: snapshot ? `${baseTopic}#${hashSnapshot(snapshot)}` : baseTopic,
+			topic,
 			contract,
 			snapshot,
 			signers,
@@ -141,14 +142,14 @@ export class AppInstance {
 		process.removeListener("SIGINT", this.onProgramInterrupt)
 	}
 
-	private static printInitialization(baseTopic: string, location: string | null) {
+	private static printInitialization(topic: string, location: string | null) {
 		if (process.env.DATABASE_URL) {
 			console.log(`[canvas] Using database at ${process.env.DATABASE_URL}`)
 		} else if (location === null) {
 			console.log(chalk.yellow(`✦ ${chalk.bold("Running app in-memory only.")} No data will be persisted.`))
 			console.log("")
 		}
-		console.log(`${chalk.gray("[canvas] Starting app with base topic")} ${chalk.whiteBright(baseTopic)}`)
+		console.log(`${chalk.gray("[canvas] Starting app with topic")} ${chalk.whiteBright(topic)}`)
 	}
 
 	private setupLogging() {
