@@ -102,8 +102,10 @@ export const useCanvas = <
 					reset = true
 				}
 
+				console.log("[canvas] initializing remote application")
+
 				await Canvas.initialize<ModelsT, ActionsT>({
-					topic: snapshot ? `${topic}#${hashSnapshot(snapshot)}` : topic,
+					topic,
 					contract,
 					reset,
 					snapshot,
@@ -132,6 +134,8 @@ export const useCanvas = <
 					console.error("Unexpected: Internal error (local application)")
 					return
 				}
+				console.log("[canvas] initializing locally defined application")
+
 				if (!app || contractHash === localContractHashRef.current) {
 					// Application just initialized, or contract remains unchanged
 					await Canvas.initialize<ModelsT, ActionsT>({
