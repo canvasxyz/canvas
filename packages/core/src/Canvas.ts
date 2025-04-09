@@ -21,6 +21,7 @@ import { ActionRecord } from "./runtime/AbstractRuntime.js"
 import { validatePayload } from "./schema.js"
 import { createSnapshot, hashSnapshot, Change } from "./snapshot.js"
 import { initialUpgradeSchema, topicPattern } from "./utils.js"
+import { SnapshotSignatureScheme } from "@canvas-js/signatures"
 
 export type { Model } from "@canvas-js/modeldb"
 export type { PeerId } from "@libp2p/interface"
@@ -106,9 +107,14 @@ export class Canvas<
 		const signers = new SignerCache(initSigners.length === 0 ? [new SIWESigner()] : initSigners)
 
 		const verifySignature = (signature: Signature, message: Message<MessageType>) => {
-			const signer = signers.getAll().find((signer) => signer.scheme.codecs.includes(signature.codec))
-			assert(signer !== undefined, "no matching signer found")
-			return signer.scheme.verify(signature, message)
+			if (message.payload.type === "snapshot") {
+				SnapshotSignatureScheme.verify(signature, message)
+			} else {
+				const signer = signers.getAll().find((signer) => signer.scheme.codecs.includes(signature.codec))
+				assert(signer !== undefined, "no matching signer found")
+				assert(message.clock > 0, "invalid clock")
+				return signer.scheme.verify(signature, message)
+			}
 		}
 
 		const runtime = await createRuntime(topic, signers, contract, { runtimeMemoryLimit })
@@ -161,14 +167,20 @@ export class Canvas<
 			}
 		}
 
-		if (config.snapshot) {
-			const [clock, heads] = await messageLog.getClock()
-			if (clock === 1 && heads.length === 0) {
-				await messageLog.append(config.snapshot)
-			}
-		}
-
 		const app = new Canvas<ModelsT, ActionsT>(signers, messageLog, runtime)
+
+		if (config.snapshot) {
+			assert(topic.endsWith(`#${hashSnapshot(config.snapshot)}`), "invalid snapshot")
+			const message: Message<Snapshot> = {
+				topic,
+				clock: 0,
+				parents: [],
+				payload: config.snapshot,
+			}
+			const signature = await SnapshotSignatureScheme.create().sign(message)
+			const signedMessage: SignedMessage<Snapshot> = app.messageLog.encode(signature, message)
+			await app.messageLog.insert(signedMessage)
+		}
 
 		// Check to see if the $actions table is empty and populate it if necessary
 		const messagesCount = await messageLog.db.count("$messages")

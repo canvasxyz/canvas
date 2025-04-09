@@ -1,5 +1,6 @@
 import * as cbor from "@ipld/dag-cbor"
 import { logger } from "@libp2p/logger"
+import { bytesToHex, hexToBytes } from "@noble/hashes/utils"
 
 import type { Action, Session, Snapshot, SignerCache, Awaitable, MessageType } from "@canvas-js/interfaces"
 
@@ -10,6 +11,7 @@ import { assert } from "@canvas-js/utils"
 import { ExecutionContext, getKeyHash } from "../ExecutionContext.js"
 import { isAction, isSession, isSnapshot } from "../utils.js"
 import { Contract } from "../types.js"
+import { hashSnapshot } from "../snapshot.js"
 
 export type EffectRecord = { key: string; value: Uint8Array | null; clock: number }
 
@@ -119,9 +121,7 @@ export abstract class AbstractRuntime {
 	private async handleSnapshot(messageLog: AbstractGossipLog<MessageType>, signedMessage: SignedMessage<Snapshot>) {
 		const { models, effects } = signedMessage.message.payload
 
-		const messages = await messageLog.getMessages()
-		assert(messages.length === 0, "snapshot must be first entry on log")
-
+		assert(signedMessage.message.clock === 0, "snapshot must have clock === 0")
 		for (const { key, value } of effects) {
 			await messageLog.db.set("$effects", { key, value, clock: 0 })
 		}

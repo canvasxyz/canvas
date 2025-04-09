@@ -63,7 +63,7 @@ test("snapshot persists data across apps", async (t) => {
 	await app2.actions.createPost({ id: "f", content: "4" })
 
 	const [clock2, parents2] = await app2.messageLog.getClock()
-	t.is(clock2, 7) // one snapshot, one session, four actions
+	t.is(clock2, 6) // one snapshot, one session, four actions
 	t.is(parents2.length, 1)
 
 	t.is((await app2.db.get("posts", "a"))?.content, "1")
@@ -91,6 +91,6 @@ test("snapshot persists data across apps", async (t) => {
 	t.is(await app3.db.get("posts", "g"), null)
 
 	const [clock3] = await app3.messageLog.getClock()
-	t.is(clock3, 2) // one snapshot
+	t.is(clock3, 1) // one snapshot
 	t.is(parents2.length, 1)
 })
