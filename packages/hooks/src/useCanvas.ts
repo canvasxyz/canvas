@@ -90,9 +90,9 @@ export const useCanvas = <
 				let reset: boolean
 				if (remoteContractHashRef.current[topic] === undefined) {
 					// No matching contract used with this hook, but it's possible that we've run this
-					// app without this hook before, and have data in IndexedDB. Since the remote is
-					// the source of truth, clear IndexedDB and catch up to the remote using Merkle sync.
-					reset = true
+					// app without this hook before, and have data in IndexedDB, in which case
+					// convergence might break.
+					reset = false // TODO
 				} else if (remoteContractHashRef.current[topic] === contractInfo.contract) {
 					// A matching contract used with this hook before. We can't guarantee that IndexedDB
 					// isn't out of sync, but that's beyond our concern (something to fix in the future).
