@@ -17,7 +17,7 @@ export type MessageTuple = [
 
 function validateSignatureTuple(signatureTuple: unknown): asserts signatureTuple is SignatureTuple {
 	assert(Array.isArray(signatureTuple), "expected Array.isArray(signatureTuple)")
-	assert(signatureTuple.length === 3, "expected signatureTuple.length === 3")
+	assert(signatureTuple.length === 3, "expected signatureTuple.length === 5")
 	const [codec, publicKey, signature] = signatureTuple
 	assert(typeof codec === "string", 'expected typeof codec === "string"')
 	assert(typeof publicKey === "string", 'expected typeof publicKey === "string"')
@@ -26,7 +26,7 @@ function validateSignatureTuple(signatureTuple: unknown): asserts signatureTuple
 
 function validateMessageTuple(messageTuple: unknown): asserts messageTuple is MessageTuple {
 	assert(Array.isArray(messageTuple), "expected Array.isArray(messageTuple)")
-	assert(messageTuple.length === 5, "messageTuple.length === 3")
+	assert(messageTuple.length === 5, "messageTuple.length === 5")
 
 	const [signature, topic, clock, parents] = messageTuple
 	validateSignatureTuple(signature)
