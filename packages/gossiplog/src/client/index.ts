@@ -64,22 +64,30 @@ export class NetworkClient<Payload> {
 			gossipLog.dispatchEvent(new CustomEvent("disconnect", { detail: { peer: this.sourceURL } }))
 		})
 
-		this.duplex.connected().then(async () => {
-			const eventStream = await this.newStream(this.pushProtocol)
+		this.duplex
+			.connected()
+			.then(async () => {
+				const eventStream = await this.newStream(this.pushProtocol)
 
-			pipe(this.eventSource, encodeEvents, lp.encode, eventStream.sink).catch((err) => {
-				this.log.error(err)
-				eventStream.close()
+				pipe(this.eventSource, encodeEvents, lp.encode, eventStream.sink).catch((err) => {
+					this.log.error(err)
+					eventStream.close()
+				})
+
+				pipe(eventStream.source, lp.decode, decodeEvents, this.eventSink).catch((err) => {
+					this.log.error(err)
+					eventStream.close()
+				})
+
+				const [_, heads] = await gossipLog.getClock()
+				this.push({ update: { heads: heads.map(encodeId) } })
 			})
-
-			pipe(eventStream.source, lp.decode, decodeEvents, this.eventSink).catch((err) => {
-				this.log.error(err)
-				eventStream.close()
+			.catch((err) => {
+				if (err.name === "UnsupportedProtocolError") {
+					err.message = `remote was not serving topic ${gossipLog.topic}`
+				}
+				throw err
 			})
-
-			const [_, heads] = await gossipLog.getClock()
-			this.push({ update: { heads: heads.map(encodeId) } })
-		})
 	}
 
 	private async newStream(protocol: string): Promise<Stream> {
