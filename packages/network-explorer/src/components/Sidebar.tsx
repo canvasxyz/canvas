@@ -5,6 +5,7 @@ import { LuTable } from "react-icons/lu"
 import { TableDef } from "../tables.js"
 import { useApplicationData } from "../hooks/useApplicationData.js"
 import { useState } from "react"
+import { useKeyboardNavigation } from "../hooks/useKeyboardNavigation.js"
 
 export const Sidebar = ({ tables }: { tables: TableDef[] }) => {
 	const [tableSearchTerm, setTableSearchTerm] = useState("")
@@ -12,6 +13,21 @@ export const Sidebar = ({ tables }: { tables: TableDef[] }) => {
 
 	const modelNames = applicationData ? Object.keys(applicationData.models) : []
 	modelNames.sort()
+
+	const navItems = [
+		{ type: "app", label: "Application", to: "/" },
+		{ type: "contract", label: "contract.ts", to: "/contract" },
+		...modelNames.map((name) => ({ type: "model", label: name, to: `/models/${name}` })),
+		{ type: "internal", label: "$actions", to: "/tables/$actions" },
+		...tables
+			.filter(({ tableName }) => tableName.toLowerCase().includes(tableSearchTerm.toLowerCase()))
+			.map(({ tableName }) => ({
+				type: "table",
+				label: tableName,
+				to: `/tables/${tableName}`,
+			})),
+	]
+	useKeyboardNavigation(navItems)
 
 	return (
 		<Flex
