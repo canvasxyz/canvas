@@ -32,3 +32,21 @@ export const formatDistanceCustom = (timestamp: number) => {
 	result = result.replace("minute", "min")
 	return result
 }
+
+export const formatTime = (ms: number) => {
+	const s = Math.floor((ms / 1000) % 60);
+	const m = Math.floor((ms / (1000 * 60)) % 60);
+	const h = Math.floor((ms / (1000 * 60 * 60)) % 24);
+	const d = Math.floor(ms / (1000 * 60 * 60 * 24));
+	
+	const parts = [
+	  { value: d, label: 'd' },
+	  { value: h, label: 'h' },
+	  { value: m, label: 'm' },
+	  { value: s, label: 's' }
+	]
+	.filter(part => part.value > 0)
+	.map(part => part.value + part.label);
+	
+	return parts.length ? parts.join(' ') : '0s';
+  }

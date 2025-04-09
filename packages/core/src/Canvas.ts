@@ -74,6 +74,8 @@ export type ApplicationData = {
 	topic: string
 	models: Record<string, Model>
 	actions: string[]
+	signerKeys: string[]
+	lastMessage: number | null
 }
 
 export class Canvas<
@@ -248,6 +250,7 @@ export class Canvas<
 	}
 	private readonly controller = new AbortController()
 	private readonly log = logger("canvas:core")
+	private lastMessage: number | null = null
 
 	private peerId: string | null = null
 	private libp2p: Libp2p | null = null
@@ -268,6 +271,8 @@ export class Canvas<
 		this.messageLog.addEventListener("sync", (event) => this.safeDispatchEvent("sync", event))
 		this.messageLog.addEventListener("connect", (event) => this.safeDispatchEvent("connect", event))
 		this.messageLog.addEventListener("disconnect", (event) => this.safeDispatchEvent("disconnect", event))
+
+		this.messageLog.addEventListener("message", (event) => this.lastMessage = Date.now())
 
 		const actionCache = {} as {
 			[K in keyof ActionsT]: (signer: SessionSigner<any>, db: ModelAPI<DeriveModelTypes<ModelsT>>, ...args: any) => any
@@ -471,6 +476,8 @@ export class Canvas<
 			topic: this.topic,
 			models: models,
 			actions: Object.keys(this.actions),
+			signerKeys: this.signers.getAll().map(((s) => s.key)),
+			lastMessage: this.lastMessage,
 		}
 	}
 
