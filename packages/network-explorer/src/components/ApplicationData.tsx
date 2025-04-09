@@ -29,19 +29,22 @@ const ConnectionPopover = ({ children }: { children: React.ReactNode }) => {
 }
 
 const LastMessageTime: React.FC<{ timestamp: number | null | undefined }> = ({ timestamp }) => {
-	const [label, setLabel] = useState('')
+	const [label, setLabel] = useState("")
+
+	// timer to update UI every 500ms
 	useEffect(() => {
 		const timer = setInterval(() => {
 			if (timestamp === null || timestamp === undefined) return
 			setLabel(formatTime(Date.now() - timestamp))
-		}, 200)	
+		}, 500)
 		return () => clearInterval(timer)
 	}, [timestamp])
 
 	if (timestamp === null) {
 		return <span>-</span>
 	}
-	return <span>{label}</span>	
+
+	return <span>{label}</span>
 }
 
 export const ApplicationData = () => {
@@ -99,11 +102,13 @@ export const ApplicationData = () => {
 					<Text color="gray">{applicationInfo ? applicationInfo.database : "-"}</Text>
 					<Text weight="bold">Version</Text> <Text color="gray">v{packageJson.version}</Text>
 					<Text weight="bold">Snapshot</Text> <Text color="gray">{contractInfo?.snapshotHash ?? "-"}</Text>
-					<Text weight="bold">Last message</Text> <Text color="gray"><LastMessageTime timestamp={applicationInfo?.lastMessage} /></Text>
+					<Text weight="bold">Last message</Text>{" "}
+					<Text color="gray">
+						<LastMessageTime timestamp={applicationInfo?.lastMessage} />
+					</Text>
 					<Text weight="bold">Signers</Text> <Text color="gray">{applicationInfo?.signerKeys?.join(", ") ?? "-"}</Text>
 				</Grid>
 			</Text>
 		</Box>
 	)
 }
-
