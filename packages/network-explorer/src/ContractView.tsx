@@ -258,6 +258,7 @@ export const ContractView = () => {
 						{editorInitialValue !== null && (
 							<Editor
 								initialValue={editorInitialValue}
+								autofocus={true}
 								onChange={(state, view) => {
 									setEditorState(state)
 									setEditorView(view)
