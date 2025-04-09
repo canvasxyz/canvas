@@ -245,6 +245,26 @@ export const ContractView = () => {
 		}
 	}
 
+	function revertToOriginal(e: MouseEvent) {
+		e.preventDefault()
+		if (!contractData || !editorState || !editorView) {
+			return
+		}
+		// Clear the editor
+		const update = editorState.update({
+			changes: { from: 0, to: editorState.doc.length, insert: contractData.originalContract },
+		})
+		editorView?.dispatch(update)
+
+		// Clear other state
+		setEditorInitialValue(contractData.originalContract)
+		localStorage.removeItem(UNSAVED_CHANGES_KEY)
+		setHasRestoredContent(false)
+		setChangesets(undefined)
+		setNewContract(undefined)
+		setError(undefined)
+	}
+
 	return (
 		<Box px="7" py="6" flexGrow="1">
 			<Heading size="3" mb="4">
@@ -306,30 +326,7 @@ export const ContractView = () => {
 									Build
 								</Button>
 								&nbsp;
-								<Button
-									size="2"
-									variant="outline"
-									color="gray"
-									onClick={(e) => {
-										e.preventDefault()
-										if (!contractData || !editorState || !editorView) {
-											return
-										}
-										// Clear the editor
-										const update = editorState.update({
-											changes: { from: 0, to: editorState.doc.length, insert: contractData.originalContract },
-										})
-										editorView?.dispatch(update)
-
-										// Clear other state
-										setEditorInitialValue(contractData.originalContract)
-										localStorage.removeItem(UNSAVED_CHANGES_KEY)
-										setHasRestoredContent(false)
-										setChangesets(undefined)
-										setNewContract(undefined)
-										setError(undefined)
-									}}
-								>
+								<Button size="2" variant="outline" color="gray" onClick={revertToOriginal}>
 									Revert to Original
 								</Button>
 							</Box>
