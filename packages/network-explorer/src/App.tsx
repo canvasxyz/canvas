@@ -1,5 +1,5 @@
 import { Suspense, useState } from "react"
-import { Flex } from "@radix-ui/themes"
+import { Box, Flex } from "@radix-ui/themes"
 import { Route, Routes } from "react-router-dom"
 
 import { Sidebar } from "./components/Sidebar.js"
@@ -17,59 +17,63 @@ export const App = () => {
 	return (
 		<Flex height="calc(100vh - 1px)" direction="row">
 			{showSidebar && <Sidebar tables={tables} />}
-			<Routes>
-				<Route path="/" element={<LandingPage />} />
+			<Box pl="200px" width="100%">
+				<Box style={{ margin: "0 auto" }}>
+					<Routes>
+						<Route path="/" element={<LandingPage />} />
 
-				<Route
-					key={"$actions"}
-					path={`/tables/$actions`}
-					element={
-						<Suspense>
-							<ActionsTable setShowSidebar={setShowSidebar} showSidebar={showSidebar} />
-						</Suspense>
-					}
-				/>
+						<Route
+							key={"$actions"}
+							path={`/tables/$actions`}
+							element={
+								<Suspense>
+									<ActionsTable setShowSidebar={setShowSidebar} showSidebar={showSidebar} />
+								</Suspense>
+							}
+						/>
 
-				{tables.map(({ tableName, defaultColumns, enableDownload, defaultSortColumn, defaultSortDirection }, key) => (
-					<Route
-						key={key}
-						path={`/tables/${tableName}`}
-						element={
-							<Suspense>
-								<Table
-									defaultSortColumn={defaultSortColumn}
-									defaultSortDirection={defaultSortDirection}
-									showSidebar={showSidebar}
-									setShowSidebar={setShowSidebar}
-									enableDownload={enableDownload || false}
-									tableName={tableName}
-									defaultColumns={defaultColumns}
-								/>
-							</Suspense>
-						}
-					/>
-				))}
+						{tables.map(({ tableName, defaultColumns, enableDownload, defaultSortColumn, defaultSortDirection }, key) => (
+							<Route
+								key={key}
+								path={`/tables/${tableName}`}
+								element={
+									<Suspense>
+										<Table
+											defaultSortColumn={defaultSortColumn}
+											defaultSortDirection={defaultSortDirection}
+											showSidebar={showSidebar}
+											setShowSidebar={setShowSidebar}
+											enableDownload={enableDownload || false}
+											tableName={tableName}
+											defaultColumns={defaultColumns}
+										/>
+									</Suspense>
+								}
+							/>
+						))}
 
-				<Route
-					key={"models"}
-					path={`/models/:model`}
-					element={
-						<Suspense>
-							<ModelTable showSidebar={showSidebar} setShowSidebar={setShowSidebar} />
-						</Suspense>
-					}
-				/>
+						<Route
+							key={"models"}
+							path={`/models/:model`}
+							element={
+								<Suspense>
+									<ModelTable showSidebar={showSidebar} setShowSidebar={setShowSidebar} />
+								</Suspense>
+							}
+						/>
 
-				<Route
-					key={"contract"}
-					path="/contract"
-					element={
-						<Suspense>
-							<ContractView />
-						</Suspense>
-					}
-				/>
-			</Routes>
+						<Route
+							key={"contract"}
+							path="/contract"
+							element={
+								<Suspense>
+									<ContractView />
+								</Suspense>
+							}
+						/>
+					</Routes>
+				</Box>
+			</Box>
 		</Flex>
 	)
 }

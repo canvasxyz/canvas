@@ -6,7 +6,7 @@ export function ThemeToggle() {
 	const { theme, toggleTheme } = useTheme()
 
 	return (
-		<div style={{ position: "fixed", bottom: 20, left: 20, zIndex: 50 }}>
+		<div style={{ position: "fixed", bottom: 20, left: 20, zIndex: 200 }}>
 			<IconButton
 				size="2"
 				variant="soft"

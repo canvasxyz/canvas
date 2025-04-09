@@ -37,11 +37,13 @@ export const Sidebar = ({ tables }: { tables: TableDef[] }) => {
 			minWidth="200px"
 			height="100%"
 			overflow="hidden"
-			position="relative"
+			position="fixed"
+			left="0"
+			top="0"
 			direction="column"
 			p="2"
 			gap="2"
-			style={{ borderRight: "1px solid var(--gray-4)", background: "var(--gray-2)" }}
+			style={{ borderRight: "1px solid var(--gray-4)", background: "var(--gray-2)", zIndex: 100 }}
 		>
 			<Box px="2" pt="10px" pb="9px">
 				<Link href="#/" size="3" highContrast color="gray" underline="none" weight="bold">
