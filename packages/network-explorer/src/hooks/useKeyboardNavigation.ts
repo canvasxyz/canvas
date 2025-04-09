@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useLocation } from "react-router-dom"
 
 type NavItem = {
 	type: string
@@ -9,7 +9,14 @@ type NavItem = {
 
 export const useKeyboardNavigation = (navItems: NavItem[]) => {
 	const navigate = useNavigate()
+	const location = useLocation()
+
 	const [selectedIndex, setSelectedIndex] = useState(-1)
+	useEffect(() => {
+		const currentPath = location.pathname
+		const index = navItems.findIndex((item) => item.to === currentPath || `/${item.to}` === currentPath)
+		setSelectedIndex(index !== -1 ? index : -1)
+	}, [navItems])
 
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
