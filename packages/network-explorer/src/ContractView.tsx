@@ -122,7 +122,11 @@ export const ContractView = () => {
 			setNewContract(value)
 			setChangesets(generateChangesets(app.getSchema(), newApp.getSchema()))
 		} catch (err: any) {
-			if ("message" in err && typeof err.message === "string") {
+			if (err.name === "RuntimeError" && err.message.startsWith("Aborted(TypeError: WebAssembly.instantiate()")) {
+				setError(
+					err.message + " This may be because of an network explorer build issue. Try rebuilding the network explorer.",
+				)
+			} else if ("message" in err && typeof err.message === "string") {
 				setError(err.message)
 			} else {
 				setError(err.toString())
