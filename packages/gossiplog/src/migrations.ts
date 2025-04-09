@@ -5,7 +5,7 @@ import * as json from "@ipld/dag-json"
 import { hashEntry } from "@canvas-js/okra"
 
 import { Config, DatabaseUpgradeAPI, ModelSchema, RangeExpression } from "@canvas-js/modeldb"
-import { Message, Signature } from "@canvas-js/interfaces"
+import { Message, MessageType, Signature } from "@canvas-js/interfaces"
 import { assert, JSONValue } from "@canvas-js/utils"
 
 import { SignedMessage } from "./SignedMessage.js"
@@ -15,7 +15,7 @@ export const version = 5
 
 export const baseVersion = { [namespace]: version }
 
-export async function upgrade(
+export async function upgrade<Payload extends MessageType>(
 	upgradeAPI: DatabaseUpgradeAPI,
 	oldConfig: Config,
 	oldVersion: Record<string, number>,
@@ -92,7 +92,7 @@ export async function upgrade(
 				const messageBytes: Uint8Array = json.encode(message)
 				const signedMessage = SignedMessage.encode(
 					json.decode<Signature>(signatureBytes),
-					json.decode<Message>(messageBytes),
+					json.decode<Message<Payload>>(messageBytes),
 				)
 
 				assert(signedMessage.id === id, "internal error - expected signedMessage.id === id")
