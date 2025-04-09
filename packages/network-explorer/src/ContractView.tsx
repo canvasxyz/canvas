@@ -99,12 +99,19 @@ export const ContractView = () => {
 		setChangesets(undefined)
 		setWaitingForCommit(undefined)
 
+		const dbs = await window.indexedDB.databases()
+		dbs.forEach((db) => {
+			if (db?.name?.startsWith("canvas/v1/test.a.") || db?.name?.startsWith("canvas/v1/test.b.")) {
+				window.indexedDB.deleteDatabase(db.name)
+			}
+		})
+
 		const { build } = await Canvas.buildContract(value, { wasmURL: "./esbuild.wasm" })
 
 		const initErrorTimer = setTimeout(() => {
 			setError(
 				"Failed to initialize in-browser Canvas application. This is likely because " +
-					"of an IndexedDB bug, try closing other windows and deleting the test.a and test.b databases.",
+					"of a known IndexedDB issue. Try building again, or try closing other tabs/windows on this page.",
 			)
 		}, 500)
 
