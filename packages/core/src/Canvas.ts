@@ -110,6 +110,7 @@ export class Canvas<
 			} else {
 				const signer = signers.getAll().find((signer) => signer.scheme.codecs.includes(signature.codec))
 				assert(signer !== undefined, "no matching signer found")
+				assert(message.clock > 0, "invalid clock")
 				return signer.scheme.verify(signature, message)
 			}
 		}

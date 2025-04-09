@@ -40,13 +40,7 @@ function validateMessageTuple<Payload extends MessageType>(
 		assert(parent.length === KEY_LENGTH, "expected parent.length === KEY_LENGTH")
 	}
 
-	assert(payload !== null && payload !== undefined, "expected payload")
-	if (payload.type === "snapshot") {
-		assert(clock === 0, "expected clock === 0 for snapshot")
-		assert(parents.length === 0, "expected empty parent array for snapshot")
-	} else {
-		assert(clock === getNextClock(parents), "expected clock === getNextClock(parents)")
-	}
+	assert((clock === 0 && parents.length === 0) || clock === getNextClock(parents), "expected clock === getNextClock(parents)")
 }
 
 export function decodeSignedMessage(value: Uint8Array): { signature: Signature; message: Message } {
@@ -60,22 +54,12 @@ export function decodeSignedMessage(value: Uint8Array): { signature: Signature; 
 	}
 }
 
-function isValidPayload(payload: unknown): payload is MessageType {
-	return typeof payload === "object" && payload !== null && "type" in payload
-}
-
 export function encodeSignedMessage<Payload>(
 	{ codec, publicKey, signature }: Signature,
 	{ topic, clock, parents, payload }: Message<Payload>,
 ): Uint8Array {
 	const parentKeys = parents.map(encodeId)
-	assert(isValidPayload(payload), "invalid payload")
-	if (payload.type === "snapshot") {
-		assert(clock === 0, "expected clock === 0 for snapshot")
-		assert(parents.length === 0, "expected empty parent array of snapshot")
-	} else {
-		assert(clock === getNextClock(parentKeys), "expected clock === getNextClock(parentKeys)")
-	}
+	assert((clock === 0 && parentKeys.length === 0) || clock === getNextClock(parentKeys), "expected clock === getNextClock(parentKeys)")
 	return cbor.encode([[codec, publicKey, signature], topic, clock, parentKeys, payload])
 }
 
