@@ -1,4 +1,4 @@
-import { useState, MouseEvent, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 import { Button, Box, Heading, Text } from "@radix-ui/themes"
 import { Canvas, generateChangesets, Changeset as ChangesetMigrationRow, Changeset } from "@canvas-js/core"
@@ -86,8 +86,7 @@ export const ContractView = () => {
 		}
 	}, [editorState, contractData])
 
-	const updateChangesets = async (e: MouseEvent, state?: EditorState) => {
-		e.preventDefault()
+	const updateChangesets = async (state?: EditorState) => {
 		const value = (editorState ?? state)?.doc.toString()
 		if (!value || !contractData) {
 			setError("No contract content")
@@ -137,14 +136,12 @@ export const ContractView = () => {
 		}
 	}
 
-	const cancelMigrations = async (e: MouseEvent) => {
-		e.preventDefault()
+	const cancelMigrations = async () => {
 		setChangesets(undefined)
 		setNewContract(undefined)
 	}
 
-	const runMigrations = async (e: MouseEvent) => {
-		e.preventDefault()
+	const runMigrations = async () => {
 		if (!changesets || !newContract) {
 			setError("No migrations to run")
 			return
@@ -245,8 +242,7 @@ export const ContractView = () => {
 		}
 	}
 
-	function revertToOriginal(e: MouseEvent) {
-		e.preventDefault()
+	function revertToOriginal() {
 		if (!contractData || !editorState || !editorView) {
 			return
 		}
@@ -288,10 +284,7 @@ export const ContractView = () => {
 								}}
 								readOnly={contractData?.admin ? false : true}
 								onBuild={(state, _view) => {
-									const syntheticEvent = {
-										preventDefault: () => {},
-									} as React.MouseEvent<HTMLButtonElement>
-									updateChangesets(syntheticEvent, state)
+									updateChangesets(state)
 								}}
 							/>
 						)}
@@ -322,11 +315,26 @@ export const ContractView = () => {
 					{contractData?.admin && (
 						<>
 							<Box mt="4">
-								<Button size="2" variant="solid" onClick={updateChangesets}>
+								<Button
+									size="2"
+									variant="solid"
+									onClick={(e) => {
+										e.preventDefault()
+										updateChangesets()
+									}}
+								>
 									Build
 								</Button>
 								&nbsp;
-								<Button size="2" variant="outline" color="gray" onClick={revertToOriginal}>
+								<Button
+									size="2"
+									variant="outline"
+									color="gray"
+									onClick={(e) => {
+										e.preventDefault()
+										revertToOriginal()
+									}}
+								>
 									Revert to Original
 								</Button>
 							</Box>
@@ -363,11 +371,25 @@ export const ContractView = () => {
 												</ul>
 											</Text>
 											<Box mt="4" pt="1">
-												<Button size="2" variant="solid" onClick={runMigrations}>
+												<Button
+													size="2"
+													variant="solid"
+													onClick={(e) => {
+														e.preventDefault()
+														runMigrations()
+													}}
+												>
 													Sign and Commit Changes
 												</Button>
 												&nbsp;
-												<Button size="2" variant="outline" onClick={cancelMigrations}>
+												<Button
+													size="2"
+													variant="outline"
+													onClick={(e) => {
+														e.preventDefault()
+														cancelMigrations()
+													}}
+												>
 													Cancel
 												</Button>
 											</Box>
