@@ -29,7 +29,6 @@ export abstract class AbstractSessionSigner<
 	public readonly sessionDuration: number | null
 
 	protected readonly log: Logger
-	protected readonly privkeySeed: string
 
 	#cache = new Map<string, { session: Session; signer: Signer<MessageType<AuthorizationData>> }>()
 
@@ -40,13 +39,6 @@ export abstract class AbstractSessionSigner<
 	) {
 		this.log = logger(`canvas:signer:${key}`)
 		this.sessionDuration = options.sessionDuration ?? null
-
-		let seed = target.get(`canvas:signers/${key}/seed`)
-		if (seed === null || seed.length !== 64 || !seed.match(/^[0-9a-f]+$/i)) {
-			seed = bytesToHex(randomBytes(32))
-			target.set(`canvas:signers/${key}/seed`, seed)
-		}
-		this.privkeySeed = seed
 	}
 
 	public abstract match: (address: string) => boolean
