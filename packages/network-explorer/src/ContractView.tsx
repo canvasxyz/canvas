@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react"
-import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 import { Button, Box, Heading, Text } from "@radix-ui/themes"
-import { Canvas, generateChangesets, Changeset as ChangesetMigrationRow, Changeset } from "@canvas-js/core"
+import { Changeset as ChangesetMigrationRow, Changeset } from "@canvas-js/core"
 import { EditorState } from "@codemirror/state"
 import { EditorView } from "@codemirror/view"
 import { useContractData } from "./hooks/useContractData.js"
@@ -9,6 +8,7 @@ import { useApplicationData } from "./hooks/useApplicationData.js"
 import { Editor } from "./components/Editor.js"
 import { SiweMessage } from "siwe"
 import { utils } from "ethers"
+import { useStagedMigrations } from "./hooks/useStagedMigrations.js"
 
 async function getSignature(nonce: string) {
 	// @ts-ignore
@@ -83,6 +83,7 @@ const ChangesetMigrationRow = ({ change: c }: { change: Changeset }) => {
 export const ContractView = () => {
 	const contractData = useContractData()
 	const applicationData = useApplicationData()
+	const { rebuildContract } = useStagedMigrations()
 
 	const [error, setError] = useState<string>()
 	const [changesets, setChangesets] = useState<ChangesetMigrationRow[]>()
@@ -134,41 +135,12 @@ export const ContractView = () => {
 		setChangesets(undefined)
 		setWaitingForCommit(undefined)
 
-		const { build } = await Canvas.buildContract(value, { wasmURL: "./esbuild.wasm" })
-
-		const initErrorTimer = setTimeout(() => {
-			setError(
-				"Failed to initialize in-browser Canvas application. This is likely because " +
-					"of an IndexedDB bug, try closing other windows and deleting the test.a and test.b databases.",
-			)
-		}, 500)
-
 		try {
-			const app = await Canvas.initialize({
-				contract: contractData.contract,
-				topic: "test.a." + bytesToHex(randomBytes(32)),
-				reset: true,
-			})
-			const newApp = await Canvas.initialize({
-				contract: build,
-				topic: "test.b." + bytesToHex(randomBytes(32)),
-				reset: true,
-			})
+			await rebuildContract(value)
 			setNewContract(value)
-			setChangesets(generateChangesets(app.getSchema(), newApp.getSchema()))
 		} catch (err: any) {
-			if (err.name === "RuntimeError" && err.message.startsWith("Aborted(TypeError: WebAssembly.instantiate()")) {
-				setError(
-					err.message + " This may be because of an network explorer build issue. Try rebuilding the network explorer.",
-				)
-			} else if ("message" in err && typeof err.message === "string") {
-				setError(err.message)
-			} else {
-				setError(err.toString())
-			}
-			console.error(err)
-		} finally {
-			clearTimeout(initErrorTimer)
+			setError(err.message)
+			return
 		}
 	}
 
