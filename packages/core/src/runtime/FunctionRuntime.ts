@@ -28,7 +28,8 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 	public readonly actions: Record<string, ActionImplementation<ModelsT, any>>
 
 	#context: ExecutionContext | null = null
-	#transaction: boolean = false
+	#txnId = 0
+	#transaction = false
 	#thisValue: ActionContext<DeriveModelTypes<ModelsT>> | null = null
 	#queue = new PQueue({ concurrency: 1 })
 	#db: ModelAPI<DeriveModelTypes<ModelsT>>
@@ -57,8 +58,13 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 			delete: (model, key) => this.#queue.add(() => this.context.deleteModelValue(model, key, this.#transaction)),
 
 			transaction: async (callback) => {
+				if (this.#txnId > 0) {
+					throw new Error("transaction(...) can only be called once per action")
+				}
+
 				try {
 					this.#transaction = true
+					this.#txnId += 1
 					return await callback.apply(this.thisValue, [])
 				} finally {
 					this.#transaction = false
@@ -83,13 +89,13 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 		return this.#thisValue
 	}
 
-	protected async execute(ex: ExecutionContext): Promise<void | any> {
+	protected async execute(exec: ExecutionContext): Promise<void | any> {
 		const {
 			did,
 			name,
 			args,
 			context: { blockhash, timestamp },
-		} = ex.message.payload
+		} = exec.message.payload
 
 		const action = this.actions[name]
 		if (action === undefined) {
@@ -98,16 +104,17 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 
 		const thisValue: ActionContext<DeriveModelTypes<ModelsT>> = {
 			db: this.#db,
-			id: ex.id,
-			publicKey: ex.signature.publicKey,
+			id: exec.id,
+			publicKey: exec.signature.publicKey,
 			did: did,
-			address: ex.address,
+			address: exec.address,
 			blockhash: blockhash ?? null,
 			timestamp: timestamp,
 		}
 
 		try {
-			this.#context = ex
+			this.#txnId = 0
+			this.#context = exec
 			this.#thisValue = thisValue
 
 			const result = await action.apply(thisValue, Array.isArray(args) ? [this.#db, ...args] : [this.#db, args])
@@ -119,6 +126,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 			console.log("Error inside canvas action:", err)
 			throw err
 		} finally {
+			this.#txnId = 0
 			this.#context = null
 			this.#thisValue = null
 		}

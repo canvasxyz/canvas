@@ -74,7 +74,8 @@ export class ContractRuntime extends AbstractRuntime {
 
 	#context: ExecutionContext | null = null
 	#thisHandle: QuickJSHandle | null = null
-	#transaction: boolean = false
+	#transaction = false
+	#txnId = 0
 
 	constructor(
 		public readonly topic: string,
@@ -118,12 +119,16 @@ export class ContractRuntime extends AbstractRuntime {
 
 				transaction: vm.context.newFunction("transaction", (callbackHandle) => {
 					const promise = vm.context.newPromise()
-
-					this.#transaction = true
-					this.vm
-						.callAsync(callbackHandle, this.thisHandle, [])
-						.then(promise.resolve, promise.reject)
-						.finally(() => void (this.#transaction = false))
+					if (this.#txnId === 0) {
+						this.#txnId += 1
+						this.#transaction = true
+						this.vm
+							.callAsync(callbackHandle, this.thisHandle, [])
+							.then(promise.resolve, promise.reject)
+							.finally(() => void (this.#transaction = false))
+					} else {
+						promise.reject(vm.wrapError(new Error("transaction(...) can only be used once per action")))
+					}
 
 					promise.settled.then(vm.runtime.executePendingJobs)
 					return promise.handle
@@ -150,12 +155,12 @@ export class ContractRuntime extends AbstractRuntime {
 		return this.#thisHandle
 	}
 
-	protected async execute(context: ExecutionContext): Promise<void | any> {
+	protected async execute(exec: ExecutionContext): Promise<void | any> {
 		const {
 			name,
 			args,
 			context: { blockhash, timestamp },
-		} = context.message.payload
+		} = exec.message.payload
 
 		const actionHandle = this.actions[name]
 		if (actionHandle === undefined) {
@@ -163,10 +168,10 @@ export class ContractRuntime extends AbstractRuntime {
 		}
 
 		const thisHandle = this.vm.wrapValue({
-			id: context.id,
-			publicKey: context.publicKey,
-			did: context.did,
-			address: context.address,
+			id: exec.id,
+			publicKey: exec.publicKey,
+			did: exec.did,
+			address: exec.address,
 			blockhash: blockhash ?? null,
 			timestamp,
 		})
@@ -176,13 +181,15 @@ export class ContractRuntime extends AbstractRuntime {
 		const argHandles = Array.isArray(args) ? args.map(this.vm.wrapValue) : [this.vm.wrapValue(args)]
 
 		try {
-			this.#context = context
+			this.#txnId = 0
+			this.#context = exec
 			this.#thisHandle = thisHandle
 			const result = await this.vm.callAsync(actionHandle, thisHandle, [this.#databaseAPI, ...argHandles])
 			return result.consume((handle) => this.vm.unwrapValue(handle))
 		} finally {
 			argHandles.map((handle: QuickJSHandle) => handle.dispose())
 			thisHandle.dispose()
+			this.#txnId = 0
 			this.#context = null
 			this.#thisHandle = null
 		}
