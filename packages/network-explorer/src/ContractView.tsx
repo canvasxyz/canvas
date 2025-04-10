@@ -10,6 +10,42 @@ import { Editor } from "./components/Editor.js"
 import { SiweMessage } from "siwe"
 import { utils } from "ethers"
 
+async function getSignature(nonce: string) {
+	// @ts-ignore
+	if (!window.ethereum) {
+		throw new Error("Ethereum provider not found. Please install a wallet like MetaMask.")
+	}
+
+	// @ts-ignore
+	const accounts = await window.ethereum.request({ method: "eth_requestAccounts" })
+	const address = utils.getAddress(accounts[0])
+
+	// Create SIWE message
+	const domain = window.location.host
+	const origin = window.location.origin
+	const statement = "Sign this message to confirm the contract migration."
+
+	const siweMessage = new SiweMessage({
+		domain,
+		address,
+		statement,
+		uri: origin,
+		version: "1",
+		chainId: 1, // Adjust based on your network
+		nonce,
+	})
+
+	const message = siweMessage.prepareMessage()
+
+	// Request signature from wallet
+	// @ts-ignore
+	const signature = await window.ethereum.request({
+		method: "personal_sign",
+		params: [message, address],
+	})
+	return { address, message, signature }
+}
+
 // Define a localStorage key for unsaved changes
 const UNSAVED_CHANGES_KEY = "contract-editor-unsaved-changes"
 
@@ -148,44 +184,13 @@ export const ContractView = () => {
 		}
 
 		try {
-			// @ts-ignore
-			if (!window.ethereum) {
-				setError("Ethereum provider not found. Please install a wallet like MetaMask.")
-				return
-			}
 			if (!contractData) {
 				setError("Must wait for contractData to load")
 				return
 			}
 			setError(undefined)
 
-			// @ts-ignore
-			const accounts = await window.ethereum.request({ method: "eth_requestAccounts" })
-			const address = utils.getAddress(accounts[0])
-
-			// Create SIWE message
-			const domain = window.location.host
-			const origin = window.location.origin
-			const statement = "Sign this message to confirm the contract migration."
-
-			const siweMessage = new SiweMessage({
-				domain,
-				address,
-				statement,
-				uri: origin,
-				version: "1",
-				chainId: 1, // Adjust based on your network
-				nonce: contractData.nonce,
-			})
-
-			const message = siweMessage.prepareMessage()
-
-			// Request signature from wallet
-			// @ts-ignore
-			const signature = await window.ethereum.request({
-				method: "personal_sign",
-				params: [message, address],
-			})
+			const { address, message, signature } = await getSignature(contractData.nonce)
 
 			// Send to API with SIWE data
 			const snapshot = await fetch("/api/migrate", {
