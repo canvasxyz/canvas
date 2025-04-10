@@ -26,6 +26,10 @@ export function createAPI(app: Canvas): express.Express {
 		res.json(await app.getApplicationData())
 	})
 
+	api.get("/contract", (req, res) => {
+		res.json({ contract: app.getContract() })
+	})
+
 	api.get("/actions/count", async (req, res) => {
 		const range = getRange(req)
 		const { did, name } = req.query

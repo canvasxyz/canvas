@@ -1,6 +1,5 @@
 import { Libp2p, TypedEventEmitter } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
-
 import type pg from "pg"
 import type { SqlStorage } from "@cloudflare/workers-types"
 import { bytesToHex } from "@noble/hashes/utils"
@@ -17,7 +16,7 @@ import target from "#target"
 
 import type { Contract, Actions, ActionImplementation, ModelAPI, DeriveModelTypes } from "./types.js"
 import { Runtime, createRuntime } from "./runtime/index.js"
-import { ActionRecord } from "./runtime/AbstractRuntime.js"
+import { AbstractRuntime, ActionRecord } from "./runtime/AbstractRuntime.js"
 import { validatePayload } from "./schema.js"
 import { createSnapshot, hashSnapshot, Change } from "./snapshot.js"
 import { initialUpgradeSchema, topicPattern } from "./utils.js"
@@ -49,7 +48,7 @@ export type Config<ModelsT extends ModelSchema = any, ActionsT extends Actions<M
 
 export type ActionAPI<Args extends Array<any> = any, Result = any> = (
 	...args: Args
-) => Promise<SignedMessage<Action, Result>>
+) => Promise<SignedMessage<Action, Result> & { result: Result }>
 
 export interface CanvasEvents extends GossipLogEvents<MessageType> {
 	stop: Event
@@ -84,7 +83,7 @@ export class Canvas<
 	ActionsT extends Actions<ModelsT> = Actions<ModelsT>,
 > extends TypedEventEmitter<CanvasEvents> {
 	public static namespace = "canvas"
-	public static version = 2
+	public static version = 3
 
 	public static async initialize<ModelsT extends ModelSchema, ActionsT extends Actions<ModelsT> = Actions<ModelsT>>(
 		config: Config<ModelsT, ActionsT>,
@@ -129,24 +128,43 @@ export class Canvas<
 
 				version: { [Canvas.namespace]: Canvas.version },
 
-				initialUpgradeVersion: { [Canvas.namespace]: 1 },
 				initialUpgradeSchema: { ...runtime.models, ...initialUpgradeSchema },
+				initialUpgradeVersion: { [Canvas.namespace]: 1 },
 
 				async upgrade(upgradeAPI, oldConfig, oldVersion, newVersion) {
 					const log = logger("canvas:core:upgrade")
 					const version = oldVersion[Canvas.namespace] ?? 0
 					log("found canvas version %d", version)
+
+					let replayRequired = false
+
 					if (version <= 1) {
 						log("removing property 'branch' from $effects", version)
 						await upgradeAPI.removeProperty("$effects", "branch")
 					}
 
-					return false
+					if (version <= 2) {
+						for (const [modelName, modelInit] of Object.entries(AbstractRuntime.effectsModel)) {
+							log("creating model %s", modelName)
+							await upgradeAPI.createModel(modelName, modelInit)
+						}
+
+						log("deleting model %s", "$effects")
+						await upgradeAPI.deleteModel("$effects")
+
+						replayRequired = true
+					}
+
+					if (replayRequired) {
+						for (const name of Object.keys(runtime.models)) {
+							await upgradeAPI.clear(name)
+						}
+					}
+
+					return replayRequired
 				},
 			},
 		)
-
-		runtime.db = messageLog.db
 
 		for (const model of Object.values(messageLog.db.models)) {
 			if (model.name.startsWith("$")) {

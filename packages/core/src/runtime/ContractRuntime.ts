@@ -64,76 +64,74 @@ export class ContractRuntime extends AbstractRuntime {
 			"contract model names cannot start with '$'",
 		)
 
-		return new ContractRuntime(topic, signers, modelSchema, vm, actions, contract)
+		return new ContractRuntime(topic, signers, vm, contract, modelSchema, actions)
 	}
+
+	public readonly contract: string
+	public readonly actions: Record<string, QuickJSHandle>
 
 	readonly #databaseAPI: QuickJSHandle
 
 	#context: ExecutionContext | null = null
+	#thisHandle: QuickJSHandle | null = null
+	#transaction = false
+	#txnId = 0
 
 	constructor(
 		public readonly topic: string,
 		public readonly signers: SignerCache,
-		public readonly models: ModelSchema,
 		public readonly vm: VM,
-		public readonly actions: Record<string, QuickJSHandle>,
-		public readonly contract: string | Contract<any, any>,
+		contract: string,
+		modelSchema: ModelSchema,
+		actions: Record<string, QuickJSHandle>,
 	) {
-		super(models)
+		super(modelSchema)
+		this.contract = contract
+		this.actions = actions
 		this.#databaseAPI = vm
 			.wrapObject({
-				get: vm.wrapFunction((model, key) => {
+				get: vm.wrapFunction(async (model, key) => {
 					assert(typeof model === "string", 'expected typeof model === "string"')
 					assert(typeof key === "string", 'expected typeof key === "string"')
-					return this.context.getModelValue(model, key)
+					return await this.context.getModelValue(model, key, this.#transaction)
 				}),
-				set: vm.context.newFunction("set", (modelHandle, valueHandle) => {
-					const model = vm.context.getString(modelHandle)
-					const value = this.vm.unwrapValue(valueHandle) as ModelValue
-					this.context.setModelValue(model, value)
-				}),
-				create: vm.context.newFunction("create", (modelHandle, valueHandle) => {
-					const model = vm.context.getString(modelHandle)
-					const value = this.vm.unwrapValue(valueHandle) as ModelValue
-					this.context.setModelValue(model, value)
-				}),
-				update: vm.context.newFunction("update", (modelHandle, valueHandle) => {
-					const model = vm.context.getString(modelHandle)
-					const value = this.vm.unwrapValue(valueHandle) as ModelValue
 
+				set: vm.wrapFunction(async (model, value) => {
+					assert(typeof model === "string", 'expected typeof model === "string"')
+					await this.context.setModelValue(model, value as ModelValue, this.#transaction)
+				}),
+
+				update: vm.wrapFunction(async (model, value) => {
+					assert(typeof model === "string", 'expected typeof model === "string"')
+					await this.context.updateModelValue(model, value as ModelValue, this.#transaction)
+				}),
+
+				merge: vm.wrapFunction(async (model, value) => {
+					assert(typeof model === "string", 'expected typeof model === "string"')
+					await this.context.mergeModelValue(model, value as ModelValue, this.#transaction)
+				}),
+
+				delete: vm.wrapFunction(async (model, key) => {
+					assert(typeof model === "string", 'expected typeof model === "string"')
+					assert(typeof key === "string", 'expected typeof key === "string"')
+					await this.context.deleteModelValue(model, key, this.#transaction)
+				}),
+
+				transaction: vm.context.newFunction("transaction", (callbackHandle) => {
 					const promise = vm.context.newPromise()
-
-					// TODO: Ensure concurrent merges into the same value don't create a race condition
-					// if the user doesn't call db.update() with await.
-					this.context
-						.updateModelValue(model, value)
-						.then(() => promise.resolve())
-						.catch((err) => promise.reject())
+					if (this.#txnId === 0) {
+						this.#txnId += 1
+						this.#transaction = true
+						this.vm
+							.callAsync(callbackHandle, this.thisHandle, [])
+							.then(promise.resolve, promise.reject)
+							.finally(() => void (this.#transaction = false))
+					} else {
+						promise.reject(vm.wrapError(new Error("transaction(...) can only be used once per action")))
+					}
 
 					promise.settled.then(vm.runtime.executePendingJobs)
 					return promise.handle
-				}),
-				merge: vm.context.newFunction("merge", (modelHandle, valueHandle) => {
-					const model = vm.context.getString(modelHandle)
-					const value = this.vm.unwrapValue(valueHandle) as ModelValue
-
-					const promise = vm.context.newPromise()
-
-					// TODO: Ensure concurrent merges into the same value don't create a race condition
-					// if the user doesn't call db.update() with await.
-					this.context
-						.mergeModelValue(model, value)
-						.then(() => promise.resolve())
-						.catch((err) => promise.reject())
-
-					promise.settled.then(vm.runtime.executePendingJobs)
-					return promise.handle
-				}),
-
-				delete: vm.context.newFunction("delete", (modelHandle, keyHandle) => {
-					const model = vm.context.getString(modelHandle)
-					const key = vm.context.getString(keyHandle)
-					this.context.deleteModelValue(model, key)
 				}),
 			})
 			.consume(vm.cache)
@@ -152,48 +150,48 @@ export class ContractRuntime extends AbstractRuntime {
 		return this.#context
 	}
 
-	protected async execute(context: ExecutionContext): Promise<void | any> {
-		const { publicKey } = context.signature
-		const { address } = context
+	private get thisHandle() {
+		assert(this.#thisHandle !== null, "expected this.#thisHandle !== null")
+		return this.#thisHandle
+	}
+
+	protected async execute(exec: ExecutionContext): Promise<void | any> {
 		const {
-			did,
 			name,
 			args,
 			context: { blockhash, timestamp },
-		} = context.message.payload
+		} = exec.message.payload
 
 		const actionHandle = this.actions[name]
-
 		if (actionHandle === undefined) {
 			throw new Error(`invalid action name: ${name}`)
 		}
 
 		const thisHandle = this.vm.wrapValue({
-			id: context.id,
-			publicKey,
-			did,
-			address,
+			id: exec.id,
+			publicKey: exec.publicKey,
+			did: exec.did,
+			address: exec.address,
 			blockhash: blockhash ?? null,
 			timestamp,
 		})
 
+		this.vm.context.setProp(thisHandle, "db", this.#databaseAPI)
+
 		const argHandles = Array.isArray(args) ? args.map(this.vm.wrapValue) : [this.vm.wrapValue(args)]
 
 		try {
-			this.#context = context
+			this.#txnId = 0
+			this.#context = exec
+			this.#thisHandle = thisHandle
 			const result = await this.vm.callAsync(actionHandle, thisHandle, [this.#databaseAPI, ...argHandles])
-
-			return result.consume((handle) => {
-				if (this.vm.context.typeof(handle) === "undefined") {
-					return undefined
-				} else {
-					return this.vm.unwrapValue(result)
-				}
-			})
+			return result.consume((handle) => this.vm.unwrapValue(handle))
 		} finally {
 			argHandles.map((handle: QuickJSHandle) => handle.dispose())
 			thisHandle.dispose()
+			this.#txnId = 0
 			this.#context = null
+			this.#thisHandle = null
 		}
 	}
 }

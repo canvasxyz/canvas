@@ -1,10 +1,10 @@
-import pDefer, { DeferredPromise } from "p-defer"
+import PQueue from "p-queue"
 
 import type { SignerCache } from "@canvas-js/interfaces"
-import { ModelSchema, ModelValue, validateModelValue, DeriveModelTypes } from "@canvas-js/modeldb"
-import { assert } from "@canvas-js/utils"
+import { ModelSchema, DeriveModelTypes } from "@canvas-js/modeldb"
+import { assert, mapValues } from "@canvas-js/utils"
 
-import { ActionContext, ActionImplementation, Contract, ModelAPI, Chainable } from "../types.js"
+import { ActionContext, ActionImplementation, Contract, ModelAPI } from "../types.js"
 import { ExecutionContext } from "../ExecutionContext.js"
 import { AbstractRuntime } from "./AbstractRuntime.js"
 
@@ -21,156 +21,53 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 			"contract model names cannot start with '$'",
 		)
 
-		return new FunctionRuntime(topic, signers, contract.models, contract.actions, contract)
+		return new FunctionRuntime(topic, signers, contract)
 	}
+
+	public readonly contract: string
+	public readonly actions: Record<string, ActionImplementation<ModelsT, any>>
 
 	#context: ExecutionContext | null = null
-	readonly #db: ModelAPI<DeriveModelTypes<ModelsT>>
+	#txnId = 0
+	#transaction = false
+	#thisValue: ActionContext<DeriveModelTypes<ModelsT>> | null = null
+	#queue = new PQueue({ concurrency: 1 })
+	#db: ModelAPI<DeriveModelTypes<ModelsT>>
 
-	#lock: DeferredPromise<void> | null = null
-	#waiting: number = 0
-
-	private async acquireLock() {
-		this.#waiting++
-		while (this.#lock) {
-			await this.#lock.promise
-		}
-		this.#lock = pDefer<void>()
-	}
-
-	private releaseLock() {
-		assert(this.#lock, "internal error")
-		this.#lock.resolve()
-		this.#lock = null
-		this.#waiting--
-	}
-
-	constructor(
-		public readonly topic: string,
-		public readonly signers: SignerCache,
-		public readonly models: ModelSchema,
-		public readonly actions: Record<string, ActionImplementation<ModelsT, any>>,
-		public readonly contract: string | Contract<ModelsT, any>,
-	) {
-		super(models)
-
-		// Extend the return type of set(), merge(), or update() to allow chaining a link() call.
-		const getChainableMethod =
-			<A extends string, B, ModelTypes extends DeriveModelTypes<ModelsT>>(
-				updater: (model: A, value: B) => Promise<void>,
-				isSelect?: boolean,
-			): ((model: A, value: B) => Chainable<ModelTypes>) =>
-			(model, value) => {
-				const promise = updater(model, value) as Chainable<ModelTypes>
-
-				// Create a backlink from the model `linkModel` where pk=`linkPrimaryKey`
-				// to point at the model we just created or updated.
-				promise.link = async (linkModel: string, linkPrimaryKey: string, params?: { through: string }) => {
-					await this.acquireLock()
-					try {
-						const {
-							primaryKey: [primaryKey],
-						} = this.db.models[model]
-						const target = isSelect ? (value as string) : ((value as ModelValue)[primaryKey] as string)
-						const modelValue = await this.context.getModelValue(linkModel, linkPrimaryKey)
-						assert(modelValue !== null, `db.link(): link from a missing model ${linkModel}.get(${linkPrimaryKey})`)
-						const backlinkKey = params?.through ?? model
-						const backlinkProp = this.db.models[linkModel].properties.find((prop) => prop.name === backlinkKey)
-						assert(backlinkProp !== undefined, `db.link(): link from ${linkModel} used missing property ${backlinkKey}`)
-						if (backlinkProp.kind === "relation") {
-							const current = (modelValue[backlinkKey] ?? []) as string[]
-							modelValue[backlinkKey] = current.includes(target) ? current : [...current, target]
-						} else {
-							throw new Error(`db.link(): link from ${linkModel} ${backlinkKey} must be a relation`)
-						}
-						if (this.db.models[linkModel] === undefined) throw new Error(`db.link(): no such model "${linkModel}"`)
-						validateModelValue(this.db.models[linkModel], modelValue)
-						this.context.modelEntries[linkModel][linkPrimaryKey] = modelValue
-					} finally {
-						this.releaseLock()
-					}
-				}
-
-				promise.unlink = async (linkModel: string, linkPrimaryKey: string, params?: { through: string }) => {
-					await this.acquireLock()
-					try {
-						const {
-							primaryKey: [primaryKey],
-						} = this.db.models[model]
-						const target = isSelect ? (value as string) : ((value as ModelValue)[primaryKey] as string)
-						const modelValue = await this.context.getModelValue(linkModel, linkPrimaryKey)
-						assert(modelValue !== null, `db.unlink(): called on a missing model ${linkModel}.get(${linkPrimaryKey})`)
-						const backlinkKey = params?.through ?? model
-						const backlinkProp = this.db.models[linkModel].properties.find((prop) => prop.name === backlinkKey)
-						assert(
-							backlinkProp !== undefined,
-							`db.unlink(): called on ${linkModel} used missing property ${backlinkKey}`,
-						)
-						if (backlinkProp.kind === "relation") {
-							const current = (modelValue[backlinkKey] ?? []) as string[]
-							modelValue[backlinkKey] = current.filter((item) => item !== target)
-						} else {
-							throw new Error(`db.unlink(): link from ${linkModel} ${backlinkKey} must be a relation`)
-						}
-						validateModelValue(this.db.models[linkModel], modelValue)
-						this.context.modelEntries[linkModel][linkPrimaryKey] = modelValue
-					} finally {
-						this.releaseLock()
-					}
-				}
-
-				return promise
-			}
+	constructor(public readonly topic: string, public readonly signers: SignerCache, contract: Contract<ModelsT>) {
+		super(contract.models)
+		this.contract = [
+			`export const models = ${JSON.stringify(contract.models, null, "  ")};`,
+			`export const actions = {\n${Object.entries(contract.actions)
+				.map(([name, action]) => `${name}: ${action}`)
+				.join(", \n")}};`,
+		].join("\n")
+		this.actions = contract.actions
 
 		this.#db = {
 			get: async <T extends keyof DeriveModelTypes<ModelsT> & string>(model: T, key: string) => {
-				await this.acquireLock()
-				try {
-					const result = await this.context.getModelValue(model, key)
-					return result as DeriveModelTypes<ModelsT>[T]
-				} finally {
-					this.releaseLock()
-				}
+				const result = await this.#queue.add(() =>
+					this.context.getModelValue<DeriveModelTypes<ModelsT>[T]>(model, key, this.#transaction),
+				)
+				return result ?? null
 			},
-			select: getChainableMethod(async (model, key: string) => {}, true),
-			set: getChainableMethod(async (model, value) => {
-				await this.acquireLock()
-				try {
-					this.context.setModelValue(model, value)
-				} finally {
-					this.releaseLock()
+
+			set: (model, value) => this.#queue.add(() => this.context.setModelValue(model, value, this.#transaction)),
+			update: (model, value) => this.#queue.add(() => this.context.updateModelValue(model, value, this.#transaction)),
+			merge: (model, value) => this.#queue.add(() => this.context.mergeModelValue(model, value, this.#transaction)),
+			delete: (model, key) => this.#queue.add(() => this.context.deleteModelValue(model, key, this.#transaction)),
+
+			transaction: async (callback) => {
+				if (this.#txnId > 0) {
+					throw new Error("transaction(...) can only be called once per action")
 				}
-			}),
-			create: getChainableMethod(async (model, value) => {
-				await this.acquireLock()
+
 				try {
-					this.context.setModelValue(model, value)
+					this.#transaction = true
+					this.#txnId += 1
+					return await callback.apply(this.thisValue, [])
 				} finally {
-					this.releaseLock()
-				}
-			}),
-			update: getChainableMethod(async (model, value) => {
-				await this.acquireLock()
-				try {
-					await this.context.updateModelValue(model, value)
-				} finally {
-					this.releaseLock()
-				}
-			}),
-			merge: getChainableMethod(async (model, value) => {
-				await this.acquireLock()
-				try {
-					await this.context.mergeModelValue(model, value)
-				} finally {
-					this.releaseLock()
-				}
-			}),
-			delete: async (model: string, key: string) => {
-				await this.acquireLock()
-				try {
-					this.context.deleteModelValue(model, key)
-				} finally {
-					this.releaseLock()
+					this.#transaction = false
 				}
 			},
 		}
@@ -187,45 +84,51 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 		return this.#context
 	}
 
-	protected async execute(context: ExecutionContext): Promise<void | any> {
-		const { publicKey } = context.signature
-		const { address } = context
+	private get thisValue() {
+		assert(this.#thisValue !== null, "expected this.#thisValue !== null")
+		return this.#thisValue
+	}
+
+	protected async execute(exec: ExecutionContext): Promise<void | any> {
 		const {
 			did,
 			name,
 			args,
 			context: { blockhash, timestamp },
-		} = context.message.payload
+		} = exec.message.payload
 
 		const action = this.actions[name]
 		if (action === undefined) {
 			throw new Error(`invalid action name: ${name}`)
 		}
 
-		this.#context = context
+		const thisValue: ActionContext<DeriveModelTypes<ModelsT>> = {
+			db: this.#db,
+			id: exec.id,
+			publicKey: exec.signature.publicKey,
+			did: did,
+			address: exec.address,
+			blockhash: blockhash ?? null,
+			timestamp: timestamp,
+		}
 
 		try {
-			const thisValue: ActionContext<DeriveModelTypes<ModelsT>> = {
-				db: this.#db,
-				id: context.id,
-				publicKey,
-				did,
-				address,
-				blockhash: blockhash ?? null,
-				timestamp,
-			}
+			this.#txnId = 0
+			this.#context = exec
+			this.#thisValue = thisValue
 
 			const result = await action.apply(thisValue, Array.isArray(args) ? [this.#db, ...args] : [this.#db, args])
-			while (this.#waiting > 0) {
-				await new Promise((resolve) => setTimeout(resolve, 10))
-			}
+			await this.#queue.onIdle()
+
 			return result
 		} catch (err) {
 			trimActionStacktrace(err)
 			console.log("Error inside canvas action:", err)
 			throw err
 		} finally {
+			this.#txnId = 0
 			this.#context = null
+			this.#thisValue = null
 		}
 	}
 }

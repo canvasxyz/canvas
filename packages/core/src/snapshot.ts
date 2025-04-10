@@ -2,13 +2,12 @@ import { sha256 } from "@noble/hashes/sha256"
 import { bytesToHex } from "@noble/hashes/utils"
 import * as cbor from "@ipld/dag-cbor"
 
-import { MIN_MESSAGE_ID } from "@canvas-js/gossiplog"
-import { Snapshot, SnapshotEffect } from "@canvas-js/interfaces"
-import type { PropertyType } from "@canvas-js/modeldb"
+import { Snapshot } from "@canvas-js/interfaces"
+import type { PrimitiveType, Property, PropertyType } from "@canvas-js/modeldb"
 
 import { Canvas } from "./Canvas.js"
+
 import { Contract, ModelSchema, ModelValue } from "./types.js"
-import { EffectRecord } from "./runtime/AbstractRuntime.js"
 
 // typeguards
 export const isIndexInit = (value: unknown): value is string[] => Array.isArray(value)
@@ -79,7 +78,7 @@ export async function createSnapshot<T extends Contract<any>>(
 	const createdTables = changesets.filter((ch) => ch.change === "create_table").map((ch) => ch.table)
 	const droppedTables = changesets.filter((ch) => ch.change === "drop_table").map((ch) => ch.table)
 	const removedColumns: Record<string, string[]> = {}
-	const addedColumns: Record<string, Record<string, string>> = {}
+	const addedColumns: Record<string, Property[]> = {}
 	changesets
 		.filter((ch) => ch.change === "remove_column")
 		.forEach(({ table, column }) => {
@@ -90,72 +89,46 @@ export async function createSnapshot<T extends Contract<any>>(
 		.filter((ch) => ch.change === "add_column")
 		.forEach(({ table, column, propertyType }) => {
 			addedColumns[table] = addedColumns[table] ?? []
-			addedColumns[table][column] = propertyType
+			addedColumns[table].push({
+				name: column,
+				kind: "primitive",
+				type: propertyType as PrimitiveType,
+				nullable: true,
+			})
 		})
 
 	// flatten models
-	const modelData: Record<string, Uint8Array[]> = {}
+	const models: Record<string, Uint8Array[]> = {}
 	for (const [modelName, modelSchema] of Object.entries(app.db.models)) {
 		if (modelName.startsWith("$")) {
 			continue
-		}
-		if (droppedTables.includes(modelName)) {
+		} else if (droppedTables.includes(modelName)) {
 			continue
 		}
-		modelData[modelName] = []
+
+		models[modelName] = []
 		for await (const row of app.db.iterate(modelName)) {
 			if (addedColumns[modelName]) {
 				for (const key of Object.keys(addedColumns[modelName])) {
 					row[key] = null
 				}
 			}
+
 			if (removedColumns[modelName]) {
 				for (const key of removedColumns[modelName]) {
 					delete row[key]
 				}
 			}
-			modelData[modelName].push(cbor.encode(row))
+
+			models[modelName].push(cbor.encode(row))
 		}
 	}
+
 	for (const table of createdTables) {
-		modelData[table] = []
+		models[table] = []
 	}
-	const models = modelData
 
-	// flatten $effects table
-	const effectsMap = new Map<string, EffectRecord>()
-	for await (const row of app.db.iterate<EffectRecord>("$effects")) {
-		const { key, value, clock } = row
-		const [table, keyhash, msgid] = key.split("/")
-		const recordId = [table, keyhash].join("/")
-		const existingEffect = effectsMap.get(recordId)
-		if (!existingEffect || clock > existingEffect.clock) {
-			const effectKey = `${recordId}/${MIN_MESSAGE_ID}`
-
-			let updatedValue = value
-			if (value !== null && (addedColumns[table] || removedColumns[table])) {
-				const decodedValue = cbor.decode<ModelValue | null>(value)
-				if (decodedValue !== null) {
-					for (const key of Object.keys(addedColumns[table])) {
-						decodedValue[key] = null
-						updatedValue = cbor.encode(decodedValue)
-					}
-					for (const key of removedColumns[table]) {
-						delete decodedValue[key]
-						updatedValue = cbor.encode(decodedValue)
-					}
-				}
-			}
-			effectsMap.set(recordId, { key: effectKey, value: updatedValue, clock })
-		}
-	}
-	const effects = Array.from(effectsMap.values()).map(({ key, value }: SnapshotEffect) => ({ key, value }))
-
-	return {
-		type: "snapshot",
-		models,
-		effects,
-	}
+	return { type: "snapshot", models }
 }
 
 export const generateChangesets = (before: ModelSchema, after: ModelSchema) => {

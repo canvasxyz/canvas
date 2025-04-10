@@ -22,19 +22,13 @@ const target: PlatformTarget = {
 
 		try {
 			const { wasmURL } = extraConfig
-			await esbuild.initialize({
-				worker: true,
-				wasmURL,
-			})
+			await esbuild.initialize({ worker: true, wasmURL })
 		} catch (err: any) {
 			if (err?.message?.startsWith("Failed to download")) throw err
 			// initialize should only be called once
 		}
 
-		const { code, warnings } = await esbuild.transform(contract, {
-			loader: "tsx",
-			format: "esm",
-		})
+		const { code, warnings } = await esbuild.transform(contract, { loader: "tsx", format: "esm" })
 		for (const warning of warnings) {
 			const location = warning.location ? ` (${warning.location.line}:${warning.location.column})` : ""
 			console.log(`esbuild warning: ${warning.text}${location}`)

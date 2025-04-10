@@ -55,36 +55,6 @@ export const tables: TableDef[] = [
 		],
 	},
 	{
-		tableName: "$effects",
-		defaultSortColumn: "clock",
-		defaultSortDirection: "desc",
-		defaultColumns: [
-			{
-				header: "key",
-				accessorKey: "key",
-				size: 580,
-				enableSorting: true,
-				enableColumnFilter: false,
-			},
-			{
-				header: "value",
-				accessorKey: "value",
-				size: 120,
-				cell: BinaryCellData,
-				enableSorting: false,
-				enableColumnFilter: false,
-			},
-
-			{
-				header: "clock",
-				accessorKey: "clock",
-				size: 100,
-				enableSorting: true,
-				enableColumnFilter: false,
-			},
-		],
-	},
-	{
 		tableName: "$heads",
 		defaultSortColumn: "id",
 		defaultSortDirection: "asc",

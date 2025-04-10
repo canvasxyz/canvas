@@ -7,7 +7,6 @@ This document will explain how branch numbers are determined and then explain ho
 ## Relevant tables:
 
 - `$messages` - this table stores the id, signature, message contents (the `message` column), hash, branch and clock information about each message that the peer sees.
-- `$effects` - in the case where a message is an action, it may make changes to the data in ModelDB. We call these changes "effects". This table stores the key (which consists of the model name and the key to be updated) and value that were set, as well as the branch number and clock of the message that produced the effect.
 - `$branch_merges` - this table stores the points where branches split off from and/or join each other. TODO: we aren't actually using this - delete?
 
 ## How branch numbers are calculated
