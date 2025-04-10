@@ -54,7 +54,7 @@
 		"@canvas-js/modeldb-sqlite": "0.14.0-next.2",
 		"@canvas-js/modeldb-sqlite-expo": "0.14.0-next.2",
 		"@canvas-js/okra": "^0.4.7",
-		"@canvas-js/okra-lmdb": "^0.2.3",
+		"@canvas-js/okra-lmdb": "^0.2.4",
 		"@canvas-js/okra-memory": "^0.4.7",
 		"@canvas-js/signatures": "0.14.0-next.2",
 		"@canvas-js/utils": "1.0.0",
