@@ -18,10 +18,10 @@ export const builder = (yargs: Argv) =>
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
-	const { topic, contract, location } = await getContractLocation(args)
+	const { baseTopic, contract, location } = await getContractLocation(args)
 
 	try {
-		const app = await Canvas.initialize({ topic, path: location, contract })
+		const app = await Canvas.initialize({ topic: baseTopic, path: location, contract })
 		const { models } = await app.getApplicationData()
 		console.log(`topic: ${app.topic}\n`)
 		console.log(chalk.green("===== models ====="))

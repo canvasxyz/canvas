@@ -99,12 +99,19 @@ export const ContractView = () => {
 		setChangesets(undefined)
 		setWaitingForCommit(undefined)
 
+		const dbs = await window.indexedDB.databases()
+		dbs.forEach((db) => {
+			if (db?.name?.startsWith("canvas/v1/test.a.") || db?.name?.startsWith("canvas/v1/test.b.")) {
+				window.indexedDB.deleteDatabase(db.name)
+			}
+		})
+
 		const { build } = await Canvas.buildContract(value, { wasmURL: "./esbuild.wasm" })
 
 		const initErrorTimer = setTimeout(() => {
 			setError(
 				"Failed to initialize in-browser Canvas application. This is likely because " +
-					"of an IndexedDB bug, try closing other windows and deleting the test.a and test.b databases.",
+					"of a known IndexedDB issue. Try building again, or try closing other tabs/windows on this page.",
 			)
 		}, 500)
 
@@ -122,7 +129,11 @@ export const ContractView = () => {
 			setNewContract(value)
 			setChangesets(generateChangesets(app.getSchema(), newApp.getSchema()))
 		} catch (err: any) {
-			if ("message" in err && typeof err.message === "string") {
+			if (err.name === "RuntimeError" && err.message.startsWith("Aborted(TypeError: WebAssembly.instantiate()")) {
+				setError(
+					err.message + " This may be because of an network explorer build issue. Try rebuilding the network explorer.",
+				)
+			} else if ("message" in err && typeof err.message === "string") {
 				setError(err.message)
 			} else {
 				setError(err.toString())
@@ -254,6 +265,7 @@ export const ContractView = () => {
 						{editorInitialValue !== null && (
 							<Editor
 								initialValue={editorInitialValue}
+								autofocus={true}
 								onChange={(state, view) => {
 									setEditorState(state)
 									setEditorView(view)

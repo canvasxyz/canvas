@@ -19,7 +19,8 @@ export const builder = (yargs: Argv) =>
 			type: "string",
 			demandOption: true,
 		})
-		.option("topic", {
+		.option("baseTopic", {
+			alias: "topic",
 			desc: "Application topic",
 			type: "string",
 		})
@@ -35,10 +36,10 @@ export const builder = (yargs: Argv) =>
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
-	const { topic, location, contract } = await getContractLocation(args)
+	const { baseTopic, location, contract } = await getContractLocation(args)
 	assert(location !== null, "Cannot import to development apps since they do not persist any data")
 
-	const app = await Canvas.initialize({ topic, path: location, contract })
+	const app = await Canvas.initialize({ topic: baseTopic, path: location, contract })
 
 	const rl = readline.createInterface({
 		input: process.stdin,

@@ -36,9 +36,9 @@ export class SIWESigner extends AbstractSessionSigner<SIWESessionData> {
 	public constructor({ sessionDuration, ...init }: SIWESignerInit = { sessionDuration: 14 * DAYS }) {
 		super("chain-ethereum", ed25519, { sessionDuration })
 
-		this._signer = init.signer ?? new Wallet(this.privkeySeed) // Wallet.createRandom()
+		this._signer = init.signer ?? Wallet.createRandom()
 		this.chainId = init.chainId ?? 1
-		this.key = `SIWESigner-${init.signer ? "signer" : "burner"}`
+		this.key = `chain-ethereum${init.signer ? "-signer" : ""}`
 	}
 
 	public async getDid(): Promise<DidIdentifier> {

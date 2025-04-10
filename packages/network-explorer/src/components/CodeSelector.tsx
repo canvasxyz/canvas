@@ -36,7 +36,7 @@ export const CodeSelector = () => {
 							},
 						})}
 						<Text size={`${fontSize}`} weight="medium">
-							contract.ts
+							Contract
 						</Text>
 					</Flex>
 				)}

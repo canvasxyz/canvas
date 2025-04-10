@@ -1,34 +1,36 @@
 import * as cbor from "@ipld/dag-cbor"
 
-import { Message, Signature } from "@canvas-js/interfaces"
+import { Message, MessageType, Signature } from "@canvas-js/interfaces"
 import { assert } from "@canvas-js/utils"
 
 import { encodeId, decodeId, KEY_LENGTH } from "./MessageId.js"
 import { decodeClock } from "./clock.js"
 
 export type SignatureTuple = [codec: string, publicKey: string, signature: Uint8Array]
-export type MessageTuple = [
+export type MessageTuple<Payload> = [
 	signature: SignatureTuple,
 	topic: string,
 	clock: number,
 	parents: Uint8Array[],
-	payload: unknown,
+	payload: Payload,
 ]
 
 function validateSignatureTuple(signatureTuple: unknown): asserts signatureTuple is SignatureTuple {
 	assert(Array.isArray(signatureTuple), "expected Array.isArray(signatureTuple)")
-	assert(signatureTuple.length === 3, "expected signatureTuple.length === 3")
+	assert(signatureTuple.length === 3, "expected signatureTuple.length === 5")
 	const [codec, publicKey, signature] = signatureTuple
 	assert(typeof codec === "string", 'expected typeof codec === "string"')
 	assert(typeof publicKey === "string", 'expected typeof publicKey === "string"')
 	assert(signature instanceof Uint8Array, "expected signature instanceof Uint8Array")
 }
 
-function validateMessageTuple(messageTuple: unknown): asserts messageTuple is MessageTuple {
+function validateMessageTuple<Payload extends MessageType>(
+	messageTuple: unknown,
+): asserts messageTuple is MessageTuple<Payload> {
 	assert(Array.isArray(messageTuple), "expected Array.isArray(messageTuple)")
-	assert(messageTuple.length === 5, "messageTuple.length === 3")
+	assert(messageTuple.length === 5, "messageTuple.length === 5")
 
-	const [signature, topic, clock, parents] = messageTuple
+	const [signature, topic, clock, parents, payload] = messageTuple
 	validateSignatureTuple(signature)
 	assert(typeof topic === "string", 'expected typeof topic === "string"')
 	assert(typeof clock === "number", 'expected typeof clock === "number"')
@@ -38,7 +40,7 @@ function validateMessageTuple(messageTuple: unknown): asserts messageTuple is Me
 		assert(parent.length === KEY_LENGTH, "expected parent.length === KEY_LENGTH")
 	}
 
-	assert(clock === getNextClock(parents), "expected clock === getNextClock(parents)")
+	assert((clock === 0 && parents.length === 0) || clock === getNextClock(parents), "expected clock === getNextClock(parents)")
 }
 
 export function decodeSignedMessage(value: Uint8Array): { signature: Signature; message: Message } {
@@ -52,12 +54,12 @@ export function decodeSignedMessage(value: Uint8Array): { signature: Signature; 
 	}
 }
 
-export function encodeSignedMessage(
+export function encodeSignedMessage<Payload>(
 	{ codec, publicKey, signature }: Signature,
-	{ topic, clock, parents, payload }: Message,
+	{ topic, clock, parents, payload }: Message<Payload>,
 ): Uint8Array {
 	const parentKeys = parents.map(encodeId)
-	assert(clock === getNextClock(parentKeys), "expected clock === getNextClock(parentKeys)")
+	assert((clock === 0 && parentKeys.length === 0) || clock === getNextClock(parentKeys), "expected clock === getNextClock(parentKeys)")
 	return cbor.encode([[codec, publicKey, signature], topic, clock, parentKeys, payload])
 }
 

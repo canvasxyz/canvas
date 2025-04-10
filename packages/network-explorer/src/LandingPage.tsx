@@ -91,13 +91,13 @@ export const LandingPage = () => {
 							)}
 						</tbody>
 					</table>
-					<Flex direction="row" justify="center" py="2" mt="2" style={{ borderTop: "solid var(--gray-4) 1px" }}>
-						<Text size="2">
-							<Link href="#/tables/$actions" color="gray" underline="none">
+					<Link href="#/tables/$actions" color="gray" underline="none">
+						<Flex direction="row" justify="center" py="2" mt="2" style={{ borderTop: "solid var(--gray-4) 1px" }}>
+							<Text size="2">
 								See more
-							</Link>
-						</Text>
-					</Flex>
+							</Text>
+						</Flex>
+					</Link>
 				</Box>
 
 				<Heading size="5">Recent sessions</Heading>
@@ -133,13 +133,13 @@ export const LandingPage = () => {
 							)}
 						</tbody>
 					</table>
-					<Flex direction="row" justify="center" py="2" mt="2" style={{ borderTop: "solid var(--gray-4) 1px" }}>
-						<Text size="2">
-							<Link href="#/tables/$sessions" color="gray" underline="none">
+					<Link href="#/tables/$sessions" color="gray" underline="none">
+						<Flex direction="row" justify="center" py="2" mt="2" style={{ borderTop: "solid var(--gray-4) 1px" }}>
+							<Text size="2">
 								See more
-							</Link>
-						</Text>
-					</Flex>
+							</Text>
+						</Flex>
+					</Link>
 				</Box>
 
 				<Heading size="5">Configuration</Heading>

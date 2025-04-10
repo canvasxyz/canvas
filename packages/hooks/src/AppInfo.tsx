@@ -94,7 +94,7 @@ export const AppInfo: React.FC<{ app: Canvas | null | undefined; ws: NetworkClie
 				</div>
 			</div>
 			{isOpen && (
-				<div style={{ position: "fixed", top: "1.25rem", right: "1.75rem", fontSize: "0.875rem" }}>
+				<div style={{ position: "fixed", top: "1.25rem", right: "1.75rem", fontSize: "0.875rem", zIndex: 9999 }}>
 					<div
 						style={{
 							border: "1px solid #e5e7eb",

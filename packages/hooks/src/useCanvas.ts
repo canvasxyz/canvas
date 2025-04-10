@@ -1,6 +1,15 @@
 import { useState, useEffect, useRef } from "react"
 import * as cbor from "@ipld/dag-cbor"
-import { Canvas, NetworkClient, ModelSchema, Config, Snapshot, Actions, hashContract } from "@canvas-js/core"
+import {
+	Canvas,
+	NetworkClient,
+	ModelSchema,
+	Config,
+	Snapshot,
+	Actions,
+	hashContract,
+	hashSnapshot,
+} from "@canvas-js/core"
 
 /**
  * React hook for Canvas applications using client-to-server sync.
@@ -81,9 +90,9 @@ export const useCanvas = <
 				let reset: boolean
 				if (remoteContractHashRef.current[topic] === undefined) {
 					// No matching contract used with this hook, but it's possible that we've run this
-					// app without this hook before, and have data in IndexedDB. Since the remote is
-					// the source of truth, clear IndexedDB and catch up to the remote using Merkle sync.
-					reset = true
+					// app without this hook before, and have data in IndexedDB, in which case
+					// convergence might break.
+					reset = false // TODO
 				} else if (remoteContractHashRef.current[topic] === contractInfo.contract) {
 					// A matching contract used with this hook before. We can't guarantee that IndexedDB
 					// isn't out of sync, but that's beyond our concern (something to fix in the future).
@@ -92,6 +101,8 @@ export const useCanvas = <
 					// A different contract was used with this hook. Always reset IndexedDB.
 					reset = true
 				}
+
+				console.log("[canvas] initializing remote application")
 
 				await Canvas.initialize<ModelsT, ActionsT>({
 					topic,
@@ -123,17 +134,32 @@ export const useCanvas = <
 					console.error("Unexpected: Internal error (local application)")
 					return
 				}
+				console.log("[canvas] initializing locally defined application")
+
 				if (!app || contractHash === localContractHashRef.current) {
 					// Application just initialized, or contract remains unchanged
-					await Canvas.initialize<ModelsT, ActionsT>(config).then(assign.bind(null, url))
+					await Canvas.initialize<ModelsT, ActionsT>({
+						...config,
+						topic: config.snapshot ? `${config.topic}#${hashSnapshot(config.snapshot)}` : config.topic,
+					}).then(assign.bind(null, url))
 				} else if ((await app.db.count("$messages")) > 1 && snapshotRef.current) {
 					// Contract changed, reuse the old snapshot
 					const snapshot = snapshotRef.current
-					await Canvas.initialize<ModelsT, ActionsT>({ ...config, reset: true, snapshot }).then(assign.bind(null, url))
+					await Canvas.initialize<ModelsT, ActionsT>({
+						...config,
+						reset: true,
+						snapshot,
+						topic: config.snapshot ? `${config.topic}#${hashSnapshot(config.snapshot)}` : config.topic,
+					}).then(assign.bind(null, url))
 				} else {
 					// Contract changed, make a new snapshot
 					const snapshot = await app.createSnapshot()
-					await Canvas.initialize<ModelsT, ActionsT>({ ...config, reset: true, snapshot }).then(assign.bind(null, url))
+					await Canvas.initialize<ModelsT, ActionsT>({
+						...config,
+						reset: true,
+						snapshot,
+						topic: config.snapshot ? `${config.topic}#${hashSnapshot(config.snapshot)}` : config.topic,
+					}).then(assign.bind(null, url))
 					snapshotRef.current = snapshot
 				}
 			}

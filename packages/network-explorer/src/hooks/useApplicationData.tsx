@@ -10,7 +10,9 @@ const ApplicationDataContext = createContext<ApplicationDataWithRefetch | null>(
 
 export const ApplicationDataProvider = ({ children }: { children: React.ReactNode }) => {
 	const [content, setContent] = useState<ApplicationData | null>(null)
-	const { data, mutate } = useSWR(`/api/`, fetchAndIpldParseJson<ApplicationData>)
+	const { data, mutate } = useSWR(`/api/`, fetchAndIpldParseJson<ApplicationData>, {
+		refreshInterval: 3000
+	})
 
 	useEffect(() => {
 		if (data && data.content && !("error" in data.content)) {

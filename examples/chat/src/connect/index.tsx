@@ -18,7 +18,7 @@ import { ConnectLeap } from "./ConnectLeap.js"
 
 import FrameSDK from "@farcaster/frame-sdk"
 
-export const Connect: React.FC<{}> = ({}) => {
+export const Connect: React.FC<{ topic: string }> = ({ topic }) => {
 	const [method, setMethod] = useState("burner")
 
 	useEffect(() => {
@@ -28,7 +28,7 @@ export const Connect: React.FC<{}> = ({}) => {
 
 	return (
 		<>
-			<div className="grid gap-0.5 min-h-[100px] max-h-[50vh] overflow-y-auto">
+			<div className="grid gap-0.5 min-h-[100px] max-h-[15vh] sm:max-h-[50vh] overflow-y-scroll">
 				<button
 					className={`p-1 border rounded ${method === "burner" ? "bg-blue-500 text-white" : "bg-gray-100"}`}
 					onClick={() => setMethod("burner")}
@@ -130,12 +130,12 @@ export const Connect: React.FC<{}> = ({}) => {
 					Magic {!import.meta.env.VITE_PUBLIC_MAGIC_API_KEY && "(API key required)"}
 				</button>
 			</div>
-			<Method method={method} />
+			<Method method={method} topic={topic} />
 		</>
 	)
 }
 
-const Method: React.FC<{ method: string }> = (props) => {
+const Method: React.FC<{ method: string; topic: string }> = (props) => {
 	switch (props.method) {
 		case "burner":
 			return <ConnectSIWEBurner />
@@ -148,9 +148,9 @@ const Method: React.FC<{ method: string }> = (props) => {
 		case "ethereum-viem":
 			return <ConnectSIWEViem />
 		case "farcaster":
-			return <ConnectSIWF />
+			return <ConnectSIWF topic={props.topic} />
 		case "farcaster-frame":
-			return <ConnectSIWF frame={true} />
+			return <ConnectSIWF frame={true} topic={props.topic} />
 		case "polkadot":
 			return <ConnectPolkadot />
 		case "solana":

@@ -49,7 +49,7 @@ export class SIWFSigner extends AbstractSessionSigner<SIWFSessionData> {
 		super("chain-ethereum-farcaster", ed25519, { sessionDuration: sessionDuration ?? 14 * DAYS })
 
 		this.chainId = 10
-		this.key = `SIWFSigner`
+		this.key = `chain-ethereum-siwf`
 		this.custodyAddress = init.custodyAddress
 
 		if (privateKey) {

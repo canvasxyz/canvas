@@ -14,7 +14,7 @@ import { multiaddr } from "@multiformats/multiaddr"
 import { WebSockets, WebSocketsSecure } from "@multiformats/multiaddr-matcher"
 import stoppable from "stoppable"
 
-import { Canvas, PeerId, Snapshot } from "@canvas-js/core"
+import { Canvas, PeerId, Snapshot, hashSnapshot } from "@canvas-js/core"
 import { createAPI } from "@canvas-js/core/api"
 
 import { NetworkServer } from "@canvas-js/gossiplog/server"
@@ -29,7 +29,7 @@ import { SolanaSigner } from "@canvas-js/chain-solana"
 const { BOOTSTRAP_LIST } = process.env
 
 export type AppConfig = {
-	topic?: string
+	baseTopic?: string
 	verbose?: boolean
 
 	/* networking configuration */
@@ -62,7 +62,7 @@ export class AppInstance {
 	private onProgramInterrupt: () => void
 
 	static async initialize({
-		topic,
+		baseTopic,
 		contract,
 		snapshot,
 		reset,
@@ -70,7 +70,7 @@ export class AppInstance {
 		config,
 		onUpdateApp,
 	}: {
-		topic: string
+		baseTopic: string
 		contract: string
 		snapshot?: Snapshot | null | undefined
 		reset?: boolean
@@ -78,6 +78,7 @@ export class AppInstance {
 		config: AppConfig
 		onUpdateApp?: (contract: string, snapshot: Snapshot) => Promise<void>
 	}) {
+		const topic = snapshot ? `${baseTopic}#${hashSnapshot(snapshot)}` : baseTopic
 		AppInstance.printInitialization(topic, location)
 
 		const signers = [
@@ -148,7 +149,7 @@ export class AppInstance {
 			console.log(chalk.yellow(`✦ ${chalk.bold("Running app in-memory only.")} No data will be persisted.`))
 			console.log("")
 		}
-		console.log(`${chalk.gray("[canvas] Starting app on topic")} ${chalk.whiteBright(topic)}`)
+		console.log(`${chalk.gray("[canvas] Starting app with topic")} ${chalk.whiteBright(topic)}`)
 	}
 
 	private setupLogging() {

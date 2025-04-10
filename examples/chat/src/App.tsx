@@ -24,8 +24,6 @@ import { Connect } from "./connect/index.js"
 import { LogStatus } from "./LogStatus.js"
 import * as contract from "./contract.js"
 
-export const topic = "chat-example.canvas.xyz"
-
 const wsURL = import.meta.env.VITE_CANVAS_WS_URL ?? null
 console.log("websocket API URL:", wsURL)
 
@@ -43,11 +41,7 @@ export const App: React.FC<{}> = ({}) => {
 	const [sessionSigner, setSessionSigner] = useState<SessionSigner | null>(null)
 	const [address, setAddress] = useState<string | null>(null)
 
-	const topicRef = useRef(topic)
-
 	const { app, ws } = useCanvas(wsURL, {
-		topic: topicRef.current,
-		contract,
 		signers: [
 			new SIWESigner(),
 			new Eip712Signer(),
@@ -65,17 +59,17 @@ export const App: React.FC<{}> = ({}) => {
 				{app && ws ? (
 					<main>
 						<AppInfo app={app} ws={ws} />
-						<div className="flex flex-row gap-4 h-full">
+						<div className="sm:flex flex-row gap-4 h-full">
 							<div className="sm:min-w-[300px] md:min-w-[480px] flex-1 flex flex-col justify-stretch gap-2">
-								<div className="flex-1 border rounded px-2 overflow-y-scroll">
+								<div className="flex-1 border rounded px-2 overflow-y-scroll max-h-[60vh] sm:max-h-none">
 									<Messages address={address} />
 								</div>
 								<MessageComposer />
 							</div>
-							<div className="flex flex-col gap-4 w-[480px] break-all">
-								<Connect />
+							<div className="flex flex-col gap-4 md:w-[480px] break-all">
+								<Connect topic={app.topic} />
 								<SessionStatus />
-								<ConnectionStatus topic={topicRef.current} ws={ws} />
+								<ConnectionStatus topic={app.topic} ws={ws} />
 								<LogStatus />
 								<ControlPanel />
 							</div>

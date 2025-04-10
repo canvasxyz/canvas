@@ -18,7 +18,7 @@ export const tables: TableDef[] = [
 			{
 				header: "key",
 				accessorKey: "key",
-				size: 100,
+				size: 120,
 				cell: BinaryCellData,
 				enableSorting: true,
 				enableColumnFilter: false,
@@ -26,14 +26,14 @@ export const tables: TableDef[] = [
 			{
 				header: "clock",
 				accessorKey: "clock",
-				size: 100,
+				size: 120,
 				enableSorting: true,
 				enableColumnFilter: false,
 			},
 			{
 				header: "links",
 				accessorKey: "links",
-				size: 100,
+				size: 120,
 				cell: BinaryCellData,
 				enableSorting: false,
 				enableColumnFilter: false,
@@ -84,7 +84,7 @@ export const tables: TableDef[] = [
 			{
 				header: "data",
 				accessorKey: "data",
-				size: 80,
+				size: 120,
 				cell: BinaryCellData,
 				enableSorting: false,
 				enableColumnFilter: false,
@@ -92,7 +92,7 @@ export const tables: TableDef[] = [
 			{
 				header: "clock",
 				accessorKey: "clock",
-				size: 80,
+				size: 120,
 				enableSorting: true,
 				enableColumnFilter: false,
 			},

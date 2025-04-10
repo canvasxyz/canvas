@@ -20,6 +20,7 @@ import { AbstractRuntime, ActionRecord } from "./runtime/AbstractRuntime.js"
 import { validatePayload } from "./schema.js"
 import { createSnapshot, hashSnapshot, Change } from "./snapshot.js"
 import { initialUpgradeSchema, topicPattern } from "./utils.js"
+import { SnapshotSignatureScheme } from "@canvas-js/signatures"
 
 export type { Model } from "@canvas-js/modeldb"
 export type { PeerId } from "@libp2p/interface"
@@ -73,6 +74,8 @@ export type ApplicationData = {
 	topic: string
 	models: Record<string, Model>
 	actions: string[]
+	signerKeys: string[]
+	lastMessage: number | null
 }
 
 export class Canvas<
@@ -87,21 +90,35 @@ export class Canvas<
 	): Promise<Canvas<ModelsT, ActionsT>> {
 		const { topic, path = null, contract, signers: initSigners = [], runtimeMemoryLimit } = config
 
-		assert(topicPattern.test(topic), "invalid topic (must match [a-zA-Z0-9\\.\\-])")
+		if (config.snapshot) {
+			assert(
+				topicPattern.test(topic) && topic.includes("#"),
+				`invalid topic ${topic}, must match the pattern [a-zA-Z0-9\\.\\-]#{snapshotHash}`,
+			)
+			assert(
+				topic.endsWith(`#${hashSnapshot(config.snapshot)}`),
+				`invalid topic ${topic} for this exact snapshot hash: ${hashSnapshot(config.snapshot).slice(0, 5)}...`,
+			)
+		} else {
+			assert(topicPattern.test(topic), "invalid topic, must match [a-zA-Z0-9\\.\\-]")
+		}
 
 		const signers = new SignerCache(initSigners.length === 0 ? [new SIWESigner()] : initSigners)
 
 		const verifySignature = (signature: Signature, message: Message<MessageType>) => {
-			const signer = signers.getAll().find((signer) => signer.scheme.codecs.includes(signature.codec))
-			assert(signer !== undefined, "no matching signer found")
-			return signer.scheme.verify(signature, message)
+			if (message.payload.type === "snapshot") {
+				SnapshotSignatureScheme.verify(signature, message)
+			} else {
+				const signer = signers.getAll().find((signer) => signer.scheme.codecs.includes(signature.codec))
+				assert(signer !== undefined, "no matching signer found")
+				assert(message.clock > 0, "invalid clock")
+				return signer.scheme.verify(signature, message)
+			}
 		}
 
 		const runtime = await createRuntime(topic, signers, contract, { runtimeMemoryLimit })
-		const gossipTopic = config.snapshot ? `${topic}#${hashSnapshot(config.snapshot)}` : topic // topic for peering
-
 		const messageLog = await target.openGossipLog(
-			{ topic: gossipTopic, path, clear: config.reset },
+			{ topic, path, clear: config.reset },
 			{
 				topic, // topic for signing and execution, in runtime consumer
 				apply: runtime.getConsumer(),
@@ -168,14 +185,20 @@ export class Canvas<
 			}
 		}
 
-		if (config.snapshot) {
-			const [clock, heads] = await messageLog.getClock()
-			if (clock === 1 && heads.length === 0) {
-				await messageLog.append(config.snapshot)
-			}
-		}
-
 		const app = new Canvas<ModelsT, ActionsT>(signers, messageLog, runtime)
+
+		if (config.snapshot) {
+			assert(topic.endsWith(`#${hashSnapshot(config.snapshot)}`), "invalid snapshot")
+			const message: Message<Snapshot> = {
+				topic,
+				clock: 0,
+				parents: [],
+				payload: config.snapshot,
+			}
+			const signature = await SnapshotSignatureScheme.create().sign(message)
+			const signedMessage: SignedMessage<Snapshot> = app.messageLog.encode(signature, message)
+			await app.messageLog.insert(signedMessage)
+		}
 
 		// Check to see if the $actions table is empty and populate it if necessary
 		const messagesCount = await messageLog.db.count("$messages")
@@ -257,6 +280,7 @@ export class Canvas<
 	}
 	private readonly controller = new AbortController()
 	private readonly log = logger("canvas:core")
+	private lastMessage: number | null = null
 
 	private peerId: string | null = null
 	private libp2p: Libp2p | null = null
@@ -277,6 +301,8 @@ export class Canvas<
 		this.messageLog.addEventListener("sync", (event) => this.safeDispatchEvent("sync", event))
 		this.messageLog.addEventListener("connect", (event) => this.safeDispatchEvent("connect", event))
 		this.messageLog.addEventListener("disconnect", (event) => this.safeDispatchEvent("disconnect", event))
+
+		this.messageLog.addEventListener("message", (event) => this.lastMessage = Date.now())
 
 		const actionCache = {} as {
 			[K in keyof ActionsT]: (signer: SessionSigner<any>, db: ModelAPI<DeriveModelTypes<ModelsT>>, ...args: any) => any
@@ -480,6 +506,8 @@ export class Canvas<
 			topic: this.topic,
 			models: models,
 			actions: Object.keys(this.actions),
+			signerKeys: this.signers.getAll().map(((s) => s.key)),
+			lastMessage: this.lastMessage,
 		}
 	}
 
