@@ -17,13 +17,15 @@ export type TransactionalRead<T extends ModelValue = ModelValue> = {
 export class View {
 	public readonly root: MessageId[]
 
-	protected readonly rootIds: string[]
 	protected readonly log = logger("canvas:runtime:context")
+	protected readonly rootIds: string[]
+	protected readonly greatestRoot: string
 
 	constructor(public readonly messageLog: AbstractGossipLog<MessageType>, root: string[] | MessageId[]) {
 		this.root = root.map((id) => (typeof id === "string" ? MessageId.encode(id) : id))
 		this.rootIds = this.root.map((id) => id.toString())
 		this.rootIds.sort()
+		this.greatestRoot = this.rootIds[this.rootIds.length - 1]
 	}
 
 	public get db() {
@@ -73,7 +75,7 @@ export class View {
 
 	public async getLastValue(recordId: string): Promise<WriteRecord | null> {
 		const lowerBound = MIN_MESSAGE_ID
-		const upperBound = this.rootIds[this.rootIds.length - 1] // greatest root
+		const upperBound = this.greatestRoot
 		for await (const write of this.db.iterate<WriteRecord>("$writes", {
 			where: { record_id: recordId, message_id: { gte: lowerBound, lte: upperBound } },
 			orderBy: { "record_id/message_id": "desc" },
@@ -87,14 +89,15 @@ export class View {
 		return null
 	}
 
+	/** this returns the greatest element of the most recent conflict set, not considering revert status */
 	public async getLatestConflictSet(recordId: string): Promise<[csx: number | null, greatestElementId: string | null]> {
 		this.log.trace("getting latest csx for record %s w/r/t roots", recordId, this.rootIds)
 
 		type Write = { record_id: string; message_id: string; csx: number | null }
 
-		let baseId: string | null = null
-		let baseCSX: number | null = null
+		let baseWrite: Write | null = null
 
+		// TODO: add { lte: max(this.rootIds) } condition?
 		for await (const write of this.db.iterate<Write>("$writes", {
 			select: { record_id: true, message_id: true, csx: true },
 			where: { record_id: recordId },
@@ -109,40 +112,43 @@ export class View {
 				continue
 			}
 
-			// we call the first write we encounter "baseCSX"
-			baseCSX = write.csx
-			baseId = write.message_id
+			// we call the first write we encounter the "base write"
+			baseWrite = write
 			break
 		}
 
-		this.log.trace("got initial baseId %s and baseCSX %d", baseId, baseCSX)
-
-		if (baseCSX === null) {
+		this.log.trace("got base write %o", baseWrite)
+		if (baseWrite === null) {
 			return [null, null]
 		}
 
-		// baseCSX is *probably* the final CSX, but we still have to check
+		assert(baseWrite.csx !== null, "internal error - expected baseWrite.csx !== null")
+
+		// the base write is *probably* the final result, but we still have to check
 		// for other 'intermediate' messages descending from other members
-		// of baseCSX that are also ancestors.
+		// of base write's conflict set that are also ancestors, since they
+		// would be members of a greater conflict set
 
 		// eslint-disable-next-line no-constant-condition
 		while (true) {
-			const next = await this.getGreatestElement(recordId, baseCSX + 1)
-			this.log.trace("checking next CS %d and got id %s", baseCSX + 1, next)
+			const next = await this.getGreatestElement(recordId, baseWrite.csx + 1)
+			this.log.trace("checking next CS %d and got id %s", baseWrite.csx + 1, next)
 			if (next === null) {
-				return [baseCSX, baseId]
+				return [baseWrite.csx, baseWrite.message_id]
 			} else {
-				baseCSX += 1
-				baseId = next
+				baseWrite.csx += 1
+				baseWrite.message_id = next
 			}
 		}
 	}
 
+	/** get the greatest element of a conflict set, not considering revert status */
 	public async getGreatestElement(recordId: string, csx: number): Promise<string | null> {
 		assert(csx >= 0, "expected csx >= 0")
 
 		type Write = { record_id: string; message_id: string; csx: number }
 
+		// TODO: add { lte: max(this.rootIds) } condition?
 		for await (const write of this.db.iterate<Write>("$writes", {
 			select: { record_id: true, message_id: true, csx: true },
 			where: { record_id: recordId, csx },

@@ -62,18 +62,18 @@ export abstract class AbstractRuntime {
 			$primary: "record_id/message_id",
 			$indexes: ["record_id/csx/message_id", "message_id/record_id/csx"],
 			record_id: "string",
-			message_id: "string",
 			value: "bytes",
-			csx: "integer?",
+			message_id: "string",
+			csx: "integer?", // integer for transactional writes, null for non-transactional writes
 		},
 
 		$reads: {
 			$primary: "reader_id/record_id",
 			$indexes: ["record_id/csx/reader_id"],
+			record_id: "string",
 			reader_id: "string",
 			writer_id: "string",
-			record_id: "string",
-			csx: "integer",
+			csx: "integer", // we only record transactional reads
 		},
 
 		$reverts: {
