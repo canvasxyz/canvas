@@ -44,7 +44,7 @@ export const ActionsTable = ({
 		{
 			header: "did",
 			accessorKey: "did",
-			size: 400,
+			size: 280,
 			enableSorting: false,
 			enableColumnFilter: true,
 			meta: {
