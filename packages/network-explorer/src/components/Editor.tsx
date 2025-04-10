@@ -70,7 +70,7 @@ export const Editor: React.FC<EditorProps> = ({ initialValue, readOnly, onChange
 	useEffect(() => {
 		if (viewRef.current) {
 			viewRef.current.dispatch({
-				effects: themeCompartment.current.reconfigure(theme === "dark" ? oneDark : [])
+				effects: themeCompartment.current.reconfigure(theme === "dark" ? oneDark : []),
 			})
 		}
 	}, [theme])

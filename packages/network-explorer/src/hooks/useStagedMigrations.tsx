@@ -4,6 +4,10 @@ import { createContext, useCallback, useContext, useState } from "react"
 import { Canvas, Changeset, generateChangesets } from "@canvas-js/core"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 import { useContractData } from "../hooks/useContractData.js"
+import { SiweMessage } from "siwe"
+import { getAddress } from "ethers"
+import { useApplicationData } from "./useApplicationData.js"
+import { BASE_URL } from "../utils.js"
 
 async function getChangesetsForContractDiff(oldContract: string, newContract: string) {
 	const { build } = await Canvas.buildContract(newContract, { wasmURL: "./esbuild.wasm" })
@@ -26,18 +30,79 @@ async function timeoutWithError(ms: number, message: string): Promise<never> {
 	})
 }
 
+async function getSignature(nonce: string) {
+	// @ts-ignore
+	if (!window.ethereum) {
+		throw new Error("Ethereum provider not found. Please install a wallet like MetaMask.")
+	}
+
+	// @ts-ignore
+	const accounts = await window.ethereum.request({ method: "eth_requestAccounts" })
+	const address = getAddress(accounts[0])
+
+	// Create SIWE message
+	const domain = window.location.host
+	const origin = window.location.origin
+	const statement = "Sign this message to confirm the contract migration."
+
+	const siweMessage = new SiweMessage({
+		domain,
+		address,
+		statement,
+		uri: origin,
+		version: "1",
+		chainId: 1, // Adjust based on your network
+		nonce,
+	})
+
+	const message = siweMessage.prepareMessage()
+
+	// Request signature from wallet
+	// @ts-ignore
+	const signature = await window.ethereum.request({
+		method: "personal_sign",
+		params: [message, address],
+	})
+	return { address, message, signature }
+}
+const UNSAVED_CHANGES_KEY = "contract-editor-unsaved-changes"
+
 const StagedMigrationsContext = createContext<{
 	contractChangesets: Changeset[]
+	cancelMigrations: () => Promise<void>
+	clearContractChangesets: () => void
 	rebuildContract: (newContract: string) => Promise<void>
+	newContract: string | undefined
+	runMigrations: () => void
+	waitingForCommit: boolean
+	commitCompleted: boolean
+	hasRestoredContent: boolean
+	setHasRestoredContent: (hasRestoredContent: boolean) => void
+	// setWaitingForCommit: (waitingForCommit: boolean) => void
+	// setCommitCompleted: (commitCompleted: boolean) => void
 }>({
 	contractChangesets: [],
+	cancelMigrations: async () => {},
+	clearContractChangesets: async () => {},
 	rebuildContract: async () => {},
+	newContract: undefined,
+	runMigrations: async () => {},
+	waitingForCommit: false,
+	commitCompleted: false,
+	hasRestoredContent: false,
+	setHasRestoredContent: () => {},
+	// setWaitingForCommit: () => {},
+	// setCommitCompleted: () => {},
 })
 
 export const StagedMigrationsProvider = ({ children }: { children: React.ReactNode }) => {
+	const applicationData = useApplicationData()
 	const contractData = useContractData()
 
-	// store current saved contract here
+	const [waitingForCommit, setWaitingForCommit] = useState(false)
+	const [commitCompleted, setCommitCompleted] = useState(false)
+
+	const [hasRestoredContent, setHasRestoredContent] = useState(false)
 
 	// store the current added rows here
 
@@ -45,7 +110,13 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 
 	// store the current deleted rows here
 
+	// store current saved contract here
+	const [newContract, setNewContract] = useState<string>()
 	const [contractChangesets, setContractChangesets] = useState<Changeset[]>([])
+	const clearContractChangesets = useCallback(() => {
+		setContractChangesets([])
+		setNewContract(undefined)
+	}, [])
 
 	// when the contract, added, modified, or deleted rows change, update the changesets
 
@@ -65,8 +136,10 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 							"of an IndexedDB bug, try closing other windows and deleting the test.a and test.b databases.",
 					),
 				])
+				setNewContract(newContract)
 				setContractChangesets(changesets)
 			} catch (err: any) {
+				setNewContract(undefined)
 				setContractChangesets([])
 
 				// re-throw the error
@@ -85,8 +158,81 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 		[contractData],
 	)
 
+	const runMigrations = async () => {
+		if (!contractChangesets) {
+			throw new Error("No migrations to run")
+		}
+
+		if (!contractData) {
+			throw new Error("Must wait for contractData to load")
+		}
+
+		const { address, message, signature } = await getSignature(contractData.nonce)
+
+		// Send to API with SIWE data
+
+		const response = await fetch(`${BASE_URL}/api/migrate`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				newContract: newContract,
+				changesets: contractChangesets,
+				siweMessage: message,
+				address,
+				signature,
+			}),
+		})
+		if (!response.ok) {
+			throw new Error("Server rejected code update")
+		}
+
+		setContractChangesets([])
+		setNewContract(undefined)
+		setWaitingForCommit(true)
+
+		// Clear saved content from localStorage once committed
+		localStorage.removeItem(UNSAVED_CHANGES_KEY)
+		setHasRestoredContent(false)
+
+		// Wait till server is available again
+		while (true) {
+			await new Promise((resolve, reject) => setTimeout(resolve, 500))
+			const available = await new Promise((resolve) =>
+				fetch(`${BASE_URL}/api/contract`)
+					.then(() => resolve(true))
+					.catch(() => resolve(false)),
+			)
+			if (available) break
+		}
+
+		// Refresh both data contexts
+		await Promise.all([contractData?.refetch(), applicationData?.refetch()])
+
+		setWaitingForCommit(false)
+		setCommitCompleted(true)
+	}
+
+	const cancelMigrations = async () => {
+		clearContractChangesets()
+	}
+
 	return (
-		<StagedMigrationsContext.Provider value={{ contractChangesets, rebuildContract }}>
+		<StagedMigrationsContext.Provider
+			value={{
+				cancelMigrations,
+				clearContractChangesets,
+				contractChangesets,
+				rebuildContract,
+				newContract,
+				runMigrations,
+				waitingForCommit,
+				commitCompleted,
+				hasRestoredContent,
+				setHasRestoredContent,
+			}}
+		>
 			{children}
 		</StagedMigrationsContext.Provider>
 	)
