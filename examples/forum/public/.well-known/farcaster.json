@@ -7,11 +7,11 @@
   "frame": {
     "version": "1",
     "name": "Example Frame",
-    "iconUrl": "https://chat-example.canvas.xyz/icon.png",
-    "homeUrl": "https://chat-example.canvas.xyz",
-    "imageUrl": "https://chat-example.canvas.xyz/image.png",
+    "iconUrl": "https://forum-example.canvas.xyz/icon.png",
+    "homeUrl": "https://forum-example.canvas.xyz",
+    "imageUrl": "https://forum-example.canvas.xyz/image.png",
     "buttonTitle": "Check this out",
-    "splashImageUrl": "https://chat-example.canvas.xyz/splash.png",
+    "splashImageUrl": "https://forum-example.canvas.xyz/splash.png",
     "splashBackgroundColor": "#eeccff"
   }
 }

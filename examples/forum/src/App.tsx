@@ -1,13 +1,7 @@
-import React, { useRef, useState } from "react"
+import React, { useState } from "react"
 
 import type { SessionSigner } from "@canvas-js/interfaces"
-import { SIWESigner, SIWFSigner, Eip712Signer } from "@canvas-js/chain-ethereum"
-import { ATPSigner } from "@canvas-js/chain-atp"
-import { CosmosSigner } from "@canvas-js/chain-cosmos"
-import { SubstrateSigner } from "@canvas-js/chain-substrate"
-import { SolanaSigner } from "@canvas-js/chain-solana"
-
-import type { Contract } from "@canvas-js/core"
+import { SIWESigner, SIWFSigner } from "@canvas-js/chain-ethereum"
 
 import { useCanvas, AppInfo } from "@canvas-js/hooks"
 
@@ -17,12 +11,7 @@ import { JsonRpcProvider } from "ethers"
 import { AppContext } from "./AppContext.js"
 import { Messages } from "./Chat.js"
 import { MessageComposer } from "./MessageComposer.js"
-import { ControlPanel } from "./ControlPanel.js"
-import { SessionStatus } from "./SessionStatus.js"
-import { ConnectionStatus } from "./ConnectionStatus.js"
 import { Connect } from "./connect/index.js"
-import { LogStatus } from "./LogStatus.js"
-import * as contract from "./contract.js"
 
 const wsURL = import.meta.env.VITE_CANVAS_WS_URL ?? null
 console.log("websocket API URL:", wsURL)
@@ -44,12 +33,7 @@ export const App: React.FC<{}> = ({}) => {
 	const { app, ws } = useCanvas(wsURL, {
 		signers: [
 			new SIWESigner(),
-			new Eip712Signer(),
 			new SIWFSigner(),
-			new ATPSigner(),
-			new CosmosSigner(),
-			new SubstrateSigner({}),
-			new SolanaSigner(),
 		],
 	})
 
@@ -68,10 +52,6 @@ export const App: React.FC<{}> = ({}) => {
 							</div>
 							<div className="flex flex-col gap-4 md:w-[480px] break-all">
 								<Connect topic={app.topic} />
-								<SessionStatus />
-								<ConnectionStatus topic={app.topic} ws={ws} />
-								<LogStatus />
-								<ControlPanel />
 							</div>
 						</div>
 					</main>
