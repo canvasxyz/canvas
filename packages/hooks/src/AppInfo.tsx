@@ -5,10 +5,13 @@ import { Canvas, NetworkClient } from "@canvas-js/core"
 import type { CanvasEvents } from "@canvas-js/core"
 import { MessageId } from "@canvas-js/gossiplog"
 
-export const AppInfo: React.FC<{ app: Canvas | null | undefined; ws: NetworkClient<any> | null | undefined }> = ({
-	app,
-	ws,
-}) => {
+export const AppInfo: React.FC<{
+	app: Canvas | null | undefined
+	ws: NetworkClient<any> | null | undefined
+	styles?: React.CSSProperties
+	buttonStyles?: React.CSSProperties
+	popupStyles?: React.CSSProperties
+}> = ({ app, ws, styles = {}, buttonStyles = {}, popupStyles = {} }) => {
 	const [, setTick] = useState(0)
 	const [isOpen, setIsOpen] = useState(false)
 	const [remoteInfo, setRemoteInfo] = useState<any>(null)
@@ -78,7 +81,7 @@ export const AppInfo: React.FC<{ app: Canvas | null | undefined; ws: NetworkClie
 
 	return (
 		<>
-			<div style={{ position: "fixed", top: "0.75rem", right: "1.25rem" }}>
+			<div style={{ position: "fixed", top: "0.75rem", right: "1rem", ...styles }}>
 				<div
 					style={{
 						border: "1px solid #ddd",
@@ -87,6 +90,7 @@ export const AppInfo: React.FC<{ app: Canvas | null | undefined; ws: NetworkClie
 						cursor: "pointer",
 						backgroundColor: "white",
 						color: "#222",
+						...buttonStyles,
 					}}
 					onClick={() => setIsOpen(!isOpen)}
 				>
@@ -94,7 +98,21 @@ export const AppInfo: React.FC<{ app: Canvas | null | undefined; ws: NetworkClie
 				</div>
 			</div>
 			{isOpen && (
-				<div style={{ position: "fixed", top: "1.25rem", right: "1.75rem", fontSize: "0.875rem", zIndex: 9999 }}>
+				<div
+					style={{
+						position: "fixed",
+						top: "1.25rem",
+						right: "1.75rem",
+						fontSize: "0.875rem",
+						zIndex: 9999,
+						...popupStyles,
+					}}
+				>
+					<div style={{ position: "absolute", top: "0.75rem", right: "0.75rem" }}>
+						<button onClick={() => setIsOpen(false)} className="text-gray-500 hover:text-gray-700">
+							✕
+						</button>
+					</div>
 					<div
 						style={{
 							border: "1px solid #e5e7eb",
