@@ -79,7 +79,7 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic, frame }) => {
 				{nonce && (
 					<button
 						type="submit"
-						style={{ background: "#eee", padding: "10px 12px" }}
+						className="w-full p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200"
 						onClick={async () => {
 							const now = new Date()
 							const exp = new Date(now.getTime() + 10 * 60 * 1000)
@@ -113,7 +113,7 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic, frame }) => {
 							console.log("started SIWF chat session inside frame", authorizationData)
 						}}
 					>
-						Sign in with Farcaster
+						Sign in with Farcaster (Frame)
 					</button>
 				)}
 				{/* non-frame login */}

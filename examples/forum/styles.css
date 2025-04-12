@@ -18,3 +18,19 @@ main {
 	height: 100%;
 	width: 100%;
 }
+
+.fc-authkit-signin-button button {
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  font-size: 100%;
+  padding: 10px 21px;
+  font-weight: 500;
+  border-radius: 5px;
+}
+.fc-authkit-signin-button button svg {
+  height: 17px;
+}
+.fc-authkit-signin-button button span:after {
+  content: " with Farcaster (Web)";
+}

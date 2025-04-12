@@ -16,8 +16,10 @@ import { ConnectSIWE } from "./connect/ConnectSIWE.js"
 import { ConnectSIWF } from "./connect/ConnectSIWF.js"
 import { App } from "./App.js"
 
-const wsURL = import.meta.env.VITE_CANVAS_WS_URL ?? null
-console.log("websocket API URL:", wsURL)
+const wsURL =
+	document.location.hostname === "localhost"
+		? `ws://${document.location.hostname}:8080`
+		: `wss://${document.location.hostname}`
 
 const config = {
 	// For a production app, replace this with an Optimism Mainnet
@@ -34,18 +36,16 @@ const Container: React.FC<{}> = ({}) => {
 	const [address, setAddress] = useState<string | null>(null)
 	const [isInfoOpen, setIsInfoOpen] = useState<boolean>(false)
 
+	const signers = [new SIWESigner(), new SIWFSigner()]
 	const { app, ws } = useCanvas(wsURL, {
-		signers: [
-			new SIWESigner(),
-			new SIWFSigner(),
-		],
+		signers,
 	})
 
 	useEffect(() => {
 		// @ts-ignore
 		FrameSDK.actions.ready()
 	}, [])
-	
+
 	return (
 		<AppContext.Provider value={{ address, setAddress, sessionSigner, setSessionSigner, app: app ?? null }}>
 			<AuthKitProvider config={config}>
@@ -53,29 +53,43 @@ const Container: React.FC<{}> = ({}) => {
 					<main>
 						<App />
 						{isInfoOpen ? (
-							<div className="fixed top-12 right-5 z-10 bg-white p-4 w-[300px] border border-1 opacity-80 shadow-md rounded">
-								<div className="flex justify-between items-center mb-2">
-									<span className="font-medium">Connection Info</span>
-									<button 
-										onClick={() => setIsInfoOpen(false)}
-										className="text-gray-500 hover:text-gray-700"
-									>
+							<div className="fixed top-4 right-5 z-10 bg-white p-4 pr-12 w-[320px] border border-1 shadow-md rounded">
+								<div className="absolute top-3 right-4">
+									<button onClick={() => setIsInfoOpen(false)} className="text-gray-500 hover:text-gray-700">
 										✕
 									</button>
 								</div>
-								<AppInfo app={app} ws={ws} />
-								<div className="sm:flex flex-row gap-4 h-full">
-									<div className="flex flex-col gap-4 md:w-[480px] break-all">
-										<ConnectSIWE />
-										<ConnectSIWF topic={app.topic} />
-										<ConnectSIWF frame={true} topic={app.topic} />
-									</div>
+								<AppInfo
+									app={app}
+									ws={ws}
+									styles={{
+										position: "absolute",
+										height: "100%",
+										top: 0,
+										bottom: 0,
+										right: 0,
+									}}
+									buttonStyles={{
+										position: "absolute",
+										right: "1rem",
+										bottom: "1rem",
+									}}
+									popupStyles={{
+										position: "absolute",
+										right: "0.5rem",
+										top: "0.5rem",
+									}}
+								/>
+								<div className="flex flex-col break-all">
+									<ConnectSIWE />
+									<ConnectSIWF frame={true} topic={app.topic} />
+									<ConnectSIWF topic={app.topic} />
 								</div>
 							</div>
 						) : (
 							<button
 								onClick={() => setIsInfoOpen(true)}
-								className="fixed top-2 right-5 z-10 bg-white p-2 rounded-full shadow-md border border-gray-200 hover:bg-gray-100"
+								className="fixed top-4 right-5 z-10 bg-white p-2 rounded-full shadow-md border border-gray-200 hover:bg-gray-100"
 							>
 								Login
 							</button>
