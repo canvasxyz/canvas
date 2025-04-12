@@ -90,7 +90,12 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic }) => {
 								nonce,
 								notBefore: now.toISOString(),
 								expirationTime: exp.toISOString(),
+							}).catch((err) => {
+								const message = err.message
+								alert(`SIWF frame sign-in error: ${message}`)
+								throw err
 							})
+							alert(JSON.stringify(result))
 
 							const { message, signature } = result
 
@@ -104,7 +109,11 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic }) => {
 								authorizationData,
 								timestamp,
 								getBytes(privateKey),
-							)
+							).catch((err) => {
+								const message = err.message
+								alert(`SIWF new session error: ${message}`)
+								throw err
+							})
 							setAddress(address)
 							setSessionSigner(signer)
 							app.updateSigners([
