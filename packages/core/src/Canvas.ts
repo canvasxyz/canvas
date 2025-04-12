@@ -118,13 +118,14 @@ export class Canvas<
 
 		const runtime = await createRuntime(topic, signers, contract, { runtimeMemoryLimit })
 		const messageLog = await target.openGossipLog(
-			{ topic, path, clear: config.reset },
+			{ topic, path },
 			{
 				topic, // topic for signing and execution, in runtime consumer
 				apply: runtime.getConsumer(),
 				validatePayload: validatePayload,
 				verifySignature: verifySignature,
 				schema: { ...config.schema, ...runtime.schema },
+				clear: config.reset,
 
 				version: { [Canvas.namespace]: Canvas.version },
 

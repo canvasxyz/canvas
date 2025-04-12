@@ -18,7 +18,7 @@ const isPostgresConnectionConfig = (
 
 const target: PlatformTarget = {
 	async openGossipLog(
-		location: { path: string | pg.ConnectionConfig | SqlStorage | null; topic: string; clear?: boolean },
+		location: { path: string | pg.ConnectionConfig | SqlStorage | null; topic: string },
 		init,
 	) {
 		if (typeof location.path === "string") {
@@ -28,7 +28,7 @@ const target: PlatformTarget = {
 		} else if (location.path === null) {
 			throw new Error("cannot initialize DurableObjects GossipLog without a SqlStorage")
 		}
-		return await DurableObjectsGossipLog.open({ ...init, db: location.path, clear: location.clear })
+		return await DurableObjectsGossipLog.open({ ...init, db: location.path, clear: init.clear })
 	},
 
 	async listen(app, port, options = {}) {
