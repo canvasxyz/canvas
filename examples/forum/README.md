@@ -4,27 +4,31 @@
 
 The forum example implements a simple publishing platform.
 
-## Server
+## Developing
 
-Run `npm run dev:server` to start a temporary in-memory server, or
-`npm run start:server` to persist data to a `.cache` directory.
+- `npm run dev:server` to start the server, on port 8080
+- `npm run dev` to start the client, on port 5173
+- `cloudflared tunnel --url http://localhost:5173` for SIWF Mini App development
 
-To deploy the replication server:
+## Farcaster Mini App Development
 
-```
-$ cd server
-$ fly deploy
-```
+First, update the domain manifest:
 
-If you are forking this example, you should change:
+- Enable developer mode in Warpcast app.
+- Go to Developer Tools > Domains
+- Enter the domain of your Cloudflare tunnel, e.g.
+  e.g. https://timber-trained-carey-composed.trycloudflare.com
+- Select "Generate domain manifest" and copy-paste the generated manifest into
+  public/.well-known/farcaster.json
+- Select "Check domain status", and it should validate successfully.
 
-- the Fly app name
-- the `ANNOUNCE` environment variable to match your Fly app name
+Don't check in the domain manifest when committing to Git. The checked-in
+manifest should always correspond to the production application.
 
-## Running the Docker container locally
+Now, to preview the mini app:
 
-Mount a volume to `/data`. Set the `PORT`, `LISTEN`, `ANNOUNCE`, and
-`BOOTSTRAP_LIST` environment variables if appropriate.
+- Go to Developer > Frame Playground > Preview
+- Enter the cloudflared tunnel URL, and select "Launch", or "Preview Embed".
 
 ## Deploying to Railway
 
