@@ -7,7 +7,7 @@ import { AuthKitProvider } from "@farcaster/auth-kit"
 import { JsonRpcProvider } from "ethers"
 import { sdk } from "@farcaster/frame-sdk"
 
-import type { SessionSigner } from "@canvas-js/interfaces"
+import type { SessionSigner, Signer } from "@canvas-js/interfaces"
 import { SIWESigner, SIWFSigner } from "@canvas-js/chain-ethereum"
 import { useCanvas, AppInfo } from "@canvas-js/hooks"
 
@@ -17,6 +17,9 @@ import { ConnectSIWF } from "./connect/ConnectSIWF.js"
 import { App } from "./App.js"
 import { ModelSchema } from "@canvas-js/modeldb"
 import { Actions, Canvas } from "@canvas-js/core"
+import { BrowserProvider } from "ethers"
+import { AbstractSessionSigner } from "@canvas-js/signatures"
+import { JsonRpcSigner } from "ethers"
 
 const wsURL =
 	document.location.hostname === "localhost"
@@ -40,13 +43,13 @@ export const models = {
 		text: "string",
 		author: "string",
 		timestamp: "number",
-	}
+	},
 } satisfies ModelSchema
 
 export const actions = {
 	createPost(db, title: string, text: string) {
 		this.db.set("posts", { id: this.id, title, text, author: this.did, timestamp: this.timestamp })
-	}
+	},
 } satisfies Actions<typeof models>
 
 export type AppT = Canvas<typeof models, typeof actions>
@@ -104,6 +107,9 @@ const Container: React.FC<{}> = ({}) => {
 								<div className="flex flex-col break-all">
 									<ConnectSIWE />
 									<ConnectSIWF topic={app.topic} />
+								</div>
+								<div className="block mt-4 text-gray-600 text-center text-sm">
+									{app.hasSession() ? "Logged in" : "Logged out"}
 								</div>
 							</div>
 						) : (

@@ -1,4 +1,4 @@
-import React, { useEffect, useContext, useRef, useState, useCallback } from "react"
+import React, { useEffect, useContext, useRef, useState } from "react"
 import { Virtuoso, VirtuosoHandle } from "react-virtuoso"
 
 import { useLiveQuery } from "@canvas-js/hooks"

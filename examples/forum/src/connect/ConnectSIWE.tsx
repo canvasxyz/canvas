@@ -35,9 +35,15 @@ export const ConnectSIWE: React.FC<ConnectSIWEProps> = ({}) => {
 		const signer = await provider
 			.getSigner()
 			.then((signer) => new SIWESigner({ signer, chainId: Number(network.chainId) }))
+			
+		if (!signer.hasSession(app.topic)) {
+			await signer.newSession(app.topic)
+		}
 
 		const address = await signer.getDid()
 		setAddress(address)
+
+		app.updateSigners([signer, ...app.signers.getAll().filter((s) => !(s instanceof SIWESigner))])
 		setSessionSigner(signer)
 	}, [app, provider])
 

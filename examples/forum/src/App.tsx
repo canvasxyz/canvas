@@ -89,13 +89,10 @@ export const App: React.FC<{ app: AppT }> = ({ app }) => {
 								return (
 									<div key={post.id} className="flex gap-3">
 										<div className="flex-1">
-											<div className="flex items-baseline">
-												<span className="font-bold mr-2 text-white">{"Demo user"}</span>
-												<span className="text-xs text-gray-400">
-													{new Date(post.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-												</span>
-											</div>
-											{post.title && <h3 className="text-white font-semibold mt-1">{post.title}</h3>}
+											<h3 className="text-white font-semibold mt-1">{post.title}</h3>
+											<div className="text-xs text-gray-400">
+												{post.author} - {new Date(post.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+											</div>											
 											<p className="text-gray-300 mt-1">{post.text}</p>
 										</div>
 									</div>
