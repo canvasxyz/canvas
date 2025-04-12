@@ -5,7 +5,7 @@ import ReactDOM from "react-dom/client"
 
 import { AuthKitProvider } from "@farcaster/auth-kit"
 import { JsonRpcProvider } from "ethers"
-import FrameSDK from "@farcaster/frame-sdk"
+import { sdk } from "@farcaster/frame-sdk"
 
 import type { SessionSigner } from "@canvas-js/interfaces"
 import { SIWESigner, SIWFSigner } from "@canvas-js/chain-ethereum"
@@ -42,8 +42,7 @@ const Container: React.FC<{}> = ({}) => {
 	})
 
 	useEffect(() => {
-		// @ts-ignore
-		FrameSDK.actions.ready()
+		sdk.actions.ready()
 	}, [])
 
 	return (
@@ -82,7 +81,6 @@ const Container: React.FC<{}> = ({}) => {
 								/>
 								<div className="flex flex-col break-all">
 									<ConnectSIWE />
-									<ConnectSIWF frame={true} topic={app.topic} />
 									<ConnectSIWF topic={app.topic} />
 								</div>
 							</div>

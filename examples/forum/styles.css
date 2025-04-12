@@ -32,5 +32,5 @@ main {
   height: 17px;
 }
 .fc-authkit-signin-button button span:after {
-  content: " with Farcaster (Web)";
+  content: " with Farcaster";
 }

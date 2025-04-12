@@ -4,16 +4,15 @@ import React, { useContext, useEffect, useRef, useState } from "react"
 import { hexlify, getBytes } from "ethers"
 import { SIWFSigner } from "@canvas-js/chain-ethereum"
 import { SignInButton, useProfile } from "@farcaster/auth-kit"
-import FrameSDK from "@farcaster/frame-sdk"
+import { sdk } from "@farcaster/frame-sdk"
 
 import { AppContext } from "../AppContext.js"
 
 export interface ConnectSIWFProps {
 	topic: string
-	frame?: boolean
 }
 
-export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic, frame }) => {
+export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic }) => {
 	const { app, setSessionSigner, setAddress } = useContext(AppContext)
 
 	const profile = useProfile()
@@ -34,19 +33,22 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic, frame }) => {
 		if (initialRef.current) {
 			return
 		}
-
 		initialRef.current = true
 
-		if (frame) {
-			const { nonce, privateKey } = SIWFSigner.newSIWFRequestNonce(topic)
-			setNonce(nonce)
-			setPrivateKey(hexlify(privateKey))
-			;(FrameSDK as any).actions.ready()
-		} else {
-			const { requestId, privateKey } = SIWFSigner.newSIWFRequestId(topic)
-			setRequestId(requestId)
-			setPrivateKey(hexlify(privateKey))
-		}
+		sdk.context.then((frameContext) => {
+			if (frameContext) {
+				const { nonce, privateKey } = SIWFSigner.newSIWFRequestNonce(topic)
+				setNonce(nonce)
+				setPrivateKey(hexlify(privateKey))
+				sdk.actions.ready()
+			} else {
+				const { requestId, privateKey } = SIWFSigner.newSIWFRequestId(topic)
+				setRequestId(requestId)
+				setPrivateKey(hexlify(privateKey))
+			}
+		}).catch((err) => {
+			alert('Error initializing FrameSDK, application may be out of date.')
+		})
 	}, [])
 
 	if (error !== null) {
@@ -84,7 +86,7 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic, frame }) => {
 							const now = new Date()
 							const exp = new Date(now.getTime() + 10 * 60 * 1000)
 
-							const result = await (FrameSDK as any).actions.signIn({
+							const result = await sdk.actions.signIn({
 								nonce,
 								notBefore: now.toISOString(),
 								expirationTime: exp.toISOString(),
