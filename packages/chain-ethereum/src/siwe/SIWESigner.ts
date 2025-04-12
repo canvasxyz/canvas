@@ -21,7 +21,7 @@ type AbstractSigner = {
 
 export interface SIWESignerInit {
 	chainId?: number
-	signer?: AbstractSigner
+	signer?: AbstractSigner | null | undefined
 	sessionDuration?: number
 }
 

@@ -412,7 +412,19 @@ export class Canvas<
 	}
 
 	/**
-	 * Get existing sessions
+	 * Get existing sessions in the signer cache
+	 */
+	public hasSession(): boolean {
+		for (const signer of this.signers.getAll()) {
+			if (signer.hasSession(this.topic)) {
+				return true
+			}
+		}
+		return false
+	}
+
+	/**
+	 * Get existing sessions on the log
 	 */
 	public async getSessions(query: {
 		did: string
