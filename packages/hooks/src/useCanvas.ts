@@ -51,6 +51,7 @@ export const useCanvas = <
 						setNetworkClient(networkClient)
 					})
 					.catch((err) => {
+						console.error(err)
 						setApp(app)
 						setTimeout(() => assign(appUrl, app), 2000)
 					})
@@ -84,7 +85,7 @@ export const useCanvas = <
 							const response = await fetch(snapshotApi)
 							const buffer = await response.arrayBuffer()
 							return cbor.decode<Snapshot>(new Uint8Array(buffer))
-					  })()
+						})()
 					: null
 
 				let reset: boolean
