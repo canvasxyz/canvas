@@ -15,6 +15,8 @@ import { AppContext } from "./AppContext.js"
 import { ConnectSIWE } from "./connect/ConnectSIWE.js"
 import { ConnectSIWF } from "./connect/ConnectSIWF.js"
 import { App } from "./App.js"
+import { ModelSchema } from "@canvas-js/modeldb"
+import { Actions, Canvas } from "@canvas-js/core"
 
 const wsURL =
 	document.location.hostname === "localhost"
@@ -31,14 +33,34 @@ const config = {
 	provider: new JsonRpcProvider(undefined, 10),
 }
 
+export const models = {
+	posts: {
+		id: "primary",
+		title: "string",
+		text: "string",
+		author: "string",
+		timestamp: "number",
+	}
+} satisfies ModelSchema
+
+export const actions = {
+	createPost(db, title: string, text: string) {
+		this.db.set("posts", { id: this.id, title, text, author: this.did, timestamp: this.timestamp })
+	}
+} satisfies Actions<typeof models>
+
+export type AppT = Canvas<typeof models, typeof actions>
+
 const Container: React.FC<{}> = ({}) => {
 	const [sessionSigner, setSessionSigner] = useState<SessionSigner | null>(null)
 	const [address, setAddress] = useState<string | null>(null)
 	const [isInfoOpen, setIsInfoOpen] = useState<boolean>(false)
 
-	const signers = [new SIWESigner(), new SIWFSigner()]
 	const { app, ws } = useCanvas(wsURL, {
-		signers,
+		signers: [new SIWESigner(), new SIWFSigner()],
+		topic: "forum-example.canvas.xyz",
+		contract: { models, actions },
+		// reset: true,
 	})
 
 	useEffect(() => {
@@ -50,7 +72,7 @@ const Container: React.FC<{}> = ({}) => {
 			<AuthKitProvider config={config}>
 				{app && ws ? (
 					<main>
-						<App />
+						<App app={app} />
 						{isInfoOpen ? (
 							<div className="fixed top-4 right-5 z-10 bg-white p-4 pr-12 w-[320px] border border-1 shadow-md rounded">
 								<div className="absolute top-3 right-4">

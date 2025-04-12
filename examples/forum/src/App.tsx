@@ -1,75 +1,30 @@
 import React, { useState, useEffect, useRef } from "react";
-import * as Dialog from "@radix-ui/react-dialog";
 import * as Scroll from "@radix-ui/react-scroll-area";
-import * as Separator from "@radix-ui/react-separator";
-import * as Avatar from "@radix-ui/react-avatar";
+import { AppT } from "./index.js";
+import { useCanvas, useLiveQuery } from "@canvas-js/hooks";
 
-// Types for our app
-interface User {
-	id: string;
-	name: string;
-	avatar: string;
-}
-
-interface Message {
-	id: string;
-	title: string;
-	text: string;
-	userId: string;
-	timestamp: Date;
-}
-
-export const App: React.FC<{}> = () => {	// Messages state
-	const [messages, setMessages] = useState<Message[]>([
-		{
-			id: "msg-1",
-			title: "Hello world!",
-			text: "This is my first post on this forum thing.",
-			userId: "user-2",
-			timestamp: new Date(Date.now() - 3600000)
-		},
-		{
-			id: "msg-2",
-			title: "Second post",
-			text: "Thanks for having me here!",
-			userId: "user-3",
-			timestamp: new Date(Date.now() - 1800000)
-		},
-	]);
+export const App: React.FC<{ app: AppT }> = ({ app }) => {
+	const posts = useLiveQuery(app, "posts") ?? []
 	
-	// New message state
 	const [newMessage, setNewMessage] = useState<string>("");
 	const [newTitle, setNewTitle] = useState<string>("");
-
-	// Reference to message container for scrolling
 	const messageEndRef = useRef<HTMLDivElement>(null);
+	const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-	// Function to send a new message
 	const sendMessage = (e: React.FormEvent) => {
 		e.preventDefault();
-		
-		// Check that both title and text are provided
 		if (!newTitle.trim() || !newMessage.trim()) return;
-		
-		const newMsg = {
-			id: `msg-${Date.now()}`,
-			title: newTitle,
-			text: newMessage,
-			userId: "user-0",
-			timestamp: new Date()
-		};
-		
-		setMessages([...messages, newMsg]);
-		setNewMessage("");
-		setNewTitle("");
+		app.actions.createPost(newTitle, newMessage).then(() => {
+			setNewMessage("");
+			setNewTitle("");
+		})
 	};
 
 	// Scroll to bottom when messages change
 	useEffect(() => {
 		messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
-	}, [messages]);
+	}, [posts]);
 
-	// Function to handle textarea key events for Cmd+Enter submission
 	const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
 		// Check for Cmd+Enter (Mac) or Ctrl+Enter (Windows/Linux)
 		if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
@@ -78,15 +33,9 @@ export const App: React.FC<{}> = () => {	// Messages state
 		}
 	};
 	
-	// Ref for the textarea element
-	const textareaRef = useRef<HTMLTextAreaElement>(null);
-	
-	// Function to auto-resize textarea
 	const autoResizeTextarea = () => {
 		if (textareaRef.current) {
-			// Reset height to auto to get the correct scrollHeight
 			textareaRef.current.style.height = '0px';
-			// Set the height to the scrollHeight to fit the content
 			const scrollHeight = textareaRef.current.scrollHeight + 23;
 			textareaRef.current.style.height = `${scrollHeight}px`;
 		}
@@ -136,18 +85,18 @@ export const App: React.FC<{}> = () => {	// Messages state
 				<Scroll.Root className="flex-1 overflow-hidden pb-[90px]">
 					<Scroll.Viewport className="h-full w-full">
 						<div className="p-4 space-y-6">
-							{messages.map(message => {
+							{posts.map(post => {
 								return (
-									<div key={message.id} className="flex gap-3">
+									<div key={post.id} className="flex gap-3">
 										<div className="flex-1">
 											<div className="flex items-baseline">
 												<span className="font-bold mr-2 text-white">{"Demo user"}</span>
 												<span className="text-xs text-gray-400">
-													{message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+													{new Date(post.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
 												</span>
 											</div>
-											{message.title && <h3 className="text-white font-semibold mt-1">{message.title}</h3>}
-											<p className="text-gray-300 mt-1">{message.text}</p>
+											{post.title && <h3 className="text-white font-semibold mt-1">{post.title}</h3>}
+											<p className="text-gray-300 mt-1">{post.text}</p>
 										</div>
 									</div>
 								);
