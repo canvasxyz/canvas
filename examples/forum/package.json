@@ -4,7 +4,7 @@
 	"version": "0.14.0-next.2",
 	"type": "module",
 	"scripts": {
-		"build": "npx vite build",
+		"build": "npx vite build --watch",
 		"dev": "npx vite",
 		"dev:server": "canvas run --port 8080 --static dist --network-explorer --admin 0x34C3A5ea06a3A67229fb21a7043243B0eB3e853f --topic forum-example.canvas.xyz src/contract.ts",
 		"dev:server:persistent": "canvas run --port 8080 --static dist --network-explorer --admin 0x34C3A5ea06a3A67229fb21a7043243B0eB3e853f --topic forum-example.canvas.xyz --init src/contract.ts /tmp/forum-example",
