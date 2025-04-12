@@ -1,18 +1,18 @@
 {
   "accountAssociation": {
     "header": "eyJmaWQiOjE0NCwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDJiYmFFZTg5MDBiYjE2NjRCMUM4M2EzQTRGMTQyY0RCRjIyMjRmYjgifQ",
-    "payload": "eyJkb21haW4iOiJmb3J1bS1leGFtcGxlLmNhbnZhcy54eXoifQ",
-    "signature": "MHhiZmVkNWJmOWIxZDEwYTY4NTkwOWZjNmIxODJjZTQ0NzUzNTUyY2RlNTcyYmU5OWEzYzcwOTUxNTI4YTI4MTllM2U4YjI3OGJjYmFhMWIyNDYxN2E3NDY5MjMyZDVhYmJlOTM3NTA3YzQ3ODZhOGY3ODk4ZWY1NjM4ZGUyZDI5MDFi"
+    "payload": "eyJkb21haW4iOiJ2ZXJtb250LWJiLWVzc2VuY2UtbGJzLnRyeWNsb3VkZmxhcmUuY29tIn0",
+    "signature": "MHgzYWQyZjNmMmQ4MjI0YzcxYjdlMjJiMDUwNmZiM2EyYzYyMGFlYWI1MWZlYTU1ZjUyZDcxNWEzMGE3ZDI1NTE3NjFmNjU2OTUyZGM4YzYzMGNjNDc1YmFlMjZjZDYyNzYwMWEwNTc4YmJiZGI4OTA2ZWZiMTY1Y2QwODUzNzZkMTFi"
   },
   "frame": {
     "version": "1",
     "name": "Example Frame",
-    "iconUrl": "https://forum-example.canvas.xyz/icon.png",
-    "homeUrl": "https://forum-example.canvas.xyz",
-    "imageUrl": "https://forum-example.canvas.xyz/image.png",
+    "iconUrl": "https://vermont-bb-essence-lbs.trycloudflare.com/icon.png",
+    "homeUrl": "https://vermont-bb-essence-lbs.trycloudflare.com",
+    "imageUrl": "https://vermont-bb-essence-lbs.trycloudflare.com/image.png",
     "buttonTitle": "Check this out",
-    "splashImageUrl": "https://forum-example.canvas.xyz/splash.png",
+    "splashImageUrl": "https://vermont-bb-essence-lbs.trycloudflare.com/splash.png",
     "splashBackgroundColor": "#eeccff",
-    "webhookUrl": "https://forum-example.canvas.xyz/api/webhook"
+    "webhookUrl": "https://vermont-bb-essence-lbs.trycloudflare.com/api/webhook"
   }
 }
