@@ -10,6 +10,9 @@ export default {
 	clear(prefix?: string) {
 		throw new Error("unsupported platform")
 	},
+	getFirst(prefix?: string) {
+		throw new Error("unsupported platform")
+	},
 	getDomain() {
 		throw new Error("unsupported platform")
 	},

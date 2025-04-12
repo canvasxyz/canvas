@@ -19,6 +19,12 @@ export default {
 			}
 		}
 	},
+	getFirst(prefix?: string): string | null {
+		for (const [key, value] of cache.entries()) {
+			if (!prefix || key.startsWith(prefix)) return value
+		}
+		return null
+	},
 
 	getDomain() {
 		return os.hostname()

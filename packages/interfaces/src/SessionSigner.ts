@@ -26,7 +26,7 @@ export interface SessionSigner<AuthorizationData = any> {
 	getAddressFromDid: (did: DidIdentifier) => string
 	getCurrentTimestamp: () => number
 
-	hasSession: (topic: string, did: DidIdentifier) => boolean
+	hasSession: (topic: string, did?: DidIdentifier) => boolean
 	getSession: (
 		topic: string,
 		options?: { did?: DidIdentifier } | { address: string },

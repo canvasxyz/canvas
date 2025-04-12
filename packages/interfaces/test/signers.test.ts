@@ -82,7 +82,11 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 	test(`${name} - create and verify session`, async (t) => {
 		const topic = "com.example.app"
 		const sessionSigner = await createSessionSigner()
+		t.is(sessionSigner.hasSession(topic), false)
 		const { payload: session } = await sessionSigner.newSession(topic)
+		t.is(sessionSigner.hasSession(topic), true)
+		t.is(sessionSigner.hasSession(topic, await sessionSigner.getDid()), true)
+		t.is(sessionSigner.hasSession(topic, "did:pkh:eip155:1:0x8A876c44064b77b36Cb3e0524DeeC1416858bDE6"), false)
 		await t.notThrowsAsync(() => Promise.resolve(sessionSigner.verifySession(topic, session)))
 	})
 

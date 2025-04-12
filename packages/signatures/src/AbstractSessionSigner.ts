@@ -173,9 +173,16 @@ export abstract class AbstractSessionSigner<
 		return result
 	}
 
-	public hasSession(topic: string, did: DidIdentifier): boolean {
-		const key = `canvas/${topic}/${did}`
-		return this.#cache.has(key) || target.get(key) !== null
+	public hasSession(topic: string, did?: DidIdentifier): boolean {
+		if (did) {
+			const key = `canvas/${topic}/${did}`
+			return this.#cache.has(key) || target.get(key) !== null
+		} else {
+			for (const key of this.#cache.keys()) {
+				if (key.startsWith(`canvas/${topic}/`)) return true
+			}
+			return target.getFirst(`canvas/${topic}/`) !== null
+		}
 	}
 
 	public async clear(topic: string) {

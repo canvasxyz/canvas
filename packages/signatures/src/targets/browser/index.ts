@@ -18,6 +18,16 @@ export default {
 
 		keyToRemove.forEach((key) => localStorage.removeItem(key))
 	},
+	getFirst(prefix?: string): string | null {
+		for (var i = 0; i < window.localStorage.length; i++) {
+			const key = window.localStorage.key(i)
+			if (key === null) break
+			if (!prefix || key.startsWith(prefix)) {
+				return window.localStorage.getItem(key)
+			}
+		}
+		return null
+	},
 
 	getDomain() {
 		return window.location.host

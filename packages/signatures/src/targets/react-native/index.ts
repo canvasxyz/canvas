@@ -18,6 +18,11 @@ export default {
 			}
 		}
 	},
+	getFirst(): string | null {
+		const keys = storage.getAllKeys()
+		if (keys[0] === undefined) return null
+		return storage.getString(keys[0]) ?? null
+	},
 
 	getDomain() {
 		return "react-native-application"
