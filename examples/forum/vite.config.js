@@ -14,6 +14,7 @@ export default defineConfig({
 	build: {
 		minify: false,
 		target: "es2022",
+		emptyOutDir: false,
 	},
 	optimizeDeps: {
 		exclude: ["@sqlite.org/sqlite-wasm", "quickjs-emscripten"],
@@ -24,5 +25,5 @@ export default defineConfig({
 			},
 		},
 	},
-	publicDir: 'public'
+	publicDir: "public",
 })

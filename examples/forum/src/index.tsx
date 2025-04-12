@@ -94,7 +94,7 @@ const Container: React.FC<{}> = ({}) => {
 						)}
 					</main>
 				) : (
-					<div className="text-center my-20">Connecting to {wsURL}...</div>
+					<div className="text-center my-20 text-white">Connecting to {wsURL}...</div>
 				)}
 			</AuthKitProvider>
 		</AppContext.Provider>

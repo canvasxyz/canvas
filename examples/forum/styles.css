@@ -10,8 +10,15 @@ body,
 	height: 100%;
 }
 
+#root #loading {
+  width: 100%;
+  text-align: center;
+  margin: 5rem 0;
+  color: #eee;
+}
+
 html, body {
-	background: rgb(16, 24, 39);
+	background: rgb(37, 37, 41);
 }
 
 main {
