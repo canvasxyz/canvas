@@ -1,19 +1,17 @@
 import type { Actions, ModelSchema } from "@canvas-js/core"
 
 export const models = {
-	message: {
+	posts: {
 		id: "primary",
-		address: "string",
-		content: "string",
-		timestamp: "integer",
-		$indexes: ["address", "timestamp"],
+		title: "string",
+		text: "string",
+		author: "string",
+		timestamp: "number",
 	},
 } satisfies ModelSchema
 
 export const actions = {
-	async createMessage(db, args) {
-		const { id, address, timestamp } = this
-		const content = typeof args === "string" ? args : args.content
-		await db.set("message", { id, address, content, timestamp })
+	createPost(db, title: string, text: string) {
+		this.db.set("posts", { id: this.id, title, text, author: this.did, timestamp: this.timestamp })
 	},
 } satisfies Actions<typeof models>
