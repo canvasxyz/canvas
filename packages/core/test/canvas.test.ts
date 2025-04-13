@@ -66,7 +66,7 @@ const init = async (t: ExecutionContext) => {
 }
 
 const initEIP712 = async (t: ExecutionContext) => {
-	const signer = new Eip712Signer()
+	const signer = new Eip712Signer({ burner: true })
 	const app = await Canvas.initialize({
 		contract,
 		topic: "com.example.app",
@@ -474,6 +474,7 @@ test("apply an action and read a record from the database using eip712", async (
 
 test("call quickjs contract with did uri and wallet address", async (t) => {
 	const { app, signer } = await initEIP712(t)
+	assert(signer._signer !== null)
 	const address = await signer._signer.getAddress()
 
 	const { id, message } = await app.actions.createPost("hello world", true, -1, 0)

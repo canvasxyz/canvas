@@ -44,6 +44,7 @@ export class SIWFSigner extends AbstractSessionSigner<SIWFSessionData> {
 	public readonly key: string
 	public readonly chainId: number
 	public readonly custodyAddress: string | undefined
+	public readonly privateKey: string | undefined
 
 	public constructor({ sessionDuration, privateKey, ...init }: SIWFSignerInit = {}) {
 		super("chain-ethereum-farcaster", ed25519, { sessionDuration: sessionDuration ?? 14 * DAYS })
@@ -51,6 +52,7 @@ export class SIWFSigner extends AbstractSessionSigner<SIWFSessionData> {
 		this.chainId = 10
 		this.key = `chain-ethereum-siwf`
 		this.custodyAddress = init.custodyAddress
+		this.privateKey = privateKey
 
 		if (privateKey) {
 			if (privateKey.length !== 64 || !privateKey.match(/^[0-9a-f]+$/i)) {
@@ -61,6 +63,7 @@ export class SIWFSigner extends AbstractSessionSigner<SIWFSessionData> {
 	}
 
 	public async getDid(): Promise<DidIdentifier> {
+		assert(this.custodyAddress && this.privateKey, "SIWFSigner initializd without a custody address")
 		if (!this.custodyAddress) throw new Error("not initialized")
 		return `did:pkh:farcaster:${this.custodyAddress}`
 	}

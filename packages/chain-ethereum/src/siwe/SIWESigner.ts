@@ -20,8 +20,20 @@ type AbstractSigner = {
 }
 
 export interface SIWESignerInit {
-	chainId?: number
+	/** An abstract signer, implementing a minimal subset of methods on ethers.Signer.
+	 *
+	 * If no signer is provided, SIWESigner will only read/accept actions, and will not
+	 * be able to authorize new sessions or actions.  */
 	signer?: AbstractSigner | null | undefined
+
+	/** Create a random burner account for SIWESigner at the time of initialization.
+	 * Default: false. */
+	burner?: boolean
+
+	/** Ethereum Chain ID to issue did:pkh identities on. Default: 1. */
+	chainId?: number
+
+	/** Duration that sessions should be valid for. Default: 14 days. */
 	sessionDuration?: number
 }
 
@@ -31,17 +43,19 @@ export class SIWESigner extends AbstractSessionSigner<SIWESessionData> {
 	public readonly key: string
 	public readonly chainId: number
 
-	_signer: AbstractSigner
+	_signer: AbstractSigner | null
 
 	public constructor({ sessionDuration, ...init }: SIWESignerInit = { sessionDuration: 14 * DAYS }) {
 		super("chain-ethereum", ed25519, { sessionDuration })
 
-		this._signer = init.signer ?? Wallet.createRandom()
+		this._signer = init.signer ?? (init.burner ? Wallet.createRandom() : null)
 		this.chainId = init.chainId ?? 1
 		this.key = `chain-ethereum${init.signer ? "-signer" : ""}`
 	}
 
 	public async getDid(): Promise<DidIdentifier> {
+		assert(this._signer !== null, "SIWESigner initialized without a signer in read-only mode")
+
 		const walletAddress = await this._signer.getAddress()
 		return `did:pkh:eip155:${this.chainId}:${walletAddress}`
 	}
@@ -56,6 +70,8 @@ export class SIWESigner extends AbstractSessionSigner<SIWESessionData> {
 	}
 
 	public async authorize(sessionData: AbstractSessionData): Promise<Session<SIWESessionData>> {
+		assert(this._signer !== null, "SIWESigner initialized without a signer in read-only mode")
+
 		const {
 			topic,
 			did,

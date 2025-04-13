@@ -46,15 +46,15 @@ const SIGNER_IMPLEMENTATIONS: SessionSignerImplementation[] = [
 	},
 	{
 		name: "chain-ethereum",
-		createSessionSigner: async (args) => new SIWESigner(args),
+		createSessionSigner: async (args) => new SIWESigner({ ...args, burner: true }),
 	},
 	{
 		name: "chain-ethereum-viem",
-		createSessionSigner: async (args) => new SIWESignerViem(args),
+		createSessionSigner: async (args) => new SIWESignerViem({ ...args, burner: true }),
 	},
 	{
 		name: "chain-ethereum-eip712",
-		createSessionSigner: async (args) => new Eip712Signer(args),
+		createSessionSigner: async (args) => new Eip712Signer({ ...args, burner: true }),
 	},
 	{
 		name: "chain-solana",
@@ -199,7 +199,7 @@ for (const implementation of SIGNER_IMPLEMENTATIONS) {
 
 test(`ethereum - ethers signer can verify ethereum viem signed data`, async (t) => {
 	const topic = "com.example.app"
-	const signingSigner = new SIWESignerViem()
+	const signingSigner = new SIWESignerViem({ burner: true })
 	const verifyingSigner = new SIWESigner()
 
 	const { payload: session } = await signingSigner.newSession(topic)
@@ -208,7 +208,7 @@ test(`ethereum - ethers signer can verify ethereum viem signed data`, async (t) 
 
 test(`ethereum - viem signer can verify ethers signed data`, async (t) => {
 	const topic = "com.example.app"
-	const signingSigner = new SIWESigner()
+	const signingSigner = new SIWESigner({ burner: true })
 	const verifyingSigner = new SIWESignerViem()
 
 	const { payload: session } = await signingSigner.newSession(topic)
