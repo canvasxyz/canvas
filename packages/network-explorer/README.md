@@ -27,8 +27,8 @@ Also create a Postgres database.
 
 For the main service:
 
-- Configure the build command to `npm run build && npm run build --workspace=@canvas-js/common-explorer`.
-- Configure the start command to `npm start:server --workspace=@canvas-js/common-explorer`.
+- Configure the build command to `npm run build && npm run build --workspace=@canvas-js/network-explorer`.
+- Configure the start command to `npm start:server --workspace=@canvas-js/network-explorer`.
 - Add DATABASE_URL, PORT, LIBP2P_PORT, LIBP2P_PRIVATE_KEY, BOOTSTRAP_LIST as environment variables.
 - To use the network explorer, add two custom domains:
   - One should be connected to port 3333, for the network explorer API.
