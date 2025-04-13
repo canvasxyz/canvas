@@ -103,7 +103,7 @@ export class Canvas<
 			assert(topicPattern.test(topic), "invalid topic, must match [a-zA-Z0-9\\.\\-]")
 		}
 
-		const signers = new SignerCache(initSigners.length === 0 ? [new SIWESigner()] : initSigners)
+		const signers = new SignerCache(initSigners.length === 0 ? [new SIWESigner({ burner: true })] : initSigners)
 
 		const verifySignature = (signature: Signature, message: Message<MessageType>) => {
 			if (message.payload.type === "snapshot") {
@@ -303,7 +303,7 @@ export class Canvas<
 		this.messageLog.addEventListener("connect", (event) => this.safeDispatchEvent("connect", event))
 		this.messageLog.addEventListener("disconnect", (event) => this.safeDispatchEvent("disconnect", event))
 
-		this.messageLog.addEventListener("message", (event) => this.lastMessage = Date.now())
+		this.messageLog.addEventListener("message", (event) => (this.lastMessage = Date.now()))
 
 		const actionCache = {} as {
 			[K in keyof ActionsT]: (signer: SessionSigner<any>, db: ModelAPI<DeriveModelTypes<ModelsT>>, ...args: any) => any
@@ -519,7 +519,7 @@ export class Canvas<
 			topic: this.topic,
 			models: models,
 			actions: Object.keys(this.actions),
-			signerKeys: this.signers.getAll().map(((s) => s.key)),
+			signerKeys: this.signers.getAll().map((s) => s.key),
 			lastMessage: this.lastMessage,
 		}
 	}

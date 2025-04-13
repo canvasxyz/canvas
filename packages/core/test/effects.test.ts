@@ -29,7 +29,7 @@ const actions = {
 } satisfies Actions<typeof models>
 
 const init = async (t: ExecutionContext<unknown>) => {
-	const signer = new SIWESigner()
+	const signer = new SIWESigner({ burner: true })
 	const app = await Canvas.initialize({
 		contract: { models, actions },
 		topic: "com.example.app",
