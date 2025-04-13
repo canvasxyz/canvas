@@ -37,12 +37,12 @@ export const useCanvas = <
 
 	const contractHash = config && "contract" in config ? hashContract(config.contract) : null
 
-	useEffect(() => {
-		// keep app signers updated
-		if (!app || !config || config.signers === undefined) return
-		app.updateSigners(config.signers)
-		console.warn(config.signers?.map(s => s.key), "signers updated")
-	}, [config.signers?.map(s => s.key)])
+	// useEffect(() => {
+	// 	// keep app signers updated
+	// 	if (!app || !config || config.signers === undefined) return
+	// 	app.updateSigners(config.signers)
+	// 	console.warn(config.signers?.map(s => s.key), "signers updated")
+	// }, [config.signers?.map(s => s.key)])
 
 	useEffect(() => {
 		if (renderedRef.current) return
