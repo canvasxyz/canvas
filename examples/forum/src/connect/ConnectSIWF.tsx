@@ -1,6 +1,6 @@
 import "@farcaster/auth-kit/styles.css"
 
-import React, { useCallback, useContext, useEffect, useRef, useState } from "react"
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
 import { hexlify, getBytes } from "ethers"
 import { SIWESigner, SIWFSigner } from "@canvas-js/chain-ethereum"
 import { AuthClientError, SignInButton, useProfile, UseSignInData } from "@farcaster/auth-kit"
@@ -8,7 +8,6 @@ import { sdk } from "@farcaster/frame-sdk"
 import { bytesToHex } from "@noble/hashes/utils"
 
 import { AppContext } from "../AppContext.js"
-import { SessionSigner } from "@canvas-js/interfaces"
 
 export interface ConnectSIWFProps {
 	topic: string
@@ -30,6 +29,14 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic }) => {
 
 	const [error, setError] = useState<Error | null>(null)
 	const initializedRef = useRef(false)
+
+	const [canvasIsAuthenticated, setCanvasIsAuthenticated] = useState(false)
+	useEffect(() => {
+		(async () => {
+			const hasSession = await sessionSigner?.hasSession(topic)
+			setCanvasIsAuthenticated(hasSession ?? false)
+		})()
+	}, [topic, sessionSigner])
 
 	useEffect(() => {
 		if (initializedRef.current) return
@@ -149,7 +156,7 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic }) => {
 	)
 
 	const signOut = useCallback(() => {
-		sessionSigner?.clear(topic)
+		sessionSigner?.clearSession(topic)
 		setAddress(null)
 		setSessionSigner(null)
 		app?.updateSigners([new SIWESigner(), new SIWFSigner()])
@@ -171,7 +178,7 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic }) => {
 		return (
 			<div style={{ marginTop: "12px", right: "12px" }}>
 				{/* TODO: combine these states, currently Canvas logins and Farcaster logins are separate. */}
-				{sessionSigner?.hasSession(topic) && (
+				{canvasIsAuthenticated && (
 					<div>
 						<button
 							type="submit"
@@ -188,7 +195,7 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic }) => {
 					</p>
 				)}
 				{/* frame login */}
-				{nonce && !isAuthenticated && !sessionSigner?.hasSession(topic) && (
+				{nonce && !isAuthenticated && !canvasIsAuthenticated && (
 					<button
 						type="submit"
 						className="w-full p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200"
@@ -198,7 +205,7 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic }) => {
 					</button>
 				)}
 				{/* non-frame login */}
-				{requestId && !isAuthenticated && !sessionSigner?.hasSession(topic) && (
+				{requestId && !isAuthenticated && !canvasIsAuthenticated && (
 					<SignInButton
 						requestId={requestId}
 						onSuccess={browserSignIn}

@@ -36,7 +36,7 @@ export const ConnectSIWE: React.FC<ConnectSIWEProps> = ({}) => {
 			.getSigner()
 			.then((signer) => new SIWESigner({ signer, chainId: Number(network.chainId) }))
 
-		if (signer.listSessions(app.topic).length === 0) {
+		if (!(await signer.hasSession(app.topic))) {
 			if (isBrowserInit) {
 				return
 			} else {
@@ -76,6 +76,7 @@ export const ConnectSIWE: React.FC<ConnectSIWEProps> = ({}) => {
 	}, [])
 
 	const disconnect = useCallback(async () => {
+		if (app?.topic) sessionSigner?.clearSession(app?.topic)
 		setAddress(null)
 		setSessionSigner(null)
 		app?.updateSigners([new SIWESigner(), new SIWFSigner()])
