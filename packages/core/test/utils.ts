@@ -85,6 +85,10 @@ export class PRNGSigner extends AbstractSessionSigner<{ signature: Uint8Array }>
 		this.key = "prng"
 	}
 
+	public isReadOnly() {
+		return false
+	}
+
 	public getCurrentTimestamp(): number {
 		return 0
 	}

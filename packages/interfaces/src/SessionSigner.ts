@@ -21,6 +21,7 @@ export interface SessionSigner<AuthorizationData = any> {
 	scheme: SignatureScheme<MessageType<AuthorizationData>>
 	match: (did: DidIdentifier) => boolean
 
+	isReadOnly: () => boolean
 	getDid: () => Awaitable<DidIdentifier>
 	getDidParts: () => number
 	getAddressFromDid: (did: DidIdentifier) => string

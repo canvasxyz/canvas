@@ -62,6 +62,11 @@ export class SIWFSigner extends AbstractSessionSigner<SIWFSessionData> {
 		}
 	}
 
+	public isReadOnly() {
+		if (!this.custodyAddress || !this.privateKey) return true
+		return false
+	}
+
 	public async getDid(): Promise<DidIdentifier> {
 		assert(this.custodyAddress && this.privateKey, "SIWFSigner initializd without a custody address")
 		if (!this.custodyAddress) throw new Error("not initialized")

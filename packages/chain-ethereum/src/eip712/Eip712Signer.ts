@@ -38,6 +38,10 @@ export class Eip712Signer extends AbstractSessionSigner<Eip712SessionData> {
 		this.chainId = init.chainId ?? 1
 	}
 
+	public isReadOnly() {
+		return this._signer === null
+	}
+
 	public async getDid(): Promise<DidIdentifier> {
 		assert(this._signer !== null, "EIP712Signer initialized without a signer in read-only mode")
 		const walletAddress = await this._signer.getAddress()

@@ -87,6 +87,10 @@ export class SIWESignerViem extends AbstractSessionSigner<SIWESessionData> {
 		this.chainId = init.chainId ?? 1
 	}
 
+	public isReadOnly() {
+		return this.#account === null
+	}
+
 	public async verifySession(topic: string, session: Session<SIWESessionData>) {
 		const {
 			did,

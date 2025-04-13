@@ -44,6 +44,7 @@ export abstract class AbstractSessionSigner<
 	public abstract match: (address: string) => boolean
 	public abstract verifySession(topic: string, session: Session<AuthorizationData>): Awaitable<void>
 
+	public abstract isReadOnly(): boolean
 	public abstract getDid(): Awaitable<DidIdentifier>
 	public abstract getDidParts(): number
 	public abstract getAddressFromDid(did: DidIdentifier): WalletAddress
@@ -161,6 +162,7 @@ export abstract class AbstractSessionSigner<
 	}
 
 	public listSessions(topic: string): string[] {
+		if (this.isReadOnly()) return []
 		// TODO: look at target
 		const prefix = `canvas/${topic}/`
 		const result = []
@@ -174,6 +176,7 @@ export abstract class AbstractSessionSigner<
 	}
 
 	public hasSession(topic: string, did?: DidIdentifier): boolean {
+		if (this.isReadOnly()) return false
 		if (did) {
 			const key = `canvas/${topic}/${did}`
 			return this.#cache.has(key) || target.get(key) !== null

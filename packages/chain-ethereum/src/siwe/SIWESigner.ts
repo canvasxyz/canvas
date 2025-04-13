@@ -53,6 +53,10 @@ export class SIWESigner extends AbstractSessionSigner<SIWESessionData> {
 		this.key = `chain-ethereum${init.signer ? "-signer" : ""}`
 	}
 
+	public isReadOnly() {
+		return this._signer === null
+	}
+
 	public async getDid(): Promise<DidIdentifier> {
 		assert(this._signer !== null, "SIWESigner initialized without a signer in read-only mode")
 

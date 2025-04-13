@@ -53,6 +53,10 @@ export class CosmosSigner extends AbstractSessionSigner<CosmosSessionData> {
 		}
 	}
 
+	public isReadOnly() {
+		return false
+	}
+
 	public async verifySession(topic: string, session: Session) {
 		const {
 			publicKey,
