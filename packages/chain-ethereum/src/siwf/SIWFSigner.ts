@@ -139,7 +139,7 @@ export class SIWFSigner extends AbstractSessionSigner<SIWFSessionData> {
 		const signer = ed25519.create()
 		const canvasDelegateSignerAddress = signer.publicKey
 		return {
-			requestId: `authorize:${topic}:${canvasDelegateSignerAddress}`,
+			requestId: `authorize:${topic.replace("#", "$")}:${canvasDelegateSignerAddress}`,
 			...signer.export(),
 		}
 	}
@@ -147,7 +147,7 @@ export class SIWFSigner extends AbstractSessionSigner<SIWFSessionData> {
 	public static getSIWFRequestId(topic: string, privateKey: string): string {
 		const signer = ed25519.create({ type: ed25519.type, privateKey: getBytes(privateKey) })
 		const canvasDelegateSignerAddress = signer.publicKey
-		return `authorize:${topic}:${canvasDelegateSignerAddress}`
+		return `authorize:${topic.replace("#", "$")}:${canvasDelegateSignerAddress}`
 	}
 
 	public static newSIWFRequestNonce(topic: string): { nonce: string; privateKey: Uint8Array } {
@@ -176,7 +176,8 @@ export class SIWFSigner extends AbstractSessionSigner<SIWFSessionData> {
 
 		if (siweMessage.requestId) {
 			// client based SIWF message - parse requestId
-			const [prefix, topic] = siweMessage.requestId.split(":", 2)
+			const [prefix, unescapedTopic] = siweMessage.requestId.split(":", 2)
+			const topic = unescapedTopic.replace("$", "#")
 			const canvasDelegateAddress = siweMessage.requestId.slice(
 				siweMessage.requestId.indexOf(":", siweMessage.requestId.indexOf(":") + 1) + 1,
 			)
@@ -261,7 +262,7 @@ export class SIWFSigner extends AbstractSessionSigner<SIWFSessionData> {
 		}
 
 		if (authorizationData.frame) {
-			const nonce = Buffer.from(`authorize:${topic}:${publicKey}`).toString("base64")
+			const nonce = Buffer.from(`authorize:${topic.replace("#", "$")}:${publicKey}`).toString("base64")
 			assert(authorizationData.siweNonce === nonce, "invalid SIWF signature for this topic and session publicKey")
 
 			const message = new siwe.SiweMessage({
@@ -281,7 +282,7 @@ export class SIWFSigner extends AbstractSessionSigner<SIWFSessionData> {
 			const recoveredAddress = verifyMessage(message, hexlify(authorizationData.signature))
 			assert(recoveredAddress === authorizationData.custodyAddress, "invalid SIWF signature")
 		} else {
-			const requestId = `authorize:${topic}:${publicKey}`
+			const requestId = `authorize:${topic.replace("#", "$")}:${publicKey}`
 
 			const message = new siwe.SiweMessage({
 				domain: authorizationData.siweDomain,
