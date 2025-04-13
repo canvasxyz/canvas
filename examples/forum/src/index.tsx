@@ -117,7 +117,7 @@ const Container: React.FC<{}> = ({}) => {
 								onClick={() => setIsInfoOpen(true)}
 								className="fixed top-4 right-5 z-10 bg-white p-2 rounded-full shadow-md border border-gray-200 hover:bg-gray-100"
 							>
-								Login
+								{app.hasSession() ? "Logout" : "Login"}
 							</button>
 						)}
 					</main>
