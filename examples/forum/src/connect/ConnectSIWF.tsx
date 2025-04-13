@@ -32,7 +32,7 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic }) => {
 
 	const [canvasIsAuthenticated, setCanvasIsAuthenticated] = useState(false)
 	useEffect(() => {
-		(async () => {
+		;(async () => {
 			const hasSession = await sessionSigner?.hasSession(topic)
 			setCanvasIsAuthenticated(hasSession ?? false)
 		})()
@@ -122,7 +122,7 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic }) => {
 		setSessionSigner(signer)
 		app.updateSigners([signer, ...app.signers.getAll().filter((signer) => signer.key !== "chain-ethereum-farcaster")])
 		app.messageLog.append(payload, { signer: delegateSigner })
-		console.log("started SIWF chat session inside frame", authorizationData)
+		console.log("started SIWF session inside frame", authorizationData)
 	}, [app, nonce, newSessionPrivateKey, topic])
 
 	const browserSignIn = useCallback(
@@ -150,7 +150,7 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic }) => {
 			setSessionSigner(signer)
 			app.updateSigners([signer, ...app.signers.getAll().filter((signer) => signer.key !== "chain-ethereum-farcaster")])
 			app.messageLog.append(payload, { signer: delegateSigner })
-			console.log("started SIWF chat session", authorizationData)
+			console.log("started SIWF session", authorizationData)
 		},
 		[app, newSessionPrivateKey, topic],
 	)

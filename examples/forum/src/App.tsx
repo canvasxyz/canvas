@@ -73,7 +73,7 @@ export const App: React.FC<{ app: AppT }> = ({ app }) => {
 				</Scroll.Root>
 			</div>
 
-			{/* Main chat area */}
+			{/* Main post area */}
 			<div className="flex-1 flex flex-col overflow-hidden bg-gray-900 relative">
 				<div className="border-b border-gray-700 px-6 py-3">
 					<h2 className="font-medium text-lg text-white">All Posts</h2>
