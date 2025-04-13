@@ -18,7 +18,7 @@ export const ConnectSIWE: React.FC<ConnectSIWEProps> = ({}) => {
 	const [provider, setProvider] = useState<BrowserProvider | null>(null)
 	const [error, setError] = useState<Error | null>(null)
 
-	const connect = useCallback(async () => {
+	const connect = useCallback(async (provider: BrowserProvider | null, isBrowserInit?: boolean) => {
 		if (app === null) {
 			setError(new Error("app not initialized"))
 			return
@@ -37,7 +37,11 @@ export const ConnectSIWE: React.FC<ConnectSIWEProps> = ({}) => {
 			.then((signer) => new SIWESigner({ signer, chainId: Number(network.chainId) }))
 
 		if (!signer.hasSession(app.topic)) {
-			await signer.newSession(app.topic)
+			if (isBrowserInit) {
+				return
+			} else {
+				await signer.newSession(app.topic)
+			}
 		}
 
 		const address = await signer.getDid()
@@ -66,6 +70,9 @@ export const ConnectSIWE: React.FC<ConnectSIWEProps> = ({}) => {
 
 		const provider = new BrowserProvider(window.ethereum)
 		setProvider(provider)
+
+		// automatically log back in
+		connect(provider, true)
 	}, [])
 
 	const disconnect = useCallback(async () => {
@@ -98,7 +105,9 @@ export const ConnectSIWE: React.FC<ConnectSIWEProps> = ({}) => {
 	} else {
 		return (
 			<button
-				onClick={() => connect()}
+				onClick={() => {
+					connect(new BrowserProvider(window.ethereum!))
+				}}
 				className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200"
 			>
 				Connect ETH wallet

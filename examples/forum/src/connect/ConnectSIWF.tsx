@@ -29,12 +29,17 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic }) => {
 
 	const [error, setError] = useState<Error | null>(null)
 	const initializedRef = useRef(false)
-	
+
 	useEffect(() => {
-		if (initializedRef.current) {
-			return
-		}
+		if (initializedRef.current) return
 		initializedRef.current = true
+
+		if (!app) return
+
+		const sig = new SIWFSigner()
+		sig.restoreSIWFSession(topic).then(() => {
+			console.log('restored')
+		})
 
 		sdk.context
 			.then((frameContext) => {
