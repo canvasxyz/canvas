@@ -3,9 +3,11 @@
 ModelDB is a minimalist cross-platform relational database wrapper. It currently supports the following backends:
 
 - IndexedDB (browser)
-- Sqlite + Wasm (browser) with either an OPFS store or transient in-memory storage
+- SQLite + WASM (browser) with either an OPFS store or transient in-memory storage
 - PostgreSQL (NodeJS)
-- Native Sqlite (NodeJS)
+- Native SQLite (NodeJS)
+- Native SQLite (React Native with Expo)
+- Durable Objects (Cloudflare) (experimental, not officially supported)
 
 ## Table of Contents
 
@@ -15,6 +17,7 @@ ModelDB is a minimalist cross-platform relational database wrapper. It currently
   - [Setting and deleting records](#setting-and-deleting-records)
   - [Queries](#queries)
   - [Indexes](#indexes)
+  - [Upgrades](#upgrades)
   - [Name restrictions](#name-restrictions)
 - [Testing](#testing)
 - [License](#license)
@@ -23,7 +26,16 @@ ModelDB is a minimalist cross-platform relational database wrapper. It currently
 
 ### Initialization
 
-Import `ModelDB` from either `@canvas-js/modeldb-idb` (browser) or `@canvas-js/modeldb-sqlite` (NodeJS).
+Import `ModelDB` from:
+
+- `@canvas-js/modeldb-idb` (browser)
+- `@canvas-js/modeldb-sqlite-wasm` (browser)
+- `@canvas-js/modeldb-pg` (NodeJS)
+- `@canvas-js/modeldb-sqlite` (NodeJS)
+- `@canvas-js/modeldb-sqlite-expo` (React Native)
+- `@canvas-js/modeldb-durable-objects` (React Native)
+
+or any other backend.
 
 ```ts
 import { ModelDB } from "@canvas-js/modeldb-sqlite"
@@ -42,6 +54,8 @@ const db = await ModelDB.init({
   models: { ... }
 })
 ```
+
+For more initialization examples, see the `test` directory in each subpackage.
 
 ### Schemas
 
@@ -173,6 +187,53 @@ const recentMessages = await db.query("message", { orderBy: { timestamp: "desc" 
 ```
 
 Multi-property index support will be added soon.
+
+### Upgrades
+
+It is now possible to specify a version number for each of your databases, and automatically run programmatic upgrades between versions.
+
+TODO: Explain upgrade usage and version conventions.
+
+```ts
+const db = await ModelDB.open(uri, {
+  models,
+  version, // e.g. { myapp: 3 }
+  upgrade: async (upgradeAPI, oldConfig, oldVersion, newVersion) => {
+    // Execute your upgrade here using upgradeAPI.
+  },
+  initialUpgradeSchema: Object.assign(init.initialUpgradeSchema ?? { ...models }, initialUpgradeSchema),
+  initialUpgradeVersion: Object.assign(init.initialUpgradeVersion ?? { ...version }, initialUpgradeVersion),
+})
+```
+
+```ts
+export interface ModelDBInit {
+  models: ModelSchema
+
+  version?: Record<string, number>
+  upgrade?: DatabaseUpgradeCallback
+  initialUpgradeVersion?: Record<string, number>
+  initialUpgradeSchema?: ModelSchema
+
+  clear?: boolean
+}
+
+export interface DatabaseUpgradeAPI extends DatabaseAPI {
+  createModel(name: string, init: ModelInit): Awaitable<void>
+  deleteModel(name: string): Awaitable<void>
+
+  addProperty(
+    modelName: string,
+    propertyName: string,
+    propertyType: PropertyType,
+    defaultPropertyValue: PropertyValue,
+  ): Awaitable<void>
+  removeProperty(modelName: string, propertyName: string): Awaitable<void>
+
+  addIndex(modelName: string, index: string): Awaitable<void>
+  removeIndex(modelName: string, index: string): Awaitable<void>
+}
+```
 
 ### Name restrictions
 
