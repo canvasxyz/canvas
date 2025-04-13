@@ -175,6 +175,7 @@ export abstract class AbstractSessionSigner<
 		return result
 	}
 
+	// TODO: remove in favor of listSessions?
 	public hasSession(topic: string, did?: DidIdentifier): boolean {
 		if (this.isReadOnly()) return false
 		if (did) {

@@ -114,6 +114,27 @@ export class SIWFSigner extends AbstractSessionSigner<SIWFSessionData> {
 		return { payload: session, signer }
 	}
 
+	public restoreSIWFSession(
+		topic: string,
+	): { payload: Session<SIWFSessionData>; signer: Signer<MessageType<SIWFSessionData>> } | null {
+		const keyPrefix = `canvas/${topic}/`
+		const values = this.target.getAll(keyPrefix)
+		for (const value of values) {
+			try {
+				const { session, type, privateKey } = json.parse<{
+					type: string
+					privateKey: Uint8Array
+					session: Session<SIWFSessionData>
+				}>(value)
+				const signer = ed25519.create({ type, privateKey })
+				return { payload: session, signer }
+			} catch (err) {
+				console.error(err)
+			}
+		}
+		return null
+	}
+
 	public static newSIWFRequestId(topic: string): { requestId: string; privateKey: Uint8Array } {
 		const signer = ed25519.create()
 		const canvasDelegateSignerAddress = signer.publicKey
