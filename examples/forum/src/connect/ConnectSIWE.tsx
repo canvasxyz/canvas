@@ -40,7 +40,8 @@ export const ConnectSIWE: React.FC<ConnectSIWEProps> = ({}) => {
 			if (isBrowserInit) {
 				return
 			} else {
-				await signer.newSession(app.topic)
+				const session = await signer.newSession(app.topic)
+				await app.messageLog.append(session.payload, { signer: session.signer })
 			}
 		}
 
