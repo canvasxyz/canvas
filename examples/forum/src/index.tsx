@@ -59,10 +59,10 @@ const Container: React.FC<{}> = ({}) => {
 	const [address, setAddress] = useState<string | null>(null)
 	const [isInfoOpen, setIsInfoOpen] = useState<boolean>(false)
 
-	const { app, ws } = useCanvas(wsURL, {
+	const { app, ws } = useCanvas<typeof models, typeof actions>(wsURL, {
 		signers: [new SIWESigner(), new SIWFSigner()],
-		topic: "forum-example.canvas.xyz",
-		contract: { models, actions },
+		// topic: "forum-example.canvas.xyz",
+		// contract: { models, actions },
 		// reset: true,
 	})
 
