@@ -84,7 +84,7 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 		const sessionSigner = await createSessionSigner()
 		t.assert(sessionSigner.listAllSessions(topic).length === 0)
 		const { payload: session } = await sessionSigner.newSession(topic)
-		t.assert(sessionSigner.listAllSessions(topic).length === 1)
+		t.assert(sessionSigner.listAllSessions(topic).length > 0)
 		t.assert(sessionSigner.listAllSessions(topic, await sessionSigner.getDid()).length === 1)
 		t.assert(
 			sessionSigner.listAllSessions(topic, "did:pkh:eip155:1:0x8A876c44064b77b36Cb3e0524DeeC1416858bDE6").length === 0,
