@@ -18,6 +18,15 @@ export default {
 			}
 		}
 	},
+	keys(prefix?: string): string[] {
+		const response: string[] = []
+		for (const key of storage.getAllKeys()) {
+			if (!prefix || key.startsWith(prefix)) {
+				response.push(key)
+			}
+		}
+		return response
+	},
 	getAll(prefix?: string): string[] {
 		const response: string[] = []
 		for (const key of storage.getAllKeys()) {

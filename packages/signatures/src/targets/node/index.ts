@@ -19,6 +19,13 @@ export default {
 			}
 		}
 	},
+	keys(prefix?: string): string[] {
+		const results: string[] = []
+		for (const key of cache.keys()) {
+			if (!prefix || key.startsWith(prefix)) results.push(key)
+		}
+		return results
+	},
 	getAll(prefix?: string): string[] {
 		const results: string[] = []
 		for (const [key, value] of cache.entries()) {

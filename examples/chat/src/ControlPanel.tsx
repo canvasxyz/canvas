@@ -48,7 +48,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({}) => {
 		await deleteDB(`canvas/v1/${app.topic}`, {})
 
 		console.log("clearing session signer data", sessionSigner)
-		await sessionSigner?.clear?.(app.topic)
+		await sessionSigner?.clearAll?.(app.topic)
 
 		window.location.reload()
 	}, [app, sessionSigner])

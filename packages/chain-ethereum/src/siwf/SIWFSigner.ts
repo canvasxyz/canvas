@@ -117,7 +117,7 @@ export class SIWFSigner extends AbstractSessionSigner<SIWFSessionData> {
 	public restoreSIWFSession(
 		topic: string,
 	): { payload: Session<SIWFSessionData>; signer: Signer<MessageType<SIWFSessionData>> } | null {
-		const keyPrefix = `canvas/${topic}/`
+		const keyPrefix = `canvas/${topic}/did:pkh:farcaster:` // TODO: refactor
 		const values = this.target.getAll(keyPrefix)
 		for (const value of values) {
 			try {
