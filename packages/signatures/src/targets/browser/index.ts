@@ -9,17 +9,17 @@ export default {
 	},
 	clear(prefix: string = "") {
 		const keyToRemove: string[] = []
-		for (let i = 0; i < localStorage.length; i++) {
-			const key = localStorage.key(i)
+		for (let i = 0; i < window.localStorage.length; i++) {
+			const key = window.localStorage.key(i)
 			if (key?.startsWith(prefix)) {
 				keyToRemove.push(key)
 			}
 		}
 
-		keyToRemove.forEach((key) => localStorage.removeItem(key))
+		keyToRemove.forEach((key) => window.localStorage.removeItem(key))
 	},
 	getFirst(prefix?: string): string | null {
-		for (var i = 0; i < window.localStorage.length; i++) {
+		for (let i = 0; i < window.localStorage.length; i++) {
 			const key = window.localStorage.key(i)
 			if (key === null) break
 			if (!prefix || key.startsWith(prefix)) {
