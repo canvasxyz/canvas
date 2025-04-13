@@ -18,15 +18,20 @@ export default {
 
 		keyToRemove.forEach((key) => window.localStorage.removeItem(key))
 	},
-	getFirst(prefix?: string): string | null {
+	getAll(prefix?: string): string[] {
+		const result: string[] = []
 		for (let i = 0; i < window.localStorage.length; i++) {
 			const key = window.localStorage.key(i)
 			if (key === null) break
 			if (!prefix || key.startsWith(prefix)) {
-				return window.localStorage.getItem(key)
+				const item = window.localStorage.getItem(key)
+				if (item !== null) result.push(item)
 			}
 		}
-		return null
+		return result
+	},
+	getFirst(prefix?: string): string | null {
+		return this.getAll(prefix)[0] ?? null
 	},
 
 	getDomain() {

@@ -10,6 +10,9 @@ export default {
 	clear(prefix?: string) {
 		throw new Error("unsupported platform")
 	},
+	getAll(prefix?: string) {
+		throw new Error("unsupported platform")
+	},
 	getFirst(prefix?: string) {
 		throw new Error("unsupported platform")
 	},
