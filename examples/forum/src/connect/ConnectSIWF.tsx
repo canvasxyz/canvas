@@ -5,9 +5,9 @@ import { hexlify, getBytes } from "ethers"
 import { SIWFSigner } from "@canvas-js/chain-ethereum"
 import { AuthClientError, SignInButton, useProfile, UseSignInData } from "@farcaster/auth-kit"
 import { sdk } from "@farcaster/frame-sdk"
+import { bytesToHex } from "@noble/hashes/utils"
 
 import { AppContext } from "../AppContext.js"
-import { Canvas } from "@canvas-js/core"
 
 export interface ConnectSIWFProps {
 	topic: string
@@ -36,10 +36,28 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic }) => {
 
 		if (!app) return
 
-		const sig = new SIWFSigner()
-		sig.restoreSIWFSession(topic).then(() => {
-			console.log('restored')
-		})
+		const siwf = new SIWFSigner()
+		const restored = siwf.restoreSIWFSession(topic)
+		if (restored !== null) {
+			const { payload, signer: delegateSigner } = restored
+
+			const sessionSigner = new SIWFSigner({
+				custodyAddress: siwf.getAddressFromDid(payload.did),
+				privateKey: bytesToHex(delegateSigner.export().privateKey),
+			})
+			setAddress(payload.did)
+			setSessionSigner(sessionSigner)
+
+			// TODO: this should already be on the log
+			app.messageLog.append(payload, { signer: delegateSigner })
+
+			app.updateSigners([
+				sessionSigner,
+				...app.signers.getAll().filter((signer) => signer.key !== "chain-ethereum-farcaster"),
+			])
+			console.log("started restored SIWF session")
+			return
+		}
 
 		sdk.context
 			.then((frameContext) => {
@@ -95,43 +113,40 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic }) => {
 			})
 		setAddress(address)
 		setSessionSigner(signer)
-		app.updateSigners([
-			signer,
-			...app.signers.getAll().filter((signer) => signer.key !== "chain-ethereum-farcaster"),
-		])
+		app.updateSigners([signer, ...app.signers.getAll().filter((signer) => signer.key !== "chain-ethereum-farcaster")])
 		app.messageLog.append(payload, { signer: delegateSigner })
 		console.log("started SIWF chat session inside frame", authorizationData)
 	}, [app, nonce, newSessionPrivateKey, topic])
 
-	const browserSignIn = useCallback(async (result: UseSignInData) => {
-		if (!app || !nonce || !newSessionPrivateKey) return
+	const browserSignIn = useCallback(
+		async (result: UseSignInData) => {
+			if (!app || !newSessionPrivateKey) return
 
-		const { signature, message } = result
-		if (!message || !signature) {
-			setError(new Error("login succeeded but did not return a valid SIWF message"))
-			return
-		}
+			const { signature, message } = result
+			if (!message || !signature) {
+				setError(new Error("login succeeded but did not return a valid SIWF message"))
+				return
+			}
 
-		const { authorizationData, topic, custodyAddress } = SIWFSigner.parseSIWFMessage(message, signature)
-		const signer = new SIWFSigner({ custodyAddress, privateKey: newSessionPrivateKey.slice(2) })
-		const address = await signer.getDid()
+			const { authorizationData, topic, custodyAddress } = SIWFSigner.parseSIWFMessage(message, signature)
+			const signer = new SIWFSigner({ custodyAddress, privateKey: newSessionPrivateKey.slice(2) })
+			const address = await signer.getDid()
 
-		const timestamp = new Date(authorizationData.siweIssuedAt).valueOf()
-		const { payload, signer: delegateSigner } = await signer.newSIWFSession(
-			topic,
-			authorizationData,
-			timestamp,
-			getBytes(newSessionPrivateKey),
-		)
-		setAddress(address)
-		setSessionSigner(signer)
-		app.updateSigners([
-			signer,
-			...app.signers.getAll().filter((signer) => signer.key !== "chain-ethereum-farcaster"),
-		])
-		app.messageLog.append(payload, { signer: delegateSigner })
-		console.log("started SIWF chat session", authorizationData)
-	}, [app, nonce, newSessionPrivateKey, topic])
+			const timestamp = new Date(authorizationData.siweIssuedAt).valueOf()
+			const { payload, signer: delegateSigner } = await signer.newSIWFSession(
+				topic,
+				authorizationData,
+				timestamp,
+				getBytes(newSessionPrivateKey),
+			)
+			setAddress(address)
+			setSessionSigner(signer)
+			app.updateSigners([signer, ...app.signers.getAll().filter((signer) => signer.key !== "chain-ethereum-farcaster")])
+			app.messageLog.append(payload, { signer: delegateSigner })
+			console.log("started SIWF chat session", authorizationData)
+		},
+		[app, newSessionPrivateKey, topic],
+	)
 
 	if (error !== null) {
 		return (
