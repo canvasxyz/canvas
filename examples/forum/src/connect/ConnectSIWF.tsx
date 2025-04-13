@@ -149,10 +149,11 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic }) => {
 	)
 
 	const signOut = useCallback(() => {
+		sessionSigner?.clear(topic)
 		setAddress(null)
 		setSessionSigner(null)
 		app?.updateSigners([new SIWESigner(), new SIWFSigner()])
-	}, [app, topic])
+	}, [app, topic, sessionSigner])
 
 	if (error !== null) {
 		return (
