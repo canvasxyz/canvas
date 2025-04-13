@@ -1,7 +1,7 @@
 import React, { useCallback, useContext, useEffect, useRef, useState } from "react"
 import { Eip1193Provider, BrowserProvider, EventEmitterable } from "ethers"
 
-import { SIWESigner } from "@canvas-js/chain-ethereum"
+import { SIWESigner, SIWFSigner } from "@canvas-js/chain-ethereum"
 
 import { AppContext } from "../AppContext.js"
 
@@ -35,7 +35,7 @@ export const ConnectSIWE: React.FC<ConnectSIWEProps> = ({}) => {
 		const signer = await provider
 			.getSigner()
 			.then((signer) => new SIWESigner({ signer, chainId: Number(network.chainId) }))
-			
+
 		if (!signer.hasSession(app.topic)) {
 			await signer.newSession(app.topic)
 		}
@@ -71,7 +71,8 @@ export const ConnectSIWE: React.FC<ConnectSIWEProps> = ({}) => {
 	const disconnect = useCallback(async () => {
 		setAddress(null)
 		setSessionSigner(null)
-	}, [sessionSigner])
+		app?.updateSigners([new SIWESigner(), new SIWFSigner()])
+	}, [app, sessionSigner])
 
 	if (error !== null) {
 		return (
