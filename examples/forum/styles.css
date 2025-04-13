@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+	margin: 0;
+	width: 100%;
+	height: 100%;
+}
+
+#root #loading {
+  width: 100%;
+  text-align: center;
+  margin: 5rem 0;
+  color: #eee;
+}
+
+html, body {
+	background: rgb(37, 37, 41);
+}
+
+main {
+	height: 100%;
+	width: 100%;
+}
+
+.fc-authkit-signin-button button {
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  font-size: 100%;
+  padding: 10px 21px;
+  font-weight: 500;
+  border-radius: 5px;
+}
+.fc-authkit-signin-button button svg {
+  height: 17px;
+}
+.fc-authkit-signin-button button span:after {
+  content: " with Farcaster";
+}
