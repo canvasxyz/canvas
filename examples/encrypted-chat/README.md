@@ -2,65 +2,19 @@
 
 [Github Link](https://github.com/canvasxyz/canvas/tree/main/examples/encrypted-chat) (`npm i && npm run dev` to run, hosted demo coming soon)
 
-The encrypted chat example implements simple private messaging for
-up to 2 people, and can be easily extended to groups of up to ~100 people.
+This example implements simple private messaging for up to 2 people,
+and can be easily extended to groups of up to tens of people.
 
-```ts
-const models = {
-  encryptionKeys: {
-    address: "primary",
-    key: "string",
-  },
-  encryptionGroups: {
-    id: "primary",
-    groupKeys: "string",
-    key: "string",
-  },
-  privateMessages: {
-    id: "primary",
-    ciphertext: "string",
-    group: "string",
-    timestamp: "integer",
-    $indexes: ["timestamp"], // ["group", "timestamp"]
-  },
-}
-
-const actions = {
-  registerEncryptionKey: (db, { key }, { address }) => {
-    db.set("encryptionKeys", { address, key })
-  },
-  createEncryptionGroup: (db, { members, groupKeys, groupPublicKey }, { address }) => {
-    if (members.indexOf(fromCAIP(address)) === -1) throw new Error()
-    const id = members.join()
-
-    db.set("encryptionGroups", {
-      id,
-      groupKeys: JSON.stringify(groupKeys),
-      key: groupPublicKey,
-    })
-  },
-  sendPrivateMessage: (db, { group, ciphertext }, { timestamp, id }) => {
-    db.set("privateMessages", { id, ciphertext, group, timestamp })
-  },
-}
-```
-
-### Registering Encryption Keys
-
-Users derive an individual encryption key when they log into the
-application, by signing a fixed message. [^1]
-
-The derived entropy is used to create an Ethereum private key/address
-pair, and this address is published in the `encryptionKeys` table.
+Users derive an encryption key when they log into the application, by
+signing a fixed message. [^1] The derived entropy is used to create an
+Ethereum private key/address pair, and this address is published in
+the `encryptionKeys` table.
 
 Other users can see which users have registered to receive private
-messages by inspecting the table. Anyone holding the Ethereum wallet
-can re-derive the encryption key by signing the same message.
+messages by inspecting the public table. Anyone holding the Ethereum
+wallet can re-derive the encryption key by signing the same message.
 
-### Creating Encryption Groups
-
-Anyone can start a private message by creating a 2-person encryption
-group.
+Start a private chat by creating a 2-person encryption group:
 
 - To create an encryption group, we generate another random private key,
   the group encryption key, which will be published in the `key` field
@@ -70,42 +24,40 @@ group.
 - Finally, we identify each encryption group by `id`, the
   lexicographically sorted, concatenated list of addresses in the group.
 
-### Sending Messages
-
 To send a message to a group, we encrypt it using the group key, and
 publish it in the `privateMessages` table.
 
-### Further Work
+Note that this is a demo and does not include key rotation, forward
+secrecy, privacy-preserving broadcast, or other useful properties that
+are in protocols like Signal, Waku, and MLS.
 
-This is a demo; later versions of this protocol might add some of these features:
+[^1]: Ethereum wallets implement [RFC-6979](1) so signatures are
+    deterministic. To be extra careful, you may want to ask the user
+    for some additional entropy.
 
-- Ability for a user to derive multiple encryptionKeys. Right now, we
-  assume that wallets correctly implement [RFC-6979](1), and so the
-  db.encryptionKeys mapping will never be overwritten, but this assumption
-  might be violated in edge cases.
-- Requiring individuals to acknowledge that a group was correctly
-  created, and/or using a zero-knowledge proof in the
-  `createEncryptionGroup` process to show that the group key was
-  encrypted correctly to each individual within the group.
-- Ratchets to enforce key rotation for groups.
-- Privacy-preserving broadcast using protocols like Waku.
+## Developing
+
+TODO
+
+- Run `npm run dev` to serve the frontend *only*, on port 5173.
+- Run `npm run dev:server` to start the backend with in-memory temporary state, on port 8080.
+- Run `npm run dev:server:persistent` to start the backend with data persisted to a directory in /tmp.
+- Run `npm run dev:server:reset` to clear the data persistence directory in /tmp.
 
 ## Deploying to Railway
 
-Create a Railway space based on the root of this Github workspace (e.g. canvasxyz/canvas).
+Create a Railway space based on the root of this Github workspace
+(e.g. canvasxyz/canvas).
 
-* Custom build command: `npm run build && VITE_CANVAS_WS_URL=wss://encrypted-chat-example.canvas.xyz npm run build --workspace=examples/encrypted-chat-example`
-* Custom start command: `./install-prod.sh && canvas run /tmp/encrypted-chat-example --port 8080 --static examples/encrypted-chat/dist --topic encrypted-chat-example.canvas.xyz --init examples/encrypted-chat/contract.canvas.js`
-* Watch paths: `/examples/encrypted-chat/**`
-* Public networking:
-  * Add a service domain for port 8080.
-  * Add a service domain for port 4444.
-* Watch path: `/examples/encrypted-chat/**`. (Only build when chat code is updated, or a chat package is updated.)
+Set the railway config to `examples/encrypted-chat/railway.json`. This will
+configure the start command, build command, and watch paths.
 
-[^1]:
-    Ethereum wallets implement [RFC-6979](1) so signatures are
-    deterministic. To be extra careful, for financial or mission-critical
-    applications, you may want to prompt for a signature twice the first
-    time seeing a user.
+Configure networking for the application:
+- Port 8080 should map to the websocket server defined in VITE_CANVAS_WS_URL (e.g. encrypted-chat-example.canvas.xyz).
+- Port 4444 should map to a URL where your libp2p service will be exposed. (e.g. encrypted-chat-example-libp2p.canvas.xyz).
 
-[1]: https://datatracker.ietf.org/doc/html/rfc6979
+Configure environment variables:
+- ANNOUNCE
+- DATABASE_URL
+- LIBP2P_PRIVATE_KEY
+- DEBUG (optional, for logging)

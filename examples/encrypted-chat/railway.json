@@ -1,0 +1,16 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "npm run build && ./install-prod.sh && VITE_CANVAS_WS_URL=wss://encrypted-chat-example.canvas.xyz npm run build --workspace=examples/encrypted-chat",
+    "watchPatterns": [
+      "/packages/network-explorer/**",
+      "/packages/cli/**",
+      "/examples/encrypted-chat/**",
+      "/examples/core/**"
+    ]
+  },
+  "deploy": {
+    "startCommand": "canvas run examples/encrypted-chat/src/contract.ts --static examples/encrypted-chat/dist --network-explorer --admin 0x34C3A5ea06a3A67229fb21a7043243B0eB3e853f --topic encrypted-chat-example.canvas.xyz"
+  }
+}

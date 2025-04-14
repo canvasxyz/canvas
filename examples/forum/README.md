@@ -32,12 +32,18 @@ Now, to preview the mini app:
 
 ## Deploying to Railway
 
-Create a Railway space based on the root of this Github workspace (e.g. canvasxyz/canvas).
+Create a Railway space based on the root of this Github workspace
+(e.g. canvasxyz/canvas).
 
-* Custom build command: `npm run build && VITE_CANVAS_WS_URL=wss://forum-example.canvas.xyz npm run build --workspace=@canvas-js/forum-example`
-* Custom start command: `./install-prod.sh && canvas run /tmp/canvas-example-forum --port 8080 --static examples/forum/dist --topic forum-example.canvas.xyz --init examples/forum/src/contract.ts`
-* Watch paths: `/examples/forum/**`
-* Public networking:
-  * Add a service domain for port 8080.
-  * Add a service domain for port 4444.
-* Watch path: `/examples/forum/**`. (Only build when forum code is updated, or a forum package is updated.)
+Set the railway config to `examples/forum/railway.json`. This will
+configure the start command, build command, and watch paths.
+
+Configure networking for the application:
+- Port 8080 should map to the websocket server defined in VITE_CANVAS_WS_URL (e.g. forum-example.canvas.xyz).
+- Port 4444 should map to a URL where your libp2p service will be exposed. (e.g. forum-example-libp2p.canvas.xyz).
+
+Configure environment variables:
+- ANNOUNCE
+- DATABASE_URL
+- LIBP2P_PRIVATE_KEY
+- DEBUG (optional, for logging)
