@@ -28,7 +28,7 @@ export function useCodeMirror<T extends Element>(
 	const [transaction, setTransaction] = useState<Transaction | null>(null)
 
 	useEffect(() => {
-		if (element.current !== null) {
+		if (element.current !== null && view.current === null) {
 			const state = EditorState.create(config)
 			view.current = new EditorView({
 				state,

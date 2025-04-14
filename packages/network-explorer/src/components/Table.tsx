@@ -152,7 +152,7 @@ export const Table = <T,>({
 	}, [applicationData?.topic])
 
 	return (
-		<Flex direction="column" maxWidth={showSidebar ? "calc(100vw - 200px)" : "100%"} flexGrow="1">
+		<Flex direction="column" maxWidth={showSidebar ? "calc(100vw - 200px - 400px)" : "100%"} flexGrow="1">
 			<TableToolbar
 				totalCount={data?.content.totalCount}
 				showSidebar={showSidebar}

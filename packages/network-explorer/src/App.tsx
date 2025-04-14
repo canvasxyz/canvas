@@ -10,6 +10,7 @@ import { LandingPage } from "./LandingPage.js"
 import { ModelTable } from "./ModelTable.js"
 import { ActionsTable } from "./ActionsTable.js"
 import { ContractView } from "./ContractView.js"
+import { StagedMigrationsSidebar } from "./components/StagedMigrationsSidebar.js"
 
 export const App = () => {
 	const [showSidebar, setShowSidebar] = useState(true)
@@ -32,25 +33,27 @@ export const App = () => {
 							}
 						/>
 
-						{tables.map(({ tableName, defaultColumns, enableDownload, defaultSortColumn, defaultSortDirection }, key) => (
-							<Route
-								key={key}
-								path={`/tables/${tableName}`}
-								element={
-									<Suspense>
-										<Table
-											defaultSortColumn={defaultSortColumn}
-											defaultSortDirection={defaultSortDirection}
-											showSidebar={showSidebar}
-											setShowSidebar={setShowSidebar}
-											enableDownload={enableDownload || false}
-											tableName={tableName}
-											defaultColumns={defaultColumns}
-										/>
-									</Suspense>
-								}
-							/>
-						))}
+						{tables.map(
+							({ tableName, defaultColumns, enableDownload, defaultSortColumn, defaultSortDirection }, key) => (
+								<Route
+									key={key}
+									path={`/tables/${tableName}`}
+									element={
+										<Suspense>
+											<Table
+												defaultSortColumn={defaultSortColumn}
+												defaultSortDirection={defaultSortDirection}
+												showSidebar={showSidebar}
+												setShowSidebar={setShowSidebar}
+												enableDownload={enableDownload || false}
+												tableName={tableName}
+												defaultColumns={defaultColumns}
+											/>
+										</Suspense>
+									}
+								/>
+							),
+						)}
 
 						<Route
 							key={"models"}
@@ -72,6 +75,7 @@ export const App = () => {
 							}
 						/>
 					</Routes>
+					<StagedMigrationsSidebar />
 				</Box>
 			</Box>
 		</Flex>

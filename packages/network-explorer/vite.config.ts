@@ -1,5 +1,6 @@
 import { defineConfig } from "vite"
 import react from "@vitejs/plugin-react"
+import wasm from "vite-plugin-wasm"
 import { viteStaticCopy } from "vite-plugin-static-copy"
 
 import { existsSync } from "fs"
@@ -15,6 +16,15 @@ export default defineConfig({
 		chunkSizeWarningLimit: 2_000_000,
 	},
 	base: "./",
+	optimizeDeps: {
+		exclude: ["@sqlite.org/sqlite-wasm", "quickjs-emscripten"],
+		esbuildOptions: {
+			// Node.js global to browser globalThis
+			define: {
+				global: "globalThis",
+			},
+		},
+	},
 	plugins: [
 		viteStaticCopy({
 			targets: [
@@ -24,6 +34,7 @@ export default defineConfig({
 				},
 			],
 		}),
+		wasm(),
 		react(),
 	],
 })
