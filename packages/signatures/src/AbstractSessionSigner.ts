@@ -44,6 +44,7 @@ export abstract class AbstractSessionSigner<
 	public abstract match: (address: string) => boolean
 	public abstract verifySession(topic: string, session: Session<AuthorizationData>): Awaitable<void>
 
+	public abstract isReadOnly(): boolean
 	public abstract getDid(): Awaitable<DidIdentifier>
 	public abstract getDidParts(): number
 	public abstract getAddressFromDid(did: DidIdentifier): WalletAddress
@@ -130,7 +131,7 @@ export abstract class AbstractSessionSigner<
 	} | null> {
 		let did
 		if (options.address) {
-			const dids = this.listSessions(topic).filter((did) => did.endsWith(":" + options.address))
+			const dids = this.listAllSessions(topic).filter((did) => did.endsWith(":" + options.address))
 			if (dids.length === 0) return null
 			did = dids[0]
 		} else {
@@ -160,8 +161,10 @@ export abstract class AbstractSessionSigner<
 		return null
 	}
 
-	public listSessions(topic: string): string[] {
-		// TODO: look at target
+	// Returns `canvas/${topic}/${did}` for sessions across all signers.
+	public listAllSessions(topic: string, did?: string): string[] {
+		if (this.isReadOnly()) return []
+
 		const prefix = `canvas/${topic}/`
 		const result = []
 
@@ -170,16 +173,17 @@ export abstract class AbstractSessionSigner<
 				result.push(key)
 			}
 		}
-		return result
+
+		for (const key of target.keys(prefix)) {
+			if (result.indexOf(key) === -1) {
+				result.push(key)
+			}
+		}
+
+		return did ? result.filter(s => s.endsWith(`/${did}`)) : result
 	}
 
-	public hasSession(topic: string, did: DidIdentifier): boolean {
-		const key = `canvas/${topic}/${did}`
-		return this.#cache.has(key) || target.get(key) !== null
-	}
-
-	public async clear(topic: string) {
-		// TODO: delete from target
+	public async clearAll(topic: string) {
 		const prefix = `canvas/${topic}/`
 
 		for (const key of this.#cache.keys()) {
@@ -187,5 +191,19 @@ export abstract class AbstractSessionSigner<
 				this.#cache.delete(key)
 			}
 		}
+		target.clear(prefix)
+	}
+
+	public async hasSession(topic: string): Promise<boolean> {
+		if (this.isReadOnly()) return false
+		const did = await this.getDid()
+		return this.listAllSessions(topic, did).length > 0
+	}
+	
+	public async clearSession(topic: string) {
+		if (this.isReadOnly()) return
+		const key = `canvas/${topic}/${await this.getDid()}`
+		this.#cache.delete(key)
+		target.clear(key)
 	}
 }

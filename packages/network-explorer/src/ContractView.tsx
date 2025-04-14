@@ -63,6 +63,14 @@ export const ContractView = () => {
 
 		setError(undefined)
 
+		// delete existing databases
+		const dbs = await window.indexedDB.databases()
+		dbs.forEach((db) => {
+			if (db?.name?.startsWith("canvas/v1/test.a.") || db?.name?.startsWith("canvas/v1/test.b.")) {
+				window.indexedDB.deleteDatabase(db.name)
+			}
+		})
+
 		try {
 			await rebuildContract(value)
 		} catch (err: any) {
@@ -102,6 +110,7 @@ export const ContractView = () => {
 						{editorInitialValue !== null && (
 							<Editor
 								initialValue={editorInitialValue}
+								autofocus={true}
 								onChange={(state, view) => {
 									setEditorState(state)
 									setEditorView(view)

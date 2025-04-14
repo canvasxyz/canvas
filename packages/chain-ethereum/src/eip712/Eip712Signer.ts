@@ -25,17 +25,25 @@ export class Eip712Signer extends AbstractSessionSigner<Eip712SessionData> {
 	public readonly match = (address: string) => addressPattern.test(address)
 
 	public readonly chainId: number
-	_signer: AbstractSigner
+	_signer: AbstractSigner | null
 
 	constructor(
-		init: { signer?: AbstractSigner; chainId?: number; sessionDuration?: number } = { sessionDuration: 14 * DAYS },
+		init: { signer?: AbstractSigner; burner?: boolean; chainId?: number; sessionDuration?: number } = {
+			sessionDuration: 14 * DAYS,
+		},
 	) {
 		super("chain-ethereum-eip712", Secp256k1SignatureScheme, { sessionDuration: init.sessionDuration })
-		this._signer = init.signer ?? Wallet.createRandom()
+
+		this._signer = init.signer ?? (init.burner ? Wallet.createRandom() : null)
 		this.chainId = init.chainId ?? 1
 	}
 
+	public isReadOnly() {
+		return this._signer === null
+	}
+
 	public async getDid(): Promise<DidIdentifier> {
+		assert(this._signer !== null, "EIP712Signer initialized without a signer in read-only mode")
 		const walletAddress = await this._signer.getAddress()
 		return `did:pkh:eip155:${this.chainId}:${walletAddress}`
 	}
@@ -50,6 +58,7 @@ export class Eip712Signer extends AbstractSessionSigner<Eip712SessionData> {
 	}
 
 	public async authorize(sessionData: AbstractSessionData): Promise<Session<Eip712SessionData>> {
+		assert(this._signer !== null, "EIP712Signer initialized without a signer in read-only mode")
 		const {
 			topic,
 			did,

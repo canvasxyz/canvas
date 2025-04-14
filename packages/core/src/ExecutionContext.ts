@@ -1,32 +1,31 @@
-import * as cbor from "@ipld/dag-cbor"
-import { blake3 } from "@noble/hashes/blake3"
-import { bytesToHex } from "@noble/hashes/utils"
+import type { MessageType, SessionSigner } from "@canvas-js/interfaces"
 
-import type { Action, MessageType } from "@canvas-js/interfaces"
-
+import { Action } from "@canvas-js/interfaces"
 import { ModelValue, PropertyValue, validateModelValue, updateModelValue, mergeModelValue } from "@canvas-js/modeldb"
 import { AbstractGossipLog, SignedMessage, MessageId } from "@canvas-js/gossiplog"
 import { assert, mapValues } from "@canvas-js/utils"
 
-export const getKeyHash = (key: string) => bytesToHex(blake3(key, { dkLen: 16 }))
+import { decodeRecordValue, getRecordId } from "./utils.js"
 
-export class ExecutionContext {
-	// // recordId -> { version, value }
-	// public readonly reads: Record<string, { version: string | null; value: ModelValue | null }> = {}
+import { View, TransactionalRead } from "./View.js"
 
-	// // recordId -> effect
-	// public readonly writes: Record<string, Effect> = {}
+export class ExecutionContext extends View {
+	// recordId -> { version, value, csx }
+	public readonly transactionalReads: Map<string, TransactionalRead | null> = new Map()
 
-	public readonly modelEntries: Record<string, Record<string, ModelValue | null>>
-	public readonly root: MessageId[]
+	// recordId -> value
+	public readonly lwwReads: Map<string, ModelValue | null> = new Map()
+
+	// recordId -> { model, key, value, csx }
+	public readonly writes: Map<string, { model: string; key: string; value: ModelValue | null; csx: number | null }> =
+		new Map()
 
 	constructor(
 		public readonly messageLog: AbstractGossipLog<MessageType>,
 		public readonly signedMessage: SignedMessage<Action>,
-		public readonly address: string,
+		public readonly signer: SessionSigner,
 	) {
-		this.modelEntries = mapValues(messageLog.db.models, () => ({}))
-		this.root = signedMessage.message.parents.map((id) => MessageId.encode(id))
+		super(messageLog, signedMessage.message.parents)
 	}
 
 	public get id() {
@@ -37,103 +36,133 @@ export class ExecutionContext {
 		return this.signedMessage.signature
 	}
 
+	public get publicKey() {
+		return this.signature.publicKey
+	}
+
 	public get message() {
 		return this.signedMessage.message
 	}
 
-	public get db() {
-		return this.messageLog.db
+	public get did() {
+		return this.message.payload.did
 	}
 
-	public async isAncestor(ancestor: string | MessageId): Promise<boolean> {
-		return await this.messageLog.isAncestor(this.root, ancestor)
+	public get address() {
+		return this.signer.getAddressFromDid(this.did)
 	}
 
-	public async getModelValue<T extends ModelValue = ModelValue>(model: string, key: string): Promise<null | T> {
-		if (this.modelEntries[model] === undefined) {
-			const { name } = this.message.payload
-			throw new Error(`could not access model db.${model} inside runtime action ${name}`)
-		}
-
-		if (this.modelEntries[model][key] !== undefined) {
-			return this.modelEntries[model][key] as T
-		}
-
-		const keyHash = getKeyHash(key)
-		const lowerBound = `${model}/${keyHash}/`
-
-		let upperBound = `${model}/${keyHash}/${this.id}`
-
-		while (true) {
-			const results = await this.db.query<{ key: string; value: Uint8Array; clock: number }>("$effects", {
-				select: { key: true, value: true, clock: true },
-				where: { key: { gt: lowerBound, lt: upperBound } },
-				orderBy: { key: "desc" },
-				limit: 1,
-			})
-
-			if (results.length === 0) {
-				return null
-			}
-
-			if (results[0].clock === 0) {
-				if (results[0].value === null) return null
-				return cbor.decode<null | T>(results[0].value)
-			}
-
-			const [effect] = results
-			const [{}, {}, messageId] = effect.key.split("/")
-
-			const isAncestor = await this.isAncestor(messageId)
-			if (isAncestor) {
-				if (effect.value === null) {
-					return null
-				} else {
-					return cbor.decode<null | T>(effect.value)
-				}
-			} else {
-				upperBound = effect.key
-			}
-		}
-	}
-
-	public setModelValue(model: string, value: ModelValue): void {
+	public async getModelValue<T extends ModelValue = ModelValue>(
+		model: string,
+		key: string,
+		transactional: boolean,
+	): Promise<T | null> {
 		assert(this.db.models[model] !== undefined, "model not found")
+		this.log("getModelValue(%s, %o, %o)", model, key, transactional)
+
+		const recordId = getRecordId(model, key)
+
+		if (this.writes.has(recordId)) {
+			const { value } = this.writes.get(recordId)!
+			return value as T | null
+		}
+
+		if (transactional) {
+			if (this.transactionalReads.has(recordId)) {
+				const { value = null } = this.transactionalReads.get(recordId) ?? {}
+				return value as T | null
+			}
+
+			const result = await this.getLastValueTransactional<T>(model, key, recordId)
+			this.transactionalReads.set(recordId, result)
+			return result?.value ?? null
+		} else {
+			if (this.lwwReads.has(recordId)) {
+				const value = this.lwwReads.get(recordId)!
+				return value as T | null
+			}
+
+			const write = await this.getLastValue(recordId)
+			if (write === null || write.value === null) {
+				this.lwwReads.set(recordId, null)
+				return null
+			} else {
+				const value = decodeRecordValue(this.db.config, model, write.value)
+				this.lwwReads.set(recordId, value)
+				return value as T
+			}
+		}
+	}
+
+	public async setModelValue(model: string, value: ModelValue, transactional: boolean): Promise<void> {
+		assert(this.db.models[model] !== undefined, "model not found")
+		this.log("setModelValue(%s, %o, %s)", model, value, transactional)
+
 		validateModelValue(this.db.models[model], value)
 		const {
 			primaryKey: [primaryKey],
 		} = this.db.models[model]
 		const key = value[primaryKey] as string
 		assert(typeof key === "string", "expected value[primaryKey] to be a string")
-		this.modelEntries[model][key] = value
+
+		const recordId = getRecordId(model, key)
+		let csx: number | null = null
+		if (transactional) {
+			const [previousCSX] = await this.getLatestConflictSet(recordId)
+			csx = (previousCSX ?? 0) + 1
+		}
+
+		this.writes.set(recordId, { model, key, value, csx })
 	}
 
-	public deleteModelValue(model: string, key: string): void {
+	public async deleteModelValue(model: string, key: string, transactional: boolean): Promise<void> {
 		assert(this.db.models[model] !== undefined, "model not found")
-		this.modelEntries[model][key] = null
+		this.log("deleteModelValue(%s, %o, %s)", model, key, transactional)
+
+		const recordId = getRecordId(model, key)
+		let csx: number | null = null
+		if (transactional) {
+			const [previousCSX] = await this.getLatestConflictSet(recordId)
+			csx = (previousCSX ?? 0) + 1
+		}
+
+		this.writes.set(recordId, { model, key, value: null, csx })
 	}
 
-	public async updateModelValue(model: string, value: Record<string, PropertyValue | undefined>): Promise<void> {
-		assert(this.db.models[model] !== undefined, "model not found")
+	public async updateModelValue(
+		model: string,
+		value: Record<string, PropertyValue | undefined>,
+		transactional: boolean,
+	): Promise<void> {
+		if (this.db.models[model] === undefined) {
+			throw new Error(`model db.${model} not found`)
+		}
+
 		const {
 			primaryKey: [primaryKey],
 		} = this.db.models[model]
 		const key = value[primaryKey] as string
-		const previousValue = await this.getModelValue(model, key)
+		const previousValue = await this.getModelValue(model, key, transactional)
 		const result = updateModelValue(value, previousValue)
-		validateModelValue(this.db.models[model], result)
-		this.modelEntries[model][key] = result
+		await this.setModelValue(model, result, transactional)
 	}
 
-	public async mergeModelValue(model: string, value: Record<string, PropertyValue | undefined>): Promise<void> {
-		assert(this.db.models[model] !== undefined, "model not found")
+	public async mergeModelValue(
+		model: string,
+		value: Record<string, PropertyValue | undefined>,
+		transactional: boolean,
+	): Promise<void> {
+		if (this.db.models[model] === undefined) {
+			throw new Error(`model db.${model} not found`)
+		}
+
 		const {
 			primaryKey: [primaryKey],
 		} = this.db.models[model]
 		const key = value[primaryKey] as string
-		const previousValue = await this.getModelValue(model, key)
+
+		const previousValue = await this.getModelValue(model, key, transactional)
 		const result = mergeModelValue(value, previousValue)
-		validateModelValue(this.db.models[model], result)
-		this.modelEntries[model][key] = result
+		await this.setModelValue(model, result, transactional)
 	}
 }

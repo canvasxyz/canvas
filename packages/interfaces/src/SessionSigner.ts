@@ -21,12 +21,18 @@ export interface SessionSigner<AuthorizationData = any> {
 	scheme: SignatureScheme<MessageType<AuthorizationData>>
 	match: (did: DidIdentifier) => boolean
 
+	isReadOnly: () => boolean
 	getDid: () => Awaitable<DidIdentifier>
 	getDidParts: () => number
 	getAddressFromDid: (did: DidIdentifier) => string
 	getCurrentTimestamp: () => number
 
-	hasSession: (topic: string, did: DidIdentifier) => boolean
+	listAllSessions: (topic: string, did?: DidIdentifier) => string[]
+	clearAll: (topic: string) => Awaitable<void>
+
+	hasSession: (topic: string, did?: DidIdentifier) => Promise<boolean>
+	clearSession: (topic: string) => Awaitable<void>
+
 	getSession: (
 		topic: string,
 		options?: { did?: DidIdentifier } | { address: string },
@@ -48,8 +54,6 @@ export interface SessionSigner<AuthorizationData = any> {
 	 * Verify that `session.data` authorizes `session.publicKey` to take actions on behalf of the user `session.did`.
 	 */
 	verifySession: (topic: string, session: Session<AuthorizationData>) => Awaitable<void>
-
-	clear(topic: string): Awaitable<void>
 
 	/**
 	 * A unique identifier based on the signer's arguments, used to trigger React effects.

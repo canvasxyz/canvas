@@ -1,6 +1,6 @@
 import { SignerCache } from "@canvas-js/interfaces"
 
-import type { Contract, ModelSchema } from "../types.js"
+import type { Contract } from "../types.js"
 import { AbstractRuntime } from "./AbstractRuntime.js"
 import { ContractRuntime } from "./ContractRuntime.js"
 import { FunctionRuntime } from "./FunctionRuntime.js"

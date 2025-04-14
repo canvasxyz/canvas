@@ -9,14 +9,40 @@ export default {
 	},
 	clear(prefix: string = "") {
 		const keyToRemove: string[] = []
-		for (let i = 0; i < localStorage.length; i++) {
-			const key = localStorage.key(i)
+		for (let i = 0; i < window.localStorage.length; i++) {
+			const key = window.localStorage.key(i)
 			if (key?.startsWith(prefix)) {
 				keyToRemove.push(key)
 			}
 		}
 
-		keyToRemove.forEach((key) => localStorage.removeItem(key))
+		keyToRemove.forEach((key) => window.localStorage.removeItem(key))
+	},
+	keys(prefix?: string): string[] {
+		const result: string[] = []
+		for (let i = 0; i < window.localStorage.length; i++) {
+			const key = window.localStorage.key(i)
+			if (key === null) break
+			if (!prefix || key.startsWith(prefix)) {
+				result.push(key)
+			}
+		}
+		return result
+	},
+	getAll(prefix?: string): string[] {
+		const result: string[] = []
+		for (let i = 0; i < window.localStorage.length; i++) {
+			const key = window.localStorage.key(i)
+			if (key === null) break
+			if (!prefix || key.startsWith(prefix)) {
+				const item = window.localStorage.getItem(key)
+				if (item !== null) result.push(item)
+			}
+		}
+		return result
+	},
+	getFirst(prefix?: string): string | null {
+		return this.getAll(prefix)[0] ?? null
 	},
 
 	getDomain() {

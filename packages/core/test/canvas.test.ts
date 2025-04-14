@@ -53,7 +53,7 @@ export const actions = {
 `.trim()
 
 const init = async (t: ExecutionContext) => {
-	const signer = new SIWESigner()
+	const signer = new SIWESigner({ burner: true })
 	const app = await Canvas.initialize({
 		contract,
 		topic: "com.example.app",
@@ -66,7 +66,7 @@ const init = async (t: ExecutionContext) => {
 }
 
 const initEIP712 = async (t: ExecutionContext) => {
-	const signer = new Eip712Signer()
+	const signer = new Eip712Signer({ burner: true })
 	const app = await Canvas.initialize({
 		contract,
 		topic: "com.example.app",
@@ -126,8 +126,8 @@ test("insert a message created by another app", async (t) => {
 })
 
 test("insert a message into an app with multiple signers", async (t) => {
-	const siweSigner = new SIWESigner()
-	const eipSigner = new Eip712Signer()
+	const siweSigner = new SIWESigner({ burner: true })
+	const eipSigner = new Eip712Signer({ burner: true })
 	const cosmosSigner = new CosmosSigner()
 
 	const getApp = async () => {
@@ -182,7 +182,7 @@ test("reject an invalid message", async (t) => {
 test("accept a manually encoded session/action with a legacy-style object arg", async (t) => {
 	t.plan(1)
 
-	const signer = new SIWESigner()
+	const signer = new SIWESigner({ burner: true })
 
 	const app = await Canvas.initialize({
 		contract: {
@@ -474,6 +474,7 @@ test("apply an action and read a record from the database using eip712", async (
 
 test("call quickjs contract with did uri and wallet address", async (t) => {
 	const { app, signer } = await initEIP712(t)
+	assert(signer._signer !== null)
 	const address = await signer._signer.getAddress()
 
 	const { id, message } = await app.actions.createPost("hello world", true, -1, 0)

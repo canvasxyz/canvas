@@ -39,6 +39,10 @@ export class ATPSigner extends AbstractSessionSigner<ATPSessionData> {
 		this.#agent = new AtpAgent({ service: serviceUrl })
 	}
 
+	public isReadOnly() {
+		return false
+	}
+
 	public readonly match = (address: string) => address.startsWith("did:plc:") || address.startsWith("did:web:")
 
 	public async verifySession(topic: string, session: Session<ATPSessionData>): Promise<void> {

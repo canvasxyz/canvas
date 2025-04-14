@@ -15,12 +15,13 @@ import { useTheme } from "../hooks/useTheme.js"
 interface EditorProps {
 	initialValue: string
 	readOnly?: boolean
+	autofocus?: boolean
 	onChange?: (state: EditorState, view: EditorView | null) => void
 	onLoad?: (state: EditorState, view: EditorView | null) => void
 	onBuild: (state: EditorState, view: EditorView | null) => void
 }
 
-export const Editor: React.FC<EditorProps> = ({ initialValue, readOnly, onChange, onLoad, onBuild }) => {
+export const Editor: React.FC<EditorProps> = ({ initialValue, readOnly, autofocus, onChange, onLoad, onBuild }) => {
 	// TODO: Refactor to avoid passing EditorState through go-around ref.
 	const stateRef = useRef<EditorState | null>(null)
 	const { theme } = useTheme()
@@ -28,6 +29,7 @@ export const Editor: React.FC<EditorProps> = ({ initialValue, readOnly, onChange
 
 	const [state, transaction, viewRef, element] = useCodeMirror<HTMLDivElement>({
 		doc: initialValue,
+		autofocus,
 		extensions: [
 			keymap.of([
 				{

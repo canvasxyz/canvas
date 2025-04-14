@@ -18,6 +18,28 @@ export default {
 			}
 		}
 	},
+	keys(prefix?: string): string[] {
+		const response: string[] = []
+		for (const key of storage.getAllKeys()) {
+			if (!prefix || key.startsWith(prefix)) {
+				response.push(key)
+			}
+		}
+		return response
+	},
+	getAll(prefix?: string): string[] {
+		const response: string[] = []
+		for (const key of storage.getAllKeys()) {
+			if (!prefix || key.startsWith(prefix)) {
+				const value = storage.getString(key)
+				if (value !== undefined) response.push(value)
+			}
+		}
+		return response
+	},
+	getFirst(prefix?: string): string | null {
+		return this.getAll(prefix)[0] ?? null
+	},
 
 	getDomain() {
 		return "react-native-application"

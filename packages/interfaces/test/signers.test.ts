@@ -46,15 +46,15 @@ const SIGNER_IMPLEMENTATIONS: SessionSignerImplementation[] = [
 	},
 	{
 		name: "chain-ethereum",
-		createSessionSigner: async (args) => new SIWESigner(args),
+		createSessionSigner: async (args) => new SIWESigner({ ...args, burner: true }),
 	},
 	{
 		name: "chain-ethereum-viem",
-		createSessionSigner: async (args) => new SIWESignerViem(args),
+		createSessionSigner: async (args) => new SIWESignerViem({ ...args, burner: true }),
 	},
 	{
 		name: "chain-ethereum-eip712",
-		createSessionSigner: async (args) => new Eip712Signer(args),
+		createSessionSigner: async (args) => new Eip712Signer({ ...args, burner: true }),
 	},
 	{
 		name: "chain-solana",
@@ -82,7 +82,13 @@ function runTestSuite({ createSessionSigner: createSessionSigner, name }: Sessio
 	test(`${name} - create and verify session`, async (t) => {
 		const topic = "com.example.app"
 		const sessionSigner = await createSessionSigner()
+		t.assert(sessionSigner.listAllSessions(topic).length === 0)
 		const { payload: session } = await sessionSigner.newSession(topic)
+		t.assert(sessionSigner.listAllSessions(topic).length > 0)
+		t.assert(sessionSigner.listAllSessions(topic, await sessionSigner.getDid()).length === 1)
+		t.assert(
+			sessionSigner.listAllSessions(topic, "did:pkh:eip155:1:0x8A876c44064b77b36Cb3e0524DeeC1416858bDE6").length === 0,
+		)
 		await t.notThrowsAsync(() => Promise.resolve(sessionSigner.verifySession(topic, session)))
 	})
 
@@ -195,7 +201,7 @@ for (const implementation of SIGNER_IMPLEMENTATIONS) {
 
 test(`ethereum - ethers signer can verify ethereum viem signed data`, async (t) => {
 	const topic = "com.example.app"
-	const signingSigner = new SIWESignerViem()
+	const signingSigner = new SIWESignerViem({ burner: true })
 	const verifyingSigner = new SIWESigner()
 
 	const { payload: session } = await signingSigner.newSession(topic)
@@ -204,7 +210,7 @@ test(`ethereum - ethers signer can verify ethereum viem signed data`, async (t) 
 
 test(`ethereum - viem signer can verify ethers signed data`, async (t) => {
 	const topic = "com.example.app"
-	const signingSigner = new SIWESigner()
+	const signingSigner = new SIWESigner({ burner: true })
 	const verifyingSigner = new SIWESignerViem()
 
 	const { payload: session } = await signingSigner.newSession(topic)

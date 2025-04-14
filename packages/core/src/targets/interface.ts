@@ -7,7 +7,7 @@ import type { SqlStorage } from "@cloudflare/workers-types"
 
 export interface PlatformTarget {
 	openGossipLog: (
-		location: { path: string | pg.ConnectionConfig | SqlStorage | null; topic: string; clear?: boolean },
+		location: { path: string | pg.ConnectionConfig | SqlStorage | null; topic: string },
 		init: GossipLogInit<MessageType>,
 	) => Promise<AbstractGossipLog<MessageType>>
 

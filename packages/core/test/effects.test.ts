@@ -9,7 +9,7 @@ const models = {
 	posts: { id: "primary", content: "string" },
 } satisfies ModelSchema
 
-export const actions = {
+const actions = {
 	async createPost(db, content: string) {
 		await db.set("posts", { id: this.id, content })
 	},
@@ -28,8 +28,8 @@ export const actions = {
 	},
 } satisfies Actions<typeof models>
 
-const init = async (t: ExecutionContext) => {
-	const signer = new SIWESigner()
+const init = async (t: ExecutionContext<unknown>) => {
+	const signer = new SIWESigner({ burner: true })
 	const app = await Canvas.initialize({
 		contract: { models, actions },
 		topic: "com.example.app",
@@ -37,12 +37,12 @@ const init = async (t: ExecutionContext) => {
 	})
 
 	t.teardown(() => app.stop())
-	return { app, signer }
+	return app
 }
 
 test("retrieve last-write-wins value", async (t) => {
-	const { app: app1 } = await init(t)
-	const { app: app2 } = await init(t)
+	const app1 = await init(t)
+	const app2 = await init(t)
 
 	const queue = new PQueue({ concurrency: 10 })
 

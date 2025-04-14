@@ -7,10 +7,11 @@ import { EditorView } from "@codemirror/view"
 export interface CodeMirrorOptions {
 	doc?: string | Text
 	extensions?: Extension
+	autofocus?: boolean
 }
 
 export function useCodeMirror<T extends Element>(
-	config?: EditorStateConfig,
+	config?: EditorStateConfig & { autofocus?: boolean },
 ): [EditorState | null, Transaction | null, MutableRefObject<EditorView | null>, MutableRefObject<T | null>] {
 	const element = useRef<T | null>(null)
 	const view = useRef<EditorView | null>(null)
@@ -35,6 +36,10 @@ export function useCodeMirror<T extends Element>(
 				parent: element.current,
 			})
 			setState(state)
+
+			if (config?.autofocus && view.current) {
+				view.current.focus()
+			}
 		}
 	}, [])
 

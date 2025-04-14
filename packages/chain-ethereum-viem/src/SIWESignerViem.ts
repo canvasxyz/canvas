@@ -11,8 +11,20 @@ import type { SIWESessionData, SIWEMessage } from "./types.js"
 import { SIWEMessageVersion, validateSessionData, parseAddress, addressPattern, prepareSIWEMessage } from "./utils.js"
 
 export interface SIWESignerViemInit {
-	chainId?: number
+	/** An abstract signer, implementing a minimal subset of methods on Viem WalletClient/PrivateKeyAccount
+	 *
+	 * If no signer is provided, SIWESignerViem will only read/accept actions, and will not
+	 * be able to authorize new sessions or actions.  */
 	signer?: WalletClient | PrivateKeyAccount
+
+	/** Create a random burner account at the time of initialization.
+	 * Default: false. */
+	burner?: boolean
+
+	/** Ethereum Chain ID to issue did:pkh identities on. Default: 1. */
+	chainId?: number
+
+	/** Duration that sessions should be valid for. Default: 14 days. */
 	sessionDuration?: number
 }
 
@@ -27,7 +39,7 @@ export class SIWESignerViem extends AbstractSessionSigner<SIWESessionData> {
 	#account: {
 		getAddress: () => Promise<`0x${string}`>
 		sign: (message: string) => Promise<`0x${string}`>
-	}
+	} | null
 
 	public constructor({ sessionDuration, ...init }: SIWESignerViemInit = {}) {
 		super("chain-ethereum-viem", ed25519, { sessionDuration })
@@ -51,11 +63,12 @@ export class SIWESignerViem extends AbstractSessionSigner<SIWESessionData> {
 					return address
 				},
 				sign: async (message) => {
-					const address = await this.#account.getAddress()
+					const addresses = await walletClient.getAddresses()
+					const address = addresses[0]
 					return await walletClient.signMessage({ account: address, message })
 				},
 			}
-		} else {
+		} else if (init.burner) {
 			// generate a random keypair
 			const privateKey = generatePrivateKey()
 			const pka = privateKeyToAccount(privateKey)
@@ -66,10 +79,16 @@ export class SIWESignerViem extends AbstractSessionSigner<SIWESessionData> {
 				},
 				sign: async (message) => await pka.signMessage({ message }),
 			}
+		} else {
+			this.#account = null
 		}
 
 		// this.sessionDuration = init.sessionDuration ?? null
 		this.chainId = init.chainId ?? 1
+	}
+
+	public isReadOnly() {
+		return this.#account === null
 	}
 
 	public async verifySession(topic: string, session: Session<SIWESessionData>) {
@@ -105,6 +124,7 @@ export class SIWESignerViem extends AbstractSessionSigner<SIWESessionData> {
 	}
 
 	public async getDid(): Promise<DidIdentifier> {
+		assert(this.#account !== null, "SIWESignerViem initialized without a signer in read-only mode")
 		const walletAddress = await this.#account.getAddress()
 		return `did:pkh:eip155:${this.chainId}:${walletAddress}`
 	}
@@ -119,6 +139,7 @@ export class SIWESignerViem extends AbstractSessionSigner<SIWESessionData> {
 	}
 
 	public async authorize(data: AbstractSessionData): Promise<Session<SIWESessionData>> {
+		assert(this.#account !== null, "SIWESignerViem initialized without a signer in read-only mode")
 		const {
 			topic,
 			did,

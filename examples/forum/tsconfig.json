@@ -1,0 +1,24 @@
+{
+	"extends": "../../tsconfig.base.json",
+	"include": ["src"],
+	"compilerOptions": {
+		"types": ["vite/client"],
+		"rootDir": "src",
+		"outDir": "lib",
+		"esModuleInterop": true,
+		"jsx": "react"
+	},
+	"references": [
+		{ "path": "../../packages/core" },
+		{ "path": "../../packages/chain-atp" },
+		{ "path": "../../packages/chain-cosmos" },
+		{ "path": "../../packages/chain-ethereum" },
+		{ "path": "../../packages/chain-ethereum-viem" },
+		{ "path": "../../packages/chain-solana" },
+		{ "path": "../../packages/chain-substrate" },
+		{ "path": "../../packages/gossiplog" },
+		{ "path": "../../packages/hooks" },
+		{ "path": "../../packages/interfaces" },
+		{ "path": "../../packages/modeldb" }
+	]
+}

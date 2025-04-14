@@ -30,13 +30,19 @@ export const useCanvas = <
 	const [networkClient, setNetworkClient] = useState<NetworkClient<any>>()
 	const [error, setError] = useState<Error>()
 
-	// TODO: Ensure effect hook re-runs when signers are changed.
 	const localContractHashRef = useRef<string>() // Ref for last-rendered contractHash of a local application.
 	const snapshotRef = useRef<Snapshot>() // Ref for caching a local application's snapshot.
 	const remoteContractHashRef = useRef<Record<string, string>>({}) // Ref for last-rendered contractHash for remote applications.
 	const renderedRef = useRef(false) // Ref for skipping extra render in React.StrictMode.
 
 	const contractHash = config && "contract" in config ? hashContract(config.contract) : null
+
+	// useEffect(() => {
+	// 	// keep app signers updated
+	// 	if (!app || !config || config.signers === undefined) return
+	// 	app.updateSigners(config.signers)
+	// 	console.warn(config.signers?.map(s => s.key), "signers updated")
+	// }, [config.signers?.map(s => s.key)])
 
 	useEffect(() => {
 		if (renderedRef.current) return
@@ -51,6 +57,7 @@ export const useCanvas = <
 						setNetworkClient(networkClient)
 					})
 					.catch((err) => {
+						console.error(err)
 						setApp(app)
 						setTimeout(() => assign(appUrl, app), 2000)
 					})

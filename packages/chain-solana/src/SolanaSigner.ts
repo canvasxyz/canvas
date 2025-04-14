@@ -82,6 +82,10 @@ export class SolanaSigner extends AbstractSessionSigner<SolanaSessionData> {
 		this.chainId = chainId ?? SOLANA_MAINNET_CHAIN_REF
 	}
 
+	public isReadOnly() {
+		return false
+	}
+
 	public verifySession(topic: string, session: Session) {
 		const {
 			publicKey,

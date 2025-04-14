@@ -1,0 +1,18 @@
+{
+  "accountAssociation": {
+    "header": "eyJmaWQiOjE0NCwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDJiYmFFZTg5MDBiYjE2NjRCMUM4M2EzQTRGMTQyY0RCRjIyMjRmYjgifQ",
+    "payload": "eyJkb21haW4iOiJmb3J1bS1leGFtcGxlLmNhbnZhcy54eXoifQ",
+    "signature": "MHhiZmVkNWJmOWIxZDEwYTY4NTkwOWZjNmIxODJjZTQ0NzUzNTUyY2RlNTcyYmU5OWEzYzcwOTUxNTI4YTI4MTllM2U4YjI3OGJjYmFhMWIyNDYxN2E3NDY5MjMyZDVhYmJlOTM3NTA3YzQ3ODZhOGY3ODk4ZWY1NjM4ZGUyZDI5MDFi"
+  },
+  "frame": {
+    "version": "1",
+    "name": "Example Frame",
+    "iconUrl": "https://forum-example.canvas.xyz/icon.png",
+    "homeUrl": "https://forum-example.canvas.xyz",
+    "imageUrl": "https://forum-example.canvas.xyz/image.png",
+    "buttonTitle": "Check this out",
+    "splashImageUrl": "https://forum-example.canvas.xyz/splash.png",
+    "splashBackgroundColor": "#eeccff",
+    "webhookUrl": "https://forum-example.canvas.xyz/api/webhook"
+  }
+}

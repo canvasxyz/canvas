@@ -1,7 +1,7 @@
 {
 	"name": "@canvas-js/network-explorer",
 	"type": "module",
-	"version": "0.14.0-next.1",
+	"version": "0.14.0-next.2",
 	"scripts": {
 		"client:dev": "npx vite dev",
 		"dev": "npx vite build --watch",
@@ -9,9 +9,9 @@
 		"lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
 	},
 	"dependencies": {
-		"@canvas-js/core": "0.14.0-next.1",
-		"@canvas-js/interfaces": "0.14.0-next.1",
-		"@canvas-js/modeldb": "0.14.0-next.1",
+		"@canvas-js/core": "0.14.0-next.2",
+		"@canvas-js/interfaces": "0.14.0-next.2",
+		"@canvas-js/modeldb": "0.14.0-next.2",
 		"@codemirror/commands": "^6.8.0",
 		"@codemirror/lang-javascript": "^6.2.3",
 		"@codemirror/language": "^6.11.0",
@@ -21,7 +21,7 @@
 		"@ipld/dag-cbor": "^9.2.2",
 		"@ipld/dag-json": "^10.2.3",
 		"@noble/hashes": "^1.7.1",
-		"@radix-ui/themes": "^3.1.3",
+		"@radix-ui/themes": "^3.2.1",
 		"@tanstack/react-table": "^8.20.6",
 		"@vitejs/plugin-react": "^4.3.1",
 		"codemirror": "^6.0.1",

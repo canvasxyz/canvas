@@ -135,6 +135,10 @@ export class SubstrateSigner extends AbstractSessionSigner<SubstrateSessionData>
 		}
 	}
 
+	public isReadOnly() {
+		return false
+	}
+
 	public async verifySession(topic: string, session: Session) {
 		const {
 			publicKey,

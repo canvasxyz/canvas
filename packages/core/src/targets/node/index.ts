@@ -44,7 +44,7 @@ const isError = (error: unknown): error is NodeJS.ErrnoException => error instan
 
 const target: PlatformTarget = {
 	async openGossipLog(
-		location: { path: string | pg.ConnectionConfig | SqlStorage | null; topic: string; clear?: boolean },
+		location: { path: string | pg.ConnectionConfig | SqlStorage | null; topic: string },
 		init,
 	) {
 		if (location.path === null) {
@@ -54,7 +54,7 @@ const target: PlatformTarget = {
 			const { GossipLog: PostgresGossipLog } = await import("@canvas-js/gossiplog/pg")
 			return await PostgresGossipLog.open(location.path as string | pg.ConnectionConfig, {
 				...init,
-				clear: location.clear,
+				clear: init.clear,
 			})
 		} else {
 			assert(typeof location.path === "string", 'expected typeof location.path === "string"')

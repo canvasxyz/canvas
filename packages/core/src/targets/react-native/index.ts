@@ -5,12 +5,12 @@ import type { PlatformTarget } from "../interface.js"
 
 const target: PlatformTarget = {
 	async openGossipLog(
-		location: { path: string | pg.ConnectionConfig | SqlStorage | null; topic: string; clear?: boolean },
+		location: { path: string | pg.ConnectionConfig | SqlStorage | null; topic: string },
 		init,
 	) {
 		if (location.path === null) {
 			const { GossipLog } = await import("@canvas-js/gossiplog/sqlite-expo")
-			return await GossipLog.open({ ...init, clear: location.clear })
+			return await GossipLog.open({ ...init, clear: init.clear })
 		} else {
 			throw new Error("Unimplemented: named sqlite dbs on react-native")
 		}
