@@ -57,7 +57,7 @@ Configure networking for the application:
 - Port 4444 should map to a URL where your libp2p service will be exposed. (e.g. encrypted-chat-example-libp2p.canvas.xyz).
 
 Configure environment variables:
-- ANNOUNCE
+- ANNOUNCE (e.g. /dns4/encrypted-chat-example-libp2p.canvas.xyz/tcp/443/wss)
 - DATABASE_URL
-- LIBP2P_PRIVATE_KEY
+- LIBP2P_PRIVATE_KEY (try: node ./scripts/generateLibp2pPrivkey.js)
 - DEBUG (optional, for logging)
