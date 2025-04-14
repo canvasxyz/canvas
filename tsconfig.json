@@ -43,7 +43,6 @@
 		{ "path": "./examples/chat" },
 		{ "path": "./examples/chat-next" },
 		{ "path": "./examples/encrypted-chat" },
-		{ "path": "./examples/forum" },
-		{ "path": "./examples/snake" }
+		{ "path": "./examples/forum" }
 	]
 }
