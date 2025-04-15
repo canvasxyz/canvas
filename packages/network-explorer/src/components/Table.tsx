@@ -10,6 +10,7 @@ import { WhereCondition } from "@canvas-js/modeldb"
 import { useApplicationData } from "../hooks/useApplicationData.js"
 import { useSearchFilters } from "../hooks/useSearchFilters.js"
 import { List as ImmutableList, Set as ImmutableSet } from "immutable"
+import { useStagedMigrations } from "../hooks/useStagedMigrations.js"
 
 export type Column = {
 	name: string
@@ -62,7 +63,7 @@ export const Table = <T,>({
 	getRowKey: (row: Row<T>) => string[]
 }) => {
 	const applicationData = useApplicationData()
-
+	const { stageDeleteRows } = useStagedMigrations()
 	const [columnFilters, setColumnFilters] = useSearchFilters(
 		defaultColumns.filter((col) => col.enableColumnFilter).map((col) => col.header as string),
 	)
@@ -141,8 +142,12 @@ export const Table = <T,>({
 		if (selectedRows.size === 0) {
 			return
 		}
-		console.log("deleting", selectedRows)
-	}, [selectedRows])
+
+		stageDeleteRows(tableName, selectedRows.map((row) => row.toArray()).toArray())
+
+		// clear the selected rows
+		setSelectedRows(ImmutableSet.of())
+	}, [tableName, selectedRows, setSelectedRows, stageDeleteRows])
 
 	useEffect(() => {
 		// invalidate the settings

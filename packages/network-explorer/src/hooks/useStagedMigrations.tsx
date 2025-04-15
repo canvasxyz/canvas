@@ -80,6 +80,7 @@ const StagedMigrationsContext = createContext<{
 	setHasRestoredContent: (hasRestoredContent: boolean) => void
 	// setWaitingForCommit: (waitingForCommit: boolean) => void
 	// setCommitCompleted: (commitCompleted: boolean) => void
+	stageDeleteRows: (tableName: string, rowKeys: string[][]) => void
 }>({
 	contractChangesets: [],
 	cancelMigrations: async () => {},
@@ -93,6 +94,7 @@ const StagedMigrationsContext = createContext<{
 	setHasRestoredContent: () => {},
 	// setWaitingForCommit: () => {},
 	// setCommitCompleted: () => {},
+	stageDeleteRows: () => {},
 })
 
 export const StagedMigrationsProvider = ({ children }: { children: React.ReactNode }) => {
@@ -214,9 +216,13 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 		setCommitCompleted(true)
 	}
 
-	const cancelMigrations = async () => {
+	const cancelMigrations = useCallback(async () => {
 		clearContractChangesets()
-	}
+	}, [clearContractChangesets])
+
+	const stageDeleteRows = useCallback((tableName: string, rowKeys: string[][]) => {
+		console.log("staging delete", tableName, rowKeys)
+	}, [])
 
 	return (
 		<StagedMigrationsContext.Provider
@@ -231,6 +237,7 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 				commitCompleted,
 				hasRestoredContent,
 				setHasRestoredContent,
+				stageDeleteRows,
 			}}
 		>
 			{children}
