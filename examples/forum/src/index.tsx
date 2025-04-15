@@ -36,6 +36,8 @@ const config = {
 	provider: new JsonRpcProvider(undefined, 10),
 }
 
+export const ADMIN_DID = "did:pkh:eip155:1:0x34C3A5ea06a3A67229fb21a7043243B0eB3e853f"
+
 export const models = {
 	posts: {
 		id: "primary",
@@ -50,6 +52,10 @@ export const actions = {
 	createPost(db, title: string, text: string) {
 		this.db.set("posts", { id: this.id, title, text, author: this.did, timestamp: this.timestamp })
 	},
+	deletePost(db, id: string) {
+		if (this.address !== "0x34C3A5ea06a3A67229fb21a7043243B0eB3e853f") throw new Error()
+		this.db.delete("posts", id)
+	},
 } satisfies Actions<typeof models>
 
 export type AppT = Canvas<typeof models, typeof actions>
@@ -61,8 +67,8 @@ const Container: React.FC<{}> = ({}) => {
 
 	const { app, ws } = useCanvas<typeof models, typeof actions>(wsURL, {
 		signers: [new SIWESigner(), new SIWFSigner()],
-		// topic: "forum-example.canvas.xyz",
-		// contract: { models, actions },
+		topic: "forum-example.canvas.xyz",
+		contract: { models, actions },
 		// reset: true,
 	})
 
@@ -76,7 +82,9 @@ const Container: React.FC<{}> = ({}) => {
 				{app && ws ? (
 					<main>
 						<App app={app} />
-						<div className={`${isInfoOpen ? '' : 'hidden'} fixed top-4 right-5 z-10 bg-white p-4 pr-12 w-[320px] border border-1 shadow-md rounded`}>
+						<div
+							className={`${isInfoOpen ? "" : "hidden"} fixed top-4 right-5 z-10 bg-white p-4 pr-12 w-[320px] border border-1 shadow-md rounded`}
+						>
 							<div className="absolute top-3 right-4">
 								<button onClick={() => setIsInfoOpen(false)} className="text-gray-500 hover:text-gray-700">
 									✕

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react"
 import * as Scroll from "@radix-ui/react-scroll-area"
-import { AppT } from "./index.js"
+import { ADMIN_DID, AppT } from "./index.js"
 import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
 
 export const App: React.FC<{ app: AppT }> = ({ app }) => {
@@ -91,6 +91,20 @@ export const App: React.FC<{ app: AppT }> = ({ app }) => {
 											<div className="text-xs text-gray-400">
 												{post.author} -{" "}
 												{new Date(post.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+												{app.hasSession(ADMIN_DID) ? (
+													<span>
+														{" - "}
+														<a
+															href="#"
+															onClick={() => {
+																if (!confirm("Really delete this post?")) return
+																app.actions.deletePost(post.id)
+															}}
+														>
+															Delete
+														</a>
+													</span>
+												) : null}
 											</div>
 											<p className="text-gray-300 mt-1">{post.text}</p>
 										</div>
