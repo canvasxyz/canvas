@@ -1,4 +1,4 @@
-import { useState, MouseEvent, useEffect } from "react"
+import { useState, MouseEvent, useEffect, useRef } from "react"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 import { Button, Box, Heading, Text, Checkbox } from "@radix-ui/themes"
 import { Canvas, generateChangesets, Changeset as ChangesetMigrationRow, Changeset } from "@canvas-js/core"
@@ -87,10 +87,17 @@ export const ContractView = () => {
 		}
 	}, [editorState, contractData])
 
+	// Keep an updated reference to contractData for the build pipeline,
+	// to avoid diffing against an old version of the contract
+	const contractDataRef = useRef(contractData);
+	useEffect(() => {
+		contractDataRef.current = contractData;
+	}, [contractData]);
+
 	const updateChangesets = async (e: MouseEvent, state?: EditorState) => {
 		e.preventDefault()
 		const value = (editorState ?? state)?.doc.toString()
-		if (!value || !contractData) {
+		if (!value || !contractDataRef.current) {
 			setError("No contract content")
 			return
 		}
@@ -118,7 +125,7 @@ export const ContractView = () => {
 
 		try {
 			const app = await Canvas.initialize({
-				contract: contractData.contract,
+				contract: contractDataRef.current.contract,
 				topic: "test.a." + bytesToHex(randomBytes(32)),
 				reset: true,
 			})
@@ -164,7 +171,7 @@ export const ContractView = () => {
 				setError("Ethereum provider not found. Please install a wallet like MetaMask.")
 				return
 			}
-			if (!contractData) {
+			if (!contractDataRef.current) {
 				setError("Must wait for contractData to load")
 				return
 			}
@@ -186,7 +193,7 @@ export const ContractView = () => {
 				uri: origin,
 				version: "1",
 				chainId: 1, // Adjust based on your network
-				nonce: contractData.nonce,
+				nonce: contractDataRef.current.nonce,
 			})
 
 			const message = siweMessage.prepareMessage()
