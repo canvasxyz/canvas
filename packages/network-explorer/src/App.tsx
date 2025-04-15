@@ -3,7 +3,7 @@ import { Box, Flex } from "@radix-ui/themes"
 import { Route, Routes } from "react-router-dom"
 
 import { Sidebar } from "./components/Sidebar.js"
-import { Table } from "./components/Table.js"
+import { Table } from "./components/table/Table.js"
 import { tables } from "./tables.js"
 
 import { LandingPage } from "./LandingPage.js"

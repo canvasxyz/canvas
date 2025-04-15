@@ -1,16 +1,17 @@
 import useSWR from "swr"
-import { Box, Button, Checkbox, Flex, Text } from "@radix-ui/themes"
-import { TableToolbar } from "./TableToolbar.js"
+import { Box, Button, Flex, Text } from "@radix-ui/themes"
+import { TableToolbar } from "../TableToolbar.js"
 import { LuChevronDown, LuChevronsUpDown, LuChevronUp } from "react-icons/lu"
 import { ColumnDef, flexRender, getCoreRowModel, Row, SortingState, useReactTable } from "@tanstack/react-table"
 import { useCallback, useEffect, useState } from "react"
-import { fetchAndIpldParseJson, fetchAsString } from "../utils.js"
-import useCursorStack from "../hooks/useCursorStack.js"
+import { fetchAndIpldParseJson, fetchAsString } from "../../utils.js"
+import useCursorStack from "../../hooks/useCursorStack.js"
 import { WhereCondition } from "@canvas-js/modeldb"
-import { useApplicationData } from "../hooks/useApplicationData.js"
-import { useSearchFilters } from "../hooks/useSearchFilters.js"
+import { useApplicationData } from "../../hooks/useApplicationData.js"
+import { useSearchFilters } from "../../hooks/useSearchFilters.js"
 import { List as ImmutableList, Set as ImmutableSet } from "immutable"
-import { useStagedMigrations } from "../hooks/useStagedMigrations.js"
+import { useStagedMigrations } from "../../hooks/useStagedMigrations.js"
+import { TableElement, Tbody, Th, Thead, TheadSpacer, NoneFound, ThCheckbox, Td } from "./elements.js"
 
 export type Column = {
 	name: string
@@ -195,40 +196,13 @@ export const Table = <T,>({
 			/>
 			<Box overflowX="scroll" flexGrow="1">
 				<Text size="2">
-					<table style={{ borderCollapse: "collapse", display: "grid" }}>
-						<thead
-							style={{ display: "grid", position: "sticky", top: 0, zIndex: 1, backgroundColor: "var(--color-panel)" }}
-						>
+					<TableElement>
+						<Thead>
 							{tanStackTable.getHeaderGroups().map((headerGroup) => (
 								<tr key={headerGroup.id} style={{ display: "flex", width: "100%" }}>
-									{allowDelete && (
-										<th
-											style={{
-												width: "32px",
-												borderWidth: "1px",
-												borderTopWidth: "0px",
-												borderLeftWidth: "0px",
-												borderColor: "var(--accent-3)",
-												borderStyle: "solid",
-											}}
-										></th>
-									)}
+									{allowDelete && <TheadSpacer />}
 									{headerGroup.headers.map((header) => (
-										<th
-											key={header.id}
-											style={{
-												display: "flex",
-												width: header.getSize(),
-												borderWidth: "1px",
-												borderTopWidth: "0px",
-												borderLeftWidth: "0px",
-												borderColor: "var(--accent-3)",
-												borderStyle: "solid",
-												paddingLeft: "6px",
-												paddingTop: "4px",
-												minHeight: "32px",
-											}}
-										>
+										<Th key={header.id} width={header.getSize()}>
 											<Flex width="100%" gap="2" p="1">
 												<Text weight="medium">
 													{header.isPlaceholder
@@ -255,83 +229,33 @@ export const Table = <T,>({
 													</Flex>
 												)}
 											</Flex>
-										</th>
+										</Th>
 									))}
 								</tr>
 							))}
-						</thead>
-						<tbody
-							style={{
-								display: "grid",
-								overflowY: "scroll",
-								scrollbarWidth: "none",
-								position: "relative",
-							}}
-						>
-							{tanStackTable.getRowCount() === 0 && (
-								<tr style={{ display: "flex" }}>
-									<td
-										style={{
-											paddingTop: "20px",
-											textAlign: "center",
-											color: "var(--gray-10)",
-											width: "calc(100vw - 200px - 400px)", // TODO: Extract sidebar width into CSS variable
-										}}
-									>
-										None found
-									</td>
-								</tr>
-							)}
+						</Thead>
+						<Tbody>
+							{tanStackTable.getRowCount() === 0 && <NoneFound />}
 							{tanStackTable.getRowModel().rows.map((row) => (
 								<tr key={row.id} style={{ display: "flex", overflow: "hidden", scrollbarWidth: "none" }}>
 									{allowDelete && (
-										<th
-											style={{
-												width: "32px",
-												borderWidth: "1px",
-												borderTopWidth: "0px",
-												borderLeftWidth: "0px",
-												borderColor: "var(--accent-3)",
-												borderStyle: "solid",
+										<ThCheckbox
+											checked={selectedRows.has(ImmutableList.of(...getRowKey(row)))}
+											onCheckedChange={(checked) => {
+												const rowKey = ImmutableList.of(...getRowKey(row))
+												setSelectedRows(checked ? selectedRows.add(rowKey) : selectedRows.delete(rowKey))
 											}}
-										>
-											<Flex justify="center" align="center" height="100%">
-												<Checkbox
-													checked={selectedRows.has(ImmutableList.of(...getRowKey(row)))}
-													onCheckedChange={(checked) => {
-														const rowKey = ImmutableList.of(...getRowKey(row))
-														setSelectedRows(checked ? selectedRows.add(rowKey) : selectedRows.delete(rowKey))
-													}}
-												/>
-											</Flex>
-										</th>
+										/>
 									)}
 									{row.getVisibleCells().map((cell) => (
-										<td
-											key={cell.id}
-											style={{
-												overflowX: "scroll",
-												borderWidth: "1px",
-												borderTopWidth: "0px",
-												borderLeftWidth: "0px",
-												borderColor: "var(--accent-3)",
-												borderStyle: "solid",
-												display: "flex",
-												paddingLeft: "6px",
-												paddingTop: "4px",
-												minHeight: "32px",
-												width: cell.column.getSize(),
-											}}
-										>
-											<Flex gap="2" p="1">
-												{flexRender(cell.column.columnDef.cell, cell.getContext())}
-											</Flex>
-										</td>
+										<Td key={cell.id} width={cell.column.getSize()}>
+											{flexRender(cell.column.columnDef.cell, cell.getContext())}
+										</Td>
 									))}
 								</tr>
 							))}
-						</tbody>
-					</table>
+						</Tbody>
+					</TableElement>
 				</Text>
 			</Box>
 		</Flex>
