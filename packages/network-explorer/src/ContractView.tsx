@@ -66,7 +66,7 @@ export const ContractView = () => {
 		if (contractData) {
 			const savedContent = localStorage.getItem(UNSAVED_CHANGES_KEY)
 
-			if (savedContent) {
+			if (savedContent && savedContent !== contractData.originalContract) {
 				setEditorInitialValue(savedContent)
 				setHasRestoredContent(true)
 			} else {
@@ -385,11 +385,16 @@ export const ContractView = () => {
 												</Button>
 											</Box>
 											<Box mt="4">
-												<Checkbox checked={migrationIncludesSnapshot} onCheckedChange={(value) => {
-													if (value === "indeterminate") return
-													setMigrationIncludesSnapshot(value)
-												}}/>
-												<Text size="2" style={{ position: "relative", top: "-4px", left: "6px" }}>Retain snapshot</Text>
+												<Checkbox
+													checked={migrationIncludesSnapshot}
+													onCheckedChange={(value) => {
+														if (value === "indeterminate") return
+														setMigrationIncludesSnapshot(value)
+													}}
+												/>
+												<Text size="2" style={{ position: "relative", top: "-4px", left: "6px" }}>
+													Retain snapshot
+												</Text>
 											</Box>
 											<Box mt="3">
 												<Text size="2">Upgrade controller key: {contractData.admin}</Text>
