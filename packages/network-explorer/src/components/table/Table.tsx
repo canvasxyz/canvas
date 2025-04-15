@@ -1,6 +1,6 @@
 import useSWR from "swr"
 import { Box, Button, Flex, Text } from "@radix-ui/themes"
-import { TableToolbar } from "../TableToolbar.js"
+import { TableToolbar } from "./TableToolbar.js"
 import { LuChevronDown, LuChevronsUpDown, LuChevronUp } from "react-icons/lu"
 import { ColumnDef, flexRender, getCoreRowModel, Row, SortingState, useReactTable } from "@tanstack/react-table"
 import { useCallback, useEffect, useState } from "react"

@@ -2,8 +2,8 @@ import { Box, Button, DropdownMenu, Flex, Text, TextField } from "@radix-ui/them
 import { ColumnFiltersState, OnChangeFn, Table as TanStackTable } from "@tanstack/react-table"
 import { BiChevronLeft, BiChevronRight, BiFilter } from "react-icons/bi"
 import { LuDownload, LuRefreshCw, LuSlidersHorizontal, LuExpand } from "react-icons/lu"
-import { ClickableChecklistItem } from "./ClickableChecklistItem.js"
-import { TextFilterMenu } from "./TextFilterMenu.js"
+import { ClickableChecklistItem } from "../ClickableChecklistItem.js"
+import { TextFilterMenu } from "../TextFilterMenu.js"
 import { List as ImmutableList, Set as ImmutableSet } from "immutable"
 
 export const TableToolbar = ({
