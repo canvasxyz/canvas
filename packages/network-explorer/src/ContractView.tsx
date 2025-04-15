@@ -1,6 +1,6 @@
 import { useState, MouseEvent, useEffect } from "react"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
-import { Button, Box, Heading, Text } from "@radix-ui/themes"
+import { Button, Box, Heading, Text, Checkbox } from "@radix-ui/themes"
 import { Canvas, generateChangesets, Changeset as ChangesetMigrationRow, Changeset } from "@canvas-js/core"
 import { EditorState } from "@codemirror/state"
 import { EditorView } from "@codemirror/view"
@@ -51,6 +51,7 @@ export const ContractView = () => {
 	const [error, setError] = useState<string>()
 	const [changesets, setChangesets] = useState<ChangesetMigrationRow[]>()
 	const [newContract, setNewContract] = useState<string>()
+	const [migrationIncludesSnapshot, setMigrationIncludesSnapshot] = useState(false)
 	const [waitingForCommit, setWaitingForCommit] = useState<boolean>()
 	const [commitCompleted, setCommitCompleted] = useState<boolean>()
 
@@ -209,6 +210,7 @@ export const ContractView = () => {
 					siweMessage: message,
 					address,
 					signature,
+					includeSnapshot: migrationIncludesSnapshot,
 				}),
 			})
 				.then(async (response) => {
@@ -383,6 +385,13 @@ export const ContractView = () => {
 												</Button>
 											</Box>
 											<Box mt="4">
+												<Checkbox checked={migrationIncludesSnapshot} onCheckedChange={(value) => {
+													if (value === "indeterminate") return
+													setMigrationIncludesSnapshot(value)
+												}}/>
+												<Text size="2" style={{ position: "relative", top: "-4px", left: "6px" }}>Retain snapshot</Text>
+											</Box>
+											<Box mt="3">
 												<Text size="2">Upgrade controller key: {contractData.admin}</Text>
 											</Box>
 											<Box mt="1">
