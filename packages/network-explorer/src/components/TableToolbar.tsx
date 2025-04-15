@@ -4,6 +4,7 @@ import { BiChevronLeft, BiChevronRight, BiFilter } from "react-icons/bi"
 import { LuDownload, LuRefreshCw, LuSlidersHorizontal, LuExpand } from "react-icons/lu"
 import { ClickableChecklistItem } from "./ClickableChecklistItem.js"
 import { TextFilterMenu } from "./TextFilterMenu.js"
+import { List as ImmutableList, Set as ImmutableSet } from "immutable"
 
 export const TableToolbar = ({
 	totalCount,
@@ -22,6 +23,9 @@ export const TableToolbar = ({
 	nextPage,
 	enableDownload,
 	downloadTable,
+	allowDelete,
+	selectedRows,
+	deleteSelectedRows,
 }: {
 	totalCount?: number
 	showSidebar: boolean
@@ -39,6 +43,9 @@ export const TableToolbar = ({
 	nextPage: () => void
 	enableDownload: boolean
 	downloadTable: () => void
+	allowDelete: boolean
+	selectedRows: ImmutableSet<ImmutableList<string>>
+	deleteSelectedRows: () => void
 }) => {
 	const tableHasFilters = tanStackTable.getAllLeafColumns().filter((column) => column.getCanFilter()).length > 0
 
@@ -118,6 +125,14 @@ export const TableToolbar = ({
 					))}
 				</DropdownMenu.Content>
 			</DropdownMenu.Root>
+			<Button
+				disabled={!allowDelete || selectedRows.size === 0}
+				onClick={() => deleteSelectedRows()}
+				color="gray"
+				variant="outline"
+			>
+				Delete
+			</Button>
 
 			<Box ml="auto" pr="2">
 				<Text size="2" wrap="nowrap">

@@ -137,6 +137,13 @@ export const Table = <T,>({
 		},
 	})
 
+	const deleteSelectedRows = useCallback(() => {
+		if (selectedRows.size === 0) {
+			return
+		}
+		console.log("deleting", selectedRows)
+	}, [selectedRows])
+
 	useEffect(() => {
 		// invalidate the settings
 		setColumnVisibility({})
@@ -177,6 +184,9 @@ export const Table = <T,>({
 				nextPage={() => pushCursor(endCursor)}
 				enableDownload={enableDownload}
 				downloadTable={downloadTable}
+				allowDelete={allowDelete}
+				selectedRows={selectedRows}
+				deleteSelectedRows={deleteSelectedRows}
 			/>
 			<Box overflowX="scroll" flexGrow="1">
 				<Text size="2">
@@ -260,7 +270,7 @@ export const Table = <T,>({
 											paddingTop: "20px",
 											textAlign: "center",
 											color: "var(--gray-10)",
-											width: "calc(100vw - 200px)", // TODO: Extract sidebar width into CSS variable
+											width: "calc(100vw - 200px - 400px)", // TODO: Extract sidebar width into CSS variable
 										}}
 									>
 										None found
