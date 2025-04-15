@@ -1,18 +1,10 @@
 import useSWR from "swr"
 import { WhereCondition } from "@canvas-js/modeldb"
 import { List as ImmutableList, Set as ImmutableSet } from "immutable"
-import { Box, Button, DropdownMenu, Flex, Text, TextField } from "@radix-ui/themes"
+import { Box, Button, Flex, Text, TextField } from "@radix-ui/themes"
 import { useCallback, useEffect, useState } from "react"
 import { BiChevronLeft, BiChevronRight } from "react-icons/bi"
-import {
-	LuChevronDown,
-	LuChevronsUpDown,
-	LuChevronUp,
-	LuDownload,
-	LuExpand,
-	LuRefreshCw,
-	LuSlidersHorizontal,
-} from "react-icons/lu"
+import { LuChevronDown, LuChevronsUpDown, LuChevronUp, LuDownload, LuExpand, LuRefreshCw } from "react-icons/lu"
 import { ColumnDef, flexRender, getCoreRowModel, Row, SortingState, useReactTable } from "@tanstack/react-table"
 import useCursorStack from "../../hooks/useCursorStack.js"
 import { useApplicationData } from "../../hooks/useApplicationData.js"
@@ -20,8 +12,8 @@ import { useSearchFilters } from "../../hooks/useSearchFilters.js"
 import { useStagedMigrations } from "../../hooks/useStagedMigrations.js"
 import { fetchAndIpldParseJson, fetchAsString } from "../../utils.js"
 import { TableElement, Tbody, Th, Thead, TheadSpacer, NoneFound, ThCheckbox, Td } from "./elements.js"
-import { ClickableChecklistItem } from "../ClickableChecklistItem.js"
 import { FiltersDropdown } from "./FiltersDropdown.js"
+import { ColumnsDropdown } from "./ColumnsDropdown.js"
 
 export type Column = {
 	name: string
@@ -193,26 +185,7 @@ export const Table = <T,>({
 						setColumnFilters={setColumnFilters}
 					/>
 				)}
-				<DropdownMenu.Root>
-					<DropdownMenu.Trigger>
-						<Button color="gray" variant="outline">
-							<LuSlidersHorizontal />
-							Columns
-						</Button>
-					</DropdownMenu.Trigger>
-					<DropdownMenu.Content>
-						{" "}
-						{tanStackTable.getAllLeafColumns().map((column) => (
-							<ClickableChecklistItem
-								key={column.id}
-								checked={column.getIsVisible()}
-								onCheckedChange={column.toggleVisibility}
-							>
-								{column.columnDef.header?.toString()}
-							</ClickableChecklistItem>
-						))}
-					</DropdownMenu.Content>
-				</DropdownMenu.Root>
+				<ColumnsDropdown tanStackTable={tanStackTable} />
 				<Button
 					disabled={!allowDelete || selectedRows.size === 0}
 					onClick={() => deleteSelectedRows()}
