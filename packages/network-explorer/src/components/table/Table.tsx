@@ -4,7 +4,7 @@ import { List as ImmutableList, Set as ImmutableSet } from "immutable"
 import { Box, Button, Flex, Text, TextField } from "@radix-ui/themes"
 import { useCallback, useEffect, useState } from "react"
 import { BiChevronLeft, BiChevronRight } from "react-icons/bi"
-import { LuChevronDown, LuChevronsUpDown, LuChevronUp, LuDownload, LuExpand, LuRefreshCw } from "react-icons/lu"
+import { LuDownload, LuExpand, LuRefreshCw } from "react-icons/lu"
 import { ColumnDef, flexRender, getCoreRowModel, Row, SortingState, useReactTable } from "@tanstack/react-table"
 import useCursorStack from "../../hooks/useCursorStack.js"
 import { useApplicationData } from "../../hooks/useApplicationData.js"
@@ -14,6 +14,7 @@ import { fetchAndIpldParseJson, fetchAsString } from "../../utils.js"
 import { TableElement, Tbody, Th, Thead, TheadSpacer, NoneFound, ThCheckbox, Td } from "./elements.js"
 import { FiltersDropdown } from "./FiltersDropdown.js"
 import { ColumnsDropdown } from "./ColumnsDropdown.js"
+import { SortSelector } from "./SortSelector.js"
 
 export type Column = {
 	name: string
@@ -271,25 +272,7 @@ export const Table = <T,>({
 														? null
 														: flexRender(header.column.columnDef.header, header.getContext())}
 												</Text>
-												{header.column.getCanSort() && (
-													<Flex ml="auto" align="center">
-														<Button
-															variant="soft"
-															color="gray"
-															size="1"
-															style={{ padding: "4px", position: "relative", top: "-1px" }}
-															onClick={header.column.getToggleSortingHandler()}
-														>
-															{header.column.getIsSorted() === "asc" ? (
-																<LuChevronUp style={{ fontSize: "var(--font-size-3)" }} />
-															) : header.column.getIsSorted() === "desc" ? (
-																<LuChevronDown style={{ fontSize: "var(--font-size-3)" }} />
-															) : (
-																<LuChevronsUpDown style={{ fontSize: "var(--font-size-3)", color: "var(--gray-8)" }} />
-															)}
-														</Button>
-													</Flex>
-												)}
+												{header.column.getCanSort() && <SortSelector header={header} />}
 											</Flex>
 										</Th>
 									))}
