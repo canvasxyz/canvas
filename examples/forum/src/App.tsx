@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef } from "react"
 import * as Scroll from "@radix-ui/react-scroll-area"
 import { ADMIN_DID, AppT } from "./index.js"
 import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
+import rehypeSanitize from "rehype-sanitize"
 
 const getAddressFromDid = (did: string) => {
 	const matches = did.match(/[a-zA-Z0-9]+$/)
@@ -92,8 +95,12 @@ export const App: React.FC<{ app: AppT }> = ({ app }) => {
 		return () => window.removeEventListener("resize", checkWindowSize)
 	}, [])
 
-	// Calculate bottom padding based on composer state
-	const scrollPadding = composerMinimized ? "pb-[40px]" : "pb-[90px]"
+	// Update the bottom padding to account for the full 20rem height when composer is open
+	const scrollPadding = composerMinimized
+		? "pb-[40px]"
+		: app?.hasSession()
+			? "pb-[14rem]" // Use 20rem (320px) padding when logged in and composer is open
+			: "pb-[90px]" // Use the original 90px padding as fallback
 
 	return (
 		<div className="flex h-screen w-full bg-gray-900 relative">
@@ -195,7 +202,9 @@ export const App: React.FC<{ app: AppT }> = ({ app }) => {
 													</span>
 												) : null}
 											</div>
-											<p className="text-gray-300 mt-1 whitespace-pre-line">{post.text}</p>
+											<div className="text-gray-300 mt-1">
+												<ReactMarkdown rehypePlugins={[remarkGfm, rehypeSanitize]}>{post.text.replace(/\n/g, '\n\n')}</ReactMarkdown>
+											</div>
 										</div>
 									</div>
 								)
