@@ -1,14 +1,15 @@
 import useSWR from "swr"
-import { Box, Button, Flex, Text } from "@radix-ui/themes"
+import { Box, Button, Checkbox, Flex, Text } from "@radix-ui/themes"
 import { TableToolbar } from "./TableToolbar.js"
 import { LuChevronDown, LuChevronsUpDown, LuChevronUp } from "react-icons/lu"
-import { ColumnDef, flexRender, getCoreRowModel, SortingState, useReactTable } from "@tanstack/react-table"
+import { ColumnDef, flexRender, getCoreRowModel, Row, SortingState, useReactTable } from "@tanstack/react-table"
 import { useCallback, useEffect, useState } from "react"
 import { fetchAndIpldParseJson, fetchAsString } from "../utils.js"
 import useCursorStack from "../hooks/useCursorStack.js"
 import { WhereCondition } from "@canvas-js/modeldb"
 import { useApplicationData } from "../hooks/useApplicationData.js"
 import { useSearchFilters } from "../hooks/useSearchFilters.js"
+import { List as ImmutableList, Set as ImmutableSet } from "immutable"
 
 export type Column = {
 	name: string
@@ -47,6 +48,8 @@ export const Table = <T,>({
 	defaultColumns,
 	defaultSortColumn,
 	defaultSortDirection,
+	allowDelete,
+	getRowKey,
 }: {
 	showSidebar: boolean
 	setShowSidebar: (show: boolean) => void
@@ -55,6 +58,8 @@ export const Table = <T,>({
 	defaultColumns: ColumnDef<T>[]
 	defaultSortColumn: string
 	defaultSortDirection: "desc" | "asc"
+	allowDelete: boolean
+	getRowKey: (row: Row<T>) => string[]
 }) => {
 	const applicationData = useApplicationData()
 
@@ -67,6 +72,8 @@ export const Table = <T,>({
 	const [sorting, setSorting] = useState<SortingState>([])
 
 	const [entriesPerPage, setEntriesPerPage] = useState(20)
+
+	const [selectedRows, setSelectedRows] = useState<ImmutableSet<ImmutableList<string>>>(ImmutableSet.of())
 
 	const sortColumn = sorting.length === 1 ? sorting[0].id : defaultSortColumn
 	const sortDirection = sorting.length === 1 ? (sorting[0].desc ? "desc" : "asc") : defaultSortDirection
@@ -179,6 +186,18 @@ export const Table = <T,>({
 						>
 							{tanStackTable.getHeaderGroups().map((headerGroup) => (
 								<tr key={headerGroup.id} style={{ display: "flex", width: "100%" }}>
+									{allowDelete && (
+										<th
+											style={{
+												width: "32px",
+												borderWidth: "1px",
+												borderTopWidth: "0px",
+												borderLeftWidth: "0px",
+												borderColor: "var(--accent-3)",
+												borderStyle: "solid",
+											}}
+										></th>
+									)}
 									{headerGroup.headers.map((header) => (
 										<th
 											key={header.id}
@@ -250,6 +269,28 @@ export const Table = <T,>({
 							)}
 							{tanStackTable.getRowModel().rows.map((row) => (
 								<tr key={row.id} style={{ display: "flex", overflow: "hidden", scrollbarWidth: "none" }}>
+									{allowDelete && (
+										<th
+											style={{
+												width: "32px",
+												borderWidth: "1px",
+												borderTopWidth: "0px",
+												borderLeftWidth: "0px",
+												borderColor: "var(--accent-3)",
+												borderStyle: "solid",
+											}}
+										>
+											<Flex justify="center" align="center" height="100%">
+												<Checkbox
+													checked={selectedRows.has(ImmutableList.of(...getRowKey(row)))}
+													onCheckedChange={(checked) => {
+														const rowKey = ImmutableList.of(...getRowKey(row))
+														setSelectedRows(checked ? selectedRows.add(rowKey) : selectedRows.delete(rowKey))
+													}}
+												/>
+											</Flex>
+										</th>
+									)}
 									{row.getVisibleCells().map((cell) => (
 										<td
 											key={cell.id}

@@ -14,11 +14,10 @@ import { StagedMigrationsSidebar } from "./components/StagedMigrationsSidebar.js
 
 export const App = () => {
 	const [showSidebar, setShowSidebar] = useState(true)
-
 	return (
 		<Flex height="calc(100vh - 1px)" direction="row">
 			{showSidebar && <Sidebar tables={tables} />}
-			<Box pl="200px" width="100%">
+			<Box pl={showSidebar ? "200px" : "0px"} pr={showSidebar ? "400px" : "0px"} width="100%">
 				<Box style={{ margin: "0 auto" }}>
 					<Routes>
 						<Route path="/" element={<LandingPage />} />
@@ -34,7 +33,10 @@ export const App = () => {
 						/>
 
 						{tables.map(
-							({ tableName, defaultColumns, enableDownload, defaultSortColumn, defaultSortDirection }, key) => (
+							(
+								{ tableName, defaultColumns, enableDownload, defaultSortColumn, defaultSortDirection, getRowKey },
+								key,
+							) => (
 								<Route
 									key={key}
 									path={`/tables/${tableName}`}
@@ -48,6 +50,8 @@ export const App = () => {
 												enableDownload={enableDownload || false}
 												tableName={tableName}
 												defaultColumns={defaultColumns}
+												allowDelete={false}
+												getRowKey={getRowKey}
 											/>
 										</Suspense>
 									}
@@ -75,9 +79,9 @@ export const App = () => {
 							}
 						/>
 					</Routes>
-					<StagedMigrationsSidebar />
 				</Box>
 			</Box>
+			{showSidebar && <StagedMigrationsSidebar />}
 		</Flex>
 	)
 }

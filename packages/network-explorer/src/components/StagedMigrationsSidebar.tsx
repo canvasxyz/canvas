@@ -40,14 +40,16 @@ export const StagedMigrationsSidebar = () => {
 	return (
 		<Flex
 			width="400px"
-			minWidth="200px"
+			minWidth="400px"
 			height="100%"
 			overflow="hidden"
-			position="relative"
+			position="fixed"
+			right="0"
+			top="0"
 			direction="column"
 			p="2"
 			gap="2"
-			style={{ borderRight: "1px solid var(--gray-4)", background: "var(--gray-2)" }}
+			style={{ borderRight: "1px solid var(--gray-4)", background: "var(--gray-2)", zIndex: 100 }}
 		>
 			<Box px="2" pt="10px" pb="9px">
 				Staged Migrations
