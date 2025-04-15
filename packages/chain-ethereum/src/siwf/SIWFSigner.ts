@@ -154,7 +154,7 @@ export class SIWFSigner extends AbstractSessionSigner<SIWFSessionData> {
 		const signer = ed25519.create()
 		const canvasDelegateSignerAddress = signer.publicKey
 		return {
-			nonce: Buffer.from(`authorize:${topic}:${canvasDelegateSignerAddress}`).toString("base64"),
+			nonce: Buffer.from(`authorize:${topic}:${canvasDelegateSignerAddress}`).toString("base64").replace(/=+$/, ""),
 			...signer.export(),
 		}
 	}
@@ -262,7 +262,9 @@ export class SIWFSigner extends AbstractSessionSigner<SIWFSessionData> {
 		}
 
 		if (authorizationData.frame) {
-			const nonce = Buffer.from(`authorize:${topic.replace("#", "$")}:${publicKey}`).toString("base64")
+			const nonce = Buffer.from(`authorize:${topic.replace("#", "$")}:${publicKey}`)
+				.toString("base64")
+				.replace(/=+$/, "")
 			assert(authorizationData.siweNonce === nonce, "invalid SIWF signature for this topic and session publicKey")
 
 			const message = new siwe.SiweMessage({
