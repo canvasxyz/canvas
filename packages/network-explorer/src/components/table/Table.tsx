@@ -3,7 +3,7 @@ import { WhereCondition } from "@canvas-js/modeldb"
 import { List as ImmutableList, Set as ImmutableSet } from "immutable"
 import { Box, Button, DropdownMenu, Flex, Text, TextField } from "@radix-ui/themes"
 import { useCallback, useEffect, useState } from "react"
-import { BiChevronLeft, BiChevronRight, BiFilter } from "react-icons/bi"
+import { BiChevronLeft, BiChevronRight } from "react-icons/bi"
 import {
 	LuChevronDown,
 	LuChevronsUpDown,
@@ -20,8 +20,8 @@ import { useSearchFilters } from "../../hooks/useSearchFilters.js"
 import { useStagedMigrations } from "../../hooks/useStagedMigrations.js"
 import { fetchAndIpldParseJson, fetchAsString } from "../../utils.js"
 import { TableElement, Tbody, Th, Thead, TheadSpacer, NoneFound, ThCheckbox, Td } from "./elements.js"
-import { TextFilterMenu } from "../TextFilterMenu.js"
 import { ClickableChecklistItem } from "../ClickableChecklistItem.js"
+import { FiltersDropdown } from "./FiltersDropdown.js"
 
 export type Column = {
 	name: string
@@ -187,58 +187,11 @@ export const Table = <T,>({
 		<Flex direction="column" maxWidth={showSidebar ? "calc(100vw - 200px - 400px)" : "100%"} flexGrow="1">
 			<Flex style={{ borderBottom: "1px solid var(--gray-3)" }} align="center" gap="2" p="2" py="3">
 				{tableHasFilters && (
-					<DropdownMenu.Root>
-						<DropdownMenu.Trigger>
-							<Button color="gray" variant="outline">
-								<BiFilter />
-								Filters {columnFilters && columnFilters.length > 0 && `(${columnFilters.length})`}
-							</Button>
-						</DropdownMenu.Trigger>
-						<DropdownMenu.Content>
-							{tanStackTable
-								.getAllLeafColumns()
-								.filter((column) => column.getCanFilter())
-								.map((column) => (
-									<DropdownMenu.Sub key={column.id}>
-										<DropdownMenu.SubTrigger>{column.columnDef.header?.toString()}</DropdownMenu.SubTrigger>
-										<DropdownMenu.SubContent>
-											{column.columnDef.meta?.textFilter && setColumnFilters && (
-												<TextFilterMenu
-													column={column}
-													columnFilters={columnFilters}
-													setColumnFilters={setColumnFilters}
-												/>
-											)}
-
-											{column.columnDef.meta?.filterOptions &&
-												column.columnDef.meta?.filterOptions.map((filterOption) => (
-													<ClickableChecklistItem
-														key={filterOption}
-														checked={
-															columnFilters.filter((f) => f.id === column.id && f.value === filterOption).length > 0
-														}
-														onCheckedChange={(checked) => {
-															if (checked) {
-																if (setColumnFilters) {
-																	setColumnFilters(columnFilters.concat({ id: column.id, value: filterOption }))
-																}
-															} else {
-																if (setColumnFilters) {
-																	setColumnFilters(
-																		columnFilters.filter((f) => !(f.id === column.id && f.value === filterOption)),
-																	)
-																}
-															}
-														}}
-													>
-														{filterOption}
-													</ClickableChecklistItem>
-												))}
-										</DropdownMenu.SubContent>
-									</DropdownMenu.Sub>
-								))}{" "}
-						</DropdownMenu.Content>
-					</DropdownMenu.Root>
+					<FiltersDropdown
+						tanStackTable={tanStackTable}
+						columnFilters={columnFilters}
+						setColumnFilters={setColumnFilters}
+					/>
 				)}
 				<DropdownMenu.Root>
 					<DropdownMenu.Trigger>
