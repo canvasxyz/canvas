@@ -1,17 +1,27 @@
 import useSWR from "swr"
-import { Box, Button, Flex, Text } from "@radix-ui/themes"
-import { TableToolbar } from "./TableToolbar.js"
-import { LuChevronDown, LuChevronsUpDown, LuChevronUp } from "react-icons/lu"
-import { ColumnDef, flexRender, getCoreRowModel, Row, SortingState, useReactTable } from "@tanstack/react-table"
-import { useCallback, useEffect, useState } from "react"
-import { fetchAndIpldParseJson, fetchAsString } from "../../utils.js"
-import useCursorStack from "../../hooks/useCursorStack.js"
 import { WhereCondition } from "@canvas-js/modeldb"
+import { List as ImmutableList, Set as ImmutableSet } from "immutable"
+import { Box, Button, DropdownMenu, Flex, Text, TextField } from "@radix-ui/themes"
+import { useCallback, useEffect, useState } from "react"
+import { BiChevronLeft, BiChevronRight, BiFilter } from "react-icons/bi"
+import {
+	LuChevronDown,
+	LuChevronsUpDown,
+	LuChevronUp,
+	LuDownload,
+	LuExpand,
+	LuRefreshCw,
+	LuSlidersHorizontal,
+} from "react-icons/lu"
+import { ColumnDef, flexRender, getCoreRowModel, Row, SortingState, useReactTable } from "@tanstack/react-table"
+import useCursorStack from "../../hooks/useCursorStack.js"
 import { useApplicationData } from "../../hooks/useApplicationData.js"
 import { useSearchFilters } from "../../hooks/useSearchFilters.js"
-import { List as ImmutableList, Set as ImmutableSet } from "immutable"
 import { useStagedMigrations } from "../../hooks/useStagedMigrations.js"
+import { fetchAndIpldParseJson, fetchAsString } from "../../utils.js"
 import { TableElement, Tbody, Th, Thead, TheadSpacer, NoneFound, ThCheckbox, Td } from "./elements.js"
+import { TextFilterMenu } from "../TextFilterMenu.js"
+import { ClickableChecklistItem } from "../ClickableChecklistItem.js"
 
 export type Column = {
 	name: string
@@ -171,29 +181,155 @@ export const Table = <T,>({
 		element.click()
 	}, [applicationData?.topic])
 
+	const tableHasFilters = tanStackTable.getAllLeafColumns().filter((column) => column.getCanFilter()).length > 0
+
 	return (
 		<Flex direction="column" maxWidth={showSidebar ? "calc(100vw - 200px - 400px)" : "100%"} flexGrow="1">
-			<TableToolbar
-				totalCount={data?.content.totalCount}
-				showSidebar={showSidebar}
-				setShowSidebar={setShowSidebar}
-				tanStackTable={tanStackTable}
-				entriesPerPage={entriesPerPage}
-				setEntriesPerPage={setEntriesPerPage}
-				responseTime={data ? data.responseTime : undefined}
-				doRefresh={doRefresh}
-				columnFilters={columnFilters || []}
-				setColumnFilters={setColumnFilters}
-				hasPrevPage={currentCursor !== null}
-				prevPage={() => popCursor()}
-				hasNextPage={endCursor !== null}
-				nextPage={() => pushCursor(endCursor)}
-				enableDownload={enableDownload}
-				downloadTable={downloadTable}
-				allowDelete={allowDelete}
-				selectedRows={selectedRows}
-				deleteSelectedRows={deleteSelectedRows}
-			/>
+			<Flex style={{ borderBottom: "1px solid var(--gray-3)" }} align="center" gap="2" p="2" py="3">
+				{tableHasFilters && (
+					<DropdownMenu.Root>
+						<DropdownMenu.Trigger>
+							<Button color="gray" variant="outline">
+								<BiFilter />
+								Filters {columnFilters && columnFilters.length > 0 && `(${columnFilters.length})`}
+							</Button>
+						</DropdownMenu.Trigger>
+						<DropdownMenu.Content>
+							{tanStackTable
+								.getAllLeafColumns()
+								.filter((column) => column.getCanFilter())
+								.map((column) => (
+									<DropdownMenu.Sub key={column.id}>
+										<DropdownMenu.SubTrigger>{column.columnDef.header?.toString()}</DropdownMenu.SubTrigger>
+										<DropdownMenu.SubContent>
+											{column.columnDef.meta?.textFilter && setColumnFilters && (
+												<TextFilterMenu
+													column={column}
+													columnFilters={columnFilters}
+													setColumnFilters={setColumnFilters}
+												/>
+											)}
+
+											{column.columnDef.meta?.filterOptions &&
+												column.columnDef.meta?.filterOptions.map((filterOption) => (
+													<ClickableChecklistItem
+														key={filterOption}
+														checked={
+															columnFilters.filter((f) => f.id === column.id && f.value === filterOption).length > 0
+														}
+														onCheckedChange={(checked) => {
+															if (checked) {
+																if (setColumnFilters) {
+																	setColumnFilters(columnFilters.concat({ id: column.id, value: filterOption }))
+																}
+															} else {
+																if (setColumnFilters) {
+																	setColumnFilters(
+																		columnFilters.filter((f) => !(f.id === column.id && f.value === filterOption)),
+																	)
+																}
+															}
+														}}
+													>
+														{filterOption}
+													</ClickableChecklistItem>
+												))}
+										</DropdownMenu.SubContent>
+									</DropdownMenu.Sub>
+								))}{" "}
+						</DropdownMenu.Content>
+					</DropdownMenu.Root>
+				)}
+				<DropdownMenu.Root>
+					<DropdownMenu.Trigger>
+						<Button color="gray" variant="outline">
+							<LuSlidersHorizontal />
+							Columns
+						</Button>
+					</DropdownMenu.Trigger>
+					<DropdownMenu.Content>
+						{" "}
+						{tanStackTable.getAllLeafColumns().map((column) => (
+							<ClickableChecklistItem
+								key={column.id}
+								checked={column.getIsVisible()}
+								onCheckedChange={column.toggleVisibility}
+							>
+								{column.columnDef.header?.toString()}
+							</ClickableChecklistItem>
+						))}
+					</DropdownMenu.Content>
+				</DropdownMenu.Root>
+				<Button
+					disabled={!allowDelete || selectedRows.size === 0}
+					onClick={() => deleteSelectedRows()}
+					color="gray"
+					variant="outline"
+				>
+					Delete
+				</Button>
+
+				<Box ml="auto" pr="2">
+					<Text size="2" wrap="nowrap">
+						{data?.content.totalCount || "0"} rows {data ? <>&bull; {`${data.responseTime}ms`}</> : ""}
+					</Text>
+				</Box>
+
+				<Flex>
+					<Button
+						disabled={currentCursor === null}
+						onClick={() => popCursor()}
+						color="gray"
+						variant="outline"
+						style={{ borderTopRightRadius: "0px", borderBottomRightRadius: "0px" }}
+					>
+						<BiChevronLeft />
+					</Button>
+					<TextField.Root
+						value={entriesPerPage}
+						onChange={(e) => {
+							const value = parseInt(e.target.value, 10)
+							if (isNaN(value)) return
+							if (value === 0) {
+								setEntriesPerPage(10)
+							} else {
+								setEntriesPerPage(value)
+							}
+						}}
+						color="gray"
+						style={{
+							borderRadius: "0px",
+							width: "44px",
+							boxShadow: "none",
+							borderTop: "1px solid var(--accent-a8)",
+							borderBottom: "1px solid var(--accent-a8)",
+							textAlign: "center",
+							paddingRight: "8px",
+						}}
+					/>
+					<Button
+						disabled={endCursor === null}
+						onClick={() => pushCursor(endCursor)}
+						color="gray"
+						variant="outline"
+						style={{ borderTopLeftRadius: "0px", borderBottomLeftRadius: "0px" }}
+					>
+						<BiChevronRight />
+					</Button>
+				</Flex>
+
+				<Button color="gray" variant="outline" onClick={() => doRefresh()}>
+					<LuRefreshCw />
+				</Button>
+				{enableDownload && (
+					<Button color="gray" variant="outline" onClick={() => downloadTable()}>
+						<LuDownload />
+					</Button>
+				)}
+				<Button color="gray" variant={showSidebar ? "outline" : "solid"} onClick={() => setShowSidebar(!showSidebar)}>
+					<LuExpand />
+				</Button>
+			</Flex>
 			<Box overflowX="scroll" flexGrow="1">
 				<Text size="2">
 					<TableElement>
