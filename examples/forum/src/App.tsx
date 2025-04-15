@@ -17,7 +17,7 @@ export const App: React.FC<{ app: AppT }> = ({ app }) => {
 	const [newMessage, setNewMessage] = useState<string>("")
 	const [newTitle, setNewTitle] = useState<string>("")
 	const [sidebarOpen, setSidebarOpen] = useState<boolean>(false)
-	const [composerMinimized, setComposerMinimized] = useState<boolean>(false)
+	const [composerMinimized, setComposerMinimized] = useState<boolean>(true)
 	const messageEndRef = useRef<HTMLDivElement>(null)
 	const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -108,11 +108,11 @@ export const App: React.FC<{ app: AppT }> = ({ app }) => {
 			<div
 				className={`${
 					sidebarOpen ? "translate-x-0" : "-translate-x-full"
-				} md:translate-x-0 transform transition-transform duration-300 ease-in-out fixed md:static z-30 h-full w-64 bg-gray-900 text-white flex flex-col border-r border-gray-700`}
+				} md:translate-x-0 transform transition-transform duration-300 ease-in-out fixed md:static z-30 h-full w-64 bg-gray-900 text-white flex flex-col border-r border-gray-800`}
 			>
-				<div className="border-b border-gray-700 px-6 py-3 flex justify-between items-center">
+				<div className="border-b border-gray-800 px-6 py-3 flex justify-between items-center">
 					{/* TODO: Title goes here. */}
-					<h2 className="font-medium text-lg text-white"></h2>
+					<h2 className="font-medium text-lg text-white">{document.location.hostname}</h2>
 					{/* Close button for mobile sidebar */}
 					<button className="text-white md:hidden focus:outline-none" onClick={toggleSidebar}>
 						<svg
@@ -145,7 +145,7 @@ export const App: React.FC<{ app: AppT }> = ({ app }) => {
 
 			{/* Main post area */}
 			<div className="flex-1 flex flex-col overflow-hidden bg-gray-900 relative" onClick={handleContentClick}>
-				<div className="border-b border-gray-700 px-6 py-3 flex items-center">
+				<div className="border-b border-gray-800 px-6 py-3 flex items-center">
 					{/* Menu button for mobile */}
 					<button
 						className="mr-4 text-white md:hidden focus:outline-none"
@@ -203,7 +203,9 @@ export const App: React.FC<{ app: AppT }> = ({ app }) => {
 												) : null}
 											</div>
 											<div className="text-gray-300 mt-1">
-												<ReactMarkdown rehypePlugins={[remarkGfm, rehypeSanitize]}>{post.text.replace(/\n/g, '\n\n')}</ReactMarkdown>
+												<ReactMarkdown rehypePlugins={[remarkGfm, rehypeSanitize]}>
+													{post.text.replace(/\n/g, "\n\n")}
+												</ReactMarkdown>
 											</div>
 										</div>
 									</div>
@@ -223,14 +225,26 @@ export const App: React.FC<{ app: AppT }> = ({ app }) => {
 				{/* Fixed composer at the bottom - updated to be responsive and minimizable */}
 				{app?.hasSession() && (
 					<div className="fixed bottom-0 right-0 left-0 md:left-64 bg-gray-900 border-t border-gray-800 transition-all duration-300 ease-in-out">
-						<div className="flex justify-between items-center px-4 mt-3">
+						{/* Make the header area clickable to expand when minimized, but not to minimize */}
+						<div
+							className="flex justify-between items-center px-4 mt-3"
+							onClick={() => {
+								if (composerMinimized) {
+									setComposerMinimized(false)
+								}
+							}}
+							style={{ cursor: composerMinimized ? "pointer" : "default" }}
+						>
 							<div className="text-sm text-gray-500 mt-0.5">Post Composer</div>
 							<button
-								onClick={toggleComposer}
+								onClick={(e) => {
+									e.stopPropagation() // Prevent the parent's onClick from firing
+									toggleComposer()
+								}}
 								className="text-gray-500 focus:outline-none"
 								style={{ position: "relative", top: "2px" }}
 							>
-								{composerMinimized ? (
+								{!composerMinimized ? (
 									<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
 										<path fillRule="evenodd" d="M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z" clipRule="evenodd" />
 									</svg>

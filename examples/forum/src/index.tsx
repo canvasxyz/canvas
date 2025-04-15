@@ -6,8 +6,10 @@ import ReactDOM from "react-dom/client"
 import { AuthKitProvider } from "@farcaster/auth-kit"
 import { JsonRpcProvider } from "ethers"
 import { sdk } from "@farcaster/frame-sdk"
+import { LuUnplug } from "react-icons/lu";
+import { Text } from "@radix-ui/themes"
 
-import type { SessionSigner, Signer } from "@canvas-js/interfaces"
+import type { SessionSigner } from "@canvas-js/interfaces"
 import { SIWESigner, SIWFSigner } from "@canvas-js/chain-ethereum"
 import { useCanvas, AppInfo } from "@canvas-js/hooks"
 
@@ -17,9 +19,6 @@ import { ConnectSIWF } from "./connect/ConnectSIWF.js"
 import { App } from "./App.js"
 import { ModelSchema } from "@canvas-js/modeldb"
 import { Actions, Canvas } from "@canvas-js/core"
-import { BrowserProvider } from "ethers"
-import { AbstractSessionSigner } from "@canvas-js/signatures"
-import { JsonRpcSigner } from "ethers"
 
 const wsURL =
 	document.location.hostname === "localhost"
@@ -117,13 +116,17 @@ const Container: React.FC<{}> = ({}) => {
 							</div>
 							<div className="block mt-4 text-gray-600 text-center text-sm">
 								{app.hasSession() ? "Logged in" : "Logged out"}
+								{ws.error ? <span className="text-red-500 ml-1.5">Connection error</span> : ""}
 							</div>
 						</div>
 						<button
 							onClick={() => setIsInfoOpen(true)}
-							className="fixed top-4 right-5 z-1 bg-white p-2 rounded-full shadow-md border border-gray-200 hover:bg-gray-100"
+							className="fixed top-4 right-5 z-1 bg-white p-2 rounded-full shadow-md border border-gray-200 hover:bg-gray-100 flex"
 						>
-							{app.hasSession() ? "Account" : "Login"}
+							<span className="mx-0.5">
+								{app.hasSession() ? "Account" : "Login"}
+							</span>
+							{ws.error ? <span className="text-red-500 mt-1 mx-0.5"><LuUnplug /></span> : null}
 						</button>
 					</main>
 				) : (
