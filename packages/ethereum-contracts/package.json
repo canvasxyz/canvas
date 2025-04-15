@@ -3,6 +3,7 @@
 	"version": "0.14.0-next.2",
 	"description": "",
 	"main": "index.js",
+	"sideEffects": false,
 	"scripts": {
 		"test": "hardhat test",
 		"clean": "hardhat clean",

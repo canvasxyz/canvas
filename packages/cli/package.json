@@ -4,6 +4,7 @@
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"type": "module",
 	"main": "dist/index.js",
+	"sideEffects": false,
 	"files": [
 		"dist"
 	],

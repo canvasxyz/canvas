@@ -11,10 +11,10 @@
 	],
 	"main": "./lib/index.js",
 	"types": "./lib/index.d.ts",
+	"sideEffects": false,
 	"exports": {
 		".": "./lib/index.js"
 	},
-	"sideEffects": false,
 	"scripts": {
 		"test": "ava"
 	},
