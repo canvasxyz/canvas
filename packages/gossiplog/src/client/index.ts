@@ -30,6 +30,8 @@ export class NetworkClient<Payload> {
 	readonly sourceURL: string
 	readonly eventSource = pushable<Event>({ objectMode: true })
 
+	error?: Error | unknown
+
 	constructor(
 		readonly gossipLog: AbstractGossipLog<Payload>,
 		readonly addr: string,
@@ -86,6 +88,7 @@ export class NetworkClient<Payload> {
 				if (err.name === "UnsupportedProtocolError") {
 					err.message = `remote was not serving topic ${gossipLog.topic}`
 				}
+				this.error = err
 				throw err
 			})
 	}
@@ -191,6 +194,7 @@ export class NetworkClient<Payload> {
 				stream = await this.newStream(this.syncProtocol)
 			} catch (err) {
 				this.log.error("failed to open outgoing sync stream: %O", err)
+				this.error = err
 				return
 			}
 
