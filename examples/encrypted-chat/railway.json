@@ -6,8 +6,13 @@
     "watchPatterns": [
       "/packages/network-explorer/**",
       "/packages/cli/**",
-      "/examples/encrypted-chat/**",
-      "/examples/core/**"
+      "/packages/core/**",
+      "/packages/gossiplog/**",
+      "/packages/hooks/**",
+      "/packages/interfaces/**",
+      "/packages/modeldb/**",
+      "/packages/chain-ethereum/**",
+      "/examples/forum/**"
     ]
   },
   "deploy": {
