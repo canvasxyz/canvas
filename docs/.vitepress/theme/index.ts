@@ -11,6 +11,7 @@ import FeatureRow from "../components/FeatureRow.vue"
 import TextItem from "../components/TextItem.vue"
 import TextRow from "../components/TextRow.vue"
 import HomepageFooter from "../components/HomepageFooter.vue"
+import FeatureTags from "../components/FeatureTags.vue"
 import { MotionPlugin } from "@vueuse/motion"
 import "./style.css"
 
@@ -32,5 +33,6 @@ export default {
 		app.component("TextItem", TextItem)
 		app.component("TextRow", TextRow)
 		app.component("HomepageFooter", HomepageFooter)
+		app.component("FeatureTags", FeatureTags)
 	},
 } satisfies Theme

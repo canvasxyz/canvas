@@ -18,6 +18,7 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
   <div class="HeroRow" :class="{ 'has-image': image || heroImageSlotExists }">
     <div class="container">
       <div class="main">
+        <div v-if="tagline" v-html="tagline" class="prefix"></div>
         <slot name="home-hero-info">
           <h1 v-if="name" class="name">
             <span v-html="name" class="clip"></span>
@@ -39,19 +40,14 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
                     :enter='{ to: { backgroundColor: "#fff" }, opacity: 0.9, scale: 0.98, transition: { repeat: Infinity, repeatType: "mirror", duration: 800, ease: "easeOut" } }'
 ></span>
 </p>
-          <p v-if="tagline" v-html="tagline" class="tagline"></p>
-          <p v-if="bullets" class="bullets">
+          <div v-if="bullets" class="bullets">
             <ul>
               <li class="bullet" v-for="bullet in bullets">
                 {{ bullet }}
               </li>
             </ul>
-          </p>
+          </div>
         </slot>
-
-        <div class="actions">
-          <slot></slot>
-        </div>
       </div>
 
       <div v-if="image || heroImageSlotExists" class="image">
@@ -67,20 +63,29 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 </template>
 
 <style scoped>
+.HeroRow .prefix {
+  color: #989FE4;
+  font-size: 80%;
+  font-weight: 500;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  margin-bottom: 30px;
+}
+
 .HeroRow {
   margin-top: calc((var(--vp-nav-height) + var(--vp-layout-top-height, 0px)) * -1);
-  padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 48px) 0 32px;
+  padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 48px) 0 18px;
 }
 
 @media (min-width: 640px) {
   .HeroRow {
-    padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 100px) 0 32px;
+    padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 100px) 0 18px;
   }
 }
 
 @media (min-width: 960px) {
   .HeroRow {
-    padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 100px) 0 36px;
+    padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 100px) 0 22px;
   }
 }
 
@@ -131,7 +136,7 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
   }
 
   .HeroRow.has-image .main {
-    max-width: 640px;
+    max-width: 600px;
   }
 }
 
@@ -181,16 +186,6 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
   }
 }
 
-.tagline {
-  padding-top: 20px;
-  max-width: 400px;
-  line-height: 1.4;
-  font-size: 18px;
-  font-weight: 500;
-  white-space: pre-wrap;
-  color: var(--vp-c-text-2);
-}
-
 .bullets {
   padding-top: 2px;
   max-width: 450px;
@@ -212,29 +207,6 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 }
 @media (min-width: 960px) {
   .bullets {
-    margin: 0;
-  }
-}
-
-.HeroRow.has-image .tagline {
-  margin: 0 auto;
-}
-@media (min-width: 640px) {
-  .tagline {
-    padding-top: 22px;
-    /*max-width: 500px;*/
-    font-size: 18px;
-  }
-}
-
-@media (min-width: 960px) {
-  .tagline {
-    font-size: 18px;
-    padding-top: 24px;
-    line-height: 1.4 !important;
-  }
-
-  .HeroRow.has-image .tagline {
     margin: 0;
   }
 }
