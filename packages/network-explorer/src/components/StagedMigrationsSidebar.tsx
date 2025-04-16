@@ -45,8 +45,15 @@ function flattenDeletedRows(deletedRows: ImmutableMap<string, ImmutableList<Immu
 
 export const StagedMigrationsSidebar = () => {
 	const contractData = useContractData()
-	const { contractChangesets, cancelMigrations, runMigrations, waitingForCommit, commitCompleted, deletedRows } =
-		useStagedMigrations()
+	const {
+		contractChangesets,
+		cancelMigrations,
+		runMigrations,
+		waitingForCommit,
+		commitCompleted,
+		deletedRows,
+		restoreDeletedRow,
+	} = useStagedMigrations()
 
 	return (
 		<Flex
@@ -74,7 +81,16 @@ export const StagedMigrationsSidebar = () => {
 					))}
 					{flattenDeletedRows(deletedRows).map(({ tableName, row }, index) => (
 						<li key={index}>
-							Delete row {row.join(", ")} from {tableName}
+							Delete row {row.join(", ")} from {tableName}{" "}
+							<a
+								href="#"
+								onClick={(e) => {
+									e.preventDefault()
+									restoreDeletedRow(tableName, row)
+								}}
+							>
+								[restore]
+							</a>
 						</li>
 					))}
 				</ul>

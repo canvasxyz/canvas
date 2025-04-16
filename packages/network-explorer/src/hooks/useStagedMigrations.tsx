@@ -83,6 +83,7 @@ const StagedMigrationsContext = createContext<{
 	// setCommitCompleted: (commitCompleted: boolean) => void
 	stageDeleteRows: (tableName: string, rowKeys: string[][]) => void
 	deletedRows: ImmutableMap<string, ImmutableList<ImmutableList<string>>>
+	restoreDeletedRow: (tableName: string, rowKeys: string[]) => void
 }>({
 	contractChangesets: [],
 	cancelMigrations: async () => {},
@@ -98,6 +99,7 @@ const StagedMigrationsContext = createContext<{
 	// setCommitCompleted: () => {},
 	stageDeleteRows: () => {},
 	deletedRows: ImmutableMap(),
+	restoreDeletedRow: () => {},
 })
 
 export const StagedMigrationsProvider = ({ children }: { children: React.ReactNode }) => {
@@ -114,7 +116,9 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 	// store the current modified rows here
 
 	// store the current deleted rows here
-	const [deletedRows, setDeletedRows] = useState<ImmutableMap<string, ImmutableList<ImmutableList<string>>>>()
+	const [deletedRows, setDeletedRows] = useState<ImmutableMap<string, ImmutableList<ImmutableList<string>>>>(
+		ImmutableMap(),
+	)
 
 	// store current saved contract here
 	const [newContract, setNewContract] = useState<string>()
@@ -237,6 +241,21 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 		[],
 	)
 
+	const restoreDeletedRow = useCallback(
+		(tableName: string, rowKey: string[]) =>
+			setDeletedRows((oldDeletedRows) => {
+				const tableRows = oldDeletedRows.get(tableName)
+				if (!tableRows) {
+					return oldDeletedRows
+				}
+
+				const newTableRows = tableRows.filter((row) => !row.equals(ImmutableList.of(...rowKey)))
+
+				return oldDeletedRows.set(tableName, newTableRows)
+			}),
+		[],
+	)
+
 	return (
 		<StagedMigrationsContext.Provider
 			value={{
@@ -252,6 +271,7 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 				setHasRestoredContent,
 				stageDeleteRows,
 				deletedRows: deletedRows || ImmutableMap(),
+				restoreDeletedRow,
 			}}
 		>
 			{children}
