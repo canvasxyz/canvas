@@ -60,7 +60,7 @@ export abstract class AbstractRuntime {
 	public static effectsModel = {
 		$writes: {
 			$primary: "record_id/message_id",
-			$indexes: ["record_id/csx/message_id", "message_id/record_id/csx"],
+			$indexes: ["record_id/csx/message_id"],
 			record_id: "string",
 			value: "bytes",
 			message_id: "string",
@@ -335,6 +335,7 @@ export abstract class AbstractRuntime {
 				const superiorWrites = await db.query<{ record_id: string; message_id: string }>("$writes", {
 					select: { record_id: true, message_id: true },
 					where: { record_id: recordId, message_id: { gt: id } },
+					orderBy: { "record_id/message_id": "asc" },
 					limit: 1,
 				})
 
