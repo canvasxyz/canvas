@@ -1,7 +1,7 @@
 // staged migrations provider
 
 import { createContext, useCallback, useContext, useState } from "react"
-import { Canvas, Changeset, generateChangesets } from "@canvas-js/core"
+import { Canvas, Changeset, generateChangesets, ModelValue } from "@canvas-js/core"
 import { Map as ImmutableMap, List as ImmutableList } from "immutable"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 import { useContractData } from "../hooks/useContractData.js"
@@ -9,6 +9,8 @@ import { SiweMessage } from "siwe"
 import { getAddress } from "ethers"
 import { useApplicationData } from "./useApplicationData.js"
 import { BASE_URL } from "../utils.js"
+import { useDeletedRows } from "./useDeletedRows.js"
+import { useModifiedRows } from "./useModifiedRows.js"
 
 async function getChangesetsForContractDiff(oldContract: string, newContract: string) {
 	const { build } = await Canvas.buildContract(newContract, { wasmURL: "./esbuild.wasm" })
@@ -81,9 +83,13 @@ const StagedMigrationsContext = createContext<{
 	setHasRestoredContent: (hasRestoredContent: boolean) => void
 	// setWaitingForCommit: (waitingForCommit: boolean) => void
 	// setCommitCompleted: (commitCompleted: boolean) => void
-	stageDeleteRows: (tableName: string, rowKeys: string[][]) => void
+	stageDeletedRows: (tableName: string, rowKeys: string[][]) => void
 	deletedRows: ImmutableMap<string, ImmutableList<ImmutableList<string>>>
 	restoreDeletedRow: (tableName: string, rowKeys: string[]) => void
+	modifiedRows: ImmutableMap<string, ImmutableMap<ImmutableList<string>, ModelValue>>
+	stageModifiedRow: (tableName: string, rowKeys: string[], row: ModelValue) => void
+	restoreModifiedRow: (tableName: string, rowKeys: string[]) => void
+	clearModifiedRows: () => void
 }>({
 	contractChangesets: [],
 	cancelMigrations: async () => {},
@@ -97,9 +103,13 @@ const StagedMigrationsContext = createContext<{
 	setHasRestoredContent: () => {},
 	// setWaitingForCommit: () => {},
 	// setCommitCompleted: () => {},
-	stageDeleteRows: () => {},
+	stageDeletedRows: () => {},
 	deletedRows: ImmutableMap(),
 	restoreDeletedRow: () => {},
+	modifiedRows: ImmutableMap(),
+	stageModifiedRow: () => {},
+	restoreModifiedRow: () => {},
+	clearModifiedRows: () => {},
 })
 
 export const StagedMigrationsProvider = ({ children }: { children: React.ReactNode }) => {
@@ -114,11 +124,10 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 	// store the current added rows here
 
 	// store the current modified rows here
+	const { modifiedRows, stageModifiedRow, restoreModifiedRow, clearModifiedRows } = useModifiedRows()
 
 	// store the current deleted rows here
-	const [deletedRows, setDeletedRows] = useState<ImmutableMap<string, ImmutableList<ImmutableList<string>>>>(
-		ImmutableMap(),
-	)
+	const { deletedRows, stageDeletedRows, restoreDeletedRow, clearDeletedRows } = useDeletedRows()
 
 	// store current saved contract here
 	const [newContract, setNewContract] = useState<string>()
@@ -200,7 +209,8 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 		}
 
 		setContractChangesets([])
-		setDeletedRows(ImmutableMap())
+		clearDeletedRows()
+		clearModifiedRows()
 		setNewContract(undefined)
 		setWaitingForCommit(true)
 
@@ -228,33 +238,9 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 
 	const cancelMigrations = useCallback(async () => {
 		clearContractChangesets()
-	}, [clearContractChangesets])
-
-	const stageDeleteRows = useCallback(
-		(tableName: string, rowKeys: string[][]) =>
-			setDeletedRows((oldDeletedRows) =>
-				(oldDeletedRows || ImmutableMap()).set(
-					tableName,
-					ImmutableList.of(...rowKeys.map((key) => ImmutableList.of(...key))),
-				),
-			),
-		[],
-	)
-
-	const restoreDeletedRow = useCallback(
-		(tableName: string, rowKey: string[]) =>
-			setDeletedRows((oldDeletedRows) => {
-				const tableRows = oldDeletedRows.get(tableName)
-				if (!tableRows) {
-					return oldDeletedRows
-				}
-
-				const newTableRows = tableRows.filter((row) => !row.equals(ImmutableList.of(...rowKey)))
-
-				return oldDeletedRows.set(tableName, newTableRows)
-			}),
-		[],
-	)
+		clearDeletedRows()
+		clearModifiedRows()
+	}, [clearContractChangesets, clearDeletedRows, clearModifiedRows])
 
 	return (
 		<StagedMigrationsContext.Provider
@@ -269,9 +255,13 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 				commitCompleted,
 				hasRestoredContent,
 				setHasRestoredContent,
-				stageDeleteRows,
-				deletedRows: deletedRows || ImmutableMap(),
+				stageDeletedRows,
+				deletedRows,
 				restoreDeletedRow,
+				modifiedRows,
+				stageModifiedRow,
+				restoreModifiedRow,
+				clearModifiedRows,
 			}}
 		>
 			{children}

@@ -67,7 +67,7 @@ export const Table = <T,>({
 	getRowKey: (row: Row<T>) => string[]
 }) => {
 	const applicationData = useApplicationData()
-	const { stageDeleteRows } = useStagedMigrations()
+	const { stageDeletedRows, deletedRows } = useStagedMigrations()
 	const [columnFilters, setColumnFilters] = useSearchFilters(
 		defaultColumns.filter((col) => col.enableColumnFilter).map((col) => col.header as string),
 	)
@@ -147,11 +147,11 @@ export const Table = <T,>({
 			return
 		}
 
-		stageDeleteRows(tableName, selectedRows.map((row) => row.toArray()).toArray())
+		stageDeletedRows(tableName, selectedRows.map((row) => row.toArray()).toArray())
 
 		// clear the selected rows
 		setSelectedRows(ImmutableSet.of())
-	}, [tableName, selectedRows, setSelectedRows, stageDeleteRows])
+	}, [tableName, selectedRows, setSelectedRows, stageDeletedRows])
 
 	useEffect(() => {
 		// invalidate the settings
@@ -175,6 +175,8 @@ export const Table = <T,>({
 	}, [applicationData?.topic])
 
 	const tableHasFilters = tanStackTable.getAllLeafColumns().filter((column) => column.getCanFilter()).length > 0
+
+	const tableDeletedRows = deletedRows?.get(tableName) || ImmutableList.of()
 
 	return (
 		<Flex direction="column" maxWidth={showSidebar ? "calc(100vw - 200px - 400px)" : "100%"} flexGrow="1">
@@ -281,24 +283,36 @@ export const Table = <T,>({
 						</Thead>
 						<Tbody>
 							{tanStackTable.getRowCount() === 0 && <NoneFound />}
-							{tanStackTable.getRowModel().rows.map((row) => (
-								<tr key={row.id} style={{ display: "flex", overflow: "hidden", scrollbarWidth: "none" }}>
-									{allowDelete && (
-										<ThCheckbox
-											checked={selectedRows.has(ImmutableList.of(...getRowKey(row)))}
-											onCheckedChange={(checked) => {
-												const rowKey = ImmutableList.of(...getRowKey(row))
-												setSelectedRows(checked ? selectedRows.add(rowKey) : selectedRows.delete(rowKey))
-											}}
-										/>
-									)}
-									{row.getVisibleCells().map((cell) => (
-										<Td key={cell.id} width={cell.column.getSize()}>
-											{flexRender(cell.column.columnDef.cell, cell.getContext())}
-										</Td>
-									))}
-								</tr>
-							))}
+							{tanStackTable.getRowModel().rows.map((row) => {
+								const rowKey = ImmutableList.of(...getRowKey(row))
+								const isDeleted = tableDeletedRows.find((otherRowKey) => rowKey.equals(otherRowKey))
+								return (
+									<tr
+										key={row.id}
+										style={{
+											display: "flex",
+											backgroundColor: isDeleted ? "var(--red-3)" : "transparent",
+											overflow: "hidden",
+											scrollbarWidth: "none",
+										}}
+									>
+										{allowDelete && (
+											<ThCheckbox
+												checked={selectedRows.has(ImmutableList.of(...getRowKey(row)))}
+												onCheckedChange={(checked) => {
+													const rowKey = ImmutableList.of(...getRowKey(row))
+													setSelectedRows(checked ? selectedRows.add(rowKey) : selectedRows.delete(rowKey))
+												}}
+											/>
+										)}
+										{row.getVisibleCells().map((cell) => (
+											<Td key={cell.id} width={cell.column.getSize()}>
+												{flexRender(cell.column.columnDef.cell, cell.getContext())}
+											</Td>
+										))}
+									</tr>
+								)
+							})}
 						</Tbody>
 					</TableElement>
 				</Text>
