@@ -1,6 +1,6 @@
 import useSWR from "swr"
 import { WhereCondition } from "@canvas-js/modeldb"
-import { List as ImmutableList, Set as ImmutableSet } from "immutable"
+import { List as ImmutableList, Map as ImmutableMap, Set as ImmutableSet } from "immutable"
 import { Box, Button, Flex, Text, TextField } from "@radix-ui/themes"
 import { useCallback, useEffect, useState } from "react"
 import { BiChevronLeft, BiChevronRight } from "react-icons/bi"
@@ -67,7 +67,7 @@ export const Table = <T,>({
 	getRowKey: (row: Row<T>) => string[]
 }) => {
 	const applicationData = useApplicationData()
-	const { stageDeletedRows, deletedRows } = useStagedMigrations()
+	const { stageRowChange, changedRows } = useStagedMigrations()
 	const [columnFilters, setColumnFilters] = useSearchFilters(
 		defaultColumns.filter((col) => col.enableColumnFilter).map((col) => col.header as string),
 	)
@@ -147,11 +147,16 @@ export const Table = <T,>({
 			return
 		}
 
-		stageDeletedRows(tableName, selectedRows.map((row) => row.toArray()).toArray())
+		// stageDeletedRows(tableName, selectedRows.map((row) => row.toArray()).toArray())
+		for (const row of selectedRows.toArray()) {
+			stageRowChange(tableName, row.toArray(), {
+				type: "delete",
+			})
+		}
 
 		// clear the selected rows
 		setSelectedRows(ImmutableSet.of())
-	}, [tableName, selectedRows, setSelectedRows, stageDeletedRows])
+	}, [tableName, selectedRows, setSelectedRows, stageRowChange])
 
 	useEffect(() => {
 		// invalidate the settings
@@ -176,7 +181,7 @@ export const Table = <T,>({
 
 	const tableHasFilters = tanStackTable.getAllLeafColumns().filter((column) => column.getCanFilter()).length > 0
 
-	const tableDeletedRows = deletedRows?.get(tableName) || ImmutableList.of()
+	const tableChangedRows = changedRows.get(tableName) || ImmutableMap()
 
 	return (
 		<Flex direction="column" maxWidth={showSidebar ? "calc(100vw - 200px - 400px)" : "100%"} flexGrow="1">
@@ -285,13 +290,13 @@ export const Table = <T,>({
 							{tanStackTable.getRowCount() === 0 && <NoneFound />}
 							{tanStackTable.getRowModel().rows.map((row) => {
 								const rowKey = ImmutableList.of(...getRowKey(row))
-								const isDeleted = tableDeletedRows.find((otherRowKey) => rowKey.equals(otherRowKey))
+								const rowChange = tableChangedRows.get(rowKey)
 								return (
 									<tr
 										key={row.id}
 										style={{
 											display: "flex",
-											backgroundColor: isDeleted ? "var(--red-3)" : "transparent",
+											backgroundColor: rowChange?.type === "delete" ? "var(--red-3)" : "transparent",
 											overflow: "hidden",
 											scrollbarWidth: "none",
 										}}

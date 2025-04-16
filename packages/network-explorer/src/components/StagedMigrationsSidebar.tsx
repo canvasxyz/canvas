@@ -3,6 +3,7 @@ import { useStagedMigrations } from "../hooks/useStagedMigrations.js"
 import { Changeset } from "@canvas-js/core"
 import { Map as ImmutableMap, List as ImmutableList } from "immutable"
 import { useContractData } from "../hooks/useContractData.js"
+import { RowChange } from "../hooks/useChangedRows.js"
 
 function ChangesetMigrationRow({ changeset }: { changeset: Changeset }) {
 	switch (changeset.change) {
@@ -33,11 +34,11 @@ function ChangesetMigrationRow({ changeset }: { changeset: Changeset }) {
 	}
 }
 
-function flattenDeletedRows(deletedRows: ImmutableMap<string, ImmutableList<ImmutableList<string>>>) {
+function flattenRowChanges(rowChanges: ImmutableMap<string, ImmutableMap<ImmutableList<string>, RowChange>>) {
 	const flattened = []
-	for (const [tableName, rows] of deletedRows.entries()) {
-		for (const row of rows.toArray()) {
-			flattened.push({ tableName, row: row.toArray() })
+	for (const [tableName, rows] of rowChanges.entries()) {
+		for (const [rowKey, rowChange] of rows.entries()) {
+			flattened.push({ tableName, row: rowKey.toArray(), rowChange })
 		}
 	}
 	return flattened
@@ -51,8 +52,8 @@ export const StagedMigrationsSidebar = () => {
 		runMigrations,
 		waitingForCommit,
 		commitCompleted,
-		deletedRows,
-		restoreDeletedRow,
+		changedRows,
+		restoreRowChange,
 	} = useStagedMigrations()
 
 	return (
@@ -79,14 +80,14 @@ export const StagedMigrationsSidebar = () => {
 							<ChangesetMigrationRow changeset={changeset} />
 						</li>
 					))}
-					{flattenDeletedRows(deletedRows).map(({ tableName, row }, index) => (
+					{flattenRowChanges(changedRows).map(({ tableName, row, rowChange }, index) => (
 						<li key={index}>
-							Delete row {row.join(", ")} from {tableName}{" "}
+							{rowChange.type} row {row.join(", ")} from {tableName}{" "}
 							<a
 								href="#"
 								onClick={(e) => {
 									e.preventDefault()
-									restoreDeletedRow(tableName, row)
+									restoreRowChange(tableName, row)
 								}}
 							>
 								[restore]
@@ -96,7 +97,7 @@ export const StagedMigrationsSidebar = () => {
 				</ul>
 			</Box>
 
-			{(contractChangesets.length > 0 || deletedRows.size > 0) && contractData && (
+			{(contractChangesets.length > 0 || changedRows.size > 0) && contractData && (
 				<Box mt="5">
 					<Box
 						mt="2"
