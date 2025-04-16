@@ -56,10 +56,11 @@ const results = await app.db.query("posts", {})
 // ]
 ```
 
-You can also maintain contracts as JavaScript files. If you export
-`models` and `actions` from a .js file, you can pass it as a string to
-`Canvas.initialize({ contract })`. Canvas will execute it inside a
-QuickJS WASM VM.
+You can also maintain contracts as JavaScript or TypeScript files.
+
+If you export `models` and `actions` from a .js or .ts file, you can
+pass it as a string to `Canvas.initialize({ contract })`. Canvas will
+execute it inside a QuickJS WASM VM.
 
 ## Actions
 
@@ -67,7 +68,7 @@ Each Canvas action is calld with a set of parameters:
 
 - a `name`, e.g. `createPost` or `deletePost`
 - an argument object `args`, e.g. `{ content: "hello world!" }`
-- an user identifier `did`, e.g. a [did:pkh](https://github.com/w3c-ccg/did-pkh) identifier
+- an user identifier `did`, e.g. a chain-agnostic [did:pkh](https://github.com/w3c-ccg/did-pkh) identifier
 - a `timestamp` and optional `blockhash` (timestamps are unverified / purely informative)
 
 ```ts
@@ -83,22 +84,24 @@ type Action = {
 }
 ```
 
-Action handlers are invoked with a mutable database handle `db`, the
-action's `args`, and a context object with the rest of the action
-metadata.
+Action handlers are called with a mutable database handle `db`, followed
+by any arguments attached to the action `...args`.
 
-The `msgid` parameter is the message ID of the signed action.
+The context object `this` contains the rest of the action metadata, e.g.
+`did`, `address` which is the last part of the DID, `timestamp`, `id`
+which is the message ID of the signed action, etc.
 
 ```ts
-async createPost(db, { content }, { msgid, chain, did, timestamp }) {
+async createPost(db, { content }) {
+  const { id, chain, address, did, timestamp } = this
 	const user = [chain, address].join(":")
 	await db.set("posts", { id: msgid, user, content, updated_at: timestamp })
 }
 ```
 
-Actions implement the business logic of your application: every effect must happen through an action, although actions can have many effects, and effects will be applied in a single atomic transaction.
+Actions implement the business logic of your application: every effect must happen through an action.
 
-Actions should also handle authorization and access control. In the example's `deletePost` action handler, we have to enforce that users can only delete their own posts, and not arbitrary posts.
+Actions should handle authorization and access control. In the example's `deletePost` action handler, we have to enforce that users can only delete their own posts, and not arbitrary posts.
 
 ```ts
 async function deletePost(db, { postId }, { chain, address }) {
@@ -116,7 +119,7 @@ async function deletePost(db, { postId }, { chain, address }) {
 }
 ```
 
-Actions are atomic transactions, so you can combine multiple `db.get()` or `db.set()` calls, and they will always be executed together.
+Actions are atomic, so you can combine multiple `db.get()` or `db.set()` calls, and they will always be executed together.
 
 When actions with `db.get()` are propagated to other machines or replayed later, the `db.get()` operation always returns the same value that it saw at the time of execution.
 

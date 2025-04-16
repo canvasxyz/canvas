@@ -1,8 +1,6 @@
 # Introduction
 
-Canvas is a framework for real-time distributed and decentralized applications.
-
-Canvas apps are built on a programmable multi-writer relational database. They're easy to configure and automatically have several useful properties:
+Canvas applications are built on a programmable multi-writer relational database. They're easy to configure and automatically have several useful properties:
 
 - **Lock-free and off-chain**. No transaction fees or confirmation wait times. Any number of peers can concurrently execute new actions, without waiting for consensus.
 - **Real-time**. Nodes connect and sync directly with each other over WebSockets, and optionally can use GossipSub to broadcast actions over an open mesh of users.

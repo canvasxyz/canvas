@@ -43,21 +43,9 @@ export default defineConfig({
 					items: [
 						{ text: "Introduction", link: "/1-introduction" },
 						{ text: "Creating an Application", link: "/2-applications" },
-						{ text: "Querying the Database", link: "/3-querying" },
-						{ text: "Wallet Login", link: "/4-wallet-login" },
-						{ text: "🚧 &nbsp;OAuth Login", link: "/5-oauth-login" },
-						{ text: "🚧 &nbsp;Deployment", link: "/6-deployment" },
-						{ text: "🚧 &nbsp;Networking", link: "/7-networking" },
-						{
-							text: "Advanced Features",
-							link: "/8-advanced",
-							collapsed: true,
-							items: [
-								{ text: "Conflict Resolution", link: "/8-advanced#handling-conflicting-offline-edits" },
-								{ text: "Custom Signers", link: "/8-advanced#creating-your-own-session-signer" },
-								{ text: "Custom Actions", link: "/8-advanced#validating-custom-action-schemas-using-ipld" },
-							],
-						},
+						{ text: "Querying Data", link: "/3-querying" },
+						{ text: "Identities & Auth", link: "/4-identities-auth" },
+						{ text: "Deployment & CLI", link: "/5-deployment" },
 					],
 				},
 				{
