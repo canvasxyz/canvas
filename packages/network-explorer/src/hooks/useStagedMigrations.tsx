@@ -1,7 +1,7 @@
 // staged migrations provider
 
 import { createContext, useCallback, useContext, useState } from "react"
-import { Canvas, Changeset, generateChangesets } from "@canvas-js/core"
+import { Canvas, Changeset, generateChangesets, RowChange } from "@canvas-js/core"
 import { Map as ImmutableMap, List as ImmutableList } from "immutable"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 import { useContractData } from "../hooks/useContractData.js"
@@ -9,7 +9,7 @@ import { SiweMessage } from "siwe"
 import { getAddress } from "ethers"
 import { useApplicationData } from "./useApplicationData.js"
 import { BASE_URL } from "../utils.js"
-import { RowChange, useChangedRows } from "./useChangedRows.js"
+import { useChangedRows } from "./useChangedRows.js"
 
 async function getChangesetsForContractDiff(oldContract: string, newContract: string) {
 	const { build } = await Canvas.buildContract(newContract, { wasmURL: "./esbuild.wasm" })

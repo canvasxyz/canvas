@@ -15,6 +15,7 @@ import { TableElement, Tbody, Th, Thead, TheadSpacer, NoneFound, ThCheckbox, Td 
 import { FiltersDropdown } from "./FiltersDropdown.js"
 import { ColumnsDropdown } from "./ColumnsDropdown.js"
 import { SortSelector } from "./SortSelector.js"
+import { encodeRowKey } from "../../hooks/useChangedRows.js"
 
 export type Column = {
 	name: string
@@ -289,7 +290,7 @@ export const Table = <T,>({
 						<Tbody>
 							{tanStackTable.getRowCount() === 0 && <NoneFound />}
 							{tanStackTable.getRowModel().rows.map((row) => {
-								const rowKey = ImmutableList.of(...getRowKey(row))
+								const rowKey = encodeRowKey(getRowKey(row))
 								const rowChange = tableChangedRows.get(rowKey)
 								return (
 									<tr
@@ -303,9 +304,8 @@ export const Table = <T,>({
 									>
 										{allowDelete && (
 											<ThCheckbox
-												checked={selectedRows.has(ImmutableList.of(...getRowKey(row)))}
+												checked={selectedRows.has(rowKey)}
 												onCheckedChange={(checked) => {
-													const rowKey = ImmutableList.of(...getRowKey(row))
 													setSelectedRows(checked ? selectedRows.add(rowKey) : selectedRows.delete(rowKey))
 												}}
 											/>

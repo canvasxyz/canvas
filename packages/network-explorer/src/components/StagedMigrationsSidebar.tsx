@@ -1,9 +1,8 @@
 import { Box, Button, Flex, Text } from "@radix-ui/themes"
 import { useStagedMigrations } from "../hooks/useStagedMigrations.js"
-import { Changeset } from "@canvas-js/core"
+import { Changeset, RowChange } from "@canvas-js/core"
 import { Map as ImmutableMap, List as ImmutableList } from "immutable"
 import { useContractData } from "../hooks/useContractData.js"
-import { RowChange } from "../hooks/useChangedRows.js"
 
 function ChangesetMigrationRow({ changeset }: { changeset: Changeset }) {
 	switch (changeset.change) {

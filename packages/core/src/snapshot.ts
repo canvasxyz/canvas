@@ -65,9 +65,22 @@ export function hashSnapshot(snapshot: Snapshot): string {
 	return bytesToHex(hash).slice(0, 16)
 }
 
+export type RowChange =
+	| {
+			type: "delete"
+	  }
+	| {
+			type: "create"
+			value: ModelValue
+	  }
+	| {
+			type: "update"
+			value: ModelValue
+	  }
+
 export type CreateSnapshotArgs = {
 	changesets?: Change[]
-	deletedRows?: Record<string, string[][]>
+	changedRows?: Record<string, Record<string, RowChange>>
 }
 
 /**
@@ -81,7 +94,7 @@ export async function createSnapshot<T extends Contract<any>>(
 	changes?: CreateSnapshotArgs,
 ): Promise<Snapshot> {
 	const changesets = changes?.changesets ?? []
-	const deletedRows = changes?.deletedRows ?? {}
+	const changedRows = changes?.changedRows ?? {}
 
 	const createdTables = changesets.filter((ch) => ch.change === "create_table").map((ch) => ch.table)
 	const droppedTables = changesets.filter((ch) => ch.change === "drop_table").map((ch) => ch.table)
@@ -115,11 +128,13 @@ export async function createSnapshot<T extends Contract<any>>(
 		}
 
 		models[modelName] = []
+
 		for await (const row of app.db.iterate(modelName)) {
 			// check if the row is deleted, if so then skip it
-			const rowKey = modelSchema.primaryKey.map((key) => row[key])
-			const isDeleted = deletedRows[modelName]?.some((rowId) => rowId.every((id, index) => id === rowKey[index]))
-			if (isDeleted) {
+			const rowKey = JSON.stringify(modelSchema.primaryKey.map((key) => row[key]))
+
+			const rowChange = changedRows[modelName]?.[rowKey]
+			if (rowChange?.type === "delete") {
 				continue
 			}
 
