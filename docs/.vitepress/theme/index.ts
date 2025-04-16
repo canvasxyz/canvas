@@ -2,6 +2,7 @@
 import { h } from "vue"
 import type { Theme } from "vitepress"
 import DefaultTheme from "vitepress/theme"
+import FloatingVue from 'floating-vue'
 import CodeGroupOpener from "../components/CodeGroupOpener.vue"
 import BlogRedirect from "../components/BlogRedirect.vue"
 import HeroRow from "../components/HeroRow.vue"
@@ -24,6 +25,7 @@ export default {
 	},
 	enhanceApp({ app, router, siteData }) {
 		app.use(MotionPlugin)
+		app.use(FloatingVue)
 		app.component("BlogRedirect", BlogRedirect)
 		app.component("CodeGroupOpener", CodeGroupOpener)
 		app.component("HeroRow", HeroRow)

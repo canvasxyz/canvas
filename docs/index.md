@@ -4,46 +4,45 @@ layout: home
 
 
 
-<HeroRow text="Write applications with peer-to-peer sync" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
+<HeroRow text="Write powerful applications without a backend" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
 
-Canvas is a programmable distributed database for web applications, that's as easy to use
-as modern web databases.
+Canvas is a distributed, local-first database with peer-to-peer sync, that's as easy to use as modern web databases.
 
 Write an entire application from inside your browser, in less time than
 it takes to set up a backend API.
 
-Write applications like games inside a local-first database,
-by embedding your business logic inside database functions.
+Write complex local-first applications, turn-based games, and even
+state channels by embedding your business logic in the database.
 
 <FeatureTags :features="[
   {
     text: 'Browser, desktop, or mobile',
-    tooltip: 'Runs in the browser, Node.js, and React Native',
+    tooltip: 'Runs in the browser, in Node.js, or in React Native',
     iconName: 'mobile'
   },
   {
     text: 'SQLite, Postgres, IndexedDB',
-    tooltip: 'Persists data to SQLite, Postgres, IndexedDB',
+    tooltip: 'Persists data to SQLite, Postgres, or IndexedDB',
     iconName: 'database'
   },
   {
     text: 'Custom mutators',
-    tooltip: 'Write custom mutators with business logic in the database',
+    tooltip: 'Write custom mutators for auth rules or business logic',
     iconName: 'desktop'
   },
   {
     text: 'Transactions',
-    tooltip: 'Write strongly consistent transactions that roll back on conflict',
+    tooltip: 'Strongly consistent database transactions that roll back on conflict',
     iconName: 'rewind'
   },
   {
     text: 'Sync via libp2p',
-    tooltip: 'Production tested browser-to-server and server-to-server sync implementations',
+    tooltip: 'Browser-to-server and server-to-server libp2p WebSockets',
     iconName: 'activity'
   },
   {
     text: 'React hooks',
-    tooltip: 'Comes with a React hook for apps & subscribing to local database tables',
+    tooltip: 'React hook for apps & live-subscribing to local database tables',
     iconName: 'compare'
   },
   {
@@ -53,12 +52,12 @@ by embedding your business logic inside database functions.
   },
   {
     text: 'MIT License',
-    tooltip: 'Open source, and serious about it',
+    tooltip: 'Open source, self-hosting encouraged',
     iconName: 'crown',
   },
   {
     text: 'CRDTs',
-    tooltip: 'Automatic conflict resolution using conflict-free replicated data types',
+    tooltip: 'Coming soon: Conflict resolution using conflict-free replicated data types',
     iconName: 'merge',
     disabled: true,
   },

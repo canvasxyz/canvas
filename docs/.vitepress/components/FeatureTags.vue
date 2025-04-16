@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { TbArrowBigLeftLines, TbDeviceMobileStar, TbGitMerge, TbDatabase, TbLockSquareRounded, TbDeviceDesktop, Tb123, TbAB, TbActivity, TbAdjustmentsHorizontal, TbAperture, TbApps, TbArchive, TbArrowGuide, TbArrowRampRight2, TbArrowsShuffle, TbArrowsSort, TbAtom, TbChartPie4, TbChartBar, TbCrown, TbGitCompare, TbThumbUp } from 'vue3-icons/tb'
+import { vTooltip } from 'floating-vue'
+import 'floating-vue/dist/style.css'
 
 interface FeatureTag {
   text: string;
@@ -60,7 +62,7 @@ const getIconComponent = (iconName: string) => {
       :key="index"
       class="feature-tag"
       :class="{ 'feature-tag-disabled': feature.disabled }"
-      :title="feature.tooltip"
+      v-tooltip.bottom="feature.tooltip"
     >
       <span v-if="feature.icon || feature.iconName" class="feature-tag-icon">
         <component v-if="feature.iconName" :is="getIconComponent(feature.iconName)" size="16" />
@@ -100,7 +102,6 @@ const getIconComponent = (iconName: string) => {
   color: var(--vp-c-text-1);
   transition: background-color 0.2s, transform 0.2s;
   font-family: var(--space-font-family);
-  cursor: default;
   position: relative;
 }
 
@@ -136,5 +137,24 @@ const getIconComponent = (iconName: string) => {
 
 .dark .feature-tag:not(.feature-tag-disabled):hover {
   background-color: var(--vp-c-brand-soft);
+}
+
+:deep(.v-popper--theme-tooltip .v-popper__inner) {
+  background: var(--vp-c-bg-soft);
+  color: var(--vp-c-text-1);
+  border-radius: 6px;
+  font-family: var(--vp-font-family-base);
+  font-size: 14px;
+  padding: 8px 12px;
+  box-shadow: 0 6px 30px rgba(0, 0, 0, 0.12);
+  border: 1px solid var(--vp-c-border);
+}
+
+:deep(.v-popper--theme-tooltip .v-popper__arrow-inner) {
+  border-color: var(--vp-c-bg-soft);
+}
+
+:deep(.v-popper--theme-tooltip .v-popper__arrow-outer) {
+  border-color: var(--vp-c-border);
 }
 </style>
