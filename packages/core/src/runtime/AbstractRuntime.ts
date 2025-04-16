@@ -5,7 +5,7 @@ import type { Action, Session, Snapshot, SignerCache, Awaitable, MessageType } f
 
 import { Effect, ModelSchema, ModelValue, isPrimaryKey } from "@canvas-js/modeldb"
 
-import { GossipLogConsumer, AbstractGossipLog, SignedMessage, MessageId, MIN_MESSAGE_ID } from "@canvas-js/gossiplog"
+import { GossipLogConsumer, AbstractGossipLog, SignedMessage, MessageId } from "@canvas-js/gossiplog"
 
 import { assert } from "@canvas-js/utils"
 
@@ -182,23 +182,23 @@ export abstract class AbstractRuntime {
 
 				const writeRecord: WriteRecord = {
 					record_id: recordId,
-					message_id: MIN_MESSAGE_ID,
+					message_id: signedMessage.id,
 					value: value,
 					csx: 0,
 				}
 
-				const versionRecord: RecordRecord = {
+				const recordRecord: RecordRecord = {
 					record_id: recordId,
 					model: modelName,
 					key: encodeRecordKey(messageLog.db.config, modelName, primaryKey),
-					version: MIN_MESSAGE_ID,
+					version: signedMessage.id,
 					csx: 0,
 				}
 
 				await messageLog.db.apply([
 					{ model: modelName, operation: "set", value: modelValue },
 					{ model: "$writes", operation: "set", value: writeRecord },
-					{ model: "$records", operation: "set", value: versionRecord },
+					{ model: "$records", operation: "set", value: recordRecord },
 				])
 			}
 		}

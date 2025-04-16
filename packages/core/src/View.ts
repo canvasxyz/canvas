@@ -146,10 +146,8 @@ export class View {
 	public async getGreatestElement(recordId: string, csx: number): Promise<string | null> {
 		assert(csx >= 0, "expected csx >= 0")
 
-		type Write = { record_id: string; message_id: string; csx: number }
-
 		// TODO: add { lte: max(this.rootIds) } condition?
-		for await (const write of this.db.iterate<Write>("$writes", {
+		for await (const write of this.db.iterate<{ record_id: string; message_id: string; csx: number }>("$writes", {
 			select: { record_id: true, message_id: true, csx: true },
 			where: { record_id: recordId, csx },
 			orderBy: { "record_id/csx/message_id": "desc" },
@@ -167,9 +165,6 @@ export class View {
 
 	public async isReverted(messageId: string): Promise<boolean> {
 		this.log.trace("isReverted(%s)", messageId)
-		if (messageId === MIN_MESSAGE_ID) {
-			return false
-		}
 
 		const revertCauses = await this.db.query<RevertRecord>("$reverts", { where: { effect_id: messageId } })
 		for (const revert of revertCauses) {
