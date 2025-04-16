@@ -18,7 +18,7 @@ import type { Contract, Actions, ActionImplementation, ModelAPI, DeriveModelType
 import { Runtime, createRuntime } from "./runtime/index.js"
 import { AbstractRuntime, ActionRecord } from "./runtime/AbstractRuntime.js"
 import { validatePayload } from "./schema.js"
-import { createSnapshot, hashSnapshot, Change } from "./snapshot.js"
+import { CreateSnapshotArgs, createSnapshot, hashSnapshot } from "./snapshot.js"
 import { initialUpgradeSchema, topicPattern } from "./utils.js"
 import { SnapshotSignatureScheme } from "@canvas-js/signatures"
 
@@ -581,7 +581,7 @@ export class Canvas<
 		}
 	}
 
-	public async createSnapshot(changesets?: Change[]): Promise<Snapshot> {
-		return createSnapshot(this, changesets)
+	public async createSnapshot(changes?: CreateSnapshotArgs): Promise<Snapshot> {
+		return createSnapshot(this, changes)
 	}
 }

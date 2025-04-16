@@ -65,6 +65,11 @@ export function hashSnapshot(snapshot: Snapshot): string {
 	return bytesToHex(hash).slice(0, 16)
 }
 
+export type CreateSnapshotArgs = {
+	changesets?: Change[]
+	deletedRows?: Record<string, string[][]>
+}
+
 /**
  * Create a `Snapshot` of the application's current database state.
  *
@@ -73,8 +78,11 @@ export function hashSnapshot(snapshot: Snapshot): string {
  */
 export async function createSnapshot<T extends Contract<any>>(
 	app: Canvas,
-	changesets: Change[] = [],
+	changes?: CreateSnapshotArgs,
 ): Promise<Snapshot> {
+	const changesets = changes?.changesets ?? []
+	const deletedRows = changes?.deletedRows ?? {}
+
 	const createdTables = changesets.filter((ch) => ch.change === "create_table").map((ch) => ch.table)
 	const droppedTables = changesets.filter((ch) => ch.change === "drop_table").map((ch) => ch.table)
 	const removedColumns: Record<string, string[]> = {}
@@ -108,6 +116,13 @@ export async function createSnapshot<T extends Contract<any>>(
 
 		models[modelName] = []
 		for await (const row of app.db.iterate(modelName)) {
+			// check if the row is deleted, if so then skip it
+			const rowKey = modelSchema.primaryKey.map((key) => row[key])
+			const isDeleted = deletedRows[modelName]?.some((rowId) => rowId.every((id, index) => id === rowKey[index]))
+			if (isDeleted) {
+				continue
+			}
+
 			if (addedColumns[modelName]) {
 				for (const key of Object.keys(addedColumns[modelName])) {
 					row[key] = null

@@ -1,40 +1,51 @@
 import { Box, Button, Flex, Text } from "@radix-ui/themes"
 import { useStagedMigrations } from "../hooks/useStagedMigrations.js"
 import { Changeset } from "@canvas-js/core"
+import { Map as ImmutableMap, List as ImmutableList } from "immutable"
 import { useContractData } from "../hooks/useContractData.js"
 
 function ChangesetMigrationRow({ changeset }: { changeset: Changeset }) {
 	switch (changeset.change) {
 		case "create_table":
-			return <li>Create table: {changeset.table}</li>
+			return <>Create table: {changeset.table}</>
 		case "drop_table":
-			return <li>Drop table: {changeset.table}</li>
+			return <>Drop table: {changeset.table}</>
 		case "add_column":
 			return (
-				<li>
+				<>
 					Add column: {changeset.table}.{changeset.column} as{" "}
 					{changeset.propertyType.endsWith("?") ? "nullable" : "non-nullable"}{" "}
 					{changeset.propertyType.replace(/\?$/, "")}
-				</li>
+				</>
 			)
 		case "remove_column":
 			return (
-				<li>
+				<>
 					Drop column: {changeset.table}.{changeset.column}
-				</li>
+				</>
 			)
 		case "make_optional_column":
 			return (
-				<li>
+				<>
 					Make column nullable: {changeset.table}.{changeset.column}
-				</li>
+				</>
 			)
 	}
 }
 
+function flattenDeletedRows(deletedRows: ImmutableMap<string, ImmutableList<ImmutableList<string>>>) {
+	const flattened = []
+	for (const [tableName, rows] of deletedRows.entries()) {
+		for (const row of rows.toArray()) {
+			flattened.push({ tableName, row: row.toArray() })
+		}
+	}
+	return flattened
+}
+
 export const StagedMigrationsSidebar = () => {
 	const contractData = useContractData()
-	const { contractChangesets, cancelMigrations, runMigrations, waitingForCommit, commitCompleted } =
+	const { contractChangesets, cancelMigrations, runMigrations, waitingForCommit, commitCompleted, deletedRows } =
 		useStagedMigrations()
 
 	return (
@@ -57,12 +68,19 @@ export const StagedMigrationsSidebar = () => {
 			<Box pb="2">
 				<ul>
 					{contractChangesets.map((changeset, index) => (
-						<ChangesetMigrationRow key={index} changeset={changeset} />
+						<li key={index}>
+							<ChangesetMigrationRow changeset={changeset} />
+						</li>
+					))}
+					{flattenDeletedRows(deletedRows).map(({ tableName, row }, index) => (
+						<li key={index}>
+							Delete row {row.join(", ")} from {tableName}
+						</li>
 					))}
 				</ul>
 			</Box>
 
-			{contractChangesets.length > 0 && contractData && (
+			{(contractChangesets.length > 0 || deletedRows.size > 0) && contractData && (
 				<Box mt="5">
 					<Box
 						mt="2"

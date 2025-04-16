@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useState } from "react"
 import { Canvas, Changeset, generateChangesets } from "@canvas-js/core"
+import { Map as ImmutableMap, List as ImmutableList } from "immutable"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 import { useContractData } from "../hooks/useContractData.js"
 import { SiweMessage } from "siwe"
@@ -81,6 +82,7 @@ const StagedMigrationsContext = createContext<{
 	// setWaitingForCommit: (waitingForCommit: boolean) => void
 	// setCommitCompleted: (commitCompleted: boolean) => void
 	stageDeleteRows: (tableName: string, rowKeys: string[][]) => void
+	deletedRows: ImmutableMap<string, ImmutableList<ImmutableList<string>>>
 }>({
 	contractChangesets: [],
 	cancelMigrations: async () => {},
@@ -95,6 +97,7 @@ const StagedMigrationsContext = createContext<{
 	// setWaitingForCommit: () => {},
 	// setCommitCompleted: () => {},
 	stageDeleteRows: () => {},
+	deletedRows: ImmutableMap(),
 })
 
 export const StagedMigrationsProvider = ({ children }: { children: React.ReactNode }) => {
@@ -111,6 +114,7 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 	// store the current modified rows here
 
 	// store the current deleted rows here
+	const [deletedRows, setDeletedRows] = useState<ImmutableMap<string, ImmutableList<ImmutableList<string>>>>()
 
 	// store current saved contract here
 	const [newContract, setNewContract] = useState<string>()
@@ -161,7 +165,7 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 	)
 
 	const runMigrations = async () => {
-		if (!contractChangesets) {
+		if (!contractChangesets || deletedRows?.size === 0) {
 			throw new Error("No migrations to run")
 		}
 
@@ -179,11 +183,12 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 				"Content-Type": "application/json",
 			},
 			body: JSON.stringify({
-				newContract: newContract,
+				newContract: newContract ?? contractData.contract,
 				changesets: contractChangesets,
 				siweMessage: message,
 				address,
 				signature,
+				deletedRows: deletedRows?.toJSON() || {},
 			}),
 		})
 		if (!response.ok) {
@@ -191,6 +196,7 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 		}
 
 		setContractChangesets([])
+		setDeletedRows(ImmutableMap())
 		setNewContract(undefined)
 		setWaitingForCommit(true)
 
@@ -220,9 +226,16 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 		clearContractChangesets()
 	}, [clearContractChangesets])
 
-	const stageDeleteRows = useCallback((tableName: string, rowKeys: string[][]) => {
-		console.log("staging delete", tableName, rowKeys)
-	}, [])
+	const stageDeleteRows = useCallback(
+		(tableName: string, rowKeys: string[][]) =>
+			setDeletedRows((oldDeletedRows) =>
+				(oldDeletedRows || ImmutableMap()).set(
+					tableName,
+					ImmutableList.of(...rowKeys.map((key) => ImmutableList.of(...key))),
+				),
+			),
+		[],
+	)
 
 	return (
 		<StagedMigrationsContext.Provider
@@ -238,6 +251,7 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 				hasRestoredContent,
 				setHasRestoredContent,
 				stageDeleteRows,
+				deletedRows: deletedRows || ImmutableMap(),
 			}}
 		>
 			{children}
