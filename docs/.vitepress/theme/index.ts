@@ -2,7 +2,7 @@
 import { h } from "vue"
 import type { Theme } from "vitepress"
 import DefaultTheme from "vitepress/theme"
-import FloatingVue from 'floating-vue'
+import FloatingVue from "floating-vue"
 import CodeGroupOpener from "../components/CodeGroupOpener.vue"
 import BlogRedirect from "../components/BlogRedirect.vue"
 import HeroRow from "../components/HeroRow.vue"
@@ -13,6 +13,7 @@ import TextItem from "../components/TextItem.vue"
 import TextRow from "../components/TextRow.vue"
 import HomepageFooter from "../components/HomepageFooter.vue"
 import FeatureTags from "../components/FeatureTags.vue"
+import EmailForm from "../components/EmailForm.vue"
 import { MotionPlugin } from "@vueuse/motion"
 import "./style.css"
 
@@ -36,5 +37,6 @@ export default {
 		app.component("TextRow", TextRow)
 		app.component("HomepageFooter", HomepageFooter)
 		app.component("FeatureTags", FeatureTags)
+		app.component("EmailForm", EmailForm)
 	},
 } satisfies Theme

@@ -3,24 +3,23 @@ aside: false
 next: false
 ---
 
-<HeroRow text="The programmable database for local-first applications" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
+<HeroRow text="Build powerful applications in a peer-to-peer database" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
 
-Canvas is a local-first database that makes writing distributed
-software simple, like a local-first Firebase or InstantDB.
+Canvas is a new database that makes writing distributed
+software simple, like a local-first, peer-to-peer Firebase.
 
-Write an application from your browser without a backend. Replicate it
-to a server with one command, and manage it from a simple web
-interface. For the first time, you can even write custom business
-logic inside a local-first database.
+Write an application in your browser, and sync it to your desktop with
+one command. Manage it from a simple web interface, just like a modern
+web database.
 
 <FeatureTags :features="[
   {
-    text: 'Browser, desktop, or mobile',
+    text: 'Runs in browser, desktop, or mobile',
     tooltip: 'Runs in the browser, in Node.js, or in React Native',
     iconName: 'mobile'
   },
   {
-    text: 'Cross-database',
+    text: 'Persists to disk or databases',
     tooltip: 'Persists data to SQLite, Postgres, or IndexedDB',
     iconName: 'database'
   },
@@ -30,8 +29,8 @@ logic inside a local-first database.
     iconName: 'atom'
   },
   {
-    text: 'Transactions',
-    tooltip: 'Strongly consistent database transactions that roll back on conflict',
+    text: 'Transactions with rollback',
+    tooltip: 'Serializable database transactions that roll back on conflict',
     iconName: 'rewind'
   },
   {
@@ -55,7 +54,7 @@ logic inside a local-first database.
     iconName: 'apps',
   },
   {
-    text: 'MIT Licensed',
+    text: 'MIT License',
     tooltip: 'Open source, and fully self-hostable',
     iconName: 'crown',
   },
@@ -99,7 +98,7 @@ const actions = {
 const { app } = useCanvas({ topic: "demo", contract: { models, actions } })   // [!code highlight]
 ```
 
-```ts [Node.js + WASM]
+```ts [Node.js]
 export const models = {
   messages: {
     id: "primary",
@@ -127,5 +126,11 @@ $ canvas run contract.ts --topic demo.canvas.xyz // [!code highlight]
   <FeatureCard title="@canvas-js/core" details="A database for local-first and peer-to-peer applications, with an embedded runtime." link="https://github.com/canvasxyz/canvas/tree/main/packages/modeldb" linkText="Github"/>
   <FeatureCard title="@canvas-js/chain-ethereum" details="Log in with an Ethereum wallet. Also supports Cosmos, Solana, and Polkadot." linkText="Demo" link="https://chat-example.canvas.xyz/"/>
 </FeatureRow>
+
+<br/>
+<br/>
+<br/>
+
+<EmailForm />
 
 <HomepageFooter />

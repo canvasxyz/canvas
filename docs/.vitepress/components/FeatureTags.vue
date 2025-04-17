@@ -94,7 +94,7 @@ const getIconComponent = (iconName: string) => {
   display: inline-flex;
   align-items: center;
   padding: 6px 14px;
-  border-radius: 20px;
+  border-radius: 3px;
   font-size: 15px;
   font-weight: 500;
   background-color: var(--vp-c-bg-alt);
@@ -105,7 +105,7 @@ const getIconComponent = (iconName: string) => {
 
 .feature-tag:not(.feature-tag-disabled):hover {
   background-color: var(--vp-c-brand-soft);
-  transform: translateY(-2px);
+  transform: translateY(-1px);
 }
 
 .feature-tag-disabled {

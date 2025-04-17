@@ -29,15 +29,16 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
             class="vue-motion"
             v-motion
                     :style='{
-                      height: "30px",
+                      height: "32px",
                       width: "19px",
                       position: "absolute",
+                      bottom: "8px",
                       backgroundColor: "var(--vp-c-brand-1)",
                       display: "inline-block",
                       borderRadius: "2px",
                     }'
                     :initial='{ opacity: 0, scale: 1 }'
-                    :enter='{ to: { backgroundColor: "#fff" }, opacity: 0.9, scale: 0.98, transition: { repeat: Infinity, repeatType: "mirror", duration: 800, ease: "easeOut" } }'
+                    :enter='{ to: { backgroundColor: "#fff" }, opacity: 0.9, scale: 0.98, transition: { repeat: 2, repeatType: "mirror", duration: 800, ease: "easeOut" } }'
 ></span>
 </p>
           <div v-if="bullets" class="bullets">
