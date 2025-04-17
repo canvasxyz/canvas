@@ -50,7 +50,7 @@ export const App = () => {
 												enableDownload={enableDownload || false}
 												tableName={tableName}
 												defaultColumns={defaultColumns}
-												allowDelete={false}
+												allowEditing={false}
 												getRowKey={getRowKey}
 											/>
 										</Suspense>

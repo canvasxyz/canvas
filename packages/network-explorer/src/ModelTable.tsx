@@ -41,7 +41,7 @@ export const ModelTable = ({
 					setShowSidebar={setShowSidebar}
 					tableName={params.model as string}
 					defaultColumns={defaultColumns}
-					allowDelete={true}
+					allowEditing={true}
 					getRowKey={(row) => [row.original[primaryProperty.name] as string]}
 				/>
 			)

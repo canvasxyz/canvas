@@ -62,7 +62,7 @@ export const ActionsTable = ({
 			enableDownload={false}
 			tableName={tableName}
 			defaultColumns={columns}
-			allowDelete={false}
+			allowEditing={false}
 			getRowKey={(row) => [row.original.message_id]}
 		/>
 	)

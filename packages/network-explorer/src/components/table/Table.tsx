@@ -54,7 +54,7 @@ export const Table = <T,>({
 	defaultColumns,
 	defaultSortColumn,
 	defaultSortDirection,
-	allowDelete,
+	allowEditing,
 	getRowKey,
 }: {
 	showSidebar: boolean
@@ -64,7 +64,7 @@ export const Table = <T,>({
 	defaultColumns: ColumnDef<T>[]
 	defaultSortColumn: string
 	defaultSortDirection: "desc" | "asc"
-	allowDelete: boolean
+	allowEditing: boolean
 	getRowKey: (row: Row<T>) => string[]
 }) => {
 	const applicationData = useApplicationData()
@@ -196,7 +196,7 @@ export const Table = <T,>({
 				)}
 				<ColumnsDropdown tanStackTable={tanStackTable} />
 				<Button
-					disabled={!allowDelete || selectedRows.size === 0}
+					disabled={!allowEditing || selectedRows.size === 0}
 					onClick={() => deleteSelectedRows()}
 					color="gray"
 					variant="outline"
@@ -240,7 +240,7 @@ export const Table = <T,>({
 						<Thead>
 							{tanStackTable.getHeaderGroups().map((headerGroup) => (
 								<tr key={headerGroup.id} style={{ display: "flex", width: "100%" }}>
-									{allowDelete && <TheadSpacer />}
+									{allowEditing && <TheadSpacer />}
 									{headerGroup.headers.map((header) => (
 										<Th key={header.id} width={header.getSize()}>
 											<Flex width="100%" gap="2" p="1">
@@ -271,7 +271,7 @@ export const Table = <T,>({
 											scrollbarWidth: "none",
 										}}
 									>
-										{allowDelete && (
+										{allowEditing && (
 											<ThCheckbox
 												checked={selectedRows.has(rowKey)}
 												onCheckedChange={(checked) => {
