@@ -1,18 +1,21 @@
 ---
-layout: home
+aside: false
+next: false
 ---
 
+<HeroRow text="The programmable database for local-first applications" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
 
+Canvas is a local-first database that makes writing distributed
+software simple, like a local-first Firebase or InstantDB.
 
-<HeroRow text="Write powerful applications without a backend" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
+Write an application from your browser, without deploying a
+backend. Replicate it to a server with one command. Manage your
+applications from a simple web interface, with all the features of a
+modern web database.
 
-Canvas is a distributed, local-first database with peer-to-peer sync, that's as easy to use as modern web databases.
-
-Write an entire application from inside your browser, in less time than
-it takes to set up a backend API.
-
-Write complex local-first applications, turn-based games, and even
-state channels by embedding your business logic in the database.
+Write more powerful applications with custom mutations and
+transactions, that weren't possible in a local-first
+environment before.
 
 <FeatureTags :features="[
   {
@@ -21,14 +24,14 @@ state channels by embedding your business logic in the database.
     iconName: 'mobile'
   },
   {
-    text: 'SQLite, Postgres, IndexedDB',
+    text: 'Cross-database',
     tooltip: 'Persists data to SQLite, Postgres, or IndexedDB',
     iconName: 'database'
   },
   {
     text: 'Custom mutators',
     tooltip: 'Write custom mutators for auth rules or business logic',
-    iconName: 'desktop'
+    iconName: 'atom'
   },
   {
     text: 'Transactions',
@@ -42,28 +45,39 @@ state channels by embedding your business logic in the database.
   },
   {
     text: 'React hooks',
-    tooltip: 'React hook for apps & live-subscribing to local database tables',
+    tooltip: 'React hooks with live-updating apps & database queries',
     iconName: 'compare'
   },
   {
-    text: 'Customizable auth',
-    tooltip: 'Use crypto wallets, passkeys, or more',
-    iconName: 'compare'
+    text: 'Flexible auth',
+    tooltip: 'Use passkeys, wallets, or write your own auth strategy',
+    iconName: '123'
   },
   {
-    text: 'MIT License',
-    tooltip: 'Open source, self-hosting encouraged',
+    text: 'Web UI',
+    tooltip: 'Comes with a Firebase-like database management interface',
+    iconName: 'apps',
+  },
+  {
+    text: 'MIT Licensed',
+    tooltip: 'Open source, and fully self-hostable',
     iconName: 'crown',
   },
   {
     text: 'CRDTs',
-    tooltip: 'Coming soon: Conflict resolution using conflict-free replicated data types',
-    iconName: 'merge',
+    tooltip: 'Soon: Conflict resolution using embedded CRDTs',
+    iconName: 'guide',
     disabled: true,
   },
   {
     text: 'Private Data',
-    tooltip: 'Coming soon: Native support for end-to-end encrypted data',
+    tooltip: 'Soon: Native support for end-to-end encrypted data',
+    iconName: 'lock',
+    disabled: true
+  },
+  {
+    text: 'Web2 Login',
+    tooltip: 'Soon: Login optimized for usability and accessibility',
     iconName: 'lock',
     disabled: true
   },
@@ -74,35 +88,32 @@ state channels by embedding your business logic in the database.
 ```ts [React app]
 import { useCanvas } from "@canvas-js/hooks"
 
-const contract = {
-  models: {
-    messages: {
-      id: "primary",
-      text: "string",
-    }
-  },
-  actions: {
-    createMessage: (db, { text }, { address, msgid }) => {
-      db.set("messages", { id: msgid, text })
-    }
+const models = {
+  messages: {
+    id: "primary",
+    text: "string",
+  }
+}
+const actions = {
+  createMessage: (db, { text }, { address, msgid }) => {
+    db.set("messages", { id: msgid, text })
   }
 }
 
-const { app } = useCanvas({ topic: "demo.canvas.xyz", contract })   // [!code highlight]
+const { app } = useCanvas({ topic: "demo", contract: { models, actions } })   // [!code highlight]
 ```
 
 ```ts [Node.js + WASM]
-export const contract = {
-  models: {
-    messages: {
-      id: "primary",
-      text: "string"
-    }
-  },
-  actions: {
-    createMessage: (db, { text }, { address, txid }) => {
-      db.set("messages", { id: txid, text })
-    }
+export const models = {
+  messages: {
+    id: "primary",
+    text: "string"
+  }
+}
+
+export const actions = {
+  createMessage: (db, { text }, { address, txid }) => {
+    db.set("messages", { id: txid, text })
   }
 }
 
@@ -113,26 +124,12 @@ $ canvas run contract.ts --topic demo.canvas.xyz // [!code highlight]
 
 <CodeGroupOpener />
 
-## A Peer-to-peer Distributed Runtime
-
-Canvas is built on a distributed runtime that allows database schemas,
-permissions, and business logic to be compiled into
-eventually-consistent mergeable data structures.
-
-When new applications are started up, they catch up on history using
-[efficient sync](https://docs.canvas.xyz/blog/2023-05-04-merklizing-the-key-value-store.html)
-to catch up on the latest state.
-
-To learn more, check out our [docs](/1-introduction).
-
-<br/>
-
 <FeatureRow title="Components" detail="">
-  <FeatureCard title="@canvas-js/okra" details="A Prolly tree written in Zig, that enables fast peer-to-peer sync for application histories." link="https://github.com/canvasxyz/okra" linkText="Github" secondaryLink="https://docs.canvas.xyz/blog/2023-05-04-merklizing-the-key-value-store.html" secondaryLinkText="Blog Post"/>
-  <FeatureCard title="@canvas-js/gossiplog" details="A self-authenticating distributed log for multi-writer applications." link="https://github.com/canvasxyz/canvas/tree/main/packages/gossiplog" linkText="Github" secondaryLinkText="Presentation" secondaryLink="https://www.youtube.com/watch?v=X8nAdx1G-Cs"/>
+  <FeatureCard title="@canvas-js/okra" details="A Prolly tree written in Zig, that enables fast peer-to-peer sync for application histories." link="https://github.com/canvasxyz/okra" linkText="Github" secondaryLink="https://docs.canvas.xyz/blog/2023-05-04-merklizing-the-key-value-store.html" secondaryLinkText="Blog"/>
+  <FeatureCard title="@canvas-js/gossiplog" details="A self-authenticating distributed log for multi-writer applications." link="https://github.com/canvasxyz/canvas/tree/main/packages/gossiplog" linkText="Github" secondaryLinkText="Talk" secondaryLink="https://www.youtube.com/watch?v=X8nAdx1G-Cs"/>
   <FeatureCard title="@canvas-js/modeldb" details="A cross-platform relational database wrapper for IDB, SQLite, and Postgres." link="https://github.com/canvasxyz/canvas/tree/main/packages/modeldb" linkText="Github"/>
   <FeatureCard title="@canvas-js/core" details="A database for local-first and peer-to-peer applications, with an embedded runtime." link="https://github.com/canvasxyz/canvas/tree/main/packages/modeldb" linkText="Github"/>
-  <FeatureCard title="Sign in with Ethereum" details="Log in with an Ethereum wallet. Also supports Cosmos, Solana, and Polkadot." linkText="Demo" link="https://chat-example.canvas.xyz/"/>
+  <FeatureCard title="@canvas-js/chain-ethereum" details="Log in with an Ethereum wallet. Also supports Cosmos, Solana, and Polkadot." linkText="Demo" link="https://chat-example.canvas.xyz/"/>
 </FeatureRow>
 
 <HomepageFooter />

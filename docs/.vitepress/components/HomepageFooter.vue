@@ -7,6 +7,7 @@
 
 <style>
 .HomepageFooter {
+  display: none;
   text-align: center;
   margin: 0 auto;
   max-width: 400px;
@@ -31,5 +32,11 @@
 .VPHome {
   margin-bottom: 10px !important;
   padding-bottom: 40px !important;
+}
+
+@media (min-width: 640px) {
+  .HomepageFooter {
+    display: block;
+  }
 }
 </style>

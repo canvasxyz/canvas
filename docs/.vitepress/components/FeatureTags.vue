@@ -81,7 +81,6 @@ const getIconComponent = (iconName: string) => {
   gap: 10px;
   margin: 36px auto;
   justify-content: center;
-  max-width: 600px;
 }
 
 @media (min-width: 960px) {
@@ -101,7 +100,6 @@ const getIconComponent = (iconName: string) => {
   background-color: var(--vp-c-bg-alt);
   color: var(--vp-c-text-1);
   transition: background-color 0.2s, transform 0.2s;
-  font-family: var(--space-font-family);
   position: relative;
 }
 

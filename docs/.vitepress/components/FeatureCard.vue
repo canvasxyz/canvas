@@ -91,6 +91,7 @@ defineProps<{
   flex-direction: column;
   padding: 24px;
   height: 100%;
+  background-color: var(--vp-sidebar-bg-color);
 }
 
 .box > :deep(.VPImage) {
@@ -125,6 +126,8 @@ defineProps<{
 }
 
 h2.title {
+  border: 0 !important;
+  margin: 0 !important;
   padding-top: 0px !important;
 }
 

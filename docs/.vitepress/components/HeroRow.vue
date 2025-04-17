@@ -79,13 +79,13 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 
 @media (min-width: 640px) {
   .HeroRow {
-    padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 100px) 0 18px;
+    padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 0px) 0 18px;
   }
 }
 
 @media (min-width: 960px) {
   .HeroRow {
-    padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 100px) 0 22px;
+    padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 10px) 0 22px;
   }
 }
 
@@ -107,7 +107,7 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 
 @media (min-width: 960px) {
   .container {
-    flex-direction: row;
+
   }
 }
 
@@ -130,11 +130,6 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 }
 
 @media (min-width: 960px) {
-  .main {
-    order: 1;
-    width: calc((100% / 3) * 2);
-  }
-
   .HeroRow.has-image .main {
     max-width: 600px;
   }
@@ -234,64 +229,22 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
   }
 }
 
-.image {
-  order: 1;
-  margin: -76px -24px -48px;
-}
-
-@media (min-width: 640px) {
-  .image {
-    margin: -108px -24px -48px;
-  }
-}
-
-@media (min-width: 960px) {
-  .image {
-    flex-grow: 1;
-    order: 2;
-    margin: 0;
-    min-height: 100%;
-  }
-}
-
 .image-container {
-  position: relative;
+  position: absolute;
+  display: none;
+  right: -320px;
   margin: 0 auto;
+  margin-top: 0;
   width: 320px;
   height: 320px;
 }
 
-@media (min-width: 640px) {
-  .image-container {
-    width: 392px;
-    height: 392px;
-  }
-}
-
-@media (min-width: 960px) {
-  .image-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    height: 100%;
-    /*rtl:ignore*/
-    transform: translate(-32px, -32px);
-  }
-}
-
 .image-bg {
-  position: absolute;
-  top: 50%;
-  /*rtl:ignore*/
-  left: 50%;
   border-radius: 50%;
   width: 192px;
   height: 192px;
   background-image: var(--vp-home-hero-image-background-image);
   filter: var(--vp-home-hero-image-filter);
-  /*rtl:ignore*/
-  transform: translate(-50%, -50%);
 }
 
 @media (min-width: 640px) {
@@ -310,29 +263,10 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 
 :deep(.image-src) {
   position: absolute;
-  top: 50%;
-  /*rtl:ignore*/
-  left: 50%;
-  max-width: 192px;
-  max-height: 192px;
-  /*rtl:ignore*/
-  transform: translate(-50%, -50%) scale(1.25);
-}
-
-@media (min-width: 640px) {
-  :deep(.image-src) {
-    max-width: 240px;
-    max-height: 240px;
-    padding-bottom: 20px;
-  }
-}
-
-@media (min-width: 960px) {
-  :deep(.image-src) {
-    max-width: 240px;
-    max-height: 240px;
-    transform: translate(40px, 160px) translate(-50%, -50%) scale(1.5);
-  }
+  top: 0;
+  left: 0;
+  max-width: 320px;
+  max-height: 320px;
 }
 
 .vue-motion {

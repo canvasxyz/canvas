@@ -65,7 +65,6 @@ export default defineConfig({
 								{ text: "ModelDB", link: "/readme-modeldb.md" },
 								{ text: "Signatures", link: "/readme-signatures.md" },
 								{ text: "Interfaces", link: "/readme-interfaces.md" },
-								{ text: "Discovery Service", link: "/readme-discovery.md" },
 							],
 						},
 						{
@@ -79,11 +78,6 @@ export default defineConfig({
 								{ text: "Cosmos", link: "/readme-chain-cosmos.md" },
 								{ text: "Substrate", link: "/readme-chain-substrate.md" },
 							],
-						},
-						{
-							text: "Integrations",
-							collapsed: true,
-							items: [{ text: "🚧 &nbsp;Next.js", link: "/readme-next.md" }],
 						},
 					],
 				},

@@ -84,6 +84,12 @@ pre {
   tab-size: 2;
 }
 
+@media (min-width: 960px) {
+  .vp-doc {
+    max-width: 680px;
+  }
+}
+
 .vp-doc .footnote-ref a,
 .vp-doc a.footnote-backref {
   color: var(--vp-c-text-3);
