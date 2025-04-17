@@ -129,16 +129,20 @@ export async function createSnapshot<T extends Contract<any>>(
 
 		models[modelName] = []
 
+		const modelChangedRows = changedRows[modelName] ?? {}
+
 		for await (const row of app.db.iterate(modelName)) {
 			// check if the row is deleted, if so then skip it
-			const rowKey = JSON.stringify(modelSchema.primaryKey.map((key) => row[key]))
+			const rowKey = JSON.stringify(modelSchema.primaryKey.map((key) => row[key])) as string
 
-			const rowChange = changedRows[modelName]?.[rowKey]
+			const rowChange = modelChangedRows[rowKey]
 			if (rowChange) {
+				// skip deleted rows
 				if (rowChange.type === "delete") {
 					continue
 				}
 
+				// update rows
 				if (rowChange.type === "update") {
 					for (const key of Object.keys(rowChange.value)) {
 						row[key] = rowChange.value[key]
@@ -159,6 +163,13 @@ export async function createSnapshot<T extends Contract<any>>(
 			}
 
 			models[modelName].push(cbor.encode(row))
+		}
+
+		// add created rows
+		for (const rowChange of Object.values(modelChangedRows)) {
+			if (rowChange.type === "create") {
+				models[modelName].push(cbor.encode(rowChange.value))
+			}
 		}
 	}
 
