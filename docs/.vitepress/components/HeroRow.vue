@@ -32,7 +32,7 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
                       height: "32px",
                       width: "19px",
                       position: "absolute",
-                      bottom: "8px",
+                      bottom: "4px",
                       backgroundColor: "var(--vp-c-brand-1)",
                       display: "inline-block",
                       borderRadius: "2px",
@@ -106,12 +106,6 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
   max-width: 1020px;
 }
 
-@media (min-width: 960px) {
-  .container {
-
-  }
-}
-
 .main {
   position: relative;
   z-index: 10;
@@ -132,13 +126,11 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 
 @media (min-width: 960px) {
   .HeroRow.has-image .main {
-    max-width: 600px;
   }
 }
 
 .name,
 .text {
-  max-width: 600px;
   letter-spacing: -0.4px;
   line-height: 1.2;
   font-size: 32px;
@@ -272,13 +264,14 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 
 .vue-motion {
     margin-top: 5px;
-    margin-left: 7px;
+    margin-left: 8px;
 }
 
 @media (min-width: 960px) {
     .vue-motion {
         margin-top: 10px;
-        margin-left: 9px;
+        margin-left: 8px;
+        bottom: 8px !important;
     }
 }
 </style>

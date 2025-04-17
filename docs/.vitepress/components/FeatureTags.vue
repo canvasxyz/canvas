@@ -78,7 +78,7 @@ const getIconComponent = (iconName: string) => {
 .feature-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 7px 8px;
   margin: 36px auto;
   justify-content: center;
 }

@@ -3,24 +3,25 @@ aside: false
 next: false
 ---
 
-<HeroRow text="Build powerful applications in a peer-to-peer database" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
+<div :class="$style.main">
 
-Canvas is a new database that makes writing distributed
-software simple, like a local-first, peer-to-peer Firebase.
+<HeroRow text="The next-generation, local-first, peer-to-peer database" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
 
-Write an application in your browser, and sync it to your desktop with
-one command. Manage it from a simple web interface, just like a modern
-web database.
+Canvas is a peer-to-peer database that makes writing
+distributed software simple, like a local-first Firebase or InstantDB.
+
+Write an application in your browser. Sync it to your desktop with
+one command. Manage it from a simple web interface.
 
 <FeatureTags :features="[
   {
-    text: 'Runs in browser, desktop, or mobile',
-    tooltip: 'Runs in the browser, in Node.js, or in React Native',
+    text: 'Runs on browser, desktop, or mobile',
+    tooltip: 'Works in the browser, in Node.js, or in React Native',
     iconName: 'mobile'
   },
   {
-    text: 'Persists to disk or databases',
-    tooltip: 'Persists data to SQLite, Postgres, or IndexedDB',
+    text: 'Persists to SQLite, Postgres, or IndexedDB',
+    tooltip: 'Uses SQLite, Postgres, or IndexedDB as the backing data store',
     iconName: 'database'
   },
   {
@@ -29,7 +30,7 @@ web database.
     iconName: 'atom'
   },
   {
-    text: 'Transactions with rollback',
+    text: 'Transactions',
     tooltip: 'Serializable database transactions that roll back on conflict',
     iconName: 'rewind'
   },
@@ -44,13 +45,13 @@ web database.
     iconName: 'compare'
   },
   {
-    text: 'Flexible auth',
-    tooltip: 'Use passkeys, wallets, or write your own auth strategy',
+    text: 'Built on IPFS standards',
+    tooltip: 'Built on IPFS standards and our Merkle sync system (Prolly-trees)',
     iconName: '123'
   },
   {
     text: 'Web UI',
-    tooltip: 'Comes with a Firebase-like database management interface',
+    tooltip: 'Firebase-like database management interface',
     iconName: 'apps',
   },
   {
@@ -60,7 +61,7 @@ web database.
   },
   {
     text: 'CRDTs',
-    tooltip: 'Soon: Conflict resolution using embedded CRDTs',
+    tooltip: 'Soon: Multiplayer editing using embedded CRDTs',
     iconName: 'guide',
     disabled: true,
   },
@@ -78,27 +79,61 @@ web database.
   },
 ]" />
 
+</div>
+
+---
+
+<div :class="$style.flex">
+  <div :class="$style.colRight">
+
 ::: code-group
 
-```ts [React app]
-import { useCanvas } from "@canvas-js/hooks"
+```ts [Browser]
+import { Canvas } from "@canvas-js/core"
 
-const models = {
-  messages: {
-    id: "primary",
-    text: "string",
+const app = await Canvas.initialize({
+  topic: "example.canvas.xyz",
+  contract: {
+    models: {
+      messages: {
+        id: "primary",
+        text: "string",
+      }
+    },
+    actions: {
+      createMessage: async (db, text) => {
+        const { address, id } = this
+        await db.set("messages", { id, text })
+      }
+    }
   }
-}
-const actions = {
-  createMessage: (db, { text }, { address, msgid }) => {
-    db.set("messages", { id: msgid, text })
-  }
-}
+})
 
-const { app } = useCanvas({ topic: "demo", contract: { models, actions } })   // [!code highlight]
+app.actions.createMessage("hello world!")
 ```
 
-```ts [Node.js]
+```ts [React hook]
+import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
+import { models, actions } from "contract.ts"
+
+const wsURL = null
+
+const Component = () => {
+  const { app, ws } = useCanvas(wsURL, {
+    topic: "example.canvas.xyz",
+    contract: { models, actions }
+  })
+
+  const items = useLiveQuery(app, "posts", {
+    orderBy: "created_at"
+  })
+
+  return <ItemView content={items}></ItemView>
+}
+```
+
+```ts [Command Line]
+// In contract.ts:
 export const models = {
   messages: {
     id: "primary",
@@ -117,19 +152,60 @@ $ canvas run contract.ts --topic demo.canvas.xyz // [!code highlight]
 
 :::
 
-<CodeGroupOpener />
+  </div>
+  <div :class="$style.colLeft">
 
-<FeatureRow title="Components" detail="">
+**Create a database** by defining models and actions.
+
+Models define the schema of your database, which are interoperable across
+platforms.
+
+Actions define mutations that users can make to the database. Use them to
+enforce authorization checks, or write business logic.
+
+---
+
+**Launch a peer** from your terminal by pointing it to contract.ts.
+
+```sh
+canvas run contract.ts --network-explorer \
+  --admin 0x349...
+  --topic chat-example.canvas.xyz
+[canvas] Bundled .ts contract: 4386 chars
+[canvas] Serving HTTP API: ...
+```
+
+You can provide an admin address for the peer, which will allow you to
+upgrade the running application, while preserving your users' data.
+
+  </div>
+</div>
+
+<style module>
+.main { max-width: 690px; }
+.flex { display: flex; flex-direction: row-reverse; }
+.colLeft { width: 49%; padding-right: 33px; padding-top: 0px; }
+.colLeft hr { margin: 1.75rem 0; }
+.colRight { width: 51%; }
+.colLeft div[class*="vp-adaptive-theme"] { margin: 1.33rem 0 1.32rem !important; }
+@media (max-width: 640px) {
+  .flex { display: block; padding-top: 1px; }
+  .colLeft { width: 100%; padding-right: 0; }
+  .colRight { width: 100%; }
+}
+</style>
+
+---
+
+<br/>
+
+<!-- <FeatureRow title="Components" detail="">
   <FeatureCard title="@canvas-js/okra" details="A Prolly tree written in Zig, that enables fast peer-to-peer sync for application histories." link="https://github.com/canvasxyz/okra" linkText="Github" secondaryLink="https://docs.canvas.xyz/blog/2023-05-04-merklizing-the-key-value-store.html" secondaryLinkText="Blog"/>
   <FeatureCard title="@canvas-js/gossiplog" details="A self-authenticating distributed log for multi-writer applications." link="https://github.com/canvasxyz/canvas/tree/main/packages/gossiplog" linkText="Github" secondaryLinkText="Talk" secondaryLink="https://www.youtube.com/watch?v=X8nAdx1G-Cs"/>
   <FeatureCard title="@canvas-js/modeldb" details="A cross-platform relational database wrapper for IDB, SQLite, and Postgres." link="https://github.com/canvasxyz/canvas/tree/main/packages/modeldb" linkText="Github"/>
   <FeatureCard title="@canvas-js/core" details="A database for local-first and peer-to-peer applications, with an embedded runtime." link="https://github.com/canvasxyz/canvas/tree/main/packages/modeldb" linkText="Github"/>
   <FeatureCard title="@canvas-js/chain-ethereum" details="Log in with an Ethereum wallet. Also supports Cosmos, Solana, and Polkadot." linkText="Demo" link="https://chat-example.canvas.xyz/"/>
-</FeatureRow>
-
-<br/>
-<br/>
-<br/>
+</FeatureRow> -->
 
 <EmailForm />
 

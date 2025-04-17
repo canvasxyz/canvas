@@ -82,12 +82,7 @@ body {
 
 pre {
   tab-size: 2;
-}
-
-@media (min-width: 960px) {
-  .vp-doc {
-    max-width: 680px;
-  }
+  outline: none;
 }
 
 .vp-doc .footnote-ref a,
