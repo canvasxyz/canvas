@@ -15,6 +15,9 @@ export default defineConfig({
 		resolve: {
 			preserveSymlinks: true,
 		},
+		ssr: {
+			noExternal: ["vue3-icons"],
+		},
 	},
 	ignoreDeadLinks: [(url) => /^\.\/[0-9]+$/.test(url)], // ignore footnote links
 	title: "Canvas",
