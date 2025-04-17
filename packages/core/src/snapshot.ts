@@ -134,8 +134,16 @@ export async function createSnapshot<T extends Contract<any>>(
 			const rowKey = JSON.stringify(modelSchema.primaryKey.map((key) => row[key]))
 
 			const rowChange = changedRows[modelName]?.[rowKey]
-			if (rowChange?.type === "delete") {
-				continue
+			if (rowChange) {
+				if (rowChange.type === "delete") {
+					continue
+				}
+
+				if (rowChange.type === "update") {
+					for (const key of Object.keys(rowChange.value)) {
+						row[key] = rowChange.value[key]
+					}
+				}
 			}
 
 			if (addedColumns[modelName]) {
