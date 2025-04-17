@@ -102,6 +102,14 @@ const getIconComponent = (iconName: string) => {
   transition: background-color 0.2s, transform 0.2s;
   position: relative;
 }
+@media (max-width: 640px) {
+  .feature-tags {
+    gap: 5px 6px;
+  }
+  .feature-tag {
+    font-size: 13.75px;
+  }
+}
 
 .feature-tag:not(.feature-tag-disabled):hover {
   background-color: var(--vp-c-brand-soft);

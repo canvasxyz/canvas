@@ -75,18 +75,18 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 
 .HeroRow {
   margin-top: calc((var(--vp-nav-height) + var(--vp-layout-top-height, 0px)) * -1);
-  padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 48px) 0 18px;
+  padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 24px) 0 14px;
 }
 
 @media (min-width: 640px) {
   .HeroRow {
-    padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 0px) 0 18px;
+    padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 0px) 0 14px;
   }
 }
 
 @media (min-width: 960px) {
   .HeroRow {
-    padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 10px) 0 22px;
+    padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 10px) 0 10px;
   }
 }
 
@@ -223,13 +223,19 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 }
 
 .image-container {
-  position: absolute;
   display: none;
-  right: -320px;
+  position: absolute;
+  right: -80px;
   margin: 0 auto;
   margin-top: 0;
   width: 320px;
   height: 320px;
+}
+
+@media (min-width: 1230px) {
+  .image-container {
+    display: block;
+  }
 }
 
 .image-bg {

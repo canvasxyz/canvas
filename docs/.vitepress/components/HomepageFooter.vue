@@ -7,11 +7,11 @@
 
 <style>
 .HomepageFooter {
-  display: none;
   text-align: center;
   margin: 0 auto;
   max-width: 400px;
   margin-top: 60px;
+  margin-bottom: -120px;
   color: var(--vp-c-text-3);
   font-family: var(--space-font-family);
 }
@@ -32,11 +32,5 @@
 .VPHome {
   margin-bottom: 10px !important;
   padding-bottom: 40px !important;
-}
-
-@media (min-width: 640px) {
-  .HomepageFooter {
-    display: block;
-  }
 }
 </style>

@@ -5,13 +5,19 @@ next: false
 
 <div :class="$style.main">
 
-<HeroRow text="The next-generation, local-first, peer-to-peer database" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
+<HeroRow text="A local-first, peer-to-peer database for the open web" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
 
-Canvas is a peer-to-peer database that makes writing
-distributed software simple, like a local-first Firebase or InstantDB.
+<div :class="$style.mainInner">
+
+Canvas is a database that makes regular applications
+distributed, like a local-first Firebase or InstantDB.
 
 Write an application in your browser. Sync it to your desktop with
-one command. Manage it from a simple web interface.
+one command, in less time than it takes to set up an API server.
+You can even write complex application logic inside the database
+without a backend.
+
+</div>
 
 <FeatureTags :features="[
   {
@@ -20,9 +26,19 @@ one command. Manage it from a simple web interface.
     iconName: 'mobile'
   },
   {
-    text: 'Persists to SQLite, Postgres, or IndexedDB',
+    text: 'Cross-database persistence',
     tooltip: 'Uses SQLite, Postgres, or IndexedDB as the backing data store',
     iconName: 'database'
+  },
+  {
+    text: 'Sync via libp2p',
+    tooltip: 'Browser-to-server and server-to-server libp2p WebSockets',
+    iconName: 'activity'
+  },
+  {
+    text: 'Reactive queries',
+    tooltip: 'React hooks for live-updating apps & database queries',
+    iconName: 'compare'
   },
   {
     text: 'Custom mutators',
@@ -35,17 +51,7 @@ one command. Manage it from a simple web interface.
     iconName: 'rewind'
   },
   {
-    text: 'Sync via libp2p',
-    tooltip: 'Browser-to-server and server-to-server libp2p WebSockets',
-    iconName: 'activity'
-  },
-  {
-    text: 'React hooks',
-    tooltip: 'React hooks with live-updating apps & database queries',
-    iconName: 'compare'
-  },
-  {
-    text: 'Built on IPFS standards',
+    text: 'IPFS standards',
     tooltip: 'Built on IPFS standards and our Merkle sync system (Prolly-trees)',
     iconName: '123'
   },
@@ -152,6 +158,8 @@ $ canvas run contract.ts --topic demo.canvas.xyz // [!code highlight]
 
 :::
 
+<CodeGroupOpener /> <!-- needed for production build -->
+
   </div>
   <div :class="$style.colLeft">
 
@@ -181,23 +189,7 @@ upgrade the running application, while preserving your users' data.
   </div>
 </div>
 
-<style module>
-.main { max-width: 690px; }
-.flex { display: flex; flex-direction: row-reverse; }
-.colLeft { width: 49%; padding-right: 33px; padding-top: 0px; }
-.colLeft hr { margin: 1.75rem 0; }
-.colRight { width: 51%; }
-.colLeft div[class*="vp-adaptive-theme"] { margin: 1.33rem 0 1.32rem !important; }
-@media (max-width: 640px) {
-  .flex { display: block; padding-top: 1px; }
-  .colLeft { width: 100%; padding-right: 0; }
-  .colRight { width: 100%; }
-}
-</style>
-
 ---
-
-<br/>
 
 <!-- <FeatureRow title="Components" detail="">
   <FeatureCard title="@canvas-js/okra" details="A Prolly tree written in Zig, that enables fast peer-to-peer sync for application histories." link="https://github.com/canvasxyz/okra" linkText="Github" secondaryLink="https://docs.canvas.xyz/blog/2023-05-04-merklizing-the-key-value-store.html" secondaryLinkText="Blog"/>
@@ -207,6 +199,49 @@ upgrade the running application, while preserving your users' data.
   <FeatureCard title="@canvas-js/chain-ethereum" details="Log in with an Ethereum wallet. Also supports Cosmos, Solana, and Polkadot." linkText="Demo" link="https://chat-example.canvas.xyz/"/>
 </FeatureRow> -->
 
+<div :class="$style.end">
+
+Canvas is an open source project built by a team with experience at
+MIT, Princeton, and Protocol Labs, that has built Web3
+products used by tens of thousands. It has been under active development
+since 2022 with the support of <a href="https://www.protocol.vc/" target="_blank">PLVC</a>,
+<a href="https://alliance.xyz/" target="_blank">Alliance</a>, <a href="https://zeitgeist.xyz/" target="_blank">Zeitgeist</a>, <a href="https://fil.org/" target="_blank">Filecoin Foundation</a>, and others.
+
+</div>
+
+Subscribe to our email updates for more information:
+
+<br/>
+
 <EmailForm />
 
 <HomepageFooter />
+
+<style module>
+.main { max-width: 690px; }
+.mainInner { max-width: 600px; } /* make room for jellyfish */
+@media (max-width: 960px) {
+  .main { margin: 0 auto; }
+  .mainInner { max-width: none; }
+}
+
+.flex div[class*="vp-adaptive-theme"] { font-size: 98%; }
+.colLeft div[class*="vp-adaptive-theme"] { font-size: 96%; }
+
+.flex { display: flex; flex-direction: row-reverse; }
+.colLeft { width: 49%; padding-right: 33px; padding-top: 0px; }
+.colLeft hr { margin: 1.75rem 0; }
+.colRight { width: 51%; }
+.colLeft div[class*="vp-adaptive-theme"] { margin: 1.33rem 0 1.32rem !important; }
+
+@media (max-width: 640px) {
+  .flex { display: block; padding-top: 1px; }
+  .colLeft { width: 100%; padding-right: 0; }
+  .colRight { width: 100%; }
+}
+
+.end {
+  margin: 40px 0;
+  max-width: 600px;
+}
+</style>

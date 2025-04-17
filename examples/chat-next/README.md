@@ -1,4 +1,4 @@
-## Server-side chat with Postgres and NextJS
+# Server-side Chat Example
 
 This app demonstrates server-side rendered implementation of Canvas.
 
