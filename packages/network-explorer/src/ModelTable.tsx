@@ -1,6 +1,8 @@
 import { Navigate, useParams } from "react-router-dom"
 import { Table } from "./components/table/Table.js"
 import { useApplicationData } from "./hooks/useApplicationData.js"
+import { BinaryCellData } from "./components/BinaryCellData.js"
+import { ColumnDef } from "@tanstack/react-table"
 
 export const ModelTable = ({
 	showSidebar,
@@ -24,14 +26,22 @@ export const ModelTable = ({
 			const defaultSortColumn = primaryProperty.name
 			const defaultSortDirection = "asc"
 
-			const defaultColumns = modelDefinition.properties.map((property) => ({
-				header: property.name,
-				accessorKey: property.name,
-				// enable sorting on the primary property
-				enableSorting: property.name === primaryProperty.name,
-				enableColumnFilter: false,
-				size: 320,
-			}))
+			const defaultColumns = modelDefinition.properties.map((property) => {
+				const columnDef: ColumnDef<any> = {
+					header: property.name,
+					accessorKey: property.name,
+					// enable sorting on the primary property
+					enableSorting: property.name === primaryProperty.name,
+					enableColumnFilter: false,
+					size: 320,
+				}
+
+				if (property.kind === "primitive" && property.type === "bytes") {
+					columnDef.cell = BinaryCellData
+				}
+
+				return columnDef
+			})
 			return (
 				<Table
 					defaultSortColumn={defaultSortColumn}
