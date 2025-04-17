@@ -8,14 +8,10 @@ next: false
 Canvas is a local-first database that makes writing distributed
 software simple, like a local-first Firebase or InstantDB.
 
-Write an application from your browser, without deploying a
-backend. Replicate it to a server with one command. Manage your
-applications from a simple web interface, with all the features of a
-modern web database.
-
-Write more powerful applications with custom mutations and
-transactions, that weren't possible in a local-first
-environment before.
+Write an application from your browser without a backend. Replicate it
+to a server with one command, and manage it from a simple web
+interface. For the first time, you can even write custom business
+logic inside a local-first database.
 
 <FeatureTags :features="[
   {
