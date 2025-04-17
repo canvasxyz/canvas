@@ -10,12 +10,13 @@ import { useApplicationData } from "../../hooks/useApplicationData.js"
 import { useSearchFilters } from "../../hooks/useSearchFilters.js"
 import { useStagedMigrations } from "../../hooks/useStagedMigrations.js"
 import { fetchAndIpldParseJson, fetchAsString } from "../../utils.js"
-import { TableElement, Tbody, Th, Thead, TheadSpacer, NoneFound, ThCheckbox, Td } from "./elements.js"
+import { TableElement, Tbody, Th, Thead, TheadSpacer, NoneFound } from "./elements.js"
 import { FiltersDropdown } from "./FiltersDropdown.js"
 import { ColumnsDropdown } from "./ColumnsDropdown.js"
 import { PaginationControl } from "./PaginationControl.js"
 import { SortSelector } from "./SortSelector.js"
 import { decodeRowKey, encodeRowKey, ImmutableRowKey } from "../../hooks/useChangedRows.js"
+import { EditableRow, NonEditableRow } from "./EditableRow.js"
 
 export type Column = {
 	name: string
@@ -259,33 +260,23 @@ export const Table = <T,>({
 						<Tbody>
 							{tanStackTable.getRowCount() === 0 && <NoneFound />}
 							{tanStackTable.getRowModel().rows.map((row) => {
-								const rowKey = encodeRowKey(getRowKey(row))
-								const rowChange = tableChangedRows.get(rowKey)
-								return (
-									<tr
-										key={row.id}
-										style={{
-											display: "flex",
-											backgroundColor: rowChange?.type === "delete" ? "var(--red-3)" : "transparent",
-											overflow: "hidden",
-											scrollbarWidth: "none",
-										}}
-									>
-										{allowEditing && (
-											<ThCheckbox
-												checked={selectedRows.has(rowKey)}
-												onCheckedChange={(checked) => {
-													setSelectedRows(checked ? selectedRows.add(rowKey) : selectedRows.delete(rowKey))
-												}}
-											/>
-										)}
-										{row.getVisibleCells().map((cell) => (
-											<Td key={cell.id} width={cell.column.getSize()}>
-												{flexRender(cell.column.columnDef.cell, cell.getContext())}
-											</Td>
-										))}
-									</tr>
-								)
+								if (allowEditing) {
+									const rowKey = encodeRowKey(getRowKey(row))
+									const rowChange = tableChangedRows.get(rowKey)
+									return (
+										<EditableRow
+											key={row.id}
+											row={row}
+											isStagedDelete={rowChange?.type === "delete"}
+											checked={selectedRows.has(rowKey)}
+											onCheckedChange={(checked) => {
+												setSelectedRows(checked ? selectedRows.add(rowKey) : selectedRows.delete(rowKey))
+											}}
+										/>
+									)
+								} else {
+									return <NonEditableRow key={row.id} row={row} />
+								}
 							})}
 						</Tbody>
 					</TableElement>

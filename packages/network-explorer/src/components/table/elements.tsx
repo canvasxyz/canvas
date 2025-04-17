@@ -1,5 +1,3 @@
-import { Checkbox, Flex } from "@radix-ui/themes"
-
 export const TableElement = ({ children }: { children: React.ReactNode }) => {
 	return <table style={{ borderCollapse: "collapse", display: "grid" }}>{children}</table>
 }
@@ -42,29 +40,6 @@ export const TheadSpacer = () => {
 	)
 }
 
-export const ThCheckbox = ({
-	checked,
-	onCheckedChange,
-}: {
-	checked: boolean
-	onCheckedChange: (checked: boolean) => void
-}) => (
-	<th
-		style={{
-			width: "32px",
-			borderWidth: "1px",
-			borderTopWidth: "0px",
-			borderLeftWidth: "0px",
-			borderColor: "var(--accent-3)",
-			borderStyle: "solid",
-		}}
-	>
-		<Flex justify="center" align="center" height="100%">
-			<Checkbox checked={checked} onCheckedChange={onCheckedChange} />
-		</Flex>
-	</th>
-)
-
 export const Th = ({ width, children }: { width: number; children: React.ReactNode }) => {
 	return (
 		<th
@@ -100,29 +75,5 @@ export const NoneFound = () => {
 				None found
 			</td>
 		</tr>
-	)
-}
-
-export const Td = ({ children, width }: { children: React.ReactNode; width: number }) => {
-	return (
-		<td
-			style={{
-				overflowX: "scroll",
-				borderWidth: "1px",
-				borderTopWidth: "0px",
-				borderLeftWidth: "0px",
-				borderColor: "var(--accent-3)",
-				borderStyle: "solid",
-				display: "flex",
-				paddingLeft: "6px",
-				paddingTop: "4px",
-				minHeight: "32px",
-				width,
-			}}
-		>
-			<Flex gap="2" p="1">
-				{children}
-			</Flex>
-		</td>
 	)
 }
