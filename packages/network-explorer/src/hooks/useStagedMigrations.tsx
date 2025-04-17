@@ -2,14 +2,14 @@
 
 import { createContext, useCallback, useContext, useState } from "react"
 import { Canvas, Changeset, generateChangesets, RowChange } from "@canvas-js/core"
-import { Map as ImmutableMap, List as ImmutableList } from "immutable"
+import { Map as ImmutableMap } from "immutable"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 import { useContractData } from "../hooks/useContractData.js"
 import { SiweMessage } from "siwe"
 import { getAddress } from "ethers"
 import { useApplicationData } from "./useApplicationData.js"
 import { BASE_URL } from "../utils.js"
-import { useChangedRows } from "./useChangedRows.js"
+import { ImmutableRowKey, RowKey, useChangedRows } from "./useChangedRows.js"
 
 async function getChangesetsForContractDiff(oldContract: string, newContract: string) {
 	const { build } = await Canvas.buildContract(newContract, { wasmURL: "./esbuild.wasm" })
@@ -82,9 +82,9 @@ const StagedMigrationsContext = createContext<{
 	setHasRestoredContent: (hasRestoredContent: boolean) => void
 	// setWaitingForCommit: (waitingForCommit: boolean) => void
 	// setCommitCompleted: (commitCompleted: boolean) => void
-	changedRows: ImmutableMap<string, ImmutableMap<ImmutableList<string>, RowChange>>
-	stageRowChange: (tableName: string, rowKey: string[], rowChange: RowChange) => void
-	restoreRowChange: (tableName: string, rowKey: string[]) => void
+	changedRows: ImmutableMap<string, ImmutableMap<ImmutableRowKey, RowChange>>
+	stageRowChange: (tableName: string, rowKey: RowKey, rowChange: RowChange) => void
+	restoreRowChange: (tableName: string, rowKey: RowKey) => void
 	clearRowChanges: () => void
 }>({
 	contractChangesets: [],

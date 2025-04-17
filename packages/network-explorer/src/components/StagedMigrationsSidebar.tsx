@@ -1,8 +1,9 @@
 import { Box, Button, Flex, Text } from "@radix-ui/themes"
 import { useStagedMigrations } from "../hooks/useStagedMigrations.js"
 import { Changeset, RowChange } from "@canvas-js/core"
-import { Map as ImmutableMap, List as ImmutableList } from "immutable"
+import { Map as ImmutableMap } from "immutable"
 import { useContractData } from "../hooks/useContractData.js"
+import { decodeRowKey, ImmutableRowKey } from "../hooks/useChangedRows.js"
 
 function ChangesetMigrationRow({ changeset }: { changeset: Changeset }) {
 	switch (changeset.change) {
@@ -33,11 +34,11 @@ function ChangesetMigrationRow({ changeset }: { changeset: Changeset }) {
 	}
 }
 
-function flattenRowChanges(rowChanges: ImmutableMap<string, ImmutableMap<ImmutableList<string>, RowChange>>) {
+function flattenRowChanges(rowChanges: ImmutableMap<string, ImmutableMap<ImmutableRowKey, RowChange>>) {
 	const flattened = []
 	for (const [tableName, rows] of rowChanges.entries()) {
 		for (const [rowKey, rowChange] of rows.entries()) {
-			flattened.push({ tableName, row: rowKey.toArray(), rowChange })
+			flattened.push({ tableName, row: decodeRowKey(rowKey), rowChange })
 		}
 	}
 	return flattened

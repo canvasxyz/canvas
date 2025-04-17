@@ -1,6 +1,6 @@
 import useSWR from "swr"
 import { WhereCondition } from "@canvas-js/modeldb"
-import { List as ImmutableList, Map as ImmutableMap, Set as ImmutableSet } from "immutable"
+import { Map as ImmutableMap, Set as ImmutableSet } from "immutable"
 import { Box, Button, Flex, Text, TextField } from "@radix-ui/themes"
 import { useCallback, useEffect, useState } from "react"
 import { BiChevronLeft, BiChevronRight } from "react-icons/bi"
@@ -15,7 +15,7 @@ import { TableElement, Tbody, Th, Thead, TheadSpacer, NoneFound, ThCheckbox, Td 
 import { FiltersDropdown } from "./FiltersDropdown.js"
 import { ColumnsDropdown } from "./ColumnsDropdown.js"
 import { SortSelector } from "./SortSelector.js"
-import { encodeRowKey } from "../../hooks/useChangedRows.js"
+import { decodeRowKey, encodeRowKey, ImmutableRowKey } from "../../hooks/useChangedRows.js"
 
 export type Column = {
 	name: string
@@ -79,7 +79,7 @@ export const Table = <T,>({
 
 	const [entriesPerPage, setEntriesPerPage] = useState(20)
 
-	const [selectedRows, setSelectedRows] = useState<ImmutableSet<ImmutableList<string>>>(ImmutableSet.of())
+	const [selectedRows, setSelectedRows] = useState<ImmutableSet<ImmutableRowKey>>(ImmutableSet.of())
 
 	const sortColumn = sorting.length === 1 ? sorting[0].id : defaultSortColumn
 	const sortDirection = sorting.length === 1 ? (sorting[0].desc ? "desc" : "asc") : defaultSortDirection
@@ -148,9 +148,8 @@ export const Table = <T,>({
 			return
 		}
 
-		// stageDeletedRows(tableName, selectedRows.map((row) => row.toArray()).toArray())
 		for (const row of selectedRows.toArray()) {
-			stageRowChange(tableName, row.toArray(), {
+			stageRowChange(tableName, decodeRowKey(row), {
 				type: "delete",
 			})
 		}

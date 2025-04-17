@@ -2,11 +2,15 @@ import { useCallback, useState } from "react"
 import { Map as ImmutableMap } from "immutable"
 import { RowChange } from "@canvas-js/core"
 
-type RowKey = string[]
-type ImmutableRowKey = string
+export type RowKey = string[]
+export type ImmutableRowKey = string
 
-export function encodeRowKey(rowKey: RowKey): string {
+export function encodeRowKey(rowKey: RowKey): ImmutableRowKey {
 	return JSON.stringify(rowKey)
+}
+
+export function decodeRowKey(rowKey: ImmutableRowKey): RowKey {
+	return JSON.parse(rowKey)
 }
 
 export const useChangedRows = () => {
