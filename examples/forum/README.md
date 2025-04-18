@@ -6,9 +6,11 @@ The forum example implements a simple publishing platform.
 
 ## Developing
 
-- `npm run dev:server` to start the server, on port 8080
-- `npm run dev` to start the client, on port 5173
-- `cloudflared tunnel --url http://localhost:5173` for SIWF Mini App development
+- Run `npm run dev` to serve the frontend, on port 5173.
+- Run `npm run dev:server` to start the backend with in-memory temporary state, on port 8080.
+- Run `npm run dev:server:persistent` to start the backend with data persisted to a directory in /tmp.
+- Run `npm run dev:server:reset` to clear the persisted data.
+- Run `cloudflared tunnel --url http://localhost:5173` to launch a tunnel for Farcaster miniapp testing.
 
 ## Farcaster Mini App Development
 

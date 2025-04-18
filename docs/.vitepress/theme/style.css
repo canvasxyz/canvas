@@ -297,6 +297,8 @@ pre {
 
 .VPNavBar .content-body {
   transition: none !important;
+  margin-right: -32px;
+  padding-right: 32px;
 }
 
 .VPNavBarTitle .title {
