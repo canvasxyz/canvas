@@ -10,20 +10,20 @@ const models = {
 } satisfies ModelSchema
 
 const actions = {
-	async createPost(db, content: string) {
-		await db.set("posts", { id: this.id, content })
+	async createPost(content: string) {
+		await this.db.set("posts", { id: this.id, content })
 	},
 
-	async updatePost(db, postId: string, content: string) {
-		await db.update("posts", { id: postId, content })
+	async updatePost(postId: string, content: string) {
+		await this.db.update("posts", { id: postId, content })
 	},
 
-	async deletePost(db, postId: string) {
-		await db.delete("posts", postId)
+	async deletePost(postId: string) {
+		await this.db.delete("posts", postId)
 	},
 
-	async getPostContent(db, postId: string) {
-		const post = await db.get("posts", postId)
+	async getPostContent(postId: string) {
+		const post = await this.db.get("posts", postId)
 		return post?.content ?? null
 	},
 } satisfies Actions<typeof models>

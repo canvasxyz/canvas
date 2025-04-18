@@ -22,7 +22,8 @@ test("increment a counter, reading outside the transaction", async (t) => {
 	} satisfies ModelSchema
 
 	const actions = {
-		async increment(db) {
+		async increment() {
+			const { db } = this
 			const record = await db.get("counter", "counter")
 			await db.transaction(async () => {
 				if (record === null) {
@@ -104,7 +105,8 @@ test("increment a counter, reading inside the transaction", async (t) => {
 	} satisfies ModelSchema
 
 	const actions = {
-		async increment(db) {
+		async increment() {
+			const { db } = this
 			let value = 1
 			await db.transaction(async () => {
 				const record = await db.get("counter", "counter")
@@ -200,14 +202,15 @@ test("test read conflict", async (t) => {
 	} satisfies ModelSchema
 
 	const actions = {
-		async createRoom(db) {
-			await db.transaction(() =>
-				db.set("rooms", { id: this.id, admins: [this.did], members: [this.did] } satisfies Room),
+		async createRoom() {
+			await this.db.transaction(() =>
+				this.db.set("rooms", { id: this.id, admins: [this.did], members: [this.did] } satisfies Room),
 			)
 			return this.id
 		},
 
-		async createPost(db, roomId: string, content: string) {
+		async createPost(roomId: string, content: string) {
+			const { db } = this
 			return await db.transaction(async () => {
 				const room = await db.get("rooms", roomId)
 				assert(room !== null, "room not found")
@@ -218,7 +221,8 @@ test("test read conflict", async (t) => {
 			})
 		},
 
-		async addMember(db, roomId: string, member: string) {
+		async addMember(roomId: string, member: string) {
+			const { db } = this
 			await db.transaction(async () => {
 				const room = await db.get("rooms", roomId)
 				assert(room !== null, "room not found")
@@ -229,7 +233,8 @@ test("test read conflict", async (t) => {
 			})
 		},
 
-		async removeMember(db, roomId: string, member: string) {
+		async removeMember(roomId: string, member: string) {
+			const { db } = this
 			await db.transaction(async () => {
 				const room = await db.get("rooms", roomId)
 				assert(room !== null, "room not found")

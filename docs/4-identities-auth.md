@@ -48,13 +48,10 @@ const app = await Canvas.initialize({
 })
 
 // Use a specific signer
-await app.actions.createPost({ content: "foo" }, { signer: app.signers[1] })
-
-// Use first signer matching a certain chain
-await app.actions.createPost({ content: "bar" }, { chain: "eip155:1" })
+await app.actions.as(app.signers[1]).createPost("foo")
 
 // Defaults to the first signer app.signers[0]
-await app.actions.createPost({ content: "baz" })
+await app.actions.createPost("baz")
 ```
 
 The SIWESigner class also supports a `burner` parameter, which will

@@ -16,7 +16,7 @@ export const models = {
 } satisfies ModelSchema
 
 export const actions = {
-  doThing: (db) => { ... }
+  doThing: () => { ... }
 } satisfies Actions<typeof models>
 ```
 

@@ -119,11 +119,11 @@ You can also subscribe to queries in the browser using the `useLiveQuery` hook e
 import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
 
 const contract = {
-  topic: "com.example.my-app",
+  topic: "example.xyz",
   models: { ... },
   actions: {
-    async createPost(db, args, {}) { ... }
-    async deletePost(db, args, {}) { ... }
+    async createPost(...args) { ... }
+    async deletePost(...args) { ... }
   }
 }
 

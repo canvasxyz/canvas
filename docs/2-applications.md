@@ -25,10 +25,12 @@ const app = await Canvas.initialize({
 			},
 		},
 		actions: {
-			async createPost(db, { content }, { id, did, timestamp }) {
+			async createPost(content) {
+				const { id, did, timestamp } = this
 				await db.set("posts", { id, user: did, content, updated_at: timestamp })
 			},
-			async deletePost(db, { postId }, { did }) {
+			async deletePost(postId) {
+				const { did } = this
 				const post = await db.get("posts", postId)
 				if (post === null) {
 					return
@@ -84,18 +86,17 @@ type Action = {
 }
 ```
 
-Action handlers are called with a mutable database handle `db`, followed
-by any arguments attached to the action `...args`.
+Action handlers are called with any arguments attached to the action `...args`.
 
 The context object `this` contains the rest of the action metadata, e.g.
 `did`, `address` which is the last part of the DID, `timestamp`, `id`
 which is the message ID of the signed action, etc.
 
 ```ts
-async createPost(db, { content }) {
+async createPost(content) {
   const { id, chain, address, did, timestamp } = this
 	const user = [chain, address].join(":")
-	await db.set("posts", { id: msgid, user, content, updated_at: timestamp })
+	await db.set("posts", { id, user, content, updated_at: timestamp })
 }
 ```
 
@@ -104,7 +105,8 @@ Actions implement the business logic of your application: every effect must happ
 Actions should handle authorization and access control. In the example's `deletePost` action handler, we have to enforce that users can only delete their own posts, and not arbitrary posts.
 
 ```ts
-async function deletePost(db, { postId }, { chain, address }) {
+async function deletePost(postId) {
+  const { chain, address } = this
 	const post = await db.get("posts", postId)
 	if (post === null) {
 		return

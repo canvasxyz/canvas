@@ -31,7 +31,8 @@ nextApp.prepare().then(async () => {
 				},
 			},
 			actions: {
-				async createMessage(db, { content }, { id, address, timestamp }) {
+				async createMessage({ content }) {
+					const { id, address, timestamp, db } = this
 					await db.set("message", { id, address, content, timestamp })
 				},
 			},

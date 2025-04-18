@@ -11,9 +11,8 @@ next: false
 
 Canvas is a peer-to-peer database, like a local-first version of Firebase.
 
-It's a real-time database that you can use from the frontend,
-with the programmability of a traditional backend, and usability
-of a modern web database.
+Write applications from the frontend, and get the full programmability of a
+traditional backend, with the usability of a modern web database.
 
 </div>
 
@@ -110,7 +109,7 @@ const models = {
 }
 
 const actions = {
-  createMessage: async (db, text) => {
+  createMessage: async (text) => {
     const { address, id } = this
     await db.set("messages", { id, text })
   }
@@ -154,8 +153,9 @@ export const models = {
 }
 
 export const actions = {
-  createMessage: (db, { text }, { address, txid }) => {
-    db.set("messages", { id: txid, text })
+  createMessage: ({ text }) => {
+    const { id, address } = this
+    db.set("messages", { id, text })
   }
 }
 
