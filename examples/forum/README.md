@@ -2,7 +2,8 @@
 
 [Demo](https://forum-example.canvas.xyz/) - [Github](https://github.com/canvasxyz/canvas/tree/main/examples/forum)
 
-The forum example implements a simple publishing platform.
+The forum example implements a simple publishing platform, with support
+for login with Ethereum or Farcaster (both on the web, and as a mini app).
 
 ## Developing
 

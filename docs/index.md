@@ -89,7 +89,7 @@ with one command. Integrate with multiple identity systems and PKIs for login.
 
 <div :class="$style.sectionHeader">
 
-# Launch an application in minutes
+# Get started in minutes
 
 </div>
 
@@ -213,15 +213,15 @@ application.
 <div :class="$style.end">
 
 The current release of Canvas is an early developer preview that we
-are using in production pilots with a limited set of design partners. We
-are excited to work with more developers to build on the system, and
-to support more identity providers. Please reach out via
-[Discord](https://discord.gg/EjczssxKpR) to discuss.
+are using in a limited set of production pilots. We are excited to
+work with more developers to build on the system, and to support more
+identity providers. Please reach out via
+[Discord](https://discord.gg/EjczssxKpR).
 
 Technically inclined readers may be interested in some of our writing,
 which covers the technical foundations of the system:
 
-- [Merklizing the Key/Value Store for Fun and Profit](https://joelgustafson.com/posts/2023-05-04/merklizing-the-key-value-store-for-fun-and-profit)
+- [Okra: Merklizing the Key/Value Store for Fun and Profit](https://joelgustafson.com/posts/2023-05-04/merklizing-the-key-value-store-for-fun-and-profit)
 - [GossipLog: Reliable Causal Broadcast for libp2p](https://joelgustafson.com/posts/2024-09-30/gossiplog-reliable-causal-broadcast-for-libp2p)
 - [Introduction to Causal Logs](https://joelgustafson.com/posts/2024-09-30/introduction-to-causal-logs)
 
