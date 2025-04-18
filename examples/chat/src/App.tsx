@@ -1,11 +1,11 @@
 import React, { useRef, useState } from "react"
 
 import type { SessionSigner } from "@canvas-js/interfaces"
-import { SIWESigner, SIWFSigner, Eip712Signer } from "@canvas-js/chain-ethereum"
-import { ATPSigner } from "@canvas-js/chain-atp"
-import { CosmosSigner } from "@canvas-js/chain-cosmos"
-import { SubstrateSigner } from "@canvas-js/chain-substrate"
-import { SolanaSigner } from "@canvas-js/chain-solana"
+import { SIWESigner, SIWFSigner, Eip712Signer } from "@canvas-js/signer-ethereum"
+import { ATPSigner } from "@canvas-js/signer-atp"
+import { CosmosSigner } from "@canvas-js/signer-cosmos"
+import { SubstrateSigner } from "@canvas-js/signer-substrate"
+import { SolanaSigner } from "@canvas-js/signer-solana"
 
 import type { Contract } from "@canvas-js/core"
 

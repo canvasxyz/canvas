@@ -6,7 +6,7 @@
 		"outDir": "lib"
 	},
 	"references": [
-		{ "path": "../chain-ethereum" },
+		{ "path": "../signer-ethereum" },
 		{ "path": "../interfaces" },
 		{ "path": "../signatures" },
 		{ "path": "../modeldb" },

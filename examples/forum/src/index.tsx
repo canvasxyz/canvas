@@ -12,7 +12,7 @@ import { Text } from "@radix-ui/themes"
 import { Actions, Canvas } from "@canvas-js/core"
 import { ModelSchema } from "@canvas-js/modeldb"
 import type { SessionSigner } from "@canvas-js/interfaces"
-import { SIWESigner, SIWFSigner } from "@canvas-js/chain-ethereum"
+import { SIWESigner, SIWFSigner } from "@canvas-js/signer-ethereum"
 import { useCanvas, AppInfo } from "@canvas-js/hooks"
 
 import { App } from "./App.js"

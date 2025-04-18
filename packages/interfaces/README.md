@@ -18,7 +18,7 @@ This package exports TypeScript types for Canvas messages and other interfaces.
 ## Installation
 
 ```
-npm i @canvas-js/chain-interfaces
+npm i @canvas-js/interfaces
 ```
 
 ## API
@@ -87,7 +87,7 @@ export type Session<AuthorizationData = any> = {
   /** did:key URI of the ephemeral session key used to sign subsequent actions */
   publicKey: string
 
-  /** chain-specific session payload, e.g. a SIWE message & signature */
+  /** signer-specific session payload, e.g. a SIWE message & signature */
   authorizationData: AuthorizationData
 
   context: {

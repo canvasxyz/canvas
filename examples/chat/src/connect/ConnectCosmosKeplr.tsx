@@ -1,7 +1,7 @@
 import React, { useCallback, useContext, useState } from "react"
 import type { Window as KeplrWindow } from "@keplr-wallet/types"
 
-import { CosmosSigner } from "@canvas-js/chain-cosmos"
+import { CosmosSigner } from "@canvas-js/signer-cosmos"
 
 import { AppContext } from "../AppContext.js"
 import { fromBech32 } from "@cosmjs/encoding"

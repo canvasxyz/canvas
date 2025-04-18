@@ -20,11 +20,11 @@ import { createAPI } from "@canvas-js/core/api"
 import { NetworkServer } from "@canvas-js/gossiplog/server"
 import { defaultBootstrapList } from "@canvas-js/gossiplog/bootstrap"
 
-import { SIWESigner, Eip712Signer, SIWFSigner } from "@canvas-js/chain-ethereum"
-import { ATPSigner } from "@canvas-js/chain-atp"
-import { CosmosSigner } from "@canvas-js/chain-cosmos"
-import { SubstrateSigner } from "@canvas-js/chain-substrate"
-import { SolanaSigner } from "@canvas-js/chain-solana"
+import { SIWESigner, Eip712Signer, SIWFSigner } from "@canvas-js/signer-ethereum"
+import { ATPSigner } from "@canvas-js/signer-atp"
+import { CosmosSigner } from "@canvas-js/signer-cosmos"
+import { SubstrateSigner } from "@canvas-js/signer-substrate"
+import { SolanaSigner } from "@canvas-js/signer-solana"
 
 const { BOOTSTRAP_LIST } = process.env
 

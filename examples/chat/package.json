@@ -12,12 +12,12 @@
 		"dev:server:reset": "rm -rf /tmp/chat-example"
 	},
 	"dependencies": {
-		"@canvas-js/chain-atp": "0.14.0-next.2",
-		"@canvas-js/chain-cosmos": "0.14.0-next.2",
-		"@canvas-js/chain-ethereum": "0.14.0-next.2",
-		"@canvas-js/chain-ethereum-viem": "0.14.0-next.2",
-		"@canvas-js/chain-solana": "0.14.0-next.2",
-		"@canvas-js/chain-substrate": "0.14.0-next.2",
+		"@canvas-js/signer-atp": "0.14.0-next.2",
+		"@canvas-js/signer-cosmos": "0.14.0-next.2",
+		"@canvas-js/signer-ethereum": "0.14.0-next.2",
+		"@canvas-js/signer-ethereum-viem": "0.14.0-next.2",
+		"@canvas-js/signer-solana": "0.14.0-next.2",
+		"@canvas-js/signer-substrate": "0.14.0-next.2",
 		"@canvas-js/cli": "0.14.0-next.2",
 		"@canvas-js/core": "0.14.0-next.2",
 		"@canvas-js/gossiplog": "0.14.0-next.2",

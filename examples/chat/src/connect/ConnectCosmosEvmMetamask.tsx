@@ -1,7 +1,7 @@
 import React, { useCallback, useContext, useState } from "react"
 import { Web3 } from "web3"
 
-import { CosmosSigner } from "@canvas-js/chain-cosmos"
+import { CosmosSigner } from "@canvas-js/signer-cosmos"
 
 import { AppContext } from "../AppContext.js"
 

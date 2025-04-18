@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { BrowserProvider } from "ethers"
 
-import { SIWESigner } from "@canvas-js/chain-ethereum"
+import { SIWESigner } from "@canvas-js/signer-ethereum"
 import { Client } from "@canvas-js/client"
 
 const topic = "chat-example.canvas.xyz"

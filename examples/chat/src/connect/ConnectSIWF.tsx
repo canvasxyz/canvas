@@ -2,7 +2,7 @@ import "@farcaster/auth-kit/styles.css"
 
 import React, { useContext, useEffect, useRef, useState } from "react"
 import { hexlify, getBytes } from "ethers"
-import { SIWFSigner } from "@canvas-js/chain-ethereum"
+import { SIWFSigner } from "@canvas-js/signer-ethereum"
 import { SignInButton, useProfile } from "@farcaster/auth-kit"
 import FrameSDK from "@farcaster/frame-sdk"
 
@@ -107,7 +107,7 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic, frame }) => {
 							setSessionSigner(signer)
 							app.updateSigners([
 								signer,
-								...app.signers.getAll().filter((signer) => signer.key !== "chain-ethereum-farcaster"),
+								...app.signers.getAll().filter((signer) => signer.key !== "signer-ethereum-farcaster"),
 							])
 							app.messageLog.append(payload, { signer: delegateSigner })
 							console.log("started SIWF chat session inside frame", authorizationData)
@@ -142,7 +142,7 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic, frame }) => {
 							setSessionSigner(signer)
 							app.updateSigners([
 								signer,
-								...app.signers.getAll().filter((signer) => signer.key !== "chain-ethereum-farcaster"),
+								...app.signers.getAll().filter((signer) => signer.key !== "signer-ethereum-farcaster"),
 							])
 							app.messageLog.append(payload, { signer: delegateSigner })
 							console.log("started SIWF chat session", authorizationData)

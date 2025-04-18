@@ -6,11 +6,11 @@
 		"outDir": "dist"
 	},
 	"references": [
-		{ "path": "../chain-atp" },
-		{ "path": "../chain-ethereum" },
-		{ "path": "../chain-cosmos" },
-		{ "path": "../chain-solana" },
-		{ "path": "../chain-substrate" },
+		{ "path": "../signer-atp" },
+		{ "path": "../signer-ethereum" },
+		{ "path": "../signer-cosmos" },
+		{ "path": "../signer-solana" },
+		{ "path": "../signer-substrate" },
 		{ "path": "../core" },
 		{ "path": "../gossiplog" },
 		{ "path": "../interfaces" },

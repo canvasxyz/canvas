@@ -46,7 +46,7 @@
 		"@nomicfoundation/solidity-analyzer-win32-x64-msvc": "0.1.1"
 	},
 	"dependencies": {
-		"@canvas-js/chain-ethereum": "0.14.0-next.2",
+		"@canvas-js/signer-ethereum": "0.14.0-next.2",
 		"@lazyledger/protobuf3-solidity-lib": "^0.6.0",
 		"@openzeppelin/contracts": "^4.9.6",
 		"base58-solidity": "^1.0.2"

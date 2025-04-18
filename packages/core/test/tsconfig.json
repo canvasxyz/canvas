@@ -11,7 +11,7 @@
 		{ "path": "../." },
 		{ "path": "../../interfaces" },
 		{ "path": "../../signatures" },
-		{ "path": "../../chain-ethereum" },
-		{ "path": "../../chain-cosmos" }
+		{ "path": "../../signer-ethereum" },
+		{ "path": "../../signer-cosmos" }
 	]
 }

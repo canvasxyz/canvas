@@ -1,6 +1,6 @@
 import React, { useCallback, useContext, useState } from "react"
 
-import { CosmosSigner } from "@canvas-js/chain-cosmos"
+import { CosmosSigner } from "@canvas-js/signer-cosmos"
 import { fromBech32 } from "@cosmjs/encoding"
 
 import { AppContext } from "../AppContext.js"

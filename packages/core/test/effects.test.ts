@@ -2,7 +2,7 @@ import test, { ExecutionContext } from "ava"
 import { nanoid } from "nanoid"
 import PQueue from "p-queue"
 
-import { SIWESigner } from "@canvas-js/chain-ethereum"
+import { SIWESigner } from "@canvas-js/signer-ethereum"
 import { Actions, Canvas, ModelSchema } from "@canvas-js/core"
 
 const models = {

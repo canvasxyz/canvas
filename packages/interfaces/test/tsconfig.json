@@ -9,10 +9,10 @@
 		{ "path": "../." },
 		{ "path": "../../interfaces" },
 		{ "path": "../../signatures" },
-		{ "path": "../../chain-cosmos" },
-		{ "path": "../../chain-ethereum" },
-		{ "path": "../../chain-ethereum-viem" },
-		{ "path": "../../chain-solana" },
-		{ "path": "../../chain-substrate" }
+		{ "path": "../../signer-cosmos" },
+		{ "path": "../../signer-ethereum" },
+		{ "path": "../../signer-ethereum-viem" },
+		{ "path": "../../signer-solana" },
+		{ "path": "../../signer-substrate" }
 	]
 }

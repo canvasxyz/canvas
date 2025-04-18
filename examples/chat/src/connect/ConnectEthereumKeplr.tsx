@@ -3,7 +3,7 @@ import { Window as KeplrWindow, EthSignType } from "@keplr-wallet/types"
 import { bytesToHex } from "@noble/hashes/utils"
 import { fromBech32 } from "@cosmjs/encoding"
 
-import { CosmosSigner } from "@canvas-js/chain-cosmos"
+import { CosmosSigner } from "@canvas-js/signer-cosmos"
 
 import { AppContext } from "../AppContext.js"
 
