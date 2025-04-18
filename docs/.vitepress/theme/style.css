@@ -38,6 +38,8 @@
   font-display: swap;
 }
 
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500&display=swap');
+
 @font-face {
   font-family: 'Geist Mono';
   src: url('/fonts/GeistMono-Bold.woff') format('woff');
