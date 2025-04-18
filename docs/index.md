@@ -5,18 +5,15 @@ next: false
 
 <div :class="$style.main">
 
-<HeroRow tagline="Early Developer Preview" text="Distributed database & runtime made simple" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
+<HeroRow tagline="Early Developer Preview" text="Build powerful applications on peer-to-peer sync" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
 
 <div :class="$style.mainInner">
 
 Canvas is a peer-to-peer database that makes it easy to write distributed
-applications that sync over the network, like a local-first Firebase or InstantDB.
+applications, like a local-first Firebase or InstantDB.
 
 Write an application in your browser in minutes. Launch a peer
-with one command.
-
-You can even write complex auth & transactional logic inside the database,
-unlike most p2p databases which only support simple data structures.
+with one command. Integrate with multiple identity systems and PKIs for login.
 
 </div>
 
@@ -215,6 +212,19 @@ application.
 
 <div :class="$style.end">
 
+The current release of Canvas is an early developer preview that we
+are using in production pilots with a limited set of design partners. We
+are excited to work with more developers to build on the system, and
+to support more identity providers. Please reach out via
+[Discord](https://discord.gg/EjczssxKpR) to discuss.
+
+Technically inclined readers may be interested in some of our writing,
+which covers the technical foundations of the system:
+
+- [Merklizing the Key/Value Store for Fun and Profit](https://joelgustafson.com/posts/2023-05-04/merklizing-the-key-value-store-for-fun-and-profit)
+- [GossipLog: Reliable Causal Broadcast for libp2p](https://joelgustafson.com/posts/2024-09-30/gossiplog-reliable-causal-broadcast-for-libp2p)
+- [Introduction to Causal Logs](https://joelgustafson.com/posts/2024-09-30/introduction-to-causal-logs)
+
 Canvas is an open source project built by a team with experience at
 MIT, Princeton, and Protocol Labs, that has also built Web3
 products used by tens of thousands of users. It has been under active development
@@ -232,6 +242,10 @@ We also send infrequent email updates. Subscribe here for more information:
 <HomepageFooter />
 
 <style module>
+.main p[class="text"],
+.main a[class="tagline"],
+.sectionHeader h1 { font-family: "Space Grotesk"; }
+
 .main { max-width: 630px; }
 .mainInner { max-width: 630px; } /* make room for jellyfish */
 @media (max-width: 960px) {
@@ -244,7 +258,7 @@ We also send infrequent email updates. Subscribe here for more information:
 .flex div[class*="vp-adaptive-theme"] { font-size: 98%; }
 .colLeft div[class*="vp-adaptive-theme"] { font-size: 96%; }
 
-.flex { display: flex; flex-direction: row-reverse; }
+.flex { display: flex; flex-direction: row-reverse; padding-bottom: 10px;}
 .colLeft { width: 49%; padding-right: 33px; padding-top: 0px; }
 .colLeft hr { margin: 1.75rem 0; }
 .colRight { width: 51%; }
