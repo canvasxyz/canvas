@@ -4,8 +4,7 @@
 [![node](https://img.shields.io/node/v/@canvas-js/core.svg)](https://www.npmjs.com/package/@canvas-js/core)
 [![npm](https://img.shields.io/npm/v/@canvas-js/core?color=33cd56&logo=npm)](https://www.npmjs.com/package/@canvas-js/core)
 
-Canvas is a **instant-sync database** with an **embedded runtime and sync engine**,
-that makes it possible to write web applications like smart contracts.
+Canvas is a local-first, peer-to-peer synced database with an embedded runtime and sync engine.
 
 Canvas applications are easy to configure and have several useful properties:
 
