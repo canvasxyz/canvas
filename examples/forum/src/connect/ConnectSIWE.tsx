@@ -18,41 +18,44 @@ export const ConnectSIWE: React.FC<ConnectSIWEProps> = ({}) => {
 	const [provider, setProvider] = useState<BrowserProvider | null>(null)
 	const [error, setError] = useState<Error | null>(null)
 
-	const connect = useCallback(async (provider: BrowserProvider | null, isBrowserInit?: boolean) => {
-		if (app === null) {
-			setError(new Error("app not initialized"))
-			return
-		}
-
-		if (provider === null) {
-			setError(new Error("window.ethereum not found"))
-			return
-		}
-
-		setProvider(provider)
-
-		const network = await provider.getNetwork()
-		const signer = await provider
-			.getSigner()
-			.then((signer) => new SIWESigner({ signer, chainId: Number(network.chainId) }))
-
-		if (!(await signer.hasSession(app.topic))) {
-			if (isBrowserInit) {
+	const connect = useCallback(
+		async (provider: BrowserProvider | null, isBrowserInit?: boolean) => {
+			if (app === null) {
+				setError(new Error("app not initialized"))
 				return
-			} else {
-				const session = await signer.newSession(app.topic)
-				await app.messageLog.append(session.payload, { signer: session.signer })
 			}
-		}
 
-		const address = await signer.getDid()
-		setAddress(address)
+			if (provider === null) {
+				setError(new Error("window.ethereum not found"))
+				return
+			}
 
-		const otherSigners =app.signers.getAll().filter((s) => !(s instanceof SIWESigner))
-		otherSigners.forEach((s) => s.clearSession(app.topic))
-		app.updateSigners([signer, ...otherSigners])
-		setSessionSigner(signer)
-	}, [app, provider])
+			setProvider(provider)
+
+			const network = await provider.getNetwork()
+			const signer = await provider
+				.getSigner()
+				.then((signer) => new SIWESigner({ signer, chainId: Number(network.chainId) }))
+
+			if (!(await signer.hasSession(app.topic))) {
+				if (isBrowserInit) {
+					return
+				} else {
+					const session = await signer.newSession(app.topic)
+					await app.messageLog.append(session.payload, { signer: session.signer })
+				}
+			}
+
+			const address = await signer.getDid()
+			setAddress(address)
+
+			const otherSigners = app.signers.getAll().filter((s) => !(s instanceof SIWESigner))
+			otherSigners.forEach((s) => s.clearSession(app.topic))
+			app.updateSigners([signer, ...otherSigners])
+			setSessionSigner(signer)
+		},
+		[app, provider],
+	)
 
 	const initialRef = useRef(false)
 	useEffect(() => {

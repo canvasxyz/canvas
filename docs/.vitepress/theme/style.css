@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&display=swap');
+
 @font-face {
   font-family: 'Geist';
   src: url('/fonts/Geist-Regular.woff') format('woff');
@@ -37,8 +39,6 @@
   font-style: normal;
   font-display: swap;
 }
-
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500&display=swap');
 
 @font-face {
   font-family: 'Geist Mono';
@@ -303,8 +303,12 @@ pre {
 
 .VPNavBar .content-body {
   transition: none !important;
-  margin-right: -32px;
-  padding-right: 32px;
+}
+@media (min-width: 960px) {
+  .VPNavBar .content-body {
+    margin-right: -32px;
+    padding-right: 32px;
+  }
 }
 
 .VPNavBarTitle .title {
