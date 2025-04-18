@@ -1,6 +1,6 @@
 {
 	"name": "@canvas-js/signer-ethereum-viem",
-	"version": "0.14.0-next.3",
+	"version": "0.14.0",
 	"type": "module",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"main": "lib/index.js",
@@ -13,11 +13,11 @@
 		"test": "ava"
 	},
 	"devDependencies": {
-		"@canvas-js/signer-ethereum-viem": "0.14.0-next.3"
+		"@canvas-js/signer-ethereum-viem": "0.14.0"
 	},
 	"dependencies": {
-		"@canvas-js/interfaces": "0.14.0-next.3",
-		"@canvas-js/signatures": "0.14.0-next.3",
+		"@canvas-js/interfaces": "0.14.0",
+		"@canvas-js/signatures": "0.14.0",
 		"@canvas-js/utils": "1.0.0",
 		"@ipld/dag-json": "^10.2.3",
 		"@libp2p/logger": "^5.1.13",
