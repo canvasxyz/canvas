@@ -5,17 +5,18 @@ next: false
 
 <div :class="$style.main">
 
-<HeroRow text="A local-first, peer-to-peer database for the open web" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
+<HeroRow tagline="Early Developer Preview" text="Distributed database & runtime made simple" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
 
 <div :class="$style.mainInner">
 
-Canvas is a database that makes regular applications
-distributed, like a local-first Firebase or InstantDB.
+Canvas is a peer-to-peer database that makes it easy to write distributed
+applications that sync over the network, like a local-first Firebase or InstantDB.
 
-Write an application in your browser. Sync it to your desktop with
-one command, in less time than it takes to set up an API server.
-You can even write complex application logic inside the database
-without a backend.
+Write an application in your browser in minutes. Launch a peer
+with one command.
+
+You can even write complex auth & transactional logic inside the database,
+unlike most p2p databases which only support simple data structures.
 
 </div>
 
@@ -89,6 +90,12 @@ without a backend.
 
 ---
 
+<div :class="$style.sectionHeader">
+
+# Launch an application in minutes
+
+</div>
+
 <div :class="$style.flex">
   <div :class="$style.colRight">
 
@@ -97,22 +104,24 @@ without a backend.
 ```ts [Browser]
 import { Canvas } from "@canvas-js/core"
 
+const models = {
+  messages: {
+    id: "primary",
+    text: "string",
+    $indexes: ["id"]
+  }
+}
+
+const actions = {
+  createMessage: async (db, text) => {
+    const { address, id } = this
+    await db.set("messages", { id, text })
+  }
+}
+
 const app = await Canvas.initialize({
   topic: "example.canvas.xyz",
-  contract: {
-    models: {
-      messages: {
-        id: "primary",
-        text: "string",
-      }
-    },
-    actions: {
-      createMessage: async (db, text) => {
-        const { address, id } = this
-        await db.set("messages", { id, text })
-      }
-    }
-  }
+  contract: { models, actions }
 })
 
 app.actions.createMessage("hello world!")
@@ -153,6 +162,7 @@ export const actions = {
   }
 }
 
+// From the command line:
 $ canvas run contract.ts --topic demo.canvas.xyz // [!code highlight]
 ```
 
@@ -164,27 +174,31 @@ $ canvas run contract.ts --topic demo.canvas.xyz // [!code highlight]
   <div :class="$style.colLeft">
 
 **Create a database** by defining models and actions.
-
-Models define the schema of your database, which are interoperable across
-platforms.
+Models are an interoperable across platforms.
 
 Actions define mutations that users can make to the database. Use them to
 enforce authorization checks, or write business logic.
 
 ---
 
-**Launch a peer** from your terminal by pointing it to contract.ts.
+**Launch a peer** from your terminal. It will automatically connect
+with everyone else running the same application, on the same topic.
 
 ```sh
-canvas run contract.ts --network-explorer \
-  --admin 0x349...
-  --topic chat-example.canvas.xyz
+canvas run contract.ts --topic example.xyz
 [canvas] Bundled .ts contract: 4386 chars
 [canvas] Serving HTTP API: ...
 ```
 
-You can provide an admin address for the peer, which will allow you to
-upgrade the running application, while preserving your users' data.
+---
+
+**Upgrade your application** by adding new actions or
+models at any time. Upgraded nodes will soft-fork
+away from old ones.
+
+To change existing actions or models, you can use the admin interface
+to generate a snapshot which compacts the past history of the
+application.
 
   </div>
 </div>
@@ -202,14 +216,14 @@ upgrade the running application, while preserving your users' data.
 <div :class="$style.end">
 
 Canvas is an open source project built by a team with experience at
-MIT, Princeton, and Protocol Labs, that has built Web3
-products used by tens of thousands. It has been under active development
-since 2022 with the support of <a href="https://www.protocol.vc/" target="_blank">PLVC</a>,
-<a href="https://alliance.xyz/" target="_blank">Alliance</a>, <a href="https://zeitgeist.xyz/" target="_blank">Zeitgeist</a>, <a href="https://fil.org/" target="_blank">Filecoin Foundation</a>, and others.
+MIT, Princeton, and Protocol Labs, that has also built Web3
+products used by tens of thousands of users. It has been under active development
+since 2022 with support from <a href="https://www.protocol.vc/" target="_blank">PLVC</a>,
+<a href="https://alliance.xyz/" target="_blank">Alliance</a>, <a href="https://zeitgeist.xyz/" target="_blank">Zeitgeist</a>, <a href="https://fil.org/" target="_blank">Filecoin</a>, and others.
 
 </div>
 
-Subscribe to our email updates for more information:
+We also send infrequent email updates. Subscribe here for more information:
 
 <br/>
 
@@ -218,12 +232,14 @@ Subscribe to our email updates for more information:
 <HomepageFooter />
 
 <style module>
-.main { max-width: 690px; }
-.mainInner { max-width: 600px; } /* make room for jellyfish */
+.main { max-width: 630px; }
+.mainInner { max-width: 630px; } /* make room for jellyfish */
 @media (max-width: 960px) {
   .main { margin: 0 auto; }
   .mainInner { max-width: none; }
 }
+
+.sectionHeader { margin: 2.5rem 0 0.7rem; }
 
 .flex div[class*="vp-adaptive-theme"] { font-size: 98%; }
 .colLeft div[class*="vp-adaptive-theme"] { font-size: 96%; }

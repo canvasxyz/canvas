@@ -18,7 +18,7 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
   <div class="HeroRow" :class="{ 'has-image': image || heroImageSlotExists }">
     <div class="container">
       <div class="main">
-        <div v-if="tagline" v-html="tagline" class="prefix"></div>
+        <a href="#" class="tagline" v-if="tagline"><div v-html="tagline"></div></a>
         <slot name="home-hero-info">
           <h1 v-if="name" class="name">
             <span v-html="name" class="clip"></span>
@@ -64,13 +64,15 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 </template>
 
 <style scoped>
-.HeroRow .prefix {
+.HeroRow a.tagline {
+  display: block;
   color: #989FE4;
   font-size: 80%;
   font-weight: 500;
   letter-spacing: 0.6px;
   text-transform: uppercase;
-  margin-bottom: 30px;
+  margin-bottom: 21px;
+  text-decoration: none;
 }
 
 .HeroRow {
