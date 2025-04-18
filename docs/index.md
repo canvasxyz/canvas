@@ -172,7 +172,7 @@ $ canvas run contract.ts --topic demo.canvas.xyz // [!code highlight]
 
 **Create a database** by defining models and actions.
 
-Models define your database's schema, in a way that's interoperable
+Models define your database schema, and are interoperable
 across platforms, like Prisma.
 
 Actions define mutations that users can make to the database. Use them to
@@ -212,7 +212,7 @@ to generate a hard-fork snapshot, and compact the state of the application.
 </div>
 
 Traditionally, local-first databases have only offered simple data
-structures (e.g. KV-stores, maps, and feeds). They often enforce strict
+structures like KV-stores, maps, and feeds. They often enforce strict
 data schemas, require developers to set up private keys for users,
 and provide limited options for persistence and sync.
 
@@ -221,7 +221,7 @@ determinism and convergence in an eventually-consistent
 environment. Using the runtime, we can compile database schemas,
 permission checks, and custom mutations into code.
 
-We also wrote a modular signer system that allows us to integrate with
+Canvas uses a modular signer interface that allows us to integrate with
 different login systems, including crypto wallets, DIDs, and (soon)
 WebAuthn and OIDC SSO. For more traditional logins, we also have
 cryptographically verifiable strategies using traditional identity
@@ -230,9 +230,9 @@ providers on the roadmap.
 We've published some of our research as technical presentations here:
 
 - [Merklizing the Key/Value Store for Fun and Profit](https://joelgustafson.com/posts/2023-05-04/merklizing-the-key-value-store-for-fun-and-profit)
-- [GossipLog: libp2p Day Presentation](https://www.youtube.com/watch?v=X8nAdx1G-Cs)
-- [GossipLog: Reliable Causal Broadcast for libp2p](https://joelgustafson.com/posts/2024-09-30/gossiplog-reliable-causal-broadcast-for-libp2p)
 - [Introduction to Causal Logs](https://joelgustafson.com/posts/2024-09-30/introduction-to-causal-logs)
+- [GossipLog: Reliable Causal Broadcast for libp2p](https://joelgustafson.com/posts/2024-09-30/gossiplog-reliable-causal-broadcast-for-libp2p)
+- [GossipLog: libp2p Day Presentation](https://www.youtube.com/watch?v=X8nAdx1G-Cs)
 
 The current release of Canvas is an early developer preview that we
 are using in a limited set of production pilots. We are excited to
