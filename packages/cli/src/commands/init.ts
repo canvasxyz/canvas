@@ -59,10 +59,12 @@ export const models = {
 };
 
 export const actions = {
-	async createMessage(db, { content }, { id, did, timestamp }) {
+	async createMessage(content) {
+		const { id, content, did, timestamp } = this
 		await db.set("messages", { id, content, did, timestamp });
 	},
-	async deleteMessage(db, { messageId }, { did }) {
+	async deleteMessage(messageId) {
+		const { did } = this
 		const message = await db.get("messages", messageId)
 		if (message !== null) {
 			if (message.did !== did) {

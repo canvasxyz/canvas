@@ -1,6 +1,6 @@
 import React, { useCallback, useContext, useMemo, useState } from "react"
 import { TypedEventEmitter } from "@libp2p/interface"
-import { ATPSigner } from "@canvas-js/chain-atp"
+import { ATPSigner } from "@canvas-js/signer-atp"
 
 import { AppContext } from "../AppContext.js"
 

@@ -184,7 +184,7 @@ export class ContractRuntime extends AbstractRuntime {
 			this.#txnId = 0
 			this.#context = exec
 			this.#thisHandle = thisHandle
-			const result = await this.vm.callAsync(actionHandle, thisHandle, [this.#databaseAPI, ...argHandles])
+			const result = await this.vm.callAsync(actionHandle, thisHandle, argHandles)
 			return result.consume((handle) => this.vm.unwrapValue(handle))
 		} finally {
 			argHandles.map((handle: QuickJSHandle) => handle.dispose())

@@ -1,7 +1,7 @@
 declare let window: any
 import React, { useCallback, useContext, useState } from "react"
 
-import { SolanaSigner } from "@canvas-js/chain-solana"
+import { SolanaSigner } from "@canvas-js/signer-solana"
 
 import { AppContext } from "../AppContext.js"
 

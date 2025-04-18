@@ -6,11 +6,11 @@ As a result, Canvas applications are initialized with **session signers**, which
 
 ## SIWESigner
 
-The `SIWESigner` class exported by `@canvas-js/chain-ethereum` matches actions with `eip155:*` chains, the EIP-155 identifier for Ethereum. This is also our most often used signer.
+The `SIWESigner` class exported by `@canvas-js/signer-ethereum` matches actions with `eip155:*` chains, the EIP-155 identifier for Ethereum. This is also our most often used signer.
 
 ```ts
 import { BrowserProvider } from "ethers"
-import { SIWESigner } from "@canvas-js/chain-ethereum"
+import { SIWESigner } from "@canvas-js/signer-ethereum"
 import { Canvas } from "@canvas-js/core"
 
 const provider = new BrowserProvider(window.ethereum)
@@ -48,13 +48,10 @@ const app = await Canvas.initialize({
 })
 
 // Use a specific signer
-await app.actions.createPost({ content: "foo" }, { signer: app.signers[1] })
-
-// Use first signer matching a certain chain
-await app.actions.createPost({ content: "bar" }, { chain: "eip155:1" })
+await app.actions.as(app.signers[1]).createPost("foo")
 
 // Defaults to the first signer app.signers[0]
-await app.actions.createPost({ content: "baz" })
+await app.actions.createPost("baz")
 ```
 
 The SIWESigner class also supports a `burner` parameter, which will

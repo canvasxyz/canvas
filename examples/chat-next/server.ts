@@ -3,7 +3,7 @@ import next from "next"
 
 import { Canvas } from "@canvas-js/core"
 import { createAPI } from "@canvas-js/core/api"
-import { SIWESigner } from "@canvas-js/chain-ethereum"
+import { SIWESigner } from "@canvas-js/signer-ethereum"
 
 const dev = process.env.NODE_ENV !== "production"
 const nextApp = next({ dev })
@@ -31,7 +31,8 @@ nextApp.prepare().then(async () => {
 				},
 			},
 			actions: {
-				async createMessage(db, { content }, { id, address, timestamp }) {
+				async createMessage({ content }) {
+					const { id, address, timestamp, db } = this
 					await db.set("message", { id, address, content, timestamp })
 				},
 			},

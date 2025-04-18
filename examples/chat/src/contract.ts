@@ -11,8 +11,8 @@ export const models = {
 } satisfies ModelSchema
 
 export const actions = {
-	async createMessage(db, args) {
-		const { id, address, timestamp } = this
+	async createMessage(args) {
+		const { id, address, timestamp, db } = this
 		const content = typeof args === "string" ? args : args.content
 		await db.set("message", { id, address, content, timestamp })
 	},

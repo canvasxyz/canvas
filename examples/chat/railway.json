@@ -11,7 +11,7 @@
       "/packages/hooks/**",
       "/packages/interfaces/**",
       "/packages/modeldb/**",
-      "/packages/chain-*/**",
+      "/packages/signer-*/**",
       "/examples/forum/**"
     ]
   },

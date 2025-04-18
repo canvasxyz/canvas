@@ -13,11 +13,11 @@ test("snapshot persists data across apps", async (t) => {
 				},
 			},
 			actions: {
-				async createPost(db, { id, content }: { id: string; content: string }) {
-					await db.set("posts", { id, content })
+				async createPost({ id, content }: { id: string; content: string }) {
+					await this.db.set("posts", { id, content })
 				},
-				async deletePost(db, { id }: { id: string }) {
-					await db.delete("posts", id)
+				async deletePost({ id }: { id: string }) {
+					await this.db.delete("posts", id)
 				},
 			},
 		},

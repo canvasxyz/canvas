@@ -1,7 +1,7 @@
 import React, { useCallback, useContext, useState } from "react"
 import { Eip1193Provider, EventEmitterable } from "ethers"
 
-import { SIWESigner } from "@canvas-js/chain-ethereum"
+import { SIWESigner } from "@canvas-js/signer-ethereum"
 
 import { AppContext } from "../AppContext.js"
 

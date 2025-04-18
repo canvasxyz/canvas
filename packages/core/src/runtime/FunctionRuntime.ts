@@ -34,7 +34,11 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 	#queue = new PQueue({ concurrency: 1 })
 	#db: ModelAPI<DeriveModelTypes<ModelsT>>
 
-	constructor(public readonly topic: string, public readonly signers: SignerCache, contract: Contract<ModelsT>) {
+	constructor(
+		public readonly topic: string,
+		public readonly signers: SignerCache,
+		contract: Contract<ModelsT>,
+	) {
 		super(contract.models)
 		this.contract = [
 			`export const models = ${JSON.stringify(contract.models, null, "  ")};`,
@@ -117,7 +121,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 			this.#context = exec
 			this.#thisValue = thisValue
 
-			const result = await action.apply(thisValue, Array.isArray(args) ? [this.#db, ...args] : [this.#db, args])
+			const result = await action.apply(thisValue, Array.isArray(args) ? args : [args])
 			await this.#queue.onIdle()
 
 			return result

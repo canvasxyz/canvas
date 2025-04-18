@@ -10,7 +10,7 @@
 	},
 	"references": [
 		{ "path": "../../packages/core" },
-		{ "path": "../../packages/chain-ethereum" },
+		{ "path": "../../packages/signer-ethereum" },
 		{ "path": "../../packages/gossiplog" },
 		{ "path": "../../packages/hooks" },
 		{ "path": "../../packages/interfaces" },

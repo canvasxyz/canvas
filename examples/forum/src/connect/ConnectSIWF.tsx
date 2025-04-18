@@ -2,7 +2,7 @@ import "@farcaster/auth-kit/styles.css"
 
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
 import { hexlify, getBytes } from "ethers"
-import { SIWESigner, SIWFSigner } from "@canvas-js/chain-ethereum"
+import { SIWESigner, SIWFSigner } from "@canvas-js/signer-ethereum"
 import { AuthClientError, SignInButton, useProfile, UseSignInData } from "@farcaster/auth-kit"
 import { sdk } from "@farcaster/frame-sdk"
 import { bytesToHex } from "@noble/hashes/utils"
@@ -61,7 +61,7 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic }) => {
 
 			app.updateSigners([
 				sessionSigner,
-				...app.signers.getAll().filter((signer) => signer.key !== "chain-ethereum-farcaster"),
+				...app.signers.getAll().filter((signer) => signer.key !== "signer-ethereum-farcaster"),
 			])
 			console.log("started restored SIWF session")
 		}
@@ -120,7 +120,7 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic }) => {
 			})
 		setAddress(address)
 		setSessionSigner(signer)
-		app.updateSigners([signer, ...app.signers.getAll().filter((signer) => signer.key !== "chain-ethereum-farcaster")])
+		app.updateSigners([signer, ...app.signers.getAll().filter((signer) => signer.key !== "signer-ethereum-farcaster")])
 		app.messageLog.append(payload, { signer: delegateSigner })
 		console.log("started SIWF session inside frame", authorizationData)
 	}, [app, nonce, newSessionPrivateKey, topic])
@@ -148,7 +148,10 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic }) => {
 			)
 			setAddress(address)
 			setSessionSigner(signer)
-			app.updateSigners([signer, ...app.signers.getAll().filter((signer) => signer.key !== "chain-ethereum-farcaster")])
+			app.updateSigners([
+				signer,
+				...app.signers.getAll().filter((signer) => signer.key !== "signer-ethereum-farcaster"),
+			])
 			app.messageLog.append(payload, { signer: delegateSigner })
 			console.log("started SIWF session", authorizationData)
 		},

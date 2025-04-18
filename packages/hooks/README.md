@@ -14,7 +14,7 @@ If you provide a WebSocket URL, it will try to connect to that WebSocket and
 use browser-to-server sync to stay updated with it.
 
 ```ts
-import { SIWESigner } from "@canvas-js/chain-ethereum"
+import { SIWESigner } from "@canvas-js/signer-ethereum"
 import { useCanvas } from "@canvas-js/hooks"
 import { useMemo } from "react"
 
