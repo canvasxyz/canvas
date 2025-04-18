@@ -48,7 +48,8 @@ export default defineConfig({
 						{ text: "Creating an Application", link: "/2-applications" },
 						{ text: "Querying Data", link: "/3-querying" },
 						{ text: "Identifying Users", link: "/4-identities-auth" },
-						{ text: "Deploying an Application", link: "/5-deployment" },
+						{ text: "Deploying Applications", link: "/5-deployment" },
+						{ text: "Upgrades & Snapshots", link: "/6-upgrading" },
 					],
 				},
 				{
@@ -57,12 +58,12 @@ export default defineConfig({
 						{ text: "Core", link: "/readme-core.md" },
 						{ text: "CLI", link: "/readme-cli.md" },
 						{ text: "Hooks", link: "/readme-hooks.md" },
+						{ text: "ModelDB", link: "/readme-modeldb.md" },
+						{ text: "GossipLog", link: "/readme-gossiplog.md" },
 						{
-							text: "Components",
+							text: "Utilities",
 							collapsed: true,
 							items: [
-								{ text: "GossipLog", link: "/readme-gossiplog.md" },
-								{ text: "ModelDB", link: "/readme-modeldb.md" },
 								{ text: "Signatures", link: "/readme-signatures.md" },
 								{ text: "Interfaces", link: "/readme-interfaces.md" },
 								{ text: "Signer: Ethereum", link: "/readme-chain-ethereum.md" },

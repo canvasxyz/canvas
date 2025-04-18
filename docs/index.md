@@ -5,15 +5,15 @@ next: false
 
 <div :class="$style.main">
 
-<HeroRow tagline="Early Developer Preview" text="Build powerful applications on peer-to-peer sync" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
+<HeroRow tagline="Early Developer Preview" text="Build local-first, peer-to-peer applications" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
 
 <div :class="$style.mainInner">
 
-Canvas is a peer-to-peer database that makes it easy to write distributed
-applications, like a local-first Firebase or InstantDB.
+Canvas is a peer-to-peer database, like a local-first version of Firebase.
 
-Write an application in your browser in minutes. Launch a peer
-with one command. Integrate with multiple identity systems and PKIs for login.
+It's a real-time database that you can use from the frontend,
+with the programmability of a web backend, and the usability
+and responsiveness of modern web databases.
 
 </div>
 
@@ -34,12 +34,12 @@ with one command. Integrate with multiple identity systems and PKIs for login.
     iconName: 'activity'
   },
   {
-    text: 'Reactive queries',
+    text: 'Live queries',
     tooltip: 'React hooks for live-updating apps & database queries',
     iconName: 'compare'
   },
   {
-    text: 'Custom mutators',
+    text: 'Custom logic',
     tooltip: 'Write custom mutators for auth rules or business logic',
     iconName: 'atom'
   },
@@ -49,18 +49,18 @@ with one command. Integrate with multiple identity systems and PKIs for login.
     iconName: 'rewind'
   },
   {
-    text: 'IPFS standards',
-    tooltip: 'Built on IPFS standards and our Merkle sync system (Prolly-trees)',
-    iconName: '123'
-  },
-  {
-    text: 'Web UI',
-    tooltip: 'Firebase-like database management interface',
+    text: 'Database Editor',
+    tooltip: 'Comes with a database management interface',
     iconName: 'apps',
   },
   {
-    text: 'MIT License',
-    tooltip: 'Open source, and fully self-hostable',
+    text: 'IPFS standards-based',
+    tooltip: 'Built on IPFS standards (IPLD, DAG-CBOR) and Prolly-trees',
+    iconName: '123'
+  },
+  {
+    text: 'MIT Licensed',
+    tooltip: 'Open source, fully self-hostable',
     iconName: 'crown',
   },
   {
@@ -76,7 +76,7 @@ with one command. Integrate with multiple identity systems and PKIs for login.
     disabled: true
   },
   {
-    text: 'Web2 Login',
+    text: 'Email Login',
     tooltip: 'Soon: Login optimized for usability and accessibility',
     iconName: 'lock',
     disabled: true
@@ -171,15 +171,17 @@ $ canvas run contract.ts --topic demo.canvas.xyz // [!code highlight]
   <div :class="$style.colLeft">
 
 **Create a database** by defining models and actions.
-Models are an interoperable across platforms.
+
+Models define your database's schema, in a way that's interoperable
+across platforms, like Prisma.
 
 Actions define mutations that users can make to the database. Use them to
 enforce authorization checks, or write business logic.
 
 ---
 
-**Launch a peer** from your terminal. It will automatically connect
-with everyone else running the same application, on the same topic.
+**Launch a peer** from your terminal. It will connect with everyone
+else running the application's topic, via DHT.
 
 ```sh
 canvas run contract.ts --topic example.xyz
@@ -190,12 +192,11 @@ canvas run contract.ts --topic example.xyz
 ---
 
 **Upgrade your application** by adding new actions or
-models at any time. Upgraded nodes will soft-fork
-away from old ones.
+models at any time. Upgraded nodes will safely soft-fork
+away from ones on the old contract.
 
 To change existing actions or models, you can use the admin interface
-to generate a snapshot which compacts the past history of the
-application.
+to generate a hard-fork snapshot, and compact the state of the application.
 
   </div>
 </div>
@@ -206,37 +207,44 @@ application.
 
 <div :class="$style.sectionHeader">
 
-# Built on distributed sync research
+# Built for the open web
 
 </div>
 
-Technically inclined readers may be interested in some of our writing
-which covers the foundations of the system:
+Traditionally, local-first databases have only offered simple data
+structures (e.g. KV-stores, maps, and feeds). They often enforce strict
+data schemas, require developers to set up private keys for users,
+and provide limited options for persistence and sync.
+
+To solve these problems, we built an embedded runtime that preserves
+determinism and convergence in an eventually-consistent
+environment. Using the runtime, we can compile database schemas,
+permission checks, and custom mutations into code.
+
+We also wrote a modular signer system that allows us to integrate with
+different login systems, including crypto wallets, DIDs, and (soon)
+WebAuthn and OIDC SSO. For more traditional logins, we also have
+cryptographically verifiable strategies using traditional identity
+providers on the roadmap.
+
+We've published some of our research as technical presentations here:
 
 - [Merklizing the Key/Value Store for Fun and Profit](https://joelgustafson.com/posts/2023-05-04/merklizing-the-key-value-store-for-fun-and-profit)
-- [Okra: libp2p Day Presentation](https://www.youtube.com/watch?v=X8nAdx1G-Cs)
+- [GossipLog: libp2p Day Presentation](https://www.youtube.com/watch?v=X8nAdx1G-Cs)
 - [GossipLog: Reliable Causal Broadcast for libp2p](https://joelgustafson.com/posts/2024-09-30/gossiplog-reliable-causal-broadcast-for-libp2p)
 - [Introduction to Causal Logs](https://joelgustafson.com/posts/2024-09-30/introduction-to-causal-logs)
 
 The current release of Canvas is an early developer preview that we
 are using in a limited set of production pilots. We are excited to
-work with more developers to build on the system, and to support more
-identity providers. Please reach out via
+work with more developers to build on the system, and support more
+identity providers. For more information, please reach out via
 [Discord](https://discord.gg/EjczssxKpR).
 
-Canvas is an open source project built by a team with experience at
-MIT, Princeton, and Protocol Labs, that has also built Web3
-products used by tens of thousands of users. It has been under active development
-since 2022 with support from <a href="https://www.protocol.vc/" target="_blank">PLVC</a>,
-<a href="https://alliance.xyz/" target="_blank">Alliance</a>, <a href="https://zeitgeist.xyz/" target="_blank">Zeitgeist</a>, <a href="https://fil.org/" target="_blank">Filecoin</a>, and others.
-
-</div>
-
-We also send infrequent email updates. Subscribe here for more information:
-
-<br/>
+To stay updated, you can subscribe here for more information:
 
 <EmailForm />
+
+</div>
 
 <HomepageFooter />
 
