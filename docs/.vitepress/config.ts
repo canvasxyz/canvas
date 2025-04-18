@@ -18,6 +18,9 @@ export default defineConfig({
 		ssr: {
 			noExternal: ["vue3-icons"],
 		},
+		define: {
+			__APP_VERSION__: JSON.stringify(process.env.npm_package_version),
+		},
 	},
 	ignoreDeadLinks: [(url) => /^\.\/[0-9]+$/.test(url)], // ignore footnote links
 	title: "Canvas",

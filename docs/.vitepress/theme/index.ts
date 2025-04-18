@@ -14,6 +14,7 @@ import TextRow from "../components/TextRow.vue"
 import HomepageFooter from "../components/HomepageFooter.vue"
 import FeatureTags from "../components/FeatureTags.vue"
 import EmailForm from "../components/EmailForm.vue"
+import Version from "../components/version.vue"
 import { MotionPlugin } from "@vueuse/motion"
 import "./style.css"
 
@@ -38,5 +39,6 @@ export default {
 		app.component("HomepageFooter", HomepageFooter)
 		app.component("FeatureTags", FeatureTags)
 		app.component("EmailForm", EmailForm)
+		app.component("Version", Version)
 	},
 } satisfies Theme
