@@ -14,4 +14,8 @@ export const actions = {
 	createPost(db, title: string, text: string) {
 		this.db.set("posts", { id: this.id, title, text, author: this.did, timestamp: this.timestamp })
 	},
+	deletePost(db, id: string) {
+		if (this.address !== "0x34C3A5ea06a3A67229fb21a7043243B0eB3e853f") throw new Error()
+		this.db.delete("posts", id)
+	},
 } satisfies Actions<typeof models>

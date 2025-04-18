@@ -1,4 +1,4 @@
-# Running an Application
+# Deploying an Application
 
 You can run Canvas applications in the browser only, or using
 browser-to-server sync with a server peer.

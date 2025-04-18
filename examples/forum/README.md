@@ -5,6 +5,10 @@
 The forum example implements a simple publishing platform, with support
 for login with Ethereum or Farcaster (both on the web, and as a mini app).
 
+## Contract
+
+<<< @/../examples/forum/src/contract.ts
+
 ## Developing
 
 - Run `npm run dev` to serve the frontend, on port 5173.

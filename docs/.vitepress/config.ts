@@ -47,8 +47,8 @@ export default defineConfig({
 						{ text: "Introduction", link: "/1-introduction" },
 						{ text: "Creating an Application", link: "/2-applications" },
 						{ text: "Querying Data", link: "/3-querying" },
-						{ text: "Identities & Auth", link: "/4-identities-auth" },
-						{ text: "Running an Application", link: "/5-deployment" },
+						{ text: "Identifying Users", link: "/4-identities-auth" },
+						{ text: "Deploying an Application", link: "/5-deployment" },
 					],
 				},
 				{

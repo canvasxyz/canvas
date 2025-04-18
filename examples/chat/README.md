@@ -4,6 +4,10 @@
 
 The simple chat example implements a public messaging room over libp2p, with a persistence server.
 
+## Contract
+
+<<< @/../examples/chat/src/contract.ts
+
 ## Developing
 
 - Run `npm run dev` to serve the frontend, on port 5173.

@@ -4,6 +4,10 @@
 
 This example implements simple private messaging, which can be extended to 10+ people.
 
+## Contract
+
+<<< @/../examples/encrypted-chat/src/contract.ts
+
 ## Developing
 
 - Run `npm run dev` to serve the frontend, on port 5173.

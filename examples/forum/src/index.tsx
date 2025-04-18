@@ -6,19 +6,20 @@ import ReactDOM from "react-dom/client"
 import { AuthKitProvider } from "@farcaster/auth-kit"
 import { JsonRpcProvider } from "ethers"
 import { sdk } from "@farcaster/frame-sdk"
-import { LuUnplug } from "react-icons/lu";
+import { LuUnplug } from "react-icons/lu"
 import { Text } from "@radix-ui/themes"
 
+import { Actions, Canvas } from "@canvas-js/core"
+import { ModelSchema } from "@canvas-js/modeldb"
 import type { SessionSigner } from "@canvas-js/interfaces"
 import { SIWESigner, SIWFSigner } from "@canvas-js/chain-ethereum"
 import { useCanvas, AppInfo } from "@canvas-js/hooks"
 
+import { App } from "./App.js"
 import { AppContext } from "./AppContext.js"
 import { ConnectSIWE } from "./connect/ConnectSIWE.js"
 import { ConnectSIWF } from "./connect/ConnectSIWF.js"
-import { App } from "./App.js"
-import { ModelSchema } from "@canvas-js/modeldb"
-import { Actions, Canvas } from "@canvas-js/core"
+import { models, actions } from "./contract.js"
 
 const wsURL =
 	document.location.hostname === "localhost"
@@ -36,26 +37,6 @@ const config = {
 }
 
 export const ADMIN_DID = "did:pkh:eip155:1:0x34C3A5ea06a3A67229fb21a7043243B0eB3e853f"
-
-export const models = {
-	posts: {
-		id: "primary",
-		title: "string",
-		text: "string",
-		author: "string",
-		timestamp: "number",
-	},
-} satisfies ModelSchema
-
-export const actions = {
-	createPost(db, title: string, text: string) {
-		this.db.set("posts", { id: this.id, title, text, author: this.did, timestamp: this.timestamp })
-	},
-	deletePost(db, id: string) {
-		if (this.address !== "0x34C3A5ea06a3A67229fb21a7043243B0eB3e853f") throw new Error()
-		this.db.delete("posts", id)
-	},
-} satisfies Actions<typeof models>
 
 export type AppT = Canvas<typeof models, typeof actions>
 
@@ -123,10 +104,12 @@ const Container: React.FC<{}> = ({}) => {
 							onClick={() => setIsInfoOpen(true)}
 							className="fixed top-4 right-5 z-1 bg-white p-2 rounded-full shadow-md border border-gray-200 hover:bg-gray-100 flex"
 						>
-							<span className="mx-0.5">
-								{app.hasSession() ? "Account" : "Login"}
-							</span>
-							{ws.error ? <span className="text-red-500 mt-1 mx-0.5"><LuUnplug /></span> : null}
+							<span className="mx-0.5">{app.hasSession() ? "Account" : "Login"}</span>
+							{ws.error ? (
+								<span className="text-red-500 mt-1 mx-0.5">
+									<LuUnplug />
+								</span>
+							) : null}
 						</button>
 					</main>
 				) : (
