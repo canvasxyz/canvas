@@ -87,7 +87,7 @@ with one command. Integrate with multiple identity systems and PKIs for login.
 
 ---
 
-<div :class="$style.sectionHeader">
+<div :class="$style.sectionHeaderCol">
 
 # Get started in minutes
 
@@ -202,28 +202,27 @@ application.
 
 ---
 
-<!-- <FeatureRow title="Components" detail="">
-  <FeatureCard title="@canvas-js/okra" details="A Prolly tree written in Zig, that enables fast peer-to-peer sync for application histories." link="https://github.com/canvasxyz/okra" linkText="Github" secondaryLink="https://docs.canvas.xyz/blog/2023-05-04-merklizing-the-key-value-store.html" secondaryLinkText="Blog"/>
-  <FeatureCard title="@canvas-js/gossiplog" details="A self-authenticating distributed log for multi-writer applications." link="https://github.com/canvasxyz/canvas/tree/main/packages/gossiplog" linkText="Github" secondaryLinkText="Talk" secondaryLink="https://www.youtube.com/watch?v=X8nAdx1G-Cs"/>
-  <FeatureCard title="@canvas-js/modeldb" details="A cross-platform relational database wrapper for IDB, SQLite, and Postgres." link="https://github.com/canvasxyz/canvas/tree/main/packages/modeldb" linkText="Github"/>
-  <FeatureCard title="@canvas-js/core" details="A database for local-first and peer-to-peer applications, with an embedded runtime." link="https://github.com/canvasxyz/canvas/tree/main/packages/modeldb" linkText="Github"/>
-  <FeatureCard title="@canvas-js/chain-ethereum" details="Log in with an Ethereum wallet. Also supports Cosmos, Solana, and Polkadot." linkText="Demo" link="https://chat-example.canvas.xyz/"/>
-</FeatureRow> -->
-
 <div :class="$style.end">
+
+<div :class="$style.sectionHeader">
+
+# Built on distributed sync research
+
+</div>
+
+Technically inclined readers may be interested in some of our writing
+which covers the foundations of the system:
+
+- [Merklizing the Key/Value Store for Fun and Profit](https://joelgustafson.com/posts/2023-05-04/merklizing-the-key-value-store-for-fun-and-profit)
+- [Okra: libp2p Day Presentation](https://www.youtube.com/watch?v=X8nAdx1G-Cs)
+- [GossipLog: Reliable Causal Broadcast for libp2p](https://joelgustafson.com/posts/2024-09-30/gossiplog-reliable-causal-broadcast-for-libp2p)
+- [Introduction to Causal Logs](https://joelgustafson.com/posts/2024-09-30/introduction-to-causal-logs)
 
 The current release of Canvas is an early developer preview that we
 are using in a limited set of production pilots. We are excited to
 work with more developers to build on the system, and to support more
 identity providers. Please reach out via
 [Discord](https://discord.gg/EjczssxKpR).
-
-Technically inclined readers may be interested in some of our writing,
-which covers the technical foundations of the system:
-
-- [Okra: Merklizing the Key/Value Store for Fun and Profit](https://joelgustafson.com/posts/2023-05-04/merklizing-the-key-value-store-for-fun-and-profit)
-- [GossipLog: Reliable Causal Broadcast for libp2p](https://joelgustafson.com/posts/2024-09-30/gossiplog-reliable-causal-broadcast-for-libp2p)
-- [Introduction to Causal Logs](https://joelgustafson.com/posts/2024-09-30/introduction-to-causal-logs)
 
 Canvas is an open source project built by a team with experience at
 MIT, Princeton, and Protocol Labs, that has also built Web3
@@ -244,7 +243,8 @@ We also send infrequent email updates. Subscribe here for more information:
 <style module>
 .main p[class="text"],
 .main a[class="tagline"],
-.sectionHeader h1 { font-family: "Space Grotesk"; }
+.sectionHeader h1,
+.sectionHeaderCol h1 { font-family: "Space Grotesk"; }
 
 .main { max-width: 630px; }
 .mainInner { max-width: 630px; } /* make room for jellyfish */
@@ -253,7 +253,8 @@ We also send infrequent email updates. Subscribe here for more information:
   .mainInner { max-width: none; }
 }
 
-.sectionHeader { margin: 2.5rem 0 0.7rem; }
+.sectionHeaderCol { margin: 2.5rem 0 0.7rem; }
+.sectionHeader { margin: 2.5rem 0 1.3rem; }
 
 .flex div[class*="vp-adaptive-theme"] { font-size: 98%; }
 .colLeft div[class*="vp-adaptive-theme"] { font-size: 96%; }

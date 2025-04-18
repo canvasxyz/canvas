@@ -85,6 +85,10 @@ pre {
   outline: none;
 }
 
+.VPDoc {
+  overflow: hidden;
+}
+
 .vp-doc .footnote-ref a,
 .vp-doc a.footnote-backref {
   color: var(--vp-c-text-3);
