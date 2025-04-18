@@ -7,7 +7,7 @@ const app = await Canvas.initialize(...)
 await app.db.get("posts", postId)
 ```
 
-You can query the database outside action handlers by using `app.db.get`, `app.db.query`, or `useLiveQuery` for live-updating data.
+You can query the database outside action handlers by using `app.db.get`, `app.db.query`, or `useLiveQuery` for live data as a React hook.
 
 ## Getting records
 
