@@ -33,7 +33,7 @@ Import `ModelDB` from:
 - `@canvas-js/modeldb-pg` (NodeJS)
 - `@canvas-js/modeldb-sqlite` (NodeJS)
 - `@canvas-js/modeldb-sqlite-expo` (React Native)
-- `@canvas-js/modeldb-durable-objects` (React Native)
+- `@canvas-js/modeldb-durable-objects` (Durable Objects)
 
 or any other backend.
 
@@ -241,8 +241,14 @@ Model names and property names can contain `[a-zA-Z0-9$:_\-\.]`.
 
 ## Testing
 
-ModelDB has a test suite that that uses Ava as its test runner and Puppeteer for browser testing. The SQLite + Wasm implementations make use of Web APIs
-and are tested in the browser. The IndexedDB implementation is tested in NodeJS using a mock IndexedDB implementation.
+ModelDB has a test suite that uses Ava as its test runner and
+Puppeteer for browser testing.
+
+The SQLite + Wasm implementations use Web APIs and are tested in the
+browser.
+
+The IndexedDB implementation is tested in NodeJS using a mock
+IndexedDB implementation.
 
 ```sh
 npm run test --workspace=@canvas-js/modeldb

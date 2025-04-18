@@ -5,7 +5,7 @@ next: false
 
 <div :class="$style.main">
 
-<HeroRow tagline="Early Developer Preview" text="Build local-first, peer-to-peer applications" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
+<HeroRow tagline="Developer Preview" text="Build local-first, peer-to-peer applications" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
 
 <div :class="$style.mainInner">
 
@@ -93,11 +93,13 @@ traditional backend, and usability of a modern web database.
 </div>
 
 <div :class="$style.badges">
+<a href="https://github.com/canvasxyz/canvas" target="_blank">
 
 ![NPM Version](https://img.shields.io/npm/v/%40canvas-js%2Fcore)
 ![GitHub stars](https://img.shields.io/github/stars/canvasxyz/canvas?style=flat)
 ![NPM Downloads](https://img.shields.io/npm/dm/%40canvas-js%2Fcore)
 
+</a>
 </div>
 
 ---
