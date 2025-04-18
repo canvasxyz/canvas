@@ -23,7 +23,7 @@
 		"@noble/hashes": "^1.7.1",
 		"@radix-ui/themes": "^3.2.1",
 		"@tanstack/react-table": "^8.20.6",
-		"@vitejs/plugin-react": "^4.3.1",
+		"@vitejs/plugin-react": "^4.4.0",
 		"codemirror": "^6.0.1",
 		"d3": "^7.9.0",
 		"date-fns": "^3.6.0",
@@ -35,11 +35,11 @@
 		"react-router-dom": "^6.20.1",
 		"siwe": "^3.0.0",
 		"swr": "^2.3.0",
-		"vite": "^5.4.8"
+		"vite": "^6.3.2"
 	},
 	"devDependencies": {
 		"@types/react": "^18.3.3",
 		"@types/react-dom": "^18.3.0",
-		"vite-plugin-static-copy": "^2.3.0"
+		"vite-plugin-static-copy": "^2.3.1"
 	}
 }

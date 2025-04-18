@@ -35,7 +35,7 @@
 		"@flydotio/dockerfile": "^0.5.7",
 		"concurrently": "^9.1.2",
 		"esbuild": "^0.24.2",
-		"vite": "^5.4.8"
+		"vite": "^6.3.2"
 	},
 	"dependencies": {
 		"@canvas-js/bootstrap-peer": "0.14.0-next.2",
