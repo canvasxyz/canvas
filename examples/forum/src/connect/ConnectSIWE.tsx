@@ -48,7 +48,9 @@ export const ConnectSIWE: React.FC<ConnectSIWEProps> = ({}) => {
 		const address = await signer.getDid()
 		setAddress(address)
 
-		app.updateSigners([signer, ...app.signers.getAll().filter((s) => !(s instanceof SIWESigner))])
+		const otherSigners =app.signers.getAll().filter((s) => !(s instanceof SIWESigner))
+		otherSigners.forEach((s) => s.clearSession(app.topic))
+		app.updateSigners([signer, ...otherSigners])
 		setSessionSigner(signer)
 	}, [app, provider])
 

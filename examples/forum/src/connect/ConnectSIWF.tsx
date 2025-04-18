@@ -18,7 +18,7 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic }) => {
 
 	const profile = useProfile()
 	const {
-		isAuthenticated,
+		isAuthenticated: farcasterIsAuthenticated,
 		profile: { fid, displayName, custody },
 	} = profile
 
@@ -33,7 +33,10 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic }) => {
 	const [canvasIsAuthenticated, setCanvasIsAuthenticated] = useState(false)
 	useEffect(() => {
 		;(async () => {
-			const hasSession = await sessionSigner?.hasSession(topic)
+			const hasSession = await app?.signers
+				.getAll()
+				.filter((s) => s.key === "signer-ethereum-farcaster")[0]
+				?.hasSession(topic)
 			setCanvasIsAuthenticated(hasSession ?? false)
 		})()
 	}, [topic, sessionSigner])
@@ -192,13 +195,13 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic }) => {
 						</button>
 					</div>
 				)}
-				{isAuthenticated && (
+				{farcasterIsAuthenticated && (
 					<p>
-						{displayName} (FID: {fid}, Custody: {custody?.slice(0, 6)})
+						Created new Farcaster session: {displayName} (FID: {fid}, Custody: {custody?.slice(0, 6)})
 					</p>
 				)}
 				{/* frame login */}
-				{nonce && !isAuthenticated && !canvasIsAuthenticated && (
+				{nonce && !farcasterIsAuthenticated && !canvasIsAuthenticated && (
 					<button
 						type="submit"
 						className="w-full p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200"
@@ -208,7 +211,7 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic }) => {
 					</button>
 				)}
 				{/* non-frame login */}
-				{requestId && !isAuthenticated && !canvasIsAuthenticated && (
+				{requestId && !farcasterIsAuthenticated && !canvasIsAuthenticated && (
 					<SignInButton
 						requestId={requestId}
 						onSuccess={browserSignIn}
