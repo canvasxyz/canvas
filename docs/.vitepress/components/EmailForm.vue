@@ -2,10 +2,10 @@
   <div class="EmailForm">
     <form class="EmailFormContainer" @submit.prevent="send">
       <div v-if="submitted" class="EmailFormSuccess">
-        Email submitted! We'll be in touch soon 😁 In the meantime, why not follow us on
+        Email submitted! We'll be in touch 😁 In the meantime, why not follow us on
         <a href="https://twitter.com/canvas_xyz" target="_blank">
-          <strong>Twitter!</strong>
-        </a>
+          <strong>Twitter</strong>
+        </a>!
       </div>
       <div v-else class="EmailFormInputGroup">
         <input

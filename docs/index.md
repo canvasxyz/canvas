@@ -9,10 +9,12 @@ next: false
 
 <div :class="$style.mainInner">
 
-Canvas is a peer-to-peer database, like a local-first Firebase or InstantDB.
+Canvas is a peer-to-peer database, like a local-first Firebase or
+InstantDB.
 
-Write applications without leaving your frontend. Get the full programmability of a
-traditional backend, with the usability of a modern web database.
+Write entire applications without leaving your frontend. Get the
+guarantees of local-first software, with the programmability of a
+traditional backend, and usability of a modern web database.
 
 </div>
 
@@ -81,6 +83,12 @@ traditional backend, with the usability of a modern web database.
     disabled: true
   },
 ]" />
+
+</div>
+
+<div :class="$style.partial">
+
+<EmailForm />
 
 </div>
 
@@ -248,10 +256,6 @@ work with more developers to build on the system, and support more
 identity providers. For more information, please reach out via
 [Discord](https://discord.gg/EjczssxKpR).
 
-To stay updated, you can subscribe here for more information:
-
-<EmailForm />
-
 </div>
 
 <HomepageFooter />
@@ -262,10 +266,10 @@ To stay updated, you can subscribe here for more information:
 .sectionHeader h1,
 .sectionHeaderCol h1 { font-family: "Space Grotesk"; }
 
-.main { max-width: 630px; }
+.main, .partial { max-width: 630px; }
 .mainInner { max-width: 630px; } /* make room for jellyfish */
 @media (max-width: 960px) {
-  .main { margin: 0 auto; }
+  .main, .partial { margin: 0 auto; }
   .mainInner { max-width: none; }
 }
 
@@ -280,7 +284,7 @@ To stay updated, you can subscribe here for more information:
   flex-direction: row;
   transform: scale(1.04);
   transform-origin: left center;
-  margin-bottom: 3rem;
+  margin-bottom: 2rem;
   justify-content: center;
 }
 .badges p img { height: 140%; margin-right: 6px; }

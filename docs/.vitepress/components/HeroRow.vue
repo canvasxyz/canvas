@@ -74,6 +74,7 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
   margin-bottom: 21px;
   text-decoration: none;
   color: var(--vp-c-brand-2);
+  cursor: initial;
 }
 
 .HeroRow {
