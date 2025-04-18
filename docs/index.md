@@ -12,8 +12,8 @@ next: false
 Canvas is a peer-to-peer database, like a local-first version of Firebase.
 
 It's a real-time database that you can use from the frontend,
-with the programmability of a web backend, and the usability
-and responsiveness of modern web databases.
+with the programmability of a traditional backend, and usability
+of a modern web database.
 
 </div>
 

@@ -49,7 +49,7 @@ export default defineConfig({
 						{ text: "Querying Data", link: "/3-querying" },
 						{ text: "Identifying Users", link: "/4-identities-auth" },
 						{ text: "Deploying Applications", link: "/5-deployment" },
-						{ text: "Upgrades & Snapshots", link: "/6-upgrading" },
+						{ text: "Upgrading Applications", link: "/6-upgrading" },
 					],
 				},
 				{
@@ -82,7 +82,7 @@ export default defineConfig({
 						{ text: "Chat", link: "/examples-chat.md" },
 						{ text: "Forum", link: "/examples-forum.md" },
 						{ text: "Encrypted Chat", link: "/examples-encrypted-chat.md" },
-						{ text: "Server-Side Chat  🚧", link: "/examples-chat-next.md" },
+						{ text: "Server-Side Chat", link: "/examples-chat-next.md" },
 					],
 				},
 			],
