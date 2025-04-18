@@ -9,9 +9,9 @@ next: false
 
 <div :class="$style.mainInner">
 
-Canvas is a peer-to-peer database, like a local-first version of Firebase.
+Canvas is a peer-to-peer database, like a local-first Firebase or InstantDB.
 
-Write applications from the frontend, and get the full programmability of a
+Write applications without leaving your frontend. Get the full programmability of a
 traditional backend, with the usability of a modern web database.
 
 </div>
@@ -53,7 +53,7 @@ traditional backend, with the usability of a modern web database.
     iconName: 'apps',
   },
   {
-    text: 'IPFS standards-based',
+    text: 'IPFS-based',
     tooltip: 'Built on IPFS standards (IPLD, DAG-CBOR) and Prolly-trees',
     iconName: '123'
   },
@@ -81,6 +81,14 @@ traditional backend, with the usability of a modern web database.
     disabled: true
   },
 ]" />
+
+</div>
+
+<div :class="$style.badges">
+
+![NPM Version](https://img.shields.io/npm/v/%40canvas-js%2Fcore)
+![GitHub stars](https://img.shields.io/github/stars/canvasxyz/canvas?style=flat)
+![NPM Downloads](https://img.shields.io/npm/dm/%40canvas-js%2Fcore)
 
 </div>
 
@@ -263,6 +271,22 @@ To stay updated, you can subscribe here for more information:
 
 .sectionHeaderCol { margin: 2.5rem 0 0.7rem; }
 .sectionHeader { margin: 2.5rem 0 1.3rem; }
+
+.badges {
+  margin: 0 auto;
+}
+.badges p {
+  display: flex;
+  flex-direction: row;
+  transform: scale(1.04);
+  transform-origin: left center;
+  margin-bottom: 3rem;
+  justify-content: center;
+}
+.badges p img { height: 140%; margin-right: 6px; }
+@media (min-width: 960px) {
+  .badges p { justify-content: left; }
+}
 
 .flex div[class*="vp-adaptive-theme"] { font-size: 98%; }
 .colLeft div[class*="vp-adaptive-theme"] { font-size: 96%; }
