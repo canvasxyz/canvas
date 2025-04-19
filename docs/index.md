@@ -10,11 +10,10 @@ next: false
 <div :class="$style.mainInner">
 
 Canvas is a peer-to-peer database, like a local-first Firebase or
-InstantDB.
+InstantDB, that lets you write entire applications without leaving your frontend.
 
-Write entire applications without leaving your frontend. Get the
-guarantees of local-first software, with the programmability of a
-traditional backend, and usability of a modern web database.
+Get the guarantees of local-first software, the programmability
+of a traditional backend, and the usability of a modern web database.
 
 </div>
 
@@ -209,12 +208,11 @@ canvas run contract.ts --topic example.xyz
 
 ---
 
-**Upgrade your application** by adding new actions or
-models at any time. Upgraded nodes will safely soft-fork
-away from ones on the old contract.
+**Upgrade your application** by adding new actions or models. Upgraded
+contracts will safely soft-fork away from nodes running the old contract.
 
-To change existing actions or models, you can use the admin interface
-to generate a hard-fork snapshot, and compact the state of the application.
+To change existing actions or models, use the admin interface to
+generate a hard-fork snapshot, and compact the state of the application.
 
   </div>
 </div>
@@ -230,9 +228,9 @@ to generate a hard-fork snapshot, and compact the state of the application.
 </div>
 
 Traditionally, local-first databases have only offered simple data
-structures like KV-stores, maps, and feeds. They often enforce strict
-data schemas, require developers to set up private keys for users,
-and provide limited options for persistence and sync.
+structures like KV-stores, maps, and feeds. They provide limited
+database consistency guarantees, require developers to manage private
+keys, and provide limited options for persistence and sync.
 
 To solve these problems, we built an embedded runtime that preserves
 determinism and convergence in an eventually-consistent
