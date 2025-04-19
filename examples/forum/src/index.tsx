@@ -7,14 +7,11 @@ import { AuthKitProvider } from "@farcaster/auth-kit"
 import { JsonRpcProvider } from "ethers"
 import { sdk } from "@farcaster/frame-sdk"
 import { LuUnplug } from "react-icons/lu"
-import { Text } from "@radix-ui/themes"
 
-import { Actions, Canvas } from "@canvas-js/core"
-import { ModelSchema } from "@canvas-js/modeldb"
-import type { SessionSigner } from "@canvas-js/interfaces"
+import { Canvas } from "@canvas-js/core"
 import { SIWESigner, SIWFSigner } from "@canvas-js/signer-ethereum"
 import { ConnectSIWE, ConnectSIWF } from "@canvas-js/hooks/components"
-import { useCanvas, AppInfo } from "@canvas-js/hooks"
+import { useCanvas, AppInfo, CanvasProvider } from "@canvas-js/hooks"
 
 import { App } from "./App.js"
 import { AppContext } from "./AppContext.js"
@@ -40,8 +37,6 @@ export const ADMIN_DID = "did:pkh:eip155:1:0x34C3A5ea06a3A67229fb21a7043243B0eB3
 export type AppT = Canvas<typeof models, typeof actions>
 
 const Container: React.FC<{}> = ({}) => {
-	const [sessionSigner, setSessionSigner] = useState<SessionSigner | null>(null)
-	const [address, setAddress] = useState<string | null>(null)
 	const [isInfoOpen, setIsInfoOpen] = useState<boolean>(false)
 
 	const { app, ws } = useCanvas<typeof models, typeof actions>(wsURL, {
@@ -56,8 +51,9 @@ const Container: React.FC<{}> = ({}) => {
 	}, [])
 
 	return (
-		<AppContext.Provider value={{ address, setAddress, sessionSigner, setSessionSigner, app: app ?? null }}>
+		<AppContext.Provider value={{ app: app ?? null }}>
 			<AuthKitProvider config={config}>
+				<CanvasProvider>
 				{app && ws ? (
 					<main>
 						<App app={app} />
@@ -91,8 +87,8 @@ const Container: React.FC<{}> = ({}) => {
 								}}
 							/>
 							<div className="flex flex-col break-all">
-								<ConnectSIWE app={app} setSessionSigner={setSessionSigner} sessionSigner={sessionSigner} address={address} setAddress={setAddress} />
-								<ConnectSIWF app={app} setSessionSigner={setSessionSigner} sessionSigner={sessionSigner} address={address} setAddress={setAddress} />
+								<ConnectSIWE app={app} />
+								<ConnectSIWF app={app} />
 							</div>
 							<div className="block mt-4 text-gray-600 text-center text-sm">
 								{app.hasSession() ? "Logged in" : "Logged out"}
@@ -114,6 +110,7 @@ const Container: React.FC<{}> = ({}) => {
 				) : (
 					<div className="text-center my-20 text-white">Connecting to {wsURL}...</div>
 				)}
+				</CanvasProvider>
 			</AuthKitProvider>
 		</AppContext.Provider>
 	)

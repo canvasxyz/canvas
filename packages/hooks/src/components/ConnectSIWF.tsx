@@ -2,29 +2,21 @@ import "@farcaster/auth-kit/styles.css"
 
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
 import { hexlify, getBytes } from "ethers"
-import { SIWESigner, SIWFSigner } from "@canvas-js/signer-ethereum"
+import { Canvas } from "@canvas-js/core"
+import { SIWFSigner } from "@canvas-js/signer-ethereum"
 import { AuthClientError, SignInButton, useProfile, UseSignInData } from "@farcaster/auth-kit"
 import { sdk } from "@farcaster/frame-sdk"
 import { bytesToHex } from "@noble/hashes/utils"
-import { DidIdentifier, SessionSigner } from "@canvas-js/interfaces"
-import { Canvas } from "@canvas-js/core"
+import { CanvasContext } from "../CanvasContext.js"
 
 export interface ConnectSIWFProps {
 	app: Canvas<any>
-	sessionSigner: SessionSigner | null,
-	setSessionSigner: (signer: SessionSigner | null) => void
-	address: string | null
-	setAddress: (address: string | null) => void
 }
 
 export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({
-	app,
-	sessionSigner,
-	setSessionSigner,
-	address,
-	setAddress,
+	app
 }) => {
-	// const { app, sessionSigner, setSessionSigner, setAddress } = useContext(AppContext)
+	const { sessionSigner, setSessionSigner, address, setAddress } = useContext(CanvasContext)
 
 	const profile = useProfile()
 	const {
@@ -162,9 +154,10 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({
 			)
 			setAddress(address)
 			setSessionSigner(signer)
+			const otherSigners = app.signers.getAll().filter((signer) => signer.key !== "signer-ethereum-farcaster")
 			app.updateSigners([
 				signer,
-				...app.signers.getAll().filter((signer) => signer.key !== "signer-ethereum-farcaster"),
+				...otherSigners
 			])
 			app.messageLog.append(payload, { signer: delegateSigner })
 			console.log("started SIWF session", authorizationData)
@@ -177,7 +170,8 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({
 		sessionSigner?.clearSession(app.topic)
 		setAddress(null)
 		setSessionSigner(null)
-		app.updateSigners([new SIWESigner(), new SIWFSigner()])
+		const otherSigners = app.signers.getAll().filter((signer) => signer.key !== "signer-ethereum-farcaster")
+		app.updateSigners([...otherSigners, new SIWFSigner()])
 	}, [app, app?.topic, sessionSigner])
 
 	if (error !== null) {
