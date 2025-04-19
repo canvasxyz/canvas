@@ -5,7 +5,6 @@ import ReactDOM from "react-dom/client"
 
 import { AuthKitProvider } from "@farcaster/auth-kit"
 import { JsonRpcProvider } from "ethers"
-import { sdk } from "@farcaster/frame-sdk"
 import { LuUnplug } from "react-icons/lu"
 
 import { Canvas } from "@canvas-js/core"
@@ -46,70 +45,66 @@ const Container: React.FC<{}> = ({}) => {
 		// reset: true,
 	})
 
-	useEffect(() => {
-		sdk.actions.ready()
-	}, [])
-
 	return (
 		<AppContext.Provider value={{ app: app ?? null }}>
 			<AuthKitProvider config={config}>
 				<CanvasProvider>
-				{app && ws ? (
-					<main>
-						<App app={app} />
-						<div
-							className={`${isInfoOpen ? "" : "hidden"} fixed top-4 right-5 z-10 bg-white p-4 pr-12 w-[320px] border border-1 shadow-md rounded`}
-						>
-							<div className="absolute top-3 right-4">
-								<button onClick={() => setIsInfoOpen(false)} className="text-gray-500 hover:text-gray-700">
-									✕
-								</button>
+					{app && ws ? (
+						<main>
+							<App app={app} />
+							<div
+								className={`${isInfoOpen ? "" : "hidden"} fixed top-4 right-5 z-10 bg-white p-4 pr-12 w-[320px] border border-1 shadow-md rounded`}
+							>
+								<div className="absolute top-3 right-4">
+									<button onClick={() => setIsInfoOpen(false)} className="text-gray-500 hover:text-gray-700">
+										✕
+									</button>
+								</div>
+								<AppInfo
+									app={app}
+									ws={ws}
+									styles={{
+										position: "absolute",
+										height: "100%",
+										top: 0,
+										bottom: 0,
+										right: 0,
+									}}
+									buttonStyles={{
+										position: "absolute",
+										right: "1rem",
+										bottom: "1rem",
+									}}
+									popupStyles={{
+										position: "absolute",
+										right: "0.5rem",
+										top: "0.5rem",
+									}}
+								/>
+								<div className="flex flex-col break-all">
+									<ConnectSIWE app={app} />
+									<ConnectSIWF app={app} />
+								</div>
+								<div className="block mt-4 text-gray-600 text-center text-sm">
+									{app.hasSession() ? "Logged in" : "Logged out"}
+									{ws.error ? <span className="text-red-500 ml-1.5">Connection error</span> : ""}
+								</div>
 							</div>
-							<AppInfo
-								app={app}
-								ws={ws}
-								styles={{
-									position: "absolute",
-									height: "100%",
-									top: 0,
-									bottom: 0,
-									right: 0,
-								}}
-								buttonStyles={{
-									position: "absolute",
-									right: "1rem",
-									bottom: "1rem",
-								}}
-								popupStyles={{
-									position: "absolute",
-									right: "0.5rem",
-									top: "0.5rem",
-								}}
-							/>
-							<div className="flex flex-col break-all">
-								<ConnectSIWE app={app} />
-								<ConnectSIWF app={app} />
-							</div>
-							<div className="block mt-4 text-gray-600 text-center text-sm">
-								{app.hasSession() ? "Logged in" : "Logged out"}
-								{ws.error ? <span className="text-red-500 ml-1.5">Connection error</span> : ""}
-							</div>
-						</div>
-						<button
-							onClick={() => setIsInfoOpen(true)}
-							className="fixed top-4 right-5 z-1 bg-white p-2 rounded-full shadow-md border border-gray-200 hover:bg-gray-100 flex"
-						>
-							<span className="mx-0.5">{app.hasSession() ? "Account" : "Login"}</span>
-							{ws.error ? (
-								<span className="text-red-500 mt-1 mx-0.5">
-									<LuUnplug />
-								</span>
-							) : null}
-						</button>
-					</main>
-				) : (
-					<div className="text-center my-20 text-white">Connecting to {wsURL}...</div>
-				)}
+							<button
+								onClick={() => setIsInfoOpen(true)}
+								className="fixed top-4 right-5 z-1 bg-white p-2 rounded-full shadow-md border border-gray-200 hover:bg-gray-100 flex"
+							>
+								<span className="mx-0.5">{app.hasSession() ? "Account" : "Login"}</span>
+								{ws.error ? (
+									<span className="text-red-500 mt-1 mx-0.5">
+										<LuUnplug />
+									</span>
+								) : null}
+							</button>
+						</main>
+					) : (
+						<div className="text-center my-20 text-white">Connecting to {wsURL}...</div>
+					)}
 				</CanvasProvider>
 			</AuthKitProvider>
 		</AppContext.Provider>

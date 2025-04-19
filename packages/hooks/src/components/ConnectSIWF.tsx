@@ -13,10 +13,12 @@ export interface ConnectSIWFProps {
 	app: Canvas<any>
 }
 
-export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({
-	app
-}) => {
+export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ app }) => {
 	const { sessionSigner, setSessionSigner, address, setAddress } = useContext(CanvasContext)
+
+	useEffect(() => {
+		sdk.actions.ready()
+	}, [])
 
 	const profile = useProfile()
 	const {
@@ -155,10 +157,7 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({
 			setAddress(address)
 			setSessionSigner(signer)
 			const otherSigners = app.signers.getAll().filter((signer) => signer.key !== "signer-ethereum-farcaster")
-			app.updateSigners([
-				signer,
-				...otherSigners
-			])
+			app.updateSigners([signer, ...otherSigners])
 			app.messageLog.append(payload, { signer: delegateSigner })
 			console.log("started SIWF session", authorizationData)
 		},
