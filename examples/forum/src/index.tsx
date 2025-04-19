@@ -5,20 +5,15 @@ import ReactDOM from "react-dom/client"
 
 import { AuthKitProvider } from "@farcaster/auth-kit"
 import { JsonRpcProvider } from "ethers"
-import { sdk } from "@farcaster/frame-sdk"
 import { LuUnplug } from "react-icons/lu"
-import { Text } from "@radix-ui/themes"
 
-import { Actions, Canvas } from "@canvas-js/core"
-import { ModelSchema } from "@canvas-js/modeldb"
-import type { SessionSigner } from "@canvas-js/interfaces"
+import { Canvas } from "@canvas-js/core"
 import { SIWESigner, SIWFSigner } from "@canvas-js/signer-ethereum"
-import { useCanvas, AppInfo } from "@canvas-js/hooks"
+import { ConnectSIWE, ConnectSIWF } from "@canvas-js/hooks/components"
+import { useCanvas, AppInfo, AuthProvider } from "@canvas-js/hooks"
 
 import { App } from "./App.js"
 import { AppContext } from "./AppContext.js"
-import { ConnectSIWE } from "./connect/ConnectSIWE.js"
-import { ConnectSIWF } from "./connect/ConnectSIWF.js"
 import { models, actions } from "./contract.js"
 
 const wsURL =
@@ -41,8 +36,6 @@ export const ADMIN_DID = "did:pkh:eip155:1:0x34C3A5ea06a3A67229fb21a7043243B0eB3
 export type AppT = Canvas<typeof models, typeof actions>
 
 const Container: React.FC<{}> = ({}) => {
-	const [sessionSigner, setSessionSigner] = useState<SessionSigner | null>(null)
-	const [address, setAddress] = useState<string | null>(null)
 	const [isInfoOpen, setIsInfoOpen] = useState<boolean>(false)
 
 	const { app, ws } = useCanvas<typeof models, typeof actions>(wsURL, {
@@ -52,69 +45,67 @@ const Container: React.FC<{}> = ({}) => {
 		// reset: true,
 	})
 
-	useEffect(() => {
-		sdk.actions.ready()
-	}, [])
-
 	return (
-		<AppContext.Provider value={{ address, setAddress, sessionSigner, setSessionSigner, app: app ?? null }}>
+		<AppContext.Provider value={{ app: app ?? null }}>
 			<AuthKitProvider config={config}>
-				{app && ws ? (
-					<main>
-						<App app={app} />
-						<div
-							className={`${isInfoOpen ? "" : "hidden"} fixed top-4 right-5 z-10 bg-white p-4 pr-12 w-[320px] border border-1 shadow-md rounded`}
-						>
-							<div className="absolute top-3 right-4">
-								<button onClick={() => setIsInfoOpen(false)} className="text-gray-500 hover:text-gray-700">
-									✕
-								</button>
+				<AuthProvider>
+					{app && ws ? (
+						<main>
+							<App app={app} />
+							<div
+								className={`${isInfoOpen ? "" : "hidden"} fixed top-4 right-5 z-10 bg-white p-4 pr-12 w-[320px] border border-1 shadow-md rounded`}
+							>
+								<div className="absolute top-3 right-4">
+									<button onClick={() => setIsInfoOpen(false)} className="text-gray-500 hover:text-gray-700">
+										✕
+									</button>
+								</div>
+								<AppInfo
+									app={app}
+									ws={ws}
+									styles={{
+										position: "absolute",
+										height: "100%",
+										top: 0,
+										bottom: 0,
+										right: 0,
+									}}
+									buttonStyles={{
+										position: "absolute",
+										right: "1rem",
+										bottom: "1rem",
+									}}
+									popupStyles={{
+										position: "absolute",
+										right: "0.5rem",
+										top: "0.5rem",
+									}}
+								/>
+								<div className="flex flex-col break-all">
+									<ConnectSIWE app={app} />
+									<ConnectSIWF app={app} />
+								</div>
+								<div className="block mt-4 text-gray-600 text-center text-sm">
+									{app.hasSession() ? "Logged in" : "Logged out"}
+									{ws.error ? <span className="text-red-500 ml-1.5">Connection error</span> : ""}
+								</div>
 							</div>
-							<AppInfo
-								app={app}
-								ws={ws}
-								styles={{
-									position: "absolute",
-									height: "100%",
-									top: 0,
-									bottom: 0,
-									right: 0,
-								}}
-								buttonStyles={{
-									position: "absolute",
-									right: "1rem",
-									bottom: "1rem",
-								}}
-								popupStyles={{
-									position: "absolute",
-									right: "0.5rem",
-									top: "0.5rem",
-								}}
-							/>
-							<div className="flex flex-col break-all">
-								<ConnectSIWE />
-								<ConnectSIWF topic={app.topic} />
-							</div>
-							<div className="block mt-4 text-gray-600 text-center text-sm">
-								{app.hasSession() ? "Logged in" : "Logged out"}
-								{ws.error ? <span className="text-red-500 ml-1.5">Connection error</span> : ""}
-							</div>
-						</div>
-						<button
-							onClick={() => setIsInfoOpen(true)}
-							className="fixed top-4 right-5 z-1 bg-white p-2 rounded-full shadow-md border border-gray-200 hover:bg-gray-100 flex"
-						>
-							<span className="mx-0.5">{app.hasSession() ? "Account" : "Login"}</span>
-							{ws.error ? (
-								<span className="text-red-500 mt-1 mx-0.5">
-									<LuUnplug />
-								</span>
-							) : null}
-						</button>
-					</main>
-				) : (
-					<div className="text-center my-20 text-white">Connecting to {wsURL}...</div>
-				)}
+							<button
+								onClick={() => setIsInfoOpen(true)}
+								className="fixed top-4 right-5 z-1 bg-white p-2 rounded-full shadow-md border border-gray-200 hover:bg-gray-100 flex"
+							>
+								<span className="mx-0.5">{app.hasSession() ? "Account" : "Login"}</span>
+								{ws.error ? (
+									<span className="text-red-500 mt-1 mx-0.5">
+										<LuUnplug />
+									</span>
+								) : null}
+							</button>
+						</main>
+					) : (
+						<div className="text-center my-20 text-white">Connecting to {wsURL}...</div>
+					)}
+				</AuthProvider>
 			</AuthKitProvider>
 		</AppContext.Provider>
 	)

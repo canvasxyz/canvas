@@ -1,19 +1,21 @@
 import React, { useCallback, useContext, useEffect, useRef, useState } from "react"
 import { Eip1193Provider, BrowserProvider, EventEmitterable } from "ethers"
 
-import { SIWESigner, SIWFSigner } from "@canvas-js/signer-ethereum"
-
-import { AppContext } from "../AppContext.js"
+import { SIWESigner } from "@canvas-js/signer-ethereum"
+import { Canvas } from "@canvas-js/core"
+import { AuthContext } from "../AuthContext.js"
 
 declare global {
 	// eslint-disable-next-line no-var
 	var ethereum: undefined | null | (Eip1193Provider & EventEmitterable<"accountsChanged" | "chainChanged">)
 }
 
-export interface ConnectSIWEProps {}
+export interface ConnectSIWEProps {
+	app: Canvas<any>
+}
 
-export const ConnectSIWE: React.FC<ConnectSIWEProps> = ({}) => {
-	const { app, sessionSigner, setSessionSigner, address, setAddress } = useContext(AppContext)
+export const ConnectSIWE: React.FC<ConnectSIWEProps> = ({ app }) => {
+	const { sessionSigner, setSessionSigner, address, setAddress } = useContext(AuthContext)
 
 	const [provider, setProvider] = useState<BrowserProvider | null>(null)
 	const [error, setError] = useState<Error | null>(null)
@@ -85,7 +87,8 @@ export const ConnectSIWE: React.FC<ConnectSIWEProps> = ({}) => {
 		if (app?.topic) sessionSigner?.clearSession(app?.topic)
 		setAddress(null)
 		setSessionSigner(null)
-		app?.updateSigners([new SIWESigner(), new SIWFSigner()])
+		const otherSigners = app.signers.getAll().filter((s) => !(s instanceof SIWESigner))
+		app?.updateSigners([...otherSigners, new SIWESigner()])
 	}, [app, sessionSigner])
 
 	if (error !== null) {

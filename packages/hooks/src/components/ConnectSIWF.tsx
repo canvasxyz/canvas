@@ -2,19 +2,23 @@ import "@farcaster/auth-kit/styles.css"
 
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
 import { hexlify, getBytes } from "ethers"
-import { SIWESigner, SIWFSigner } from "@canvas-js/signer-ethereum"
+import { Canvas } from "@canvas-js/core"
+import { SIWFSigner } from "@canvas-js/signer-ethereum"
 import { AuthClientError, SignInButton, useProfile, UseSignInData } from "@farcaster/auth-kit"
 import { sdk } from "@farcaster/frame-sdk"
 import { bytesToHex } from "@noble/hashes/utils"
-
-import { AppContext } from "../AppContext.js"
+import { AuthContext } from "../AuthContext.js"
 
 export interface ConnectSIWFProps {
-	topic: string
+	app: Canvas<any>
 }
 
-export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic }) => {
-	const { app, sessionSigner, setSessionSigner, setAddress } = useContext(AppContext)
+export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ app }) => {
+	const { sessionSigner, setSessionSigner, address, setAddress } = useContext(AuthContext)
+
+	useEffect(() => {
+		sdk.actions.ready()
+	}, [])
 
 	const profile = useProfile()
 	const {
@@ -36,17 +40,18 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic }) => {
 			const hasSession = await app?.signers
 				.getAll()
 				.filter((s) => s.key === "signer-ethereum-farcaster")[0]
-				?.hasSession(topic)
+				?.hasSession(app.topic)
 			setCanvasIsAuthenticated(hasSession ?? false)
 		})()
-	}, [topic, sessionSigner])
+	}, [app, app?.topic, sessionSigner])
 
 	useEffect(() => {
 		if (initializedRef.current) return
 		initializedRef.current = true
 
-		if (!app) return
+		if (!app || !app.topic) return
 
+		const topic = app.topic
 		const siwf = new SIWFSigner()
 		const restored = siwf.restoreSIWFSession(topic)
 		if (restored !== null) {
@@ -87,7 +92,7 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic }) => {
 			.catch((err) => {
 				alert("Error initializing FrameSDK, application may be out of date.")
 			})
-	}, [topic])
+	}, [app, app?.topic])
 
 	const frameSignIn = useCallback(async () => {
 		if (!app || !nonce || !newSessionPrivateKey) return
@@ -126,7 +131,7 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic }) => {
 		app.updateSigners([signer, ...app.signers.getAll().filter((signer) => signer.key !== "signer-ethereum-farcaster")])
 		app.messageLog.append(payload, { signer: delegateSigner })
 		console.log("started SIWF session inside frame", authorizationData)
-	}, [app, nonce, newSessionPrivateKey, topic])
+	}, [app, app?.topic, nonce, newSessionPrivateKey])
 
 	const browserSignIn = useCallback(
 		async (result: UseSignInData) => {
@@ -151,22 +156,22 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic }) => {
 			)
 			setAddress(address)
 			setSessionSigner(signer)
-			app.updateSigners([
-				signer,
-				...app.signers.getAll().filter((signer) => signer.key !== "signer-ethereum-farcaster"),
-			])
+			const otherSigners = app.signers.getAll().filter((signer) => signer.key !== "signer-ethereum-farcaster")
+			app.updateSigners([signer, ...otherSigners])
 			app.messageLog.append(payload, { signer: delegateSigner })
 			console.log("started SIWF session", authorizationData)
 		},
-		[app, newSessionPrivateKey, topic],
+		[app, app?.topic, newSessionPrivateKey],
 	)
 
 	const signOut = useCallback(() => {
-		sessionSigner?.clearSession(topic)
+		if (!app || !app.topic) return
+		sessionSigner?.clearSession(app.topic)
 		setAddress(null)
 		setSessionSigner(null)
-		app?.updateSigners([new SIWESigner(), new SIWFSigner()])
-	}, [app, topic, sessionSigner])
+		const otherSigners = app.signers.getAll().filter((signer) => signer.key !== "signer-ethereum-farcaster")
+		app.updateSigners([...otherSigners, new SIWFSigner()])
+	}, [app, app?.topic, sessionSigner])
 
 	if (error !== null) {
 		return (

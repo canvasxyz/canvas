@@ -1,4 +1,4 @@
-# Deploying an Application
+# Deploying Applications
 
 You can run Canvas applications in the browser only, or using
 browser-to-server sync with a server peer.
@@ -20,10 +20,10 @@ export const actions = {
 } satisfies Actions<typeof models>
 ```
 
-The `satisfies` keyword is optional, but will ensure that you can
-get type completions when working with the application later.
+`satisfies` is optional, but will ensure that you can use type completions later.
 
-Now, import this contract from our frontend:
+Now you can use the browser contract in an application on the frontend.
+If you're using React, this would look like:
 
 ```ts
 import { useCanvas } from "@canvas-js/hooks"
@@ -40,10 +40,9 @@ export const App = () => {
 }
 ```
 
-We've initialized the `useCanvas` hook with a `null` first parameter,
-instead of a WebSocket URL. As a result, the application won't try to
-sync to a server WebSocket, and will persist in the browser until
-IndexedDB is cleared.
+We've initialized the `useCanvas` hook with `null` instead of a
+WebSocket URL. As a result, the application won't try to sync to a
+server, and will only persist temporarily until IndexedDB is cleared.
 
 ## CLI application
 

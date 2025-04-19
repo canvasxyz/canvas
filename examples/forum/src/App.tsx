@@ -21,12 +21,10 @@ export const App: React.FC<{ app: AppT }> = ({ app }) => {
 	const messageEndRef = useRef<HTMLDivElement>(null)
 	const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-	// Function to toggle sidebar
 	const toggleSidebar = () => {
 		setSidebarOpen(!sidebarOpen)
 	}
 
-	// Function to toggle composer
 	const toggleComposer = () => {
 		setComposerMinimized(!composerMinimized)
 	}
