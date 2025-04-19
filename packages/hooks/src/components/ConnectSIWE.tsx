@@ -2,18 +2,32 @@ import React, { useCallback, useContext, useEffect, useRef, useState } from "rea
 import { Eip1193Provider, BrowserProvider, EventEmitterable } from "ethers"
 
 import { SIWESigner, SIWFSigner } from "@canvas-js/signer-ethereum"
+import { Canvas } from "@canvas-js/core"
+import { DidIdentifier, SessionSigner } from "@canvas-js/interfaces"
 
-import { AppContext } from "../AppContext.js"
+// import { AppContext } from "../AppContext.js"
 
 declare global {
 	// eslint-disable-next-line no-var
 	var ethereum: undefined | null | (Eip1193Provider & EventEmitterable<"accountsChanged" | "chainChanged">)
 }
 
-export interface ConnectSIWEProps {}
+export interface ConnectSIWEProps {
+	app: Canvas<any>
+	sessionSigner: SessionSigner | null,
+	setSessionSigner: (signer: SessionSigner | null) => void
+	address: string | null
+	setAddress: (address: string | null) => void
+}
 
-export const ConnectSIWE: React.FC<ConnectSIWEProps> = ({}) => {
-	const { app, sessionSigner, setSessionSigner, address, setAddress } = useContext(AppContext)
+export const ConnectSIWE: React.FC<ConnectSIWEProps> = ({
+	app,
+	sessionSigner,
+	setSessionSigner,
+	address,
+	setAddress,
+}) => {
+	// const { app, sessionSigner, setSessionSigner, address, setAddress } = useContext(AppContext)
 
 	const [provider, setProvider] = useState<BrowserProvider | null>(null)
 	const [error, setError] = useState<Error | null>(null)

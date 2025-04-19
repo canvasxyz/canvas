@@ -13,12 +13,11 @@ import { Actions, Canvas } from "@canvas-js/core"
 import { ModelSchema } from "@canvas-js/modeldb"
 import type { SessionSigner } from "@canvas-js/interfaces"
 import { SIWESigner, SIWFSigner } from "@canvas-js/signer-ethereum"
+import { ConnectSIWE, ConnectSIWF } from "@canvas-js/hooks/components"
 import { useCanvas, AppInfo } from "@canvas-js/hooks"
 
 import { App } from "./App.js"
 import { AppContext } from "./AppContext.js"
-import { ConnectSIWE } from "./connect/ConnectSIWE.js"
-import { ConnectSIWF } from "./connect/ConnectSIWF.js"
 import { models, actions } from "./contract.js"
 
 const wsURL =
@@ -92,8 +91,8 @@ const Container: React.FC<{}> = ({}) => {
 								}}
 							/>
 							<div className="flex flex-col break-all">
-								<ConnectSIWE />
-								<ConnectSIWF topic={app.topic} />
+								<ConnectSIWE app={app} setSessionSigner={setSessionSigner} sessionSigner={sessionSigner} address={address} setAddress={setAddress} />
+								<ConnectSIWF app={app} setSessionSigner={setSessionSigner} sessionSigner={sessionSigner} address={address} setAddress={setAddress} />
 							</div>
 							<div className="block mt-4 text-gray-600 text-center text-sm">
 								{app.hasSession() ? "Logged in" : "Logged out"}

@@ -10,7 +10,8 @@
 		"lib"
 	],
 	"exports": {
-		".": "./lib/index.js"
+		".": "./lib/index.js",
+		"./components": "./lib/components/index.js"
 	},
 	"peerDependencies": {
 		"react": "^18.3.1"
@@ -21,6 +22,7 @@
 		"@canvas-js/interfaces": "0.14.0",
 		"@canvas-js/modeldb": "0.14.0",
 		"@canvas-js/modeldb-idb": "0.14.0",
+		"@farcaster/frame-sdk": "^0.0.35",
 		"@ipld/dag-cbor": "^9.2.2",
 		"@noble/hashes": "^1.7.1"
 	},
