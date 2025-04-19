@@ -1,7 +1,7 @@
 # UI Components
 
-We provide React components that provide an additional layer of
-abstraction above session signers, for users to be able to log in/out
+We provide React components that provide an additional level of
+abstraction above session signers, for users to directly log in/out
 of your application.
 
 ## Adding the Auth Provider

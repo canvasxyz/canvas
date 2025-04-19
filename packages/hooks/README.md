@@ -1,6 +1,6 @@
 # @canvas-js/hooks
 
-Hooks for using Canvas applications in React.
+React hooks for Canvas applications.
 
 ## `useCanvas`
 
@@ -23,7 +23,7 @@ export function MyApp() {
     return ethers.Wallet.createRandom()
   }, [])
 
-  const { app, error } = useCanvas("wss://forum-example.canvas.xyz", {
+  const { app, ws, error } = useCanvas("wss://forum-example.canvas.xyz", {
     topic: "forum-example.canvas.xyz",
     contract: {
       // ...
@@ -34,6 +34,9 @@ export function MyApp() {
 ```
 
 Note that `app` might be null when the hook initializes.
+
+Once a connection is established, `ws` will be a `NetworkClient`
+object that returns the state of the connection.
 
 ## `useLiveQuery`
 
@@ -55,3 +58,30 @@ export function MyComponent({ app }: { app?: Canvas }) {
   })
 }
 ```
+
+## `AuthProvider`
+
+The `AuthProvider` provider is used with login components, and used to
+keep track of a currently logged in session address to use for the
+app. Configure it like any other provider:
+
+```ts
+import { AuthProvider } from "@canvas-js/hooks"
+import { App } from "./App.js"
+
+const root = ReactDOM.createRoot(document.getElementById("root")!)
+
+root.render(
+	<AuthProvider>
+		// other providers here
+		<App />
+	</AuthProvider>,
+)
+```
+
+With AuthProvider, you can use signer-specific auth components:
+
+- In `@canvas-js/hooks/components`, the `ConnectSIWE` component provides a login/logout button
+that uses the browser's current Ethereum wallet.
+- In `@canvas-js/hooks/components`, the `ConnectSIWF` component provides a login/logout button
+that supports in-browser or in-frame login via Sign in With Farcaster.
