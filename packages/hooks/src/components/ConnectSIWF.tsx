@@ -7,14 +7,14 @@ import { SIWFSigner } from "@canvas-js/signer-ethereum"
 import { AuthClientError, SignInButton, useProfile, UseSignInData } from "@farcaster/auth-kit"
 import { sdk } from "@farcaster/frame-sdk"
 import { bytesToHex } from "@noble/hashes/utils"
-import { CanvasContext } from "../CanvasContext.js"
+import { AuthContext } from "../AuthContext.js"
 
 export interface ConnectSIWFProps {
 	app: Canvas<any>
 }
 
 export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ app }) => {
-	const { sessionSigner, setSessionSigner, address, setAddress } = useContext(CanvasContext)
+	const { sessionSigner, setSessionSigner, address, setAddress } = useContext(AuthContext)
 
 	useEffect(() => {
 		sdk.actions.ready()

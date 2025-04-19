@@ -3,7 +3,7 @@ import { Eip1193Provider, BrowserProvider, EventEmitterable } from "ethers"
 
 import { SIWESigner } from "@canvas-js/signer-ethereum"
 import { Canvas } from "@canvas-js/core"
-import { CanvasContext } from "../CanvasContext.js"
+import { AuthContext } from "../AuthContext.js"
 
 declare global {
 	// eslint-disable-next-line no-var
@@ -14,10 +14,8 @@ export interface ConnectSIWEProps {
 	app: Canvas<any>
 }
 
-export const ConnectSIWE: React.FC<ConnectSIWEProps> = ({
-	app
-}) => {
-	const { sessionSigner, setSessionSigner, address, setAddress } = useContext(CanvasContext)
+export const ConnectSIWE: React.FC<ConnectSIWEProps> = ({ app }) => {
+	const { sessionSigner, setSessionSigner, address, setAddress } = useContext(AuthContext)
 
 	const [provider, setProvider] = useState<BrowserProvider | null>(null)
 	const [error, setError] = useState<Error | null>(null)

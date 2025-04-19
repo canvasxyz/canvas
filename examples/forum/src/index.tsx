@@ -10,7 +10,7 @@ import { LuUnplug } from "react-icons/lu"
 import { Canvas } from "@canvas-js/core"
 import { SIWESigner, SIWFSigner } from "@canvas-js/signer-ethereum"
 import { ConnectSIWE, ConnectSIWF } from "@canvas-js/hooks/components"
-import { useCanvas, AppInfo, CanvasProvider } from "@canvas-js/hooks"
+import { useCanvas, AppInfo, AuthProvider } from "@canvas-js/hooks"
 
 import { App } from "./App.js"
 import { AppContext } from "./AppContext.js"
@@ -48,7 +48,7 @@ const Container: React.FC<{}> = ({}) => {
 	return (
 		<AppContext.Provider value={{ app: app ?? null }}>
 			<AuthKitProvider config={config}>
-				<CanvasProvider>
+				<AuthProvider>
 					{app && ws ? (
 						<main>
 							<App app={app} />
@@ -105,7 +105,7 @@ const Container: React.FC<{}> = ({}) => {
 					) : (
 						<div className="text-center my-20 text-white">Connecting to {wsURL}...</div>
 					)}
-				</CanvasProvider>
+				</AuthProvider>
 			</AuthKitProvider>
 		</AppContext.Provider>
 	)
