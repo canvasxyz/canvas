@@ -1,14 +1,14 @@
 import { useState, MouseEvent, useEffect, useRef } from "react"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 import { Button, Box, Heading, Text, Checkbox } from "@radix-ui/themes"
-import { Canvas, generateChangesets, Changeset as ChangesetMigrationRow, Changeset } from "@canvas-js/core"
+import { Canvas, generateChangesets, Changeset } from "@canvas-js/core"
 import { EditorState } from "@codemirror/state"
 import { EditorView } from "@codemirror/view"
 import { useContractData } from "./hooks/useContractData.js"
 import { useApplicationData } from "./hooks/useApplicationData.js"
 import { Editor } from "./components/Editor.js"
 import { SiweMessage } from "siwe"
-import { utils } from "ethers"
+import { getAddress } from "ethers"
 
 // Define a localStorage key for unsaved changes
 const UNSAVED_CHANGES_KEY = "contract-editor-unsaved-changes"
@@ -49,7 +49,7 @@ export const ContractView = () => {
 	const applicationData = useApplicationData()
 
 	const [error, setError] = useState<string>()
-	const [changesets, setChangesets] = useState<ChangesetMigrationRow[]>()
+	const [changesets, setChangesets] = useState<Changeset[]>()
 	const [newContract, setNewContract] = useState<string>()
 	const [migrationIncludesSnapshot, setMigrationIncludesSnapshot] = useState(false)
 	const [waitingForCommit, setWaitingForCommit] = useState<boolean>()
@@ -89,10 +89,10 @@ export const ContractView = () => {
 
 	// Keep an updated reference to contractData for the build pipeline,
 	// to avoid diffing against an old version of the contract
-	const contractDataRef = useRef(contractData);
+	const contractDataRef = useRef(contractData)
 	useEffect(() => {
-		contractDataRef.current = contractData;
-	}, [contractData]);
+		contractDataRef.current = contractData
+	}, [contractData])
 
 	const updateChangesets = async (e: MouseEvent, state?: EditorState) => {
 		e.preventDefault()
@@ -179,7 +179,7 @@ export const ContractView = () => {
 
 			// @ts-ignore
 			const accounts = await window.ethereum.request({ method: "eth_requestAccounts" })
-			const address = utils.getAddress(accounts[0])
+			const address = getAddress(accounts[0])
 
 			// Create SIWE message
 			const domain = window.location.host
