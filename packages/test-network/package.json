@@ -1,7 +1,7 @@
 {
 	"private": true,
 	"name": "@canvas-js/test-network",
-	"version": "0.14.0-next.2",
+	"version": "0.14.0",
 	"type": "module",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"main": "lib/index.js",
@@ -35,13 +35,13 @@
 		"@flydotio/dockerfile": "^0.5.7",
 		"concurrently": "^9.1.2",
 		"esbuild": "^0.24.2",
-		"vite": "^5.4.8"
+		"vite": "^6.3.2"
 	},
 	"dependencies": {
-		"@canvas-js/bootstrap-peer": "0.14.0-next.2",
-		"@canvas-js/gossiplog": "0.14.0-next.2",
-		"@canvas-js/interfaces": "0.14.0-next.2",
-		"@canvas-js/relay-server": "0.14.0-next.2",
+		"@canvas-js/bootstrap-peer": "0.14.0",
+		"@canvas-js/gossiplog": "0.14.0",
+		"@canvas-js/interfaces": "0.14.0",
+		"@canvas-js/relay-server": "0.14.0",
 		"@canvas-js/utils": "1.0.0",
 		"@libp2p/crypto": "^5.0.15",
 		"@libp2p/interface": "^2.7.0",

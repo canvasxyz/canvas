@@ -1,9 +1,9 @@
-## Server-side chat with Postgres and NextJS
+# Server-side Chat Example 🚧
 
 This app demonstrates server-side rendered implementation of Canvas.
 
 1. All signer state is stored on the frontend. Only signatures and signed actions are passed to the server, which handles all other Canvas-related functionality
-2. Effects recieved on the server are persisted into a local or cloud Postgres database
+2. Effects received on the server are persisted into a local or cloud Postgres database
 3. Pages are served using NextJS for static generation
 
 ### Workspaces

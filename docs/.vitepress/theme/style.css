@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&display=swap');
+
 @font-face {
   font-family: 'Geist';
   src: url('/fonts/Geist-Regular.woff') format('woff');
@@ -55,9 +57,9 @@
   --vp-c-text-2: #67666a;
   --vp-c-gutter-alt: #5672cd;
   --vp-c-bg-home: #fbf5e9;
-  --vp-c-bg: #fffbf3;
+  --vp-c-bg: #fffefc;
   --vp-c-bg-soft: #fbf9f4;
-  --vp-c-bg-alt: #f8eed9;
+  --vp-c-bg-alt: #FBF5E9;
   --vp-sidebar-bg-color: #fbf5e9;
   --vp-button-alt-bg: #ece7e0;
   --vp-button-alt-hover-bg: #ede7dd;
@@ -82,6 +84,11 @@ body {
 
 pre {
   tab-size: 2;
+  outline: none;
+}
+
+.VPDoc {
+  overflow: hidden;
 }
 
 .vp-doc .footnote-ref a,
@@ -146,7 +153,7 @@ pre {
 .VPContent.is-home .vp-doc > div > div > p,
 .VPContent.is-home .vp-doc > div > div > ul,
 .VPContent.is-home .vp-doc > div > div > ol {
-  max-width: 580px;
+  max-width: 560px;
 }
 
 @media (max-width: 959px) {
@@ -296,6 +303,12 @@ pre {
 
 .VPNavBar .content-body {
   transition: none !important;
+}
+@media (min-width: 960px) {
+  .VPNavBar .content-body {
+    margin-right: -32px;
+    padding-right: 32px;
+  }
 }
 
 .VPNavBarTitle .title {

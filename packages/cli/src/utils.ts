@@ -42,9 +42,25 @@ export async function writeSnapshot(args: { location: string; snapshot: Snapshot
 	await new Promise((resolve) => fs.writeFile(snapshotPath, encoded, resolve))
 }
 
-export async function clearContractLocationDB(args: { location: string }) {
+export function clearSnapshot(args: { location: string }) {
+	const location = args.location
+	const snapshotPath = path.resolve(location, SNAPSHOT_FILENAME)
+
+	console.log(`[canvas] Removing snapshot at ${snapshotPath}`)
+	try {
+		fs.unlinkSync(snapshotPath)
+	} catch (err) {
+		console.error(err)
+	}
+}
+
+export function clearContractLocationDB(args: { location: string }) {
 	const sqlitePath = path.resolve(args.location, DB_FILENAME)
-	fs.unlinkSync(sqlitePath)
+	try {
+		fs.unlinkSync(sqlitePath)
+	} catch (err) {
+		console.error(err)
+	}
 }
 
 async function buildContract(originalContractPath: string, bundledContractPath: string) {

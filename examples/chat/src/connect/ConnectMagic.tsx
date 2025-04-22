@@ -3,7 +3,7 @@ import React, { useCallback, useContext, useEffect, useState } from "react"
 import { AuthExtension } from "@magic-ext/auth"
 import { Magic as MagicBase, RPCError, RPCErrorCode } from "magic-sdk"
 
-import { SIWESigner } from "@canvas-js/chain-ethereum"
+import { SIWESigner } from "@canvas-js/signer-ethereum"
 
 import { AppContext } from "../AppContext.js"
 

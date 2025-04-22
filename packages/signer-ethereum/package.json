@@ -1,0 +1,28 @@
+{
+	"name": "@canvas-js/signer-ethereum",
+	"version": "0.14.0",
+	"type": "module",
+	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
+	"main": "lib/index.js",
+	"types": "lib/index.d.ts",
+	"sideEffects": false,
+	"files": [
+		"lib"
+	],
+	"scripts": {
+		"test": "ava"
+	},
+	"dependencies": {
+		"@canvas-js/interfaces": "0.14.0",
+		"@canvas-js/signatures": "0.14.0",
+		"@canvas-js/utils": "1.0.0",
+		"@ipld/dag-json": "^10.2.3",
+		"@libp2p/logger": "^5.1.13",
+		"ethers": "^6.13.5",
+		"multiformats": "^13.3.2",
+		"siwe": "^3.0.0"
+	},
+	"devDependencies": {
+		"base58-solidity": "^1.0.2"
+	}
+}

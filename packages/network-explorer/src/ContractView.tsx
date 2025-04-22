@@ -33,7 +33,7 @@ export const ContractView = () => {
 		if (contractData) {
 			const savedContent = localStorage.getItem(UNSAVED_CHANGES_KEY)
 
-			if (savedContent) {
+			if (savedContent && savedContent !== contractData.originalContract) {
 				setEditorInitialValue(savedContent)
 				setHasRestoredContent(true)
 			} else {

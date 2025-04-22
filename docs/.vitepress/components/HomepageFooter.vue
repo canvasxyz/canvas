@@ -1,7 +1,7 @@
 <template>
   <div class="HomepageFooter">
     <img src="./icon_logo.png" width="64">
-    &copy; 2024 Canvas Technologies, Inc.
+    &copy; {{ new Date().getFullYear() }} Canvas Technologies, Inc.
   </div>
 </template>
 
@@ -11,6 +11,7 @@
   margin: 0 auto;
   max-width: 400px;
   margin-top: 60px;
+  margin-bottom: -120px;
   color: var(--vp-c-text-3);
   font-family: var(--space-font-family);
 }

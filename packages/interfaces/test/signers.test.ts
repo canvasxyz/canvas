@@ -5,12 +5,12 @@ import { secp256k1 } from "@noble/curves/secp256k1"
 
 import { Action, DidIdentifier, Message, Session, SessionSigner, Signer } from "@canvas-js/interfaces"
 
-// import { ATPSigner } from "@canvas-js/chain-atp"
-import { CosmosSigner } from "@canvas-js/chain-cosmos"
-import { SIWESigner, Eip712Signer } from "@canvas-js/chain-ethereum"
-import { SIWESignerViem } from "@canvas-js/chain-ethereum-viem"
-import { SolanaSigner } from "@canvas-js/chain-solana"
-import { SubstrateSigner } from "@canvas-js/chain-substrate"
+// import { ATPSigner } from "@canvas-js/signer-atp"
+import { CosmosSigner } from "@canvas-js/signer-cosmos"
+import { SIWESigner, Eip712Signer } from "@canvas-js/signer-ethereum"
+import { SIWESignerViem } from "@canvas-js/signer-ethereum-viem"
+import { SolanaSigner } from "@canvas-js/signer-solana"
+import { SubstrateSigner } from "@canvas-js/signer-substrate"
 
 type AdditionalSignerArgs = {
 	sessionDuration?: number
@@ -23,11 +23,11 @@ type SessionSignerImplementation = {
 
 const SIGNER_IMPLEMENTATIONS: SessionSignerImplementation[] = [
 	{
-		name: "chain-cosmos",
+		name: "signer-cosmos",
 		createSessionSigner: async (args) => new CosmosSigner(args),
 	},
 	{
-		name: "chain-cosmos-amino",
+		name: "signer-cosmos-amino",
 		createSessionSigner: async (args) => {
 			const wallet = await Secp256k1Wallet.fromKey(secp256k1.utils.randomPrivateKey())
 
@@ -45,35 +45,35 @@ const SIGNER_IMPLEMENTATIONS: SessionSignerImplementation[] = [
 		},
 	},
 	{
-		name: "chain-ethereum",
+		name: "signer-ethereum",
 		createSessionSigner: async (args) => new SIWESigner({ ...args, burner: true }),
 	},
 	{
-		name: "chain-ethereum-viem",
+		name: "signer-ethereum-viem",
 		createSessionSigner: async (args) => new SIWESignerViem({ ...args, burner: true }),
 	},
 	{
-		name: "chain-ethereum-eip712",
+		name: "signer-ethereum-eip712",
 		createSessionSigner: async (args) => new Eip712Signer({ ...args, burner: true }),
 	},
 	{
-		name: "chain-solana",
+		name: "signer-solana",
 		createSessionSigner: async (args) => new SolanaSigner(args),
 	},
 	{
-		name: "chain-substrate-sr25519",
+		name: "signer-substrate-sr25519",
 		createSessionSigner: async (args) => new SubstrateSigner({ substrateKeyType: "sr25519", ...args }),
 	},
 	{
-		name: "chain-substrate-ed25519",
+		name: "signer-substrate-ed25519",
 		createSessionSigner: async (args) => new SubstrateSigner({ substrateKeyType: "ed25519", ...args }),
 	},
 	{
-		name: "chain-substrate-ecdsa",
+		name: "signer-substrate-ecdsa",
 		createSessionSigner: async (args) => new SubstrateSigner({ substrateKeyType: "ecdsa", ...args }),
 	},
 	{
-		name: "chain-substrate-ethereum",
+		name: "signer-substrate-ethereum",
 		createSessionSigner: async (args) => new SubstrateSigner({ substrateKeyType: "ethereum", ...args }),
 	},
 ]

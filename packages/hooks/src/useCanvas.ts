@@ -78,7 +78,7 @@ export const useCanvas = <
 				{ contract: string; snapshotHash: string },
 			]) {
 				if (config === undefined || "topic" in config || "contract" in config) {
-					console.error("Unexpected: Internal error (remote application)")
+					console.error("Canvas WebSocket remote did not return a valid application topic or contract")
 					return
 				}
 
@@ -138,7 +138,7 @@ export const useCanvas = <
 			// Snapshot, reset, and restart the application from a snapshot if the contract changed.
 			async function setupLocalApplicationBySnapshot() {
 				if (config === undefined || !("topic" in config) || !("contract" in config)) {
-					console.error("Unexpected: Internal error (local application)")
+					console.error("Canvas application initialized without both a topic and contract")
 					return
 				}
 				console.log("[canvas] initializing locally defined application")

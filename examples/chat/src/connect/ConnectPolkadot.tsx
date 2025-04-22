@@ -1,7 +1,7 @@
 import React, { useCallback, useContext, useState } from "react"
 import { web3Enable, web3Accounts, web3FromAddress } from "@polkadot/extension-dapp"
 
-import { SubstrateSigner } from "@canvas-js/chain-substrate"
+import { SubstrateSigner } from "@canvas-js/signer-substrate"
 
 import { AppContext } from "../AppContext.js"
 

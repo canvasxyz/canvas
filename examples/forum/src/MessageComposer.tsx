@@ -5,15 +5,15 @@ import { AppContext } from "./AppContext.js"
 export interface MessageComposerProps {}
 
 export const MessageComposer: React.FC<MessageComposerProps> = ({}) => {
-	const { app, sessionSigner: signer } = useContext(AppContext)
+	const { app } = useContext(AppContext)
 
 	const [value, setValue] = useState("")
 
 	const handleKeyDown = useCallback(
 		async (event: React.KeyboardEvent<HTMLInputElement>) => {
-			if (event.key === "Enter" && app !== null && signer !== null) {
+			if (event.key === "Enter" && app !== null) {
 				try {
-					const { id } = await app.as(signer).createMessage(value)
+					const { id } = await app.actions.createMessage(value)
 					setValue("")
 				} catch (err) {
 					console.log(err)
@@ -21,10 +21,10 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({}) => {
 				}
 			}
 		},
-		[app, signer, value],
+		[app, value],
 	)
 
-	if (app === null || signer === null) {
+	if (app === null) {
 		return null
 	}
 

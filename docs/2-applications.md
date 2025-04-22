@@ -6,7 +6,7 @@ Canvas applications are configured by three values:
 2. `models`: A relational database schema, expressed in a concise JSON DSL documented in [canvas/packages/modeldb/README.md](https://github.com/canvasxyz/canvas/tree/main/packages/modeldb)
 3. `actions`: An object of _action handler_ functions that execute each type of action
 
-These values are collectively called a "contract" and can be provided in two ways - either inline as regular JavaScript values, or as ESM exports of a JavaScript _file_ provided as a string.
+These values are collectively called a "contract" and can be provided in two ways - either inline as regular JavaScript values, or as ESM exports of a JavaScript file.
 
 The simplest way to get started is to import `@canvas-js/core` and call `Canvas.initialize({ ... })` with an inline contract.
 
@@ -25,10 +25,12 @@ const app = await Canvas.initialize({
 			},
 		},
 		actions: {
-			async createPost(db, { content }, { id, did, timestamp }) {
+			async createPost(content) {
+				const { id, did, timestamp } = this
 				await db.set("posts", { id, user: did, content, updated_at: timestamp })
 			},
-			async deletePost(db, { postId }, { did }) {
+			async deletePost(postId) {
+				const { did } = this
 				const post = await db.get("posts", postId)
 				if (post === null) {
 					return
@@ -56,19 +58,19 @@ const results = await app.db.query("posts", {})
 // ]
 ```
 
-You can also maintain contracts as JavaScript files. If you export
-`models` and `actions` from a .js file, you can pass it as a string to
-`Canvas.initialize({ contract })`. Canvas will execute it inside a
-QuickJS WASM VM.
+You can also maintain contracts as separate JavaScript or TypeScript files that export `models` and `actions`, and pass them as a string to `Canvas.initialize({ contract })`. Canvas will
+execute them inside a QuickJS WASM VM.
+
+TypeScript contracts are compiled automatically using esbuild.
 
 ## Actions
 
-Each Canvas action is calld with a set of parameters:
+Each Canvas action is called with a set of parameters:
 
 - a `name`, e.g. `createPost` or `deletePost`
-- an argument object `args`, e.g. `{ content: "hello world!" }`
-- an user identifier `did`, e.g. a [did:pkh](https://github.com/w3c-ccg/did-pkh) identifier
-- a `timestamp` and optional `blockhash` (timestamps are unverified / purely informative)
+- an argument array `args`, e.g. `['hello world!']`
+- an user identifier `did`, e.g. a chain-agnostic [did:pkh](https://github.com/w3c-ccg/did-pkh) identifier
+- a `timestamp` and optional `blockhash` (timestamps are unverified and purely informative)
 
 ```ts
 type Action = {
@@ -83,41 +85,46 @@ type Action = {
 }
 ```
 
-Action handlers are invoked with a mutable database handle `db`, the
-action's `args`, and a context object with the rest of the action
-metadata.
+Action handlers are called with any arguments attached to the action `...args`.
 
-The `msgid` parameter is the message ID of the signed action.
+The context object `this` contains the rest of the action metadata, including
+`did`, `address` (the last component of the DID), `timestamp`, and a unique action `id`.
 
 ```ts
-async createPost(db, { content }, { msgid, chain, did, timestamp }) {
-	const user = [chain, address].join(":")
-	await db.set("posts", { id: msgid, user, content, updated_at: timestamp })
+export const actions = {
+  // ...
+  async createPost(content) {
+    const { id, chain, address, did, timestamp } = this
+    const user = [chain, address].join(":")
+    await db.set("posts", { id, user, content, updated_at: timestamp })
+  }
 }
 ```
 
-Actions implement the business logic of your application: every effect must happen through an action, although actions can have many effects, and effects will be applied in a single atomic transaction.
+Actions implement the business logic of your application: every effect must happen through an action.
 
-Actions should also handle authorization and access control. In the example's `deletePost` action handler, we have to enforce that users can only delete their own posts, and not arbitrary posts.
+Actions also handle authorization and access control. In the example `deletePost` action handler, we have to enforce that users can only delete their own posts, and not arbitrary posts.
 
 ```ts
-async function deletePost(db, { postId }, { chain, address }) {
-	const post = await db.get("posts", postId)
-	if (post === null) {
-		return
-	}
+export const actions = {
+  // ...
+  async function deletePost(postId) {
+    const { chain, address } = this
+    const post = await db.get("posts", postId)
+    if (post === null) {
+      return
+    }
 
-	const user = [chain, address].join(":")
-	if (post.user !== user) {
-		throw new Error("not authorized")
-	}
+  	const user = [chain, address].join(":")
+  	if (post.user !== user) {
+  		throw new Error("not authorized")
+  	}
 
-	await db.delete("posts", postId)
+  	await db.delete("posts", postId)
+  }
 }
 ```
 
-Actions are atomic transactions, so you can combine multiple `db.get()` or `db.set()` calls, and they will always be executed together.
+Every action reads a deterministic snapshot of the database. When actions that call `db.get()` are propagated to other machines or replayed later, each `db.get()` always returns the same value that it saw at the time and place it was first created.
 
-When actions with `db.get()` are propagated to other machines or replayed later, the `db.get()` operation always returns the same value that it saw at the time of execution.
-
-We achieve this by doing extra bookkeeping inside the database, and storing an automatically compacted history of the database inside the action log.
+We achieve this by doing extra bookkeeping inside the database, including a compacted history of each database record.

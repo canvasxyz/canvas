@@ -1,10 +1,7 @@
 # @canvas-js/cli
 
-Canvas provides a command line interface for running applications inside
-Node.js.
-
-This package lets you run individual application servers that join the
-peer-to-peer network.
+Canvas provides a command line interface for running applications in
+Node.js, that join the peer-to-peer network.
 
 ## Installation
 
@@ -24,16 +21,22 @@ Commands:
   canvas info <path>    Show the model schema and action names in a contract
   canvas run <path>     Run a Canvas application
   canvas export <path>  Export the action log as dag-json to stdout
-  canvas import <path>   Import an action log from stdin
+  canvas import <path>  Import an action log from stdin
 
 Options:
-  --version  Show version number                                       [boolean]
-  --help     Show help                                                 [boolean]
+  --version  Show version number
+  --help     Show help
 ```
 
 ## Running an application
 
-The main command is `canvas run <path>`. This will start a libp2p node, SQLite database, QuickJS VM for processing actions, and an HTTP API server. Use the `--help` flag to learn more.
+The main command is `canvas run <path>`. This will start a libp2p node, SQLite database, QuickJS VM for processing actions, and an HTTP API server.
+
+By default, `canvas run contract.ts` will run a contract with ephemeral storage persistence.
+
+For persistence, you should provide a data directory like `canvas run data/myapp --init contract.ts` to save the message log and model database to disk. You only need to provide the --init argument the first time when setting up the data directory.
+
+Use the `--help` flag to learn more.
 
 ### Joining the libp2p mesh
 
@@ -101,6 +104,10 @@ A counter of messages applied
 | `topic`    | `string` |                           |
 | `type`     | `string` | `"action"` or `"session"` |
 
-### Serving static content alonside the API
+## Serving static content alongside the API
 
 `--static [directory]` can be used to serve a static directory alongside the application API. This is the easiest way to bundle a frontend that uses Canvas as a backend. If the `--static` flag is provided, the root path `/` serves the files in `[directory]`.
+
+## Serving the network explorer
+
+`--network-explorer` serves an explorer for the model database and message log. If you're running the network explorer, you can also provide `--admin <ethAddress>` to set an admin address that can upgrade the currently running contract in the CLI.

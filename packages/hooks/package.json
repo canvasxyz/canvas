@@ -1,25 +1,29 @@
 {
 	"name": "@canvas-js/hooks",
-	"version": "0.14.0-next.2",
+	"version": "0.14.0",
 	"type": "module",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"main": "lib/index.js",
 	"types": "lib/index.d.ts",
+	"sideEffects": false,
 	"files": [
 		"lib"
 	],
 	"exports": {
-		".": "./lib/index.js"
+		".": "./lib/index.js",
+		"./components": "./lib/components/index.js"
 	},
 	"peerDependencies": {
 		"react": "^18.3.1"
 	},
 	"dependencies": {
-		"@canvas-js/core": "0.14.0-next.2",
-		"@canvas-js/gossiplog": "0.14.0-next.2",
-		"@canvas-js/interfaces": "0.14.0-next.2",
-		"@canvas-js/modeldb": "0.14.0-next.2",
-		"@canvas-js/modeldb-idb": "0.14.0-next.2",
+		"@canvas-js/core": "0.14.0",
+		"@canvas-js/gossiplog": "0.14.0",
+		"@canvas-js/interfaces": "0.14.0",
+		"@canvas-js/modeldb": "0.14.0",
+		"@canvas-js/modeldb-idb": "0.14.0",
+		"@farcaster/auth-kit": "^0.6.0",
+		"@farcaster/frame-sdk": "^0.0.35",
 		"@ipld/dag-cbor": "^9.2.2",
 		"@noble/hashes": "^1.7.1"
 	},

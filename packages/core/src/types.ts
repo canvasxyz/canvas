@@ -19,7 +19,7 @@ export type ActionImplementation<
 	Result = any,
 > = (
 	this: ActionContext<DeriveModelTypes<ModelsT>>,
-	db: ModelAPI<DeriveModelTypes<ModelsT>>,
+	// db: ModelAPI<DeriveModelTypes<ModelsT>>,
 	...args: Args
 ) => Awaitable<Result>
 

@@ -1,6 +1,6 @@
 import React, { useCallback, useContext, useState } from "react"
 
-import { SIWESignerViem } from "@canvas-js/chain-ethereum-viem"
+import { SIWESignerViem } from "@canvas-js/signer-ethereum-viem"
 
 import { AppContext } from "../AppContext.js"
 import { createWalletClient, custom } from "viem"

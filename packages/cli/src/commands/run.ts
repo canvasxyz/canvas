@@ -12,7 +12,7 @@ import { Canvas, hashSnapshot } from "@canvas-js/core"
 import { MAX_CONNECTIONS } from "@canvas-js/core/constants"
 import { Snapshot } from "@canvas-js/core"
 import { AppInstance } from "../AppInstance.js"
-import { writeContract, writeSnapshot, getContractLocation, clearContractLocationDB } from "../utils.js"
+import { writeContract, writeSnapshot, clearSnapshot, getContractLocation, clearContractLocationDB } from "../utils.js"
 import { startActionPrompt } from "../prompt.js"
 
 export const command = "run <path>"
@@ -156,7 +156,8 @@ export async function handler(args: Args) {
 		if (args.admin) {
 			const adminAddress = args.admin
 			instance.api.post("/api/migrate", async (req, res) => {
-				const { newContract, changesets, address, signature, siweMessage, changedRows } = req.body ?? {}
+				const { newContract, changesets, address, signature, siweMessage, changedRows, includeSnapshot } =
+					req.body ?? {}
 
 				if (address !== adminAddress && adminAddress !== "any") {
 					return res.status(403).json({
@@ -210,22 +211,28 @@ export async function handler(args: Args) {
 					updatedContract = newContract
 					updatedBuild = build
 
-					console.log("[canvas] snapshotting and migrating app with changesets:", changesets)
+					console.log(
+						`[canvas] ${includeSnapshot ? "snapshotting and " : ""}migrating app with changesets:`,
+						changesets,
+					)
 
 					instance.app
 						.createSnapshot({ changedRows })
 						.then(async (snapshot: Snapshot) => {
-							res.json({ status: "Success" })
 							console.log("[canvas] Stopping existing instance...")
 							await instance.stop()
 
 							if (location !== null) {
 								console.log("[canvas] Rewriting application on disk...")
-								await writeSnapshot({ location, snapshot })
+								if (includeSnapshot) {
+									await writeSnapshot({ location, snapshot })
+								} else {
+									await clearSnapshot({ location })
+								}
 								clearContractLocationDB({ location })
 							}
 
-							updatedSnapshot = snapshot
+							updatedSnapshot = includeSnapshot ? snapshot : null
 
 							// Restart the application, running the new, compiled contract.
 							console.log("[canvas] Restarting...")
@@ -234,11 +241,12 @@ export async function handler(args: Args) {
 								baseTopic,
 								contract: updatedBuild,
 								location,
-								snapshot,
+								snapshot: includeSnapshot ? snapshot : null,
 								reset: true,
 								config: args,
 							})
 							bindInstanceAPIs(newInstance)
+							res.json({ status: "Success" })
 						})
 						.catch((error) => {
 							console.error(error)

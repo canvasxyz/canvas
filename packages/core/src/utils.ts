@@ -8,7 +8,7 @@ import * as cbor from "@ipld/dag-cbor"
 import { assert, zip } from "@canvas-js/utils"
 import { Action, MessageType, Session, Snapshot } from "@canvas-js/interfaces"
 import { SignedMessage } from "@canvas-js/gossiplog"
-import { Config, isPrimaryKey, ModelSchema, ModelValue, PrimaryKeyValue, PropertyValue } from "@canvas-js/modeldb"
+import { Config, isPrimaryKey, ModelValue, PrimaryKeyValue, PropertyValue } from "@canvas-js/modeldb"
 
 export const isAction = (signedMessage: SignedMessage<MessageType>): signedMessage is SignedMessage<Action> =>
 	signedMessage.message.payload.type === "action"
@@ -158,30 +158,3 @@ function writeArgument(majorType: number, argument: number): Uint8Array {
 		return arrays[4]
 	}
 }
-
-export const initialUpgradeSchema = {
-	$sessions: {
-		message_id: "primary",
-		did: "string",
-		public_key: "string",
-		address: "string",
-		expiration: "integer?",
-		$indexes: ["did", "public_key"],
-	},
-	$actions: {
-		message_id: "primary",
-		did: "string",
-		name: "string",
-		timestamp: "integer",
-		$indexes: ["did", "name"],
-	},
-	$effects: {
-		key: "primary",
-		value: "bytes?",
-		branch: "integer",
-		clock: "integer",
-	},
-	$dids: {
-		did: "primary",
-	},
-} satisfies ModelSchema

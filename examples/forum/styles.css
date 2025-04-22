@@ -41,3 +41,10 @@ main {
 .fc-authkit-signin-button button span:after {
   content: " with Farcaster";
 }
+
+a {
+  color: #5284f0;
+}
+p {
+  margin: 4px 0;
+}

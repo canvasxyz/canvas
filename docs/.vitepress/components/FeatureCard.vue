@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import type { DefaultTheme } from 'vitepress/theme'
 import { VPImage } from 'vitepress/theme'
+import { FiExternalLink } from 'vue3-icons/fi'
 
 defineProps<{
   icon?: DefaultTheme.FeatureIcon
+  iconName?: string
   title: string
   details?: string
   soon?: string
@@ -18,7 +20,7 @@ defineProps<{
 
 <template>
   <div class="item grid-3">
-    <div class="FeatureCard">
+    <div class="FeatureCard" :class="{ 'feature-soon': soon }">
       <article class="box">
         <div v-if="typeof icon === 'object' && icon.wrap" class="icon">
           <VPImage
@@ -36,19 +38,20 @@ defineProps<{
           :width="icon.width || 48"
         />
         <div v-else-if="icon" class="icon" v-html="icon"></div>
+        <component v-else-if="iconName" :is="iconName" class="icon" size="24" />
         <h2 class="title" v-html="title"></h2>
         <p v-if="details" class="details" v-html="details"></p>
 
         <div v-if="link || soon" class="link-text">
           <p class="link-text-value">
             <a v-if="link" :href="link" target="blank">
-              {{ linkText || 'Link' }}&nbsp;<span class="external-link">↗</span>
+              {{ linkText || 'Link' }}&nbsp;<FiExternalLink class="external-link" size="16" />
             </a>
             <a v-if="secondaryLink" :href="secondaryLink" target="blank">
-              {{ secondaryLinkText || 'Link' }}&nbsp;<span class="external-link">↗</span>
+              {{ secondaryLinkText || 'Link' }}&nbsp;<FiExternalLink class="external-link" size="16" />
             </a>
-            <span v-if="soon" class="soon-text">
-              {{ soon }}
+            <span v-if="soon" class="feature-tag-soon">
+              Soon
             </span>
           </p>
         </div>
@@ -88,6 +91,7 @@ defineProps<{
   flex-direction: column;
   padding: 24px;
   height: 100%;
+  background-color: var(--vp-sidebar-bg-color);
 }
 
 .box > :deep(.VPImage) {
@@ -122,6 +126,8 @@ defineProps<{
 }
 
 h2.title {
+  border: 0 !important;
+  margin: 0 !important;
   padding-top: 0px !important;
 }
 
@@ -146,10 +152,18 @@ p.details {
   text-decoration: none;
 }
 
-.soon-text {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--vp-c-text-3);
+.feature-tag-soon {
+  margin-left: 6px;
+  font-size: 12px;
+  opacity: 0.7;
+  background-color: var(--vp-c-brand-soft);
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.feature-soon {
+  opacity: 0.8;
+  border: 1px dashed var(--vp-c-border);
 }
 
 .external-link {

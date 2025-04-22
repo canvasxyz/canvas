@@ -1,0 +1,31 @@
+{
+	"name": "@canvas-js/signer-cosmos",
+	"version": "0.14.0",
+	"type": "module",
+	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
+	"main": "lib/index.js",
+	"types": "lib/index.d.ts",
+	"sideEffects": false,
+	"files": [
+		"lib"
+	],
+	"scripts": {
+		"test": "ava"
+	},
+	"dependencies": {
+		"@canvas-js/interfaces": "0.14.0",
+		"@canvas-js/signatures": "0.14.0",
+		"@canvas-js/utils": "1.0.0",
+		"@cosmjs/amino": "^0.32.3",
+		"@cosmjs/crypto": "^0.32.3",
+		"@cosmjs/encoding": "^0.32.3",
+		"@ipld/dag-cbor": "^9.2.2",
+		"@ipld/dag-json": "^10.2.3",
+		"@keplr-wallet/types": "^0.11.64",
+		"@libp2p/logger": "^5.1.13",
+		"@noble/curves": "^1.8.1",
+		"@noble/hashes": "^1.7.1",
+		"ethers": "^6.13.5",
+		"multiformats": "^13.3.2"
+	}
+}

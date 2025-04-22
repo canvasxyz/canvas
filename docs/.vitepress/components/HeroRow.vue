@@ -18,6 +18,7 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
   <div class="HeroRow" :class="{ 'has-image': image || heroImageSlotExists }">
     <div class="container">
       <div class="main">
+        <a href="#" class="tagline" v-if="tagline"><div v-html="tagline"></div></a>
         <slot name="home-hero-info">
           <h1 v-if="name" class="name">
             <span v-html="name" class="clip"></span>
@@ -28,30 +29,26 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
             class="vue-motion"
             v-motion
                     :style='{
-                      height: "30px",
+                      height: "32px",
                       width: "19px",
                       position: "absolute",
+                      bottom: "4px",
                       backgroundColor: "var(--vp-c-brand-1)",
                       display: "inline-block",
                       borderRadius: "2px",
                     }'
                     :initial='{ opacity: 0, scale: 1 }'
-                    :enter='{ to: { backgroundColor: "#fff" }, opacity: 0.9, scale: 0.98, transition: { repeat: Infinity, repeatType: "mirror", duration: 800, ease: "easeOut" } }'
+                    :enter='{ to: { backgroundColor: "#fff" }, opacity: 0.9, scale: 0.98, transition: { repeat: 2, repeatType: "mirror", duration: 800, ease: "easeOut" } }'
 ></span>
 </p>
-          <p v-if="tagline" v-html="tagline" class="tagline"></p>
-          <p v-if="bullets" class="bullets">
+          <div v-if="bullets" class="bullets">
             <ul>
               <li class="bullet" v-for="bullet in bullets">
                 {{ bullet }}
               </li>
             </ul>
-          </p>
+          </div>
         </slot>
-
-        <div class="actions">
-          <slot></slot>
-        </div>
       </div>
 
       <div v-if="image || heroImageSlotExists" class="image">
@@ -67,20 +64,33 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 </template>
 
 <style scoped>
+.HeroRow a.tagline {
+  display: block;
+  color: #989FE4;
+  font-size: 80%;
+  font-weight: 500;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  margin-bottom: 21px;
+  text-decoration: none;
+  color: var(--vp-c-brand-2);
+  cursor: initial;
+}
+
 .HeroRow {
   margin-top: calc((var(--vp-nav-height) + var(--vp-layout-top-height, 0px)) * -1);
-  padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 48px) 0 32px;
+  padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 24px) 0 14px;
 }
 
 @media (min-width: 640px) {
   .HeroRow {
-    padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 100px) 0 32px;
+    padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 0px) 0 14px;
   }
 }
 
 @media (min-width: 960px) {
   .HeroRow {
-    padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 100px) 0 36px;
+    padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 10px) 0 10px;
   }
 }
 
@@ -98,12 +108,6 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
   flex-direction: column;
   margin: 0 auto;
   max-width: 1020px;
-}
-
-@media (min-width: 960px) {
-  .container {
-    flex-direction: row;
-  }
 }
 
 .main {
@@ -125,19 +129,12 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 }
 
 @media (min-width: 960px) {
-  .main {
-    order: 1;
-    width: calc((100% / 3) * 2);
-  }
-
   .HeroRow.has-image .main {
-    max-width: 640px;
   }
 }
 
 .name,
 .text {
-  max-width: 600px;
   letter-spacing: -0.4px;
   line-height: 1.2;
   font-size: 32px;
@@ -181,16 +178,6 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
   }
 }
 
-.tagline {
-  padding-top: 20px;
-  max-width: 400px;
-  line-height: 1.4;
-  font-size: 18px;
-  font-weight: 500;
-  white-space: pre-wrap;
-  color: var(--vp-c-text-2);
-}
-
 .bullets {
   padding-top: 2px;
   max-width: 450px;
@@ -212,29 +199,6 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 }
 @media (min-width: 960px) {
   .bullets {
-    margin: 0;
-  }
-}
-
-.HeroRow.has-image .tagline {
-  margin: 0 auto;
-}
-@media (min-width: 640px) {
-  .tagline {
-    padding-top: 22px;
-    /*max-width: 500px;*/
-    font-size: 18px;
-  }
-}
-
-@media (min-width: 960px) {
-  .tagline {
-    font-size: 18px;
-    padding-top: 24px;
-    line-height: 1.4 !important;
-  }
-
-  .HeroRow.has-image .tagline {
     margin: 0;
   }
 }
@@ -262,64 +226,33 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
   }
 }
 
-.image {
-  order: 1;
-  margin: -76px -24px -48px;
-}
-
-@media (min-width: 640px) {
-  .image {
-    margin: -108px -24px -48px;
-  }
-}
-
-@media (min-width: 960px) {
-  .image {
-    flex-grow: 1;
-    order: 2;
-    margin: 0;
-    min-height: 100%;
-  }
-}
-
 .image-container {
-  position: relative;
+  display: none;
+  position: absolute;
+  right: -170px;
   margin: 0 auto;
+  margin-top: 0;
   width: 320px;
   height: 320px;
 }
 
-@media (min-width: 640px) {
+@media (min-width: 1140px) {
   .image-container {
-    width: 392px;
-    height: 392px;
+    display: block;
   }
 }
-
-@media (min-width: 960px) {
+@media (min-width: 1240px) {
   .image-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    height: 100%;
-    /*rtl:ignore*/
-    transform: translate(-32px, -32px);
+    right: -80px;
   }
 }
 
 .image-bg {
-  position: absolute;
-  top: 50%;
-  /*rtl:ignore*/
-  left: 50%;
   border-radius: 50%;
   width: 192px;
   height: 192px;
   background-image: var(--vp-home-hero-image-background-image);
   filter: var(--vp-home-hero-image-filter);
-  /*rtl:ignore*/
-  transform: translate(-50%, -50%);
 }
 
 @media (min-width: 640px) {
@@ -338,40 +271,22 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 
 :deep(.image-src) {
   position: absolute;
-  top: 50%;
-  /*rtl:ignore*/
-  left: 50%;
-  max-width: 192px;
-  max-height: 192px;
-  /*rtl:ignore*/
-  transform: translate(-50%, -50%) scale(1.25);
-}
-
-@media (min-width: 640px) {
-  :deep(.image-src) {
-    max-width: 240px;
-    max-height: 240px;
-    padding-bottom: 20px;
-  }
-}
-
-@media (min-width: 960px) {
-  :deep(.image-src) {
-    max-width: 240px;
-    max-height: 240px;
-    transform: translate(40px, 160px) translate(-50%, -50%) scale(1.5);
-  }
+  top: 0;
+  left: 0;
+  max-width: 320px;
+  max-height: 320px;
 }
 
 .vue-motion {
     margin-top: 5px;
-    margin-left: 7px;
+    margin-left: 8px;
 }
 
 @media (min-width: 960px) {
     .vue-motion {
         margin-top: 10px;
-        margin-left: 9px;
+        margin-left: 8px;
+        bottom: 8px !important;
     }
 }
 </style>

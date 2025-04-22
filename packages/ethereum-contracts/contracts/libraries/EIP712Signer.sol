@@ -5,11 +5,11 @@ pragma solidity ^0.8.19;
  * Solidity implementations of the `canvas-action-eip712` and
  * `canvas-session-eip712` codecs for Message<Action>,
  * Message<Session>, and Session, defined in the EIP712Signer
- * and Secp256k1DelegateSigner in the chain-ethereum package.
+ * and Secp256k1DelegateSigner in the signer-ethereum package.
  *
  * This package also includes typed data formats used by the
  * EIP712Signer and Secp256k1DelegateSigner signers in
- * packages/chain-ethereum, which match the signTypedData calls in
+ * packages/signer-ethereum, which match the signTypedData calls in
  * EIP712Signer.ts and Secp256k1DelegateSigner.ts.
  *
  * They *do not* exactly match the structs, nor do they match

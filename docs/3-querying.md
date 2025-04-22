@@ -7,7 +7,7 @@ const app = await Canvas.initialize(...)
 await app.db.get("posts", postId)
 ```
 
-You can query the database outside action handlers by using `app.db.get`, `app.db.query`, or `useLiveQuery` for live-updating data.
+You can query the database outside action handlers by using `app.db.get`, `app.db.query`, or `useLiveQuery` for live data as a React hook.
 
 ## Getting records
 
@@ -16,7 +16,7 @@ All database models have a primary key, defined in the model schema using the `"
 ```ts
 const app = await Canvas.initialize({
   contract: {
-    topic: "com.example.my-app",
+    topic: "example.com",
     models: {
       posts: {
         id: "primary",
@@ -63,6 +63,8 @@ type PrimitiveValue = null | string | number | Uint8Array
 type PropertyValue = null | string | number | Uint8Array | string[]
 ```
 
+### Basic query
+
 ```ts
 // Get all posts
 const results = await app.db.query("posts", {})
@@ -74,20 +76,11 @@ const results = await app.db.query("posts", {})
 //     content: 'foo',
 //     updated_at: 1698344798345
 //   },
-//   {
-//     id: '0cfag48t05mags2lhdt9idn3cbpubl1e',
-//     user: 'did:pkh:eip155:1:0x8A876c44064b77b36Cb3e0524DeeC1416858bDE6',
-//     content: 'bar',
-//     updated_at: 1698344798363
-//   },
-//   {
-//     id: '0j77pkoundspspv1dgkppvceduu8s2t1',
-//     user: 'did:pkh:eip155:1:0x8A876c44064b77b36Cb3e0524DeeC1416858bDE6',
-//     content: 'baz',
-//     updated_at: 1698344798366
-//   }
+//   ...
 // ]
 ```
+
+### Sorting with `orderBy`
 
 ```ts
 // Get all posts, sorted by timestamp
@@ -102,6 +95,8 @@ const results = await app.db.query("posts", {
 //   { id: '08arkku017tl90n9dptlkkd62vooji11', content: 'foo' },
 // ]
 ```
+
+### Filtering with `where`
 
 ```ts
 // Get all posts, filtering by a range expression on `content`
@@ -124,11 +119,11 @@ You can also subscribe to queries in the browser using the `useLiveQuery` hook e
 import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
 
 const contract = {
-  topic: "com.example.my-app",
+  topic: "example.xyz",
   models: { ... },
   actions: {
-    async createPost(db, args, {}) { ... }
-    async deletePost(db, args, {}) { ... }
+    async createPost(...args) { ... }
+    async deletePost(...args) { ... }
   }
 }
 

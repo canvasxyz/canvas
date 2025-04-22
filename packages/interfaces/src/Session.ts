@@ -1,5 +1,5 @@
 /**
- * Sessions consist of an ephemeral keypair and some chain-specific
+ * Sessions consist of an ephemeral keypair and some session signer-specific
  * data representing a user's (temporary) authorization of that
  * keypair to sign actions on their behalf.
  */
@@ -12,7 +12,7 @@ export type Session<AuthorizationData = any> = {
 	/** did:key URI of the ephemeral session key used to sign subsequent actions */
 	publicKey: string
 
-	/** chain-specific session payload, e.g. a SIWE message & signature */
+	/** signer-specific session payload, e.g. a SIWE message & signature */
 	authorizationData: AuthorizationData
 
 	context: {

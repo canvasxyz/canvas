@@ -71,8 +71,8 @@ jobs:
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
 
-      - name: Run @canvas-js/chain-atp tests
-        run: npm run test --workspace=@canvas-js/chain-atp
+      - name: Run @canvas-js/signer-atp tests
+        run: npm run test --workspace=@canvas-js/signer-atp
 
       - name: Run @canvas-js/core tests
         run: npm run test --workspace=@canvas-js/core
@@ -89,8 +89,8 @@ jobs:
       # - name: Run @canvas-js/ethereum-contracts tests
       #   run: npm run test --workspace=@canvas-js/ethereum-contracts
 
-      - name: Run @canvas-js/chain-ethereum tests
-        run: npm run test --workspace=@canvas-js/chain-ethereum
+      - name: Run @canvas-js/signer-ethereum tests
+        run: npm run test --workspace=@canvas-js/signer-ethereum
 
       - name: Run @canvas-js/signatures tests
         run: npm run test --workspace=@canvas-js/signatures

@@ -84,9 +84,15 @@ defineProps<{
   }
 }
 
+
 @media (min-width: 960px) {
-  .item.grid-4 {
-    width: calc(100% / 4);
+  .item.grid-2,
+  .item.grid-3,
+  .item.grid-4,
+  .item.grid-5,
+  .item.grid-6 {
+    width: calc(100% / 2);
   }
 }
+
 </style>

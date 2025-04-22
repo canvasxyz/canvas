@@ -1,108 +1,331 @@
 ---
-layout: home
+aside: false
+next: false
 ---
 
-<HeroRow text="Peer-to-peer sync for TypeScript applications" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }">
-  <HeroAction theme="brand big" text="Guide" href="/1-introduction" />
-  <HeroAction theme="brand big" text="Blog" href="/blog" />
-  <HeroAction theme="alt big" text="API Docs" href="/readme-core" />
-</HeroRow>
+<div :class="$style.main">
 
-Canvas is a replicated database with an embedded runtime, that lets
-you write multiplayer TypeScript applications with complex logic and
-instant sync.
+<HeroRow tagline="Developer Preview" text="Build local-first, peer-to-peer applications" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
 
-Write your core application logic in a [replicated contract](#),
-that syncs over libp2p. Users' actions are applied instantly on their machine,
-and merged seamlessly with others' actions.
+<div :class="$style.mainInner">
 
-Handle conflicts with CRDTs, the data structures that Figma and Linear
-use to make their UI fast. Or, we also support optimistic rollback,
-for MMO-style game sync
+Canvas is a peer-to-peer database, like a local-first Firebase or
+InstantDB, that lets you write entire applications without leaving your frontend.
 
-It's fully open source, and built on SQLite, Postgres, and IndexedDB.
+Get the guarantees of local-first software, the programmability
+of a traditional backend, and the usability of a modern web database.
+
+</div>
+
+<FeatureTags :features="[
+  {
+    text: 'Runs on browser, desktop, or mobile',
+    tooltip: 'Works in the browser, in Node.js, or in React Native',
+    iconName: 'mobile'
+  },
+  {
+    text: 'Cross-database persistence',
+    tooltip: 'Uses SQLite, Postgres, or IndexedDB as the backing data store',
+    iconName: 'database'
+  },
+  {
+    text: 'Sync via libp2p',
+    tooltip: 'Browser-to-server and server-to-server libp2p WebSockets',
+    iconName: 'activity'
+  },
+  {
+    text: 'Live queries',
+    tooltip: 'React hooks for live-updating apps & database queries',
+    iconName: 'compare'
+  },
+  {
+    text: 'Custom logic',
+    tooltip: 'Write custom mutators for auth rules or business logic',
+    iconName: 'atom'
+  },
+  {
+    text: 'Transactions',
+    tooltip: 'Serializable database transactions that roll back on conflict',
+    iconName: 'rewind'
+  },
+  {
+    text: 'Database Editor',
+    tooltip: 'Comes with a database management interface',
+    iconName: 'apps',
+  },
+  {
+    text: 'IPFS-based',
+    tooltip: 'Built on IPFS standards (IPLD, DAG-CBOR) and Prolly-trees',
+    iconName: '123'
+  },
+  {
+    text: 'MIT Licensed',
+    tooltip: 'Open source, fully self-hostable',
+    iconName: 'crown',
+  },
+  {
+    text: 'CRDTs',
+    tooltip: 'Soon: Multiplayer editing using embedded CRDTs',
+    iconName: 'guide',
+    disabled: true,
+  },
+  {
+    text: 'Private Data',
+    tooltip: 'Soon: Native support for end-to-end encrypted data',
+    iconName: 'lock',
+    disabled: true
+  },
+  {
+    text: 'Email Login',
+    tooltip: 'Soon: Login optimized for usability and accessibility',
+    iconName: 'lock',
+    disabled: true
+  },
+]" />
+
+</div>
+
+<div :class="$style.partial">
+
+<EmailForm />
+
+</div>
+
+<div :class="$style.badges">
+<a href="https://github.com/canvasxyz/canvas" target="_blank">
+
+![NPM Version](https://img.shields.io/npm/v/%40canvas-js%2Fcore)
+![GitHub stars](https://img.shields.io/github/stars/canvasxyz/canvas?style=flat)
+![NPM Downloads](https://img.shields.io/npm/dm/%40canvas-js%2Fcore)
+
+</a>
+</div>
+
+---
+
+<div :class="$style.sectionHeaderCol">
+
+# Get started in minutes
+
+</div>
+
+<div :class="$style.flex">
+  <div :class="$style.colRight">
 
 ::: code-group
 
-```ts [React app]
-import { useCanvas } from "@canvas-js/hooks"
+```ts [Browser]
+import { Canvas } from "@canvas-js/core"
 
-const contract = {
-  models: {
-    messages: {
-      id: "primary",
-      text: "string",
-    }
-  },
-  actions: {
-    createMessage: (db, { text }, { address, msgid }) => {
-      db.set("messages", { id: msgid, text })
-    }
+const models = {
+  messages: {
+    id: "primary",
+    text: "string",
+    $indexes: ["id"]
   }
 }
 
-const { app } = useCanvas({ topic: "demo.canvas.xyz", contract })   // [!code highlight]
+const actions = {
+  createMessage: async (text) => {
+    const { address, id } = this
+    await db.set("messages", { id, text })
+  }
+}
+
+const app = await Canvas.initialize({
+  topic: "example.canvas.xyz",
+  contract: { models, actions }
+})
+
+app.actions.createMessage("hello world!")
 ```
 
-```ts [Node.js + WASM]
-export const contract = {
-  models: {
-    messages: {
-      id: "primary",
-      text: "string"
-    }
-  },
-  actions: {
-    createMessage: (db, { text }, { address, txid }) => {
-      db.set("messages", { id: txid, text })
-    }
+```ts [React hook]
+import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
+import { models, actions } from "contract.ts"
+
+const wsURL = null
+
+const Component = () => {
+  const { app, ws } = useCanvas(wsURL, {
+    topic: "example.canvas.xyz",
+    contract: { models, actions }
+  })
+
+  const items = useLiveQuery(app, "posts", {
+    orderBy: "created_at"
+  })
+
+  return <ItemView content={items}></ItemView>
+}
+```
+
+```ts [Command Line]
+// In contract.ts:
+export const models = {
+  messages: {
+    id: "primary",
+    text: "string"
   }
 }
 
+export const actions = {
+  createMessage: ({ text }) => {
+    const { id, address } = this
+    db.set("messages", { id, text })
+  }
+}
+
+// From the command line:
 $ canvas run contract.ts --topic demo.canvas.xyz // [!code highlight]
 ```
 
 :::
 
-<CodeGroupOpener />
+<CodeGroupOpener /> <!-- needed for production build -->
 
-## A Peer-to-peer Distributed Runtime
+  </div>
+  <div :class="$style.colLeft">
 
-Every Canvas application runs on a [distributed
-log](https://joelgustafson.com/posts/2024-09-30/gossiplog-reliable-causal-broadcast-for-libp2p)
-that stores a history of users' actions.
+**Create a database** by defining models and actions.
 
-When new applications are started up, they catch up on history using
-[efficient sync](https://docs.canvas.xyz/blog/2023-05-04-merklizing-the-key-value-store.html)
-to catch up on the latest state.
+Models define your database schema, and are interoperable
+across platforms, like Prisma.
 
-On top of the sync layer, we've written a peer-to-peer
-runtime that sandboxes users' actions, that executes them in a
-deterministic environment to maintain convergence and mergeability.
+Actions define mutations that users can make to the database. Use them to
+enforce authorization checks, or write business logic.
 
-![Replicated log](./public/gossiplog.png)
+---
 
-Now you can develop multiplayer games, local-first
-applications, and realtime applications with instant
-responsiveness, while maintaining strong decentralization properties.
+**Launch a peer** from your terminal. It will connect with everyone
+else running the application's topic, via DHT.
 
-For demanding applications, you can shard an application into
-multiple state containers, and state containers can be snapshotted
-and compacted as they grow.
+```sh
+canvas run contract.ts --topic example.xyz
+[canvas] Bundled .ts contract: 4386 chars
+[canvas] Serving HTTP API: ...
+```
 
-To learn more, check out our [docs](/1-introduction), or
-join us on [Github](https://github.com/canvasxyz/canvas) and
-[Discord](https://discord.gg/yQ5pTkAS).
+---
 
-<br/>
+**Upgrade your application** by adding new actions or models. Upgraded
+contracts will safely soft-fork away from nodes running the old contract.
 
-<FeatureRow title="Components" detail="">
-  <FeatureCard title="@canvas-js/okra" details="A Prolly tree written in Zig, that enables fast peer-to-peer sync for application histories." link="https://github.com/canvasxyz/okra" linkText="Github" secondaryLink="https://docs.canvas.xyz/blog/2023-05-04-merklizing-the-key-value-store.html" secondaryLinkText="Blog Post"/>
-  <FeatureCard title="@canvas-js/gossiplog" details="A self-authenticating distributed log for multi-writer applications." link="https://github.com/canvasxyz/canvas/tree/main/packages/gossiplog" linkText="Github" secondaryLinkText="Presentation" secondaryLink="https://www.youtube.com/watch?v=X8nAdx1G-Cs"/>
-  <FeatureCard title="@canvas-js/modeldb" details="A cross-platform relational database wrapper for IDB, SQLite, and Postgres." link="https://github.com/canvasxyz/canvas/tree/main/packages/modeldb" linkText="Github"/>
-  <FeatureCard title="Sign in with Ethereum" details="Log in with an Ethereum wallet. Also supports Cosmos, Solana, and Polkadot." linkText="Demo" link="https://chat-example.canvas.xyz/"/>
-  <FeatureCard title="Sign in with Bluesky" details="Log in with your decentralized identity from the Bluesky PLC network." linkText="Demo" link="https://chat-example.canvas.xyz/"/>
-  <FeatureCard title="Sign in with OpenID" details="Log in trustlessly with Google, Apple, or other SSO providers." soon="In development"/>
-</FeatureRow>
+To change existing actions or models, use the admin interface to
+generate a hard-fork snapshot, and compact the state of the application.
+
+  </div>
+</div>
+
+---
+
+<div :class="$style.end">
+
+<div :class="$style.sectionHeader">
+
+# Frequently asked questions
+
+</div>
+
+<FAQ :items="[
+  {
+    question: 'How does Canvas differ from other databases?',
+    answer: 'Canvas uses libp2p for peer-to-peer synchronization. Nodes can connect directly to each other or through relay servers, ensuring your data stays in sync across devices even without a central server.\n This makes it possible to build local-first applications with more complex business logic, like database transactions that roll back on conflict.'
+  },
+  {
+    question: 'Is Canvas ready for production?',
+    answer: 'Canvas is currently in developer preview. We\'ve deployed it in small embedded applications with 100s of users, and larger server-side production deployments with 10k+ users and 300k+ rows.\n It\'s currently best for peer-to-peer applications, local-first applications, and decentralized applications where the user has a wallet. Improving the system to work well with traditional logins is one of our next priorities. \n We recommend joining our Discord to discuss your specific use case before using in production.'
+  },
+]" />
+
+<div :class="$style.sectionHeader">
+
+# Built for the open web
+
+</div>
+
+Traditionally, local-first databases have only offered simple data
+structures like KV-stores, maps, and feeds. They provide limited
+database consistency guarantees, require developers to manage private
+keys, and provide limited options for persistence and sync.
+
+To solve these problems, we built an embedded runtime that preserves
+determinism and convergence in an eventually-consistent
+environment. Using the runtime, we can compile database schemas,
+permission checks, and custom mutations into code.
+
+Canvas uses a modular signer interface that allows us to integrate with
+different login systems, including crypto wallets, DIDs, and (soon)
+WebAuthn and OIDC SSO. For more traditional logins, we also have
+cryptographically verifiable strategies using traditional identity
+providers on the roadmap.
+
+We've published some of our research as technical presentations here:
+
+- [Merklizing the Key/Value Store for Fun and Profit](https://joelgustafson.com/posts/2023-05-04/merklizing-the-key-value-store-for-fun-and-profit)
+- [Introduction to Causal Logs](https://joelgustafson.com/posts/2024-09-30/introduction-to-causal-logs)
+- [GossipLog: Reliable Causal Broadcast for libp2p](https://joelgustafson.com/posts/2024-09-30/gossiplog-reliable-causal-broadcast-for-libp2p)
+- [GossipLog: libp2p Day Presentation](https://www.youtube.com/watch?v=X8nAdx1G-Cs)
+
+The current release of Canvas is an early developer preview that we
+are using in a limited set of production pilots. We are excited to
+work with more developers to build on the system, and support more
+identity providers. For more information, please reach out via
+[Discord](https://discord.gg/EjczssxKpR).
+
+</div>
 
 <HomepageFooter />
+
+<style module>
+.main p[class="text"],
+.main a[class="tagline"],
+.sectionHeader h1,
+.sectionHeaderCol h1 { font-family: "Space Grotesk"; }
+
+.main, .partial { max-width: 630px; }
+.mainInner { max-width: 630px; } /* make room for jellyfish */
+@media (max-width: 960px) {
+  .main, .partial { margin: 0 auto; }
+  .mainInner { max-width: none; }
+}
+
+.sectionHeaderCol { margin: 2.5rem 0 0.7rem; }
+.sectionHeader { margin: 2.5rem 0 1.3rem; }
+
+.badges {
+  margin: 0 auto;
+}
+.badges p {
+  display: flex;
+  flex-direction: row;
+  transform: scale(1.04);
+  transform-origin: left center;
+  margin-bottom: 2rem;
+  justify-content: center;
+}
+.badges p img { height: 140%; margin-right: 6px; }
+@media (min-width: 960px) {
+  .badges p { justify-content: left; }
+}
+
+.flex div[class*="vp-adaptive-theme"] { font-size: 98%; }
+.colLeft div[class*="vp-adaptive-theme"] { font-size: 96%; }
+
+.flex { display: flex; flex-direction: row-reverse; padding-bottom: 10px;}
+.colLeft { width: 49%; padding-right: 33px; padding-top: 0px; }
+.colLeft hr { margin: 1.75rem 0; }
+.colRight { width: 51%; }
+.colLeft div[class*="vp-adaptive-theme"] { margin: 1.33rem 0 1.32rem !important; }
+
+@media (max-width: 640px) {
+  .flex { display: block; padding-top: 1px; }
+  .colLeft { width: 100%; padding-right: 0; }
+  .colRight { width: 100%; }
+}
+
+.end {
+  margin: 40px 0;
+  max-width: 600px;
+}
+</style>

@@ -4,7 +4,7 @@ import { ethers } from "ethers"
 
 import type { Canvas } from "@canvas-js/core"
 import { useCanvas, useLiveQuery, AppInfo } from "@canvas-js/hooks"
-import { SIWESigner } from "@canvas-js/chain-ethereum"
+import { SIWESigner } from "@canvas-js/signer-ethereum"
 
 import { usePrivkey } from "./components/privkeys"
 import * as contract from "./contract"

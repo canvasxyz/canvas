@@ -11,5 +11,5 @@
 		"skipLibCheck": true,
 		"outDir": "lib"
 	},
-	"references": [{ "path": "../chain-ethereum" }, { "path": "../signatures" }]
+	"references": [{ "path": "../signer-ethereum" }, { "path": "../signatures" }]
 }

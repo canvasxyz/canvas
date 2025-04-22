@@ -2,13 +2,20 @@
 
 [Demo](https://forum-example.canvas.xyz/) - [Github](https://github.com/canvasxyz/canvas/tree/main/examples/forum)
 
-The forum example implements a simple publishing platform.
+The forum example implements a simple publishing platform, with support
+for login with Ethereum or Farcaster (both on the web, and as a mini app).
+
+## Contract
+
+<<< @/../examples/forum/src/contract.ts
 
 ## Developing
 
-- `npm run dev:server` to start the server, on port 8080
-- `npm run dev` to start the client, on port 5173
-- `cloudflared tunnel --url http://localhost:5173` for SIWF Mini App development
+- Run `npm run dev` to serve the frontend, on port 5173.
+- Run `npm run dev:server` to start the backend with in-memory temporary state, on port 8080.
+- Run `npm run dev:server:persistent` to start the backend with data persisted to a directory in /tmp.
+- Run `npm run dev:server:reset` to clear the persisted data.
+- Run `cloudflared tunnel --url http://localhost:5173` to launch a tunnel for Farcaster miniapp testing.
 
 ## Farcaster Mini App Development
 
@@ -32,12 +39,18 @@ Now, to preview the mini app:
 
 ## Deploying to Railway
 
-Create a Railway space based on the root of this Github workspace (e.g. canvasxyz/canvas).
+Create a Railway space based on the root of this Github workspace
+(e.g. canvasxyz/canvas).
 
-* Custom build command: `npm run build && VITE_CANVAS_WS_URL=wss://forum-example.canvas.xyz npm run build --workspace=@canvas-js/forum-example`
-* Custom start command: `./install-prod.sh && canvas run /tmp/canvas-example-forum --port 8080 --static examples/forum/dist --topic forum-example.canvas.xyz --init examples/forum/src/contract.ts`
-* Watch paths: `/examples/forum/**`
-* Public networking:
-  * Add a service domain for port 8080.
-  * Add a service domain for port 4444.
-* Watch path: `/examples/forum/**`. (Only build when forum code is updated, or a forum package is updated.)
+Set the railway config to `examples/forum/railway.json`. This will
+configure the start command, build command, and watch paths.
+
+Configure networking for the application:
+- Port 8080 should map to the websocket server defined in VITE_CANVAS_WS_URL (e.g. forum-example.canvas.xyz).
+- Port 4444 should map to a URL where your libp2p service will be exposed. (e.g. forum-example-libp2p.canvas.xyz).
+
+Configure environment variables:
+- ANNOUNCE (e.g. /dns4/forum-example-libp2p.canvas.xyz/tcp/443/wss)
+- DATABASE_URL
+- LIBP2P_PRIVATE_KEY (try: node ./scripts/generateLibp2pPrivkey.js)
+- DEBUG (optional, for logging)

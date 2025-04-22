@@ -6,21 +6,22 @@ import { bytesToHex } from "@noble/hashes/utils"
 
 import { Signature, Action, Message, Snapshot, SessionSigner, SignerCache, MessageType } from "@canvas-js/interfaces"
 import { AbstractModelDB, Model, ModelSchema, Effect } from "@canvas-js/modeldb"
-import { SIWESigner } from "@canvas-js/chain-ethereum"
+import { SIWESigner } from "@canvas-js/signer-ethereum"
 import { AbstractGossipLog, GossipLogEvents, NetworkClient, SignedMessage } from "@canvas-js/gossiplog"
 import type { ServiceMap, NetworkConfig } from "@canvas-js/gossiplog/libp2p"
 
 import { assert, mapValues } from "@canvas-js/utils"
+import { SnapshotSignatureScheme } from "@canvas-js/signatures"
 
 import target from "#target"
 
 import type { Contract, Actions, ActionImplementation, ModelAPI, DeriveModelTypes } from "./types.js"
 import { Runtime, createRuntime } from "./runtime/index.js"
-import { AbstractRuntime, ActionRecord } from "./runtime/AbstractRuntime.js"
+import { ActionRecord } from "./runtime/AbstractRuntime.js"
 import { validatePayload } from "./schema.js"
 import { CreateSnapshotArgs, createSnapshot, hashSnapshot } from "./snapshot.js"
-import { initialUpgradeSchema, topicPattern } from "./utils.js"
-import { SnapshotSignatureScheme } from "@canvas-js/signatures"
+import { baseVersion, initialUpgradeSchema, initialUpgradeVersion, upgrade } from "./migrations.js"
+import { topicPattern } from "./utils.js"
 
 export type { Model } from "@canvas-js/modeldb"
 export type { PeerId } from "@libp2p/interface"
@@ -83,7 +84,7 @@ export class Canvas<
 	ActionsT extends Actions<ModelsT> = Actions<ModelsT>,
 > extends TypedEventEmitter<CanvasEvents> {
 	public static namespace = "canvas"
-	public static version = 3
+	public static version = 4
 
 	public static async initialize<ModelsT extends ModelSchema, ActionsT extends Actions<ModelsT> = Actions<ModelsT>>(
 		config: Config<ModelsT, ActionsT>,
@@ -127,41 +128,16 @@ export class Canvas<
 				schema: { ...config.schema, ...runtime.schema },
 				clear: config.reset,
 
-				version: { [Canvas.namespace]: Canvas.version },
-
+				version: baseVersion,
 				initialUpgradeSchema: { ...runtime.models, ...initialUpgradeSchema },
-				initialUpgradeVersion: { [Canvas.namespace]: 1 },
-
-				async upgrade(upgradeAPI, oldConfig, oldVersion, newVersion) {
-					const log = logger("canvas:core:upgrade")
-					const version = oldVersion[Canvas.namespace] ?? 0
-					log("found canvas version %d", version)
-
-					let replayRequired = false
-
-					if (version <= 1) {
-						log("removing property 'branch' from $effects", version)
-						await upgradeAPI.removeProperty("$effects", "branch")
-					}
-
-					if (version <= 2) {
-						for (const [modelName, modelInit] of Object.entries(AbstractRuntime.effectsModel)) {
-							log("creating model %s", modelName)
-							await upgradeAPI.createModel(modelName, modelInit)
-						}
-
-						log("deleting model %s", "$effects")
-						await upgradeAPI.deleteModel("$effects")
-
-						replayRequired = true
-					}
-
+				initialUpgradeVersion: initialUpgradeVersion,
+				upgrade: async (upgradeAPI, oldConfig, oldVersion, newVersion) => {
+					const replayRequired = await upgrade(upgradeAPI, oldConfig, oldVersion, newVersion)
 					if (replayRequired) {
 						for (const name of Object.keys(runtime.models)) {
 							await upgradeAPI.clear(name)
 						}
 					}
-
 					return replayRequired
 				},
 			},
@@ -196,7 +172,7 @@ export class Canvas<
 				parents: [],
 				payload: config.snapshot,
 			}
-			const signature = await SnapshotSignatureScheme.create().sign(message)
+			const signature = SnapshotSignatureScheme.create().sign(message)
 			const signedMessage: SignedMessage<Snapshot> = app.messageLog.encode(signature, message)
 			await app.messageLog.insert(signedMessage)
 		}

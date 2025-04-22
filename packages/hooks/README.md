@@ -2,18 +2,19 @@
 
 Hooks for using Canvas applications in React.
 
-## Table of Contents
-
-- [`useCanvas`](#usecanvas)
-- [`useLiveQuery`](#uselivequery)
-- [`useTick`](#usetick)
-
 ## `useCanvas`
 
-The `useCanvas` hook initializes a Canvas application contract inside a React component. It accepts the same `CanvasConfig` object as `Canvas.initialize` in `@canvas-js/core`.
+The `useCanvas` hook initializes a Canvas application inside a React component,
+returning the application as `app` and a NetworkClient object as `ws`.
+
+It accepts a WebSocket URL (or null) as the first argument, and the
+same configuration object as `Canvas.initialize()` does for the second argument.
+
+If you provide a WebSocket URL, it will try to connect to that WebSocket and
+use browser-to-server sync to stay updated with it.
 
 ```ts
-import { SIWESigner } from "@canvas-js/chain-ethereum"
+import { SIWESigner } from "@canvas-js/signer-ethereum"
 import { useCanvas } from "@canvas-js/hooks"
 import { useMemo } from "react"
 
@@ -21,18 +22,18 @@ export function MyApp() {
   const wallet = useMemo(() => {
     return ethers.Wallet.createRandom()
   }, [])
-  const { app, error } = useCanvas({
-    topic: "com.example.forum",
+
+  const { app, error } = useCanvas("wss://forum-example.canvas.xyz", {
+    topic: "forum-example.canvas.xyz",
     contract: {
       // ...
     },
     signers: [new SIWESigner({ signer: wallet })],
-    topic: "myapp",
   })
 }
 ```
 
-Note that `app` might be null the first time the hook runs.
+Note that `app` might be null when the hook initializes.
 
 ## `useLiveQuery`
 
@@ -53,60 +54,4 @@ export function MyComponent({ app }: { app?: Canvas }) {
     where: category === "all" ? undefined : { category },
   })
 }
-```
-
-## `useTick`
-
-`useTick(app: Canvas, condition: string | null, interval: number)`
-
-The `useTick` hook calls a `tick()` action on a contract at a regular interval.
-
-Ticking happens client-side. Here are a few considerations:
-
-- Ticking will only run if the user has started a session.
-- If a client observes that any other user on the log has called tick()
-  within the last `interval`, their tick will be skipped.
-- Contracts will stop ticking if no clients are online.
-
-Note that useTick() does not do any special accounting for networking -
-it is possible that if two users start their timers at around the same time, their
-clocks will be synchronized and each will emit tick() events around the same time.
-
-You should account for this in your application logic.
-
-### Conditional Ticking
-
-Ticking can be configured to only run when a certain condition in the database is true.
-
-```ts
-const models = {
-  state: {
-    gameOver: "boolean"
-  }
-}
-
-const actions = {
-  toggleGameStart: (db) => {
-    const { gameOver } = await db.state.get()
-    db.state.set({ gameOver: !gameOver })
-  }
-  tick: (db} => {
-    // ...
-  }
-}
-
-const { app } = useCanvas({
-  topic: "...",
-  contract: { models, actions }
-})
-
-useTick(app, '!state.gameOver', 1000)
-```
-
-The condition can be any query of the form `model.field` or `!model.field`.
-
-If would prefer not to use a condition, you can also leave it null.
-
-```ts
-useTick(app, null, 1000)
 ```
