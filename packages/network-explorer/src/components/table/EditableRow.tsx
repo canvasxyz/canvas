@@ -1,7 +1,7 @@
+import { ModelValue } from "@canvas-js/modeldb"
 import { Checkbox, Flex } from "@radix-ui/themes"
 import { flexRender } from "@tanstack/react-table"
 import { Row } from "@tanstack/react-table"
-import { useState } from "react"
 
 export const ThCheckbox = ({
 	checked,
@@ -62,17 +62,19 @@ export const Td = ({
 
 export const EditableRow = ({
 	row,
+	stagedValues,
+	setStagedValues,
 	isStagedDelete,
 	checked,
 	onCheckedChange,
 }: {
 	row: Row<any>
+	stagedValues: ModelValue | undefined
+	setStagedValues: (values: ModelValue) => void
 	isStagedDelete: boolean
 	checked: boolean
 	onCheckedChange: (checked: boolean) => void
 }) => {
-	const [isEditing, setIsEditing] = useState(false)
-
 	return (
 		<tr
 			style={{
@@ -84,8 +86,16 @@ export const EditableRow = ({
 		>
 			<ThCheckbox checked={checked} onCheckedChange={onCheckedChange} />
 			{row.getVisibleCells().map((cell) => (
-				<Td key={cell.id} width={cell.column.getSize()} onClick={() => setIsEditing(!isEditing)}>
-					{isEditing ? <></> : flexRender(cell.column.columnDef.cell, cell.getContext())}
+				<Td key={cell.id} width={cell.column.getSize()}>
+					{cell.column.columnDef.meta?.editCell
+						? flexRender(cell.column.columnDef.meta?.editCell, {
+								value: stagedValues ? stagedValues[cell.column.id] : cell.getValue(),
+								setValue: (value: string) => {
+									setStagedValues({ ...stagedValues, [cell.column.id]: value })
+								},
+						  })
+						: // add something to say that the cell cannot be edited
+						  flexRender(cell.column.columnDef.cell, cell.getContext())}
 				</Td>
 			))}
 		</tr>

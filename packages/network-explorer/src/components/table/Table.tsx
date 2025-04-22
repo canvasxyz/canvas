@@ -1,5 +1,5 @@
 import useSWR from "swr"
-import { WhereCondition } from "@canvas-js/modeldb"
+import { ModelValue, WhereCondition } from "@canvas-js/modeldb"
 import { Map as ImmutableMap, Set as ImmutableSet } from "immutable"
 import { Box, Button, Flex, Text } from "@radix-ui/themes"
 import { useCallback, useEffect, useState } from "react"
@@ -261,16 +261,29 @@ export const Table = <T,>({
 							{tanStackTable.getRowCount() === 0 && <NoneFound />}
 							{tanStackTable.getRowModel().rows.map((row) => {
 								if (allowEditing) {
-									const rowKey = encodeRowKey(getRowKey(row))
-									const rowChange = tableChangedRows.get(rowKey)
+									const rowKey = getRowKey(row)
+									const encodedRowKey = encodeRowKey(rowKey)
+									const rowChange = tableChangedRows.get(encodedRowKey)
+
+									let stagedValues: ModelValue | undefined = undefined
+									if (rowChange && rowChange.type === "update") {
+										stagedValues = rowChange.value
+									}
 									return (
 										<EditableRow
 											key={row.id}
 											row={row}
+											stagedValues={stagedValues}
+											setStagedValues={(newValues) => {
+												stageRowChange(tableName, rowKey, {
+													type: "update",
+													value: newValues,
+												})
+											}}
 											isStagedDelete={rowChange?.type === "delete"}
-											checked={selectedRows.has(rowKey)}
+											checked={selectedRows.has(encodedRowKey)}
 											onCheckedChange={(checked) => {
-												setSelectedRows(checked ? selectedRows.add(rowKey) : selectedRows.delete(rowKey))
+												setSelectedRows(checked ? selectedRows.add(encodedRowKey) : selectedRows.delete(encodedRowKey))
 											}}
 										/>
 									)

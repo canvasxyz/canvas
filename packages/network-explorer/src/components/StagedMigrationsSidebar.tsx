@@ -3,7 +3,7 @@ import { useStagedMigrations } from "../hooks/useStagedMigrations.js"
 import { Changeset, RowChange } from "@canvas-js/core"
 import { Map as ImmutableMap } from "immutable"
 import { useContractData } from "../hooks/useContractData.js"
-import { decodeRowKey, ImmutableRowKey } from "../hooks/useChangedRows.js"
+import { decodeRowKey, encodeRowKey, ImmutableRowKey, RowKey } from "../hooks/useChangedRows.js"
 
 function ChangesetMigrationRow({ changeset }: { changeset: Changeset }) {
 	switch (changeset.change) {
@@ -29,6 +29,30 @@ function ChangesetMigrationRow({ changeset }: { changeset: Changeset }) {
 			return (
 				<>
 					Make column nullable: {changeset.table}.{changeset.column}
+				</>
+			)
+	}
+}
+
+function RowChangeRow({ rowKey, rowChange, tableName }: { rowKey: RowKey; rowChange: RowChange; tableName: string }) {
+	const encodedRowKey = encodeRowKey(rowKey)
+	switch (rowChange.type) {
+		case "create":
+			return (
+				<>
+					Created row {encodedRowKey} in "{tableName}"
+				</>
+			)
+		case "delete":
+			return (
+				<>
+					Deleted row {encodedRowKey} in "{tableName}"
+				</>
+			)
+		case "update":
+			return (
+				<>
+					Updated row {encodedRowKey} in "{tableName}"
 				</>
 			)
 	}
@@ -82,7 +106,8 @@ export const StagedMigrationsSidebar = () => {
 					))}
 					{flattenRowChanges(changedRows).map(({ tableName, row, rowChange }, index) => (
 						<li key={index}>
-							{rowChange.type} row {row.join(", ")} from {tableName}{" "}
+							<RowChangeRow rowKey={row} rowChange={rowChange} tableName={tableName} />
+							&nbsp;
 							<a
 								href="#"
 								onClick={(e) => {

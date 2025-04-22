@@ -3,6 +3,7 @@ import { Table } from "./components/table/Table.js"
 import { useApplicationData } from "./hooks/useApplicationData.js"
 import { BinaryCellData } from "./components/BinaryCellData.js"
 import { ColumnDef } from "@tanstack/react-table"
+import { EditableCell } from "./components/table/EditableCell.js"
 
 export const ModelTable = ({
 	showSidebar,
@@ -34,6 +35,9 @@ export const ModelTable = ({
 					enableSorting: property.name === primaryProperty.name,
 					enableColumnFilter: false,
 					size: 320,
+					meta: {
+						editCell: EditableCell,
+					},
 				}
 
 				if (property.kind === "primitive" && property.type === "bytes") {
