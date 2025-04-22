@@ -9,6 +9,7 @@ import { useApplicationData } from "./hooks/useApplicationData.js"
 import { Editor } from "./components/Editor.js"
 import { SiweMessage } from "siwe"
 import { getAddress } from "ethers"
+import { BASE_URL } from "./utils.js"
 
 // Define a localStorage key for unsaved changes
 const UNSAVED_CHANGES_KEY = "contract-editor-unsaved-changes"
@@ -206,7 +207,7 @@ export const ContractView = () => {
 			})
 
 			// Send to API with SIWE data
-			const snapshot = await fetch("/api/migrate", {
+			const snapshot = await fetch(`${BASE_URL}/api/migrate`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
