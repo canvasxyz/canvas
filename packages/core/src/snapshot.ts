@@ -65,6 +65,24 @@ export function hashSnapshot(snapshot: Snapshot): string {
 	return bytesToHex(hash).slice(0, 16)
 }
 
+export type RowChange =
+	| {
+			type: "delete"
+	  }
+	| {
+			type: "create"
+			value: ModelValue
+	  }
+	| {
+			type: "update"
+			value: ModelValue
+	  }
+
+export type CreateSnapshotArgs = {
+	changesets?: Change[]
+	changedRows?: Record<string, Record<string, RowChange>>
+}
+
 /**
  * Create a `Snapshot` of the application's current database state.
  *
@@ -73,8 +91,11 @@ export function hashSnapshot(snapshot: Snapshot): string {
  */
 export async function createSnapshot<T extends Contract<any>>(
 	app: Canvas,
-	changesets: Change[] = [],
+	changes?: CreateSnapshotArgs,
 ): Promise<Snapshot> {
+	const changesets = changes?.changesets ?? []
+	const changedRows = changes?.changedRows ?? {}
+
 	const createdTables = changesets.filter((ch) => ch.change === "create_table").map((ch) => ch.table)
 	const droppedTables = changesets.filter((ch) => ch.change === "drop_table").map((ch) => ch.table)
 	const removedColumns: Record<string, string[]> = {}
@@ -107,7 +128,27 @@ export async function createSnapshot<T extends Contract<any>>(
 		}
 
 		models[modelName] = []
+		const modelChangedRows = changedRows[modelName] ?? {}
+
 		for await (const row of app.db.iterate(modelName)) {
+			// check if the row is deleted, if so then skip it
+			const rowKey = JSON.stringify(modelSchema.primaryKey.map((key) => row[key])) as string
+
+			const rowChange = modelChangedRows[rowKey]
+			if (rowChange) {
+				// skip deleted rows
+				if (rowChange.type === "delete") {
+					continue
+				}
+
+				// update rows
+				if (rowChange.type === "update") {
+					for (const key of Object.keys(rowChange.value)) {
+						row[key] = rowChange.value[key]
+					}
+				}
+			}
+
 			if (addedColumns[modelName]) {
 				for (const key of Object.keys(addedColumns[modelName])) {
 					row[key] = null
@@ -121,6 +162,13 @@ export async function createSnapshot<T extends Contract<any>>(
 			}
 
 			models[modelName].push(cbor.encode(row))
+		}
+
+		// add created rows
+		for (const rowChange of Object.values(modelChangedRows)) {
+			if (rowChange.type === "create") {
+				models[modelName].push(cbor.encode(rowChange.value))
+			}
 		}
 	}
 
