@@ -223,23 +223,6 @@ generate a hard-fork snapshot, and compact the state of the application.
 
 <div :class="$style.sectionHeader">
 
-# Frequently asked questions
-
-</div>
-
-<FAQ :items="[
-  {
-    question: 'How does Canvas differ from other databases?',
-    answer: 'Canvas uses libp2p for peer-to-peer synchronization. Nodes can connect directly to each other or through relay servers, ensuring your data stays in sync across devices even without a central server.\n This makes it possible to build local-first applications with more complex business logic, like database transactions that roll back on conflict.'
-  },
-  {
-    question: 'Is Canvas ready for production?',
-    answer: 'Canvas is currently in developer preview. We\'ve deployed it in small embedded applications with 100s of users, and larger server-side production deployments with 10k+ users and 300k+ rows.\n It\'s currently best for peer-to-peer applications, local-first applications, and decentralized applications where the user has a wallet. Improving the system to work well with traditional logins is one of our next priorities. \n We recommend joining our Discord to discuss your specific use case before using in production.'
-  },
-]" />
-
-<div :class="$style.sectionHeader">
-
 # Built for the open web
 
 </div>
