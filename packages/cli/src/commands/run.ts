@@ -156,7 +156,8 @@ export async function handler(args: Args) {
 		if (args.admin) {
 			const adminAddress = args.admin
 			instance.api.post("/api/migrate", async (req, res) => {
-				const { newContract, changesets, address, signature, siweMessage, includeSnapshot } = req.body ?? {}
+				const { newContract, changesets, address, signature, siweMessage, includeSnapshot, changedRows } =
+					req.body ?? {}
 
 				if (address !== adminAddress && adminAddress !== "any") {
 					return res.status(403).json({
@@ -216,7 +217,7 @@ export async function handler(args: Args) {
 					)
 
 					instance.app
-						.createSnapshot()
+						.createSnapshot({ changedRows })
 						.then(async (snapshot: Snapshot) => {
 							console.log("[canvas] Stopping existing instance...")
 							await instance.stop()
