@@ -90,7 +90,7 @@ export const actions = {
 
 Here, any number of concurrent `createPost` actions can still be published by group members without conflict, so long they reference the same linear history of membership records. But if a user tries to publish a `createPost` action concurrently to a `removeMember` action that removes them from the group, this will cause a read conflict on the membership record. The write (`removeMember`) will take precedence over the read (`createPost`), and the `createPost` transaction will be reverted.
 
-Similarly, if two concurrent `addMember` actions try to add the same user to the same room (maybe with conflicting `admin` roles), this sill cause a write conflict, and one will be reverted. Any `createPost` actions building on the reverted branch will be reverted as well, since transactional reads form "read dependencies" that recursively propagate reverts.
+Similarly, if two concurrent `addMember` actions try to add the same user to the same room (maybe with conflicting `admin` roles), this will cause a write conflict, and one will be reverted. Any `createPost` actions building on the reverted branch will be reverted as well, since transactional reads form "read dependencies" that recursively propagate reverts.
 
 ### Transaction revert conditions
 
