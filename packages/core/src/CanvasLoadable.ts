@@ -1,4 +1,4 @@
-import type { ModelSchema } from "@canvas-js/modeldb"
+import type { ModelSchema } from "@canvas-js/core"
 import { assert } from "@canvas-js/utils"
 
 import type { Actions } from "./types.js"

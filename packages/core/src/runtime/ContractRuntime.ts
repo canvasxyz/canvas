@@ -1,11 +1,11 @@
 import { QuickJSHandle } from "quickjs-emscripten"
 
 import type { SignerCache } from "@canvas-js/interfaces"
-import { ModelValue, ModelSchema } from "@canvas-js/modeldb"
+import { ModelValue } from "@canvas-js/modeldb"
 import { VM } from "@canvas-js/vm"
 import { assert, mapValues } from "@canvas-js/utils"
 
-import { Contract } from "../types.js"
+import { Contract, ModelSchema } from "../types.js"
 import { ExecutionContext } from "../ExecutionContext.js"
 import { AbstractRuntime } from "./AbstractRuntime.js"
 

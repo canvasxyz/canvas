@@ -3,7 +3,7 @@ import { logger } from "@libp2p/logger"
 
 import type { Action, Session, Snapshot, SignerCache, Awaitable, MessageType } from "@canvas-js/interfaces"
 
-import { Effect, ModelSchema, ModelValue, isPrimaryKey } from "@canvas-js/modeldb"
+import { Effect, ModelValue, isPrimaryKey } from "@canvas-js/modeldb"
 
 import { GossipLogConsumer, AbstractGossipLog, SignedMessage, MessageId } from "@canvas-js/gossiplog"
 
@@ -12,7 +12,9 @@ import { assert } from "@canvas-js/utils"
 import { ExecutionContext } from "../ExecutionContext.js"
 
 import { View } from "../View.js"
+import { generateActions, extractRulesFromModelSchema } from "./utils.js"
 import { encodeRecordKey, encodeRecordValue, getRecordId, isAction, isSession, isSnapshot } from "../utils.js"
+import { Actions, ModelSchema, RulesInit } from "../types.js"
 
 export type WriteRecord = {
 	record_id: string
@@ -121,12 +123,19 @@ export abstract class AbstractRuntime {
 	public abstract readonly signers: SignerCache
 	public abstract readonly actionNames: string[]
 	public readonly schema: ModelSchema
+	public readonly rules: Record<string, RulesInit>
+	public readonly generatedActions: Actions<any>
 
 	protected readonly log = logger("canvas:runtime")
 
 	protected constructor(public readonly models: ModelSchema) {
+		const { schema, rules } = extractRulesFromModelSchema(models);
+
+		this.rules = rules
+		this.generatedActions = generateActions(rules)
+
 		this.schema = {
-			...models,
+			...schema,
 			...AbstractRuntime.sessionsModel,
 			...AbstractRuntime.actionsModel,
 			...AbstractRuntime.effectsModel,

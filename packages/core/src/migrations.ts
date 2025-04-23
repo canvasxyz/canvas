@@ -1,5 +1,6 @@
 import { logger } from "@libp2p/logger"
-import { Config, DatabaseUpgradeAPI, ModelSchema } from "@canvas-js/modeldb"
+import { Config, DatabaseUpgradeAPI } from "@canvas-js/modeldb"
+import { ModelSchema } from "./types.js"
 
 export const namespace = "canvas"
 export const version = 4

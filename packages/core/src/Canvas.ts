@@ -5,7 +5,7 @@ import type { SqlStorage } from "@cloudflare/workers-types"
 import { bytesToHex } from "@noble/hashes/utils"
 
 import { Signature, Action, Message, Snapshot, SessionSigner, SignerCache, MessageType } from "@canvas-js/interfaces"
-import { AbstractModelDB, Model, ModelSchema, Effect } from "@canvas-js/modeldb"
+import { AbstractModelDB, Model, Effect } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/signer-ethereum"
 import { AbstractGossipLog, GossipLogEvents, NetworkClient, SignedMessage } from "@canvas-js/gossiplog"
 import type { ServiceMap, NetworkConfig } from "@canvas-js/gossiplog/libp2p"
@@ -15,7 +15,7 @@ import { SnapshotSignatureScheme } from "@canvas-js/signatures"
 
 import target from "#target"
 
-import type { Contract, Actions, ActionImplementation, ModelAPI, DeriveModelTypes } from "./types.js"
+import type { Contract, Actions, ActionImplementation, ModelSchema, ModelAPI, DeriveModelTypes } from "./types.js"
 import { Runtime, createRuntime } from "./runtime/index.js"
 import { ActionRecord } from "./runtime/AbstractRuntime.js"
 import { validatePayload } from "./schema.js"
@@ -259,7 +259,6 @@ export class Canvas<
 	private readonly log = logger("canvas:core")
 	private lastMessage: number | null = null
 
-	private peerId: string | null = null
 	private libp2p: Libp2p | null = null
 	private networkConfig: NetworkConfig | null = null
 	private wsListen: { port: number } | null = null
