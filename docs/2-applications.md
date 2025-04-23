@@ -26,11 +26,11 @@ const app = await Canvas.initialize({
 		},
 		actions: {
 			async createPost(content) {
-				const { id, did, timestamp } = this
+				const { db, id, did, timestamp } = this
 				await db.set("posts", { id, user: did, content, updated_at: timestamp })
 			},
 			async deletePost(postId) {
-				const { did } = this
+				const { db, did } = this
 				const post = await db.get("posts", postId)
 				if (post === null) {
 					return
@@ -96,7 +96,7 @@ export const actions = {
   async createPost(content) {
     const { id, chain, address, did, timestamp } = this
     const user = [chain, address].join(":")
-    await db.set("posts", { id, user, content, updated_at: timestamp })
+    await this.db.set("posts", { id, user, content, updated_at: timestamp })
   }
 }
 ```
@@ -108,9 +108,9 @@ Actions also handle authorization and access control. In the example `deletePost
 ```ts
 export const actions = {
   // ...
-  async function deletePost(postId) {
+  async deletePost(postId) {
     const { chain, address } = this
-    const post = await db.get("posts", postId)
+    const post = await this.db.get("posts", postId)
     if (post === null) {
       return
     }
@@ -120,7 +120,7 @@ export const actions = {
   		throw new Error("not authorized")
   	}
 
-  	await db.delete("posts", postId)
+  	await this.db.delete("posts", postId)
   }
 }
 ```
