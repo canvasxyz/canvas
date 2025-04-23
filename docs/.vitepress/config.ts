@@ -53,6 +53,7 @@ export default defineConfig({
 						{ text: "Identifying Users", link: "/4-identities-auth" },
 						{ text: "Deploying Applications", link: "/5-deployment" },
 						{ text: "Upgrading Applications", link: "/6-upgrading" },
+						{ text: "Consistency Model", link: "/7-consistency-model" },
 						{ text: "UI Components", link: "/8-components" },
 					],
 				},
