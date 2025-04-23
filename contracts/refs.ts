@@ -2,7 +2,7 @@ import type { ModelSchema, ModelInit } from "@canvas-js/core"
 
 const connection: ModelInit = {
 	id: "primary",
-	creator: "@user",
+	creator: "@profile",
 	ref: "@ref",
 
 	image: "string?",
@@ -21,8 +21,8 @@ const connection: ModelInit = {
 
 	$indexes: ["id"],
 	$rules: {
-		create: "this.sender === creator && id === user + '/' + connection",
-		update: "this.sender === creator && id === user + '/' + connection",
+		create: "this.sender === creator && id === creator + '/' + ref",
+		update: "this.sender === creator && id === creator + '/' + ref",
 		delete: "this.sender === creator",
 	},
 }
@@ -49,7 +49,7 @@ const profile: ModelInit = {
 
 const ref: ModelInit = {
 	id: "primary",
-	creator: "@user?",
+	creator: "@profile?",
 	type: "string?",
 
 	title: "string?",
@@ -63,8 +63,8 @@ const ref: ModelInit = {
 	deleted: "string?",
 
 	$rules: {
-		create: "this.sender === creator && ['place', 'artwork', 'other'].includes(type)",
-		update: "this.sender === creator && ['place', 'artwork', 'other'].includes(type)",
+		create: "this.id === txid && this.sender === creator && ['place', 'artwork', 'other'].includes(type)",
+		update: "this.id === txid && this.sender === creator && ['place', 'artwork', 'other'].includes(type)",
 		delete: false,
 	},
 }
