@@ -1,7 +1,7 @@
 // staged migrations provider
 
 import { createContext, useCallback, useContext, useState } from "react"
-import { Canvas, Changeset, generateChangesets, ModelValue, RowChange } from "@canvas-js/core"
+import { Canvas, Changeset, generateChangesets, RowChange } from "@canvas-js/core"
 import { Map as ImmutableMap } from "immutable"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 import { useContractData } from "../hooks/useContractData.js"
