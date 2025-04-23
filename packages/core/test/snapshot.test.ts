@@ -1,5 +1,5 @@
 import test from "ava"
-
+import * as cbor from "@ipld/dag-cbor"
 import { Canvas, Config, hashSnapshot } from "@canvas-js/core"
 
 test("snapshot persists data across apps", async (t) => {
@@ -93,4 +93,75 @@ test("snapshot persists data across apps", async (t) => {
 	const [clock3] = await app3.messageLog.getClock()
 	t.is(clock3, 1) // one snapshot
 	t.is(parents2.length, 1)
+})
+
+test("row level changes in snapshots", async (t) => {
+	const config: Config = {
+		topic: "com.example.app",
+		contract: {
+			models: {
+				posts: {
+					id: "primary",
+					content: "string",
+				},
+			},
+			actions: {
+				async createPost({ id, content }: { id: string; content: string }) {
+					await this.db.set("posts", { id, content })
+				},
+				async deletePost({ id }: { id: string }) {
+					await this.db.delete("posts", id)
+				},
+			},
+		},
+	}
+
+	const app = await Canvas.initialize(config)
+
+	const [clock0, parents0] = await app.messageLog.getClock()
+	t.is(clock0, 1)
+	t.is(parents0.length, 0)
+
+	await app.actions.createPost({ id: "a", content: "foo" })
+	await app.actions.createPost({ id: "b", content: "bar" })
+
+	// snapshot and add some more actions
+	const snapshot = await app.createSnapshot({
+		changedRows: {
+			posts: {
+				[JSON.stringify(["a"])]: {
+					type: "update",
+					value: {
+						id: "a",
+						content: "baz",
+					},
+				},
+				[JSON.stringify(["b"])]: {
+					type: "delete",
+				},
+				[JSON.stringify(["c"])]: {
+					type: "create",
+					value: {
+						id: "c",
+						content: "qux",
+					},
+				},
+			},
+		},
+	})
+	await app.stop()
+
+	const app2 = await Canvas.initialize({
+		reset: true,
+		snapshot,
+		...config,
+		topic: `${config.topic}#${hashSnapshot(snapshot)}`,
+	})
+
+	// assert that the row was updated
+	t.is((await app2.db.get("posts", "a"))?.content, "baz")
+	// assert that the row was deleted
+	t.is(await app2.db.get("posts", "b"), null)
+	// assert that the row was created
+	t.is((await app2.db.get("posts", "c"))?.content, "qux")
 })
