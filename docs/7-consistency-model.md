@@ -68,8 +68,12 @@ export const actions = {
   }
   async removeMember(roomId: string, userId: string) {
     await this.db.transaction(async () => {
-      const membershipKey = [roomId, userId].join("/")
-      await this.db.delete("membership", membershipKey)
+      const selfMembershipKey = [roomId, this.did].join("/")
+      const selfMembership = await this.db.get("membership", selfMembershipKey)
+      assert(selfMembership !== null && selfMembership.admin)
+
+      const userMembershipKey = [roomId, userId].join("/")
+      await this.db.delete("membership", userMembershipKey)
     })
   }
   async createPost(roomId: string, content: string) {
