@@ -334,36 +334,40 @@ export class VM {
 		}
 	}
 
-	public wrapFunction = (fn: (...args: JSValue[]) => Awaitable<void | JSValue>): QuickJSHandle => {
+	public wrapFunction = (fn: (this: QuickJSHandle, ...args: JSValue[]) => Awaitable<void | JSValue>): QuickJSHandle => {
 		const wrap = (value: void | JSValue) => (value === undefined ? this.context.undefined : this.wrapValue(value))
-		return this.context.newFunction(fn.name, (...args) => {
+
+		// eslint-disable-next-line @typescript-eslint/no-this-alias
+		const vm = this
+
+		return this.context.newFunction(fn.name, function (this: QuickJSHandle, ...args) {
 			let result: ReturnType<typeof fn> | undefined = undefined
-			this.log("invoking function")
+			vm.log("invoking function")
 			try {
-				result = fn(...args.map(this.unwrapValue))
+				result = fn.apply(this, args.map(vm.unwrapValue))
 			} catch (err) {
-				this.log("caught error in wrapped function: %O", err)
-				return this.wrapError(err)
+				vm.log("caught error in wrapped function: %O", err)
+				return vm.wrapError(err)
 			}
 
-			this.log("got result")
+			vm.log("got result")
 			if (result instanceof Promise) {
-				const deferred = this.context.newPromise()
+				const deferred = vm.context.newPromise()
 				result.then(
 					(value) => {
-						this.log("resolving deferred promise")
+						vm.log("resolving deferred promise")
 						const handle = wrap(value)
 						deferred.settled.then(() => handle.dispose())
 						deferred.resolve(handle)
 						// wrap(value).consume((handle) => deferred.resolve(handle))
 					},
 					(err) => {
-						this.log("rejecting deferred promise")
-						deferred.reject(this.wrapError(err))
+						vm.log("rejecting deferred promise")
+						deferred.reject(vm.wrapError(err))
 					},
 				)
 
-				deferred.settled.finally(() => this.runtime.executePendingJobs())
+				deferred.settled.finally(() => vm.runtime.executePendingJobs())
 
 				return deferred.handle
 			} else {
