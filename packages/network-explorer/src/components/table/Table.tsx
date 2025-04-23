@@ -205,6 +205,10 @@ export const Table = <T,>({
 					Delete
 				</Button>
 
+				<Button disabled={!allowEditing} onClick={() => {}} color="gray" variant="outline">
+					New Entry
+				</Button>
+
 				<Box ml="auto" pr="2">
 					<Text size="2" wrap="nowrap">
 						{data?.content.totalCount || "0"} rows {data ? <>&bull; {`${data.responseTime}ms`}</> : ""}

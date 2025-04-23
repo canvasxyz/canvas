@@ -1,7 +1,7 @@
 // staged migrations provider
 
 import { createContext, useCallback, useContext, useState } from "react"
-import { Canvas, Changeset, generateChangesets, RowChange } from "@canvas-js/core"
+import { Canvas, Changeset, generateChangesets, ModelValue, RowChange } from "@canvas-js/core"
 import { Map as ImmutableMap } from "immutable"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 import { useContractData } from "../hooks/useContractData.js"
@@ -86,6 +86,8 @@ const StagedMigrationsContext = createContext<{
 	stageRowChange: (tableName: string, rowKey: RowKey, rowChange: RowChange) => void
 	restoreRowChange: (tableName: string, rowKey: RowKey) => void
 	clearRowChanges: () => void
+	migrationIncludesSnapshot: boolean
+	setMigrationIncludesSnapshot: (migrationIncludesSnapshot: boolean) => void
 }>({
 	contractChangesets: [],
 	cancelMigrations: async () => {},
@@ -103,6 +105,8 @@ const StagedMigrationsContext = createContext<{
 	stageRowChange: () => {},
 	restoreRowChange: () => {},
 	clearRowChanges: () => {},
+	migrationIncludesSnapshot: false,
+	setMigrationIncludesSnapshot: () => {},
 })
 
 export const StagedMigrationsProvider = ({ children }: { children: React.ReactNode }) => {
@@ -111,6 +115,7 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 
 	const [waitingForCommit, setWaitingForCommit] = useState(false)
 	const [commitCompleted, setCommitCompleted] = useState(false)
+	const [migrationIncludesSnapshot, setMigrationIncludesSnapshot] = useState(false)
 
 	const [hasRestoredContent, setHasRestoredContent] = useState(false)
 
@@ -189,6 +194,7 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 				address,
 				signature,
 				changedRows: changedRows?.toJSON() || {},
+				includeSnapshot: migrationIncludesSnapshot,
 			}),
 		})
 		if (!response.ok) {
@@ -244,6 +250,8 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 				stageRowChange,
 				restoreRowChange,
 				clearRowChanges,
+				migrationIncludesSnapshot,
+				setMigrationIncludesSnapshot,
 			}}
 		>
 			{children}

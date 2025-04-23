@@ -1,4 +1,4 @@
-import { Box, Button, Flex, Text } from "@radix-ui/themes"
+import { Box, Button, Checkbox, Flex, Text } from "@radix-ui/themes"
 import { useStagedMigrations } from "../hooks/useStagedMigrations.js"
 import { Changeset, RowChange } from "@canvas-js/core"
 import { Map as ImmutableMap } from "immutable"
@@ -78,6 +78,8 @@ export const StagedMigrationsSidebar = () => {
 		commitCompleted,
 		changedRows,
 		restoreRowChange,
+		migrationIncludesSnapshot,
+		setMigrationIncludesSnapshot,
 	} = useStagedMigrations()
 
 	return (
@@ -165,6 +167,19 @@ export const StagedMigrationsSidebar = () => {
 								>
 									Cancel
 								</Button>
+							</Box>
+
+							<Box mt="4">
+								<Checkbox
+									checked={migrationIncludesSnapshot}
+									onCheckedChange={(value) => {
+										if (value === "indeterminate") return
+										setMigrationIncludesSnapshot(value)
+									}}
+								/>
+								<Text size="2" style={{ position: "relative", top: "-4px", left: "6px" }}>
+									Retain snapshot
+								</Text>
 							</Box>
 
 							<Box mt="4">
