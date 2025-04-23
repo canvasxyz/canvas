@@ -13,7 +13,7 @@ test("create, update, and delete in a contract permissioned by model $rules", as
 		contract: {
 			models: {
 				posts: {
-					id: "primary",
+					pk: "string",
 					address: "string",
 					content: "string",
 					$rules: {
@@ -21,6 +21,7 @@ test("create, update, and delete in a contract permissioned by model $rules", as
 						update: "address === this.did",
 						delete: false,
 					},
+					$primary: "pk"
 				},
 			},
 		},
@@ -28,9 +29,9 @@ test("create, update, and delete in a contract permissioned by model $rules", as
 	})
 	t.teardown(() => app.stop())
 
-	await app.actions.createPosts({ id: "foo", address: `did:pkh:eip155:1:${wallet.address}`, content: "Hello world" })
+	await app.actions.createPosts({ pk: "foo", address: `did:pkh:eip155:1:${wallet.address}`, content: "Hello world" })
 	await t.throwsAsync(async () => {
-		await app.actions.createPosts({ id: "foo", address: `did:pkh:eip155:1:${ethers.Wallet.createRandom().address}` })
+		await app.actions.createPosts({ pk: "foo", address: `did:pkh:eip155:1:${ethers.Wallet.createRandom().address}` })
 	})
 
 	const value = await app.db.get("posts", "foo")
@@ -38,9 +39,9 @@ test("create, update, and delete in a contract permissioned by model $rules", as
 	t.is(value?.content, "Hello world")
 
 	await t.throwsAsync(async () => {
-		await app.actions.updatePosts({ id: "foo", address: `did:pkh:eip155:1:${ethers.Wallet.createRandom().address}` })
+		await app.actions.updatePosts({ pk: "foo", address: `did:pkh:eip155:1:${ethers.Wallet.createRandom().address}` })
 	})
-	await app.actions.updatePosts({ id: "foo", address: `did:pkh:eip155:1:${wallet.address}`, content: "Bonk!" })
+	await app.actions.updatePosts({ pk: "foo", address: `did:pkh:eip155:1:${wallet.address}`, content: "Bonk!" })
 	const value2 = await app.db.get("posts", "foo")
 	t.is(value2?.content, "Bonk!")
 

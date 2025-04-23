@@ -1,5 +1,5 @@
 import { assert } from "@canvas-js/utils"
-import { ActionContext, Actions, DeriveModelTypes, ModelSchema, RulesInit } from "../types.js"
+import { ActionContext, Actions, DeriveModelTypes, ModelInit, ModelSchema, RulesInit } from "../types.js"
 import { capitalize } from "../utils.js"
 
 export const extractRulesFromModelSchema = (models: ModelSchema) => {
@@ -22,13 +22,14 @@ export const extractRulesFromModelSchema = (models: ModelSchema) => {
 	return { schema, rules }
 }
 
-export const generateActions = <T extends ModelSchema>(rules: Record<string, RulesInit>) => {
+export const generateActions = <T extends ModelSchema>(rules: Record<string, RulesInit>, models: T) => {
 	const actions: Actions<T> = {}
 
 	for (const [modelName, modelRules] of Object.entries(rules)) {
 		/**
-		 * Create rules run on the data that is being *written* a model.
-		 * Update/delete rules run on the data that is being *read from* in a model, from a local perspective.
+		 * Create rules run on the data that is being *written* to a database row.
+		 * Update/delete rules run on the data that is being *read from* a database row,
+		 * necessarily from a local perspective.
 		 */
 		const createRule = modelRules["create"]
 		const updateRule = modelRules["update"]
@@ -37,10 +38,12 @@ export const generateActions = <T extends ModelSchema>(rules: Record<string, Rul
 		const checkCreateRule = async (rule: string, context: ActionContext<DeriveModelTypes<T>>, newModel: any) => {
 			const ruleFunction = new Function("$model", `with ($model) { return (${rule}) }`)
 			const result = ruleFunction.call(context, newModel)
-			assert(
-				result === true,
-				`Create rule check failed: ${rule} returned ${result}, context: ${JSON.stringify({ ...newModel, this: context })}`,
-			)
+			if (result !== true) {
+                const contextString = JSON.stringify({ ...newModel, this: context })
+				throw new Error(
+					`Create rule check failed: ${rule} returned ${result}, context: ${contextString}`,
+				)
+			}
 		}
 		const checkUpdateDeleteRule = async (
 			rule: string,
@@ -50,10 +53,12 @@ export const generateActions = <T extends ModelSchema>(rules: Record<string, Rul
 		) => {
 			const ruleFunction = new Function("$model", `with ($model) { return (${rule}) }`)
 			const result = ruleFunction.call(context, existingModel)
-			assert(
-				result === true,
-				`${update ? "Update" : "Delete"} rule check failed: ${rule} returned ${result}, context: ${JSON.stringify({ ...existingModel, this: context })}`,
-			)
+			if (result !== true) {
+                const contextString = JSON.stringify({ ...existingModel, this: context })
+				throw new Error(
+					`${update ? "Update" : "Delete"} rule check failed: ${rule} returned ${result}, context: ${contextString}`,
+				)
+			}
 		}
 
 		const createAction = async function (
@@ -73,10 +78,24 @@ export const generateActions = <T extends ModelSchema>(rules: Record<string, Rul
 			this: ActionContext<DeriveModelTypes<T>>,
 			updatedModel: Partial<DeriveModelTypes<T>[string]>,
 		) {
+            const findPrimaryKey = (m: ModelInit) => {
+                if (models[modelName]["$primary"] !== undefined) {
+                    return models[modelName]["$primary"]
+                }
+                const tuple = Object.entries(m).find(([k, v]) => {
+                    return v === "primary"
+                })
+                if (!tuple) {
+                    throw new Error("Must provide model primary key")
+                }
+                return tuple[0]
+            }
+
 			if (updateRule === false) {
 				throw new Error("Disallowed by $rules.delete")
 			} else if (updateRule === true) {
-				assert("id" in updatedModel && typeof updatedModel.id === "string", "Must provide model primary key") // TODO: support PKs other than `id`
+                const primaryKey = findPrimaryKey(models[modelName])
+				assert(primaryKey in updatedModel && typeof updatedModel[primaryKey as keyof typeof updatedModel] === "string", "Must provide model primary key")
 
 				if (createRule === false) {
 					throw new Error("Disallowed by $rules.create")
@@ -86,8 +105,9 @@ export const generateActions = <T extends ModelSchema>(rules: Record<string, Rul
 
 				await this.db.update(modelName, updatedModel)
 			} else {
-				assert("id" in updatedModel && typeof updatedModel.id === "string", "Must provide model primary key") // TODO: support PKs other than `id`
-				const existingModel = await this.db.get(modelName, updatedModel.id) // TODO: support PKs other than `id`
+                const primaryKey = models[modelName]["$primary"] ?? findPrimaryKey(models[modelName])
+				assert(primaryKey in updatedModel && typeof updatedModel[primaryKey as keyof typeof updatedModel] === "string", "Must provide model primary key")
+				const existingModel = await this.db.get(modelName, updatedModel[primaryKey as keyof typeof updatedModel] as string)
 				await checkUpdateDeleteRule(updateRule, this, existingModel, true)
 
 				if (createRule === false) {

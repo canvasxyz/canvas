@@ -132,7 +132,7 @@ export abstract class AbstractRuntime {
 		const { schema, rules } = extractRulesFromModelSchema(models);
 
 		this.rules = rules
-		this.generatedActions = generateActions(rules)
+		this.generatedActions = generateActions(rules, models)
 
 		this.schema = {
 			...schema,
