@@ -30,10 +30,12 @@ export const Td = ({
 	children,
 	width,
 	onClick,
+	isEdited,
 }: {
 	children: React.ReactNode
 	width: number
 	onClick?: () => void
+	isEdited?: boolean
 }) => {
 	return (
 		<td
@@ -50,6 +52,7 @@ export const Td = ({
 				minHeight: "32px",
 				width,
 				cursor: onClick ? "pointer" : "default",
+				backgroundColor: isEdited ? "var(--accent-3)" : "transparent",
 			}}
 			onClick={onClick}
 		>
@@ -86,10 +89,14 @@ export const EditableRow = ({
 		>
 			<ThCheckbox checked={checked} onCheckedChange={onCheckedChange} />
 			{row.getVisibleCells().map((cell) => (
-				<Td key={cell.id} width={cell.column.getSize()}>
+				<Td
+					key={cell.id}
+					width={cell.column.getSize()}
+					isEdited={stagedValues && cell.column.id in stagedValues && stagedValues[cell.column.id] !== cell.getValue()}
+				>
 					{cell.column.columnDef.meta?.editCell
 						? flexRender(cell.column.columnDef.meta?.editCell, {
-								value: stagedValues ? stagedValues[cell.column.id] : cell.getValue(),
+								value: stagedValues && stagedValues[cell.column.id] ? stagedValues[cell.column.id] : cell.getValue(),
 								setValue: (value: string) => {
 									setStagedValues({ ...stagedValues, [cell.column.id]: value })
 								},
