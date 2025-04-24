@@ -78,7 +78,6 @@ export const generateActionsFromRules = <T extends ModelSchema>(rules: Record<st
 					`Create rule check failed: ${createRule} returned ${createResult}, context: ${JSON.stringify({ ...newModel, this: this })}`,
 				)
 			}
-			console.log(6)
 
 			await this.db.update(modelName, newModel)
 		}
