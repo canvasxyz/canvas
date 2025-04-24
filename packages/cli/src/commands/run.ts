@@ -222,6 +222,10 @@ export async function handler(args: Args) {
 							console.log("[canvas] Stopping existing instance...")
 							await instance.stop()
 
+							console.log("[canvas] Waiting for instance to stop...")
+							await new Promise((resolve) => setTimeout(resolve, 2000))
+							console.log("[canvas] Instance stopped.")
+
 							if (location !== null) {
 								console.log("[canvas] Rewriting application on disk...")
 								if (includeSnapshot) {
