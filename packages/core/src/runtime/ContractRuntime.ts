@@ -87,8 +87,13 @@ export class ContractRuntime extends AbstractRuntime {
 	) {
 		super(modelSchema)
 
+		// eslint-disable-next-line @typescript-eslint/no-this-alias
 		const self = this
+
 		this.contract = contract
+
+		// Create a context for generated actions outside the runtime, if
+		// we're not using actions inside QuickJS for execution.
 		this.actions =
 			actions ??
 			mapValues(this.generatedActions, (action) => {
@@ -128,6 +133,7 @@ export class ContractRuntime extends AbstractRuntime {
 					await action.call(actionContext, ...args)
 				})
 			})
+
 		this.#databaseAPI = vm
 			.wrapObject({
 				get: vm.wrapFunction(async (model, key) => {
