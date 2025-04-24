@@ -22,7 +22,7 @@ export const extractRulesFromModelSchema = (models: ModelSchema) => {
 	return { schema, rules }
 }
 
-export const generateActions = <T extends ModelSchema>(rules: Record<string, RulesInit>, models: T) => {
+export const generateActionsFromRules = <T extends ModelSchema>(rules: Record<string, RulesInit>, models: T) => {
 	const actions: Actions<T> = {}
 
 	for (const [modelName, modelRules] of Object.entries(rules)) {

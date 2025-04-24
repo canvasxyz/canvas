@@ -71,7 +71,7 @@ export const models = {
 }`,
 		signers: [new SIWESigner({ signer: wallet })],
 	})
-	// t.teardown(() => app.stop())
+	t.teardown(() => app.stop())
 
 	await app.create("posts", { pk: "foo", address: `did:pkh:eip155:1:${wallet.address}`, content: "Hello world" })
 	await t.throwsAsync(async () => {

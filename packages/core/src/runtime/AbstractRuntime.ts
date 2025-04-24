@@ -12,7 +12,7 @@ import { assert } from "@canvas-js/utils"
 import { ExecutionContext } from "../ExecutionContext.js"
 
 import { View } from "../View.js"
-import { generateActions, extractRulesFromModelSchema } from "./utils.js"
+import { generateActionsFromRules, extractRulesFromModelSchema } from "./rules.js"
 import { encodeRecordKey, encodeRecordValue, getRecordId, isAction, isSession, isSnapshot } from "../utils.js"
 import { Actions, ModelSchema, RulesInit } from "../types.js"
 
@@ -132,7 +132,7 @@ export abstract class AbstractRuntime {
 		const { schema, rules } = extractRulesFromModelSchema(models);
 
 		this.rules = rules
-		this.generatedActions = generateActions(rules, models)
+		this.generatedActions = generateActionsFromRules(rules, models)
 
 		this.schema = {
 			...schema,
