@@ -158,3 +158,7 @@ function writeArgument(majorType: number, argument: number): Uint8Array {
 		return arrays[4]
 	}
 }
+
+export const capitalize = (str: string) => {
+	return str.charAt(0).toUpperCase() + str.slice(1);
+}
