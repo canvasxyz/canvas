@@ -34,19 +34,11 @@ export const generateActions = <T extends ModelSchema>(rules: Record<string, Rul
 		const updateRule = modelRules["update"].toString()
 		const deleteRule = modelRules["delete"].toString()
 
-		/**
-		 * These functions use outside variables from the closure:
-		 *
-		 * - createRule, updateRule, deleteRule: string
-		 * - modelName: string
-		 * - models: {} // used to access model schema information for pk lookups
-		 */
-
 		const createAction = async function proxiedCreateAction(
 			this: ActionContext<DeriveModelTypes<T>>,
 			newModel: DeriveModelTypes<T>[string],
 		) {
-			console.log("createAction", this, newModel)
+			// check create rule
 			const ruleFunction = new Function("$model", `with ($model) { return (${createRule}) }`)
 			const result = ruleFunction.call(this, newModel)
 			if (result !== true) {
@@ -54,7 +46,6 @@ export const generateActions = <T extends ModelSchema>(rules: Record<string, Rul
 					`Create rule check failed: ${createRule} returned ${result}, context: ${JSON.stringify({ ...newModel, this: this })}`,
 				)
 			}
-
 			await this.db.set(modelName, newModel)
 		}
 
@@ -62,22 +53,10 @@ export const generateActions = <T extends ModelSchema>(rules: Record<string, Rul
 			this: ActionContext<DeriveModelTypes<T>>,
 			newModel: Partial<DeriveModelTypes<T>[string]>,
 		) {
-			const findPrimaryKey = (m: ModelInit) => {
-				if (models[modelName]["$primary"] !== undefined) {
-					return models[modelName]["$primary"]
-				}
-				const tuple = Object.entries(m).find(([k, v]) => {
-					return v === "primary"
-				})
-				if (!tuple) {
-					throw new Error("Must provide model primary key")
-				}
-				return tuple[0]
-			}
-
-			const primaryKey = models[modelName]["$primary"] ?? findPrimaryKey(models[modelName])
+			const primaryKey =
+				models[modelName]["$primary"] ?? Object.entries(models[modelName]).find(([k, v]) => v === "primary")?.[0]
 			assert(
-				primaryKey in newModel && typeof newModel[primaryKey as keyof typeof newModel] === "string",
+				primaryKey && primaryKey in newModel && typeof newModel[primaryKey as keyof typeof newModel] === "string",
 				"Must provide model primary key",
 			)
 			const existingModel = await this.db.get(modelName, newModel[primaryKey as keyof typeof newModel] as string)
@@ -99,6 +78,7 @@ export const generateActions = <T extends ModelSchema>(rules: Record<string, Rul
 					`Create rule check failed: ${createRule} returned ${createResult}, context: ${JSON.stringify({ ...newModel, this: this })}`,
 				)
 			}
+			console.log(6)
 
 			await this.db.update(modelName, newModel)
 		}

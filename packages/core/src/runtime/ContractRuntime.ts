@@ -3,9 +3,9 @@ import { QuickJSHandle } from "quickjs-emscripten"
 import type { SignerCache } from "@canvas-js/interfaces"
 import { ModelValue } from "@canvas-js/modeldb"
 import { VM } from "@canvas-js/vm"
-import { assert, mapValues } from "@canvas-js/utils"
+import { assert, JSValue, mapValues } from "@canvas-js/utils"
 
-import { Contract, ModelSchema } from "../types.js"
+import { ActionContext, Contract, ModelSchema } from "../types.js"
 import { ExecutionContext } from "../ExecutionContext.js"
 import { AbstractRuntime } from "./AbstractRuntime.js"
 
@@ -32,31 +32,31 @@ export class ContractRuntime extends AbstractRuntime {
 			handle.dispose()
 		}
 
-		let actionHandles: Record<string, QuickJSHandle>
+		let actionHandles: Record<string, QuickJSHandle> | null
 		let modelHandles: Record<string, QuickJSHandle>
 		if (contractHandle !== undefined) {
 			assert(actionsHandle === undefined, "cannot export both `contract` and `actions`")
 			assert(modelsHandle === undefined, "cannot export both `contract` and `models`")
 			const { actions, models, ...rest } = contractHandle.consume(vm.unwrapObject)
-			assert(actions !== undefined, "missing `actions` in contract export")
 			assert(models !== undefined, "missing `models` in contract export")
-			actionHandles = actions.consume(vm.unwrapObject)
+			actionHandles = actions?.consume(vm.unwrapObject)
 			modelHandles = models.consume(vm.unwrapObject)
 			for (const [key, value] of Object.entries(rest)) {
 				console.warn(`extraneous entry "${key}" in contract export`)
 				value.dispose()
 			}
 		} else {
-			assert(actionsHandle !== undefined, "missing `actions` export")
 			assert(modelsHandle !== undefined, "missing `models` export")
-			actionHandles = actionsHandle.consume(vm.unwrapObject)
+			actionHandles = actionsHandle?.consume(vm.unwrapObject)
 			modelHandles = modelsHandle.consume(vm.unwrapObject)
 		}
 
-		const actions = mapValues(actionHandles, (handle) => {
-			assert(vm.context.typeof(handle) === "function", "expected action handle to be a function")
-			return handle.consume(vm.cache)
-		})
+		const actions = actionHandles
+			? mapValues(actionHandles, (handle) => {
+					assert(vm.context.typeof(handle) === "function", "expected action handle to be a function")
+					return handle.consume(vm.cache)
+				})
+			: null
 
 		const modelSchema: ModelSchema = mapValues(modelHandles, (handle) => handle.consume(vm.context.dump))
 		assert(
@@ -83,11 +83,51 @@ export class ContractRuntime extends AbstractRuntime {
 		public readonly vm: VM,
 		contract: string,
 		modelSchema: ModelSchema,
-		actions: Record<string, QuickJSHandle>,
+		actions: Record<string, QuickJSHandle> | null,
 	) {
 		super(modelSchema)
+
+		const self = this
 		this.contract = contract
-		this.actions = actions
+		this.actions =
+			actions ??
+			mapValues(this.generatedActions, (action) => {
+				return vm.wrapFunction(async function (this: QuickJSHandle, ...args: JSValue[]) {
+					const exec = self.#context
+					if (exec === null) throw new Error("expected execution context")
+
+					const actionContext: ActionContext<any> = {
+						db: {
+							get: async (model, key) => await self.context.getModelValue(model, key, self.#transaction),
+							set: async (model, value) => await self.context.setModelValue(model, value, self.#transaction),
+							update: async (model, value) => await self.context.updateModelValue(model, value, self.#transaction),
+							merge: async (model, value) => await self.context.mergeModelValue(model, value, self.#transaction),
+							delete: async (model, key) => await self.context.deleteModelValue(model, key, self.#transaction),
+							transaction: async (callbackHandle) => {
+								if (self.#txnId === 0) {
+									self.#txnId += 1
+									self.#transaction = true
+									try {
+										return callbackHandle.call(actionContext)
+									} finally {
+										self.#transaction = false
+									}
+								} else {
+									throw new Error("transaction(...) can only be used once per action")
+								}
+							},
+						},
+						id: exec.id,
+						address: exec.address,
+						blockhash: exec.message.payload.context.blockhash ?? null,
+						timestamp: exec.message.payload.context.timestamp,
+						did: exec.did,
+						publicKey: exec.publicKey,
+					}
+
+					await action.call(actionContext, ...args)
+				})
+			})
 		this.#databaseAPI = vm
 			.wrapObject({
 				get: vm.wrapFunction(async (model, key) => {
