@@ -3,7 +3,7 @@ import { Table } from "./components/table/Table.js"
 import { useApplicationData } from "./hooks/useApplicationData.js"
 import { BinaryCellData } from "./components/BinaryCellData.js"
 import { ColumnDef } from "@tanstack/react-table"
-import { EditableCell } from "./components/table/EditableCell.js"
+import { EditableIntegerCell, EditableTextCell } from "./components/table/EditableCell.js"
 
 export const ModelTable = ({
 	showSidebar,
@@ -35,13 +35,23 @@ export const ModelTable = ({
 					enableSorting: property.name === primaryProperty.name,
 					enableColumnFilter: false,
 					size: 320,
-					meta: {
-						editCell: EditableCell,
-					},
+					// meta: {
+					// 	editCell: EditableTextCell,
+					// },
 				}
+				columnDef.meta = {}
 
+				console.log(property)
 				if (property.kind === "primitive" && property.type === "bytes") {
 					columnDef.cell = BinaryCellData
+				}
+
+				if (property.kind === "primitive" && property.type === "integer") {
+					columnDef.meta.editCell = EditableIntegerCell
+				}
+
+				if (property.kind === "primitive" && property.type === "string") {
+					columnDef.meta.editCell = EditableTextCell
 				}
 
 				return columnDef
