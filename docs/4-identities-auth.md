@@ -1,4 +1,4 @@
-# Identifying Users
+# Authenticating Users
 
 We want end users to authenticate with public-key identities, but we don't want them to have to manually sign every interaction.
 

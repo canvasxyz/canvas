@@ -1,12 +1,12 @@
-# Deploying Applications
+# Deploying
 
 You can run Canvas applications in the browser only, or using
 browser-to-server sync with a server peer.
 
-## Browser applications
+## Preparing for Deployment
 
-For a browser application, we'll create a separate `contract.ts`
-file and import it.
+To make deploying browser applications easier, we recommend creating a
+separate `contract.ts` file that's imported from your frontend:
 
 ```ts
 import type { ModelSchema, Actions } from "@canvas-js/core"
@@ -20,29 +20,21 @@ export const actions = {
 } satisfies Actions<typeof models>
 ```
 
-`satisfies` is optional, but will ensure that you can use type completions later.
-
-Now you can use the browser contract in an application on the frontend.
-If you're using React, this would look like:
-
 ```ts
-import { useCanvas } from "@canvas-js/hooks"
+import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
 import { models, actions } from "./contract.js"
 
+const wsURL = process.env.wsURL
+
 export const App = () => {
-  const { app, ws } = useCanvas(null, {
+  const { app, ws } = useCanvas(wsURL, {
     contract: { models, actions },
     topic: "example.xyz",
   })
 
-  const items = useCanvas(app, "items")
   // ...
 }
 ```
-
-We've initialized the `useCanvas` hook with `null` instead of a
-WebSocket URL. As a result, the application won't try to sync to a
-server, and will only persist temporarily until IndexedDB is cleared.
 
 ## CLI application
 
@@ -64,72 +56,28 @@ canvas run contract.ts --topic example.xyz
 
 This will start the application on localhost:8000.
 
-If you provide `--network-explorer`, the CLI will also expose a
+Some relevant options:
+
+* If you provide `--network-explorer`, the CLI will also expose a
 management interface at localhost:8000/explorer, which will show you
 data and past actions stored on the replica.
-
-If you provide `--network-explorer --admin <ethAddr>`, you will be
+* If you provide `--network-explorer --admin <ethAddr>`, you will be
 able to change the currently running contract from the explorer by
 signing a message with your address. This will cause the instance to
 terminate and start over again.
+* If you run the application with `/data/canvas-example --init contract.ts`
+instead, the local node will copy of the contract to the data directory
+you've provided instead. This will ensure that application data persists
+when the CLI is shut down.
+* If you would prefer to use Postgres as a backing database, create a
+local Postgres DB and provide its URL as an environment variable.
+The data directory will only be used to store metadata.
 
-If you provide `--init contract.ts /data/canvas-example` instead, the
-local node will make a copy of the contract and store it in the data
-directory you've provided. This will ensure that application data
-persists when the CLI is shut down.
-
-```
-canvas run \
-  --topic example.xyz \
-  --init contract.ts /data/canvas-example
-```
-
-If you would prefer to use Postgres as a backing database, create a
-local Postgres DB and provide its URL as an environment variable as
-well. The data directory will only be used to store metadata.
-
-```
+```sh
 DATABASE_URL="postgres://localhost:5432/..." canvas run \
   --topic example.xyz \
   --init contract.ts /data/canvas-example
 ```
-
-## CLI application with snapshot
-
-When you restart a server using the admin key, you have the option to
-restart the application's data from scratch, or keep the existing data
-as a flattened "snapshot". (Snapshots are not verifiable by end-users,
-and are like hard forks.)
-
-Creating a snapshot causes the server to append a #hash to the end of
-your topic, so an topic like `chat-example.canvas.xyz` would become:
-
-```
-chat-example.canvas.xyz#ffae63ab95cc5483
-```
-
-This topic will *not* sync with applications on the topic
-`chat-example.canvas.xyz`.
-
-If you want to run a browser application that follows the snapshot,
-you should use the `useCanvas` hook with a WebSocket URL, but do not
-provide a contract or topic.
-
-```ts
-import { useCanvas } from "@canvas-js/hooks"
-import { models, actions } from "./contract.js"
-
-export const App = () => {
-  const { app, ws } = useCanvas<typeof models, typeof actions>(
-    "ws://localhost:8080"
-  )
-  // app.actions.doThing()
-  // await app.db.get("foo", id)
-}
-```
-
-The browser will download the latest snapshot, contract, and topic from the
-remote application.
 
 ## Production deployment
 
