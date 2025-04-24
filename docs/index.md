@@ -9,11 +9,9 @@ next: false
 
 <div :class="$style.mainInner">
 
-Canvas is a peer-to-peer database, like a local-first Firebase or
-InstantDB, that lets you write entire applications without leaving your frontend.
-
-Get the guarantees of local-first software, the programmability
-of a traditional backend, and the usability of a modern web database.
+Canvas is a peer-to-peer database, like a local-first version of
+Firebase, that lets you write entire applications without leaving your
+frontend.
 
 </div>
 
@@ -39,7 +37,7 @@ of a traditional backend, and the usability of a modern web database.
     iconName: 'compare'
   },
   {
-    text: 'Custom logic',
+    text: 'Embedded runtime',
     tooltip: 'Write custom mutators for auth rules or business logic',
     iconName: 'atom'
   },
@@ -54,8 +52,8 @@ of a traditional backend, and the usability of a modern web database.
     iconName: 'apps',
   },
   {
-    text: 'IPFS-based',
-    tooltip: 'Built on IPFS standards (IPLD, DAG-CBOR) and Prolly-trees',
+    text: 'IPFS',
+    tooltip: 'Built on IPFS components (IPLD, DAG-CBOR, and Kademlia) and Prolly-trees',
     iconName: '123'
   },
   {
@@ -105,7 +103,7 @@ of a traditional backend, and the usability of a modern web database.
 
 <div :class="$style.sectionHeaderCol">
 
-# Get started in minutes
+# Quick start
 
 </div>
 
@@ -187,18 +185,21 @@ $ canvas run contract.ts --topic demo.canvas.xyz // [!code highlight]
   </div>
   <div :class="$style.colLeft">
 
-**Create a database** by defining models and actions.
+Each application is built around a contract, which contains models and
+actions:
 
-Models define your database schema, and are interoperable
-across platforms, like Prisma.
+Models define your database schema.
 
-Actions define mutations that users can make to the database. Use them to
-enforce authorization checks, or write business logic.
+Actions define mutations that users can make to the database. Use them
+to enforce authorization checks, or write business logic.
 
 ---
 
-**Launch a peer** from your terminal. It will connect with everyone
-else running the application's topic, via DHT.
+You can define a contract inline in the browser, or as a file
+that you run using the `canvas` CLI.
+
+Easily use the CLI to start a peer, which connects to everyone else
+running the application's topic via DHT.
 
 ```sh
 canvas run contract.ts --topic example.xyz
@@ -208,11 +209,11 @@ canvas run contract.ts --topic example.xyz
 
 ---
 
-**Upgrade your application** by adding new actions or models. Upgraded
+You can upgrade your application by adding new actions or models. Upgraded
 contracts will safely soft-fork away from nodes running the old contract.
 
-To change existing actions or models, use the admin interface to
-generate a hard-fork snapshot, and compact the state of the application.
+To change existing data, you can use the admin interface to
+generate a hard-fork snapshot, which compacts and flattens the state of the application.
 
   </div>
 </div>
@@ -223,42 +224,25 @@ generate a hard-fork snapshot, and compact the state of the application.
 
 <div :class="$style.sectionHeader">
 
-# Frequently asked questions
-
-</div>
-
-<FAQ :items="[
-  {
-    question: 'How does Canvas differ from other databases?',
-    answer: 'Canvas uses libp2p for peer-to-peer synchronization. Nodes can connect directly to each other or through relay servers, ensuring your data stays in sync across devices even without a central server.\n This makes it possible to build local-first applications with more complex business logic, like database transactions that roll back on conflict.'
-  },
-  {
-    question: 'Is Canvas ready for production?',
-    answer: 'Canvas is currently in developer preview. We\'ve deployed it in small embedded applications with 100s of users, and larger server-side production deployments with 10k+ users and 300k+ rows.\n It\'s currently best for peer-to-peer applications, local-first applications, and decentralized applications where the user has a wallet. Improving the system to work well with traditional logins is one of our next priorities. \n We recommend joining our Discord to discuss your specific use case before using in production.'
-  },
-]" />
-
-<div :class="$style.sectionHeader">
-
-# Built for the open web
+# About Canvas
 
 </div>
 
 Traditionally, local-first databases have only offered simple data
 structures like KV-stores, maps, and feeds. They provide limited
-database consistency guarantees, require developers to manage private
-keys, and provide limited options for persistence and sync.
+database consistency guarantees and relatively few options for
+persistence and sync.
 
 To solve these problems, we built an embedded runtime that preserves
-determinism and convergence in an eventually-consistent
-environment. Using the runtime, we can compile database schemas,
-permission checks, and custom mutations into code.
+convergence in an eventually-consistent environment. Using the
+runtime, we compile database schemas, permissions, and custom mutations
+into code.
 
-Canvas uses a modular signer interface that allows us to integrate with
-different login systems, including crypto wallets, DIDs, and (soon)
-WebAuthn and OIDC SSO. For more traditional logins, we also have
-cryptographically verifiable strategies using traditional identity
-providers on the roadmap.
+We also built a modular signer system that allows us to integrate with
+different identity systems, including crypto wallets, DIDs, and soon,
+WebAuthn and OpenID Connect. For more traditional login, we're working
+on integrations with traditional identity providers to custody users'
+private keys.
 
 We've published some of our research as technical presentations here:
 
