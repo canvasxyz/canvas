@@ -1,7 +1,7 @@
 import { Box, Button, Checkbox, Flex, Text } from "@radix-ui/themes"
 import { useStagedMigrations } from "../hooks/useStagedMigrations.js"
-import { Changeset, RowChange } from "@canvas-js/core"
-import { Map as ImmutableMap } from "immutable"
+import { Changeset, ModelValue, RowChange } from "@canvas-js/core"
+import { Map as ImmutableMap, List as ImmutableList } from "immutable"
 import { useContractData } from "../hooks/useContractData.js"
 import { decodeRowKey, encodeRowKey, ImmutableRowKey, RowKey } from "../hooks/useChangedRows.js"
 
@@ -40,7 +40,7 @@ function RowChangeRow({ rowKey, rowChange, tableName }: { rowKey: RowKey; rowCha
 		case "create":
 			return (
 				<>
-					Created row {encodedRowKey} in "{tableName}"
+					Created row in "{tableName}" <pre>{JSON.stringify(rowChange.value, null, 2)}</pre>
 				</>
 			)
 		case "delete":
@@ -58,13 +58,23 @@ function RowChangeRow({ rowKey, rowChange, tableName }: { rowKey: RowKey; rowCha
 	}
 }
 
-function flattenRowChanges(rowChanges: ImmutableMap<string, ImmutableMap<ImmutableRowKey, RowChange>>) {
+function flattenRowChanges(
+	rowChanges: ImmutableMap<string, ImmutableMap<ImmutableRowKey, RowChange>>,
+	newRows: ImmutableMap<string, ImmutableList<ModelValue>>,
+) {
 	const flattened = []
 	for (const [tableName, rows] of rowChanges.entries()) {
 		for (const [rowKey, rowChange] of rows.entries()) {
 			flattened.push({ tableName, row: decodeRowKey(rowKey), rowChange })
 		}
 	}
+
+	for (const [tableName, rows] of newRows.entries()) {
+		for (const row of rows) {
+			flattened.push({ tableName, row: [], rowChange: { type: "create" as const, value: row } })
+		}
+	}
+
 	return flattened
 }
 
@@ -80,6 +90,7 @@ export const StagedMigrationsSidebar = () => {
 		restoreRowChange,
 		migrationIncludesSnapshot,
 		setMigrationIncludesSnapshot,
+		newRows,
 	} = useStagedMigrations()
 
 	return (
@@ -106,7 +117,7 @@ export const StagedMigrationsSidebar = () => {
 							<ChangesetMigrationRow changeset={changeset} />
 						</li>
 					))}
-					{flattenRowChanges(changedRows).map(({ tableName, row, rowChange }, index) => (
+					{flattenRowChanges(changedRows, newRows).map(({ tableName, row, rowChange }, index) => (
 						<li key={index}>
 							<RowChangeRow rowKey={row} rowChange={rowChange} tableName={tableName} />
 							&nbsp;
@@ -124,7 +135,7 @@ export const StagedMigrationsSidebar = () => {
 				</ul>
 			</Box>
 
-			{(contractChangesets.length > 0 || changedRows.size > 0) && contractData && (
+			{(contractChangesets.length > 0 || changedRows.size > 0 || newRows.size > 0) && contractData && (
 				<Box mt="5">
 					<Box
 						mt="2"

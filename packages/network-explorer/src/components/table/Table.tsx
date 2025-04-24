@@ -1,6 +1,6 @@
 import useSWR from "swr"
 import { ModelValue, WhereCondition } from "@canvas-js/modeldb"
-import { Map as ImmutableMap, Set as ImmutableSet } from "immutable"
+import { Map as ImmutableMap, Set as ImmutableSet, List as ImmutableList } from "immutable"
 import { Box, Button, Flex, Text } from "@radix-ui/themes"
 import { useCallback, useEffect, useState } from "react"
 import { LuDownload, LuExpand, LuRefreshCw } from "react-icons/lu"
@@ -69,7 +69,7 @@ export const Table = <T,>({
 	getRowKey: (row: Row<T>) => string[]
 }) => {
 	const applicationData = useApplicationData()
-	const { stageRowChange, changedRows } = useStagedMigrations()
+	const { stageRowChange, changedRows, newRows, setNewRows } = useStagedMigrations()
 	const [columnFilters, setColumnFilters] = useSearchFilters(
 		defaultColumns.filter((col) => col.enableColumnFilter).map((col) => col.header as string),
 	)
@@ -185,6 +185,21 @@ export const Table = <T,>({
 
 	const tableChangedRows = changedRows.get(tableName) || ImmutableMap()
 
+	const tableNewRows = newRows.get(tableName) || ImmutableList.of()
+
+	const newRowsTable = useReactTable<ModelValue>({
+		columns: defaultColumns as ColumnDef<ModelValue>[],
+		data: tableNewRows.toArray(),
+		getCoreRowModel: getCoreRowModel(),
+		manualPagination: true,
+		manualSorting: true,
+		manualFiltering: true,
+		state: {
+			columnVisibility,
+		},
+		onColumnVisibilityChange: setColumnVisibility,
+	})
+
 	return (
 		<Flex direction="column" maxWidth={showSidebar ? "calc(100vw - 200px - 400px)" : "100%"} flexGrow="1">
 			<Flex style={{ borderBottom: "1px solid var(--gray-3)" }} align="center" gap="2" p="2" py="3">
@@ -205,7 +220,16 @@ export const Table = <T,>({
 					Delete
 				</Button>
 
-				<Button disabled={!allowEditing} onClick={() => {}} color="gray" variant="outline">
+				<Button
+					disabled={!allowEditing}
+					onClick={() => {
+						// add a new row
+						const tableRows = newRows.get(tableName) || ImmutableList.of()
+						setNewRows(newRows.set(tableName, tableRows.push({})))
+					}}
+					color="gray"
+					variant="outline"
+				>
 					New Entry
 				</Button>
 
@@ -294,6 +318,24 @@ export const Table = <T,>({
 								} else {
 									return <NonEditableRow key={row.id} row={row} />
 								}
+							})}
+							{newRowsTable.getRowModel().rows.map((row, index) => {
+								return (
+									<EditableRow
+										key={row.id}
+										row={row}
+										stagedValues={row.original as ModelValue}
+										setStagedValues={(newValues) => {
+											// update new row with index
+											const tableRows = newRows.get(tableName) || ImmutableList.of()
+											const newTableRows = tableRows.set(index, newValues)
+											setNewRows(newRows.set(tableName, newTableRows))
+										}}
+										isStagedDelete={false}
+										checked={false}
+										onCheckedChange={() => {}}
+									/>
+								)
 							})}
 						</Tbody>
 					</TableElement>

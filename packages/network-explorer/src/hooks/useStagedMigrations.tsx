@@ -1,8 +1,8 @@
 // staged migrations provider
 
 import { createContext, useCallback, useContext, useState } from "react"
-import { Canvas, Changeset, generateChangesets, RowChange } from "@canvas-js/core"
-import { Map as ImmutableMap } from "immutable"
+import { Canvas, Changeset, generateChangesets, ModelValue, RowChange } from "@canvas-js/core"
+import { Map as ImmutableMap, List as ImmutableList } from "immutable"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 import { useContractData } from "../hooks/useContractData.js"
 import { SiweMessage } from "siwe"
@@ -88,6 +88,8 @@ const StagedMigrationsContext = createContext<{
 	clearRowChanges: () => void
 	migrationIncludesSnapshot: boolean
 	setMigrationIncludesSnapshot: (migrationIncludesSnapshot: boolean) => void
+	newRows: ImmutableMap<string, ImmutableList<ModelValue>>
+	setNewRows: (newRows: ImmutableMap<string, ImmutableList<ModelValue>>) => void
 }>({
 	contractChangesets: [],
 	cancelMigrations: async () => {},
@@ -107,6 +109,8 @@ const StagedMigrationsContext = createContext<{
 	clearRowChanges: () => {},
 	migrationIncludesSnapshot: false,
 	setMigrationIncludesSnapshot: () => {},
+	newRows: ImmutableMap(),
+	setNewRows: () => {},
 })
 
 export const StagedMigrationsProvider = ({ children }: { children: React.ReactNode }) => {
@@ -118,6 +122,8 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 	const [migrationIncludesSnapshot, setMigrationIncludesSnapshot] = useState(false)
 
 	const [hasRestoredContent, setHasRestoredContent] = useState(false)
+
+	const [newRows, setNewRows] = useState<ImmutableMap<string, ImmutableList<ModelValue>>>(ImmutableMap())
 
 	const { changedRows, stageRowChange, restoreRowChange, clearRowChanges } = useChangedRows()
 
@@ -170,7 +176,7 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 	)
 
 	const runMigrations = async () => {
-		if (!contractChangesets || changedRows?.size === 0) {
+		if (!contractChangesets || (changedRows?.size === 0 && newRows?.size === 0)) {
 			throw new Error("No migrations to run")
 		}
 
@@ -194,6 +200,7 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 				address,
 				signature,
 				changedRows: changedRows?.toJSON() || {},
+				newRows: newRows?.toJSON() || {},
 				includeSnapshot: migrationIncludesSnapshot,
 			}),
 		})
@@ -252,6 +259,8 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 				clearRowChanges,
 				migrationIncludesSnapshot,
 				setMigrationIncludesSnapshot,
+				newRows,
+				setNewRows,
 			}}
 		>
 			{children}
