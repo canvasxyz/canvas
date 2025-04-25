@@ -35,9 +35,6 @@ export const ModelTable = ({
 					enableSorting: property.name === primaryProperty.name,
 					enableColumnFilter: false,
 					size: 320,
-					// meta: {
-					// 	editCell: EditableTextCell,
-					// },
 				}
 				columnDef.meta = {}
 
@@ -46,6 +43,8 @@ export const ModelTable = ({
 					columnDef.cell = BinaryCellData
 				}
 
+				// right now only allow editing for strings and integers
+				// TODO: add support for other types
 				if (property.kind === "primitive" && property.type === "integer") {
 					columnDef.meta.editCell = EditableIntegerCell
 				}
