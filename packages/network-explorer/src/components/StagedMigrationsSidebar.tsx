@@ -181,6 +181,7 @@ export const StagedMigrationsSidebar = ({ showSidebar }: { showSidebar: boolean 
 									<Checkbox
 										id="retain-snapshot"
 										checked={migrationIncludesSnapshot}
+										disabled={changedRows.size > 0 || newRows.size > 0}
 										onCheckedChange={(value) => {
 											if (value === "indeterminate") return
 											setMigrationIncludesSnapshot(value)

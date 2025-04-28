@@ -1,6 +1,6 @@
 // staged migrations provider
 
-import { createContext, useCallback, useContext, useState } from "react"
+import { createContext, useCallback, useContext, useEffect, useState } from "react"
 import { Canvas, TableChange, generateChangesets, ModelValue, RowChange } from "@canvas-js/core"
 import { Map as ImmutableMap, List as ImmutableList } from "immutable"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
@@ -134,6 +134,14 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 		setContractChangesets([])
 		setNewContract(undefined)
 	}, [])
+
+	// Update migrationIncludesSnapshot when changedRows or newRows change
+	useEffect(() => {
+		// If there are any row changes or new rows, force migrationIncludesSnapshot to true
+		if (changedRows?.size > 0 || newRows?.size > 0) {
+			setMigrationIncludesSnapshot(true)
+		}
+	}, [changedRows, newRows])
 
 	// when the contract, added, modified, or deleted rows change, update the changesets
 
