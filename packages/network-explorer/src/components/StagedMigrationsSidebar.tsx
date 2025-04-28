@@ -195,8 +195,8 @@ export const StagedMigrationsSidebar = ({ showSidebar }: { showSidebar: boolean 
 							<Box mt="3">
 								<Text size="2">
 									{contractData.inMemory
-										? "⚠️ This network explorer is running an in-memory contract. Changes will not be persisted to disk."
-										: "This network explorer is running a contract stored on disk. Changes will be persisted on the server."}
+										? "⚠️ Running in-memory contract. Changes will not be persisted to disk."
+										: "Running a contract stored on disk. Changes will be persisted."}
 								</Text>
 							</Box>
 
