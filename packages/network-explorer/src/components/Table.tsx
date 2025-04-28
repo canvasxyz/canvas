@@ -136,7 +136,6 @@ export const Table = <T,>({
 		// invalidate the settings
 		setColumnVisibility({})
 		setSorting([])
-		setColumnFilters([])
 		clearCursors()
 	}, [tableName])
 
