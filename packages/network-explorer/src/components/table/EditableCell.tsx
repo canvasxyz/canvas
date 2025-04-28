@@ -9,8 +9,8 @@ export const EditableTextCell = ({
 	setValue: (value: string) => void
 } & CellContext<any, unknown>) => {
 	return (
-		<Flex>
-			<input type="text" value={value} onChange={(e) => setValue(e.target.value)}></input>
+		<Flex flexGrow="1">
+			<input style={{ width: "100%" }} type="text" value={value} onChange={(e) => setValue(e.target.value)}></input>
 		</Flex>
 	)
 }
@@ -23,8 +23,8 @@ export const EditableIntegerCell = ({
 	setValue: (value: number) => void
 } & CellContext<any, unknown>) => {
 	return (
-		<Flex>
-			<input type="number" value={value} onChange={(e) => setValue(parseInt(e.target.value))}></input>
+		<Flex flexGrow="1">
+			<input style={{ width: "100%" }} type="number" value={value} onChange={(e) => setValue(parseInt(e.target.value))}></input>
 		</Flex>
 	)
 }

@@ -47,8 +47,7 @@ export const Td = ({
 				borderColor: "var(--accent-3)",
 				borderStyle: "solid",
 				display: "flex",
-				paddingLeft: "6px",
-				paddingTop: "4px",
+				padding: "4px 6px",
 				minHeight: "32px",
 				width,
 				cursor: onClick ? "pointer" : "default",
@@ -56,7 +55,7 @@ export const Td = ({
 			}}
 			onClick={onClick}
 		>
-			<Flex gap="2" p="1">
+			<Flex gap="2" p="1" width="100%">
 				{children}
 			</Flex>
 		</td>

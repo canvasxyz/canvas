@@ -36,7 +36,8 @@ function ChangesetMigrationRow({ changeset }: { changeset: TableChange }) {
 }
 
 function RowChangeRow({ rowKey, rowChange, tableName }: { rowKey: RowKey; rowChange: RowChange; tableName: string }) {
-	const encodedRowKey = encodeRowKey(rowKey)
+	const formattedRowKey = rowKey.length === 1 ? rowKey[0] : encodeRowKey(rowKey)
+	
 	switch (rowChange.type) {
 		case "create":
 			return (
@@ -47,13 +48,13 @@ function RowChangeRow({ rowKey, rowChange, tableName }: { rowKey: RowKey; rowCha
 		case "delete":
 			return (
 				<>
-					Deleted row {encodedRowKey} in "{tableName}"
+					Delete {formattedRowKey} in "{tableName}"
 				</>
 			)
 		case "update":
 			return (
 				<>
-					Updated row {encodedRowKey} in "{tableName}"
+					Update {formattedRowKey} in "{tableName}"
 				</>
 			)
 	}
@@ -131,15 +132,15 @@ export const StagedMigrationsSidebar = ({ showSidebar }: { showSidebar: boolean 
 							<li key={index}>
 								<RowChangeRow rowKey={row} rowChange={rowChange} tableName={tableName} />
 								&nbsp;
-								<a
+								[<a
 									href="#"
 									onClick={(e) => {
 										e.preventDefault()
 										restoreRowChange(tableName, row)
 									}}
 								>
-									[restore]
-								</a>
+									x
+								</a>]
 							</li>
 						))}
 					</ul>
