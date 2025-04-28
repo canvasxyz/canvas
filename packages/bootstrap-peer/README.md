@@ -17,3 +17,9 @@ $ fly deploy
 ```
 $ npm run start
 ```
+
+## HTTP API
+
+- GET /api/connections
+- GET /api/registrations
+- GET /metrics
