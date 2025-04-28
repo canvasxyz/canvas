@@ -1,7 +1,7 @@
 // staged migrations provider
 
 import { createContext, useCallback, useContext, useState } from "react"
-import { Canvas, Changeset, generateChangesets, ModelValue, RowChange } from "@canvas-js/core"
+import { Canvas, TableChange, generateChangesets, ModelValue, RowChange } from "@canvas-js/core"
 import { Map as ImmutableMap, List as ImmutableList } from "immutable"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 import { useContractData } from "../hooks/useContractData.js"
@@ -70,7 +70,7 @@ async function getSignature(nonce: string) {
 const UNSAVED_CHANGES_KEY = "contract-editor-unsaved-changes"
 
 const StagedMigrationsContext = createContext<{
-	contractChangesets: Changeset[]
+	contractChangesets: TableChange[]
 	cancelMigrations: () => Promise<void>
 	clearContractChangesets: () => void
 	rebuildContract: (newContract: string) => Promise<void>
@@ -129,7 +129,7 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 
 	// store current saved contract here
 	const [newContract, setNewContract] = useState<string>()
-	const [contractChangesets, setContractChangesets] = useState<Changeset[]>([])
+	const [contractChangesets, setContractChangesets] = useState<TableChange[]>([])
 	const clearContractChangesets = useCallback(() => {
 		setContractChangesets([])
 		setNewContract(undefined)

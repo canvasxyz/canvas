@@ -38,7 +38,7 @@ export type MakeOptionalColumnChange = {
 	column: string
 }
 
-export type Change =
+export type TableChange =
 	| CreateTableChange
 	| DropTableChange
 	| AddColumnChange
@@ -79,7 +79,7 @@ export type RowChange =
 	  }
 
 export type CreateSnapshotArgs = {
-	changesets?: Change[]
+	changesets?: TableChange[]
 	changedRows?: Record<string, Record<string, RowChange>>
 	newRows?: Record<string, ModelValue[]>
 }
@@ -181,7 +181,7 @@ export async function createSnapshot<T extends Contract<any>>(
 }
 
 export const generateChangesets = (before: ModelSchema, after: ModelSchema) => {
-	const changesets: Change[] = []
+	const changesets: TableChange[] = []
 
 	const addedTables = Object.keys(after).filter((table) => !(table in before))
 	addedTables.forEach((table) => {

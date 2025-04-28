@@ -1,11 +1,11 @@
 import { Box, Button, Checkbox, Flex, Text } from "@radix-ui/themes"
 import { useStagedMigrations } from "../hooks/useStagedMigrations.js"
-import { Changeset, ModelValue, RowChange } from "@canvas-js/core"
+import { TableChange, ModelValue, RowChange } from "@canvas-js/core"
 import { Map as ImmutableMap, List as ImmutableList } from "immutable"
 import { useContractData } from "../hooks/useContractData.js"
 import { decodeRowKey, encodeRowKey, ImmutableRowKey, RowKey } from "../hooks/useChangedRows.js"
 
-function ChangesetMigrationRow({ changeset }: { changeset: Changeset }) {
+function ChangesetMigrationRow({ changeset }: { changeset: TableChange }) {
 	switch (changeset.change) {
 		case "create_table":
 			return <>Create table: {changeset.table}</>
