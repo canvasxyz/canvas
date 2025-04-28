@@ -169,36 +169,34 @@ export const StagedMigrationsSidebar = ({ showSidebar }: { showSidebar: boolean 
 									variant="outline"
 									onClick={(e) => {
 										e.preventDefault()
-										cancelMigrations()
+										if (confirm("Reset all staged changes?")) cancelMigrations()
 									}}
 								>
 									Cancel
 								</Button>
+								<Box mt="2" ml="4" display="inline-block">
+									<Label>
+										<Checkbox
+											id="retain-snapshot"
+											checked={migrationIncludesSnapshot}
+											disabled={changedRows.size > 0 || newRows.size > 0}
+											onCheckedChange={(value) => {
+												if (value === "indeterminate") return
+												setMigrationIncludesSnapshot(value)
+											}}
+										/>
+										<Text size="2" style={{ position: "relative", top: "-4px", left: "6px" }}>
+											Start from snapshot
+										</Text>
+									</Label>
+								</Box>
 							</Box>
 
-							<Box mt="4">
-								<Label>
-									<Checkbox
-										id="retain-snapshot"
-										checked={migrationIncludesSnapshot}
-										disabled={changedRows.size > 0 || newRows.size > 0}
-										onCheckedChange={(value) => {
-											if (value === "indeterminate") return
-											setMigrationIncludesSnapshot(value)
-										}}
-									/>
-									<Text size="2" style={{ position: "relative", top: "-4px", left: "6px" }}>
-										Retain snapshot
-									</Text>
-								</Label>
-							</Box>
-
-							<Box mt="1">
+							<Box mt="3">
 								<Text size="2">
-									Contract stored{" "}
 									{contractData.inMemory
-										? "in-memory. Changes will be lost when the explorer server restarts."
-										: "on disk. Changes will be persisted on the explorer server."}
+										? "⚠️ This network explorer is running an in-memory contract. Changes will not be persisted to disk."
+										: "This network explorer is running a contract stored on disk. Changes will be persisted on the server."}
 								</Text>
 							</Box>
 
