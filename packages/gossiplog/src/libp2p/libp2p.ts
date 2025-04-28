@@ -6,7 +6,7 @@ import { webSockets } from "@libp2p/websockets"
 import { yamux } from "@chainsafe/libp2p-yamux"
 import { noise } from "@chainsafe/libp2p-noise"
 import { KadDHT, kadDHT } from "@libp2p/kad-dht"
-import { PingService, ping as pingService } from "@libp2p/ping"
+import { Ping, ping } from "@libp2p/ping"
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
 import { GossipsubEvents, gossipsub } from "@chainsafe/libp2p-gossipsub"
 export { GossipSub } from "@chainsafe/libp2p-gossipsub"
@@ -42,7 +42,7 @@ export interface NetworkConfig {
 
 export type ServiceMap<Payload> = {
 	identify: Identify
-	ping: PingService
+	ping: Ping
 	pubsub: PubSub<GossipsubEvents>
 	gossipLog: GossipLogService<Payload>
 	dht: KadDHT
@@ -89,7 +89,7 @@ export async function getLibp2p<Payload>(
 
 		services: {
 			identify: identify({ protocolPrefix: "canvas" }),
-			ping: pingService({ protocolPrefix: "canvas" }),
+			ping: ping({ protocolPrefix: "canvas" }),
 
 			dht: kadDHT({ protocol: getDHTProtocol(gossipLog.topic) }),
 

@@ -51,7 +51,7 @@ export function hashContract<T extends Contract<any>>(contract: T | string): str
 		return bytesToHex(hash)
 	} else {
 		const contractCodeMap: Record<string, string> = Object.fromEntries(
-			Object.entries(contract.actions).map(([name, fn]) => [name, fn.toString()]),
+			Object.entries(contract.actions ?? {}).map(([name, fn]) => [name, fn.toString()]),
 		)
 		const actionHash = sha256(cbor.encode(contractCodeMap))
 		const modelHash = sha256(cbor.encode(contract.models))

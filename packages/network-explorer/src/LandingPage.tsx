@@ -5,6 +5,7 @@ import { ApplicationData } from "./components/ApplicationData.js"
 import { fetchAndIpldParseJson } from "./utils.js"
 import { ReactNode } from "react"
 import { useTheme } from "./hooks/useTheme.js"
+import { usePageTitle } from "./hooks/usePageTitle.js"
 
 const Th = ({ children }: { children: ReactNode }) => (
 	<th style={{ padding: "8px 6px 8px 14px", textAlign: "left" }}>
@@ -18,6 +19,8 @@ const Td = ({ children, first }: { children: ReactNode; first: boolean }) => (
 )
 
 export const LandingPage = () => {
+	usePageTitle("Dashboard | Application Explorer")
+
 	const { theme } = useTheme()
 	const { data: actionData } = useSWR(
 		`/api/models/$actions?${stringifyRequestParams({

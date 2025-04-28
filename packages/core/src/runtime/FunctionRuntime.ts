@@ -1,12 +1,18 @@
 import PQueue from "p-queue"
 
 import type { SignerCache } from "@canvas-js/interfaces"
-import { ModelSchema, DeriveModelTypes } from "@canvas-js/modeldb"
+import { DeriveModelTypes } from "@canvas-js/modeldb"
 import { assert, mapValues } from "@canvas-js/utils"
+import { ModelSchema } from "../types.js"
 
 import { ActionContext, ActionImplementation, Contract, ModelAPI } from "../types.js"
 import { ExecutionContext } from "../ExecutionContext.js"
 import { AbstractRuntime } from "./AbstractRuntime.js"
+
+// Check if all models have $rules defined
+const hasAllRules = (models: ModelSchema) => {
+	return Object.values(models).every((model) => "$rules" in model)
+}
 
 export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntime {
 	public static async init<ModelsT extends ModelSchema>(
@@ -14,8 +20,11 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 		signers: SignerCache,
 		contract: Contract<ModelsT>,
 	): Promise<FunctionRuntime<ModelsT>> {
-		assert(contract.actions !== undefined, "contract initialized without actions")
 		assert(contract.models !== undefined, "contract initialized without models")
+		assert(
+			contract.actions !== undefined || hasAllRules(contract.models),
+			"contracts without actions must have $rules on all models",
+		)
 		assert(
 			Object.keys(contract.models).every((key) => !key.startsWith("$")),
 			"contract model names cannot start with '$'",
@@ -42,11 +51,11 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 		super(contract.models)
 		this.contract = [
 			`export const models = ${JSON.stringify(contract.models, null, "  ")};`,
-			`export const actions = {\n${Object.entries(contract.actions)
+			`export const actions = {\n${Object.entries(contract.actions ?? this.generatedActions)
 				.map(([name, action]) => `${name}: ${action}`)
 				.join(", \n")}};`,
 		].join("\n")
-		this.actions = contract.actions
+		this.actions = contract.actions ?? this.generatedActions
 
 		this.#db = {
 			get: async <T extends keyof DeriveModelTypes<ModelsT> & string>(model: T, key: string) => {
@@ -127,7 +136,6 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 			return result
 		} catch (err) {
 			trimActionStacktrace(err)
-			console.log("Error inside canvas action:", err)
 			throw err
 		} finally {
 			this.#txnId = 0

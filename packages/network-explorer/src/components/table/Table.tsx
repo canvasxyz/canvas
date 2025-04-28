@@ -16,6 +16,7 @@ import { ColumnsDropdown } from "./ColumnsDropdown.js"
 import { PaginationControl } from "./PaginationControl.js"
 import { SortSelector } from "./SortSelector.js"
 import { decodeRowKey, encodeRowKey, ImmutableRowKey } from "../../hooks/useChangedRows.js"
+import { usePageTitle } from "../../hooks/usePageTitle.js"
 import { EditableRow, NonEditableRow } from "./EditableRow.js"
 
 export type Column = {
@@ -68,6 +69,7 @@ export const Table = <T,>({
 	allowEditing: boolean
 	getRowKey: (row: Row<T>) => string[]
 }) => {
+	usePageTitle(`${tableName} | Application Explorer`)
 	const applicationData = useApplicationData()
 	const { stageRowChange, changedRows, newRows, setNewRows } = useStagedMigrations()
 	const [columnFilters, setColumnFilters] = useSearchFilters(
@@ -164,7 +166,6 @@ export const Table = <T,>({
 		// invalidate the settings
 		setColumnVisibility({})
 		setSorting([])
-		setColumnFilters([])
 		clearCursors()
 	}, [tableName])
 

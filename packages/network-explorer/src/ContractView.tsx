@@ -5,11 +5,14 @@ import { EditorView } from "@codemirror/view"
 import { useContractData } from "./hooks/useContractData.js"
 import { Editor } from "./components/Editor.js"
 import { useStagedMigrations } from "./hooks/useStagedMigrations.js"
+import { usePageTitle } from "./hooks/usePageTitle.js"
 
 // Define a localStorage key for unsaved changes
 const UNSAVED_CHANGES_KEY = "contract-editor-unsaved-changes"
 
 export const ContractView = () => {
+	usePageTitle("Contract | Application Explorer")
+
 	const contractData = useContractData()
 
 	const {

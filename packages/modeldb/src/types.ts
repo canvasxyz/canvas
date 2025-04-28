@@ -19,11 +19,12 @@ export type PropertyType =
 
 /** property name, or property names joined by slashes */
 export type IndexInit = string
+
 /** This should be an intersection type or conditional mapped type, but TS 5.6 doesn't let us mix them.
  * If you need a proper conditional type here, consider overriding ModelInit with your own type.
  */
-export type ModelInit = { $indexes?: IndexInit[]; $primary?: string } | Record<string, PropertyType>
-export type ModelSchema = Record<string, ModelInit>
+export type ModelInit<Ext = {}> = ({ $indexes?: IndexInit[]; $primary?: string } & Ext) | Record<string, PropertyType>
+export type ModelSchema<Ext = {}> = Record<string, ModelInit<Ext>>
 
 // These are more structured representations of the schema defined by ModelSchema that are easier
 // to work with at runtime
@@ -93,30 +94,30 @@ export type QueryParams = {
 export type DerivePropertyType<T extends PropertyType> = T extends "primary"
 	? string
 	: T extends "integer" | "float" | "number"
-	? number
-	: T extends "integer?" | "float?" | "number?"
-	? number | null
-	: T extends "string"
-	? string
-	: T extends "string?"
-	? string | null
-	: T extends "bytes"
-	? Uint8Array
-	: T extends "bytes?"
-	? Uint8Array | null
-	: T extends "boolean"
-	? boolean
-	: T extends "boolean?"
-	? boolean | null
-	: T extends "json"
-	? JSONValue
-	: T extends `@${string}[]`
-	? RelationValue
-	: T extends `@${string}?`
-	? ReferenceValue | null
-	: T extends `@${string}`
-	? ReferenceValue
-	: never
+		? number
+		: T extends "integer?" | "float?" | "number?"
+			? number | null
+			: T extends "string"
+				? string
+				: T extends "string?"
+					? string | null
+					: T extends "bytes"
+						? Uint8Array
+						: T extends "bytes?"
+							? Uint8Array | null
+							: T extends "boolean"
+								? boolean
+								: T extends "boolean?"
+									? boolean | null
+									: T extends "json"
+										? JSONValue
+										: T extends `@${string}[]`
+											? RelationValue
+											: T extends `@${string}?`
+												? ReferenceValue | null
+												: T extends `@${string}`
+													? ReferenceValue
+													: never
 
 export type DeriveModelTypes<T extends ModelSchema> = {
 	[K in keyof T as Exclude<K, "$indexes" | "$primary">]: {
