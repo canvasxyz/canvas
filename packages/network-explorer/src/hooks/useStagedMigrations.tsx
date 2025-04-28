@@ -238,7 +238,8 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 	const cancelMigrations = useCallback(async () => {
 		clearContractChangesets()
 		clearRowChanges()
-	}, [clearContractChangesets, clearRowChanges])
+		setNewRows(ImmutableMap())
+	}, [clearContractChangesets, clearRowChanges, setNewRows])
 
 	return (
 		<StagedMigrationsContext.Provider
