@@ -332,6 +332,7 @@ export const Table = <T,>({
 											setNewRows(newRows.set(tableName, newTableRows))
 										}}
 										isStagedDelete={false}
+										isNewRow={true}
 										checked={false}
 										onCheckedChange={() => {}}
 									/>

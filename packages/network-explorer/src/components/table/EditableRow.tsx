@@ -70,6 +70,7 @@ export const EditableRow = ({
 	isStagedDelete,
 	checked,
 	onCheckedChange,
+	isNewRow,
 }: {
 	row: Row<any>
 	stagedValues: ModelValue | undefined
@@ -77,12 +78,13 @@ export const EditableRow = ({
 	isStagedDelete: boolean
 	checked: boolean
 	onCheckedChange: (checked: boolean) => void
+	isNewRow?: boolean
 }) => {
 	return (
 		<tr
 			style={{
 				display: "flex",
-				backgroundColor: isStagedDelete ? "var(--red-3)" : "transparent",
+				backgroundColor: isStagedDelete ? "var(--red-3)" : isNewRow ? "var(--green-3)" : "transparent",
 				overflow: "hidden",
 				scrollbarWidth: "none",
 			}}
