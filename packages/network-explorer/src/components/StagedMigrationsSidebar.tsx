@@ -1,4 +1,5 @@
-import { Box, Button, Checkbox, Flex, Text } from "@radix-ui/themes"
+import { Box, Button, Checkbox, Text } from "@radix-ui/themes"
+import { Label } from "@radix-ui/react-label"
 import { useStagedMigrations } from "../hooks/useStagedMigrations.js"
 import { TableChange, ModelValue, RowChange } from "@canvas-js/core"
 import { Map as ImmutableMap, List as ImmutableList } from "immutable"
@@ -78,7 +79,7 @@ function flattenRowChanges(
 	return flattened
 }
 
-export const StagedMigrationsSidebar = () => {
+export const StagedMigrationsSidebar = ({ showSidebar }: { showSidebar: boolean }) => {
 	const contractData = useContractData()
 	const {
 		contractChangesets,
@@ -93,68 +94,61 @@ export const StagedMigrationsSidebar = () => {
 		newRows,
 	} = useStagedMigrations()
 
+	const rowChangesets = flattenRowChanges(changedRows, newRows)
+	const isEmpty = contractChangesets.length === 0 && rowChangesets.length === 0
+
 	return (
-		<Flex
-			width="400px"
-			minWidth="400px"
-			height="100%"
+		<Box
+			width={showSidebar ? "calc(100% - 200px)" : "100%"}
 			overflow="hidden"
 			position="fixed"
+			bottom="0"
 			right="0"
-			top="0"
-			direction="column"
-			p="2"
-			gap="2"
-			style={{ borderRight: "1px solid var(--gray-4)", background: "var(--gray-2)", zIndex: 100 }}
+			px="4"
+			style={{
+				borderRight: "1px solid var(--gray-4)",
+				background: "var(--gray-2)",
+				opacity: 0.9,
+				zIndex: 100,
+				height: isEmpty ? 0 : 240,
+				transition: 'height 0.3s ease-in-out',
+			}}
 		>
-			<Box px="2" pt="10px" pb="9px">
-				Staged Migrations
+			<Box pt="10px" pb="9px">
+				<Text size="2">
+					Staged Migrations
+				</Text>
 			</Box>
 			<Box pb="2">
-				<ul>
-					{contractChangesets.map((changeset, index) => (
-						<li key={index}>
-							<ChangesetMigrationRow changeset={changeset} />
-						</li>
-					))}
-					{flattenRowChanges(changedRows, newRows).map(({ tableName, row, rowChange }, index) => (
-						<li key={index}>
-							<RowChangeRow rowKey={row} rowChange={rowChange} tableName={tableName} />
-							&nbsp;
-							<a
-								href="#"
-								onClick={(e) => {
-									e.preventDefault()
-									restoreRowChange(tableName, row)
-								}}
-							>
-								[restore]
-							</a>
-						</li>
-					))}
-				</ul>
+				<Text size="2" className="div">
+					<ul>
+						{contractChangesets.map((changeset, index) => (
+							<li key={index}>
+								<ChangesetMigrationRow changeset={changeset} />
+							</li>
+						))}
+						{rowChangesets.map(({ tableName, row, rowChange }, index) => (
+							<li key={index}>
+								<RowChangeRow rowKey={row} rowChange={rowChange} tableName={tableName} />
+								&nbsp;
+								<a
+									href="#"
+									onClick={(e) => {
+										e.preventDefault()
+										restoreRowChange(tableName, row)
+									}}
+								>
+									[restore]
+								</a>
+							</li>
+						))}
+					</ul>
+				</Text>
 			</Box>
 
 			{(contractChangesets.length > 0 || changedRows.size > 0 || newRows.size > 0) && contractData && (
-				<Box mt="5">
-					<Box
-						mt="2"
-						style={{
-							width: "100%",
-							border: "1px solid var(--gray-6)",
-							borderRadius: "2px",
-						}}
-					>
-						<Box
-							px="4"
-							py="3"
-							style={{
-								borderBottom: "1px solid var(--gray-6)",
-							}}
-						>
-							<Text size="2">Run Migrations</Text>
-						</Box>
-
+				<Box>
+					<Box>
 						<Box px="4" pt="1" pb="4">
 							<Box mt="4" pt="1">
 								<Button
@@ -178,24 +172,27 @@ export const StagedMigrationsSidebar = () => {
 								>
 									Cancel
 								</Button>
+								<Box mt="1" ml="3" display="inline-block">
+									<Text size="2">Admin: {contractData.admin}</Text>
+								</Box>
 							</Box>
 
 							<Box mt="4">
-								<Checkbox
-									checked={migrationIncludesSnapshot}
-									onCheckedChange={(value) => {
-										if (value === "indeterminate") return
-										setMigrationIncludesSnapshot(value)
-									}}
-								/>
-								<Text size="2" style={{ position: "relative", top: "-4px", left: "6px" }}>
-									Retain snapshot
-								</Text>
+								<Label>
+									<Checkbox
+										id="retain-snapshot"
+										checked={migrationIncludesSnapshot}
+										onCheckedChange={(value) => {
+											if (value === "indeterminate") return
+											setMigrationIncludesSnapshot(value)
+										}}
+									/>
+										<Text size="2" style={{ position: "relative", top: "-4px", left: "6px" }}>
+										Retain snapshot
+									</Text>
+								</Label>
 							</Box>
 
-							<Box mt="4">
-								<Text size="2">Upgrade controller key: {contractData.admin}</Text>
-							</Box>
 							<Box mt="1">
 								<Text size="2">
 									Contract stored{" "}
@@ -220,6 +217,6 @@ export const StagedMigrationsSidebar = () => {
 					<Text size="2">Changes committed!</Text>
 				</Box>
 			)}
-		</Flex>
+		</Box>
 	)
 }

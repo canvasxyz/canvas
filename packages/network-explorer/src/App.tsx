@@ -17,7 +17,7 @@ export const App = () => {
 	return (
 		<Flex height="calc(100vh - 1px)" direction="row">
 			{showSidebar && <Sidebar tables={tables} />}
-			<Box pl={showSidebar ? "200px" : "0px"} pr={showSidebar ? "400px" : "0px"} width="100%">
+			<Box pl={showSidebar ? "200px" : "0px"} width="100%">
 				<Box style={{ margin: "0 auto" }}>
 					<Routes>
 						<Route path="/" element={<LandingPage />} />
@@ -81,7 +81,7 @@ export const App = () => {
 					</Routes>
 				</Box>
 			</Box>
-			{showSidebar && <StagedMigrationsSidebar />}
+			{showSidebar && <StagedMigrationsSidebar showSidebar={showSidebar} />}
 		</Flex>
 	)
 }

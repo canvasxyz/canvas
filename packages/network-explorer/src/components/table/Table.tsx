@@ -202,7 +202,7 @@ export const Table = <T,>({
 	})
 
 	return (
-		<Flex direction="column" maxWidth={showSidebar ? "calc(100vw - 200px - 400px)" : "100%"} flexGrow="1">
+		<Flex direction="column" maxWidth={showSidebar ? "calc(100vw - 200px)" : "100%"} flexGrow="1">
 			<Flex style={{ borderBottom: "1px solid var(--gray-3)" }} align="center" gap="2" p="2" py="3">
 				{tableHasFilters && (
 					<FiltersDropdown
