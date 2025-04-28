@@ -1,7 +1,8 @@
-import type { Signature, Message } from "@canvas-js/interfaces"
 import * as cbor from "@ipld/dag-cbor"
 import { compare } from "uint8arrays"
 import { assert } from "@canvas-js/utils"
+
+import type { Signature, Message } from "@canvas-js/interfaces"
 
 import { MessageId, decodeId, getKey, encodeId, KEY_LENGTH } from "./MessageId.js"
 import { MessageSet } from "./MessageSet.js"
@@ -91,6 +92,15 @@ function validateMessageTuple<Payload>(messageTuple: unknown): asserts messageTu
 	assert(gossiplogTopicPattern.test(topic), "invalid topic string")
 
 	assert(typeof clock === "number", 'expected typeof clock === "number"')
+	validateMessageParents(parents)
+
+	assert(
+		(clock === 0 && parents.length === 0) || clock === getNextClock(parents),
+		"expected clock === getNextClock(parents)",
+	)
+}
+
+function validateMessageParents(parents: any): asserts parents is Uint8Array[] {
 	assert(Array.isArray(parents), "expected Array.isArray(parents)")
 	for (const [i, parent] of parents.entries()) {
 		assert(parent instanceof Uint8Array, "expected parent instanceof Uint8Array")
@@ -99,11 +109,6 @@ function validateMessageTuple<Payload>(messageTuple: unknown): asserts messageTu
 			assert(compare(parent, parents[i - 1]) === 1, "expected parents to be sorted lexicographically")
 		}
 	}
-
-	assert(
-		(clock === 0 && parents.length === 0) || clock === getNextClock(parents),
-		"expected clock === getNextClock(parents)",
-	)
 }
 
 function encodeMessageTuple<Payload>(messageTuple: MessageTuple<Payload>) {
