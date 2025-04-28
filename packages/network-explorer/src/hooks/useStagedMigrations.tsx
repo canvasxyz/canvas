@@ -184,7 +184,7 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 	)
 
 	const runMigrations = async () => {
-		if (!contractChangesets || (changedRows?.size === 0 && newRows?.size === 0)) {
+		if (!newContract && !contractChangesets && changedRows?.size === 0 && newRows?.size === 0) {
 			throw new Error("No migrations to run")
 		}
 
