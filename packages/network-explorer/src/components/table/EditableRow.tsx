@@ -47,7 +47,7 @@ export const Td = ({
 				borderColor: "var(--accent-3)",
 				borderStyle: "solid",
 				display: "flex",
-				padding: "4px 6px",
+				padding: "6px 6px 2px",
 				minHeight: "32px",
 				width,
 				cursor: onClick ? "pointer" : "default",

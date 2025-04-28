@@ -42,7 +42,7 @@ function RowChangeRow({ rowKey, rowChange, tableName }: { rowKey: RowKey; rowCha
 		case "create":
 			return (
 				<>
-					Created row in "{tableName}" <pre>{JSON.stringify(rowChange.value, null, 2)}</pre>
+					Create row in "{tableName}" {JSON.stringify(rowChange.value, null, 2)}
 				</>
 			)
 		case "delete":
@@ -109,18 +109,18 @@ export const StagedMigrationsSidebar = ({ showSidebar }: { showSidebar: boolean 
 			style={{
 				borderRight: "1px solid var(--gray-4)",
 				background: "var(--gray-2)",
-				opacity: 0.9,
+				opacity: 0.94,
 				zIndex: 100,
 				height: isEmpty ? 0 : 240,
 				transition: 'height 0.3s ease-in-out',
 			}}
 		>
-			<Box pt="10px" pb="9px">
-				<Text size="2">
+			<Box pt="15px">
+				<Text>
 					Staged Migrations
 				</Text>
 			</Box>
-			<Box pb="2">
+			<Box>
 				<Text size="2" className="div">
 					<ul>
 						{contractChangesets.map((changeset, index) => (
@@ -130,17 +130,17 @@ export const StagedMigrationsSidebar = ({ showSidebar }: { showSidebar: boolean 
 						))}
 						{rowChangesets.map(({ tableName, row, rowChange }, index) => (
 							<li key={index}>
-								<RowChangeRow rowKey={row} rowChange={rowChange} tableName={tableName} />
-								&nbsp;
-								[<a
-									href="#"
-									onClick={(e) => {
-										e.preventDefault()
-										restoreRowChange(tableName, row)
-									}}
-								>
-									x
-								</a>]
+								<pre>
+									<RowChangeRow rowKey={row} rowChange={rowChange} tableName={tableName} />&nbsp;[<a
+										href="#"
+										onClick={(e) => {
+											e.preventDefault()
+											restoreRowChange(tableName, row)
+										}}
+									>
+										x
+									</a>]
+								</pre>
 							</li>
 						))}
 					</ul>
@@ -151,7 +151,7 @@ export const StagedMigrationsSidebar = ({ showSidebar }: { showSidebar: boolean 
 				<Box>
 					<Box>
 						<Box px="4" pt="1" pb="4">
-							<Box mt="4" pt="1">
+							<Box>
 								<Button
 									size="2"
 									variant="solid"
