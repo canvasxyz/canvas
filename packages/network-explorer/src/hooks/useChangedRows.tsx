@@ -22,7 +22,7 @@ export const useChangedRows = () => {
 		const tableRows = changedRows.get(tableName) || ImmutableMap()
 		const newTableRows = tableRows.set(encodeRowKey(rowKey), rowChange)
 		setChangedRows(changedRows.set(tableName, newTableRows))
-	}, [])
+	}, [changedRows])
 
 	const restoreRowChange = useCallback((tableName: string, rowKey: string[]) => {
 		const tableRows = changedRows.get(tableName) || ImmutableMap()
@@ -32,7 +32,7 @@ export const useChangedRows = () => {
 		} else {
 			setChangedRows(changedRows.set(tableName, newTableRows))
 		}
-	}, [])
+	}, [changedRows])
 
 	const clearRowChanges = useCallback(() => {
 		setChangedRows(ImmutableMap())
