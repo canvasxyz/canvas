@@ -264,7 +264,7 @@ export const Table = <T,>({
 					<LuExpand />
 				</Button>
 			</Flex>
-			<Box overflowX="scroll" flexGrow="1">
+			<Box overflowX="scroll" flexGrow="1" pb={(tableChangedRows.size > 0 || tableNewRows.size > 0) ? "60vh" : "0"}>
 				<Text size="2">
 					<TableElement>
 						<Thead>

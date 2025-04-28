@@ -37,7 +37,7 @@ function ChangesetMigrationRow({ changeset }: { changeset: TableChange }) {
 
 function RowChangeRow({ rowKey, rowChange, tableName }: { rowKey: RowKey; rowChange: RowChange; tableName: string }) {
 	const formattedRowKey = rowKey.length === 1 ? rowKey[0] : encodeRowKey(rowKey)
-	
+
 	switch (rowChange.type) {
 		case "create":
 			return (
@@ -111,14 +111,12 @@ export const StagedMigrationsSidebar = ({ showSidebar }: { showSidebar: boolean 
 				background: "var(--gray-2)",
 				opacity: 0.94,
 				zIndex: 100,
-				height: isEmpty ? 0 : 240,
-				transition: 'height 0.3s ease-in-out',
+				height: isEmpty ? 0 : undefined,
+				transition: "height 0.3s ease-in-out",
 			}}
 		>
 			<Box pt="15px">
-				<Text>
-					Staged Migrations
-				</Text>
+				<Text>Staged Migrations</Text>
 			</Box>
 			<Box>
 				<Text size="2" className="div">
@@ -131,7 +129,9 @@ export const StagedMigrationsSidebar = ({ showSidebar }: { showSidebar: boolean 
 						{rowChangesets.map(({ tableName, row, rowChange }, index) => (
 							<li key={index}>
 								<pre>
-									<RowChangeRow rowKey={row} rowChange={rowChange} tableName={tableName} />&nbsp;[<a
+									<RowChangeRow rowKey={row} rowChange={rowChange} tableName={tableName} />
+									&nbsp;[
+									<a
 										href="#"
 										onClick={(e) => {
 											e.preventDefault()
@@ -139,7 +139,8 @@ export const StagedMigrationsSidebar = ({ showSidebar }: { showSidebar: boolean 
 										}}
 									>
 										x
-									</a>]
+									</a>
+									]
 								</pre>
 							</li>
 						))}
@@ -149,7 +150,7 @@ export const StagedMigrationsSidebar = ({ showSidebar }: { showSidebar: boolean 
 
 			{(contractChangesets.length > 0 || changedRows.size > 0 || newRows.size > 0) && contractData && (
 				<Box>
-					<Box>
+					<Box pb="2">
 						<Box px="4" pt="1" pb="4">
 							<Box>
 								<Button
@@ -173,9 +174,6 @@ export const StagedMigrationsSidebar = ({ showSidebar }: { showSidebar: boolean 
 								>
 									Cancel
 								</Button>
-								<Box mt="1" ml="3" display="inline-block">
-									<Text size="2">Admin: {contractData.admin}</Text>
-								</Box>
 							</Box>
 
 							<Box mt="4">
@@ -188,7 +186,7 @@ export const StagedMigrationsSidebar = ({ showSidebar }: { showSidebar: boolean 
 											setMigrationIncludesSnapshot(value)
 										}}
 									/>
-										<Text size="2" style={{ position: "relative", top: "-4px", left: "6px" }}>
+									<Text size="2" style={{ position: "relative", top: "-4px", left: "6px" }}>
 										Retain snapshot
 									</Text>
 								</Label>
@@ -201,6 +199,10 @@ export const StagedMigrationsSidebar = ({ showSidebar }: { showSidebar: boolean 
 										? "in-memory. Changes will be lost when the explorer server restarts."
 										: "on disk. Changes will be persisted on the explorer server."}
 								</Text>
+							</Box>
+
+							<Box mt="1">
+								<Text size="2">Admin: {contractData.admin}</Text>
 							</Box>
 						</Box>
 					</Box>
