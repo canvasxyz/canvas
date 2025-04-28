@@ -9,6 +9,7 @@ import useCursorStack from "../hooks/useCursorStack.js"
 import { WhereCondition } from "@canvas-js/modeldb"
 import { useApplicationData } from "../hooks/useApplicationData.js"
 import { useSearchFilters } from "../hooks/useSearchFilters.js"
+import { usePageTitle } from "../hooks/usePageTitle.js"
 
 export type Column = {
 	name: string
@@ -56,6 +57,7 @@ export const Table = <T,>({
 	defaultSortColumn: string
 	defaultSortDirection: "desc" | "asc"
 }) => {
+	usePageTitle(`${tableName} | Application Explorer`)
 	const applicationData = useApplicationData()
 
 	const [columnFilters, setColumnFilters] = useSearchFilters(
@@ -134,7 +136,6 @@ export const Table = <T,>({
 		// invalidate the settings
 		setColumnVisibility({})
 		setSorting([])
-		setColumnFilters([])
 		clearCursors()
 	}, [tableName])
 

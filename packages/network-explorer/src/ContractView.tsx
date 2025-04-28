@@ -10,6 +10,7 @@ import { Editor } from "./components/Editor.js"
 import { SiweMessage } from "siwe"
 import { getAddress } from "ethers"
 import { BASE_URL } from "./utils.js"
+import { usePageTitle } from "./hooks/usePageTitle.js"
 
 // Define a localStorage key for unsaved changes
 const UNSAVED_CHANGES_KEY = "contract-editor-unsaved-changes"
@@ -46,6 +47,8 @@ const ChangesetMigrationRow = ({ change: c }: { change: Changeset }) => {
 }
 
 export const ContractView = () => {
+	usePageTitle("Contract | Application Explorer")
+
 	const contractData = useContractData()
 	const applicationData = useApplicationData()
 

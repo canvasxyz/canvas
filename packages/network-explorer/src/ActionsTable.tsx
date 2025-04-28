@@ -1,7 +1,7 @@
 import { ColumnDef } from "@tanstack/react-table"
 import { Table } from "./components/Table.js"
 import { useApplicationData } from "./hooks/useApplicationData.js"
-
+import { usePageTitle } from "./hooks/usePageTitle.js"
 // special case of Table where the name field options are based on data from the API
 export const ActionsTable = ({
 	showSidebar,
@@ -10,6 +10,8 @@ export const ActionsTable = ({
 	showSidebar: boolean
 	setShowSidebar: (showSidebar: boolean) => void
 }) => {
+	usePageTitle("$actions | Application Explorer")
+
 	const applicationData = useApplicationData()
 
 	const tableName = "$actions"
