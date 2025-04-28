@@ -2,8 +2,8 @@ import type { MessageType, SessionSigner } from "@canvas-js/interfaces"
 
 import { Action } from "@canvas-js/interfaces"
 import { ModelValue, PropertyValue, validateModelValue, updateModelValue, mergeModelValue } from "@canvas-js/modeldb"
-import { AbstractGossipLog, SignedMessage, MessageId } from "@canvas-js/gossiplog"
-import { assert, mapValues } from "@canvas-js/utils"
+import { AbstractGossipLog, SignedMessage } from "@canvas-js/gossiplog"
+import { assert } from "@canvas-js/utils"
 
 import { decodeRecordValue, getRecordId } from "./utils.js"
 
@@ -25,7 +25,7 @@ export class ExecutionContext extends View {
 		public readonly signedMessage: SignedMessage<Action>,
 		public readonly signer: SessionSigner,
 	) {
-		super(messageLog, signedMessage.message.parents)
+		super(messageLog, signedMessage.parents)
 	}
 
 	public get id() {

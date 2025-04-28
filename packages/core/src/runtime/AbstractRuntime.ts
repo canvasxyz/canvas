@@ -129,7 +129,7 @@ export abstract class AbstractRuntime {
 	protected readonly log = logger("canvas:runtime")
 
 	protected constructor(public readonly models: ModelSchema) {
-		const { schema, rules } = extractRulesFromModelSchema(models);
+		const { schema, rules } = extractRulesFromModelSchema(models)
 
 		this.rules = rules
 		this.generatedActions = generateActionsFromRules(rules, models)
@@ -513,8 +513,8 @@ export abstract class AbstractRuntime {
 		}
 
 		if (revertEffects.size > 0) {
-			const [_, heads] = await messageLog.getClock()
-			const currentView = new View(messageLog, heads)
+			const currentHeads = await messageLog.getHeads()
+			const currentView = new View(messageLog, currentHeads)
 
 			for (const effectId of revertEffects) {
 				this.log.trace("checking for values currently referencing reverted effect %s", effectId)

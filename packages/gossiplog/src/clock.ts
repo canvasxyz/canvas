@@ -1,28 +1,5 @@
 import { assert } from "@canvas-js/utils"
 
-// const N1 = 1 << 7
-// const N2 = 1 << 14
-// const N3 = 1 << 21
-// const N4 = 1 << 28
-// const N5 = 1 << 35
-// const N6 = 1 << 42
-// const N7 = 1 << 49
-// const N8 = 1 << 56
-// const N9 = 1 << 63
-
-// export function encodingLength(value: number) {
-// 	if (value < N1) return 1
-// 	if (value < N2) return 2
-// 	if (value < N3) return 3
-// 	if (value < N4) return 4
-// 	if (value < N5) return 5
-// 	if (value < N6) return 6
-// 	if (value < N7) return 7
-// 	if (value < N8) return 8
-// 	if (value < N9) return 9
-// 	return 10
-// }
-
 export function encodeClock(key: Uint8Array, clock: number): number {
 	assert(key.byteLength >= 8)
 	assert(clock <= Number.MAX_SAFE_INTEGER)

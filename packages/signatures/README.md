@@ -127,9 +127,9 @@ type Eip712SessionData = {
 Once a message has been signed, we need another serialization format to use for storing the signature and message together in the log, for gossiping over libp2p, and for sending over the wire during merkle sync. For these, we use a compact tuple representation encoded with dag-cbor.
 
 ```ts
-export type SignatureTuple = [codec: string, publicKey: string, signature: Uint8Array]
+type SignatureTuple = [codec: string, publicKey: string, signature: Uint8Array]
 
-export type MessageTuple = [
+type MessageTuple = [
   signature: SignatureTuple,
   topic: string,
   clock: number,

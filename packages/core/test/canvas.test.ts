@@ -83,17 +83,17 @@ test("apply an action and read a record from the database", async (t) => {
 	const value = await app.db.get("posts", postId)
 	t.is(value?.content, "hello")
 
-	const clock = await app.messageLog.getClock()
-	t.is(clock[0], 3)
+	const [clock] = await app.messageLog.getClock()
+	t.is(clock, 3)
 
 	const { id: id2 } = await app.actions.createPost("bumping this thread again", true, {})
 	t.log(`applied action ${id2}`)
-	const clock2 = await app.messageLog.getClock()
-	t.is(clock2[0], 4)
+	const [clock2] = await app.messageLog.getClock()
+	t.is(clock2, 4)
 
 	const { id: id3 } = await app.actions.updatePost(postId, "update", false, {})
-	const clock3 = await app.messageLog.getClock()
-	t.is(clock3[0], 5)
+	const [clock3] = await app.messageLog.getClock()
+	t.is(clock3, 5)
 })
 
 test("create and delete a post", async (t) => {

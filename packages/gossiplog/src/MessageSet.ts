@@ -1,4 +1,5 @@
 import * as cbor from "microcbor"
+import { signalInvalidType } from "@canvas-js/utils"
 
 import { MessageId } from "./MessageId.js"
 
@@ -9,9 +10,18 @@ export class MessageSet {
 	}
 
 	#map = new Map<string, MessageId>()
-	public constructor(entries?: Iterable<MessageId>) {
+
+	public constructor(entries?: Iterable<MessageId | string | Uint8Array>) {
 		for (const messageId of entries ?? []) {
-			this.add(messageId)
+			if (messageId instanceof MessageId) {
+				this.add(messageId)
+			} else if (messageId instanceof Uint8Array) {
+				this.add(MessageId.decode(messageId))
+			} else if (typeof messageId === "string") {
+				this.add(MessageId.encode(messageId))
+			} else {
+				signalInvalidType(messageId)
+			}
 		}
 	}
 
@@ -36,6 +46,7 @@ export class MessageSet {
 		for (const messageId of this.#map.values()) {
 			links.push(messageId.key)
 		}
+
 		return cbor.encode(links)
 	}
 }

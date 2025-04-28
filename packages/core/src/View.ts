@@ -2,7 +2,7 @@ import { logger } from "@libp2p/logger"
 import type { MessageType } from "@canvas-js/interfaces"
 
 import { ModelValue, PrimaryKeyValue } from "@canvas-js/modeldb"
-import { AbstractGossipLog, MessageId, MIN_MESSAGE_ID } from "@canvas-js/gossiplog"
+import { AbstractGossipLog, MessageId, MessageSet, MIN_MESSAGE_ID } from "@canvas-js/gossiplog"
 import { assert } from "@canvas-js/utils"
 
 import { RevertRecord, WriteRecord } from "./runtime/AbstractRuntime.js"
@@ -15,15 +15,15 @@ export type TransactionalRead<T extends ModelValue = ModelValue> = {
 }
 
 export class View {
-	public readonly root: MessageId[]
+	public readonly root: MessageSet
 
 	protected readonly log = logger("canvas:runtime:context")
 	protected readonly rootIds: string[]
 	protected readonly greatestRoot: string
 
-	constructor(public readonly messageLog: AbstractGossipLog<MessageType>, root: string[] | MessageId[]) {
-		this.root = root.map((id) => (typeof id === "string" ? MessageId.encode(id) : id))
-		this.rootIds = this.root.map((id) => id.toString())
+	constructor(public readonly messageLog: AbstractGossipLog<MessageType>, root: string[] | MessageId[] | MessageSet) {
+		this.root = root instanceof MessageSet ? root : new MessageSet(root)
+		this.rootIds = [...root].map((id) => id.toString())
 		this.rootIds.sort()
 		this.greatestRoot = this.rootIds[this.rootIds.length - 1]
 	}
@@ -51,7 +51,6 @@ export class View {
 
 		// this iterates backward over the greatest element of each conflict set
 		// and returns the value of the first non-reverted write.
-		// eslint-disable-next-line no-constant-condition
 		while (true) {
 			let isReverted = reverted?.has(messageId)
 			isReverted ??= await this.isReverted(messageId)
@@ -91,7 +90,7 @@ export class View {
 
 	/** this returns the greatest element of the most recent conflict set, not considering revert status */
 	public async getLatestConflictSet(recordId: string): Promise<[csx: number | null, greatestElementId: string | null]> {
-		this.log.trace("getting latest csx for record %s w/r/t roots", recordId, this.rootIds)
+		this.log.trace("getting latest csx for record %s w/r/t roots %o", recordId, this.rootIds)
 
 		type Write = { record_id: string; message_id: string; csx: number | null }
 
@@ -129,7 +128,6 @@ export class View {
 		// of base write's conflict set that are also ancestors, since they
 		// would be members of a greater conflict set
 
-		// eslint-disable-next-line no-constant-condition
 		while (true) {
 			const next = await this.getGreatestElement(recordId, baseWrite.csx + 1)
 			this.log.trace("checking next CS %d and got id %s", baseWrite.csx + 1, next)

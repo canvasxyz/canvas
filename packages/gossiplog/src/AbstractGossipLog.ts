@@ -25,10 +25,9 @@ import { namespace, version } from "#migrations"
 
 import { SyncSnapshot } from "./interface.js"
 import { AncestorIndex } from "./AncestorIndex.js"
-import { MessageSource, SignedMessage } from "./SignedMessage.js"
 import { MessageSet } from "./MessageSet.js"
-import { MessageId, decodeId, encodeId, messageIdPattern } from "./MessageId.js"
-import { getNextClock } from "./schema.js"
+import { MessageId, decodeId, messageIdPattern } from "./MessageId.js"
+import { MessageSource, SignedMessage, getNextClock } from "./SignedMessage.js"
 import { gossiplogTopicPattern } from "./utils.js"
 
 export type GossipLogConsumer<Payload = unknown, Result = any> = (
@@ -289,10 +288,15 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		return signedMessage
 	}
 
+	public async getHeads(): Promise<MessageSet> {
+		const heads = await this.db.getAll<{ id: string }>("$heads")
+		return new MessageSet(heads.map((head) => MessageId.encode(head.id)))
+	}
+
 	public async getClock(): Promise<[clock: number, heads: string[]]> {
 		const heads = await this.db.getAll<{ id: string }>("$heads")
 		const ids = heads.map(({ id }) => id)
-		const clock = getNextClock(ids.map(encodeId))
+		const clock = getNextClock(ids)
 		return [clock, ids]
 	}
 
@@ -457,18 +461,16 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 	}
 
 	public async isAncestor(
-		root: string | string[] | MessageId | MessageId[],
+		root: string | string[] | MessageId | MessageId[] | MessageSet,
 		ancestor: string | MessageId,
 	): Promise<boolean> {
-		const ids = Array.isArray(root) ? root : [root]
 		const visited = new MessageSet()
+		const ids = root instanceof MessageSet ? root : Array.isArray(root) ? root : [root]
+		const ancestorId = typeof ancestor === "string" ? MessageId.encode(ancestor) : ancestor
 		for (const id of ids) {
-			const isAncestor = await this.ancestorIndex.isAncestor(
-				typeof id === "string" ? MessageId.encode(id) : id,
-				typeof ancestor === "string" ? MessageId.encode(ancestor) : ancestor,
-				visited,
-			)
-
+			const rootId = typeof id === "string" ? MessageId.encode(id) : id
+			this.log.trace("isAncestor %s ?-> %s", rootId.clock, rootId.id, ancestorId.clock, ancestorId.id)
+			const isAncestor = await this.ancestorIndex.isAncestor(rootId, ancestorId, visited)
 			if (isAncestor) {
 				return true
 			}
