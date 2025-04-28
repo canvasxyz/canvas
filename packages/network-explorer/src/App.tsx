@@ -10,7 +10,7 @@ import { LandingPage } from "./LandingPage.js"
 import { ModelTable } from "./ModelTable.js"
 import { ActionsTable } from "./ActionsTable.js"
 import { ContractView } from "./ContractView.js"
-import { StagedMigrationsSidebar } from "./components/StagedMigrationsSidebar.js"
+import { StagedMigrationsBottomSheet } from "./components/StagedMigrationsBottomSheet.js"
 
 export const App = () => {
 	const [showSidebar, setShowSidebar] = useState(true)
@@ -81,7 +81,7 @@ export const App = () => {
 					</Routes>
 				</Box>
 			</Box>
-			{showSidebar && <StagedMigrationsSidebar showSidebar={showSidebar} />}
+			{showSidebar && <StagedMigrationsBottomSheet showSidebar={showSidebar} />}
 		</Flex>
 	)
 }

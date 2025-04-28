@@ -80,7 +80,7 @@ function flattenRowChanges(
 	return flattened
 }
 
-export const StagedMigrationsSidebar = ({ showSidebar }: { showSidebar: boolean }) => {
+export const StagedMigrationsBottomSheet = ({ showSidebar }: { showSidebar: boolean }) => {
 	const contractData = useContractData()
 	const {
 		contractChangesets,
@@ -93,10 +93,11 @@ export const StagedMigrationsSidebar = ({ showSidebar }: { showSidebar: boolean 
 		migrationIncludesSnapshot,
 		setMigrationIncludesSnapshot,
 		newRows,
+		newContract,
 	} = useStagedMigrations()
 
 	const rowChangesets = flattenRowChanges(changedRows, newRows)
-	const isEmpty = contractChangesets.length === 0 && rowChangesets.length === 0
+	const isEmpty = contractChangesets.length === 0 && rowChangesets.length === 0 && contractChangesets.length === 0 && !newContract
 
 	return (
 		<Box
@@ -121,6 +122,9 @@ export const StagedMigrationsSidebar = ({ showSidebar }: { showSidebar: boolean 
 			<Box>
 				<Text size="2" className="div">
 					<ul>
+						{newContract && <li>
+							Update contract ({contractData?.originalContract.length} bytes &rarr; {newContract.length} bytes)
+						</li>}
 						{contractChangesets.map((changeset, index) => (
 							<li key={index}>
 								<ChangesetMigrationRow changeset={changeset} />
@@ -148,7 +152,7 @@ export const StagedMigrationsSidebar = ({ showSidebar }: { showSidebar: boolean 
 				</Text>
 			</Box>
 
-			{(contractChangesets.length > 0 || changedRows.size > 0 || newRows.size > 0) && contractData && (
+			{(contractChangesets.length > 0 || changedRows.size > 0 || newRows.size > 0 || newContract) && contractData && (
 				<Box>
 					<Box pb="2">
 						<Box px="4" pt="1" pb="4">
