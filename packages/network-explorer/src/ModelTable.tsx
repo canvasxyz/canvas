@@ -48,7 +48,10 @@ export const ModelTable = ({
 					columnDef.meta.editCell = EditableIntegerCell
 				}
 
-				if (property.kind === "primitive" && property.type === "string" && !modelDefinition.primaryKey.includes(property.name)) {
+				if (
+					property.kind === "primitive" &&
+					property.type === "string" /* && !modelDefinition.primaryKey.includes(property.name) */
+				) {
 					columnDef.meta.editCell = EditableTextCell
 				}
 

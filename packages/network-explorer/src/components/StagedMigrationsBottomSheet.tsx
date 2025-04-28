@@ -86,8 +86,6 @@ export const StagedMigrationsBottomSheet = ({ showSidebar }: { showSidebar: bool
 		contractChangesets,
 		cancelMigrations,
 		runMigrations,
-		waitingForCommit,
-		commitCompleted,
 		changedRows,
 		restoreRowChange,
 		migrationIncludesSnapshot,
@@ -97,7 +95,8 @@ export const StagedMigrationsBottomSheet = ({ showSidebar }: { showSidebar: bool
 	} = useStagedMigrations()
 
 	const rowChangesets = flattenRowChanges(changedRows, newRows)
-	const isEmpty = contractChangesets.length === 0 && rowChangesets.length === 0 && contractChangesets.length === 0 && !newContract
+	const isEmpty =
+		contractChangesets.length === 0 && rowChangesets.length === 0 && contractChangesets.length === 0 && !newContract
 
 	return (
 		<Box
@@ -122,9 +121,11 @@ export const StagedMigrationsBottomSheet = ({ showSidebar }: { showSidebar: bool
 			<Box>
 				<Text size="2" className="div">
 					<ul>
-						{newContract && <li>
-							Update contract ({contractData?.originalContract.length} bytes &rarr; {newContract.length} bytes)
-						</li>}
+						{newContract && (
+							<li>
+								Update contract ({contractData?.originalContract.length} bytes &rarr; {newContract.length} bytes)
+							</li>
+						)}
 						{contractChangesets.map((changeset, index) => (
 							<li key={index}>
 								<ChangesetMigrationRow changeset={changeset} />
@@ -209,18 +210,6 @@ export const StagedMigrationsBottomSheet = ({ showSidebar }: { showSidebar: bool
 							</Box>
 						</Box>
 					</Box>
-				</Box>
-			)}
-
-			{waitingForCommit && (
-				<Box mt="4">
-					<Text size="2">Waiting for server...</Text>
-				</Box>
-			)}
-
-			{commitCompleted && (
-				<Box mt="4">
-					<Text size="2">Changes committed!</Text>
 				</Box>
 			)}
 		</Box>

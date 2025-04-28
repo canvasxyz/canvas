@@ -22,6 +22,7 @@ export const ContractView = () => {
 		newContract,
 		hasRestoredContent,
 		setHasRestoredContent,
+		waitingForCommit,
 	} = useStagedMigrations()
 
 	const [error, setError] = useState<string>()
@@ -181,6 +182,11 @@ export const ContractView = () => {
 						</>
 					)}
 				</>
+			)}
+			{waitingForCommit && (
+				<Box mt="4">
+					<Text size="2">Waiting for server...</Text>
+				</Box>
 			)}
 			<br />
 		</Box>
