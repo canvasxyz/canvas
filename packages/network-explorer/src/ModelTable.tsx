@@ -38,7 +38,6 @@ export const ModelTable = ({
 				}
 				columnDef.meta = {}
 
-				console.log(property)
 				if (property.kind === "primitive" && property.type === "bytes") {
 					columnDef.cell = BinaryCellData
 				}
