@@ -203,7 +203,7 @@ export const Table = <T,>({
 
 	return (
 		<Flex direction="column" maxWidth={showSidebar ? "calc(100vw - 200px)" : "100%"} flexGrow="1">
-			<Flex style={{ borderBottom: "1px solid var(--gray-3)" }} align="center" gap="2" p="2" py="3">
+			<Flex position="fixed" style={{ zIndex: 5, background: "var(--gray-1)", width: showSidebar ? "calc(100vw - 200px)" : "100%", borderBottom: "1px solid var(--gray-3)" }} align="center" gap="2" p="2" py="3">
 				{tableHasFilters && (
 					<FiltersDropdown
 						tanStackTable={tanStackTable}
@@ -264,7 +264,7 @@ export const Table = <T,>({
 					<LuExpand />
 				</Button>
 			</Flex>
-			<Box overflowX="scroll" flexGrow="1" pb={(tableChangedRows.size > 0 || tableNewRows.size > 0) ? "60vh" : "0"}>
+			<Box pt="56px" overflowX="scroll" flexGrow="1" pb={(tableChangedRows.size > 0 || tableNewRows.size > 0) ? "60vh" : "0"}>
 				<Text size="2">
 					<TableElement>
 						<Thead>
