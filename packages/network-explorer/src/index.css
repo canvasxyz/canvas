@@ -31,7 +31,11 @@ body {
 .radix-themes button,
 .radix-themes h1,
 .radix-themes h2,
-.radix-themes h3 {
+.radix-themes h3,
+.radix-themes h4,
+.radix-themes h5,
+.radix-themes h6,
+.radix-themes pre {
 	font-family: "Geist Mono", monospace;
 }
 

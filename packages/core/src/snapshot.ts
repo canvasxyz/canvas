@@ -38,7 +38,7 @@ export type MakeOptionalColumnChange = {
 	column: string
 }
 
-export type Change =
+export type TableChange =
 	| CreateTableChange
 	| DropTableChange
 	| AddColumnChange
@@ -65,6 +65,25 @@ export function hashSnapshot(snapshot: Snapshot): string {
 	return bytesToHex(hash).slice(0, 16)
 }
 
+export type RowChange =
+	| {
+			type: "delete"
+	  }
+	| {
+			type: "create"
+			value: ModelValue
+	  }
+	| {
+			type: "update"
+			value: ModelValue
+	  }
+
+export type CreateSnapshotArgs = {
+	changesets?: TableChange[]
+	changedRows?: Record<string, Record<string, RowChange>>
+	newRows?: Record<string, ModelValue[]>
+}
+
 /**
  * Create a `Snapshot` of the application's current database state.
  *
@@ -73,8 +92,12 @@ export function hashSnapshot(snapshot: Snapshot): string {
  */
 export async function createSnapshot<T extends Contract<any>>(
 	app: Canvas,
-	changesets: Change[] = [],
+	changes?: CreateSnapshotArgs,
 ): Promise<Snapshot> {
+	const changesets = changes?.changesets ?? []
+	const changedRows = changes?.changedRows ?? {}
+	const newRows = changes?.newRows ?? {}
+
 	const createdTables = changesets.filter((ch) => ch.change === "create_table").map((ch) => ch.table)
 	const droppedTables = changesets.filter((ch) => ch.change === "drop_table").map((ch) => ch.table)
 	const removedColumns: Record<string, string[]> = {}
@@ -107,7 +130,28 @@ export async function createSnapshot<T extends Contract<any>>(
 		}
 
 		models[modelName] = []
+
+		const modelChangedRows = changedRows[modelName] ?? {}
+
 		for await (const row of app.db.iterate(modelName)) {
+			// check if the row is deleted, if so then skip it
+			const rowKey = JSON.stringify(modelSchema.primaryKey.map((key) => row[key])) as string
+
+			const rowChange = modelChangedRows[rowKey]
+			if (rowChange) {
+				// skip deleted rows
+				if (rowChange.type === "delete") {
+					continue
+				}
+
+				// update rows
+				if (rowChange.type === "update") {
+					for (const key of Object.keys(rowChange.value)) {
+						row[key] = rowChange.value[key]
+					}
+				}
+			}
+
 			if (addedColumns[modelName]) {
 				for (const key of Object.keys(addedColumns[modelName])) {
 					row[key] = null
@@ -122,6 +166,11 @@ export async function createSnapshot<T extends Contract<any>>(
 
 			models[modelName].push(cbor.encode(row))
 		}
+
+		// add created rows
+		for (const newRow of Object.values(newRows[modelName] ?? [])) {
+			models[modelName].push(cbor.encode(newRow))
+		}
 	}
 
 	for (const table of createdTables) {
@@ -132,7 +181,7 @@ export async function createSnapshot<T extends Contract<any>>(
 }
 
 export const generateChangesets = (before: ModelSchema, after: ModelSchema) => {
-	const changesets: Change[] = []
+	const changesets: TableChange[] = []
 
 	const addedTables = Object.keys(after).filter((table) => !(table in before))
 	addedTables.forEach((table) => {

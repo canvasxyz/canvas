@@ -1,4 +1,4 @@
-import { ColumnDef } from "@tanstack/react-table"
+import { ColumnDef, Row } from "@tanstack/react-table"
 import { BinaryCellData } from "./components/BinaryCellData.js"
 
 export type TableDef = {
@@ -7,6 +7,7 @@ export type TableDef = {
 	defaultSortColumn: string
 	defaultSortDirection: "desc" | "asc"
 	enableDownload?: boolean
+	getRowKey: (row: Row<any>) => string[]
 }
 
 export const tables: TableDef[] = [
@@ -39,6 +40,7 @@ export const tables: TableDef[] = [
 				enableColumnFilter: false,
 			},
 		],
+		getRowKey: (row) => [row.original.key],
 	},
 	{
 		tableName: "$dids",
@@ -53,6 +55,7 @@ export const tables: TableDef[] = [
 				enableColumnFilter: false,
 			},
 		],
+		getRowKey: (row) => [row.original.did],
 	},
 	{
 		tableName: "$writes",
@@ -89,6 +92,7 @@ export const tables: TableDef[] = [
 				enableColumnFilter: false,
 			},
 		],
+		getRowKey: (row) => [row.original.record_id],
 	},
 	{
 		tableName: "$reads",
@@ -124,6 +128,7 @@ export const tables: TableDef[] = [
 				enableColumnFilter: false,
 			},
 		],
+		getRowKey: (row) => [row.original.record_id],
 	},
 	{
 		tableName: "$reverts",
@@ -145,6 +150,7 @@ export const tables: TableDef[] = [
 				enableColumnFilter: false,
 			},
 		],
+		getRowKey: (row) => [row.original.effect_id],
 	},
 	{
 		tableName: "$records",
@@ -180,6 +186,7 @@ export const tables: TableDef[] = [
 				enableColumnFilter: false,
 			},
 		],
+		getRowKey: (row) => [row.original.record_id],
 	},
 	{
 		tableName: "$heads",
@@ -194,6 +201,7 @@ export const tables: TableDef[] = [
 				enableColumnFilter: false,
 			},
 		],
+		getRowKey: (row) => [row.original.id],
 	},
 	{
 		tableName: "$messages",
@@ -224,6 +232,7 @@ export const tables: TableDef[] = [
 				enableColumnFilter: false,
 			},
 		],
+		getRowKey: (row) => [row.original.id],
 	},
 	{
 		tableName: "$sessions",
@@ -262,5 +271,6 @@ export const tables: TableDef[] = [
 				enableColumnFilter: false,
 			},
 		],
+		getRowKey: (row) => [row.original.message_id],
 	},
 ]

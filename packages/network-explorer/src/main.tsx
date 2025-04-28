@@ -10,6 +10,7 @@ import { ApplicationDataProvider } from "./hooks/useApplicationData.js"
 import { ContractDataProvider } from "./hooks/useContractData.js"
 import { ThemeProvider, useTheme } from "./hooks/useTheme.js"
 import { ThemeToggle } from "./components/ThemeToggle.js"
+import { StagedMigrationsProvider } from "./hooks/useStagedMigrations.js"
 
 function ThemedApp() {
 	const { theme } = useTheme()
@@ -18,8 +19,10 @@ function ThemedApp() {
 		<Theme appearance={theme}>
 			<ApplicationDataProvider>
 				<ContractDataProvider>
-					<ThemeToggle />
-					<App />
+					<StagedMigrationsProvider>
+						<ThemeToggle />
+						<App />
+					</StagedMigrationsProvider>
 				</ContractDataProvider>
 			</ApplicationDataProvider>
 		</Theme>

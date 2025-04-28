@@ -1,5 +1,5 @@
 import { ColumnDef } from "@tanstack/react-table"
-import { Table } from "./components/Table.js"
+import { Table } from "./components/table/Table.js"
 import { useApplicationData } from "./hooks/useApplicationData.js"
 import { usePageTitle } from "./hooks/usePageTitle.js"
 // special case of Table where the name field options are based on data from the API
@@ -64,6 +64,8 @@ export const ActionsTable = ({
 			enableDownload={false}
 			tableName={tableName}
 			defaultColumns={columns}
+			allowEditing={false}
+			getRowKey={(row) => [row.original.message_id]}
 		/>
 	)
 }

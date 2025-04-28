@@ -1,6 +1,9 @@
 import { Navigate, useParams } from "react-router-dom"
-import { Table } from "./components/Table.js"
+import { Table } from "./components/table/Table.js"
 import { useApplicationData } from "./hooks/useApplicationData.js"
+import { BinaryCellData } from "./components/BinaryCellData.js"
+import { ColumnDef } from "@tanstack/react-table"
+import { EditableIntegerCell, EditableTextCell } from "./components/table/EditableCell.js"
 
 export const ModelTable = ({
 	showSidebar,
@@ -24,14 +27,33 @@ export const ModelTable = ({
 			const defaultSortColumn = primaryProperty.name
 			const defaultSortDirection = "asc"
 
-			const defaultColumns = modelDefinition.properties.map((property) => ({
-				header: property.name,
-				accessorKey: property.name,
-				// enable sorting on the primary property
-				enableSorting: property.name === primaryProperty.name,
-				enableColumnFilter: false,
-				size: 320,
-			}))
+			const defaultColumns = modelDefinition.properties.map((property) => {
+				const columnDef: ColumnDef<any> = {
+					header: property.name,
+					accessorKey: property.name,
+					// enable sorting on the primary property
+					enableSorting: property.name === primaryProperty.name,
+					enableColumnFilter: false,
+					size: 320,
+				}
+				columnDef.meta = {}
+
+				if (property.kind === "primitive" && property.type === "bytes") {
+					columnDef.cell = BinaryCellData
+				}
+
+				// right now only allow editing for strings and integers
+				// TODO: add support for other types
+				if (property.kind === "primitive" && property.type === "integer") {
+					columnDef.meta.editCell = EditableIntegerCell
+				}
+
+				if (property.kind === "primitive" && property.type === "string" && !modelDefinition.primaryKey.includes(property.name)) {
+					columnDef.meta.editCell = EditableTextCell
+				}
+
+				return columnDef
+			})
 			return (
 				<Table
 					defaultSortColumn={defaultSortColumn}
@@ -41,6 +63,8 @@ export const ModelTable = ({
 					setShowSidebar={setShowSidebar}
 					tableName={params.model as string}
 					defaultColumns={defaultColumns}
+					allowEditing={true}
+					getRowKey={(row) => [row.original[primaryProperty.name] as string]}
 				/>
 			)
 		} else {
