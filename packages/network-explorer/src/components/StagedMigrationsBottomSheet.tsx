@@ -84,6 +84,7 @@ export const StagedMigrationsBottomSheet = ({ showSidebar }: { showSidebar: bool
 		migrationIncludesSnapshot,
 		setMigrationIncludesSnapshot,
 		newContract,
+		errors,
 	} = useStagedMigrations()
 
 	const rowChangesets = flattenRowChanges(changedRows)
@@ -163,6 +164,13 @@ export const StagedMigrationsBottomSheet = ({ showSidebar }: { showSidebar: bool
 				<Box>
 					<Box pb="2">
 						<Box px="4" pt="1" pb="4">
+							{errors.length > 0 && (
+								<Box pb="2">
+									<Text size="2" color="red">
+										{errors.join("\n")}
+									</Text>
+								</Box>
+							)}
 							<Flex align="center">
 								<Box mr="5" display="inline-block">
 									<Button
@@ -210,7 +218,6 @@ export const StagedMigrationsBottomSheet = ({ showSidebar }: { showSidebar: bool
 									</Text>
 								</Box>
 							</Flex>
-
 							<Box mt="4" style={{ lineHeight: 1.2 }}>
 								<Text size="2">
 									{!migrationIncludesSnapshot
@@ -218,7 +225,6 @@ export const StagedMigrationsBottomSheet = ({ showSidebar }: { showSidebar: bool
 										: "This will restart your application, with existing data compacted into a snapshot."}
 								</Text>
 							</Box>
-
 							<Box mt="2" style={{ lineHeight: 1.2 }}>
 								<Text size="2">
 									{contractData.inMemory

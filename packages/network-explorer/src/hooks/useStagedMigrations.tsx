@@ -87,6 +87,7 @@ const StagedMigrationsContext = createContext<{
 	clearRowChanges: () => void
 	migrationIncludesSnapshot: boolean
 	setMigrationIncludesSnapshot: (migrationIncludesSnapshot: boolean) => void
+	errors: string[]
 }>({
 	contractChangesets: [],
 	cancelMigrations: async () => {},
@@ -106,11 +107,14 @@ const StagedMigrationsContext = createContext<{
 	clearRowChanges: () => {},
 	migrationIncludesSnapshot: false,
 	setMigrationIncludesSnapshot: () => {},
+	errors: [],
 })
 
 export const StagedMigrationsProvider = ({ children }: { children: React.ReactNode }) => {
 	const applicationData = useApplicationData()
 	const contractData = useContractData()
+
+	const [errors, setErrors] = useState<string[]>([])
 
 	const [waitingForCommit, setWaitingForCommit] = useState(false)
 	const [commitCompleted, setCommitCompleted] = useState(false)
@@ -134,6 +138,8 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 		if (changedRows?.size > 0) {
 			setMigrationIncludesSnapshot(true)
 		}
+		// reset errors when changedRows change
+		setErrors([])
 	}, [changedRows])
 
 	// when the contract, added, modified, or deleted rows change, update the changesets
@@ -198,13 +204,22 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 		const modelSchema = app.getSchema()
 		const models = Config.parse(modelSchema)
 
+		const errors: string[] = []
 		for (const model of models.models) {
 			for (const change of (changedRows.get(model.name) || ImmutableMap()).values()) {
 				if (change.type === "update" || change.type === "create") {
-					console.log(model, change.value)
-					validateModelValue(model, change.value)
+					try {
+						validateModelValue(model, change.value)
+					} catch (error: any) {
+						errors.push(error.message)
+					}
 				}
 			}
+		}
+
+		if (errors.length > 0) {
+			setErrors(errors)
+			return
 		}
 
 		const { address, message, signature } = await getSignature(contractData.nonce)
@@ -281,6 +296,7 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 				clearRowChanges,
 				migrationIncludesSnapshot,
 				setMigrationIncludesSnapshot,
+				errors,
 			}}
 		>
 			{children}
