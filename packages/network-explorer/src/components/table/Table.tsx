@@ -323,7 +323,7 @@ export const Table = <T,>({
 							))}
 						</Thead>
 						<Tbody>
-							{tanStackTable.getRowCount() === 0 && <NoneFound />}
+							{tanStackTable.getRowCount() === 0 && tableNewRows.length === 0 && <NoneFound />}
 							{tanStackTable.getRowModel().rows.map((row) => {
 								if (allowEditing) {
 									const rowKey = getRowKey(row)
