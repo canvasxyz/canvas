@@ -1,1 +1,0 @@
-../packages/chain-cosmos/README.md

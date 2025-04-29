@@ -1,1 +1,0 @@
-../packages/chain-near/README.md

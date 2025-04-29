@@ -1,1 +1,0 @@
-../packages/signatures/README.md

@@ -1,1 +1,0 @@
-../packages/chain-ethereum/README.md

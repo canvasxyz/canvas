@@ -1,1 +1,0 @@
-../packages/discovery/README.md

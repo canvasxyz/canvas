@@ -1,1 +1,0 @@
-../packages/gossiplog/README.md

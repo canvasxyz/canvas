@@ -1,1 +1,0 @@
-../packages/chain-atp/README.md
