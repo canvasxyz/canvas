@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react"
-import { Canvas, TableChange, generateChangesets, ModelValue, RowChange } from "@canvas-js/core"
-import { Map as ImmutableMap, List as ImmutableList } from "immutable"
+import { Canvas, TableChange, generateChangesets, RowChange, ModelValue } from "@canvas-js/core"
+import { Map as ImmutableMap } from "immutable"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 import { useContractData } from "../hooks/useContractData.js"
 import { SiweMessage } from "siwe"
@@ -86,8 +86,6 @@ const StagedMigrationsContext = createContext<{
 	clearRowChanges: () => void
 	migrationIncludesSnapshot: boolean
 	setMigrationIncludesSnapshot: (migrationIncludesSnapshot: boolean) => void
-	newRows: ImmutableMap<string, ImmutableList<ModelValue>>
-	setNewRows: (newRows: ImmutableMap<string, ImmutableList<ModelValue>>) => void
 }>({
 	contractChangesets: [],
 	cancelMigrations: async () => {},
@@ -107,8 +105,6 @@ const StagedMigrationsContext = createContext<{
 	clearRowChanges: () => {},
 	migrationIncludesSnapshot: false,
 	setMigrationIncludesSnapshot: () => {},
-	newRows: ImmutableMap(),
-	setNewRows: () => {},
 })
 
 export const StagedMigrationsProvider = ({ children }: { children: React.ReactNode }) => {
@@ -120,8 +116,6 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 	const [migrationIncludesSnapshot, setMigrationIncludesSnapshot] = useState(false)
 
 	const [hasRestoredContent, setHasRestoredContent] = useState(false)
-
-	const [newRows, setNewRows] = useState<ImmutableMap<string, ImmutableList<ModelValue>>>(ImmutableMap())
 
 	const { changedRows, stageRowChange, restoreRowChange, clearRowChanges } = useChangedRows()
 
@@ -135,11 +129,11 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 
 	// Update migrationIncludesSnapshot when changedRows or newRows change
 	useEffect(() => {
-		// If there are any row changes or new rows, force migrationIncludesSnapshot to true
-		if (changedRows?.size > 0 || newRows?.size > 0) {
+		// If there are any row changes, force migrationIncludesSnapshot to true
+		if (changedRows?.size > 0) {
 			setMigrationIncludesSnapshot(true)
 		}
-	}, [changedRows, newRows])
+	}, [changedRows])
 
 	// when the contract, added, modified, or deleted rows change, update the changesets
 
@@ -185,7 +179,7 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 	)
 
 	const runMigrations = async () => {
-		if (!newContract && !contractChangesets && changedRows?.size === 0 && newRows?.size === 0) {
+		if (!newContract && !contractChangesets && changedRows?.size === 0) {
 			throw new Error("No migrations to run")
 		}
 
@@ -196,6 +190,16 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 		const { address, message, signature } = await getSignature(contractData.nonce)
 
 		// Send to API with SIWE data
+
+		const newRows: Record<string, ModelValue[]> = {}
+		for (const [tableName, tableRows] of changedRows.entries()) {
+			for (const [_rowKey, rowChange] of tableRows.entries()) {
+				if (rowChange.type === "create") {
+					newRows[tableName] = newRows[tableName] || []
+					newRows[tableName].push(rowChange.value)
+				}
+			}
+		}
 
 		const response = await fetch(`${BASE_URL}/api/migrate`, {
 			method: "POST",
@@ -209,7 +213,7 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 				address,
 				signature,
 				changedRows: changedRows?.toJSON() || {},
-				newRows: newRows?.toJSON() || {},
+				newRows,
 				includeSnapshot: migrationIncludesSnapshot,
 			}),
 		})
@@ -247,8 +251,7 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 	const cancelMigrations = useCallback(async () => {
 		clearContractChangesets()
 		clearRowChanges()
-		setNewRows(ImmutableMap())
-	}, [clearContractChangesets, clearRowChanges, setNewRows])
+	}, [clearContractChangesets, clearRowChanges])
 
 	return (
 		<StagedMigrationsContext.Provider
@@ -269,8 +272,6 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 				clearRowChanges,
 				migrationIncludesSnapshot,
 				setMigrationIncludesSnapshot,
-				newRows,
-				setNewRows,
 			}}
 		>
 			{children}

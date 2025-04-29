@@ -2,8 +2,8 @@ import React from "react"
 import { Box, Flex, Button, Checkbox, Text } from "@radix-ui/themes"
 import { Label } from "@radix-ui/react-label"
 import { useStagedMigrations } from "../hooks/useStagedMigrations.js"
-import { TableChange, ModelValue, RowChange } from "@canvas-js/core"
-import { Map as ImmutableMap, List as ImmutableList } from "immutable"
+import { TableChange, RowChange } from "@canvas-js/core"
+import { Map as ImmutableMap } from "immutable"
 import { useContractData } from "../hooks/useContractData.js"
 import { decodeRowKey, encodeRowKey, ImmutableRowKey, RowKey } from "../hooks/useChangedRows.js"
 import { HiChevronUp, HiChevronDown } from "react-icons/hi2"
@@ -62,20 +62,11 @@ function RowChangeRow({ rowKey, rowChange, tableName }: { rowKey: RowKey; rowCha
 	}
 }
 
-function flattenRowChanges(
-	rowChanges: ImmutableMap<string, ImmutableMap<ImmutableRowKey, RowChange>>,
-	newRows: ImmutableMap<string, ImmutableList<ModelValue>>,
-) {
+function flattenRowChanges(rowChanges: ImmutableMap<string, ImmutableMap<ImmutableRowKey, RowChange>>) {
 	const flattened = []
 	for (const [tableName, rows] of rowChanges.entries()) {
 		for (const [rowKey, rowChange] of rows.entries()) {
 			flattened.push({ tableName, row: decodeRowKey(rowKey), rowChange })
-		}
-	}
-
-	for (const [tableName, rows] of newRows.entries()) {
-		for (const row of rows) {
-			flattened.push({ tableName, row: [], rowChange: { type: "create" as const, value: row } })
 		}
 	}
 
@@ -92,11 +83,10 @@ export const StagedMigrationsBottomSheet = ({ showSidebar }: { showSidebar: bool
 		restoreRowChange,
 		migrationIncludesSnapshot,
 		setMigrationIncludesSnapshot,
-		newRows,
 		newContract,
 	} = useStagedMigrations()
 
-	const rowChangesets = flattenRowChanges(changedRows, newRows)
+	const rowChangesets = flattenRowChanges(changedRows)
 	const isEmpty =
 		contractChangesets.length === 0 && rowChangesets.length === 0 && contractChangesets.length === 0 && !newContract
 
@@ -169,7 +159,7 @@ export const StagedMigrationsBottomSheet = ({ showSidebar }: { showSidebar: bool
 				</Text>
 			</Box>
 
-			{(contractChangesets.length > 0 || changedRows.size > 0 || newRows.size > 0 || newContract) && contractData && (
+			{(contractChangesets.length > 0 || changedRows.size > 0 || newContract) && contractData && (
 				<Box>
 					<Box pb="2">
 						<Box px="4" pt="1" pb="4">
@@ -202,7 +192,7 @@ export const StagedMigrationsBottomSheet = ({ showSidebar }: { showSidebar: bool
 										<Checkbox
 											id="retain-snapshot"
 											checked={migrationIncludesSnapshot}
-											disabled={changedRows.size > 0 || newRows.size > 0}
+											disabled={changedRows.size > 0}
 											onCheckedChange={(value) => {
 												if (value === "indeterminate") return
 												setMigrationIncludesSnapshot(value)

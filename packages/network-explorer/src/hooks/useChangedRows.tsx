@@ -2,7 +2,7 @@ import { useCallback, useState } from "react"
 import { Map as ImmutableMap } from "immutable"
 import { RowChange } from "@canvas-js/core"
 
-export type RowKey = string[]
+export type RowKey = string[] | string
 export type ImmutableRowKey = string
 
 export function encodeRowKey(rowKey: RowKey): ImmutableRowKey {
@@ -30,7 +30,7 @@ export const useChangedRows = () => {
 	)
 
 	const restoreRowChange = useCallback(
-		(tableName: string, rowKey: string[]) =>
+		(tableName: string, rowKey: RowKey) =>
 			setChangedRows((oldChangedRows) => {
 				const tableRows = changedRows.get(tableName) || ImmutableMap()
 				const newTableRows = tableRows.delete(encodeRowKey(rowKey))
