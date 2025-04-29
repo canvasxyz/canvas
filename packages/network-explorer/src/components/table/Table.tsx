@@ -72,7 +72,7 @@ export const Table = <T,>({
 }) => {
 	usePageTitle(`${tableName} | Application Explorer`)
 	const applicationData = useApplicationData()
-	const { stageRowChange, changedRows } = useStagedMigrations()
+	const { stageRowChange, changedRows, restoreRowChange } = useStagedMigrations()
 	const [columnFilters, setColumnFilters] = useSearchFilters(
 		defaultColumns.filter((col) => col.enableColumnFilter).map((col) => col.header as string),
 	)
@@ -340,10 +340,24 @@ export const Table = <T,>({
 											row={row}
 											stagedValues={stagedValues}
 											setStagedValues={(newValues) => {
-												stageRowChange(tableName, rowKey, {
-													type: "update",
-													value: newValues,
-												})
+												// if the updated values equal the original values, unstage the row
+												let rowIsUnchanged = true
+												const originalValues = row.original as ModelValue
+												for (const key in newValues) {
+													if (newValues[key] !== originalValues[key]) {
+														rowIsUnchanged = false
+														break
+													}
+												}
+
+												if (rowIsUnchanged) {
+													restoreRowChange(tableName, rowKey)
+												} else {
+													stageRowChange(tableName, rowKey, {
+														type: "update",
+														value: newValues,
+													})
+												}
 											}}
 											isStagedDelete={rowChange?.type === "delete"}
 											checked={selectedRows.has(encodedRowKey)}
