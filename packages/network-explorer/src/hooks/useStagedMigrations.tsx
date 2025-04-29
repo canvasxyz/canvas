@@ -1,5 +1,3 @@
-// staged migrations provider
-
 import { createContext, useCallback, useContext, useEffect, useState } from "react"
 import { Canvas, TableChange, generateChangesets, ModelValue, RowChange } from "@canvas-js/core"
 import { Map as ImmutableMap, List as ImmutableList } from "immutable"
@@ -151,6 +149,9 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 			if (!contractData) {
 				throw new Error("Contract data not found")
 			}
+
+			setCommitCompleted(false)
+			setWaitingForCommit(false)
 
 			try {
 				const changesets = await Promise.race([

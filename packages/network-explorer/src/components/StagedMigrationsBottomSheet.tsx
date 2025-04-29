@@ -111,7 +111,7 @@ export const StagedMigrationsBottomSheet = ({ showSidebar }: { showSidebar: bool
 			right="0"
 			px="4"
 			style={{
-				borderRight: "1px solid var(--gray-4)",
+				borderTop: "1px solid var(--gray-4)",
 				background: "var(--gray-2)",
 				opacity: 0.94,
 				zIndex: 100,
@@ -173,7 +173,7 @@ export const StagedMigrationsBottomSheet = ({ showSidebar }: { showSidebar: bool
 				<Box>
 					<Box pb="2">
 						<Box px="4" pt="1" pb="4">
-							<Flex>
+							<Flex align="center">
 								<Box mr="5" display="inline-block">
 									<Button
 										size="2"
@@ -215,7 +215,8 @@ export const StagedMigrationsBottomSheet = ({ showSidebar }: { showSidebar: bool
 								</Box>
 								<Box pt="7px" mr="22px" display="inline-block">
 									<Text size="2" style={{ position: "relative", top: "-4px" }}>
-										Admin: {contractData.admin?.slice(0, 8)}&hellip;{contractData.admin?.slice(contractData.admin?.length - 4)}
+										Admin: {contractData.admin?.slice(0, 8)}&hellip;
+										{contractData.admin?.slice(contractData.admin?.length - 4)}
 									</Text>
 								</Box>
 							</Flex>
@@ -224,7 +225,7 @@ export const StagedMigrationsBottomSheet = ({ showSidebar }: { showSidebar: bool
 								<Text size="2">
 									{!migrationIncludesSnapshot
 										? "This will restart your application, and reapply its action log from scratch."
-										: "This will restart your application with a new topic, starting from a new snapshot."}
+										: "This will restart your application, with existing data compacted into a snapshot."}
 								</Text>
 							</Box>
 

@@ -56,3 +56,7 @@ body {
 	color: var(--gray-10);
 	background-color: var(--color-panel-solid);
 }
+
+.cm-focused {
+  outline: initial !important;
+}

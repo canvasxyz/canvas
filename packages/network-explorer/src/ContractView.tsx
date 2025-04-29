@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { Button, Box, Heading, Text } from "@radix-ui/themes"
+import { Button, Box, Heading, Text, Flex } from "@radix-ui/themes"
 import { EditorState } from "@codemirror/state"
 import { EditorView } from "@codemirror/view"
 import { useContractData } from "./hooks/useContractData.js"
@@ -111,7 +111,7 @@ export const ContractView = () => {
 				<>Loading...</>
 			) : (
 				<>
-					<Box style={{ border: "1px solid var(--gray-6)", borderRadius: "2px", width: "100%" }}>
+					<Box position="relative" style={{ border: "1px solid var(--gray-6)", borderRadius: "2px", width: "100%" }}>
 						{editorInitialValue !== null && (
 							<Editor
 								initialValue={editorInitialValue}
@@ -130,69 +130,58 @@ export const ContractView = () => {
 								}}
 							/>
 						)}
-					</Box>
-
-					{error ? (
-						<Box mt="2">
-							<Text size="2" color="red">
-								{error}
-							</Text>
-						</Box>
-					) : contractChangesets && newContract ? (
-						<Box mt="2">
-							<Text size="2" color="green">
-								Success: Built contract ({editorState?.doc.length} chars)
-							</Text>
-						</Box>
-					) : hasRestoredContent ? (
-						<Box mt="2">
-							<Text size="2" color="blue">
-								Restored unsaved changes from your previous session
-							</Text>
-						</Box>
-					) : (
-						<></>
-					)}
-
-					{contractData?.admin && (
-						<>
-							<Box mt="4">
-								<Button
-									size="2"
-									variant="solid"
-									onClick={(e) => {
-										e.preventDefault()
-										updateChangesets()
-									}}
-								>
-									Build
-								</Button>
-								&nbsp;
-								<Button
-									size="2"
-									variant="outline"
-									color="gray"
-									onClick={(e) => {
-										e.preventDefault()
-										revertToOriginal()
-									}}
-								>
-									Revert to Original
-								</Button>
+						<Flex py="2" px="3" style={{ borderTop: "1px solid var(--gray-6)" }} align="center">
+							<Box pb="3" style={{ position: "relative", top: "6px", flex: 1, lineHeight: 1 }}>
+								<Text size="2">
+									{error ? (
+										<Text color="red">{error}</Text>
+									) : commitCompleted ? (
+										<Text size="2">Changes committed! The application will now restart.</Text>
+									) : waitingForCommit ? (
+										<Text size="2">Waiting for server...</Text>
+									) : contractChangesets && newContract ? (
+										<Text size="2" color="green">
+											Success: Built contract ({editorState?.doc.length} chars)
+										</Text>
+									) : hasRestoredContent ? (
+										<Text size="2" color="blue">
+											Restored unsaved changes from your previous session
+										</Text>
+									) : (
+										<></>
+									)}
+								</Text>
 							</Box>
-						</>
-					)}
+							{contractData?.admin && (
+								<Box display="inline-block">
+									<Button
+										size="2"
+										variant="solid"
+										onClick={(e) => {
+											e.preventDefault()
+											updateChangesets()
+										}}
+									>
+										Build
+									</Button>
+									&nbsp;
+									<Button
+										size="2"
+										variant="outline"
+										color="gray"
+										onClick={(e) => {
+											e.preventDefault()
+											if (!confirm("Revert to the current running contract? You will lose any changes.")) return
+											revertToOriginal()
+										}}
+									>
+										Revert
+									</Button>
+								</Box>
+							)}
+						</Flex>
+					</Box>
 				</>
-			)}
-			{waitingForCommit && (
-				<Box mt="4">
-					<Text size="2">Waiting for server...</Text>
-				</Box>
-			)}
-			{commitCompleted && (
-				<Box mt="4">
-					<Text size="2">Changes committed! The application will now restart.</Text>
-				</Box>
 			)}
 			<br />
 		</Box>
