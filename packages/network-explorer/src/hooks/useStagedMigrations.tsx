@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react"
-import { Canvas, TableChange, generateChangesets, RowChange, ModelValue } from "@canvas-js/core"
+import { Canvas, TableChange, generateChangesets, RowChange } from "@canvas-js/core"
 import { Map as ImmutableMap } from "immutable"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 import { useContractData } from "../hooks/useContractData.js"
@@ -191,16 +191,6 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 
 		// Send to API with SIWE data
 
-		const newRows: Record<string, ModelValue[]> = {}
-		for (const [tableName, tableRows] of changedRows.entries()) {
-			for (const [_rowKey, rowChange] of tableRows.entries()) {
-				if (rowChange.type === "create") {
-					newRows[tableName] = newRows[tableName] || []
-					newRows[tableName].push(rowChange.value)
-				}
-			}
-		}
-
 		const response = await fetch(`${BASE_URL}/api/migrate`, {
 			method: "POST",
 			headers: {
@@ -213,7 +203,6 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 				address,
 				signature,
 				changedRows: changedRows?.toJSON() || {},
-				newRows,
 				includeSnapshot: migrationIncludesSnapshot,
 			}),
 		})
