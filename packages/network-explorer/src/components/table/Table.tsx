@@ -331,8 +331,10 @@ export const Table = <T,>({
 									const rowChange = tableChangedRows.get(encodedRowKey)
 
 									let stagedValues: ModelValue | undefined = undefined
-									if (rowChange && rowChange.type === "update") {
+									if (rowChange && (rowChange.type === "update" || rowChange.type === "create")) {
 										stagedValues = rowChange.value
+									} else {
+										stagedValues = row.original as ModelValue
 									}
 									return (
 										<EditableRow

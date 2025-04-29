@@ -8,6 +8,7 @@ import { getAddress } from "ethers"
 import { useApplicationData } from "./useApplicationData.js"
 import { BASE_URL } from "../utils.js"
 import { ImmutableRowKey, RowKey, useChangedRows } from "./useChangedRows.js"
+import { Config, validateModelValue } from "@canvas-js/modeldb"
 
 async function getChangesetsForContractDiff(oldContract: string, newContract: string) {
 	const { build } = await Canvas.buildContract(newContract, { wasmURL: "./esbuild.wasm" })
@@ -185,6 +186,25 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 
 		if (!contractData) {
 			throw new Error("Must wait for contractData to load")
+		}
+
+		// get the model schema for contractData
+		// instantiate a new canvas app with the model schema
+		const app = await Canvas.initialize({
+			contract: contractData.contract,
+			topic: "test.a." + bytesToHex(randomBytes(32)),
+			reset: true,
+		})
+		const modelSchema = app.getSchema()
+		const models = Config.parse(modelSchema)
+
+		for (const model of models.models) {
+			for (const change of (changedRows.get(model.name) || ImmutableMap()).values()) {
+				if (change.type === "update" || change.type === "create") {
+					console.log(model, change.value)
+					validateModelValue(model, change.value)
+				}
+			}
 		}
 
 		const { address, message, signature } = await getSignature(contractData.nonce)
