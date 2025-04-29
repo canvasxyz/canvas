@@ -231,7 +231,7 @@ export const Table = <T,>({
 					color="gray"
 					variant="outline"
 				>
-					New Entry
+					+ Add Row
 				</Button>
 
 				<Box ml="auto" pr="2">
@@ -264,7 +264,7 @@ export const Table = <T,>({
 					<LuExpand />
 				</Button>
 			</Flex>
-			<Box pt="56px" overflowX="scroll" flexGrow="1" pb={(tableChangedRows.size > 0 || tableNewRows.size > 0) ? "60vh" : "0"}>
+			<Box pt="56px" overflowX="scroll" flexGrow="1" pb={(tableChangedRows.size > 0 || tableNewRows.size > 0) ? "80vh" : "0"}>
 				<Text size="2">
 					<TableElement>
 						<Thead>

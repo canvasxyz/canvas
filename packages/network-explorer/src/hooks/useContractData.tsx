@@ -7,7 +7,7 @@ type ContractData = {
 	inMemory: boolean
 	originalContract: string
 	contract: string
-	admin: boolean
+	admin: string
 	nonce: string
 	snapshotHash: string | null
 	refetch: () => Promise<any>

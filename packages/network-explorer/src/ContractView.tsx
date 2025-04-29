@@ -23,6 +23,7 @@ export const ContractView = () => {
 		hasRestoredContent,
 		setHasRestoredContent,
 		waitingForCommit,
+		commitCompleted,
 	} = useStagedMigrations()
 
 	const [error, setError] = useState<string>()
@@ -186,6 +187,11 @@ export const ContractView = () => {
 			{waitingForCommit && (
 				<Box mt="4">
 					<Text size="2">Waiting for server...</Text>
+				</Box>
+			)}
+			{commitCompleted && (
+				<Box mt="4">
+					<Text size="2">Changes committed! The application will now restart.</Text>
 				</Box>
 			)}
 			<br />
