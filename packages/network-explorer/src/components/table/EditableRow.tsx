@@ -89,23 +89,26 @@ export const EditableRow = ({
 			}}
 		>
 			<ThCheckbox checked={checked} onCheckedChange={onCheckedChange} />
-			{row.getVisibleCells().map((cell) => (
-				<Td
-					key={cell.id}
-					width={cell.column.getSize()}
-					isEdited={stagedValues && cell.column.id in stagedValues && stagedValues[cell.column.id] !== cell.getValue()}
-				>
-					{cell.column.columnDef.meta?.editCell
-						? flexRender(cell.column.columnDef.meta?.editCell, {
-								value: stagedValues && stagedValues[cell.column.id] ? stagedValues[cell.column.id] : cell.getValue(),
-								setValue: (value: string) => {
-									setStagedValues({ ...stagedValues, [cell.column.id]: value })
-								},
-						  })
-						: // add something to say that the cell cannot be edited
-						  flexRender(cell.column.columnDef.cell, cell.getContext())}
-				</Td>
-			))}
+			{row.getVisibleCells().map((cell) => {
+				const originalValue = cell.getValue()
+				const value = stagedValues && cell.column.id in stagedValues ? stagedValues[cell.column.id] : originalValue
+
+				const isEdited = value !== originalValue
+
+				return (
+					<Td key={cell.id} width={cell.column.getSize()} isEdited={isEdited}>
+						{cell.column.columnDef.meta?.editCell
+							? flexRender(cell.column.columnDef.meta?.editCell, {
+									value,
+									setValue: (value: string) => {
+										setStagedValues({ ...stagedValues, [cell.column.id]: value })
+									},
+							  })
+							: // add something to say that the cell cannot be edited
+							  flexRender(cell.column.columnDef.cell, cell.getContext())}
+					</Td>
+				)
+			})}
 		</tr>
 	)
 }

@@ -2,7 +2,7 @@ import { useCallback, useState } from "react"
 import { Map as ImmutableMap } from "immutable"
 import { RowChange } from "@canvas-js/core"
 
-export type RowKey = string[]
+export type RowKey = string[] | string
 export type ImmutableRowKey = string
 
 export function encodeRowKey(rowKey: RowKey): ImmutableRowKey {
@@ -18,21 +18,30 @@ export const useChangedRows = () => {
 		ImmutableMap(),
 	)
 
-	const stageRowChange = useCallback((tableName: string, rowKey: RowKey, rowChange: RowChange) => {
-		const tableRows = changedRows.get(tableName) || ImmutableMap()
-		const newTableRows = tableRows.set(encodeRowKey(rowKey), rowChange)
-		setChangedRows(changedRows.set(tableName, newTableRows))
-	}, [changedRows])
+	const stageRowChange = useCallback(
+		(tableName: string, rowKey: RowKey, rowChange: RowChange) => {
+			setChangedRows((oldChangedRows) => {
+				const tableRows = oldChangedRows.get(tableName) || ImmutableMap()
+				const newTableRows = tableRows.set(encodeRowKey(rowKey), rowChange)
+				return oldChangedRows.set(tableName, newTableRows)
+			})
+		},
+		[changedRows],
+	)
 
-	const restoreRowChange = useCallback((tableName: string, rowKey: string[]) => {
-		const tableRows = changedRows.get(tableName) || ImmutableMap()
-		const newTableRows = tableRows.delete(encodeRowKey(rowKey))
-		if (newTableRows.size === 0) {
-			setChangedRows(changedRows.delete(tableName))
-		} else {
-			setChangedRows(changedRows.set(tableName, newTableRows))
-		}
-	}, [changedRows])
+	const restoreRowChange = useCallback(
+		(tableName: string, rowKey: RowKey) =>
+			setChangedRows((oldChangedRows) => {
+				const tableRows = changedRows.get(tableName) || ImmutableMap()
+				const newTableRows = tableRows.delete(encodeRowKey(rowKey))
+				if (newTableRows.size === 0) {
+					return oldChangedRows.delete(tableName)
+				} else {
+					return oldChangedRows.set(tableName, newTableRows)
+				}
+			}),
+		[changedRows],
+	)
 
 	const clearRowChanges = useCallback(() => {
 		setChangedRows(ImmutableMap())

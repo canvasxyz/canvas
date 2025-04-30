@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react"
-import { Canvas, TableChange, generateChangesets, ModelValue, RowChange } from "@canvas-js/core"
-import { Map as ImmutableMap, List as ImmutableList } from "immutable"
+import { Canvas, TableChange, generateChangesets, RowChange } from "@canvas-js/core"
+import { Map as ImmutableMap } from "immutable"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 import { useContractData } from "../hooks/useContractData.js"
 import { SiweMessage } from "siwe"
@@ -8,6 +8,7 @@ import { getAddress } from "ethers"
 import { useApplicationData } from "./useApplicationData.js"
 import { BASE_URL } from "../utils.js"
 import { ImmutableRowKey, RowKey, useChangedRows } from "./useChangedRows.js"
+import { Config, validateModelValue } from "@canvas-js/modeldb"
 
 async function getChangesetsForContractDiff(oldContract: string, newContract: string) {
 	const { build } = await Canvas.buildContract(newContract, { wasmURL: "./esbuild.wasm" })
@@ -86,8 +87,7 @@ const StagedMigrationsContext = createContext<{
 	clearRowChanges: () => void
 	migrationIncludesSnapshot: boolean
 	setMigrationIncludesSnapshot: (migrationIncludesSnapshot: boolean) => void
-	newRows: ImmutableMap<string, ImmutableList<ModelValue>>
-	setNewRows: (newRows: ImmutableMap<string, ImmutableList<ModelValue>>) => void
+	errors: string[]
 }>({
 	contractChangesets: [],
 	cancelMigrations: async () => {},
@@ -107,21 +107,20 @@ const StagedMigrationsContext = createContext<{
 	clearRowChanges: () => {},
 	migrationIncludesSnapshot: false,
 	setMigrationIncludesSnapshot: () => {},
-	newRows: ImmutableMap(),
-	setNewRows: () => {},
+	errors: [],
 })
 
 export const StagedMigrationsProvider = ({ children }: { children: React.ReactNode }) => {
 	const applicationData = useApplicationData()
 	const contractData = useContractData()
 
+	const [errors, setErrors] = useState<string[]>([])
+
 	const [waitingForCommit, setWaitingForCommit] = useState(false)
 	const [commitCompleted, setCommitCompleted] = useState(false)
 	const [migrationIncludesSnapshot, setMigrationIncludesSnapshot] = useState(false)
 
 	const [hasRestoredContent, setHasRestoredContent] = useState(false)
-
-	const [newRows, setNewRows] = useState<ImmutableMap<string, ImmutableList<ModelValue>>>(ImmutableMap())
 
 	const { changedRows, stageRowChange, restoreRowChange, clearRowChanges } = useChangedRows()
 
@@ -135,11 +134,13 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 
 	// Update migrationIncludesSnapshot when changedRows or newRows change
 	useEffect(() => {
-		// If there are any row changes or new rows, force migrationIncludesSnapshot to true
-		if (changedRows?.size > 0 || newRows?.size > 0) {
+		// If there are any row changes, force migrationIncludesSnapshot to true
+		if (changedRows?.size > 0) {
 			setMigrationIncludesSnapshot(true)
 		}
-	}, [changedRows, newRows])
+		// reset errors when changedRows change
+		setErrors([])
+	}, [changedRows])
 
 	// when the contract, added, modified, or deleted rows change, update the changesets
 
@@ -185,12 +186,40 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 	)
 
 	const runMigrations = async () => {
-		if (!newContract && !contractChangesets && changedRows?.size === 0 && newRows?.size === 0) {
+		if (!newContract && !contractChangesets && changedRows?.size === 0) {
 			throw new Error("No migrations to run")
 		}
 
 		if (!contractData) {
 			throw new Error("Must wait for contractData to load")
+		}
+
+		// get the model schema for contractData
+		// instantiate a new canvas app with the model schema
+		const app = await Canvas.initialize({
+			contract: contractData.contract,
+			topic: "test.a." + bytesToHex(randomBytes(32)),
+			reset: true,
+		})
+		const modelSchema = app.getSchema()
+		const models = Config.parse(modelSchema)
+
+		const errors: string[] = []
+		for (const model of models.models) {
+			for (const change of (changedRows.get(model.name) || ImmutableMap()).values()) {
+				if (change.type === "update" || change.type === "create") {
+					try {
+						validateModelValue(model, change.value)
+					} catch (error: any) {
+						errors.push(error.message)
+					}
+				}
+			}
+		}
+
+		if (errors.length > 0) {
+			setErrors(errors)
+			return
 		}
 
 		const { address, message, signature } = await getSignature(contractData.nonce)
@@ -209,7 +238,6 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 				address,
 				signature,
 				changedRows: changedRows?.toJSON() || {},
-				newRows: newRows?.toJSON() || {},
 				includeSnapshot: migrationIncludesSnapshot,
 			}),
 		})
@@ -247,8 +275,7 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 	const cancelMigrations = useCallback(async () => {
 		clearContractChangesets()
 		clearRowChanges()
-		setNewRows(ImmutableMap())
-	}, [clearContractChangesets, clearRowChanges, setNewRows])
+	}, [clearContractChangesets, clearRowChanges])
 
 	return (
 		<StagedMigrationsContext.Provider
@@ -269,8 +296,7 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 				clearRowChanges,
 				migrationIncludesSnapshot,
 				setMigrationIncludesSnapshot,
-				newRows,
-				setNewRows,
+				errors,
 			}}
 		>
 			{children}

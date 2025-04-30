@@ -96,7 +96,6 @@ export async function createSnapshot<T extends Contract<any>>(
 ): Promise<Snapshot> {
 	const changesets = changes?.changesets ?? []
 	const changedRows = changes?.changedRows ?? {}
-	const newRows = changes?.newRows ?? {}
 
 	const createdTables = changesets.filter((ch) => ch.change === "create_table").map((ch) => ch.table)
 	const droppedTables = changesets.filter((ch) => ch.change === "drop_table").map((ch) => ch.table)
@@ -168,8 +167,10 @@ export async function createSnapshot<T extends Contract<any>>(
 		}
 
 		// add created rows
-		for (const newRow of Object.values(newRows[modelName] ?? [])) {
-			models[modelName].push(cbor.encode(newRow))
+		for (const [_rowKey, rowChange] of Object.entries(modelChangedRows)) {
+			if (rowChange.type === "create") {
+				models[modelName].push(cbor.encode(rowChange.value))
+			}
 		}
 	}
 

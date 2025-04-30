@@ -1,10 +1,11 @@
 import useSWR from "swr"
 import { ModelValue, WhereCondition } from "@canvas-js/modeldb"
-import { Map as ImmutableMap, Set as ImmutableSet, List as ImmutableList } from "immutable"
+import { Map as ImmutableMap, Set as ImmutableSet } from "immutable"
 import { Box, Button, Flex, Text } from "@radix-ui/themes"
 import { useCallback, useEffect, useState } from "react"
 import { LuDownload, LuExpand, LuRefreshCw } from "react-icons/lu"
 import { ColumnDef, flexRender, getCoreRowModel, Row, SortingState, useReactTable } from "@tanstack/react-table"
+import { v4 as uuidv4 } from "uuid"
 import useCursorStack from "../../hooks/useCursorStack.js"
 import { useApplicationData } from "../../hooks/useApplicationData.js"
 import { useSearchFilters } from "../../hooks/useSearchFilters.js"
@@ -71,7 +72,7 @@ export const Table = <T,>({
 }) => {
 	usePageTitle(`${tableName} | Application Explorer`)
 	const applicationData = useApplicationData()
-	const { stageRowChange, changedRows, newRows, setNewRows } = useStagedMigrations()
+	const { stageRowChange, changedRows, restoreRowChange } = useStagedMigrations()
 	const [columnFilters, setColumnFilters] = useSearchFilters(
 		defaultColumns.filter((col) => col.enableColumnFilter).map((col) => col.header as string),
 	)
@@ -186,11 +187,20 @@ export const Table = <T,>({
 
 	const tableChangedRows = changedRows.get(tableName) || ImmutableMap()
 
-	const tableNewRows = newRows.get(tableName) || ImmutableList.of()
+	const tableNewRows = tableChangedRows
+		.filter((row) => row.type === "create")
+		.toArray()
+		.map(
+			([key, row]) =>
+				({
+					...row.value,
+					$newRowKey: key,
+				} as ModelValue),
+		)
 
 	const newRowsTable = useReactTable<ModelValue>({
 		columns: defaultColumns as ColumnDef<ModelValue>[],
-		data: tableNewRows.toArray(),
+		data: tableNewRows,
 		getCoreRowModel: getCoreRowModel(),
 		manualPagination: true,
 		manualSorting: true,
@@ -203,7 +213,19 @@ export const Table = <T,>({
 
 	return (
 		<Flex direction="column" maxWidth={showSidebar ? "calc(100vw - 200px)" : "100%"} flexGrow="1">
-			<Flex position="fixed" style={{ zIndex: 5, background: "var(--gray-1)", width: showSidebar ? "calc(100vw - 200px)" : "100%", borderBottom: "1px solid var(--gray-3)" }} align="center" gap="2" p="2" py="3">
+			<Flex
+				position="fixed"
+				style={{
+					zIndex: 5,
+					background: "var(--gray-1)",
+					width: showSidebar ? "calc(100vw - 200px)" : "100%",
+					borderBottom: "1px solid var(--gray-3)",
+				}}
+				align="center"
+				gap="2"
+				p="2"
+				py="3"
+			>
 				{tableHasFilters && (
 					<FiltersDropdown
 						tanStackTable={tanStackTable}
@@ -225,8 +247,17 @@ export const Table = <T,>({
 					disabled={!allowEditing}
 					onClick={() => {
 						// add a new row
-						const tableRows = newRows.get(tableName) || ImmutableList.of()
-						setNewRows(newRows.set(tableName, tableRows.push({})))
+						const id = uuidv4()
+						// value should have all the fields with empty values
+						const value: ModelValue = {}
+						for (const col of defaultColumns) {
+							value[col.header as string] = ""
+						}
+
+						stageRowChange(tableName, `newRow-${id}`, {
+							type: "create",
+							value,
+						})
 					}}
 					color="gray"
 					variant="outline"
@@ -264,7 +295,12 @@ export const Table = <T,>({
 					<LuExpand />
 				</Button>
 			</Flex>
-			<Box pt="56px" overflowX="scroll" flexGrow="1" pb={(tableChangedRows.size > 0 || tableNewRows.size > 0) ? "80vh" : "0"}>
+			<Box
+				pt="56px"
+				overflowX="scroll"
+				flexGrow="1"
+				pb={tableChangedRows.size > 0 || tableNewRows.length > 0 ? "80vh" : "0"}
+			>
 				<Text size="2">
 					<TableElement>
 						<Thead>
@@ -287,7 +323,7 @@ export const Table = <T,>({
 							))}
 						</Thead>
 						<Tbody>
-							{tanStackTable.getRowCount() === 0 && <NoneFound />}
+							{tanStackTable.getRowCount() === 0 && tableNewRows.length === 0 && <NoneFound />}
 							{tanStackTable.getRowModel().rows.map((row) => {
 								if (allowEditing) {
 									const rowKey = getRowKey(row)
@@ -295,8 +331,10 @@ export const Table = <T,>({
 									const rowChange = tableChangedRows.get(encodedRowKey)
 
 									let stagedValues: ModelValue | undefined = undefined
-									if (rowChange && rowChange.type === "update") {
+									if (rowChange && (rowChange.type === "update" || rowChange.type === "create")) {
 										stagedValues = rowChange.value
+									} else {
+										stagedValues = row.original as ModelValue
 									}
 									return (
 										<EditableRow
@@ -304,10 +342,24 @@ export const Table = <T,>({
 											row={row}
 											stagedValues={stagedValues}
 											setStagedValues={(newValues) => {
-												stageRowChange(tableName, rowKey, {
-													type: "update",
-													value: newValues,
-												})
+												// if the updated values equal the original values, unstage the row
+												let rowIsUnchanged = true
+												const originalValues = row.original as ModelValue
+												for (const key in newValues) {
+													if (newValues[key] !== originalValues[key]) {
+														rowIsUnchanged = false
+														break
+													}
+												}
+
+												if (rowIsUnchanged) {
+													restoreRowChange(tableName, rowKey)
+												} else {
+													stageRowChange(tableName, rowKey, {
+														type: "update",
+														value: newValues,
+													})
+												}
 											}}
 											isStagedDelete={rowChange?.type === "delete"}
 											checked={selectedRows.has(encodedRowKey)}
@@ -320,17 +372,22 @@ export const Table = <T,>({
 									return <NonEditableRow key={row.id} row={row} />
 								}
 							})}
-							{newRowsTable.getRowModel().rows.map((row, index) => {
+							{newRowsTable.getRowModel().rows.map((row) => {
 								return (
 									<EditableRow
 										key={row.id}
 										row={row}
 										stagedValues={row.original as ModelValue}
 										setStagedValues={(newValues) => {
+											console.log("set staged values", newValues)
 											// update new row with index
-											const tableRows = newRows.get(tableName) || ImmutableList.of()
-											const newTableRows = tableRows.set(index, newValues)
-											setNewRows(newRows.set(tableName, newTableRows))
+											const { $newRowKey, ...rest } = newValues
+											console.log("newRowKey:", $newRowKey)
+											console.log("rest:", rest)
+											stageRowChange(tableName, JSON.parse($newRowKey as any), {
+												type: "create",
+												value: rest,
+											})
 										}}
 										isStagedDelete={false}
 										isNewRow={true}
