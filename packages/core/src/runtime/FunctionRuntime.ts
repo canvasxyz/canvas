@@ -2,10 +2,12 @@ import PQueue from "p-queue"
 
 import type { SignerCache } from "@canvas-js/interfaces"
 import { DeriveModelTypes } from "@canvas-js/modeldb"
-import { assert, mapValues } from "@canvas-js/utils"
-import { ModelSchema } from "../types.js"
+import { assert } from "@canvas-js/utils"
+import { encodeId } from "@canvas-js/gossiplog"
+import { bytesToHex } from "@noble/hashes/utils"
+import { sha256 } from "@noble/hashes/sha256"
 
-import { ActionContext, ActionImplementation, Contract, ModelAPI } from "../types.js"
+import { ModelSchema, ActionContext, ActionImplementation, Contract, ModelAPI } from "../types.js"
 import { ExecutionContext } from "../ExecutionContext.js"
 import { AbstractRuntime } from "./AbstractRuntime.js"
 
@@ -38,6 +40,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 
 	#context: ExecutionContext | null = null
 	#txnId = 0
+	#nextId: Uint8Array | null = null
 	#transaction = false
 	#thisValue: ActionContext<DeriveModelTypes<ModelsT>> | null = null
 	#queue = new PQueue({ concurrency: 1 })
@@ -83,6 +86,12 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 					this.#transaction = false
 				}
 			},
+
+			id: () => {
+				if (this.#nextId === null) throw new Error("expected this.#nextId !== null")
+				this.#nextId = sha256(this.#nextId)
+				return bytesToHex(this.#nextId.slice(0, 16))
+			},
 		}
 	}
 
@@ -127,6 +136,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 
 		try {
 			this.#txnId = 0
+			this.#nextId = encodeId(exec.id)
 			this.#context = exec
 			this.#thisValue = thisValue
 
@@ -139,6 +149,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 			throw err
 		} finally {
 			this.#txnId = 0
+			this.#nextId = null
 			this.#context = null
 			this.#thisValue = null
 		}

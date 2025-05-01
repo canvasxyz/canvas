@@ -5,9 +5,13 @@ import { ModelValue } from "@canvas-js/modeldb"
 import { VM } from "@canvas-js/vm"
 import { assert, JSValue, mapValues } from "@canvas-js/utils"
 
+import { hexToBytes, bytesToHex } from "@noble/hashes/utils"
+import { sha256 } from "@noble/hashes/sha256"
+
 import { ActionContext, Contract, ModelSchema } from "../types.js"
 import { ExecutionContext } from "../ExecutionContext.js"
 import { AbstractRuntime } from "./AbstractRuntime.js"
+import { encodeId } from "@canvas-js/gossiplog"
 
 export class ContractRuntime extends AbstractRuntime {
 	public static async init(
@@ -76,6 +80,7 @@ export class ContractRuntime extends AbstractRuntime {
 	#thisHandle: QuickJSHandle | null = null
 	#transaction = false
 	#txnId = 0
+	#nextId: Uint8Array | null = null
 
 	constructor(
 		public readonly topic: string,
@@ -103,6 +108,11 @@ export class ContractRuntime extends AbstractRuntime {
 
 					const actionContext: ActionContext<any> = {
 						db: {
+							id: () => {
+								if (self.#nextId === null) throw new Error("expected this.#nextId !== null")
+								self.#nextId = sha256(self.#nextId)
+								return bytesToHex(self.#nextId.slice(0, 16))
+							},
 							get: async (model, key) => await self.context.getModelValue(model, key, self.#transaction),
 							set: async (model, value) => await self.context.setModelValue(model, value, self.#transaction),
 							update: async (model, value) => await self.context.updateModelValue(model, value, self.#transaction),
@@ -179,6 +189,12 @@ export class ContractRuntime extends AbstractRuntime {
 					promise.settled.then(vm.runtime.executePendingJobs)
 					return promise.handle
 				}),
+
+				id: vm.context.newFunction("idgen", (callbackHandle) => {
+					if (this.#nextId === null) throw new Error("expected this.#nextId !== null")
+					this.#nextId = sha256(this.#nextId)
+					return vm.wrapValue(bytesToHex(this.#nextId.slice(0, 16)))
+				}),
 			})
 			.consume(vm.cache)
 	}
@@ -228,6 +244,7 @@ export class ContractRuntime extends AbstractRuntime {
 
 		try {
 			this.#txnId = 0
+			this.#nextId = encodeId(exec.id)
 			this.#context = exec
 			this.#thisHandle = thisHandle
 			const result = await this.vm.callAsync(actionHandle, thisHandle, argHandles)
@@ -236,6 +253,7 @@ export class ContractRuntime extends AbstractRuntime {
 			argHandles.map((handle: QuickJSHandle) => handle.dispose())
 			thisHandle.dispose()
 			this.#txnId = 0
+			this.#nextId = null
 			this.#context = null
 			this.#thisHandle = null
 		}

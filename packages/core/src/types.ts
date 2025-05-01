@@ -25,6 +25,7 @@ export type ActionImplementation<
 > = (this: ActionContext<DeriveModelTypes<ModelsT>>, ...args: Args) => Awaitable<Result>
 
 export type ModelAPI<ModelTypes extends Record<string, ModelValue>> = {
+	id: () => string
 	get: <T extends keyof ModelTypes & string>(model: T, key: string) => Promise<ModelTypes[T] | null>
 	set: <T extends keyof ModelTypes & string>(model: T, value: ModelTypes[T]) => Promise<void>
 	update: <T extends keyof ModelTypes & string>(model: T, value: Partial<ModelTypes[T]>) => Promise<void>
