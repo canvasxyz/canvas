@@ -166,7 +166,6 @@ export class ExecutionContext extends View {
 
 		const primaryProperties = this.db.config.primaryKeys[model]
 		const key = primaryProperties.map((property) => value[property.name] as PrimaryKeyValue)
-
 		const previousValue = await this.getModelValue(model, key, transactional)
 		const result = updateModelValue(value, previousValue)
 		await this.setModelValue(model, result, transactional)
@@ -187,7 +186,6 @@ export class ExecutionContext extends View {
 
 		const primaryProperties = this.db.config.primaryKeys[model]
 		const key = primaryProperties.map((property) => value[property.name] as PrimaryKeyValue)
-
 		const previousValue = await this.getModelValue(model, key, transactional)
 		const result = mergeModelValue(value, previousValue)
 		await this.setModelValue(model, result, transactional)
