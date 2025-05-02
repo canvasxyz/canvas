@@ -1,7 +1,15 @@
 import type { MessageType, SessionSigner } from "@canvas-js/interfaces"
 
 import { Action } from "@canvas-js/interfaces"
-import { ModelValue, PropertyValue, validateModelValue, updateModelValue, mergeModelValue } from "@canvas-js/modeldb"
+import {
+	ModelValue,
+	PropertyValue,
+	validateModelValue,
+	updateModelValue,
+	mergeModelValue,
+	ReferenceValue,
+	PrimaryKeyValue,
+} from "@canvas-js/modeldb"
 import { AbstractGossipLog, SignedMessage } from "@canvas-js/gossiplog"
 import { assert } from "@canvas-js/utils"
 
@@ -17,8 +25,15 @@ export class ExecutionContext extends View {
 	public readonly lwwReads: Map<string, ModelValue | null> = new Map()
 
 	// recordId -> { model, key, value, csx }
-	public readonly writes: Map<string, { model: string; key: string; value: ModelValue | null; csx: number | null }> =
-		new Map()
+	public readonly writes: Map<
+		string,
+		{
+			model: string
+			key: PrimaryKeyValue | PrimaryKeyValue[]
+			value: ModelValue | null
+			csx: number | null
+		}
+	> = new Map()
 
 	constructor(
 		public readonly messageLog: AbstractGossipLog<MessageType>,
@@ -54,7 +69,7 @@ export class ExecutionContext extends View {
 
 	public async getModelValue<T extends ModelValue = ModelValue>(
 		model: string,
-		key: string,
+		key: PrimaryKeyValue | PrimaryKeyValue[],
 		transactional: boolean,
 	): Promise<T | null> {
 		assert(this.db.models[model] !== undefined, "model not found")
@@ -115,7 +130,11 @@ export class ExecutionContext extends View {
 		this.writes.set(recordId, { model, key, value, csx })
 	}
 
-	public async deleteModelValue(model: string, key: string, transactional: boolean): Promise<void> {
+	public async deleteModelValue(
+		model: string,
+		key: PrimaryKeyValue | PrimaryKeyValue[],
+		transactional: boolean,
+	): Promise<void> {
 		assert(this.db.models[model] !== undefined, "model not found")
 		this.log("deleteModelValue(%s, %o, %s)", model, key, transactional)
 
@@ -138,6 +157,10 @@ export class ExecutionContext extends View {
 			throw new Error(`model db.${model} not found`)
 		}
 
+		if (!transactional) {
+			throw new Error("`db.update(...) can only be called from inside a transaction")
+		}
+
 		const {
 			primaryKey: [primaryKey],
 		} = this.db.models[model]
@@ -154,6 +177,10 @@ export class ExecutionContext extends View {
 	): Promise<void> {
 		if (this.db.models[model] === undefined) {
 			throw new Error(`model db.${model} not found`)
+		}
+
+		if (!transactional) {
+			throw new Error("`db.merge(...) can only be called from inside a transaction")
 		}
 
 		const {
