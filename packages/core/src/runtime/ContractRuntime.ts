@@ -118,6 +118,10 @@ export class ContractRuntime extends AbstractRuntime {
 							update: async (model, value) => await self.context.updateModelValue(model, value, self.#transaction),
 							merge: async (model, value) => await self.context.mergeModelValue(model, value, self.#transaction),
 							delete: async (model, key) => await self.context.deleteModelValue(model, key, self.#transaction),
+							link: async (modelProperty, source, target) =>
+								await self.context.linkModelValue(modelProperty, source, target, self.#transaction),
+							unlink: async (modelProperty, source, target) =>
+								await self.context.unlinkModelValue(modelProperty, source, target, self.#transaction),
 							transaction: async (callbackHandle) => {
 								if (self.#txnId === 0) {
 									self.#txnId += 1

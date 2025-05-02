@@ -72,6 +72,10 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 			update: (model, value) => this.#queue.add(() => this.context.updateModelValue(model, value, this.#transaction)),
 			merge: (model, value) => this.#queue.add(() => this.context.mergeModelValue(model, value, this.#transaction)),
 			delete: (model, key) => this.#queue.add(() => this.context.deleteModelValue(model, key, this.#transaction)),
+			link: (modelProperty, source, target) =>
+				this.#queue.add(() => this.context.linkModelValue(modelProperty, source, target, this.#transaction)),
+			unlink: (modelProperty, source, target) =>
+				this.#queue.add(() => this.context.unlinkModelValue(modelProperty, source, target, this.#transaction)),
 
 			transaction: async (callback) => {
 				if (this.#txnId > 0) {
