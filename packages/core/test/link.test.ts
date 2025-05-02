@@ -19,19 +19,19 @@ test("link and unlink database items", async (t) => {
 						const gameId = "0"
 						await this.db.set("game", { id: gameId, player: [], manager: [], observers: [], status: null })
 						await this.db.set("player", { id: "1", game: gameId, status: "ALIVE" })
-						await this.db.link("game", "player", gameId, "1")
+						await this.db.link("game.player", gameId, "1")
 						await this.db.set("player", { id: "2", game: gameId, status: "ALIVE" })
-						await this.db.link("game", "manager", gameId, "2")
+						await this.db.link("game.manager", gameId, "2")
 						await this.db.set("player", { id: "3", game: gameId, status: "ALIVE" })
-						await this.db.link("game", "observers", gameId, "3")
+						await this.db.link("game.observers", gameId, "3")
 						await this.db.set("player", { id: "4", game: gameId, status: "ALIVE" })
-						await this.db.link("game", "observers", gameId, "4")
+						await this.db.link("game.observers", gameId, "4")
 					})
 				},
 				async unlinkGame() {
 					await this.db.transaction(async () => {
 						const gameId = "0"
-						await this.db.unlink("game", "observers", gameId, "4")
+						await this.db.unlink("game.observers", gameId, "4")
 					})
 				},
 			},
@@ -79,19 +79,19 @@ export const actions = {
 						const gameId = "0"
 						await this.db.set("game", { id: gameId, player: [], manager: [], observers: [], status: null })
 						await this.db.set("player", { id: "1", game: gameId, status: "ALIVE" })
-						await this.db.link("game", "player", gameId, "1")
+						await this.db.link("game.player", gameId, "1")
 						await this.db.set("player", { id: "2", game: gameId, status: "ALIVE" })
-						await this.db.link("game", "manager", gameId, "2")
+						await this.db.link("game.manager", gameId, "2")
 						await this.db.set("player", { id: "3", game: gameId, status: "ALIVE" })
-						await this.db.link("game", "observers", gameId, "3")
+						await this.db.link("game.observers", gameId, "3")
 						await this.db.set("player", { id: "4", game: gameId, status: "ALIVE" })
-						await this.db.link("game", "observers", gameId, "4")
+						await this.db.link("game.observers", gameId, "4")
 					})
 				},
 				async unlinkGame() {
 					await this.db.transaction(async () => {
 						const gameId = "0"
-						await this.db.unlink("game", "observers", gameId, "4")
+						await this.db.unlink("game.observers", gameId, "4")
 					})
 				},
 }`,

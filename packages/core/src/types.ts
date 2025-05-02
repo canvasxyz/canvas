@@ -34,14 +34,12 @@ export type ModelAPI<ModelTypes extends Record<string, ModelValue>> = {
 	merge: <T extends keyof ModelTypes & string>(model: T, value: Partial<ModelTypes[T]>) => Promise<void>
 
 	link: <T extends keyof ModelTypes & string>(
-		model: T,
-		propertyName: string,
+		modelPath: `${T}.${string}`,
 		source: string,
 		target: string,
 	) => Promise<void>
 	unlink: <T extends keyof ModelTypes & string>(
-		model: T,
-		propertyName: string,
+		modelPath: `${T}.${string}`,
 		source: string,
 		target: string,
 	) => Promise<void>

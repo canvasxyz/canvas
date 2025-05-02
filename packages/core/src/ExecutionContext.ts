@@ -194,12 +194,15 @@ export class ExecutionContext extends View {
 	}
 
 	public async linkModelValue(
-		model: string,
-		propertyName: string,
+		modelProperty: string,
 		source: PrimaryKeyValue | PrimaryKeyValue[],
 		target: PrimaryKeyValue | PrimaryKeyValue[],
 		transactional: boolean,
 	) {
+		const [model, propertyName] = modelProperty.split(".")
+		if (model === undefined || propertyName === undefined) {
+			throw new Error(`db.link failed - must provide model.propertyName`)
+		}
 		if (this.db.models[model] === undefined) {
 			throw new Error(`model db.${model} not found`)
 		}
@@ -233,14 +236,17 @@ export class ExecutionContext extends View {
 	}
 
 	public async unlinkModelValue(
-		model: string,
-		propertyName: string,
+		modelProperty: string,
 		source: PrimaryKeyValue | PrimaryKeyValue[],
 		target: PrimaryKeyValue | PrimaryKeyValue[],
 		transactional: boolean,
 	) {
+		const [model, propertyName] = modelProperty.split(".")
+		if (model === undefined || propertyName === undefined) {
+			throw new Error(`db.unlink failed - must provide model.propertyName`)
+		}
 		if (this.db.models[model] === undefined) {
-			throw new Error(`model db.${model} not found`)
+			throw new Error(`db.unlink failed - model db.${model} not found`)
 		}
 
 		const relationProperty = this.db.models[model].properties.find((property) => property.name === propertyName)
