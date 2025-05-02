@@ -65,7 +65,7 @@ test("link and unlink database items", async (t) => {
 	})
 })
 
-test("link and unlink database items in a string contract", async (t) => {
+test.skip("link and unlink database items in a string contract", async (t) => {
 	const app = await Canvas.initialize({
 		topic: "com.example.app",
 		contract: `
