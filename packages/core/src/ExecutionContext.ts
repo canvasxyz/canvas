@@ -9,6 +9,9 @@ import {
 	mergeModelValue,
 	ReferenceValue,
 	PrimaryKeyValue,
+	isRelationValue,
+	equalReferences,
+	RelationValue,
 } from "@canvas-js/modeldb"
 import { AbstractGossipLog, SignedMessage } from "@canvas-js/gossiplog"
 import { assert } from "@canvas-js/utils"
@@ -161,10 +164,9 @@ export class ExecutionContext extends View {
 			throw new Error("`db.update(...) can only be called from inside a transaction")
 		}
 
-		const {
-			primaryKey: [primaryKey],
-		} = this.db.models[model]
-		const key = value[primaryKey] as string
+		const primaryProperties = this.db.config.primaryKeys[model]
+		const key = primaryProperties.map((property) => value[property.name] as PrimaryKeyValue)
+
 		const previousValue = await this.getModelValue(model, key, transactional)
 		const result = updateModelValue(value, previousValue)
 		await this.setModelValue(model, result, transactional)
@@ -183,13 +185,90 @@ export class ExecutionContext extends View {
 			throw new Error("`db.merge(...) can only be called from inside a transaction")
 		}
 
-		const {
-			primaryKey: [primaryKey],
-		} = this.db.models[model]
-		const key = value[primaryKey] as string
+		const primaryProperties = this.db.config.primaryKeys[model]
+		const key = primaryProperties.map((property) => value[property.name] as PrimaryKeyValue)
 
 		const previousValue = await this.getModelValue(model, key, transactional)
 		const result = mergeModelValue(value, previousValue)
 		await this.setModelValue(model, result, transactional)
+	}
+
+	public async linkModelValue(
+		model: string,
+		propertyName: string,
+		source: PrimaryKeyValue | PrimaryKeyValue[],
+		target: PrimaryKeyValue | PrimaryKeyValue[],
+		transactional: boolean,
+	) {
+		if (this.db.models[model] === undefined) {
+			throw new Error(`model db.${model} not found`)
+		}
+
+		const relationProperty = this.db.models[model].properties.find((property) => property.name === propertyName)
+		if (relationProperty === undefined) {
+			throw new Error(`db.link(...) failed - model '${model}' has no property '${propertyName}'`)
+		} else if (relationProperty.kind !== "relation") {
+			throw new Error(`db.link(...) failed - '${model}/${propertyName}' is not a relation property`)
+		}
+
+		if (!transactional) {
+			throw new Error("`db.link(...) can only be called from inside a transaction")
+		}
+
+		const previousValue = await this.getModelValue(model, source, transactional)
+		if (previousValue === null) {
+			throw new Error("db.link(...) failed - source record not found")
+		}
+
+		const previousTargets = previousValue[propertyName]
+		assert(isRelationValue(previousTargets), "internal error - expected isRelationValue(previousValueLinks)")
+
+		// no-op if the source already links to the target
+		if (previousTargets.some((key) => equalReferences(key, target))) {
+			return
+		}
+
+		const newTargets = [...previousTargets, target] as RelationValue
+		await this.setModelValue(model, { ...previousValue, [propertyName]: newTargets }, transactional)
+	}
+
+	public async unlinkModelValue(
+		model: string,
+		propertyName: string,
+		source: PrimaryKeyValue | PrimaryKeyValue[],
+		target: PrimaryKeyValue | PrimaryKeyValue[],
+		transactional: boolean,
+	) {
+		if (this.db.models[model] === undefined) {
+			throw new Error(`model db.${model} not found`)
+		}
+
+		const relationProperty = this.db.models[model].properties.find((property) => property.name === propertyName)
+		if (relationProperty === undefined) {
+			throw new Error(`db.unlink(...) failed - model '${model}' has no property '${propertyName}'`)
+		} else if (relationProperty.kind !== "relation") {
+			throw new Error(`db.unlink(...) failed - '${model}/${propertyName}' is not a relation property`)
+		}
+
+		if (!transactional) {
+			throw new Error("`db.unlink(...) can only be called from inside a transaction")
+		}
+
+		const previousValue = await this.getModelValue(model, source, transactional)
+		if (previousValue === null) {
+			throw new Error("db.unlink(...) failed - source record not found")
+		}
+
+		const previousTargets = previousValue[propertyName]
+		assert(isRelationValue(previousTargets), "internal error - expected isRelationValue(previousValueLinks)")
+
+		const newTargets = previousTargets.filter((key) => !equalReferences(key, target)) as RelationValue
+
+		// no-op if the source doesn't contain the target
+		if (newTargets.length === previousTargets.length) {
+			return
+		}
+
+		await this.setModelValue(model, { ...previousValue, [propertyName]: newTargets }, transactional)
 	}
 }
