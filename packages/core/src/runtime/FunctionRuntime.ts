@@ -46,11 +46,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 	#queue = new PQueue({ concurrency: 1 })
 	#db: ModelAPI<DeriveModelTypes<ModelsT>>
 
-	constructor(
-		public readonly topic: string,
-		public readonly signers: SignerCache,
-		contract: Contract<ModelsT>,
-	) {
+	constructor(public readonly topic: string, public readonly signers: SignerCache, contract: Contract<ModelsT>) {
 		super(contract.models)
 		this.contract = [
 			`export const models = ${JSON.stringify(contract.models, null, "  ")};`,
@@ -72,6 +68,10 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 			update: (model, value) => this.#queue.add(() => this.context.updateModelValue(model, value, this.#transaction)),
 			merge: (model, value) => this.#queue.add(() => this.context.mergeModelValue(model, value, this.#transaction)),
 			delete: (model, key) => this.#queue.add(() => this.context.deleteModelValue(model, key, this.#transaction)),
+			link: (model, propertyName, source, target) =>
+				this.#queue.add(() => this.context.linkModelValue(model, propertyName, source, target, this.#transaction)),
+			unlink: (model, propertyName, source, target) =>
+				this.#queue.add(() => this.context.unlinkModelValue(model, propertyName, source, target, this.#transaction)),
 
 			transaction: async (callback) => {
 				if (this.#txnId > 0) {

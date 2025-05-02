@@ -28,9 +28,23 @@ export type ModelAPI<ModelTypes extends Record<string, ModelValue>> = {
 	id: () => string
 	get: <T extends keyof ModelTypes & string>(model: T, key: string) => Promise<ModelTypes[T] | null>
 	set: <T extends keyof ModelTypes & string>(model: T, value: ModelTypes[T]) => Promise<void>
+	delete: <T extends keyof ModelTypes & string>(model: T, key: string) => Promise<void>
+
 	update: <T extends keyof ModelTypes & string>(model: T, value: Partial<ModelTypes[T]>) => Promise<void>
 	merge: <T extends keyof ModelTypes & string>(model: T, value: Partial<ModelTypes[T]>) => Promise<void>
-	delete: <T extends keyof ModelTypes & string>(model: T, key: string) => Promise<void>
+
+	link: <T extends keyof ModelTypes & string>(
+		model: T,
+		propertyName: string,
+		source: string,
+		target: string,
+	) => Promise<void>
+	unlink: <T extends keyof ModelTypes & string>(
+		model: T,
+		propertyName: string,
+		source: string,
+		target: string,
+	) => Promise<void>
 
 	transaction: <T>(callback: () => Awaitable<T>) => Promise<T>
 }
