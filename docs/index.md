@@ -5,13 +5,17 @@ next: false
 
 <div :class="$style.main">
 
-<HeroRow tagline="Developer Preview" text="Build local-first, peer-to-peer applications" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
+<HeroRow text="Realtime database,<br/>peer-to-peer sync" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
 
 <div :class="$style.mainInner">
 
-Canvas is a peer-to-peer database, like a local-first version of
-Firebase, that lets you write entire applications without leaving your
-frontend.
+Canvas is an open-source, serverless database, with peer-to-peer sync
+and an embedded runtime.
+
+It's a local-first alternative to Firebase, that lets you write
+entire applications inside your frontend, supports complex
+transactional logic, works across platforms, and more.
+
 
 </div>
 
@@ -22,7 +26,7 @@ frontend.
     iconName: 'mobile'
   },
   {
-    text: 'Cross-database persistence',
+    text: 'Cross-platform persistence',
     tooltip: 'Uses SQLite, Postgres, or IndexedDB as the backing data store',
     iconName: 'database'
   },
@@ -32,32 +36,27 @@ frontend.
     iconName: 'activity'
   },
   {
-    text: 'Live queries',
+    text: 'React integration',
     tooltip: 'React hooks for live-updating apps & database queries',
     iconName: 'compare'
   },
   {
-    text: 'Embedded runtime',
-    tooltip: 'Write custom mutators for auth rules or business logic',
-    iconName: 'atom'
-  },
-  {
-    text: 'Transactions',
-    tooltip: 'Serializable database transactions that roll back on conflict',
-    iconName: 'rewind'
-  },
-  {
-    text: 'Database Editor',
+    text: 'Database editor',
     tooltip: 'Comes with a database management interface',
     iconName: 'apps',
   },
   {
-    text: 'IPFS',
-    tooltip: 'Built on IPFS components (IPLD, DAG-CBOR, and Kademlia) and Prolly-trees',
+    text: 'Transactional runtime',
+    tooltip: 'Write game logic inside your database',
+    iconName: 'atom'
+  },
+  {
+    text: 'IPFS based',
+    tooltip: 'Built on IPFS standards (IPLD, DAG-CBOR, and Kademlia DHT) and Prolly-trees',
     iconName: '123'
   },
   {
-    text: 'MIT Licensed',
+    text: 'MIT License',
     tooltip: 'Open source, fully self-hostable',
     iconName: 'crown',
   },
@@ -185,21 +184,18 @@ $ canvas run contract.ts --topic demo.canvas.xyz // [!code highlight]
   </div>
   <div :class="$style.colLeft">
 
-Each application is built around a contract, which contains models and
-actions:
+To build your first application, start by defining a contract, which
+is an object containing `models` and `actions`:
 
-Models define your database schema.
+- Models define your database schema.
+- Actions define mutations that users can make to the database, just like API routes on the backend.
 
-Actions define mutations that users can make to the database. Use them
-to enforce authorization checks, or write business logic.
+Because mutations are inside the database, each peer can validate the
+full history of the application. This means apps are offline-first,
+without any dependency on a central server.
 
----
-
-You can define a contract inline in the browser, or as a file
-that you run using the `canvas` CLI.
-
-Easily use the CLI to start a peer, which connects to everyone else
-running the application's topic via DHT.
+You can import a contract in the browser, and use it from the frontend
+directly. You can also define it as a file:
 
 ```sh
 canvas run contract.ts --topic example.xyz
@@ -207,10 +203,12 @@ canvas run contract.ts --topic example.xyz
 [canvas] Serving HTTP API: ...
 ```
 
----
+This starts a peer that syncs with the browser. By default, it
+will also connect to everyone else running the application's topic.
 
-You can upgrade your application by adding new actions or models. Upgraded
-contracts will safely soft-fork away from nodes running the old contract.
+Now, you can upgrade your application by adding new actions or models.
+
+Upgraded contracts will safely soft-fork away from nodes running the old contract.
 
 To change existing data, you can use the admin interface to
 generate a hard-fork snapshot, which compacts and flattens the state of the application.
@@ -228,21 +226,9 @@ generate a hard-fork snapshot, which compacts and flattens the state of the appl
 
 </div>
 
-Traditionally, local-first databases have only offered simple data
-structures like KV-stores, maps, and feeds. They provide limited
-database consistency guarantees and relatively few options for
-persistence and sync.
-
-To solve these problems, we built an embedded runtime that preserves
-convergence in an eventually-consistent environment. Using the
-runtime, we compile database schemas, permissions, and custom mutations
-into code.
-
-We also built a modular signer system that allows us to integrate with
-different identity systems, including crypto wallets, DIDs, and soon,
-WebAuthn and OpenID Connect. For more traditional login, we're working
-on integrations with traditional identity providers to custody users'
-private keys.
+Canvas is based on several years of research on a new architecture for
+distributed web applications. It builds on work from projects including IPFS,
+OrbitDB, and other peer-to-peer databases.
 
 We've published some of our research as technical presentations here:
 
@@ -252,10 +238,10 @@ We've published some of our research as technical presentations here:
 - [GossipLog: libp2p Day Presentation](https://www.youtube.com/watch?v=X8nAdx1G-Cs)
 
 The current release of Canvas is an early developer preview that we
-are using in a limited set of production pilots. We are excited to
-work with more developers to build on the system, and support more
-identity providers. For more information, please reach out via
-[Discord](https://discord.gg/EjczssxKpR).
+are using in a limited set of production pilots. Starting in 2025, we
+are beginning to work with more developers to build on the system, and
+extend support to more identity providers. For more information, please reach
+out on [Discord](https://discord.gg/EjczssxKpR).
 
 </div>
 
@@ -267,8 +253,8 @@ identity providers. For more information, please reach out via
 .sectionHeader h1,
 .sectionHeaderCol h1 { font-family: "Space Grotesk"; }
 
-.main, .partial { max-width: 630px; }
-.mainInner { max-width: 630px; } /* make room for jellyfish */
+.main, .partial { max-width: 620px; }
+.mainInner { max-width: 620px; } /* make room for jellyfish */
 @media (max-width: 960px) {
   .main, .partial { margin: 0 auto; }
   .mainInner { max-width: none; }
