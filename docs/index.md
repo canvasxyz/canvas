@@ -12,9 +12,9 @@ next: false
 Canvas is an open-source, serverless database, with peer-to-peer sync
 and an embedded runtime.
 
-It's a local-first alternative to Firebase, that lets you write
+It's a local-first version of Firebase, that lets you write
 entire applications inside your frontend, supports complex
-transactional logic, works across platforms, and more.
+transactional logic, and works across platforms.
 
 
 </div>
