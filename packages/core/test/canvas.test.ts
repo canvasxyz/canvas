@@ -27,14 +27,14 @@ export const actions = {
   async createPost(content, isVisible, metadata) {
     const { id, did, address, timestamp, db } = this
     const postId = [did, id].join("/")
-    await db.set("posts", { id: postId, content, address, did, isVisible, timestamp, metadata });
+    await db.transaction(() => db.set("posts", { id: postId, content, address, did, isVisible, timestamp, metadata }));
   },
 
   async updatePost(postId, content, isVisible, metadata) {
     const { id, did, address, timestamp, db } = this
     const post = await db.get("posts", postId)
     if (post.did !== did) throw new Error("can only update own posts")
-    await db.update("posts", { id: postId, content, isVisible, metadata });
+    await db.transaction(() => db.update("posts", { id: postId, content, isVisible, metadata }));
   },
 
   async deletePost(key) {
@@ -271,27 +271,35 @@ test("merge and update into a value set by another action", async (t) => {
 			},
 			actions: {
 				async createGame() {
-					await this.db.set("game", {
-						id: "0",
-						state: { started: false, player1: "foo", player2: "bar" },
-						label: "foobar",
-					})
+					await this.db.transaction(() =>
+						this.db.set("game", {
+							id: "0",
+							state: { started: false, player1: "foo", player2: "bar" },
+							label: "foobar",
+						}),
+					)
 				},
 				async updateGame() {
-					await this.db.merge("game", {
-						id: "0",
-						state: { started: true } as any,
-						label: "foosball",
-					})
+					await this.db.transaction(() =>
+						this.db.merge("game", {
+							id: "0",
+							state: { started: true } as any,
+							label: "foosball",
+						}),
+					)
 				},
 				async updateGameMultipleMerges() {
-					await this.db.merge("game", { id: "0", state: { extra1: { a: 1, b: 1 } } })
-					await this.db.merge("game", { id: "0", state: { extra2: "b" } })
-					await this.db.merge("game", { id: "0", state: { extra3: null, extra1: { b: 2, c: 3 } } })
+					await this.db.transaction(async () => {
+						await this.db.merge("game", { id: "0", state: { extra1: { a: 1, b: 1 } } })
+						await this.db.merge("game", { id: "0", state: { extra2: "b" } })
+						await this.db.merge("game", { id: "0", state: { extra3: null, extra1: { b: 2, c: 3 } } })
+					})
 				},
 				async updateGameMultipleUpdates() {
-					await this.db.update("game", { id: "0", state: { extra1: { a: 1, b: 2 } } })
-					await this.db.update("game", { id: "0", state: { extra3: null, extra1: { b: 2, c: 3 } } })
+					await this.db.transaction(async () => {
+						await this.db.update("game", { id: "0", state: { extra1: { a: 1, b: 2 } } })
+						await this.db.update("game", { id: "0", state: { extra3: null, extra1: { b: 2, c: 3 } } })
+					})
 				},
 			},
 		},
@@ -338,7 +346,7 @@ test("merge and update into a value set by another action", async (t) => {
 	})
 })
 
-test("merge and get execute in order, even without await", async (t) => {
+test("merge and get execute in order", async (t) => {
 	const app = await Canvas.initialize({
 		topic: "com.example.app",
 		contract: {
@@ -347,19 +355,21 @@ test("merge and get execute in order, even without await", async (t) => {
 			},
 			actions: {
 				async testMerges() {
-					this.db.set("test", { id: "0", foo: null, bar: null, qux: "foo" })
-					this.db.merge("test", { id: "0", foo: "foo", qux: "qux" })
-					this.db.merge("test", { id: "0", bar: "bar" })
-					const result = await this.db.get("test", "0")
-					return result
+					return await this.db.transaction(async () => {
+						await this.db.set("test", { id: "0", foo: null, bar: null, qux: "foo" })
+						await this.db.merge("test", { id: "0", foo: "foo", qux: "qux" })
+						await this.db.merge("test", { id: "0", bar: "bar" })
+						return await this.db.get("test", "0")
+					})
 				},
 				async testGet(): Promise<any> {
-					this.db.set("test", { id: "1", foo: null, bar: null, qux: "foo" })
-					const resultPromise = this.db.get("test", "1")
-					this.db.merge("test", { id: "1", foo: "foo", qux: "qux" })
-					this.db.merge("test", { id: "1", bar: "bar" })
-					const result = await resultPromise
-					return result
+					return await this.db.transaction(async () => {
+						await this.db.set("test", { id: "1", foo: null, bar: null, qux: "foo" })
+						const result = await this.db.get("test", "1")
+						await this.db.merge("test", { id: "1", foo: "foo", qux: "qux" })
+						await this.db.merge("test", { id: "1", bar: "bar" })
+						return result
+					})
 				},
 			},
 		},
