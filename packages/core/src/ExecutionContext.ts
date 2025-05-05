@@ -14,7 +14,7 @@ import {
 	RelationValue,
 } from "@canvas-js/modeldb"
 import { AbstractGossipLog, SignedMessage } from "@canvas-js/gossiplog"
-import { assert } from "@canvas-js/utils"
+import { assert, signalInvalidType } from "@canvas-js/utils"
 
 import { decodeRecordValue, getRecordId } from "./utils.js"
 
@@ -117,11 +117,9 @@ export class ExecutionContext extends View {
 		this.log("setModelValue(%s, %o, %s)", model, value, transactional)
 
 		validateModelValue(this.db.models[model], value)
-		const {
-			primaryKey: [primaryKey],
-		} = this.db.models[model]
-		const key = value[primaryKey] as string
-		assert(typeof key === "string", "expected value[primaryKey] to be a string")
+
+		const primaryProperties = this.db.config.primaryKeys[model]
+		const key = primaryProperties.map((property) => value[property.name] as PrimaryKeyValue)
 
 		const recordId = getRecordId(model, key)
 		let csx: number | null = null
@@ -274,5 +272,39 @@ export class ExecutionContext extends View {
 		}
 
 		await this.setModelValue(model, { ...previousValue, [propertyName]: newTargets }, transactional)
+	}
+
+	async createModelValue(model: string, value: ModelValue, transactional: boolean) {
+		assert(this.db.models[model] !== undefined, "model not found")
+		this.log("createModelValue(%s, %o, %s)", model, value, transactional)
+
+		const initialValue = { ...value }
+		for (const property of this.db.models[model].properties) {
+			if (initialValue[property.name] === undefined) {
+				if (property.kind === "primitive" || property.kind === "reference") {
+					if (property.nullable) {
+						initialValue[property.name] = null
+					}
+				} else if (property.kind === "relation") {
+					initialValue[property.name] = []
+				} else {
+					signalInvalidType(property)
+				}
+			}
+		}
+
+		validateModelValue(this.db.models[model], initialValue)
+
+		const primaryProperties = this.db.config.primaryKeys[model]
+		const key = primaryProperties.map((property) => initialValue[property.name] as PrimaryKeyValue)
+
+		const recordId = getRecordId(model, key)
+		let csx: number | null = null
+		if (transactional) {
+			const [previousCSX] = await this.getLatestConflictSet(recordId)
+			csx = (previousCSX ?? 0) + 1
+		}
+
+		this.writes.set(recordId, { model, key, value: initialValue, csx })
 	}
 }

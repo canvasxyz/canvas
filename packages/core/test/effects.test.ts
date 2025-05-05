@@ -15,7 +15,7 @@ const actions = {
 	},
 
 	async updatePost(postId: string, content: string) {
-		await this.db.update("posts", { id: postId, content })
+		await this.db.set("posts", { id: postId, content })
 	},
 
 	async deletePost(postId: string) {

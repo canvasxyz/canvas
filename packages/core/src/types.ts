@@ -30,6 +30,7 @@ export type ModelAPI<ModelTypes extends Record<string, ModelValue>> = {
 	set: <T extends keyof ModelTypes & string>(model: T, value: ModelTypes[T]) => Promise<void>
 	delete: <T extends keyof ModelTypes & string>(model: T, key: string) => Promise<void>
 
+	create: <T extends keyof ModelTypes & string>(model: T, value: ModelTypes[T]) => Promise<void>
 	update: <T extends keyof ModelTypes & string>(model: T, value: Partial<ModelTypes[T]>) => Promise<void>
 	merge: <T extends keyof ModelTypes & string>(model: T, value: Partial<ModelTypes[T]>) => Promise<void>
 

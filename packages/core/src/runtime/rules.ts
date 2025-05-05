@@ -43,10 +43,14 @@ export const generateActionsFromRules = <T extends ModelSchema>(rules: Record<st
 			const result = ruleFunction.call(this, newModel)
 			if (result !== true) {
 				throw new Error(
-					`Create rule check failed: ${createRule} returned ${result}, context: ${JSON.stringify({ ...newModel, this: this })}`,
+					`Create rule check failed: ${createRule} returned ${result}, context: ${JSON.stringify({
+						...newModel,
+						this: this,
+					})}`,
 				)
 			}
-			await this.db.set(modelName, newModel)
+
+			await this.db.transaction(() => this.db.set(modelName, newModel))
 		}
 
 		const updateAction = async function proxiedUpdateAction(
@@ -66,7 +70,10 @@ export const generateActionsFromRules = <T extends ModelSchema>(rules: Record<st
 			const updateResult = updateRuleFunction.call(this, existingModel)
 			if (updateResult !== true) {
 				throw new Error(
-					`Update rule check failed: ${updateRule} returned ${updateResult}, context: ${JSON.stringify({ ...existingModel, this: this })}`,
+					`Update rule check failed: ${updateRule} returned ${updateResult}, context: ${JSON.stringify({
+						...existingModel,
+						this: this,
+					})}`,
 				)
 			}
 
@@ -75,11 +82,14 @@ export const generateActionsFromRules = <T extends ModelSchema>(rules: Record<st
 			const createResult = createRuleFunction.call(this, newModel)
 			if (createResult !== true) {
 				throw new Error(
-					`Create rule check failed: ${createRule} returned ${createResult}, context: ${JSON.stringify({ ...newModel, this: this })}`,
+					`Create rule check failed: ${createRule} returned ${createResult}, context: ${JSON.stringify({
+						...newModel,
+						this: this,
+					})}`,
 				)
 			}
 
-			await this.db.update(modelName, newModel)
+			await this.db.transaction(() => this.db.update(modelName, newModel))
 		}
 		const deleteAction = async function proxiedDeleteAction(this: ActionContext<DeriveModelTypes<T>>, pk: string) {
 			const existing = await this.db.get(modelName, pk)
@@ -89,11 +99,13 @@ export const generateActionsFromRules = <T extends ModelSchema>(rules: Record<st
 			const deleteResult = deleteRuleFunction.call(this, existing)
 			if (deleteResult !== true) {
 				throw new Error(
-					`Delete rule check failed: ${deleteRule} returned ${deleteResult}, context: ${pk}, ${JSON.stringify({ this: this })}`,
+					`Delete rule check failed: ${deleteRule} returned ${deleteResult}, context: ${pk}, ${JSON.stringify({
+						this: this,
+					})}`,
 				)
 			}
 
-			await this.db.delete(modelName, pk)
+			await this.db.transaction(() => this.db.delete(modelName, pk))
 		}
 
 		const action = capitalize(modelName)

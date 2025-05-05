@@ -59,7 +59,7 @@ export class ContractRuntime extends AbstractRuntime {
 			? mapValues(actionHandles, (handle) => {
 					assert(vm.context.typeof(handle) === "function", "expected action handle to be a function")
 					return handle.consume(vm.cache)
-				})
+			  })
 			: null
 
 		const modelSchema: ModelSchema = mapValues(modelHandles, (handle) => handle.consume(vm.context.dump))
@@ -117,6 +117,7 @@ export class ContractRuntime extends AbstractRuntime {
 							set: async (model, value) => await self.context.setModelValue(model, value, self.#transaction),
 							update: async (model, value) => await self.context.updateModelValue(model, value, self.#transaction),
 							merge: async (model, value) => await self.context.mergeModelValue(model, value, self.#transaction),
+							create: async (model, value) => await self.context.createModelValue(model, value, self.#transaction),
 							delete: async (model, key) => await self.context.deleteModelValue(model, key, self.#transaction),
 							link: async (modelProperty, source, target) =>
 								await self.context.linkModelValue(modelProperty, source, target, self.#transaction),
