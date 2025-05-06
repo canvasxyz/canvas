@@ -85,7 +85,7 @@
 		"event-iterator": "^2.0.0",
 		"express": "^4.21.2",
 		"express-async-errors": "^3.1.1",
-		"express-ipld": "^0.0.1",
+		"express-ipld": "^1.0.0",
 		"http-status-codes": "^2.3.0",
 		"idb": "^8.0.2",
 		"it-length-prefixed": "^10.0.1",

@@ -29,7 +29,6 @@
 		"test": "ava"
 	},
 	"dependencies": {
-		"@canvas-js/signer-ethereum": "0.14.1-next.2",
 		"@canvas-js/gossiplog": "0.14.1-next.2",
 		"@canvas-js/interfaces": "0.14.1-next.2",
 		"@canvas-js/modeldb": "0.14.1-next.2",
@@ -38,6 +37,7 @@
 		"@canvas-js/modeldb-pg": "0.14.1-next.2",
 		"@canvas-js/modeldb-sqlite": "0.14.1-next.2",
 		"@canvas-js/signatures": "0.14.1-next.2",
+		"@canvas-js/signer-ethereum": "0.14.1-next.2",
 		"@canvas-js/utils": "1.0.0",
 		"@canvas-js/vm": "0.14.1-next.2",
 		"@ipld/dag-cbor": "^9.2.2",
@@ -62,7 +62,6 @@
 		"ethers": "^6.13.5",
 		"express": "^4.21.2",
 		"express-async-errors": "^3.1.1",
-		"express-ipld": "^0.0.1",
 		"http-status-codes": "^2.3.0",
 		"multiformats": "^13.3.2",
 		"p-defer": "^4.0.1",
