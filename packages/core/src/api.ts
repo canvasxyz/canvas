@@ -10,7 +10,7 @@ import { createAPI as createBaseAPI, getLimit, getOrder, getRange } from "@canva
 import { assert } from "@canvas-js/utils"
 
 import { Canvas } from "./Canvas.js"
-import { MessageRecord, SignedMessage } from "@canvas-js/gossiplog"
+import { MessageRecord } from "@canvas-js/gossiplog"
 import { WhereCondition } from "@canvas-js/modeldb"
 
 export interface APIOptions {}
@@ -20,9 +20,11 @@ export function createAPI(app: Canvas): express.Express {
 
 	api.get("/", async (req, res) => {
 		if (app.closed) {
-			return res.status(400).send("application closed")
+			return void res.status(400).send("application closed")
 		}
-		res.json(await app.getApplicationData())
+
+		const data = await app.getApplicationData()
+		res.json(data)
 	})
 
 	api.get("/actions/count", async (req, res) => {

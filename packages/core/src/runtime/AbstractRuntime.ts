@@ -12,9 +12,9 @@ import { assert } from "@canvas-js/utils"
 import { ExecutionContext } from "../ExecutionContext.js"
 
 import { View } from "../View.js"
-import { generateActionsFromRules, extractRulesFromModelSchema } from "./rules.js"
+import { extractRulesFromModelSchema } from "./rules.js"
+import { ModelSchema, RulesInit } from "../types.js"
 import { encodeRecordKey, encodeRecordValue, getRecordId, isAction, isSession, isSnapshot } from "../utils.js"
-import { Actions, ModelSchema, RulesInit } from "../types.js"
 
 export type WriteRecord = {
 	record_id: string

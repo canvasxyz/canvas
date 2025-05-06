@@ -160,7 +160,7 @@ export async function handler(args: Args) {
 					req.body ?? {}
 
 				if (address !== adminAddress && adminAddress !== "any") {
-					return res.status(403).json({
+					return void res.status(403).json({
 						error: "Unauthorized: Only the configured admin address can perform migrations",
 					})
 				}
@@ -168,28 +168,28 @@ export async function handler(args: Args) {
 				// Verify SIWE signature
 				try {
 					if (!signature || !siweMessage) {
-						return res.status(400).json({
+						return void res.status(400).json({
 							error: "Missing signature or SIWE message",
 						})
 					}
 					const message = new SiweMessage(siweMessage)
 
 					if (!message.nonce || message.nonce !== nonce) {
-						return res.status(403).json({
+						return void res.status(403).json({
 							error: "Invalid nonce in SIWE message",
 						})
 					}
 
 					const recoveredAddress = verifyMessage(message.prepareMessage(), signature)
 					if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
-						return res.status(403).json({
+						return void res.status(403).json({
 							error: "Signature verification failed",
 						})
 					}
 
 					// Verify the signature matches the admin address (duplicate check)
 					if (adminAddress !== "any" && recoveredAddress.toLowerCase() !== adminAddress.toLowerCase()) {
-						return res.status(403).json({
+						return void res.status(403).json({
 							error: "Signature verification failed",
 						})
 					}
@@ -231,7 +231,7 @@ export async function handler(args: Args) {
 								if (includeSnapshot) {
 									await writeSnapshot({ location, snapshot })
 								} else {
-									await clearSnapshot({ location })
+									clearSnapshot({ location })
 								}
 								clearContractLocationDB({ location })
 							}
@@ -258,7 +258,7 @@ export async function handler(args: Args) {
 						})
 				} catch (error) {
 					console.error("Signature verification error:", error)
-					return res.status(403).json({
+					return void res.status(403).json({
 						error: "Signature verification failed",
 					})
 				}
