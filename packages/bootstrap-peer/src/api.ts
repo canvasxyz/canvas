@@ -19,7 +19,7 @@ export function createAPI(libp2p: Libp2p<ServiceMap>): Express {
 			rtt: conn.rtt,
 		}))
 
-		return res.json(connections)
+		return void res.json(connections)
 	})
 
 	const hexPattern = /^[a-f0-9]+$/
@@ -57,7 +57,7 @@ export function createAPI(libp2p: Libp2p<ServiceMap>): Express {
 			}
 		}
 
-		res.json({ cursor: cursor.toString(16).padStart(16, "0"), registrations })
+		return void res.json({ cursor: cursor.toString(16).padStart(16, "0"), registrations })
 	})
 
 	api.get("/metrics", async (req, res) => {
