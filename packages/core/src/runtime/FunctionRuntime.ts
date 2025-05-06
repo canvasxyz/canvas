@@ -10,6 +10,7 @@ import { sha256 } from "@noble/hashes/sha256"
 import { ModelSchema, ActionContext, ActionImplementation, Contract, ModelAPI } from "../types.js"
 import { ExecutionContext } from "../ExecutionContext.js"
 import { AbstractRuntime } from "./AbstractRuntime.js"
+import { generateActionsFromRules } from "./rules.js"
 
 // Check if all models have $rules defined
 const hasAllRules = (models: ModelSchema) => {
@@ -48,13 +49,13 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 
 	constructor(public readonly topic: string, public readonly signers: SignerCache, contract: Contract<ModelsT>) {
 		super(contract.models)
+		this.actions = contract.actions ?? generateActionsFromRules(this.rules, contract.models)
 		this.contract = [
 			`export const models = ${JSON.stringify(contract.models, null, "  ")};`,
-			`export const actions = {\n${Object.entries(contract.actions ?? this.generatedActions)
+			`export const actions = {\n${Object.entries(this.actions)
 				.map(([name, action]) => `${name}: ${action}`)
 				.join(", \n")}};`,
 		].join("\n")
-		this.actions = contract.actions ?? this.generatedActions
 
 		this.#db = {
 			get: async <T extends keyof DeriveModelTypes<ModelsT> & string>(model: T, key: string) => {

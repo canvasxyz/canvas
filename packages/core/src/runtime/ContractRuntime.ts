@@ -12,6 +12,7 @@ import { ActionContext, Contract, ModelSchema } from "../types.js"
 import { ExecutionContext } from "../ExecutionContext.js"
 import { AbstractRuntime } from "./AbstractRuntime.js"
 import { encodeId } from "@canvas-js/gossiplog"
+import { generateActionsFromRules } from "./rules.js"
 
 export class ContractRuntime extends AbstractRuntime {
 	public static async init(
@@ -101,7 +102,7 @@ export class ContractRuntime extends AbstractRuntime {
 		// we're not using actions inside QuickJS for execution.
 		this.actions =
 			actions ??
-			mapValues(this.generatedActions, (action) => {
+			mapValues(generateActionsFromRules(this.rules, this.models), (action) => {
 				return vm.wrapFunction(async function (this: QuickJSHandle, ...args: JSValue[]) {
 					const exec = self.#context
 					if (exec === null) throw new Error("expected execution context")

@@ -124,16 +124,12 @@ export abstract class AbstractRuntime {
 	public abstract readonly actionNames: string[]
 	public readonly schema: ModelSchema
 	public readonly rules: Record<string, RulesInit>
-	public readonly generatedActions: Actions<any>
 
 	protected readonly log = logger("canvas:runtime")
 
 	protected constructor(public readonly models: ModelSchema) {
 		const { schema, rules } = extractRulesFromModelSchema(models)
-
 		this.rules = rules
-		this.generatedActions = generateActionsFromRules(rules, models)
-
 		this.schema = {
 			...schema,
 			...AbstractRuntime.sessionsModel,
