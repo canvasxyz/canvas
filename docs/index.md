@@ -124,7 +124,7 @@ const models = {
 
 const actions = {
   createMessage: async (text) => {
-    const { address, id } = this
+    const { address, db, id } = this
     await db.set("messages", { id, text })
   }
 }
@@ -139,7 +139,7 @@ app.actions.createMessage("hello world!")
 
 ```ts [React hook]
 import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
-import { models, actions } from "contract.ts"
+import { models, actions } from "./contract.ts"
 
 const wsURL = null
 
@@ -168,7 +168,7 @@ export const models = {
 
 export const actions = {
   createMessage: ({ text }) => {
-    const { id, address } = this
+    const { address, db, id } = this
     db.set("messages", { id, text })
   }
 }
