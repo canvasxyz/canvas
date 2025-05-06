@@ -1,5 +1,4 @@
 import express from "express"
-import "express-async-errors"
 import { StatusCodes } from "http-status-codes"
 
 import { Counter, Gauge, Summary, Registry, register } from "prom-client"

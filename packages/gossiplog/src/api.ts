@@ -1,7 +1,6 @@
 import assert from "node:assert"
 
 import express from "express"
-import "express-async-errors"
 
 import ipld from "express-ipld"
 import { StatusCodes } from "http-status-codes"
@@ -9,15 +8,7 @@ import * as json from "@ipld/dag-json"
 
 import type { Signature, Message } from "@canvas-js/interfaces"
 import type { RangeExpression } from "@canvas-js/modeldb"
-import {
-	AbstractGossipLog,
-	MessageSourceType,
-	MessageRecord,
-	AncestorRecord,
-	MessageId,
-	MessageSet,
-	messageIdPattern,
-} from "@canvas-js/gossiplog"
+import { AbstractGossipLog, AncestorRecord, MessageId, MessageSet, messageIdPattern } from "@canvas-js/gossiplog"
 
 export function createAPI<Payload>(gossipLog: AbstractGossipLog<Payload>): express.Express {
 	const api = express()
@@ -90,7 +81,7 @@ export function createAPI<Payload>(gossipLog: AbstractGossipLog<Payload>): expre
 			orderBy: { clock: "asc" },
 		})
 
-		return res.json(
+		res.json(
 			records.map((record) => {
 				const links: string[] = []
 				for (const { id, clock } of MessageSet.decode(record.links)) {
@@ -107,7 +98,7 @@ export function createAPI<Payload>(gossipLog: AbstractGossipLog<Payload>): expre
 	gossipLog.addEventListener("connect", ({ detail: { peer } }) => connectionURLs.add(peer))
 	gossipLog.addEventListener("disconnect", ({ detail: { peer } }) => connectionURLs.delete(peer))
 
-	api.get("/connections", (req, res) => res.json(Array.from(connectionURLs).map((peer) => ({ peer }))))
+	api.get("/connections", (req, res) => void res.json(Array.from(connectionURLs).map((peer) => ({ peer }))))
 
 	return api
 }
