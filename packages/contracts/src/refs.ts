@@ -1,6 +1,6 @@
 import type { ModelSchema, ModelInit } from "@canvas-js/core"
 
-const connection: ModelInit = {
+export const connection = {
 	id: "primary",
 	creator: "@profile",
 	ref: "@ref",
@@ -21,13 +21,13 @@ const connection: ModelInit = {
 
 	$indexes: ["id"],
 	$rules: {
-		create: "this.sender === creator && id === creator + '/' + ref",
-		update: "this.sender === creator && id === creator + '/' + ref",
-		delete: "this.sender === creator",
+		create: "id === creator + '/' + ref && creator === this.did",
+		update: "id === creator + '/' + ref && creator === this.did",
+		delete: "creator === this.did",
 	},
-}
+} as const satisfies ModelInit
 
-const profile: ModelInit = {
+export const profile = {
 	id: "primary",
 	userName: "string",
 
@@ -41,13 +41,13 @@ const profile: ModelInit = {
 	updated: "string?",
 
 	$rules: {
-		create: "this.sender === id",
-		update: "this.sender === id",
+		create: "id === this.did",
+		update: "id === this.did",
 		delete: false,
 	},
-}
+} as const satisfies ModelInit
 
-const ref: ModelInit = {
+export const ref = {
 	id: "primary",
 	creator: "@profile?",
 	type: "string?",
@@ -63,14 +63,16 @@ const ref: ModelInit = {
 	deleted: "string?",
 
 	$rules: {
-		create: "this.id === txid && this.sender === creator && ['place', 'artwork', 'other'].includes(type)",
-		update: "this.id === txid && this.sender === creator && ['place', 'artwork', 'other'].includes(type)",
+		create: "creator === this.did && ['place', 'artwork', 'other'].includes(type)",
+		update: "creator === this.did && ['place', 'artwork', 'other'].includes(type)",
 		delete: false,
 	},
-}
+} as const satisfies ModelInit
 
 export const models = {
 	connection,
 	profile,
 	ref,
-} satisfies ModelSchema
+} as const satisfies ModelSchema
+
+export default { models }

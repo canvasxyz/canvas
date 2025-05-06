@@ -1,0 +1,23 @@
+{
+	"name": "@canvas-js/contracts",
+	"version": "0.14.1-next.2",
+	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
+	"type": "module",
+	"engines": {
+		"node": ">=20.0.0"
+	},
+	"files": [
+		"lib"
+	],
+	"main": "./lib/index.js",
+	"types": "./lib/index.d.ts",
+	"sideEffects": false,
+	"scripts": {
+		"test": "ava --serial"
+	},
+	"dependencies": {
+		"@canvas-js/core": "0.14.1-next.2",
+		"@canvas-js/signer-ethereum": "0.14.1-next.2",
+		"@canvas-js/utils": "1.0.0"
+	}
+}

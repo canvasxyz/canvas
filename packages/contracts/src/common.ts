@@ -41,7 +41,7 @@ export const models = {
 	},
 } satisfies ModelSchema
 
-export const actions = {
+export const actions: Actions<typeof models> = {
 	async thread({
 		community,
 		title,
@@ -56,7 +56,7 @@ export const actions = {
 		topic: number
 	}) {
 		const { did, id, timestamp } = this
-		await db.set("threads", {
+		await this.db.set("threads", {
 			id: id,
 			author: did,
 			community,
@@ -82,10 +82,10 @@ export const actions = {
 		topic: number
 	}) {
 		const { did, timestamp } = this
-		const t = await db.get("threads", thread_id)
+		const t = await this.db.get("threads", thread_id)
 		if (!t || !t.id) throw new Error("invalid thread")
 		if (t.author !== did) throw new Error("invalid thread")
-		await db.set("threads", {
+		await this.db.set("threads", {
 			id: t.id as string,
 			author: t.author,
 			community: t.community,
@@ -98,10 +98,10 @@ export const actions = {
 	},
 	async deleteThread({ thread_id }: { thread_id: string }) {
 		const { did } = this
-		const t = await db.get("threads", thread_id)
+		const t = await this.db.get("threads", thread_id)
 		if (!t || !t.id) throw new Error("invalid thread")
 		if (t.author !== did) throw new Error("invalid thread")
-		await db.delete("threads", t.id as string)
+		await this.db.delete("threads", t.id as string)
 	},
 	async comment({
 		thread_id,
@@ -113,7 +113,7 @@ export const actions = {
 		parent_comment_id: string
 	}) {
 		const { did, id, timestamp } = this
-		await db.set("comments", {
+		await this.db.set("comments", {
 			id: id,
 			author: did,
 			thread_id,
@@ -125,10 +125,10 @@ export const actions = {
 	// TODO: not implemented (packages/commonwealth/server/routes/comments/update_comment_handler.ts)
 	async updateComment({ comment_id, body }: { comment_id: string; body: string }) {
 		const { did, timestamp } = this
-		const c = await db.get("comments", comment_id)
+		const c = await this.db.get("comments", comment_id)
 		if (!c || !c.id) throw new Error("invalid comment")
 		if (c.author !== did) throw new Error("invalid comment")
-		await db.set("comments", {
+		await this.db.set("comments", {
 			id: c.id,
 			author: c.author,
 			thread_id: c.thread_id,
@@ -139,17 +139,17 @@ export const actions = {
 	},
 	async deleteComment({ comment_id }: { comment_id: string }) {
 		const { did } = this
-		const c = await db.get("comments", comment_id)
+		const c = await this.db.get("comments", comment_id)
 		if (!c || !c.id) throw new Error("invalid comment")
 		if (c.author !== did) throw new Error("invalid comment")
-		await db.delete("comments", c.id as string)
+		await this.db.delete("comments", c.id as string)
 	},
 	async reactThread({ thread_id, value }: { thread_id: string; value: string }) {
 		const { did, timestamp } = this
 		if (value !== "like" && value !== "dislike") {
 			throw new Error("Invalid reaction")
 		}
-		await db.set("thread_reactions", {
+		await this.db.set("thread_reactions", {
 			id: `${thread_id}/${did}`,
 			author: did,
 			thread_id,
@@ -159,16 +159,16 @@ export const actions = {
 	},
 	async unreactThread({ thread_id }: { thread_id: string }) {
 		const { did } = this
-		const r = await db.get("thread_reactions", `${thread_id}/${did}`)
+		const r = await this.db.get("thread_reactions", `${thread_id}/${did}`)
 		if (!r || !r.id) throw new Error("reaction does not exist")
-		await db.delete("thread_reactions", `${thread_id}/${did}`)
+		await this.db.delete("thread_reactions", `${thread_id}/${did}`)
 	},
 	async reactComment({ comment_id, value }: { comment_id: string; value: string }) {
 		const { did, timestamp } = this
 		if (value !== "like" && value !== "dislike") {
 			throw new Error("Invalid reaction")
 		}
-		await db.set("comment_reactions", {
+		await this.db.set("comment_reactions", {
 			id: `${comment_id}/${did}`,
 			author: did,
 			comment_id,
@@ -178,8 +178,8 @@ export const actions = {
 	},
 	async unreactComment({ comment_id }: { comment_id: string }) {
 		const { did } = this
-		const r = await db.get("comment_reactions", `${comment_id}/${did}`)
+		const r = await this.db.get("comment_reactions", `${comment_id}/${did}`)
 		if (!r || !r.id) throw new Error("reaction does not exist")
-		await db.delete("comment_reactions", `${comment_id}/${did}`)
+		await this.db.delete("comment_reactions", `${comment_id}/${did}`)
 	},
-} satisfies Actions<typeof models>
+} as const
