@@ -2,6 +2,10 @@ import { assert } from "@canvas-js/utils"
 import { ActionContext, Actions, DeriveModelTypes, ModelInit, ModelSchema, RulesInit } from "../types.js"
 import { capitalize } from "../utils.js"
 
+const toString = (err: unknown) => {
+	return typeof err === "object" && err !== null && "message" in err ? String(err.message) : String(err)
+}
+
 export const extractRulesFromModelSchema = (models: ModelSchema) => {
 	const rules: Record<string, RulesInit> = {}
 	const schema: ModelSchema = {}
@@ -40,7 +44,12 @@ export const generateActionsFromRules = <T extends ModelSchema>(rules: Record<st
 		) {
 			// check create rule
 			const ruleFunction = new Function("$model", `with ($model) { return (${createRule}) }`)
-			const result = ruleFunction.call(this, newModel)
+			let result
+			try {
+				result = ruleFunction.call(this, newModel)
+			} catch (error) {
+				throw new Error(`Create rule execution failed: ${toString(error)}`)
+			}
 			if (result !== true) {
 				throw new Error(
 					`Create rule check failed: ${createRule} returned ${result}, context: ${JSON.stringify({
@@ -67,7 +76,12 @@ export const generateActionsFromRules = <T extends ModelSchema>(rules: Record<st
 
 			// check update rule
 			const updateRuleFunction = new Function("$model", `with ($model) { return (${updateRule}) }`)
-			const updateResult = updateRuleFunction.call(this, existingModel)
+			let updateResult
+			try {
+				updateResult = updateRuleFunction.call(this, existingModel)
+			} catch (error) {
+				throw new Error(`Update rule execution failed: ${toString(error)}`)
+			}
 			if (updateResult !== true) {
 				throw new Error(
 					`Update rule check failed: ${updateRule} returned ${updateResult}, context: ${JSON.stringify({
@@ -79,7 +93,12 @@ export const generateActionsFromRules = <T extends ModelSchema>(rules: Record<st
 
 			// check create rule
 			const createRuleFunction = new Function("$model", `with ($model) { return (${createRule}) }`)
-			const createResult = createRuleFunction.call(this, newModel)
+			let createResult
+			try {
+				createResult = createRuleFunction.call(this, newModel)
+			} catch (error) {
+				throw new Error(`Create rule execution failed: ${toString(error)}`)
+			}
 			if (createResult !== true) {
 				throw new Error(
 					`Create rule check failed: ${createRule} returned ${createResult}, context: ${JSON.stringify({
@@ -96,7 +115,12 @@ export const generateActionsFromRules = <T extends ModelSchema>(rules: Record<st
 
 			// check delete rule
 			const deleteRuleFunction = new Function("$model", `with ($model) { return (${deleteRule}) }`)
-			const deleteResult = deleteRuleFunction.call(this, existing)
+			let deleteResult
+			try {
+				deleteResult = deleteRuleFunction.call(this, existing)
+			} catch (error) {
+				throw new Error(`Delete rule execution failed: ${toString(error)}`)
+			}
 			if (deleteResult !== true) {
 				throw new Error(
 					`Delete rule check failed: ${deleteRule} returned ${deleteResult}, context: ${pk}, ${JSON.stringify({
