@@ -59,14 +59,14 @@ nextApp.prepare().then(async () => {
 			const results = await canvasApp.db.query("message", {})
 			// const connections = canvasApp.libp2p.getConnections()
 
-			return res.json({
+			return void res.json({
 				messages: results,
 				// status: canvasApp.status,
 				// connectionsLength: connections.length,
 				// connections,
 			})
 		} catch (err) {
-			return res.status(400).json({ error: "[Canvas] query failed" })
+			return void res.status(400).json({ error: "[Canvas] query failed" })
 		}
 	})
 
