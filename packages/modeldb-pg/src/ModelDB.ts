@@ -1,4 +1,4 @@
-import pg from "pg"
+import * as pg from "pg"
 
 import { assert, signalInvalidType } from "@canvas-js/utils"
 
@@ -112,7 +112,7 @@ export class ModelDB extends AbstractModelDB {
 		}
 	}
 
-	private constructor(public readonly client: pg.Client, config: Config, version: Record<string, number>) {
+	private constructor(public readonly client: InstanceType<typeof pg.Client>, config: Config, version: Record<string, number>) {
 		super(config, version)
 
 		this.#selectTable = new Query(

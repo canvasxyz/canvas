@@ -1,4 +1,4 @@
-import pg from "pg"
+import * as pg from "pg"
 
 import { assert, signalInvalidType, mapValues, zip } from "@canvas-js/utils"
 
@@ -79,7 +79,7 @@ export class ModelAPI {
 	readonly primaryProperties: PrimitiveProperty[]
 	readonly mutableProperties: Property[] = []
 
-	constructor(readonly client: pg.Client, readonly config: Config, readonly model: Model) {
+	constructor(readonly client: typeof pg.Client, readonly config: Config, readonly model: Model) {
 		this.table = model.name
 		this.primaryProperties = config.primaryKeys[model.name]
 	}
