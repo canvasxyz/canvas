@@ -1,4 +1,4 @@
-import type pg from "pg"
+import * as pg from "pg"
 import type { SqlStorage } from "@cloudflare/workers-types"
 
 import type { PlatformTarget } from "../interface.js"

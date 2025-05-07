@@ -49,7 +49,7 @@ type Statements = {
 }
 
 export class ModelAPI {
-	public static async create(client: pg.Client, config: Config, model: Model, clear: boolean = false) {
+	public static async create(client: InstanceType<typeof pg.Client>, config: Config, model: Model, clear: boolean = false) {
 		const api = new ModelAPI(client, config, model)
 
 		/** SQL column declarations */
@@ -79,7 +79,7 @@ export class ModelAPI {
 	readonly primaryProperties: PrimitiveProperty[]
 	readonly mutableProperties: Property[] = []
 
-	constructor(readonly client: typeof pg.Client, readonly config: Config, readonly model: Model) {
+	constructor(readonly client: InstanceType<typeof pg.Client>, readonly config: Config, readonly model: Model) {
 		this.table = model.name
 		this.primaryProperties = config.primaryKeys[model.name]
 	}

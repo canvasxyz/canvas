@@ -8,7 +8,7 @@ import { anySignal } from "any-signal"
 import esbuild from "esbuild"
 import chalk from "chalk"
 
-import type pg from "pg"
+import * as pg from "pg"
 import { WebSocketServer } from "ws"
 
 import { NetworkServer } from "@canvas-js/gossiplog/server"
