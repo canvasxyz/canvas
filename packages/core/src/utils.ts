@@ -95,7 +95,12 @@ export function decodeRecordValue<T = ModelValue>(config: Config, modelName: str
 
 	const keys = config.propertyNames[modelName]
 	const values = cbor.decode<PropertyValue[]>(value)
-	return Object.fromEntries(zip(keys, values))
+
+	if (values === null) {
+		return null
+	} else {
+		return Object.fromEntries(zip(keys, values))
+	}
 }
 
 export function getRecordId(model: string, key: PrimaryKeyValue | PrimaryKeyValue[]): string {
@@ -160,5 +165,5 @@ function writeArgument(majorType: number, argument: number): Uint8Array {
 }
 
 export const capitalize = (str: string) => {
-	return str.charAt(0).toUpperCase() + str.slice(1);
+	return str.charAt(0).toUpperCase() + str.slice(1)
 }
