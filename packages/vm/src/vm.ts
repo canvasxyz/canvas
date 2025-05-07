@@ -135,7 +135,7 @@ export class VM {
 		return this.unwrapResult(result)
 	}
 
-	public callAsync = async (
+	public callAsync = (
 		fn: string | QuickJSHandle,
 		thisArg: string | QuickJSHandle,
 		args: QuickJSHandle[],
@@ -144,7 +144,7 @@ export class VM {
 		if (this.isInstanceOf(resultHandle, this.get("Promise"))) {
 			return resultHandle.consume(this.resolvePromise)
 		} else {
-			return resultHandle
+			return Promise.resolve(resultHandle)
 		}
 	}
 
