@@ -1,8 +1,10 @@
-# UI Components
+# Managing Sessions
 
-We provide React components that provide an additional layer of
-abstraction above session signers, for users to be able to log in/out
-of your application.
+We provide React components for managing users' sessions, so they
+can log in and out of your application with one click.
+
+These are built as a layer of abstraction above session signers.
+Currently, these components support signing in with Ethereum and Farcaster.
 
 ## Adding the Auth Provider
 
@@ -47,7 +49,7 @@ const MyComponent = () => {
 }
 ```
 
-## Other Considerations
+## Other considerations
 
 If you are using SIWFSigner, you'll need to wrap your application in
 the provider given to you by @farcaster/auth-kit.

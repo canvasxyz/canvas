@@ -1,5 +1,10 @@
 # Upgrading Applications
 
+Canvas has limited support for upgrading applications. This is one
+of our main focuses for development through the current year.
+
+## Using the Network Explorer
+
 When you use `canvas run --network-explorer`, the node will serve a
 management interface, similar to the Firebase web interface, that
 shows you the current database and contract.
@@ -23,33 +28,54 @@ You can now decide whether you want to proceed with the upgrade:
 
 ![Run migrations](/run_migrations.png)
 
-## Soft Forks
+## Soft Forks: Upgrading development applications
 
 If you apply the upgrade **without retaining a snapshot**, this will
 make your application reset and re-apply actions from the start.
 
 This will start the application in soft-fork mode, with a topic like `example.xyz`.
 
-Soft-fork applications start from an empty database, and are
-recommended for getting started.
+Soft-fork applications start from an empty database, and attempt to
+replay the entire history of actions every time.
 
-## Hard Forks
+> [!TIP]
+> You should take care to ensure that the new application accepts all
+> actions from the previous application. Otherwise, those actions will be lost,
+> as well as any actions following them.
+>
+> For this reason, we discourage developers from soft-forking
+> applications in production at this time, until further
+> protections are in place.
+
+## Hard Forks: Upgrading immutable applications
 
 If you apply the upgrade **while retaining a snapshot**, this will
 make your application restart from a hard fork snapshot, which holds
 the initial database state of the application.
 
 Creating a snapshot causes the server to append a #hash to the end of
-your topic, so an topic like `chat-example.canvas.xyz` would become:
-
-```
-chat-example.canvas.xyz#ffae63ab95cc5483
-```
+your topic, so `example.canvas.xyz` would become
+`example.canvas.xyz#ffae63ab95cc5483`.
 
 Each snapshotted application runs on its own mesh. The snapshotted
-application will *not* sync with applications on the topic
-`chat-example.canvas.xyz`.
+application will *not* sync with apps on the original topic without a
+snapshot, since this is a hard fork.
 
 For now, we recommend that clients of hard-fork applications
 [fetch the contract](/5-deployment.html#cli-application-with-snapshot)
-from a server when starting.
+from a server when starting, by using the `useContract` hook and
+omitting the `contract` and `topic` fields from the local (client) code:
+
+```ts
+const app = useCanvas("ws://app.example.xyz", {
+  signers: [new SIWESigner()]
+})
+```
+
+This will ensure that your local application always stays in sync with
+the server.
+
+> [!TIP]
+> We are actively working on several backwards-compatible improvements to the
+> snapshot system, that will make it easier to understand the data flow
+> between different versions of your application.

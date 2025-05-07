@@ -1,12 +1,13 @@
-# Deploying
+# Running & Deploying Peers
 
-You can run Canvas applications in the browser only, or using
-browser-to-server sync with a server peer.
+You can run a Canvas application in the browser without connecting
+to a server, but when you're ready to go live, you'll want to deploy
+it to a server anyone can connect to.
 
-## Preparing for Deployment
+## Preparing for deployment
 
-To make deploying browser applications easier, we recommend creating a
-separate `contract.ts` file that's imported from your frontend:
+To get started, we recommend creating a separate `contract.ts` file
+that's imported from your frontend:
 
 ```ts
 import type { ModelSchema, Actions } from "@canvas-js/core"
@@ -20,6 +21,8 @@ export const actions = {
 } satisfies Actions<typeof models>
 ```
 
+Then, import the contract.ts file:
+
 ```ts
 import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
 import { models, actions } from "./contract.js"
@@ -31,15 +34,13 @@ export const App = () => {
     contract: { models, actions },
     topic: "example.xyz",
   })
-
-  // ...
 }
 ```
 
-## CLI application
+## Running a local development node
 
-To run a temporary development node for this application, we can use
-the `contract.ts` file which we created above:
+Using the contract.ts file, now you can run a development node for the
+application above, with one command:
 
 ```sh
 npm install -g @canvas-js/cli
@@ -58,26 +59,28 @@ This will start the application on localhost:8000.
 
 Some relevant options:
 
-* If you provide `--network-explorer`, the CLI will also expose a
+* If you provide `--network-explorer`, the CLI will serve a
 management interface at localhost:8000/explorer, which will show you
-data and past actions stored on the replica.
-* If you provide `--network-explorer --admin <ethAddr>`, you will be
-able to change the currently running contract from the explorer by
-signing a message with your address. This will cause the instance to
-terminate and start over again.
+data and action history.
 * If you run the application with `/data/canvas-example --init contract.ts`
 instead, the local node will copy of the contract to the data directory
 you've provided instead. This will ensure that application data persists
 when the CLI is shut down.
-* If you would prefer to use Postgres as a backing database, create a
-local Postgres DB and provide its URL as an environment variable.
-The data directory will only be used to store metadata.
+* If you provide `--admin <ethAddr>`, you will be able to upgrade the
+running contract by signing a message with your address. This will cause
+the instance to terminate and start over again.
+
+By default, the local node is backed by SQLite. If you would prefer to
+use Postgres as a backing database, create a local Postgres DB and
+provide its URL as an environment variable:
 
 ```sh
 DATABASE_URL="postgres://localhost:5432/..." canvas run \
   --topic example.xyz \
   --init contract.ts /data/canvas-example
 ```
+
+Then, the data directory will only be used to store metadata.
 
 ## Production deployment
 
