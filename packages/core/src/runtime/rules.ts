@@ -44,22 +44,19 @@ export const generateActionsFromRules = <T extends ModelSchema>(rules: Record<st
 		) {
 			// check create rule
 			const ruleFunction = new Function("$model", `with ($model) { return (${createRule}) }`)
-			let result
+			let result = false
 			try {
 				result = ruleFunction.call(this, newModel)
 			} catch (error) {
 				throw new Error(`Create rule execution failed, ${toString(error)}: ${createRule}`)
 			}
+
 			if (result !== true) {
-				throw new Error(
-					`Create rule check failed: ${createRule} returned ${result}, context: ${JSON.stringify({
-						...newModel,
-						this: this,
-					})}`,
-				)
+				const ctx = JSON.stringify({ ...newModel, this: this }, null, "  ")
+				throw new Error(`Create rule check failed: \`${createRule}\` ${ctx}`)
 			}
 
-			await this.db.transaction(() => this.db.create(modelName, newModel))
+			await this.db.transaction(async () => await this.db.create(modelName, newModel))
 		}
 
 		const updateAction = async function proxiedUpdateAction(
@@ -74,42 +71,41 @@ export const generateActionsFromRules = <T extends ModelSchema>(rules: Record<st
 			)
 			const existingModel = await this.db.get(modelName, newModel[primaryKey as keyof typeof newModel] as string)
 
-			// check update rule
-			const updateRuleFunction = new Function("$model", `with ($model) { return (${updateRule}) }`)
-			let updateResult
-			try {
-				updateResult = updateRuleFunction.call(this, existingModel)
-			} catch (error) {
-				throw new Error(`Update rule execution failed, ${toString(error)}: ${updateRule}`)
-			}
-			if (updateResult !== true) {
-				throw new Error(
-					`Update rule check failed: ${updateRule} returned ${updateResult}, context: ${JSON.stringify({
-						...existingModel,
-						this: this,
-					})}`,
-				)
+			{
+				// check update rule
+				const updateRuleFunction = new Function("$model", `with ($model) { return (${updateRule}) }`)
+				let updateResult = false
+				try {
+					updateResult = updateRuleFunction.call(this, existingModel)
+				} catch (error) {
+					throw new Error(`Update rule execution failed, ${toString(error)}: ${updateRule}`)
+				}
+
+				if (updateResult !== true) {
+					const ctx = JSON.stringify({ ...newModel, this: this }, null, "  ")
+					throw new Error(`Update rule check failed: \`${updateRule}\` ${ctx}`)
+				}
 			}
 
-			// check create rule
-			const createRuleFunction = new Function("$model", `with ($model) { return (${createRule}) }`)
-			let createResult
-			try {
-				createResult = createRuleFunction.call(this, newModel)
-			} catch (error) {
-				throw new Error(`Create rule execution failed, ${toString(error)}: ${createRule}`)
-			}
-			if (createResult !== true) {
-				throw new Error(
-					`Create rule check failed: ${createRule} returned ${createResult}, context: ${JSON.stringify({
-						...newModel,
-						this: this,
-					})}`,
-				)
+			{
+				// check create rule
+				const createRuleFunction = new Function("$model", `with ($model) { return (${createRule}) }`)
+				let createResult
+				try {
+					createResult = createRuleFunction.call(this, newModel)
+				} catch (error) {
+					throw new Error(`Create rule execution failed, ${toString(error)}: ${createRule}`)
+				}
+
+				if (createResult !== true) {
+					const ctx = JSON.stringify({ ...newModel, this: this }, null, "  ")
+					throw new Error(`Create rule check failed: \`${updateRule}\` ${ctx}`)
+				}
 			}
 
-			await this.db.transaction(() => this.db.update(modelName, newModel))
+			await this.db.transaction(async () => await this.db.update(modelName, newModel))
 		}
+
 		const deleteAction = async function proxiedDeleteAction(this: ActionContext<DeriveModelTypes<T>>, pk: string) {
 			const existing = await this.db.get(modelName, pk)
 
@@ -121,15 +117,13 @@ export const generateActionsFromRules = <T extends ModelSchema>(rules: Record<st
 			} catch (error) {
 				throw new Error(`Delete rule execution failed, ${toString(error)}: ${deleteRule}`)
 			}
+
 			if (deleteResult !== true) {
-				throw new Error(
-					`Delete rule check failed: ${deleteRule} returned ${deleteResult}, context: ${pk}, ${JSON.stringify({
-						this: this,
-					})}`,
-				)
+				const ctx = JSON.stringify({ this: this }, null, "  ")
+				throw new Error(`Delete rule check failed: \`${updateRule}\` ${ctx}`)
 			}
 
-			await this.db.transaction(() => this.db.delete(modelName, pk))
+			await this.db.transaction(async () => await this.db.delete(modelName, pk))
 		}
 
 		const action = capitalize(modelName)
