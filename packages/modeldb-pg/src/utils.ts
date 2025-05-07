@@ -1,12 +1,14 @@
-import pg from "pg"
+import * as pg from "pg"
 import Cursor from "pg-cursor"
 
 import { PostgresPrimitiveValue } from "./encoding.js"
 
+export type PgClient = InstanceType<typeof pg.Client>
+
 export const quote = (name: string) => `"${name}"`
 
 export class Query<R extends Record<string, PostgresPrimitiveValue> = Record<string, PostgresPrimitiveValue>> {
-	constructor(private readonly client: pg.Client, private readonly sql: string) {}
+	constructor(private readonly client: PgClient, private readonly sql: string) {}
 
 	public async get(params: PostgresPrimitiveValue[] | PostgresPrimitiveValue[][]): Promise<R | null> {
 		const { rows } = await this.client.query<R, PostgresPrimitiveValue[] | PostgresPrimitiveValue[][]>(this.sql, params)
@@ -40,7 +42,7 @@ export class Query<R extends Record<string, PostgresPrimitiveValue> = Record<str
 }
 
 export class Method {
-	constructor(private readonly client: pg.Client, private readonly sql: string) {}
+	constructor(private readonly client: PgClient, private readonly sql: string) {}
 
 	public async run(params: PostgresPrimitiveValue[]) {
 		const result = await this.client.query<{}, PostgresPrimitiveValue[]>(this.sql, params)

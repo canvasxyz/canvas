@@ -1,8 +1,8 @@
-import pg from "pg"
+import * as pg from "pg"
 
 import { Relation, Config } from "@canvas-js/modeldb"
 import { PostgresPrimitiveValue, columnTypes } from "./encoding.js"
-import { Method, Query, quote } from "./utils.js"
+import { Method, Query, PgClient, quote } from "./utils.js"
 
 export class RelationAPI {
 	public readonly table: string
@@ -12,7 +12,7 @@ export class RelationAPI {
 	readonly #delete: Method
 	readonly #clear: Method
 
-	public static async create(client: pg.Client, config: Config, relation: Relation, clear: boolean = false) {
+	public static async create(client: PgClient, config: Config, relation: Relation, clear: boolean = false) {
 		const sourceColumnNames: string[] = []
 		const targetColumnNames: string[] = []
 
@@ -71,7 +71,7 @@ export class RelationAPI {
 	}
 
 	private constructor(
-		readonly client: pg.Client,
+		readonly client: PgClient,
 		readonly config: Config,
 		readonly relation: Relation,
 		readonly sourceColumnNames: string[],

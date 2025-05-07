@@ -1,4 +1,4 @@
-import pg from "pg"
+import * as pg from "pg"
 
 import { toString } from "uint8arrays"
 

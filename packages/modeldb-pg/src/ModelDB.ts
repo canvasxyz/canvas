@@ -1,4 +1,4 @@
-import pg from "pg"
+import * as pg from "pg"
 
 import { assert, signalInvalidType } from "@canvas-js/utils"
 
@@ -19,7 +19,7 @@ import {
 } from "@canvas-js/modeldb"
 
 import { ModelAPI } from "./ModelAPI.js"
-import { Query } from "./utils.js"
+import { PgClient, Query } from "./utils.js"
 
 export class ModelDB extends AbstractModelDB {
 	#models: Record<string, ModelAPI> = {}
@@ -112,7 +112,7 @@ export class ModelDB extends AbstractModelDB {
 		}
 	}
 
-	private constructor(public readonly client: pg.Client, config: Config, version: Record<string, number>) {
+	private constructor(public readonly client: PgClient, config: Config, version: Record<string, number>) {
 		super(config, version)
 
 		this.#selectTable = new Query(

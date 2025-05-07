@@ -1,4 +1,4 @@
-import type pg from "pg"
+import * as pg from "pg"
 
 import { SqlStorage } from "@cloudflare/workers-types"
 

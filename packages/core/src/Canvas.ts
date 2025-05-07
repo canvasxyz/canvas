@@ -1,6 +1,6 @@
 import { Libp2p, TypedEventEmitter } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
-import type pg from "pg"
+import * as pg from "pg"
 import type { SqlStorage } from "@cloudflare/workers-types"
 import { bytesToHex } from "@noble/hashes/utils"
 
