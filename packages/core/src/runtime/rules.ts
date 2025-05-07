@@ -48,7 +48,7 @@ export const generateActionsFromRules = <T extends ModelSchema>(rules: Record<st
 			try {
 				result = ruleFunction.call(this, newModel)
 			} catch (error) {
-				throw new Error(`Create rule execution failed: ${toString(error)}`)
+				throw new Error(`Create rule execution failed, ${toString(error)}: ${createRule}`)
 			}
 			if (result !== true) {
 				throw new Error(
@@ -59,7 +59,7 @@ export const generateActionsFromRules = <T extends ModelSchema>(rules: Record<st
 				)
 			}
 
-			await this.db.transaction(() => this.db.set(modelName, newModel))
+			await this.db.transaction(() => this.db.create(modelName, newModel))
 		}
 
 		const updateAction = async function proxiedUpdateAction(
@@ -80,7 +80,7 @@ export const generateActionsFromRules = <T extends ModelSchema>(rules: Record<st
 			try {
 				updateResult = updateRuleFunction.call(this, existingModel)
 			} catch (error) {
-				throw new Error(`Update rule execution failed: ${toString(error)}`)
+				throw new Error(`Update rule execution failed, ${toString(error)}: ${updateRule}`)
 			}
 			if (updateResult !== true) {
 				throw new Error(
@@ -97,7 +97,7 @@ export const generateActionsFromRules = <T extends ModelSchema>(rules: Record<st
 			try {
 				createResult = createRuleFunction.call(this, newModel)
 			} catch (error) {
-				throw new Error(`Create rule execution failed: ${toString(error)}`)
+				throw new Error(`Create rule execution failed, ${toString(error)}: ${createRule}`)
 			}
 			if (createResult !== true) {
 				throw new Error(
@@ -119,7 +119,7 @@ export const generateActionsFromRules = <T extends ModelSchema>(rules: Record<st
 			try {
 				deleteResult = deleteRuleFunction.call(this, existing)
 			} catch (error) {
-				throw new Error(`Delete rule execution failed: ${toString(error)}`)
+				throw new Error(`Delete rule execution failed, ${toString(error)}: ${deleteRule}`)
 			}
 			if (deleteResult !== true) {
 				throw new Error(
