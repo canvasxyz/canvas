@@ -293,6 +293,14 @@ export class ExecutionContext extends View {
 			}
 		}
 
+		// If the `primary` key isn't in a db.create() initialValue, use the message ID.
+		// Experimental and still required for db.set() and in the types. TODO: Use the id factory?
+		if (
+			initialValue[this.db.models[model].primaryKey[0]] === undefined &&
+			this.db.models[model].primaryKey.length === 1
+		) {
+			initialValue[this.db.models[model].primaryKey[0]] = this.id
+		}
 		validateModelValue(this.db.models[model], initialValue)
 
 		const primaryProperties = this.db.config.primaryKeys[model]
