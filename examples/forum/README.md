@@ -11,11 +11,12 @@ for login with Ethereum or Farcaster (both on the web, and as a mini app).
 
 ## Developing
 
-- Run `npm run dev` to serve the frontend, on port 5173.
-- Run `npm run dev:server` to start the backend with in-memory temporary state, on port 8080.
-- Run `npm run dev:server:persistent` to start the backend with data persisted to a directory in /tmp.
-- Run `npm run dev:server:reset` to clear the persisted data.
-- Run `cloudflared tunnel --url http://localhost:5173` to launch a tunnel for Farcaster miniapp testing.
+- `npm run dev` to serve the frontend, on port 5173.
+- `npm run build` to build a static bundle, which is required for the next steps.
+- `npm run dev:server` to start the backend with in-memory temporary state, on port 8080.
+- `npm run dev:server:persistent` to start the backend with data persisted to a directory in /tmp.
+- `npm run dev:server:reset` to clear the persisted data.
+- `cloudflared tunnel --url http://localhost:5173` to launch a tunnel for Farcaster miniapp testing.
 
 ## Farcaster Mini App Development
 
