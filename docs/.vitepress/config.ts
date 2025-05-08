@@ -1,6 +1,7 @@
 import { defineConfig } from "vitepress"
 import namedCodeBlocks from "markdown-it-named-code-blocks"
 import footnote from "markdown-it-footnote"
+import checkbox from "markdown-it-checkbox"
 import { getSidebar } from "./getSidebar.js"
 
 // https://vitepress.dev/reference/site-config
@@ -9,6 +10,7 @@ export default defineConfig({
 		config: (md) => {
 			md.use(footnote)
 			md.use(namedCodeBlocks)
+			md.use(checkbox)
 		},
 	},
 	vite: {

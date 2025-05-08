@@ -108,6 +108,21 @@ pre {
 .vp-doc .footnotes-sep {
   margin-top: 60px;
 }
+.vp-doc li input[type="checkbox"] {
+  pointer-events: none;
+  position: absolute;
+  left: 0;
+  margin-top: 6px;
+}
+.vp-doc li label[for] {
+  pointer-events: none;
+}
+.vp-doc li:has(input[type="checkbox"]) {
+  padding-left: 10px;
+  /* display: inline-block; */
+  /* margin-left: 20px; */
+  /* margin-top: -1.75em; */
+}
 
 .VPHome {
   background-color: var(--vp-c-bg-home);
