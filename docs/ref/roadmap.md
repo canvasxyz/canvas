@@ -1,17 +1,15 @@
 # Roadmap & Changelog
 
+<!-- Please do not use line breaks, or inline code blocks, inside markdown-it checkbox lists. -->
+
 _This page lists the upcoming priorities that we're working on right now.
 For past release notes, please see [Github](https://github.com/canvasxyz/canvas/releases)._
 
-## Immediate priorities
+## Upcoming Priorities
 
-- Improving the experience around upgrading applications.
-- Improving the experience for hosting applications.
-- Working on several applications built on our system to
-  create a better developer experience.
-
-## Long-term priorities
-
+- **Improving the experience around upgrading applications.**
+- **Improving the experience for hosting applications.**
+- **Supporting the launch of the first protocolized applications on our system.** (by June 2025)
 - Adding a non-Ethereum, conventional (web2-friendly) login method.
 - Improving configurability around peer-to-peer networking, for
   e.g. applications that want to only sync with selected peers
@@ -23,17 +21,13 @@ For past release notes, please see [Github](https://github.com/canvasxyz/canvas/
 
 ## 0.15 (Next release)
 
-**Model-only contracts**
+This is a nonbreaking, backwards compatible change that adds two new syntaxes for
+contracts: class contracts and model-only contracts.
 
-- Adds an API for defining application contracts/databases without
-  actions. Instead, you will be able to provide a $rules array, similar
-  to permissions in Firebase.
-- Adds db.create() method for creating new objects with randomized primary keys
-  while using model-only contracts.
-- Adds db.merge(), db.update() methods for partial updates. These are only
-  available inside transactions at this time.
-- Adds a class syntax for contracts, that greatly simplifies how contracts
-  are defined.
+- [ ] Adds an API for defining applications as ES6 classes.
+- [x] Adds an API for defining application contracts/databases without actions, where permissions are defined in a $rules object, similar to Firebase.
+- [x] Adds db.create() and db.id() methods for creating database records with randomized primary keys.
+- [x] Adds db.merge() and db.update() methods for partial updates. These are only available inside transactions at this time.
 
 ## 0.14 (2025-04-18)
 
