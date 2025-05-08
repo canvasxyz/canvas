@@ -2,40 +2,43 @@ import { randomUUID } from "node:crypto"
 import test, { ExecutionContext } from "ava"
 
 import { ethers } from "ethers"
+import { assert } from "@canvas-js/utils"
 
 import type { Action, Message, Session } from "@canvas-js/interfaces"
 import { ed25519 } from "@canvas-js/signatures"
 import { SIWESigner, Eip712Signer } from "@canvas-js/signer-ethereum"
 import { CosmosSigner } from "@canvas-js/signer-cosmos"
-import { Canvas } from "@canvas-js/core"
-import { assert } from "@canvas-js/utils"
+import { Canvas, ModelSchema } from "@canvas-js/core"
+import { Contract } from "@canvas-js/core/contract"
 
 const contract = `
-export const models = {
-  posts: {
-    id: "primary",
-    content: "string",
-    address: "string",
-    did: "string",
-    timestamp: "integer",
-    isVisible: "boolean",
-		metadata: "json"
-  },
-};
+import { Contract } from "@canvas-js/core/contract"
 
-export const actions = {
+export default class extends Contract {
+  static models = {
+    posts: {
+      id: "primary",
+      content: "string",
+      address: "string",
+      did: "string",
+      timestamp: "integer",
+      isVisible: "boolean",
+  		metadata: "json"
+    },
+  }
+
   async createPost(content, isVisible, metadata) {
     const { id, did, address, timestamp, db } = this
     const postId = [did, id].join("/")
     await db.transaction(() => db.set("posts", { id: postId, content, address, did, isVisible, timestamp, metadata }));
-  },
+  }
 
   async updatePost(postId, content, isVisible, metadata) {
     const { id, did, address, timestamp, db } = this
     const post = await db.get("posts", postId)
     if (post.did !== did) throw new Error("can only update own posts")
     await db.transaction(() => db.update("posts", { id: postId, content, isVisible, metadata }));
-  },
+  }
 
   async deletePost(key) {
     const { did, db } = this
@@ -44,9 +47,9 @@ export const actions = {
 		}
 
 		await db.delete("posts", key)
-  },
-};
-`.trim()
+  }
+}
+`
 
 const init = async (t: ExecutionContext) => {
 	const signer = new SIWESigner({ burner: true })
@@ -505,4 +508,67 @@ test("open custom modeldb tables", async (t) => {
 	const id = randomUUID()
 	await app.db.set("widgets", { id, name: "foobar" })
 	t.deepEqual(await app.db.get("widgets", id), { id, name: "foobar" })
+})
+
+test("class function runtime", async (t) => {
+	class MyApp extends Contract<typeof MyApp.models> {
+		static models = {
+			posts: {
+				id: "primary",
+				content: "string",
+				address: "string",
+				did: "string",
+				timestamp: "integer",
+				isVisible: "boolean",
+			},
+		} satisfies ModelSchema
+
+		async createPost(content: string, isVisible: boolean) {
+			const { id, did, address, timestamp, db } = this
+			const postId = [did, id].join("/")
+			await db.transaction(() => db.set("posts", { id: postId, content, address, did, isVisible, timestamp }))
+		}
+
+		async updatePost(postId: string, content: string, isVisible: boolean) {
+			const { id, did, address, timestamp, db } = this
+			const post = await db.get("posts", postId)
+			if (post?.did !== did) throw new Error("can only update own posts")
+			await db.transaction(() => db.update("posts", { id: postId, content, isVisible }))
+		}
+
+		async deletePost(key: string) {
+			const { did, db } = this
+			if (!key.startsWith(did + "/")) {
+				throw new Error("unauthorized")
+			}
+
+			await db.delete("posts", key)
+		}
+	}
+
+	const app = await Canvas.initialize({
+		topic: "com.example.app",
+		contract: MyApp,
+	})
+
+	t.teardown(() => app.stop())
+
+	const { id, message } = await app.actions.createPost("hello", true, {})
+
+	t.log(`applied action ${id}`)
+	const postId = [message.payload.did, id].join("/")
+	const value = await app.db.get("posts", postId)
+	t.is(value?.content, "hello")
+
+	const [clock] = await app.messageLog.getClock()
+	t.is(clock, 3)
+
+	const { id: id2 } = await app.actions.createPost("bumping this thread again", true, {})
+	t.log(`applied action ${id2}`)
+	const [clock2] = await app.messageLog.getClock()
+	t.is(clock2, 4)
+
+	const { id: id3 } = await app.actions.updatePost(postId, "update", false, {})
+	const [clock3] = await app.messageLog.getClock()
+	t.is(clock3, 5)
 })

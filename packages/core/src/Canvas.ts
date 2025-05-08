@@ -397,7 +397,7 @@ export class Canvas<
 	}
 
 	public getContract() {
-		return this.runtime.contract
+		return ""
 	}
 
 	public getSchema(internal?: false) {

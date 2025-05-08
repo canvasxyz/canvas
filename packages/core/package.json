@@ -14,6 +14,7 @@
 	"exports": {
 		".": "./lib/index.js",
 		"./api": "./lib/api.js",
+		"./contract": "./lib/contract.js",
 		"./constants": "./lib/constants.js"
 	},
 	"imports": {

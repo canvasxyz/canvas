@@ -2,7 +2,14 @@ import type { ModelValue } from "@canvas-js/modeldb"
 import type { Awaitable } from "@canvas-js/interfaces"
 
 export type { ModelValue } from "@canvas-js/modeldb"
-import type { ModelInit as DbModelInit, ModelSchema as DbModelSchema, DeriveModelTypes as DbDeriveModelTypes, DeriveModelType as DbDeriveModelType } from "@canvas-js/modeldb"
+import type {
+	ModelInit as DbModelInit,
+	ModelSchema as DbModelSchema,
+	DeriveModelTypes as DbDeriveModelTypes,
+	DeriveModelType as DbDeriveModelType,
+} from "@canvas-js/modeldb"
+
+import { Contract as BaseContract } from "@canvas-js/core/contract"
 
 export type RulesInit = { create: string | boolean; update: string | boolean; delete: string | boolean }
 export type ModelInit = DbModelInit<{ $rules?: RulesInit }>
@@ -13,9 +20,11 @@ export type DeriveModelTypes<T extends ModelSchema> = DbDeriveModelTypes<T, { $r
 export type Contract<
 	ModelsT extends ModelSchema = ModelSchema,
 	ActionsT extends Actions<ModelsT> = Actions<ModelsT>,
-> = {
+> = { models: ModelsT; actions?: ActionsT }
+
+export type ClassContract<ModelsT extends ModelSchema = ModelSchema> = {
 	models: ModelsT
-	actions?: ActionsT
+	new (topic: string): BaseContract<ModelsT>
 }
 
 export type Actions<ModelsT extends ModelSchema> = Record<string, ActionImplementation<ModelsT>>
