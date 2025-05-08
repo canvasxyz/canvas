@@ -5,15 +5,19 @@ next: false
 
 <div :class="$style.main">
 
-<HeroRow text="Serverless database,<br/>built on peer-to-peer sync" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
+<HeroRow text="Build serverless applications,<br/>on peer-to-peer sync" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
 
 <div :class="$style.mainInner">
 
-Canvas is an open-source database, built on an embedded peer-to-peer runtime
-that allows regular applications to run as distributed applications.
+Canvas is an open-source database, built on an embedded peer-to-peer
+runtime that allows regular applications to run as distributed
+applications.
 
-It's like a local-first version of Firebase, that lets you write
+You can use it as a local-first version of Firebase, that lets you write
 entire applications inside your frontend.
+
+Or use it to build web applications as open protocols, with
+cryptographic security that anyone can interoperate with.
 
 </div>
 
@@ -24,7 +28,7 @@ entire applications inside your frontend.
     iconName: 'mobile'
   },
   {
-    text: 'Cross-platform persistence',
+    text: 'Works with your database',
     tooltip: 'Uses SQLite, Postgres, or IndexedDB as the backing data store',
     iconName: 'database'
   },
@@ -34,18 +38,18 @@ entire applications inside your frontend.
     iconName: 'activity'
   },
   {
-    text: 'React integration',
-    tooltip: 'React hooks for live-updating apps & database queries',
+    text: 'React hooks',
+    tooltip: 'React hooks for live apps & live database queries',
     iconName: 'compare'
   },
   {
     text: 'Database editor',
-    tooltip: 'Comes with a database management interface',
+    tooltip: 'Edit your application through a database management interface',
     iconName: 'apps',
   },
   {
     text: 'Transactional runtime',
-    tooltip: 'Write game logic inside your database',
+    tooltip: 'Write game logic & state machines inside your database',
     iconName: 'atom'
   },
   {
@@ -184,13 +188,11 @@ with  `models` and `actions`.
 - Actions define mutations that users can make to the database, like API routes.
 
 By embedding your application logic in the database, we enable each
-peer to validate the full history of your application.
+peer to validate the full history of your application. Applications
+are local-first, without any dependency on a server.
 
-Applications are fully local-first, without any dependency on a
-central server.
-
-To run your contract, include it in your application, using React hooks.  Or, run
-it from the command line:
+To run your contract, include it in your frontend using React
+hooks, or run it from the command line:
 
 ```sh
 canvas run contract.ts --topic example
@@ -198,12 +200,13 @@ canvas run contract.ts --topic example
 [canvas] Serving HTTP API: ...
 ```
 
-This starts a peer that syncs with the browser. By default, it
-will also connect to everyone else running the application's topic.
+This starts a peer that you can connect to from your browser. By
+default, it will also peer with other servers running the
+application's topic.
 
 Read on to learn how to [authenticate users](/4-identities-auth),
 [upgrade your app](/6-deploying), or [deploy to a
-server](/7-upgrading)!
+server](/7-upgrading).
 
   </div>
 </div>
@@ -234,10 +237,9 @@ are using in a limited set of production pilots. This first release is
 well suited for *protocolized applications* - applications with public
 data that anyone can permissionlessly interoperate with.
 
-Starting in 2025, we are beginning to work with more developers to
-build on the system, and extend support to more identity
-providers. For more information, please reach out on
-[Discord](https://discord.gg/EjczssxKpR).
+In 2025, we are working to expand the categories of applications that
+we can support, and provide support to developers building on the system.
+For more information, please reach out on [Discord](https://discord.gg/EjczssxKpR).
 
 </div>
 

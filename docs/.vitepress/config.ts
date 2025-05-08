@@ -61,11 +61,9 @@ export default defineConfig({
 				{
 					text: "Reference",
 					items: [
-						/*
-						{ text: "Application API", link: "/ref/application" },
-						{ text: "Database API", link: "/ref/database" },
-						{ text: "FAQ", link: "/ref/faq" },
-            */
+						// { text: "Application API", link: "/ref/application" },
+						// { text: "Database API", link: "/ref/database" },
+						// { text: "FAQ", link: "/ref/faq" },
 						{ text: "Consistency Model", link: "/ref/consistency" },
 						{ text: "Roadmap", link: "/ref/roadmap" },
 						{
@@ -79,6 +77,9 @@ export default defineConfig({
 								{ text: "GossipLog", link: "/api/gossiplog" },
 								{ text: "Signatures", link: "/api/signatures" },
 								{ text: "Interfaces", link: "/api/interfaces" },
+								// { text: "Client", link: "/api/client" },
+								// { text: "Relay Server", link: "/api/relay-server" },
+								// { text: "VM", link: "/api/vm" },
 								{ text: "Signer: Ethereum", link: "/api/signer-ethereum" },
 								{ text: "Signer: Ethereum (Viem)", link: "/api/signer-ethereum-viem" },
 								{ text: "Signer: Bluesky", link: "/api/signer-atp" },
