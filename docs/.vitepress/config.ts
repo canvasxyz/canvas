@@ -67,7 +67,7 @@ export default defineConfig({
 						{ text: "FAQ", link: "/ref/faq" },
             */
 						{ text: "Consistency Model", link: "/ref/consistency" },
-						{ text: "Roadmap & Changelog", link: "/ref/roadmap" },
+						{ text: "Roadmap", link: "/ref/roadmap" },
 						{
 							text: "Packages",
 							collapsed: true,

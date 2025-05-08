@@ -5,17 +5,15 @@ next: false
 
 <div :class="$style.main">
 
-<HeroRow text="Realtime database,<br/>peer-to-peer sync" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
+<HeroRow text="Serverless database,<br/>built on peer-to-peer sync" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
 
 <div :class="$style.mainInner">
 
-Canvas is an open-source, serverless database, with peer-to-peer sync
-and an embedded runtime.
+Canvas is an open-source database, built on an embedded peer-to-peer runtime
+that allows regular applications to run as distributed applications.
 
-It's a local-first version of Firebase, that lets you write
-entire applications inside your frontend, supports complex
-transactional logic, and works across platforms.
-
+It's like a local-first version of Firebase, that lets you write
+entire applications inside your frontend.
 
 </div>
 
@@ -184,21 +182,21 @@ $ canvas run contract.ts --topic demo.canvas.xyz // [!code highlight]
   </div>
   <div :class="$style.colLeft">
 
-To build your first application, start by defining a contract, which
-is an object containing `models` and `actions`:
+Every application is defined as a contract, with is like a virtual backend
+which defines `models` and `actions`.
 
 - Models define your database schema.
-- Actions define mutations that users can make to the database, just like API routes on the backend.
+- Actions define mutations that users can make to the database, like API routes.
 
-Because mutations are inside the database, each peer can validate the
-full history of the application. This means apps are offline-first,
-without any dependency on a central server.
+Because your application logic is encoded in the database, each peer
+can validate the full history of an application, and apps are truly
+offline-first, without any dependency on a central server.
 
-You can import a contract in the browser, and use it from the frontend
-directly. You can also define it as a file:
+You can import a contract in the browser, using React hooks.  Or, run
+a contract as a file:
 
 ```sh
-canvas run contract.ts --topic example.xyz
+canvas run contract.ts --topic example
 [canvas] Bundled .ts contract: 4386 chars
 [canvas] Serving HTTP API: ...
 ```
@@ -206,12 +204,9 @@ canvas run contract.ts --topic example.xyz
 This starts a peer that syncs with the browser. By default, it
 will also connect to everyone else running the application's topic.
 
-Now, you can upgrade your application by adding new actions or models.
-
-Upgraded contracts will safely soft-fork away from nodes running the old contract.
-
-To change existing data, you can use the admin interface to
-generate a hard-fork snapshot, which compacts and flattens the state of the application.
+Read on to learn how to [authenticate users](/4-identities-auth),
+[upgrade your app](/6-deploying), or [deploy to a
+server](/7-upgrading)!
 
   </div>
 </div>
