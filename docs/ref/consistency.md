@@ -13,7 +13,7 @@ In order to guarantee determinism, every `get` needs to return the same value wh
 
 ## Convergence
 
-To guarantee convergence, each peer needs to resolve conflicts in the same way, independent of the order in which they apply concurrent actions. By default, Canvas treats each database row as its own last-write-wins record, using the logical clock from the [underlying causal log](/ref/gossiplog) to determine precedence.
+To guarantee convergence, each peer needs to resolve conflicts in the same way, independent of the order in which they apply concurrent actions. By default, Canvas treats each database row as its own last-write-wins record, using the logical clock from the [underlying causal log](/api/gossiplog) to determine precedence.
 
 ## Limitations of last-write-wins
 

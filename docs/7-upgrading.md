@@ -61,10 +61,9 @@ Each snapshotted application runs on its own mesh. The snapshotted
 application will *not* sync with apps on the original topic without a
 snapshot, since this is a hard fork.
 
-For now, we recommend that clients of hard-fork applications
-[fetch the contract](/5-deployment.html#cli-application-with-snapshot)
-from a server when starting, by using the `useContract` hook and
-omitting the `contract` and `topic` fields from the local (client) code:
+For now, we recommend that clients of hard-fork applications fetch the
+contract from a server when starting, by using the `useContract` hook
+without `contract` or `topic`, in their local client code:
 
 ```ts
 const app = useCanvas("ws://app.example.xyz", {

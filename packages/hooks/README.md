@@ -39,7 +39,7 @@ Note that `app` might be null when the hook initializes.
 
 The `useLiveQuery` hook maintains a live-updated frontend query on top of a Canvas application.
 
-You can see a more [complete example here](/ref/core.html#subscribing-to-live-queries).
+You can see a more [complete example here](/api/core.html#subscribing-to-live-queries).
 
 Example usage:
 
