@@ -49,17 +49,12 @@ entire applications inside your frontend.
     iconName: 'atom'
   },
   {
-    text: 'IPFS based',
-    tooltip: 'Built on IPFS standards (IPLD, DAG-CBOR, and Kademlia DHT) and Prolly-trees',
-    iconName: '123'
-  },
-  {
     text: 'MIT License',
     tooltip: 'Open source, fully self-hostable',
     iconName: 'crown',
   },
   {
-    text: 'CRDTs',
+    text: 'Embedded CRDTs',
     tooltip: 'Soon: Multiplayer editing using embedded CRDTs',
     iconName: 'guide',
     disabled: true,
@@ -182,18 +177,20 @@ $ canvas run contract.ts --topic demo.canvas.xyz // [!code highlight]
   </div>
   <div :class="$style.colLeft">
 
-Every application is defined as a contract, with is like a virtual backend
-which defines `models` and `actions`.
+Every application is defined as a contract, a virtual backend
+with  `models` and `actions`.
 
 - Models define your database schema.
 - Actions define mutations that users can make to the database, like API routes.
 
-Because your application logic is encoded in the database, each peer
-can validate the full history of an application, and apps are truly
-offline-first, without any dependency on a central server.
+By embedding your application logic in the database, we enable each
+peer to validate the full history of your application.
 
-You can import a contract in the browser, using React hooks.  Or, run
-a contract as a file:
+Applications are fully local-first, without any dependency on a
+central server.
+
+To run your contract, include it in your application, using React hooks.  Or, run
+it from the command line:
 
 ```sh
 canvas run contract.ts --topic example
@@ -233,10 +230,14 @@ We've published some of our research as technical presentations here:
 - [GossipLog: libp2p Day Presentation](https://www.youtube.com/watch?v=X8nAdx1G-Cs)
 
 The current release of Canvas is an early developer preview that we
-are using in a limited set of production pilots. Starting in 2025, we
-are beginning to work with more developers to build on the system, and
-extend support to more identity providers. For more information, please reach
-out on [Discord](https://discord.gg/EjczssxKpR).
+are using in a limited set of production pilots. This first release is
+well suited for *protocolized applications* - applications with public
+data that anyone can permissionlessly interoperate with.
+
+Starting in 2025, we are beginning to work with more developers to
+build on the system, and extend support to more identity
+providers. For more information, please reach out on
+[Discord](https://discord.gg/EjczssxKpR).
 
 </div>
 
