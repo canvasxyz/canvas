@@ -2,6 +2,10 @@
 	"extends": "../../tsconfig.base.json",
 	"include": ["src"],
 	"compilerOptions": {
+		"baseUrl": "../../",
+		"paths": {
+			"@canvas-js/modeldb": ["packages/modeldb/lib/index.d.ts"]
+		},
 		"types": ["vite/client"],
 		"rootDir": "src",
 		"outDir": "lib",
