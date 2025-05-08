@@ -26,6 +26,7 @@ export interface VMOptions {
 
 export class VM {
 	public static RUNTIME_MEMORY_LIMIT = 1024 * 640 // 640kb
+	public static getFileURI = (file: string) => `canvas:${bytesToHex(sha256(file))}`
 
 	private readonly log = logger("canvas:vm")
 
@@ -78,15 +79,14 @@ export class VM {
 		}
 	}
 
-	public execute(contract: string, options: { uri?: string } = {}) {
-		const filename = options.uri ?? `canvas:${bytesToHex(sha256(contract))}`
-
-		this.unwrapResult(this.context.evalCode(contract, filename, { type: "global", strict: true })).dispose()
+	public execute(script: string, options: { uri?: string } = {}) {
+		const filename = options.uri ?? VM.getFileURI(script)
+		this.unwrapResult(this.context.evalCode(script, filename, { type: "global", strict: true })).dispose()
 	}
 
-	public import(contract: string, options: { uri?: string } = {}): QuickJSHandle {
-		const filename = options.uri ?? `canvas:${bytesToHex(sha256(contract))}`
-		return this.unwrapResult(this.context.evalCode(contract, filename, { type: "module" }))
+	public import(module: string, options: { uri?: string } = {}): QuickJSHandle {
+		const filename = options.uri ?? VM.getFileURI(module)
+		return this.unwrapResult(this.context.evalCode(module, filename, { type: "module", strict: true }))
 	}
 
 	public get = (path: string): QuickJSHandle => {
@@ -295,7 +295,7 @@ export class VM {
 	}
 
 	public is = (a: QuickJSHandle, b: QuickJSHandle): boolean =>
-		this.call("Object.is", this.context.null, [a, b]).consume(this.context.dump)
+		this.call("Object.is", this.context.null, [a, b]).consume(this.getBoolean)
 
 	public isArray = (handle: QuickJSHandle): boolean =>
 		this.context.typeof(handle) === "object" &&
@@ -419,5 +419,28 @@ export class VM {
 		const copy = handle.dup()
 		this.#localCache.add(copy)
 		return copy
+	}
+
+	public isClass = (handle: QuickJSHandle) => {
+		if (this.context.typeof(handle) !== "function") {
+			return false
+		}
+
+		const getOwnPropertyDescriptor = this.get("Object.getOwnPropertyDescriptor")
+		using constructorHandle = this.context.getProp(handle, "constructor")
+		using prototypeStringHandle = this.context.newString("prototype")
+		using propertyDescriptorHandle = this.unwrapResult(
+			this.context.callFunction(getOwnPropertyDescriptor, getOwnPropertyDescriptor, [
+				constructorHandle,
+				prototypeStringHandle,
+			]),
+		)
+
+		if (this.is(propertyDescriptorHandle, this.context.undefined)) {
+			return false
+		}
+
+		using writableHandle = this.context.getProp(propertyDescriptorHandle, "writable")
+		return this.getBoolean(writableHandle) === false
 	}
 }
