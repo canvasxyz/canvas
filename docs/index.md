@@ -5,7 +5,7 @@ next: false
 
 <div :class="$style.main">
 
-<HeroRow text="Build serverless applications,<br/>on peer-to-peer sync" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
+<HeroRow text="Build serverless applications<br/>on peer-to-peer sync" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
 
 <div :class="$style.mainInner">
 
@@ -108,10 +108,10 @@ cryptographic security that anyone can interoperate with.
 
 ::: code-group
 
-```ts [Browser]
+```ts [Object Syntax]
 import { Canvas } from "@canvas-js/core"
 
-const models = {
+export const models = {
   messages: {
     id: "primary",
     text: "string",
@@ -119,42 +119,58 @@ const models = {
   }
 }
 
-const actions = {
+export const actions = {
   createMessage: async (text) => {
     const { address, db, id } = this
     await db.set("messages", { id, text })
   }
 }
-
-const app = await Canvas.initialize({
-  topic: "example.canvas.xyz",
-  contract: { models, actions }
-})
-
-app.actions.createMessage("hello world!")
 ```
 
-```ts [React hook]
+```ts [Class Syntax]
+import { Contract } from "@canvas-js/core"
+
+export const Chat extends Contract {
+  static models = {
+    messages: {
+      id: "primary",
+      content: "string",
+      address: "string",
+    }
+  }
+
+  async createMessage(content: string) {
+    db.create("messages", {
+      content,
+      address: this.address
+    })
+  }
+}
+```
+
+```ts [React Usage]
 import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
 import { models, actions } from "./contract.ts"
 
-const wsURL = null
+const wsURL = process.env.SERVER_WSURL || null
 
 const Component = () => {
   const { app, ws } = useCanvas(wsURL, {
-    topic: "example.canvas.xyz",
+    topic: "example.xyz",
     contract: { models, actions }
   })
 
-  const items = useLiveQuery(app, "posts", {
+  const items = useLiveQuery(app, "messages", {
     orderBy: "created_at"
   })
+
+  // app.actions.createMessage("hello world!")
 
   return <ItemView content={items}></ItemView>
 }
 ```
 
-```ts [Command Line]
+```ts [CLI]
 // In contract.ts:
 export const models = {
   messages: {
@@ -171,7 +187,7 @@ export const actions = {
 }
 
 // From the command line:
-$ canvas run contract.ts --topic demo.canvas.xyz // [!code highlight]
+$ canvas run contract.ts --topic example.xyz // [!code highlight]
 ```
 
 :::
@@ -187,11 +203,12 @@ with  `models` and `actions`.
 - Models define your database schema.
 - Actions define mutations that users can make to the database, like API routes.
 
-By embedding your application logic in the database, we enable each
-peer to validate the full history of your application. Applications
-are local-first, without any dependency on a server.
+Applications are fully distributed & local-first. Because
+controller logic is in the database, every
+peer can validate the full history of your application,
+without a central server.
 
-To run your contract, include it in your frontend using React
+To run your application, include it in your frontend using React
 hooks, or run it from the command line:
 
 ```sh
