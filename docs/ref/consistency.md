@@ -7,25 +7,31 @@ The two basic guarantees that the runtime provides are:
 1. the execution of every action is deterministic, and
 2. peers converge to the same state as they sync.
 
-Additionally, we provide transactions, which allow game-like applications to be written inside actions. Transactions work in a way that's like optimistic rollback in multiplayer online games - actions are always accepted at the time they are executed, and potentially rolled back on conflict.
+Additionally, we provide transactions, which work in a way similar to optimistic rollback in multiplayer online games. Actions are accepted at the time they are executed, and rolled back on conflict.
+
+In a transaction, if you read from a database record and then write to any other records, your writes will be rolled back if the record that you read was changed.
 
 ## How we achieve determinism
 
-In order to guarantee determinism, every `get` needs to return the same value when applied by every peer, even if other peers have already applied other concurrent actions that write to that record.
+To guarantee determinism, we ensure that every `db.get()` returns the same value when an action is reexecuted by other peers.
+
+This needs to be true even if they receive the action later in time, and/or have applied other concurrent actions that write to that record.
 
 The runtime achieves this by using a virtual snapshot of the database, in which only effects from the action's causal ancestors are visible. This can also be thought of as *rewinding* to the original context which the action was executed in.
 
-### Avoiding nondeterminism
+### Nondeterministic JS code
 
-However, it is still possible to write non-deterministic JavaScript code inside an action function, with functions like `Math.random()` and `Date.now()`.
-
-These functions will break determinism and should not be used.
+However, it is still possible to write non-deterministic JavaScript code inside an action function, with functions like `Math.random()` and `Date.now()`. These functions will break determinism and should not be used.
 
 For generating random identifiers, you can use the `this.db.id()` function. This will generate a new hash every time it is called, and it is safe to use as a deterministic replacement for `Math.random()`.
 
+(Like `Math.random()`, it is not cryptographically secure.)
+
 ## How we achieve convergence
 
-To guarantee convergence, each peer needs to resolve conflicts in the same way, independent of the order in which they apply concurrent actions. By default, Canvas treats each database row as its own last-write-wins record, using the logical clock from the [underlying causal log](/api/gossiplog) to determine precedence.
+To guarantee convergence, we ensure each peer resolves conflicts in a consistent way, independent of the order in which they apply concurrent actions.
+
+To accomplish this, we treat each database row as its own last-write-wins record, using the logical clock from the [underlying causal log](/api/gossiplog) to determine precedence.
 
 This means if if multiple users edit the same database record concurrently, the user that writes to the database with a greater action ID will overwrite the other one.
 
@@ -33,7 +39,9 @@ This means if if multiple users edit the same database record concurrently, the 
 
 Last-write-wins (LWW) is good default behavior that works well for many kinds of state, but has some fundamental limitations. For example, last-write-wins can partially overwite or "interleave" effects between two concurrent branches, making it impossible to maintain invariants across multiple records.
 
-Another limitation of LWW is that a malicious user could select convenient locations in the past to branch off of, "bypassing" undesired actions that e.g. remove them from a group chat's membership list. Last-write-wins is good for merging a big union of logically monotonic effects, but using it means you can't enforce arbitrary constraints on global state transitions.
+Another limitation of LWW is that a malicious user can select convenient locations in the past to branch off of, "bypassing" undesired actions that e.g. remove them from a group chat's membership list.
+
+Last-write-wins is good for merging many logically independent operations, but it doesn't enforce any constraints between different database records - you can't enforce arbitrary constraints on global state transitions.
 
 ## Transactions
 

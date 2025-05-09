@@ -16,8 +16,7 @@ applications.
 You can use it as a local-first version of Firebase, that lets you write
 entire applications inside your frontend.
 
-Or use it to build web applications as open protocols, with
-cryptographic security that anyone can interoperate with.
+Or, use it to build web applications as open protocols, that anyone can interoperate with.
 
 </div>
 
@@ -251,7 +250,7 @@ We've published some of our research as technical presentations here:
 
 The current release of Canvas is an early developer preview that we
 are using in a limited set of production pilots. This first release is
-well suited for *protocolized applications* - applications with public
+recommended for *protocolized applications* - applications with public
 data that anyone can permissionlessly interoperate with.
 
 In 2025, we are working to expand the categories of applications that
