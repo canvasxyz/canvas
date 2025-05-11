@@ -1,0 +1,8 @@
+{
+	"extends": "../tsconfig.base.json",
+	"compilerOptions": {
+		"rootDir": "src",
+		"outDir": "lib"
+	},
+	"references": [{ "path": "../packages/core" }, { "path": "../packages/modeldb" }, { "path": "../packages/signer-ethereum" }]
+}

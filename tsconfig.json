@@ -2,7 +2,7 @@
 	"files": [],
 	"exclude": ["**/vite.config.ts"],
 	"references": [
-		{ "path": "./packages/contracts" },
+		{ "path": "./contracts" },
 		{ "path": "./packages/interfaces" },
 		{ "path": "./packages/interfaces/test" },
 		{ "path": "./packages/vm" },

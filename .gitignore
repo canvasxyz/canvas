@@ -10,6 +10,10 @@ node_modules/
 tsconfig.tsbuildinfo
 tsconfig.node.tsbuildinfo
 
+contracts/lib/
+contracts/dist/
+contracts/.cache/
+
 packages/**/lib/
 packages/**/dist/
 packages/**/.cache/
