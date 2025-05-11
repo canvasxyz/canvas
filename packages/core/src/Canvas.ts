@@ -255,13 +255,13 @@ export class Canvas<
 			? ActionAPI<Args, Result>
 			: never
 	}
-	public readonly create: (
-		model: string,
-		modelValue: any,
+	public readonly create: <M extends string>(
+		model: M,
+		modelValue: Partial<DeriveModelTypes<ModelsT>[M]>, // TODO: optional primary key only
 	) => Promise<SignedMessage<Action, unknown> & { result: unknown }>
-	public readonly update: (
-		model: string,
-		modelValue: any,
+	public readonly update: <M extends string>(
+		model: M,
+		modelValue: Partial<DeriveModelTypes<ModelsT>[M]>,
 	) => Promise<SignedMessage<Action, unknown> & { result: unknown }>
 	public readonly delete: (
 		model: string,
@@ -357,11 +357,11 @@ export class Canvas<
 			}
 		}
 
-		this.create = <T extends string>(modelName: string, modelValue: DeriveModelTypes<ModelSchema>[T]) => {
-			return this.actions[`create${capitalize(modelName)}`].call(this, modelValue)
+		this.create = <T extends string>(model: string, modelValue: Partial<DeriveModelTypes<ModelsT>[T]>) => {
+			return this.actions[`create${capitalize(model)}`].call(this, modelValue)
 		}
-		this.update = <T extends string>(modelName: T, modelValue: DeriveModelTypes<ModelSchema>[T]) => {
-			return this.actions[`update${capitalize(modelName)}`].call(this, modelValue)
+		this.update = <T extends string>(model: T, modelValue: Partial<DeriveModelTypes<ModelsT>[T]>) => {
+			return this.actions[`update${capitalize(model)}`].call(this, modelValue)
 		}
 		this.delete = (modelName: string, primaryKey: string) => {
 			return this.actions[`delete${capitalize(modelName)}`].call(this, primaryKey)

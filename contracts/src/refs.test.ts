@@ -25,7 +25,8 @@ test("create a profile, ref, and connection", async (t) => {
 		updated: null,
 	}
 
-	await app.actions.createProfile(newProfile)
+	await app.create("profile", newProfile)
+
 	t.deepEqual(await app.db.query("profile"), [newProfile])
 
 	const newRef: Omit<Models["ref"], "id"> = {
@@ -41,7 +42,7 @@ test("create a profile, ref, and connection", async (t) => {
 		deleted: null,
 	}
 
-	const { id: refId } = await app.actions.createRef(newRef)
+	const { id: refId } = await app.create("ref", newRef)
 	const [{ id, ...ref }] = await app.db.query("ref")
 	t.deepEqual(ref, newRef)
 
@@ -62,8 +63,16 @@ test("create a profile, ref, and connection", async (t) => {
 		updated: null,
 	}
 
-	await app.actions.createConnection(newConnection)
+	await app.create("connection", newConnection)
 	t.deepEqual(await app.db.query("connection"), [newConnection])
 
 	t.pass()
+})
+
+test.skip("only you can update your profiles or connections", (t) => {
+	// app.update("")
+})
+
+test.skip("only you can delete connections", (t) => {
+	// app.delete("")
 })
