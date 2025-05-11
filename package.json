@@ -10,7 +10,7 @@
 		"dev": "tsc --build --watch",
 		"build": "tsc --build && npm run build -w packages/network-explorer",
 		"clean": "tsc --build --clean",
-		"clean-all": "rm -rf packages/*/lib/* packages/*/test/lib/* packages/*/tsconfig.tsbuildinfo packages/network-explorer/dist/* packages/ethereum-contracts/artifacts/* packages/ethereum-contracts/typesigner-types/* examples/*/lib/* examples/*/tsconfig.tsbuildinfo examples/*/tsconfig.node.tsbuildinfo",
+		"clean-all": "rm -rf contracts/lib/* contracts/test/lib/* packages/*/lib/* packages/*/test/lib/* packages/*/tsconfig.tsbuildinfo packages/network-explorer/dist/* packages/ethereum-contracts/artifacts/* packages/ethereum-contracts/typesigner-types/* examples/*/lib/* examples/*/tsconfig.tsbuildinfo examples/*/tsconfig.node.tsbuildinfo",
 		"lint": "eslint .",
 		"publish": "npm run clean && npm run build && npm publish -w=packages/ --access public",
 		"test": "npm run test -w=packages/interfaces -w=packages/modeldb -w=packages/gossiplog -w=packages/core -w=packages/vm -w packages/signer-atp -w=packages/signer-cosmos -w=packages/signer-ethereum -w=packages/signer-ethereum-viem -w=packages/signer-solana -w=packages/signer-substrate",
