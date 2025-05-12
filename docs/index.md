@@ -215,14 +215,14 @@ with  `models` and `actions`.
 - Models define your database schema.
 - Actions define mutations that users can make to the database, like API routes.
 
-Because controller logic is in the database, every
-peer can validate the full history of your application,
+Because actions are embedded in the database, every
+peer can validate the history of your application,
 without a central server.
 
-Run your application from the command line:
+Now, run your app from the command line:
 
 ```sh
-canvas run contract.ts --topic example
+canvas run contract.ts --topic example.xyz
 [canvas] Bundled .ts contract: 4386 chars
 [canvas] Serving HTTP API: ...
 ```

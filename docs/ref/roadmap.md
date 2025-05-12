@@ -3,19 +3,17 @@
 _This page lists the upcoming priorities that we're working on right now.
 For past release notes, please see [Github](https://github.com/canvasxyz/canvas/releases)._
 
-## Upcoming Priorities
+## Roadmap
 
-- **Improving the experience around upgrading applications.**
-- **Improving the experience for hosting applications.**
-- **Supporting the launch of the first protocolized applications on our system.** (by June 2025)
-- Adding a non-Ethereum, conventional (web2-friendly) login method.
-- Improving configurability around peer-to-peer networking, for
+- [ ] Improving the experience around upgrading and hosting applications.
+- [ ] Improving configurability around peer-to-peer networking, for
   e.g. applications that want to only sync with selected peers
   rather than connecting to the DHT.
-- Support for application deployment on existing EVM chains.
-- Support for sharding applications into multiple objects.
-- Support for partial sync.
-- Support for private data.
+- [ ] Adding a non-crypto, traditional web2-friendly login method.
+- [ ] Support for application deployment on existing EVM chains.
+- [ ] Support for sharding applications into multiple objects.
+- [ ] Support for partial sync.
+- [ ] Support for private data.
 
 ## 0.15 (Upcoming release)
 
@@ -36,8 +34,8 @@ This releases includes significant changes to the main application API
 around how actions are defined. This is the first version where the main
 application APIs can be considered stable.
 
-- Add Farcaster login support, inside frames using miniapp login, and outside frames using SIWF.
-- Add basic login components, including a sign in/sign out React button.
-- Add transactions, using the `db.transaction()` method.
-- Reworked APIs like `db.set()` from scratch following the addition of transactions.
-- Changed action API syntax from `action(db, ...args)` to `action(...args)`.
+- [x] Add Farcaster login support, inside frames using miniapp login, and outside frames using SIWF.
+- [x] Add basic login components, including a sign in/sign out React button.
+- [x] Add transactions, using the `db.transaction()` method.
+- [x] Reworked APIs like `db.set()` from scratch following the addition of transactions.
+- [x] Changed action API syntax from `action(db, ...args)` to `action(...args)`.
