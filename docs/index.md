@@ -5,7 +5,7 @@ next: false
 
 <div :class="$style.main">
 
-<HeroRow text="Build serverless applications<br/>on peer-to-peer sync" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
+<HeroRow text="Serverless, distributed Firebase with peer-to-peer sync" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
 
 <div :class="$style.mainInner">
 
