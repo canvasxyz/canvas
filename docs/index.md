@@ -9,14 +9,13 @@ next: false
 
 <div :class="$style.mainInner">
 
-Canvas is an open-source database, built on an embedded peer-to-peer
-runtime that allows regular applications to run as distributed
-applications.
+Canvas is an open-source database, with an embedded peer-to-peer
+runtime.
 
 You can use it as a local-first version of Firebase, that lets you write
 entire applications inside your frontend.
 
-Or, use it to build web applications as open protocols, that anyone can interoperate with.
+Or, use it to build open protocols, that anyone can interoperate with.
 
 </div>
 
@@ -124,6 +123,13 @@ export const actions = {
     await db.set("messages", { id, text })
   }
 }
+
+const app = await Canvas.initialize({
+  topic: "example.xyz",
+  contract: { models, actions },
+})
+
+app.actions.createMessage("Who up?")
 ```
 
 ```ts [Class Syntax]
@@ -145,6 +151,13 @@ export const Chat extends Contract {
     })
   }
 }
+
+await Canvas.initialize({
+  topic: "example.xyz",
+  contract: Chat,
+})
+
+app.actions.createMessage("Hello world!")
 ```
 
 ```ts [React Usage]
@@ -153,19 +166,19 @@ import { models, actions } from "./contract.ts"
 
 const wsURL = process.env.SERVER_WSURL || null
 
-const Component = () => {
+export const App = () => {
   const { app, ws } = useCanvas(wsURL, {
     topic: "example.xyz",
     contract: { models, actions }
   })
+  const items = useLiveQuery(app, "messages")
 
-  const items = useLiveQuery(app, "messages", {
-    orderBy: "created_at"
-  })
-
-  // app.actions.createMessage("hello world!")
-
-  return <ItemView content={items}></ItemView>
+  return (<div>
+    <ComposeBox
+      onSend={app.actions.createMessage}
+    />
+    <ItemView content={items}></ItemView>
+  </div>)
 }
 ```
 
@@ -202,13 +215,11 @@ with  `models` and `actions`.
 - Models define your database schema.
 - Actions define mutations that users can make to the database, like API routes.
 
-Applications are fully distributed & local-first. Because
-controller logic is in the database, every
+Because controller logic is in the database, every
 peer can validate the full history of your application,
 without a central server.
 
-To run your application, include it in your frontend using React
-hooks, or run it from the command line:
+Run your application from the command line:
 
 ```sh
 canvas run contract.ts --topic example
@@ -217,7 +228,7 @@ canvas run contract.ts --topic example
 ```
 
 This starts a peer that you can connect to from your browser. By
-default, it will also peer with other servers running the
+default, it will also connect to other servers on the
 application's topic.
 
 Read on to learn how to [authenticate users](/4-identities-auth),
@@ -241,7 +252,7 @@ Canvas is based on several years of research on a new architecture for
 distributed web applications. It builds on work from projects including IPFS,
 OrbitDB, and other peer-to-peer databases.
 
-We've published some of our research as technical presentations here:
+We've published some of our technical presentations here:
 
 - [Merklizing the Key/Value Store for Fun and Profit](https://joelgustafson.com/posts/2023-05-04/merklizing-the-key-value-store-for-fun-and-profit)
 - [Introduction to Causal Logs](https://joelgustafson.com/posts/2024-09-30/introduction-to-causal-logs)
