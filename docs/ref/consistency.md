@@ -135,3 +135,5 @@ The revert status of a specific transaction is a subjective property - it depend
 Also important to note is that inside a transaction, `db.get` will only return values written by past transactions, and not any LWW values set outside a transaction callback.
 
 However, non-transactional LWW reads will see all past values, both inside and outside transactions.
+
+In general, for any value, you should either always write to it from inside a transaction, or always use LWW writes, and never mix.
