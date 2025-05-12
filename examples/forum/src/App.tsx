@@ -47,7 +47,9 @@ export const App: React.FC<{ app: AppT }> = ({ app }) => {
 
 	// Scroll to bottom when messages change
 	useEffect(() => {
-		messageEndRef.current?.scrollIntoView({ behavior: "smooth" })
+		if (window.self === window.top) {
+			messageEndRef.current?.scrollIntoView({ behavior: "smooth" })
+		}
 	}, [posts])
 
 	const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

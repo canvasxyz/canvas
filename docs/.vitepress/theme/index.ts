@@ -15,6 +15,7 @@ import HomepageFooter from "../components/HomepageFooter.vue"
 import FeatureTags from "../components/FeatureTags.vue"
 import EmailForm from "../components/EmailForm.vue"
 import Version from "../components/Version.vue"
+import Iframe from "../components/Iframe.vue"
 import { MotionPlugin } from "@vueuse/motion"
 import "./style.css"
 
@@ -40,5 +41,6 @@ export default {
 		app.component("FeatureTags", FeatureTags)
 		app.component("EmailForm", EmailForm)
 		app.component("Version", Version)
+		app.component("Iframe", Iframe)
 	},
 } satisfies Theme

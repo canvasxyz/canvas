@@ -4,6 +4,8 @@
 
 The simple chat example implements a public messaging room over libp2p, with a persistence server.
 
+<Iframe src="https://chat-example.canvas.xyz" />
+
 ## Contract
 
 <<< @/../examples/chat/src/contract.ts
