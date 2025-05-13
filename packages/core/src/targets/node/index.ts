@@ -5,7 +5,6 @@ import express from "express"
 import cors from "cors"
 import { anySignal } from "any-signal"
 
-import esbuild from "esbuild"
 import chalk from "chalk"
 
 import * as pg from "pg"
@@ -17,6 +16,7 @@ import { createAPI } from "@canvas-js/core/api"
 import type { SqlStorage } from "@cloudflare/workers-types"
 
 import type { PlatformTarget } from "../interface.js"
+import { stripBundleFilename } from "../../utils.js"
 
 function isPostgresConnectionConfig(
 	path: string | pg.ConnectionConfig | SqlStorage | null,
@@ -43,10 +43,7 @@ function isPostgres(path: string | pg.ConnectionConfig | SqlStorage): boolean {
 const isError = (error: unknown): error is NodeJS.ErrnoException => error instanceof Error
 
 const target: PlatformTarget = {
-	async openGossipLog(
-		location: { path: string | pg.ConnectionConfig | SqlStorage | null; topic: string },
-		init,
-	) {
+	async openGossipLog(location: { path: string | pg.ConnectionConfig | SqlStorage | null; topic: string }, init) {
 		if (location.path === null) {
 			const { GossipLog: SqliteGossipLog } = await import("@canvas-js/gossiplog/sqlite")
 			return await SqliteGossipLog.open(null, init)
@@ -102,6 +99,7 @@ const target: PlatformTarget = {
 	},
 
 	async buildContract(contract: string) {
+		const esbuild = await import("esbuild")
 		const bundle = await esbuild.build({
 			bundle: true,
 			platform: "node",
@@ -117,12 +115,13 @@ const target: PlatformTarget = {
 		if (!bundle.outputFiles || bundle.outputFiles.length === 0) {
 			throw new Error("building contract from string produced no files")
 		} else {
-			return { build: bundle.outputFiles[0].text, originalContract: contract }
+			return { build: stripBundleFilename(bundle.outputFiles[0].text), originalContract: contract }
 		}
 	},
 
 	async buildContractByLocation(location: string) {
 		const originalContract = fs.readFileSync(location, "utf-8")
+		const esbuild = await import("esbuild")
 		const bundle = await esbuild.build({
 			bundle: true,
 			platform: "node",
@@ -134,9 +133,9 @@ const target: PlatformTarget = {
 			throw new Error("building .ts contract produced no files")
 		} else if (bundle.outputFiles && bundle.outputFiles.length > 1) {
 			// unexpected
-			return { build: bundle.outputFiles[0].text, originalContract }
+			return { build: stripBundleFilename(bundle.outputFiles[0].text), originalContract }
 		} else {
-			return { build: bundle.outputFiles[0].text, originalContract }
+			return { build: stripBundleFilename(bundle.outputFiles[0].text), originalContract }
 		}
 	},
 }
