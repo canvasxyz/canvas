@@ -273,8 +273,8 @@ export class ModelDB extends AbstractModelDB {
 		}
 
 		const result = query.include
-			? await this.read((txn) => api.query(txn, query), [api.storeName])
-			: await this.read((txn) => api.queryWithInclude(txn, this.#models, query), [api.storeName])
+			? await this.read((txn) => api.queryWithInclude(txn, this.#models, query), [api.storeName])
+			: await this.read((txn) => api.query(txn, query), [api.storeName])
 		return result as T[]
 	}
 
