@@ -47,7 +47,11 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 	#queue = new PQueue({ concurrency: 1 })
 	#db: ModelAPI<DeriveModelTypes<ModelsT>>
 
-	constructor(public readonly topic: string, public readonly signers: SignerCache, contract: Contract<ModelsT>) {
+	constructor(
+		public readonly topic: string,
+		public readonly signers: SignerCache,
+		contract: Contract<ModelsT>,
+	) {
 		super(contract.models)
 		this.actions = contract.actions ?? generateActionsFromRules(this.rules, contract.models)
 		this.contract = [
@@ -85,6 +89,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 					this.#txnId += 1
 					return await callback.apply(this.thisValue, [])
 				} finally {
+					await this.#queue.onIdle()
 					this.#transaction = false
 				}
 			},
