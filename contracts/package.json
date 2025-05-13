@@ -16,8 +16,9 @@
 		"test": "ava --serial"
 	},
 	"dependencies": {
-		"@canvas-js/core": "0.14.1-next.2",
-		"@canvas-js/signer-ethereum": "0.14.1-next.2",
+		"@canvas-js/core": "0.14.1-next.4",
+		"@canvas-js/modeldb": "0.14.1-next.4",
+		"@canvas-js/signer-ethereum": "0.14.1-next.4",
 		"@canvas-js/utils": "1.0.0"
 	}
 }
