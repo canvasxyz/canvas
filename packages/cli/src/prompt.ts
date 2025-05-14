@@ -1,7 +1,7 @@
 import chalk from "chalk"
 import prompts from "prompts"
 
-import { Canvas } from "@canvas-js/core"
+import { ActionAPI, Canvas } from "@canvas-js/core"
 
 const indirectEval = eval
 
@@ -49,7 +49,8 @@ export const startActionPrompt = async (app: Canvas) => {
 		if (typeof args === "object") {
 			console.log(`Executing ${call}(${JSON.stringify(args)})`)
 			try {
-				const result = await app.actions[call].call(this, args)
+				const { [call]: actionAPI } = app.actions as Record<string, ActionAPI>
+				const result = await actionAPI.call(this, args)
 				console.log("[canvas] Applied message", result)
 			} catch (err) {
 				console.log("Action rejected by contract")

@@ -1,19 +1,20 @@
-import type { Actions, ModelSchema } from "@canvas-js/core"
+import type { ModelSchema } from "@canvas-js/core"
+import { Contract } from "@canvas-js/core/contract"
 
-export const models = {
-	message: {
-		id: "primary",
-		address: "string",
-		content: "string",
-		timestamp: "integer",
-		$indexes: ["address", "timestamp"],
-	},
-} satisfies ModelSchema
+export default class Chat extends Contract<typeof Chat.models> {
+	static models = {
+		message: {
+			id: "primary",
+			address: "string",
+			content: "string",
+			timestamp: "integer",
+			$indexes: ["address", "timestamp"],
+		},
+	} satisfies ModelSchema
 
-export const actions = {
-	async createMessage(args) {
+	async createMessage(arg: string | { content: string }) {
 		const { id, address, timestamp, db } = this
-		const content = typeof args === "string" ? args : args.content
+		const content = typeof arg === "string" ? arg : arg.content
 		await db.set("message", { id, address, content, timestamp })
-	},
-} satisfies Actions<typeof models>
+	}
+}

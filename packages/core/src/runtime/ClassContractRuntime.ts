@@ -28,7 +28,7 @@ export class ClassContractRuntime extends AbstractRuntime {
 		const contractURI = VM.getFileURI(contract)
 		vm.runtime.setModuleLoader((moduleName, context) => {
 			if (moduleName === "@canvas-js/core/contract") {
-				return `export class Contract {}`
+				return `export class Contract { constructor(topic) { this.topic = topic } }`
 			} else if (moduleName === contractURI) {
 				return contract
 			} else {

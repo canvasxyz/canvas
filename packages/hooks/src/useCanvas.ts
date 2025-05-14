@@ -6,10 +6,11 @@ import {
 	ModelSchema,
 	Config,
 	Snapshot,
-	Actions,
+	ContractAction,
 	hashContract,
 	hashSnapshot,
 } from "@canvas-js/core"
+import { Contract } from "@canvas-js/core/contract"
 
 /**
  * React hook for Canvas applications using client-to-server sync.
@@ -21,12 +22,12 @@ import {
  */
 export const useCanvas = <
 	ModelsT extends ModelSchema = ModelSchema,
-	ActionsT extends Actions<ModelsT> = Actions<ModelsT>,
+	InstanceT extends Contract<ModelsT> = Contract<ModelsT> & Record<string, ContractAction<ModelsT>>,
 >(
 	url: string | null,
-	config: Config<ModelsT, ActionsT> | Omit<Config<ModelsT, ActionsT>, "topic" | "contract">,
+	config?: Config<ModelsT, InstanceT>,
 ) => {
-	const [app, setApp] = useState<Canvas<ModelsT, ActionsT>>()
+	const [app, setApp] = useState<Canvas<ModelsT, InstanceT>>()
 	const [networkClient, setNetworkClient] = useState<NetworkClient<any>>()
 	const [error, setError] = useState<Error>()
 
@@ -35,7 +36,7 @@ export const useCanvas = <
 	const remoteContractHashRef = useRef<Record<string, string>>({}) // Ref for last-rendered contractHash for remote applications.
 	const renderedRef = useRef(false) // Ref for skipping extra render in React.StrictMode.
 
-	const contractHash = config && "contract" in config ? hashContract(config.contract) : null
+	const contractHash = config && typeof config.contract === "string" ? hashContract(config.contract) : null
 
 	// useEffect(() => {
 	// 	// keep app signers updated
@@ -48,7 +49,7 @@ export const useCanvas = <
 		if (renderedRef.current) return
 		renderedRef.current = true
 
-		function assign(appUrl: string | null, app: Canvas<ModelsT, ActionsT>) {
+		function assign(appUrl: string | null, app: Canvas<ModelsT, InstanceT>) {
 			if (url) {
 				app
 					.connect(url)
@@ -77,7 +78,7 @@ export const useCanvas = <
 				{ topic: string },
 				{ contract: string; snapshotHash: string },
 			]) {
-				if (config === undefined || "topic" in config || "contract" in config) {
+				if (config === undefined) {
 					console.error("Canvas WebSocket remote did not return a valid application topic or contract")
 					return
 				}
@@ -111,13 +112,7 @@ export const useCanvas = <
 
 				console.log("[canvas] initializing remote application")
 
-				await Canvas.initialize<ModelsT, ActionsT>({
-					topic,
-					contract,
-					reset,
-					snapshot,
-					...config,
-				})
+				await Canvas.initialize<ModelsT, InstanceT>({ reset, snapshot, ...config })
 					.then(assign.bind(null, url))
 					.finally(() => {
 						remoteContractHashRef.current[topic] = remoteContractHash
@@ -145,14 +140,14 @@ export const useCanvas = <
 
 				if (!app || contractHash === localContractHashRef.current) {
 					// Application just initialized, or contract remains unchanged
-					await Canvas.initialize<ModelsT, ActionsT>({
+					await Canvas.initialize({
 						...config,
 						topic: config.snapshot ? `${config.topic}#${hashSnapshot(config.snapshot)}` : config.topic,
 					}).then(assign.bind(null, url))
 				} else if ((await app.db.count("$messages")) > 1 && snapshotRef.current) {
 					// Contract changed, reuse the old snapshot
 					const snapshot = snapshotRef.current
-					await Canvas.initialize<ModelsT, ActionsT>({
+					await Canvas.initialize({
 						...config,
 						reset: true,
 						snapshot,
@@ -161,7 +156,7 @@ export const useCanvas = <
 				} else {
 					// Contract changed, make a new snapshot
 					const snapshot = await app.createSnapshot()
-					await Canvas.initialize<ModelsT, ActionsT>({
+					await Canvas.initialize({
 						...config,
 						reset: true,
 						snapshot,

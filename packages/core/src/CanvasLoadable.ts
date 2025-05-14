@@ -1,7 +1,7 @@
-import type { ModelSchema } from "@canvas-js/core"
+import type { ActionAPI, ContractAction, ModelSchema } from "@canvas-js/core"
+import type { Contract } from "@canvas-js/core/contract"
 import { assert } from "@canvas-js/utils"
 
-import type { Actions } from "./types.js"
 import type { Config } from "./Canvas.js"
 import { Canvas } from "./Canvas.js"
 
@@ -13,13 +13,16 @@ import { Canvas } from "./Canvas.js"
  * and other places that require an immediately usable `Canvas` object
  * by calling `const app = CanvasLoadable({ ... })`.
  */
-export class CanvasLoadable<M extends ModelSchema = any, A extends Actions<M> = Actions<M>> {
-	initPromise: Promise<Canvas<M, Actions<M>>>
+export class CanvasLoadable<
+	ModelsT extends ModelSchema = ModelSchema,
+	InstanceT extends Contract<ModelsT> = Contract<ModelsT> & Record<string, ContractAction<ModelsT>>,
+> {
+	initPromise: Promise<Canvas<ModelsT, InstanceT>>
 	ready: boolean
-	app: Canvas<M, Actions<M>> | undefined
+	app: Canvas<ModelsT, InstanceT> | undefined
 	actions: {}
 
-	constructor(config: Config<M>, { disableSSR }: { disableSSR?: boolean } = {}) {
+	constructor(config: Config<ModelsT, InstanceT>, { disableSSR }: { disableSSR?: boolean } = {}) {
 		this.actions = {} // stub actions for ssr
 
 		if (disableSSR && typeof window === "undefined") {
@@ -46,7 +49,8 @@ export class CanvasLoadable<M extends ModelSchema = any, A extends Actions<M> = 
 					await this.initPromise
 					assert(this.app, "app failed to initialize")
 					assert(typeof action === "string", "action names must be strings")
-					return this.app.actions[action](...args)
+					const { [action]: actionAPI } = this.app.actions as Record<string, ActionAPI>
+					return actionAPI(...args)
 				}
 			},
 		})

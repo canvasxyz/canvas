@@ -1,13 +1,13 @@
 import test from "ava"
-import refs, { models } from "./refs.js"
+import Refs from "./refs.js"
 
 import { Canvas, DeriveModelTypes } from "@canvas-js/core"
 
-type Models = DeriveModelTypes<typeof models>
+type Models = DeriveModelTypes<typeof Refs.models>
 
 test("create a profile, ref, and connection", async (t) => {
 	const app = await Canvas.initialize({
-		contract: refs,
+		contract: Refs,
 		topic: "refs.nyc.test",
 	})
 	const did = await app.signers.getFirst().getDid()

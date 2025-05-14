@@ -1,5 +1,5 @@
 import { assert } from "@canvas-js/utils"
-import { ActionContext, Actions, DeriveModelTypes, ModelInit, ModelSchema, RulesInit } from "../types.js"
+import { ActionContext, DeriveModelTypes, ModelSchema, RulesInit } from "../types.js"
 import { capitalize } from "../utils.js"
 
 const toString = (err: unknown) => {

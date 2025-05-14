@@ -1,26 +1,29 @@
 import test from "ava"
 
-import { Canvas, Config, hashSnapshot } from "@canvas-js/core"
+import { Canvas, hashSnapshot, ModelSchema } from "@canvas-js/core"
+import { Contract } from "@canvas-js/core/contract"
 
 test("snapshot persists data across apps", async (t) => {
-	const config: Config = {
+	class MyApp extends Contract<typeof MyApp.models> {
+		static models = {
+			posts: {
+				id: "primary",
+				content: "string",
+			},
+		} satisfies ModelSchema
+
+		async createPost({ id, content }: { id: string; content: string }) {
+			await this.db.set("posts", { id, content })
+		}
+
+		async deletePost({ id }: { id: string }) {
+			await this.db.delete("posts", id)
+		}
+	}
+
+	const config = {
 		topic: "com.example.app",
-		contract: {
-			models: {
-				posts: {
-					id: "primary",
-					content: "string",
-				},
-			},
-			actions: {
-				async createPost({ id, content }: { id: string; content: string }) {
-					await this.db.set("posts", { id, content })
-				},
-				async deletePost({ id }: { id: string }) {
-					await this.db.delete("posts", id)
-				},
-			},
-		},
+		contract: MyApp,
 	}
 
 	const app = await Canvas.initialize(config)

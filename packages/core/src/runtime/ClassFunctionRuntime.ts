@@ -9,16 +9,17 @@ import { sha256 } from "@noble/hashes/sha256"
 
 import { Contract as BaseContract } from "@canvas-js/core/contract"
 
-import { ModelSchema, ActionContext, ModelAPI, ClassContract, Actions } from "../types.js"
+import { ModelSchema, ModelAPI, ContractClass, ContractAction } from "../types.js"
 import { ExecutionContext } from "../ExecutionContext.js"
 import { AbstractRuntime } from "./AbstractRuntime.js"
+import { ActionAPI } from "../index.js"
 
-export class ClassFunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntime {
-	public static async init<ModelsT extends ModelSchema>(
+export class ClassFunctionRuntime extends AbstractRuntime {
+	public static async init(
 		topic: string,
 		signers: SignerCache,
-		contract: ClassContract<ModelsT>,
-	): Promise<ClassFunctionRuntime<ModelsT>> {
+		contract: ContractClass<ModelSchema, BaseContract<ModelSchema>>,
+	): Promise<ClassFunctionRuntime> {
 		assert(contract.models !== undefined, "missing `static models` value in contract class")
 		assert(
 			Object.keys(contract.models).every((key) => !key.startsWith("$")),
@@ -35,27 +36,25 @@ export class ClassFunctionRuntime<ModelsT extends ModelSchema> extends AbstractR
 	#txnId = 0
 	#nextId: Uint8Array | null = null
 	#transaction = false
-	#thisValue: ActionContext<DeriveModelTypes<ModelsT>> | null = null
+	#thisValue: BaseContract<ModelSchema> | null = null
 	#queue = new PQueue({ concurrency: 1 })
-	#db: ModelAPI<DeriveModelTypes<ModelsT>>
+	#db: ModelAPI
 
-	#contract: BaseContract<ModelsT>
+	#contract: BaseContract<ModelSchema>
 
 	constructor(
 		public readonly topic: string,
 		public readonly signers: SignerCache,
 		public readonly actionNames: string[],
 		models: ModelSchema,
-		contractInstance: BaseContract<ModelsT>,
+		contractInstance: BaseContract<ModelSchema>,
 	) {
 		super(models)
 
 		this.#contract = contractInstance
 		this.#db = {
-			get: async <T extends keyof DeriveModelTypes<ModelsT> & string>(model: T, key: string) => {
-				const result = await this.#queue.add(() =>
-					this.context.getModelValue<DeriveModelTypes<ModelsT>[T]>(model, key, this.#transaction),
-				)
+			get: async <T extends keyof DeriveModelTypes<ModelSchema> & string>(model: T, key: string) => {
+				const result = await this.#queue.add(() => this.context.getModelValue(model, key, this.#transaction))
 				return result ?? null
 			},
 
@@ -111,12 +110,12 @@ export class ClassFunctionRuntime<ModelsT extends ModelSchema> extends AbstractR
 			context: { blockhash, timestamp },
 		} = exec.message.payload
 
-		const { [name]: action } = this.#contract as unknown as Actions<ModelsT>
-		if (action === undefined) {
+		const { [name]: actionAPI } = this.#contract as unknown as Record<string, ActionAPI>
+		if (actionAPI === undefined) {
 			throw new Error(`invalid action name: ${name}`)
 		}
 
-		const thisValue: ActionContext<DeriveModelTypes<ModelsT>> = {
+		const thisValue = {
 			db: this.#db,
 			id: exec.id,
 			publicKey: exec.signature.publicKey,
@@ -124,7 +123,8 @@ export class ClassFunctionRuntime<ModelsT extends ModelSchema> extends AbstractR
 			address: exec.address,
 			blockhash: blockhash ?? null,
 			timestamp: timestamp,
-		}
+			topic: this.topic,
+		} as BaseContract<ModelSchema>
 
 		try {
 			this.#txnId = 0
@@ -132,7 +132,7 @@ export class ClassFunctionRuntime<ModelsT extends ModelSchema> extends AbstractR
 			this.#context = exec
 			this.#thisValue = thisValue
 
-			const result = await action.apply(thisValue, Array.isArray(args) ? args : [args])
+			const result = await actionAPI.apply(thisValue, Array.isArray(args) ? args : [args])
 			await this.#queue.onIdle()
 
 			return result

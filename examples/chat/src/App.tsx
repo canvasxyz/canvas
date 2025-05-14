@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react"
+import React, { useState } from "react"
 
 import type { SessionSigner } from "@canvas-js/interfaces"
 import { SIWESigner, SIWFSigner, Eip712Signer } from "@canvas-js/signer-ethereum"
@@ -6,8 +6,6 @@ import { ATPSigner } from "@canvas-js/signer-atp"
 import { CosmosSigner } from "@canvas-js/signer-cosmos"
 import { SubstrateSigner } from "@canvas-js/signer-substrate"
 import { SolanaSigner } from "@canvas-js/signer-solana"
-
-import type { Contract } from "@canvas-js/core"
 
 import { useCanvas, AppInfo } from "@canvas-js/hooks"
 
@@ -22,7 +20,8 @@ import { SessionStatus } from "./SessionStatus.js"
 import { ConnectionStatus } from "./ConnectionStatus.js"
 import { Connect } from "./connect/index.js"
 import { LogStatus } from "./LogStatus.js"
-import * as contract from "./contract.js"
+
+import Chat from "./contract.js"
 
 const wsURL = import.meta.env.VITE_CANVAS_WS_URL ?? null
 console.log("websocket API URL:", wsURL)
@@ -42,6 +41,8 @@ export const App: React.FC<{}> = ({}) => {
 	const [address, setAddress] = useState<string | null>(null)
 
 	const { app, ws } = useCanvas(wsURL, {
+		topic: "chat-example.canvas.xyz",
+		contract: Chat,
 		signers: [
 			new SIWESigner(),
 			new Eip712Signer(),

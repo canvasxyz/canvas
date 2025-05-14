@@ -5,7 +5,8 @@ import { bytesToHex } from "@noble/hashes/utils"
 import { ethers } from "ethers"
 
 import { SIWESigner } from "@canvas-js/signer-ethereum"
-import { Canvas } from "@canvas-js/core"
+import { Canvas, ModelSchema } from "@canvas-js/core"
+import { Contract } from "@canvas-js/core/contract"
 import { encodeId } from "@canvas-js/gossiplog"
 
 const hashN = (id: string, n: number): string => {
@@ -17,36 +18,36 @@ const hashN = (id: string, n: number): string => {
 }
 
 test("create several ids", async (t) => {
-	const wallet = ethers.Wallet.createRandom()
+	class MyApp extends Contract<typeof MyApp.models> {
+		static models = {
+			blobs: { id: "primary", txid: "string" },
+		} satisfies ModelSchema
 
+		async createBlob() {
+			await this.db.set("blobs", { id: this.db.id(), txid: this.id })
+			return this.id
+		}
+		async createSeveralBlobs() {
+			await this.db.set("blobs", { id: this.db.id(), txid: this.id })
+			await this.db.set("blobs", { id: this.db.id(), txid: this.id })
+			await this.db.set("blobs", { id: this.db.id(), txid: this.id })
+			return this.id
+		}
+		async createSeveralBlobsInterleaved() {
+			await this.db.set("blobs", { id: this.db.id(), txid: this.id })
+			this.db.id()
+			await this.db.set("blobs", { id: this.db.id(), txid: this.id })
+			this.db.id()
+			await this.db.set("blobs", { id: this.db.id(), txid: this.id })
+			this.db.id()
+			return this.id
+		}
+	}
+
+	const wallet = ethers.Wallet.createRandom()
 	const app = await Canvas.initialize({
 		topic: "example.xyz",
-		contract: {
-			models: {
-				blobs: { id: "primary", txid: "string" },
-			},
-			actions: {
-				createBlob() {
-					this.db.set("blobs", { id: this.db.id(), txid: this.id })
-					return this.id
-				},
-				createSeveralBlobs() {
-					this.db.set("blobs", { id: this.db.id(), txid: this.id })
-					this.db.set("blobs", { id: this.db.id(), txid: this.id })
-					this.db.set("blobs", { id: this.db.id(), txid: this.id })
-					return this.id
-				},
-				createSeveralBlobsInterleaved() {
-					this.db.set("blobs", { id: this.db.id(), txid: this.id })
-					this.db.id()
-					this.db.set("blobs", { id: this.db.id(), txid: this.id })
-					this.db.id()
-					this.db.set("blobs", { id: this.db.id(), txid: this.id })
-					this.db.id()
-					return this.id
-				},
-			},
-		},
+		contract: MyApp,
 		signers: [new SIWESigner({ signer: wallet })],
 	})
 	t.teardown(() => app.stop())
