@@ -6,7 +6,7 @@ const toString = (err: unknown) => {
 	return typeof err === "object" && err !== null && "message" in err ? String(err.message) : String(err)
 }
 
-export const extractRulesFromModelSchema = (models: ModelSchema) => {
+export const extractRules = (models: ModelSchema) => {
 	const rules: Record<string, RulesInit> = {}
 	const schema: ModelSchema = {}
 
@@ -23,7 +23,7 @@ export const extractRulesFromModelSchema = (models: ModelSchema) => {
 		}
 	}
 
-	return { schema, rules }
+	return { baseModels: schema, rules }
 }
 
 export const generateActionsFromRules = <T extends ModelSchema>(rules: Record<string, RulesInit>, models: T) => {

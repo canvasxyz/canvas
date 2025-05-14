@@ -16,6 +16,9 @@ import { generateActionsFromRules } from "./rules.js"
 const hasAllRules = (models: ModelSchema) => {
 	return Object.values(models).every((model) => "$rules" in model)
 }
+const hasNoRules = (models: ModelSchema) => {
+	return Object.values(models).every((model) => !("$rules" in model))
+}
 
 export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntime {
 	public static async init<ModelsT extends ModelSchema>(
@@ -27,6 +30,10 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 		assert(
 			contract.actions !== undefined || hasAllRules(contract.models),
 			"contracts without actions must have $rules on all models",
+		)
+		assert(
+			hasNoRules(contract.models) || hasAllRules(contract.models),
+			"contracts with rules must have them on all models"
 		)
 		assert(
 			Object.keys(contract.models).every((key) => !key.startsWith("$")),
