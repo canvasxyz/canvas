@@ -91,7 +91,7 @@ export type QueryParams = {
 // Derives typed PropertyValue = PrimitiveValue | ReferenceValue | RelationValue | JSONValue
 // from a given PropertyType
 
-export type DerivePropertyType<T extends PropertyType> = T extends "primary"
+export type DerivePropertyType<T extends PropertyType, HasIncludes extends boolean = false> = T extends "primary"
 	? string
 	: T extends "integer" | "float" | "number"
 		? number
@@ -112,24 +112,33 @@ export type DerivePropertyType<T extends PropertyType> = T extends "primary"
 									: T extends "json"
 										? JSONValue
 										: T extends `@${string}[]`
-											? RelationValue
+											? HasIncludes extends true
+												? any
+												: RelationValue
 											: T extends `@${string}?`
-												? ReferenceValue | null
+												? (HasIncludes extends true ? any : ReferenceValue) | null
 												: T extends `@${string}`
-													? ReferenceValue
+													? HasIncludes extends true
+														? any
+														: ReferenceValue
 													: never
 
 export type DeriveModelTypes<T extends ModelSchema, Ext = {}> = {
 	[K in keyof T]: {
-		[P in keyof T[K] as Exclude<P, keyof Ext | "$indexes" | "$primary">]:
-			T[K][P] extends PropertyType
-				? DerivePropertyType<T[K][P]>
-					: never
+		[P in keyof T[K] as Exclude<P, keyof Ext | "$indexes" | "$primary">]: T[K][P] extends PropertyType
+			? DerivePropertyType<T[K][P]>
+			: never
 	}
 }
 
-export type DeriveModelType<T extends { $indexes?: IndexInit[], $primary?: string } | Record<string, PropertyType>, Ext = {}> = {
-	[P in keyof T as Exclude<P, keyof Ext | "$indexes" | "$primary">]: T[P] extends PropertyType ? DerivePropertyType<T[P]> : never
+export type DeriveModelType<
+	T extends { $indexes?: IndexInit[]; $primary?: string } | Record<string, PropertyType>,
+	Ext = {},
+	Includes extends IncludeExpression | undefined = {},
+> = {
+	[P in keyof T as Exclude<P, keyof Ext | "$indexes" | "$primary">]: T[P] extends PropertyType
+		? DerivePropertyType<T[P], Includes extends IncludeExpression ? true : false>
+		: never
 }
 
 export type Contract<T extends ModelSchema = ModelSchema> = {
