@@ -210,6 +210,14 @@ export class ContractRuntime extends AbstractRuntime {
 				this.#nextId = sha256(this.#nextId)
 				return vm.wrapValue(bytesToHex(this.#nextId.slice(0, 16)))
 			}),
+
+			random: vm.context.newFunction("random", () => {
+				if (this.#nextId === null) throw new Error("expected this.#nextId !== null")
+				this.#nextId = sha256(this.#nextId)
+				// use the first 4 bytes (32 bits) of the hash, normalized to [0,1]
+				const view = new DataView(this.#nextId.buffer, this.#nextId.byteOffset, 4)
+				return vm.wrapValue(view.getUint32(0, false) / 0xFFFFFFFF)
+			}),
 		})
 
 		this.#databaseAPI = databaseAPI.consume(vm.cache)
@@ -252,6 +260,13 @@ export class ContractRuntime extends AbstractRuntime {
 						assert(this.#nextId !== null, "internal error - expected self.#nextId !== null")
 						this.#nextId = sha256(this.#nextId)
 						return bytesToHex(this.#nextId.slice(0, 16))
+					},
+					random: () => {
+						assert(this.#nextId !== null, "internal error - expected self.#nextId !== null")
+						this.#nextId = sha256(this.#nextId)
+						// use the first 4 bytes (32 bits) of the hash, normalized to [0,1]
+						const view = new DataView(this.#nextId.buffer, this.#nextId.byteOffset, 4)
+						return view.getUint32(0, false) / 0xFFFFFFFF
 					},
 					get: (model, key) => exec.getModelValue(model, key, this.#transaction),
 					set: (model, value) => exec.setModelValue(model, value, this.#transaction),
