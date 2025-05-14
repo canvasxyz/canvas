@@ -213,7 +213,7 @@ export class ModelAPI {
 						})
 						if (result === undefined) {
 							console.error(
-								`expected relation to be populated while looking up ${modelName}.${includeKey}: ${includeModelName} = ${includeValue}`,
+								`relational join to populate ${modelName}.${includeKey} failed: could not find ${includeModelName} where ${includePrimaryKeyName} = ${item}`,
 							)
 							continue
 						}
