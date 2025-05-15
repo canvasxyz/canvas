@@ -1,10 +1,12 @@
 # Upgrading Applications
 
-Canvas has functional but minimal support for upgrading applications right now.
+Upgrading a peer-to-peer application is a little more complex than
+upgrading an application where everyone is coordinated by a central server.
 
-We're working to smooth out the rough edges around application
-upgrades this year, and provide an experience that matches traditional
-databases.
+Canvas has functional but minimal support for upgrading applications right now, using two strategies:
+
+* [Soft-fork upgrades](#soft-forks), where an application gets *extended* with actions that wouldn't be accepted in the pre-upgrade application. This requires reasoning about actions, and taking care to not introduce changes that would cause peers to go out of sync.
+* [Hard-fork upgrades](#hard-forks), where the application gets switched to a new contract and peer-to-peer mesh entirely. Hard forks start from a flattened, compacted snapshot of the existing application history, and have an entirely different topic.
 
 ## Using the Network Explorer
 
@@ -31,12 +33,12 @@ You can now decide whether you want to proceed with the upgrade:
 
 ![Run migrations](/run_migrations.png)
 
-## Soft Forks: Upgrading development applications
+## Soft Forks
 
 If you apply the upgrade **without retaining a snapshot**, this will
 make your application reset and re-apply actions from the start.
 
-This will start the application in soft-fork mode, with a topic like `example.xyz`.
+This will start the application in soft-fork mode, with the same topic as before, e.g. `example.xyz`.
 
 Soft-fork applications start from an empty database, and attempt to
 replay the entire history of actions every time.
@@ -50,7 +52,7 @@ replay the entire history of actions every time.
 > applications in production at this time, until further
 > protections are in place.
 
-## Hard Forks: Upgrading immutable applications
+## Hard Forks
 
 If you apply the upgrade **while retaining a snapshot**, this will
 make your application restart from a hard fork snapshot, which holds
