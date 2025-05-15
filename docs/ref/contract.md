@@ -11,7 +11,7 @@ Inside the contract, actions and permission checks can access these objects:
 * [ActionContext](#actioncontext): Contains information like the current message ID for the action.
 * [ModelAPI](./model.md#modelapi): Contains database APIs for reading, writing, transacting, generating IDs, etc.
 
-Additionally, each contract can be imported [inline](#inline-imports), or as a separate [file or ES module](#module-imports).
+Additionally, contracts can be declared [inline](#inline-contracts), or as a separate [ES module](#module-contracts).
 
 ## Contracts with Mutators
 
@@ -125,13 +125,13 @@ See ActionContext in the [API Types](../api/core.md#api) for more information.
 
 ## Import Styles
 
-Each contract can be specified either inline or as a separate file. Contracts that are imported as a file will be run inside a QuickJS WASM container.
+Each contract can be declared either inline or as a separate file or string, imported as an ES module.
 
-Some application platforms do not work well with the QuickJS WASM container. For those applications, we recommend providing your contract as inline imports instead.
+Contracts that are imported as an ES module will be run inside a QuickJS WASM container. Some application platforms do not work well with the QuickJS WASM. For those applications, we recommend declaring your contract as inline functions instead.
 
-### Inline Imports
+### Inline Contracts
 
-Contracts can be imported as vanilla JavaScript fields, or a vanilla TS/JS class:
+Contracts can be provided as vanilla JavaScript objects, or a vanilla TS/JS class:
 
 ::: code-group
 
@@ -158,7 +158,7 @@ await Canvas.initialize({
 
 :::
 
-### Module Imports
+### Module Contracts
 
 When using a contract from the command line with `canvas run contract.ts`, it is always imported as a file, and treated as an ES module. Modules can do any of the following:
 
@@ -170,7 +170,7 @@ You can also import a contract as a module by providing it as a string, or using
 
 ::: code-group
 
-```ts [Inline String]
+```ts [String Contract]
 await Canvas.initialize({
   topic: "example.xyz",
   contract: `
@@ -180,7 +180,7 @@ export actions = { ... }
 })
 ```
 
-```ts [Inline with Vite]
+```ts [ES Module with Vite]
 import contract from "./contract.js?raw"
 
 await Canvas.initialize({
@@ -189,7 +189,7 @@ await Canvas.initialize({
 })
 ```
 
-```ts [Inline with Import Attributes]
+```ts [ES Module with Import Attributes]
 import contract from "./contract.js"  with { type: "text" }
 
 await Canvas.initialize({

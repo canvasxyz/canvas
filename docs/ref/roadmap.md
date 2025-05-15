@@ -1,15 +1,12 @@
 # Roadmap
 
-_This page lists the upcoming priorities that we're working on right now.
-For past release notes, please see [Github](https://github.com/canvasxyz/canvas/releases)._
+This page lists the upcoming priorities that we're working on right now.
+For past release notes, please see [Github](https://github.com/canvasxyz/canvas/releases).
 
 ## Roadmap
 
 - [ ] Improving the experience around upgrading and hosting applications.
-- [ ] Improving configurability around peer-to-peer networking, for
-  e.g. applications that want to only sync with selected peers
-  rather than connecting to the DHT.
-- [ ] Adding a non-crypto, traditional web2-friendly login method.
+- [ ] Support for non-crypto, traditional web2 login.
 - [ ] Support for application deployment on existing EVM chains.
 - [ ] Support for sharding applications into multiple objects.
 - [ ] Support for partial sync.

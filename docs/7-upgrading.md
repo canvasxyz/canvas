@@ -1,12 +1,14 @@
 # Upgrading Applications
 
-Upgrading a peer-to-peer application is a little more complex than
-upgrading an application where everyone is coordinated by a central server.
+Upgrading a peer-to-peer application is slightly more complex than
+upgrading an application coordinated by a central server.
 
-Canvas has functional but minimal support for upgrading applications right now, using two strategies:
+We have functional but minimal support for two ways to upgrade applications:
 
 * [Soft-fork upgrades](#soft-forks), where an application gets *extended* with actions that wouldn't be accepted in the pre-upgrade application. This requires reasoning about actions, and taking care to not introduce changes that would cause peers to go out of sync.
-* [Hard-fork upgrades](#hard-forks), where the application gets switched to a new contract and peer-to-peer mesh entirely. Hard forks start from a flattened, compacted snapshot of the existing application history, and have an entirely different topic.
+* [Hard-fork upgrades](#hard-forks), where the application gets switched to a new contract and peer-to-peer mesh entirely. Hard forks start from scratch, from a flattened, compacted snapshot of the existing application history.
+
+Regular, soft-forked applications have a topic like `example.xyz`, while hard-forked applications have a topic like `example.canvas.xyz#ffae63ab95cc5483`.
 
 ## Using the Network Explorer
 
