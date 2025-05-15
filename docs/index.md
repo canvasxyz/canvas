@@ -12,7 +12,7 @@ next: false
 Canvas is an open-source, cryptographically authenticated version of Firebase that lets you write entire applications inside your frontend.
 
 Use it to build local-first applications without depending on a
-central server. Or, use it to build apps as open protocols, that anyone
+central server. Or, use it to build open protocols that anyone
 can interoperate with.
 
 </div>
@@ -104,7 +104,7 @@ can interoperate with.
 
 ::: code-group
 
-```ts [Object Syntax]
+```ts [Object Runtime]
 import { Canvas } from "@canvas-js/core"
 
 export const models = {
@@ -130,7 +130,7 @@ const app = await Canvas.initialize({
 app.actions.createMessage("Who up?")
 ```
 
-```ts [Class Syntax]
+```ts [Class Runtime]
 import { Contract } from "@canvas-js/core"
 
 export const Chat extends Contract {
@@ -150,7 +150,7 @@ export const Chat extends Contract {
   }
 }
 
-await Canvas.initialize({
+const app = await Chat.initialize({
   topic: "example.xyz",
   contract: Chat,
 })
@@ -158,16 +158,16 @@ await Canvas.initialize({
 app.actions.createMessage("Hello world!")
 ```
 
-```ts [React Usage]
+```ts [React]
 import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
-import { models, actions } from "./contract.ts"
+import { Chat } from "./contract.ts"
 
 const wsURL = process.env.SERVER_WSURL || null
 
 export const App = () => {
   const { app, ws } = useCanvas(wsURL, {
     topic: "example.xyz",
-    contract: { models, actions }
+    contract: Chat,
   })
   const items = useLiveQuery(app, "messages")
 

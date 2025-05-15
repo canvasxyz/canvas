@@ -1,8 +1,8 @@
 # Running & Deploying Peers
 
-You can run a Canvas application in the browser without connecting
+You can run an application in the browser without connecting
 to a server, but when you're ready to go live, you'll want to deploy
-it to a server anyone can connect to.
+to a server anyone can connect to.
 
 ## Preparing for deployment
 

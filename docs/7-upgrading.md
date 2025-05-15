@@ -1,7 +1,10 @@
 # Upgrading Applications
 
-Canvas has limited support for upgrading applications. This is one
-of our main focuses for development through the current year.
+Canvas has functional but minimal support for upgrading applications right now.
+
+We're working to smooth out the rough edges around application
+upgrades this year, and provide an experience that matches traditional
+databases.
 
 ## Using the Network Explorer
 

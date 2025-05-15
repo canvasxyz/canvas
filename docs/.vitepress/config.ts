@@ -61,8 +61,8 @@ export default defineConfig({
 				{
 					text: "Reference",
 					items: [
-						// { text: "Application API", link: "/ref/application" },
-						// { text: "Database API", link: "/ref/database" },
+						{ text: "Contract API", link: "/ref/contract" },
+						{ text: "Model API", link: "/ref/model" },
 						// { text: "FAQ", link: "/ref/faq" },
 						{ text: "Consistency Model", link: "/ref/consistency" },
 						{ text: "Roadmap", link: "/ref/roadmap" },
