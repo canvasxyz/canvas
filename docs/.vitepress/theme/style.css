@@ -94,6 +94,9 @@ pre {
   overflow: hidden;
 }
 
+.vp-doc table {
+  line-height: 1.5;
+}
 .vp-doc tr {
   background-color: rgba(var(--vp-c-bg-soft-rgb), 0.4) !important;
 }

@@ -1,6 +1,6 @@
 # Authenticating Users
 
-We want end users to authenticate with public-key identities, but we don't want them to have to manually sign every interaction.
+We need users to authenticate with public-key identities, but we don't want them to have to manually sign every interaction.
 
 As a result, Canvas applications are initialized with **session signers**, which define different ways that users can delegate a session key to sign individual interactions.
 

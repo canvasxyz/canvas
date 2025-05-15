@@ -38,7 +38,7 @@ export const actions = {
 
 You can also create a Firebase-style contract with permissions for each table, using a `$rules` object on the model.
 
-This is useful for creating simpler contracts, and applications that resemble databases but still have some of the flexibility of programmable applications.
+This is useful for creating simpler contracts, and applications that resemble databases but still have programmable constraints on what data can be stored in the application.
 
 ::: tip
 A current limitation is that if you use $rules, you must use it for all models on a contract instead of specifying actions. This is a temporary limitation we have in place, since interoperability between `actions` and `$rules` has not been fully documented yet.
@@ -62,6 +62,8 @@ export const models = {
 ```
 
 Inside each permission check, `this` is the current [ActionContext](#actioncontext), and other fields on the database are in the global scope.
+
+### External Database API
 
 Once you've set up a contract with rules, you can use the `app.create`, `app.update`, `app.delete` methods to access the application, like a regular database:
 

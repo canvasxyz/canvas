@@ -1,13 +1,29 @@
 # Model API
 
-Each application comes with a cross-platform relational database, which is an instance of [ModelDB](../api/modeldb.md).
+Each application comes with a cross-platform relational database, based on [ModelDB](../api/modeldb.md).
 
-## Model Configuration
+## Model Properties
 
-For information on how to configure ModelDB and set up schemas, refer to the ModelDB docs:
+For detailed information on how to configure models and set up schemas, refer to the ModelDB documentation on [schemas](../api/modeldb.md#schemas) and [indexes](../api/modeldb.md#indexes).
 
-* [Schemas](../api/modeldb.md#schemas) (including @reference and @relation[] properties)
-* [Indexes](../api/modeldb.md#indexes)
+Here is an abbreviated table of model property types:
+
+| Property | Description |
+|---------|-------------|
+| `primary` | String primary key. You can also use `$primary` to define composite primary keys. |
+| `number` | Number. |
+| `integer` | Integer. |
+| `float` | Floating-point number. |
+| `string` | String. |
+| `bytes` | Byte array. |
+| `boolean` | Boolean. |
+| `json` | Arbitrary JSON. |
+| `@reference` | Reference to the primary key of another model. Foreign keys are not enforced. |
+| `@relation[]` | One-to-many reference to the primary keys of another model. Stored as a separate table; foreign keys are not enforced. |
+
+Any property may be made nullable by adding a `?` to the end of the property type.
+
+At this time, nullable properties must still be provided as `null` when a database record is initialized using `db.create` or `db.set`.
 
 ## ModelAPI
 
@@ -34,4 +50,3 @@ See ModelAPI in the [API Types](../api/core.md#api) for more information.
 Transactional-only operations are always required to be run inside a `db.transaction()` block, and will roll back if any of the records they read from have changed.
 
 Consider reviewing the [Transactions](./consistency.md#transactions) document to understand how this works.
-
