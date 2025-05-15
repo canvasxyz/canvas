@@ -5,17 +5,15 @@ next: false
 
 <div :class="$style.main">
 
-<HeroRow text="Serverless, distributed Firebase with peer-to-peer sync" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
+<HeroRow text="Embedded application database with peer-to-peer sync" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
 
 <div :class="$style.mainInner">
 
-Canvas is an open-source database, with an embedded peer-to-peer
-runtime.
+Canvas is an open-source, cryptographically authenticated version of Firebase that lets you write entire applications inside your frontend.
 
-You can use it as a local-first version of Firebase, that lets you write
-entire applications inside your frontend.
-
-Or, use it to build open protocols, that anyone can interoperate with.
+Use it to build local-first applications without depending on a
+central server. Or, use it to build apps as open protocols, that anyone
+can interoperate with.
 
 </div>
 
@@ -26,29 +24,29 @@ Or, use it to build open protocols, that anyone can interoperate with.
     iconName: 'mobile'
   },
   {
-    text: 'Works with your database',
+    text: 'Cross-database compatibility',
     tooltip: 'Uses SQLite, Postgres, or IndexedDB as the backing data store',
     iconName: 'database'
   },
   {
-    text: 'Sync via libp2p',
+    text: 'Realtime sync',
     tooltip: 'Browser-to-server and server-to-server libp2p WebSockets',
     iconName: 'activity'
   },
   {
-    text: 'React hooks',
-    tooltip: 'React hooks for live apps & live database queries',
+    text: 'Live subscriptions',
+    tooltip: 'React hooks for live database queries',
     iconName: 'compare'
+  },
+  {
+    text: 'Transactional mutations',
+    tooltip: 'Write transactional logic inside your database',
+    iconName: 'atom'
   },
   {
     text: 'Database editor',
     tooltip: 'Edit your application through a database management interface',
     iconName: 'apps',
-  },
-  {
-    text: 'Transactional runtime',
-    tooltip: 'Write game logic & state machines inside your database',
-    iconName: 'atom'
   },
   {
     text: 'MIT License',
