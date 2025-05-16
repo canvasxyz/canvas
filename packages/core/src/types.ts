@@ -52,6 +52,7 @@ export type GetActionsType<ModelsT extends ModelSchema, InstanceT extends Contra
 
 export type ModelAPI<ModelTypes extends Record<string, ModelValue> = Record<string, ModelValue>> = {
 	id: () => string
+	random: () => number
 	get: <T extends keyof ModelTypes & string>(model: T, key: string) => Promise<ModelTypes[T] | null>
 	set: <T extends keyof ModelTypes & string>(model: T, value: ModelTypes[T]) => Promise<void>
 	delete: <T extends keyof ModelTypes & string>(model: T, key: string) => Promise<void>

@@ -3,11 +3,11 @@ import { useEffect, useRef, useState } from "react"
 import { deepEqual } from "@canvas-js/utils"
 import type { AbstractModelDB, QueryParams, ModelSchema, DeriveModelType } from "@canvas-js/modeldb"
 
-export function useLiveQuery<Schema extends ModelSchema, K extends keyof Schema>(
+export function useLiveQuery<Schema extends ModelSchema, K extends keyof Schema, Q extends QueryParams>(
 	db: AbstractModelDB | null | undefined,
 	modelName: string | null | undefined,
-	query: QueryParams | null | undefined,
-): DeriveModelType<Schema[K]>[] | null {
+	query: Q | null | undefined,
+): DeriveModelType<Schema[K], {}, Q["include"]>[] | null {
 	const dbRef = useRef<AbstractModelDB | null>(db ?? null)
 	const modelRef = useRef<string | null>(modelName ?? null)
 	const queryRef = useRef<QueryParams | null>(query ?? null)

@@ -4,6 +4,8 @@
 
 This example implements simple private messaging, which can be extended to 10+ people.
 
+<Iframe src="https://encrypted-chat-example.canvas.xyz" />
+
 ## Contract
 
 <<< @/../examples/encrypted-chat/src/contract.ts

@@ -5,17 +5,15 @@ next: false
 
 <div :class="$style.main">
 
-<HeroRow text="Realtime database,<br/>peer-to-peer sync" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
+<HeroRow text="Embedded application database with peer-to-peer sync" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
 
 <div :class="$style.mainInner">
 
-Canvas is an open-source, serverless database, with peer-to-peer sync
-and an embedded runtime.
+Canvas is an open-source, cryptographically authenticated version of Firebase that lets you write entire applications inside your frontend.
 
-It's a local-first version of Firebase, that lets you write
-entire applications inside your frontend, supports complex
-transactional logic, and works across platforms.
-
+Use it to build local-first applications without depending on a
+central server. Or, use it to build open protocols that anyone
+can interoperate with.
 
 </div>
 
@@ -26,34 +24,29 @@ transactional logic, and works across platforms.
     iconName: 'mobile'
   },
   {
-    text: 'Cross-platform persistence',
+    text: 'Cross-database compatibility',
     tooltip: 'Uses SQLite, Postgres, or IndexedDB as the backing data store',
     iconName: 'database'
   },
   {
-    text: 'Sync via libp2p',
+    text: 'Realtime sync',
     tooltip: 'Browser-to-server and server-to-server libp2p WebSockets',
     iconName: 'activity'
   },
   {
-    text: 'React integration',
-    tooltip: 'React hooks for live-updating apps & database queries',
+    text: 'Live subscriptions',
+    tooltip: 'React hooks for live database queries',
     iconName: 'compare'
   },
   {
-    text: 'Database editor',
-    tooltip: 'Comes with a database management interface',
-    iconName: 'apps',
-  },
-  {
-    text: 'Transactional runtime',
-    tooltip: 'Write game logic inside your database',
+    text: 'Transactional mutations',
+    tooltip: 'Write transactional logic inside your database',
     iconName: 'atom'
   },
   {
-    text: 'IPFS based',
-    tooltip: 'Built on IPFS standards (IPLD, DAG-CBOR, and Kademlia DHT) and Prolly-trees',
-    iconName: '123'
+    text: 'Database editor',
+    tooltip: 'Edit your application through a database management interface',
+    iconName: 'apps',
   },
   {
     text: 'MIT License',
@@ -61,7 +54,7 @@ transactional logic, and works across platforms.
     iconName: 'crown',
   },
   {
-    text: 'CRDTs',
+    text: 'Embedded CRDTs',
     tooltip: 'Soon: Multiplayer editing using embedded CRDTs',
     iconName: 'guide',
     disabled: true,
@@ -111,10 +104,10 @@ transactional logic, and works across platforms.
 
 ::: code-group
 
-```ts [Browser]
+```ts [Object Runtime]
 import { Canvas } from "@canvas-js/core"
 
-const models = {
+export const models = {
   messages: {
     id: "primary",
     text: "string",
@@ -122,7 +115,7 @@ const models = {
   }
 }
 
-const actions = {
+export const actions = {
   createMessage: async (text) => {
     const { address, db, id } = this
     await db.set("messages", { id, text })
@@ -130,34 +123,64 @@ const actions = {
 }
 
 const app = await Canvas.initialize({
-  topic: "example.canvas.xyz",
-  contract: { models, actions }
+  topic: "example.xyz",
+  contract: { models, actions },
 })
 
-app.actions.createMessage("hello world!")
+app.actions.createMessage("Who up?")
 ```
 
-```ts [React hook]
+```ts [Class Runtime]
+import { Contract } from "@canvas-js/core"
+
+export const Chat extends Contract {
+  static models = {
+    messages: {
+      id: "primary",
+      content: "string",
+      address: "string",
+    }
+  }
+
+  async createMessage(content: string) {
+    db.create("messages", {
+      content,
+      address: this.address
+    })
+  }
+}
+
+const app = await Chat.initialize({
+  topic: "example.xyz",
+  contract: Chat,
+})
+
+app.actions.createMessage("Hello world!")
+```
+
+```ts [React]
 import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
-import { models, actions } from "./contract.ts"
+import { Chat } from "./contract.ts"
 
-const wsURL = null
+const wsURL = process.env.SERVER_WSURL || null
 
-const Component = () => {
+export const App = () => {
   const { app, ws } = useCanvas(wsURL, {
-    topic: "example.canvas.xyz",
-    contract: { models, actions }
+    topic: "example.xyz",
+    contract: Chat,
   })
+  const items = useLiveQuery(app, "messages")
 
-  const items = useLiveQuery(app, "posts", {
-    orderBy: "created_at"
-  })
-
-  return <ItemView content={items}></ItemView>
+  return (<div>
+    <ComposeBox
+      onSend={app.actions.createMessage}
+    />
+    <ItemView content={items}></ItemView>
+  </div>)
 }
 ```
 
-```ts [Command Line]
+```ts [CLI]
 // In contract.ts:
 export const models = {
   messages: {
@@ -174,7 +197,7 @@ export const actions = {
 }
 
 // From the command line:
-$ canvas run contract.ts --topic demo.canvas.xyz // [!code highlight]
+$ canvas run contract.ts --topic example.xyz // [!code highlight]
 ```
 
 :::
@@ -184,18 +207,17 @@ $ canvas run contract.ts --topic demo.canvas.xyz // [!code highlight]
   </div>
   <div :class="$style.colLeft">
 
-To build your first application, start by defining a contract, which
-is an object containing `models` and `actions`:
+Every application is defined as a contract, a virtual backend
+with  `models` and `actions`.
 
 - Models define your database schema.
-- Actions define mutations that users can make to the database, just like API routes on the backend.
+- Actions define mutations that users can make to the database, like API routes.
 
-Because mutations are inside the database, each peer can validate the
-full history of the application. This means apps are offline-first,
-without any dependency on a central server.
+Because actions are embedded in the database, every
+peer can validate the history of your application,
+without a central server.
 
-You can import a contract in the browser, and use it from the frontend
-directly. You can also define it as a file:
+Now, run your app from the command line:
 
 ```sh
 canvas run contract.ts --topic example.xyz
@@ -203,15 +225,13 @@ canvas run contract.ts --topic example.xyz
 [canvas] Serving HTTP API: ...
 ```
 
-This starts a peer that syncs with the browser. By default, it
-will also connect to everyone else running the application's topic.
+This starts a peer that you can connect to from your browser. By
+default, it will also connect to other servers on the
+application's topic.
 
-Now, you can upgrade your application by adding new actions or models.
-
-Upgraded contracts will safely soft-fork away from nodes running the old contract.
-
-To change existing data, you can use the admin interface to
-generate a hard-fork snapshot, which compacts and flattens the state of the application.
+Read on to learn how to [authenticate users](/4-identities-auth),
+[upgrade your app](/6-deploying), or [deploy to a
+server](/7-upgrading).
 
   </div>
 </div>
@@ -230,7 +250,7 @@ Canvas is based on several years of research on a new architecture for
 distributed web applications. It builds on work from projects including IPFS,
 OrbitDB, and other peer-to-peer databases.
 
-We've published some of our research as technical presentations here:
+We've published some of our technical presentations here:
 
 - [Merklizing the Key/Value Store for Fun and Profit](https://joelgustafson.com/posts/2023-05-04/merklizing-the-key-value-store-for-fun-and-profit)
 - [Introduction to Causal Logs](https://joelgustafson.com/posts/2024-09-30/introduction-to-causal-logs)
@@ -238,10 +258,13 @@ We've published some of our research as technical presentations here:
 - [GossipLog: libp2p Day Presentation](https://www.youtube.com/watch?v=X8nAdx1G-Cs)
 
 The current release of Canvas is an early developer preview that we
-are using in a limited set of production pilots. Starting in 2025, we
-are beginning to work with more developers to build on the system, and
-extend support to more identity providers. For more information, please reach
-out on [Discord](https://discord.gg/EjczssxKpR).
+are using in a limited set of production pilots. This first release is
+recommended for *protocolized applications* - applications with public
+data that anyone can permissionlessly interoperate with.
+
+In 2025, we are working to expand the categories of applications that
+we can support, and provide support to developers building on the system.
+For more information, please reach out on [Discord](https://discord.gg/EjczssxKpR).
 
 </div>
 

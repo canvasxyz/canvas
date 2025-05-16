@@ -1,4 +1,6 @@
-import { assert } from "@canvas-js/utils"
+import { assert, mapEntries, mapValues } from "@canvas-js/utils"
+
+import { Contract } from "@canvas-js/core/contract"
 import { ActionContext, DeriveModelTypes, ModelSchema, RulesInit } from "../types.js"
 import { capitalize } from "../utils.js"
 
@@ -6,7 +8,7 @@ const toString = (err: unknown) => {
 	return typeof err === "object" && err !== null && "message" in err ? String(err.message) : String(err)
 }
 
-export const extractRulesFromModelSchema = (models: ModelSchema) => {
+export const extractRules = (models: ModelSchema) => {
 	const rules: Record<string, RulesInit> = {}
 	const schema: ModelSchema = {}
 
@@ -23,13 +25,11 @@ export const extractRulesFromModelSchema = (models: ModelSchema) => {
 		}
 	}
 
-	return { schema, rules }
+	return { baseModels: schema, rules }
 }
 
-export const generateActionsFromRules = <T extends ModelSchema>(rules: Record<string, RulesInit>, models: T) => {
-	const actions: Actions<T> = {}
-
-	for (const [modelName, modelRules] of Object.entries(rules)) {
+export function generateActionsFromRules<T extends ModelSchema>(rules: Record<string, RulesInit>, models: T) {
+	return mapEntries(rules, ([modelName, modelRules]) => {
 		/**
 		 * Create rules run on the data that is being *written* to a database row.
 		 * Update/delete rules run on the data that is being *read from* a database row.
@@ -38,15 +38,15 @@ export const generateActionsFromRules = <T extends ModelSchema>(rules: Record<st
 		const updateRule = modelRules["update"].toString()
 		const deleteRule = modelRules["delete"].toString()
 
-		const createAction = async function proxiedCreateAction(
-			this: ActionContext<DeriveModelTypes<T>>,
-			newModel: DeriveModelTypes<T>[string],
-		) {
+		const createRuleFunction = new Function("$model", `with ($model) { return (${createRule}) }`)
+		const updateRuleFunction = new Function("$model", `with ($model) { return (${updateRule}) }`)
+		const deleteRuleFunction = new Function("$model", `with ($model) { return (${deleteRule}) }`)
+
+		async function createAction(this: ActionContext<DeriveModelTypes<T>>, newModel: DeriveModelTypes<T>[string]) {
 			// check create rule
-			const ruleFunction = new Function("$model", `with ($model) { return (${createRule}) }`)
 			let result = false
 			try {
-				result = ruleFunction.call(this, newModel)
+				result = createRuleFunction.call(this, newModel)
 			} catch (error) {
 				throw new Error(`Create rule execution failed, ${toString(error)}: ${createRule}`)
 			}
@@ -59,7 +59,7 @@ export const generateActionsFromRules = <T extends ModelSchema>(rules: Record<st
 			await this.db.transaction(async () => await this.db.create(modelName, newModel))
 		}
 
-		const updateAction = async function proxiedUpdateAction(
+		async function updateAction(
 			this: ActionContext<DeriveModelTypes<T>>,
 			newModel: Partial<DeriveModelTypes<T>[string]>,
 		) {
@@ -73,7 +73,7 @@ export const generateActionsFromRules = <T extends ModelSchema>(rules: Record<st
 
 			{
 				// check update rule
-				const updateRuleFunction = new Function("$model", `with ($model) { return (${updateRule}) }`)
+
 				let updateResult = false
 				try {
 					updateResult = updateRuleFunction.call(this, existingModel)
@@ -89,7 +89,7 @@ export const generateActionsFromRules = <T extends ModelSchema>(rules: Record<st
 
 			{
 				// check create rule
-				const createRuleFunction = new Function("$model", `with ($model) { return (${createRule}) }`)
+
 				let createResult
 				try {
 					createResult = createRuleFunction.call(this, newModel)
@@ -106,11 +106,11 @@ export const generateActionsFromRules = <T extends ModelSchema>(rules: Record<st
 			await this.db.transaction(async () => await this.db.update(modelName, newModel))
 		}
 
-		const deleteAction = async function proxiedDeleteAction(this: ActionContext<DeriveModelTypes<T>>, pk: string) {
+		async function deleteAction(this: ActionContext<DeriveModelTypes<T>>, pk: string) {
 			const existing = await this.db.get(modelName, pk)
 
 			// check delete rule
-			const deleteRuleFunction = new Function("$model", `with ($model) { return (${deleteRule}) }`)
+
 			let deleteResult
 			try {
 				deleteResult = deleteRuleFunction.call(this, existing)
@@ -126,11 +126,10 @@ export const generateActionsFromRules = <T extends ModelSchema>(rules: Record<st
 			await this.db.transaction(async () => await this.db.delete(modelName, pk))
 		}
 
-		const action = capitalize(modelName)
-		actions[`create${action}`] = createAction
-		actions[`update${action}`] = updateAction
-		actions[`delete${action}`] = deleteAction
-	}
-
-	return actions
+		return {
+			create: createAction,
+			update: updateAction,
+			delete: deleteAction,
+		}
+	})
 }

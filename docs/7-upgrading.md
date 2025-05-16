@@ -1,7 +1,14 @@
 # Upgrading Applications
 
-Canvas has limited support for upgrading applications. This is one
-of our main focuses for development through the current year.
+Upgrading a peer-to-peer application is slightly more complex than
+upgrading an application coordinated by a central server.
+
+We have functional but minimal support for two ways to upgrade applications:
+
+* [Soft-fork upgrades](#soft-forks), where an application gets *extended* with actions that wouldn't be accepted in the pre-upgrade application. This requires reasoning about actions, and taking care to not introduce changes that would cause peers to go out of sync.
+* [Hard-fork upgrades](#hard-forks), where the application gets switched to a new contract and peer-to-peer mesh entirely. Hard forks start from scratch, from a flattened, compacted snapshot of the existing application history.
+
+Regular, soft-forked applications have a topic like `example.xyz`, while hard-forked applications have a topic like `example.canvas.xyz#ffae63ab95cc5483`.
 
 ## Using the Network Explorer
 
@@ -28,12 +35,12 @@ You can now decide whether you want to proceed with the upgrade:
 
 ![Run migrations](/run_migrations.png)
 
-## Soft Forks: Upgrading development applications
+## Soft Forks
 
 If you apply the upgrade **without retaining a snapshot**, this will
 make your application reset and re-apply actions from the start.
 
-This will start the application in soft-fork mode, with a topic like `example.xyz`.
+This will start the application in soft-fork mode, with the same topic as before, e.g. `example.xyz`.
 
 Soft-fork applications start from an empty database, and attempt to
 replay the entire history of actions every time.
@@ -47,7 +54,7 @@ replay the entire history of actions every time.
 > applications in production at this time, until further
 > protections are in place.
 
-## Hard Forks: Upgrading immutable applications
+## Hard Forks
 
 If you apply the upgrade **while retaining a snapshot**, this will
 make your application restart from a hard fork snapshot, which holds

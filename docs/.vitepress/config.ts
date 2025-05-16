@@ -1,6 +1,7 @@
 import { defineConfig } from "vitepress"
 import namedCodeBlocks from "markdown-it-named-code-blocks"
 import footnote from "markdown-it-footnote"
+import checkbox from "markdown-it-checkbox"
 import { getSidebar } from "./getSidebar.js"
 
 // https://vitepress.dev/reference/site-config
@@ -9,6 +10,7 @@ export default defineConfig({
 		config: (md) => {
 			md.use(footnote)
 			md.use(namedCodeBlocks)
+			md.use(checkbox)
 		},
 	},
 	vite: {
@@ -59,13 +61,11 @@ export default defineConfig({
 				{
 					text: "Reference",
 					items: [
-						/*
-						{ text: "Application API", link: "/ref/application" },
-						{ text: "Database API", link: "/ref/database" },
-						{ text: "FAQ", link: "/ref/faq" },
-            */
+						{ text: "Contract API", link: "/ref/contract" },
+						{ text: "Model API", link: "/ref/model" },
+						// { text: "FAQ", link: "/ref/faq" },
 						{ text: "Consistency Model", link: "/ref/consistency" },
-						{ text: "Roadmap & Changelog", link: "/ref/roadmap" },
+						{ text: "Roadmap", link: "/ref/roadmap" },
 						{
 							text: "Packages",
 							collapsed: true,
@@ -77,6 +77,9 @@ export default defineConfig({
 								{ text: "GossipLog", link: "/api/gossiplog" },
 								{ text: "Signatures", link: "/api/signatures" },
 								{ text: "Interfaces", link: "/api/interfaces" },
+								// { text: "Client", link: "/api/client" },
+								// { text: "Relay Server", link: "/api/relay-server" },
+								// { text: "VM", link: "/api/vm" },
 								{ text: "Signer: Ethereum", link: "/api/signer-ethereum" },
 								{ text: "Signer: Ethereum (Viem)", link: "/api/signer-ethereum-viem" },
 								{ text: "Signer: Bluesky", link: "/api/signer-atp" },

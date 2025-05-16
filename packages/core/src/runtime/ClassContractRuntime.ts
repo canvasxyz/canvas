@@ -150,6 +150,14 @@ export class ClassContractRuntime extends AbstractRuntime {
 				this.#nextId = sha256(this.#nextId)
 				return vm.wrapValue(bytesToHex(this.#nextId.slice(0, 16)))
 			}),
+
+			random: vm.context.newFunction("random", () => {
+				assert(this.#nextId !== null, "internal error - expected this.#nextId !== null")
+				this.#nextId = sha256(this.#nextId)
+				// use the first 4 bytes (32 bits) of the hash, normalized to [0,1]
+				const view = new DataView(this.#nextId.buffer, this.#nextId.byteOffset, 4)
+				return vm.wrapValue(view.getUint32(0, false) / 0xffffffff)
+			}),
 		})
 
 		this.#databaseAPI = databaseAPI.consume(vm.cache)

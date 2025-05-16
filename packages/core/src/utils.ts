@@ -167,3 +167,11 @@ function writeArgument(majorType: number, argument: number): Uint8Array {
 export const capitalize = (str: string) => {
 	return str.charAt(0).toUpperCase() + str.slice(1)
 }
+
+export const stripBundleFilename = (bundle: string) => {
+	if (bundle.startsWith("//")) {
+		return bundle.slice(bundle.indexOf("\n") + 1)
+	} else {
+		return bundle
+	}
+}

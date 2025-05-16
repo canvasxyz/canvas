@@ -5,6 +5,8 @@
 The forum example implements a simple publishing platform, with support
 for login with Ethereum or Farcaster (both on the web, and as a mini app).
 
+<Iframe src="https://forum-example.canvas.xyz" />
+
 ## Contract
 
 <<< @/../examples/forum/src/contract.ts

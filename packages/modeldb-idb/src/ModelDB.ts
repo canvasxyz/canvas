@@ -134,7 +134,11 @@ export class ModelDB extends AbstractModelDB {
 		return "idb"
 	}
 
-	private constructor(public readonly db: IDBPDatabase, config: Config, version: Record<string, number>) {
+	private constructor(
+		public readonly db: IDBPDatabase,
+		config: Config,
+		version: Record<string, number>,
+	) {
 		super(config, version)
 
 		for (const model of config.models) {
@@ -212,6 +216,16 @@ export class ModelDB extends AbstractModelDB {
 
 		// TODO: re-open the transaction if the caller awaits on other promises between yields
 		const txn = this.db.transaction([api.storeName], "readonly", {})
+
+		// fall back to queryWithIncludes
+		if (query.include !== undefined) {
+			const results = (await api.queryWithInclude(txn, this.#models, query)) as T[]
+			for (const result of results) {
+				yield result
+			}
+			return
+		}
+
 		yield* api.iterate(txn, query) as AsyncIterable<T>
 	}
 
@@ -258,7 +272,9 @@ export class ModelDB extends AbstractModelDB {
 			throw new Error(`model ${modelName} not found`)
 		}
 
-		const result = await this.read((txn) => api.query(txn, query), [api.storeName])
+		const result = query.include
+			? await this.read((txn) => api.queryWithInclude(txn, this.#models, query), [api.storeName])
+			: await this.read((txn) => api.query(txn, query), [api.storeName])
 		return result as T[]
 	}
 
@@ -321,10 +337,9 @@ export class ModelDB extends AbstractModelDB {
 
 					if (effects.some((effect) => filter(effect))) {
 						try {
-							// const results = query.include
-							// 	? await api.queryWithInclude(txn, this.#models, query)
-							// 	: await api.query(txn, query)
-							const results = await api.query(txn, query)
+							const results = query.include
+								? await api.queryWithInclude(txn, this.#models, query)
+								: await api.query(txn, query)
 							await callback(results)
 						} catch (err) {
 							this.log.error(err)

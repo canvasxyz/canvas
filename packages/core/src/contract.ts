@@ -1,6 +1,6 @@
-import type { DeriveModelTypes, ModelAPI, ModelSchema } from "./types.js"
+import type { ActionContext, DeriveModelTypes, ModelAPI, ModelSchema } from "./types.js"
 
-export class Contract<ModelsT extends ModelSchema = ModelSchema> {
+export class Contract<ModelsT extends ModelSchema = ModelSchema> implements ActionContext<DeriveModelTypes<ModelsT>> {
 	public static get models(): ModelSchema {
 		throw new Error("the `Contract` class must be extended by a child class providing `static models`")
 	}

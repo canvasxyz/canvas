@@ -251,18 +251,18 @@ export class Canvas<
 
 	public readonly as: (signer: SessionSigner<any>) => GetActionsType<ModelsT, InstanceT>
 
-	// public readonly create: (
-	// 	model: string,
-	// 	modelValue: any,
-	// ) => Promise<SignedMessage<Action, unknown> & { result: unknown }>
-	// public readonly update: (
-	// 	model: string,
-	// 	modelValue: any,
-	// ) => Promise<SignedMessage<Action, unknown> & { result: unknown }>
-	// public readonly delete: (
-	// 	model: string,
-	// 	primaryKey: string,
-	// ) => Promise<SignedMessage<Action, unknown> & { result: unknown }>
+	public readonly create: <M extends string>(
+		model: M,
+		modelValue: Partial<DeriveModelTypes<ModelsT>[M]>, // TODO: optional primary key only
+	) => Promise<SignedMessage<Action, unknown> & { result: unknown }>
+	public readonly update: <M extends string>(
+		model: M,
+		modelValue: Partial<DeriveModelTypes<ModelsT>[M]>,
+	) => Promise<SignedMessage<Action, unknown> & { result: unknown }>
+	public readonly delete: (
+		model: string,
+		primaryKey: string,
+	) => Promise<SignedMessage<Action, unknown> & { result: unknown }>
 
 	private readonly controller = new AbortController()
 	private readonly log = logger("canvas:core")
@@ -346,15 +346,18 @@ export class Canvas<
 		this.as = (signer: SessionSigner<any>) =>
 			mapValues(actionCache, (action) => action.bind(this, signer)) as GetActionsType<ModelsT, InstanceT>
 
-		// this.create = <T extends string>(modelName: string, modelValue: DeriveModelTypes<ModelSchema>[T]) => {
-		// 	return this.actions[`create${capitalize(modelName)}`].call(this, modelValue)
-		// }
-		// this.update = <T extends string>(modelName: T, modelValue: DeriveModelTypes<ModelSchema>[T]) => {
-		// 	return this.actions[`update${capitalize(modelName)}`].call(this, modelValue)
-		// }
-		// this.delete = (modelName: string, primaryKey: string) => {
-		// 	return this.actions[`delete${capitalize(modelName)}`].call(this, primaryKey)
-		// }
+		this.create = <T extends string>(model: string, modelValue: Partial<DeriveModelTypes<ModelsT>[T]>) => {
+			throw new Error("NOT IMPLEMENTED")
+			// return this.actions[`create${capitalize(model)}`].call(this, modelValue)
+		}
+		this.update = <T extends string>(model: T, modelValue: Partial<DeriveModelTypes<ModelsT>[T]>) => {
+			throw new Error("NOT IMPLEMENTED")
+			// return this.actions[`update${capitalize(model)}`].call(this, modelValue)
+		}
+		this.delete = (modelName: string, primaryKey: string) => {
+			throw new Error("NOT IMPLEMENTED")
+			// return this.actions[`delete${capitalize(modelName)}`].call(this, primaryKey)
+		}
 	}
 
 	public async replay(): Promise<boolean> {

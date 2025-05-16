@@ -123,6 +123,8 @@ export class ModelAPI {
 	}
 
 	async query(txn: IDBPTransaction<any, any, IDBTransactionMode>, query: QueryParams): Promise<ModelValue[]> {
+		assert(query.include === undefined, "cannot call ModelAPI.query with includes")
+
 		const results: ModelValue[] = []
 		for await (const value of this.iterate(txn, query)) {
 			results.push(value)
@@ -211,7 +213,7 @@ export class ModelAPI {
 						})
 						if (result === undefined) {
 							console.error(
-								`expected relation to be populated while looking up ${modelName}.${includeKey}: ${includeModelName} = ${includeValue}`,
+								`relational join to populate ${modelName}.${includeKey} failed: could not find ${includeModelName} where ${includePrimaryKeyName} = ${item}`,
 							)
 							continue
 						}
@@ -433,6 +435,7 @@ export class ModelAPI {
 		query: QueryParams = {},
 	): AsyncIterable<ModelValue> {
 		// TODO: re-open the transaction if the caller awaits on other promises between yields
+		assert(query.include === undefined, "cannot call ModelAPI.iterate with includes")
 
 		const select = this.getSelect(query.select)
 		const filter = getFilter(this.model, query.where)

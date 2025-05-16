@@ -21,6 +21,17 @@ for f in ./package.json; do
   echo "$p" | jq --tab > $f;
 done
 
+for f in ./contracts/package.json; do
+  p=$( cat $f | jq "${SET_VERSION}" )
+  for PACKAGE in ${PACKAGES}; do
+    P="\"@canvas-js/${PACKAGE}\"";
+    SET_DEPENDENCIES="if .dependencies.${P}? then .dependencies.${P} = ${VERSION} else . end";
+    SET_DEV_DEPENDENCIES="if .devDependencies.${P}? then .devDependencies.${P} = ${VERSION} else . end";
+    p=$( echo "$p" | jq "${SET_DEPENDENCIES} | ${SET_DEV_DEPENDENCIES}" );
+  done;
+  echo "$p" | jq --tab > $f;
+done
+
 for f in ./packages/*/package.json; do
   p=$( cat $f | jq "${SET_VERSION}" )
   for PACKAGE in ${PACKAGES}; do

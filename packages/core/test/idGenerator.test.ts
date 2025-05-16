@@ -81,31 +81,33 @@ test("create several ids in a string contract", async (t) => {
 	const app = await Canvas.initialize({
 		topic: "example.xyz",
 		contract: `
-export const models = {
-  blobs: { id: "primary", txid: "string" },
-}
+    export default class {
+      static models = {
+        blobs: { id: "primary", txid: "string" },
+      }
 
-export const actions = {
-	async createBlob() {
-		await this.db.set("blobs", { id: this.db.id(), txid: this.id })
-		return this.id
-	},
-	async createSeveralBlobs() {
-		await this.db.set("blobs", { id: this.db.id(), txid: this.id })
-		await this.db.set("blobs", { id: this.db.id(), txid: this.id })
-		await this.db.set("blobs", { id: this.db.id(), txid: this.id })
-		return this.id
-	},
-	async createSeveralBlobsInterleaved() {
-		await this.db.set("blobs", { id: this.db.id(), txid: this.id })
-		this.db.id()
-		await this.db.set("blobs", { id: this.db.id(), txid: this.id })
-		this.db.id()
-		await this.db.set("blobs", { id: this.db.id(), txid: this.id })
-		this.db.id()
-		return this.id
-	},
-}`,
+      async createBlob() {
+        await this.db.set("blobs", { id: this.db.id(), txid: this.id })
+        return this.id
+      }
+
+      async createSeveralBlobs() {
+        await this.db.set("blobs", { id: this.db.id(), txid: this.id })
+        await this.db.set("blobs", { id: this.db.id(), txid: this.id })
+        await this.db.set("blobs", { id: this.db.id(), txid: this.id })
+        return this.id
+      }
+
+      async createSeveralBlobsInterleaved() {
+        await this.db.set("blobs", { id: this.db.id(), txid: this.id })
+        this.db.id()
+        await this.db.set("blobs", { id: this.db.id(), txid: this.id })
+        this.db.id()
+        await this.db.set("blobs", { id: this.db.id(), txid: this.id })
+        this.db.id()
+        return this.id
+      }
+    }`,
 		signers: [new SIWESigner({ signer: wallet })],
 	})
 	t.teardown(() => app.stop())

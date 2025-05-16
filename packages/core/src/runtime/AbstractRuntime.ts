@@ -12,7 +12,7 @@ import { assert } from "@canvas-js/utils"
 import { ExecutionContext } from "../ExecutionContext.js"
 
 import { View } from "../View.js"
-import { extractRulesFromModelSchema } from "./rules.js"
+import { extractRules } from "./rules.js"
 import { ModelSchema, RulesInit } from "../types.js"
 import { encodeRecordKey, encodeRecordValue, getRecordId, isAction, isSession, isSnapshot } from "../utils.js"
 
@@ -124,14 +124,16 @@ export abstract class AbstractRuntime {
 	public abstract readonly actionNames: string[]
 	public readonly schema: ModelSchema
 	public readonly rules: Record<string, RulesInit>
+	public readonly models: ModelSchema
 
 	protected readonly log = logger("canvas:runtime")
 
-	protected constructor(public readonly models: ModelSchema) {
-		const { schema, rules } = extractRulesFromModelSchema(models)
+	protected constructor(models: ModelSchema) {
+		const { baseModels, rules } = extractRules(models)
+		this.models = baseModels
 		this.rules = rules
 		this.schema = {
-			...schema,
+			...baseModels,
 			...AbstractRuntime.sessionsModel,
 			...AbstractRuntime.actionsModel,
 			...AbstractRuntime.effectsModel,

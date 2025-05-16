@@ -14,6 +14,14 @@ import { ExecutionContext } from "../ExecutionContext.js"
 import { AbstractRuntime } from "./AbstractRuntime.js"
 import { ActionAPI } from "../index.js"
 
+// Check if all models have $rules defined
+const hasAllRules = (models: ModelSchema) => {
+	return Object.values(models).every((model) => "$rules" in model)
+}
+const hasNoRules = (models: ModelSchema) => {
+	return Object.values(models).every((model) => !("$rules" in model))
+}
+
 export class ClassFunctionRuntime extends AbstractRuntime {
 	public static async init(
 		topic: string,
@@ -21,6 +29,10 @@ export class ClassFunctionRuntime extends AbstractRuntime {
 		contract: ContractClass<ModelSchema, BaseContract<ModelSchema>>,
 	): Promise<ClassFunctionRuntime> {
 		assert(contract.models !== undefined, "missing `static models` value in contract class")
+		assert(
+			hasNoRules(contract.models) || hasAllRules(contract.models),
+			"contracts with rules must have them on all models",
+		)
 		assert(
 			Object.keys(contract.models).every((key) => !key.startsWith("$")),
 			"contract model names cannot start with '$'",
@@ -78,6 +90,7 @@ export class ClassFunctionRuntime extends AbstractRuntime {
 					this.#txnId += 1
 					return await callback.apply(this.thisValue, [])
 				} finally {
+					await this.#queue.onIdle()
 					this.#transaction = false
 				}
 			},
@@ -86,6 +99,14 @@ export class ClassFunctionRuntime extends AbstractRuntime {
 				if (this.#nextId === null) throw new Error("expected this.#nextId !== null")
 				this.#nextId = sha256(this.#nextId)
 				return bytesToHex(this.#nextId.slice(0, 16))
+			},
+
+			random: () => {
+				if (this.#nextId === null) throw new Error("expected this.#nextId !== null")
+				this.#nextId = sha256(this.#nextId)
+				// use the first 4 bytes (32 bits) of the hash, normalized to [0,1]
+				const view = new DataView(this.#nextId.buffer, this.#nextId.byteOffset, 4)
+				return view.getUint32(0, false) / 0xffffffff
 			},
 		}
 	}

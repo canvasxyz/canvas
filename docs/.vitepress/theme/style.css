@@ -52,13 +52,15 @@
   --space-font-family: "Geist Mono", -apple-system, BlinkMacSystemFont, Inter, sans-serif;
   --vp-font-family-base: "Geist", -apple-system, BlinkMacSystemFont, Inter, sans-serif;
   --vp-font-family-mono: "Geist Mono", ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-  --vp-code-line-height: 1.48;
+  --vp-code-line-height: 1.425;
+  --vp-code-font-size: 0.85em;
   --vp-c-text-1: rgba(72, 72, 79);
   --vp-c-text-2: #67666a;
   --vp-c-gutter-alt: #5672cd;
   --vp-c-bg-home: #fbf5e9;
   --vp-c-bg: #fffefc;
   --vp-c-bg-soft: #fbf9f4;
+  --vp-c-bg-soft-rgb: 251, 249, 244;
   --vp-c-bg-alt: #FBF5E9;
   --vp-sidebar-bg-color: #fbf5e9;
   --vp-button-alt-bg: #ece7e0;
@@ -71,6 +73,7 @@
   --vp-c-bg-home: #161618;
   --vp-c-bg: #101012;
   --vp-c-bg-soft: #202126;
+  --vp-c-bg-soft-rgb: 32, 33, 38;
   --vp-c-bg-alt: #202126;
   --vp-sidebar-bg-color: #161618;
   --vp-button-alt-bg: #32363f;
@@ -91,6 +94,16 @@ pre {
   overflow: hidden;
 }
 
+.vp-doc table {
+  line-height: 1.5;
+}
+.vp-doc tr {
+  background-color: rgba(var(--vp-c-bg-soft-rgb), 0.4) !important;
+}
+.vp-doc .custom-block p {
+  line-height: 1.5;
+}
+
 .vp-doc .footnote-ref a,
 .vp-doc a.footnote-backref {
   color: var(--vp-c-text-3);
@@ -107,6 +120,21 @@ pre {
 }
 .vp-doc .footnotes-sep {
   margin-top: 60px;
+}
+.vp-doc li input[type="checkbox"] {
+  pointer-events: none;
+  position: absolute;
+  left: 0;
+  margin-top: 6px;
+}
+.vp-doc li label[for] {
+  pointer-events: none;
+}
+.vp-doc li:has(input[type="checkbox"]) {
+  padding-left: 10px;
+  /* display: inline-block; */
+  /* margin-left: 20px; */
+  /* margin-top: -1.75em; */
 }
 
 .VPHome {
@@ -279,6 +307,10 @@ pre {
 
 .VPSidebar {
   padding-bottom: 20px !important; /* override default padding-bottom: 128px */
+}
+.VPSidebar .item p {
+  padding: 3.2px 0;
+  font-weight: 400;
 }
 .VPSidebar .item h2.text {
   margin-bottom: 4px;
