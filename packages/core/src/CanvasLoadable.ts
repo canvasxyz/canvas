@@ -54,7 +54,12 @@ export class CanvasLoadable<M extends ModelSchema = any, A extends Actions<M> = 
 		const dbProxy = new Proxy(this, {
 			get: (innerTarget, call) => {
 				if (call === "subscribe") {
-					if (!this.app) return { db: { subscribe: () => {} } }
+					if (!this.app)
+						return async (...args) => {
+							await this.initPromise
+							assert(this.app, "app failed to initialize")
+							return this.app.db.subscribe.call(this.app.db, ...args)
+						}
 					return this.app.db.subscribe.bind(this.app.db)
 				}
 				return async (...args: any[]) => {
