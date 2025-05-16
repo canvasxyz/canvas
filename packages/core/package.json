@@ -14,7 +14,8 @@
 	"exports": {
 		".": "./lib/index.js",
 		"./api": "./lib/api.js",
-		"./constants": "./lib/constants.js"
+		"./constants": "./lib/constants.js",
+		"./sync": "./lib/synchronous.js"
 	},
 	"imports": {
 		"#target": {
