@@ -1,13 +1,12 @@
 import { QuickJSHandle } from "quickjs-emscripten"
 
+import { bytesToHex } from "@noble/hashes/utils"
+import { sha256 } from "@noble/hashes/sha256"
+import { assert } from "@canvas-js/utils"
+
 import type { SignerCache } from "@canvas-js/interfaces"
 import { ModelValue } from "@canvas-js/modeldb"
 import { VM } from "@canvas-js/vm"
-import { assert } from "@canvas-js/utils"
-
-import { bytesToHex } from "@noble/hashes/utils"
-import { sha256 } from "@noble/hashes/sha256"
-
 import { encodeId } from "@canvas-js/gossiplog"
 
 import { ModelSchema } from "../types.js"

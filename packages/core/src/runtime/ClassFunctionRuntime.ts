@@ -1,11 +1,12 @@
 import PQueue from "p-queue"
 
-import type { SignerCache } from "@canvas-js/interfaces"
-import { DeriveModelTypes } from "@canvas-js/modeldb"
-import { assert } from "@canvas-js/utils"
-import { encodeId } from "@canvas-js/gossiplog"
 import { bytesToHex } from "@noble/hashes/utils"
 import { sha256 } from "@noble/hashes/sha256"
+import { assert } from "@canvas-js/utils"
+
+import type { SignerCache } from "@canvas-js/interfaces"
+import { DeriveModelTypes } from "@canvas-js/modeldb"
+import { encodeId } from "@canvas-js/gossiplog"
 
 import { Contract as BaseContract } from "@canvas-js/core/contract"
 

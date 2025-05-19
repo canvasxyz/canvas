@@ -94,12 +94,6 @@ export class Canvas<
 	public static namespace = "canvas"
 	public static version = 4
 
-	// public static async initializeDatabase<ModelsT extends ModelSchema = ModelSchema>(
-	// 	config: Config<ModelsT>,
-	// ): Promise<Canvas<ModelsT, Contract<ModelsT>>> {
-	// 	//
-	// }
-
 	public static async initialize<
 		ModelsT extends ModelSchema = ModelSchema,
 		InstanceT extends Contract<ModelsT> = Contract<ModelsT> & Record<string, ContractAction<ModelsT>>,

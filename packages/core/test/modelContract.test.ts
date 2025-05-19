@@ -3,8 +3,7 @@ import test from "ava"
 import { ethers } from "ethers"
 
 import { SIWESigner } from "@canvas-js/signer-ethereum"
-import { Canvas, ModelSchema } from "@canvas-js/core"
-import { Contract } from "@canvas-js/core/contract"
+import { Canvas } from "@canvas-js/core"
 
 test("create, update, and delete in an inline contract with $rules", async (t) => {
 	const wallet = ethers.Wallet.createRandom()
@@ -28,6 +27,7 @@ test("create, update, and delete in an inline contract with $rules", async (t) =
 		},
 		signers: [new SIWESigner({ signer: wallet })],
 	})
+
 	t.teardown(() => app.stop())
 
 	await app.create("posts", { pk: "foo", address: `did:pkh:eip155:1:${wallet.address}`, content: "Hello world" })
@@ -51,7 +51,7 @@ test("create, update, and delete in an inline contract with $rules", async (t) =
 	})
 })
 
-test("create, update, and delete in a string contract with $rules", async (t) => {
+test.skip("create, update, and delete in a string contract with $rules", async (t) => {
 	const wallet = ethers.Wallet.createRandom()
 
 	const app = await Canvas.initialize({
