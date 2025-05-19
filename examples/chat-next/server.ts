@@ -1,8 +1,9 @@
 import express from "express"
 import next from "next"
 
-import { Canvas } from "@canvas-js/core"
+import { Canvas, ModelSchema } from "@canvas-js/core"
 import { createAPI } from "@canvas-js/core/api"
+import { Contract } from "@canvas-js/core/contract"
 import { SIWESigner } from "@canvas-js/signer-ethereum"
 
 const dev = process.env.NODE_ENV !== "production"
@@ -16,27 +17,28 @@ process.on("uncaughtException", (error) => {
 	console.error("Unhandled Exception:", error)
 })
 
+class Chat extends Contract<typeof Chat.models> {
+	static models = {
+		message: {
+			id: "primary",
+			address: "string",
+			content: "string",
+			timestamp: "integer",
+			$indexes: ["address", "timestamp"],
+		},
+	} satisfies ModelSchema
+
+	async createMessage({ content }: { content: string }) {
+		const { id, address, timestamp, db } = this
+		await db.set("message", { id, address, content, timestamp })
+	}
+}
+
 nextApp.prepare().then(async () => {
 	const canvasApp = await Canvas.initialize({
 		path: process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/chat_postgres",
 		topic: "chat-example.canvas.xyz",
-		contract: {
-			models: {
-				message: {
-					id: "primary",
-					address: "string",
-					content: "string",
-					timestamp: "integer",
-					$indexes: ["address", "timestamp"],
-				},
-			},
-			actions: {
-				async createMessage({ content }) {
-					const { id, address, timestamp, db } = this
-					await db.set("message", { id, address, content, timestamp })
-				},
-			},
-		},
+		contract: Chat,
 		signers: [new SIWESigner()],
 		// bootstrapList: [
 		// 	"/dns4/canvas-chat-discovery-staging-p0.fly.dev/tcp/443/wss/p2p/12D3KooWFtS485QGEZwquMQbq7MZTMxiuHs6xUKEi664i4yWUhWa",
