@@ -13,33 +13,65 @@ import { ModelSchema, ModelAPI, ContractClass, ContractAction } from "../types.j
 import { ExecutionContext } from "../ExecutionContext.js"
 import { AbstractRuntime } from "./AbstractRuntime.js"
 import { ActionAPI } from "../index.js"
+import { extractRules, generateActionsFromRules } from "./rules.js"
 
-// Check if all models have $rules defined
-const hasAllRules = (models: ModelSchema) => {
-	return Object.values(models).every((model) => "$rules" in model)
-}
-const hasNoRules = (models: ModelSchema) => {
-	return Object.values(models).every((model) => !("$rules" in model))
+function isContractClass(a: any): a is ContractClass {
+	const prototype = Object.getPrototypeOf(a)
+	if (prototype === null) {
+		return false
+	} else if (prototype === BaseContract) {
+		return true
+	} else {
+		return isContractClass(prototype)
+	}
 }
 
 export class ClassFunctionRuntime extends AbstractRuntime {
 	public static async init(
 		topic: string,
 		signers: SignerCache,
-		contract: ContractClass<ModelSchema, BaseContract<ModelSchema>>,
+		contract: { models: ModelSchema } | ContractClass<ModelSchema, BaseContract<ModelSchema>>,
 	): Promise<ClassFunctionRuntime> {
 		assert(contract.models !== undefined, "missing `static models` value in contract class")
-		assert(
-			hasNoRules(contract.models) || hasAllRules(contract.models),
-			"contracts with rules must have them on all models",
-		)
+
 		assert(
 			Object.keys(contract.models).every((key) => !key.startsWith("$")),
 			"contract model names cannot start with '$'",
 		)
 
-		const contractInstance = new contract(topic)
-		const actionNames = Object.getOwnPropertyNames(contract.prototype).filter((name) => name !== "constructor")
+		let contractInstance: BaseContract<ModelSchema>
+		let actionNames: string[]
+		if (isContractClass(contract)) {
+			assert(
+				Object.values(contract.models).every((model) => model.$rules === undefined),
+				"class contracts cannot have model $rules",
+			)
+
+			contractInstance = new contract(topic)
+			actionNames = Object.getOwnPropertyNames(contract.prototype).filter((name) => name !== "constructor")
+		} else {
+			for (const [name, model] of Object.entries(contract.models)) {
+				if (model.$rules === undefined) {
+					throw new Error(`missing $rules from model "${name}"`)
+				}
+			}
+
+			contractInstance = new BaseContract(topic)
+			actionNames = Object.keys(contract.models).flatMap((name) => [
+				`${name}/create`,
+				`${name}/update`,
+				`${name}/delete`,
+			])
+
+			const { rules, baseModels } = extractRules(contract.models)
+			const actionEntries = Object.entries(generateActionsFromRules(rules, baseModels)).flatMap(([name, actions]) => [
+				[`${name}/create`, actions.create],
+				[`${name}/update`, actions.update],
+				[`${name}/delete`, actions.delete],
+			])
+
+			Object.assign(contractInstance, Object.fromEntries(actionEntries))
+		}
 
 		return new ClassFunctionRuntime(topic, signers, actionNames, contract.models, contractInstance)
 	}

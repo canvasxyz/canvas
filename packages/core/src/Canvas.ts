@@ -16,13 +16,21 @@ import { SnapshotSignatureScheme } from "@canvas-js/signatures"
 
 import target from "#target"
 
-import type { ContractAction, ModelSchema, ModelAPI, DeriveModelTypes, ContractClass, GetActionsType } from "./types.js"
+import type {
+	ContractAction,
+	ModelSchema,
+	ModelAPI,
+	DeriveModelTypes,
+	ContractClass,
+	GetActionsType,
+	ActionAPI,
+} from "./types.js"
 import { Runtime, createRuntime } from "./runtime/index.js"
 import { ActionRecord } from "./runtime/AbstractRuntime.js"
 import { validatePayload } from "./schema.js"
 import { CreateSnapshotArgs, createSnapshot, hashSnapshot } from "./snapshot.js"
 import { baseVersion, initialUpgradeSchema, initialUpgradeVersion, upgrade } from "./migrations.js"
-import { capitalize, topicPattern } from "./utils.js"
+import { topicPattern } from "./utils.js"
 
 export type { Model } from "@canvas-js/modeldb"
 export type { PeerId } from "@libp2p/interface"
@@ -32,7 +40,7 @@ export type Config<
 	InstanceT extends Contract<ModelsT> = Contract<ModelsT> & Record<string, ContractAction<ModelsT>>,
 > = {
 	topic: string
-	contract: string | ContractClass<ModelsT, InstanceT>
+	contract: string | { models: ModelsT } | ContractClass<ModelsT, InstanceT>
 	signers?: SessionSigner[]
 
 	/** data directory path (NodeJS/sqlite), postgres connection config (NodeJS/pg), or storage backend (Cloudflare DO) */
@@ -85,6 +93,12 @@ export class Canvas<
 > extends TypedEventEmitter<CanvasEvents> {
 	public static namespace = "canvas"
 	public static version = 4
+
+	// public static async initializeDatabase<ModelsT extends ModelSchema = ModelSchema>(
+	// 	config: Config<ModelsT>,
+	// ): Promise<Canvas<ModelsT, Contract<ModelsT>>> {
+	// 	//
+	// }
 
 	public static async initialize<
 		ModelsT extends ModelSchema = ModelSchema,
@@ -264,8 +278,8 @@ export class Canvas<
 		primaryKey: string,
 	) => Promise<SignedMessage<Action, unknown> & { result: unknown }>
 
-	private readonly controller = new AbortController()
-	private readonly log = logger("canvas:core")
+	protected readonly controller = new AbortController()
+	protected readonly log = logger("canvas:core")
 	private lastMessage: number | null = null
 
 	private libp2p: Libp2p | null = null
@@ -273,7 +287,7 @@ export class Canvas<
 	private wsListen: { port: number } | null = null
 	private wsConnect: { url: string } | null = null
 
-	private constructor(
+	protected constructor(
 		public readonly signers: SignerCache,
 		public readonly messageLog: AbstractGossipLog<MessageType>,
 		private readonly runtime: Runtime,
@@ -347,16 +361,18 @@ export class Canvas<
 			mapValues(actionCache, (action) => action.bind(this, signer)) as GetActionsType<ModelsT, InstanceT>
 
 		this.create = <T extends string>(model: string, modelValue: Partial<DeriveModelTypes<ModelsT>[T]>) => {
-			throw new Error("NOT IMPLEMENTED")
-			// return this.actions[`create${capitalize(model)}`].call(this, modelValue)
+			const { [`${model}/create`]: action } = this.actions as Record<string, ActionAPI>
+			return action.call(this, modelValue)
 		}
+
 		this.update = <T extends string>(model: T, modelValue: Partial<DeriveModelTypes<ModelsT>[T]>) => {
-			throw new Error("NOT IMPLEMENTED")
-			// return this.actions[`update${capitalize(model)}`].call(this, modelValue)
+			const { [`${model}/update`]: action } = this.actions as Record<string, ActionAPI>
+			return action.call(this, modelValue)
 		}
+
 		this.delete = (modelName: string, primaryKey: string) => {
-			throw new Error("NOT IMPLEMENTED")
-			// return this.actions[`delete${capitalize(modelName)}`].call(this, primaryKey)
+			const { [`${modelName}/delete`]: action } = this.actions as Record<string, ActionAPI>
+			return action.call(this, primaryKey)
 		}
 	}
 

@@ -18,20 +18,7 @@ export async function createRuntime(
 ): Promise<AbstractRuntime> {
 	if (typeof contract === "string") {
 		return ClassContractRuntime.init(topic, signers, contract, options)
-	} else if (isContractClass(contract)) {
+	} else {
 		return ClassFunctionRuntime.init(topic, signers, contract)
-	} else {
-		throw new Error("invalid contract class")
-	}
-}
-
-function isContractClass(a: any): a is ContractClass {
-	const prototype = Object.getPrototypeOf(a)
-	if (prototype === null) {
-		return false
-	} else if (prototype === BaseContract) {
-		return true
-	} else {
-		return isContractClass(prototype)
 	}
 }

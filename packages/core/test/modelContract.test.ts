@@ -9,25 +9,23 @@ import { Contract } from "@canvas-js/core/contract"
 test("create, update, and delete in an inline contract with $rules", async (t) => {
 	const wallet = ethers.Wallet.createRandom()
 
-	class MyApp extends Contract<typeof MyApp.models> {
-		static models = {
-			posts: {
-				$primary: "pk",
-				pk: "string",
-				address: "string",
-				content: "string",
-				$rules: {
-					create: "address === this.did",
-					update: "address === this.did",
-					delete: false,
-				},
-			},
-		} satisfies ModelSchema
-	}
-
 	const app = await Canvas.initialize({
 		topic: "example.xyz",
-		contract: MyApp,
+		contract: {
+			models: {
+				posts: {
+					$primary: "pk",
+					pk: "string",
+					address: "string",
+					content: "string",
+					$rules: {
+						create: "address === this.did",
+						update: "address === this.did",
+						delete: false,
+					},
+				},
+			},
+		},
 		signers: [new SIWESigner({ signer: wallet })],
 	})
 	t.teardown(() => app.stop())

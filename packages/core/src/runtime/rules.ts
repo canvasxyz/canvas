@@ -1,8 +1,7 @@
-import { assert, mapEntries, mapValues } from "@canvas-js/utils"
+import { assert, mapEntries } from "@canvas-js/utils"
 
 import { Contract } from "@canvas-js/core/contract"
 import { ActionContext, DeriveModelTypes, ModelSchema, RulesInit } from "../types.js"
-import { capitalize } from "../utils.js"
 
 const toString = (err: unknown) => {
 	return typeof err === "object" && err !== null && "message" in err ? String(err.message) : String(err)
