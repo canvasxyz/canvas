@@ -130,8 +130,10 @@ export async function handler(args: Args) {
 		}
 	}
 
+	// AppInstance creates an Express API, but routes for restarting
+	// and upgrading apps are configured outside the AppInstance here.
 	const bindInstanceAPIs = (instance: AppInstance) => {
-		// AppInstance should always have an api unless it was initialized with --disable-http-api
+		// Should always have an api unless it was initialized with --disable-http-api
 		if (!instance.api) return
 
 		// Nonce for SIWE signing.

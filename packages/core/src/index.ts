@@ -1,5 +1,4 @@
 export * from "./Canvas.js"
-export * from "./CanvasLoadable.js"
 export * from "./types.js"
 
 export { TransformActionParams, transformArrowFns, transformArrowFnsTransactional } from "./compatibility.js"
