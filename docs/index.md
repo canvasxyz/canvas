@@ -5,52 +5,61 @@ next: false
 
 <div :class="$style.main">
 
-<HeroRow text="Embedded application database with peer-to-peer sync" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
+<HeroRow text="Embedded instant database for modular applications" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
 
 <div :class="$style.mainInner">
 
-Canvas is an open-source, cryptographically authenticated version of Firebase that lets you write entire applications inside your frontend.
+Canvas is a local-first, distributed database similar to Firebase or
+Y.js, built on the same principles as collaborative data types.
 
-Use it to build local-first applications without depending on a
-central server. Or, use it to build open protocols that anyone
-can interoperate with.
+It's an instant-sync database, where user actions are applied locally and
+sent over WebSockets, without waiting for a server to acknowledge them.
+It's also fully local-first and supports advanced features like transactions
+and custom mutation logic.
+
+Write your application logic inside the database, and deploy it
+anywhere. Every client can use the database concurrently, and their
+interactions automatically sync and merge.
+
+Use it to build mini apps, shared databases, browser extensions, or
+decentralized applications.
 
 </div>
 
 <FeatureTags :features="[
   {
-    text: 'Runs on browser, desktop, or mobile',
+    text: 'Cross-platform',
     tooltip: 'Works in the browser, in Node.js, or in React Native',
     iconName: 'mobile'
   },
   {
-    text: 'Cross-database compatibility',
+    text: 'Cross-database',
     tooltip: 'Uses SQLite, Postgres, or IndexedDB as the backing data store',
     iconName: 'database'
   },
   {
-    text: 'Realtime sync',
-    tooltip: 'Browser-to-server and server-to-server libp2p WebSockets',
+    text: 'Realtime',
+    tooltip: 'Instant-sync via libp2p WebSockets',
     iconName: 'activity'
   },
   {
-    text: 'Live subscriptions',
-    tooltip: 'React hooks for live database queries',
+    text: 'React hooks',
+    tooltip: 'React hooks for live apps & database queries',
     iconName: 'compare'
   },
   {
-    text: 'Transactional mutations',
-    tooltip: 'Write transactional logic inside your database',
+    text: 'Transactions',
+    tooltip: 'Transactional logic inside your database',
     iconName: 'atom'
   },
   {
-    text: 'Database editor',
+    text: 'Management UI',
     tooltip: 'Edit your application through a database management interface',
     iconName: 'apps',
   },
   {
-    text: 'MIT License',
-    tooltip: 'Open source, fully self-hostable',
+    text: 'MIT Licensed',
+    tooltip: 'Open source, minimal vendor lock-in',
     iconName: 'crown',
   },
   {
@@ -61,7 +70,7 @@ can interoperate with.
   },
   {
     text: 'Private Data',
-    tooltip: 'Soon: Native support for end-to-end encrypted data',
+    tooltip: 'Soon: Native end-to-end encrypted data',
     iconName: 'lock',
     disabled: true
   },
@@ -104,36 +113,10 @@ can interoperate with.
 
 ::: code-group
 
-```ts [Object Runtime]
-import { Canvas } from "@canvas-js/core"
+```ts [Class Contract]
+import { Canvas, Contract } from "@canvas-js/core"
 
-export const models = {
-  messages: {
-    id: "primary",
-    text: "string",
-    $indexes: ["id"]
-  }
-}
-
-export const actions = {
-  createMessage: async (text) => {
-    const { address, db, id } = this
-    await db.set("messages", { id, text })
-  }
-}
-
-const app = await Canvas.initialize({
-  topic: "example.xyz",
-  contract: { models, actions },
-})
-
-app.actions.createMessage("Who up?")
-```
-
-```ts [Class Runtime]
-import { Contract } from "@canvas-js/core"
-
-export const Chat extends Contract {
+class Chat extends Contract<typeof Chat.models> {
   static models = {
     messages: {
       id: "primary",
@@ -143,14 +126,14 @@ export const Chat extends Contract {
   }
 
   async createMessage(content: string) {
-    db.create("messages", {
+    this.db.create("messages", {
       content,
       address: this.address
     })
   }
 }
 
-const app = await Chat.initialize({
+const app = await Canvas.initialize({
   topic: "example.xyz",
   contract: Chat,
 })
@@ -207,17 +190,15 @@ $ canvas run contract.ts --topic example.xyz // [!code highlight]
   </div>
   <div :class="$style.colLeft">
 
-Every application is defined as a contract, a virtual backend
-with  `models` and `actions`.
+Canvas is a conflict-free replicated object (CRO), similar to CRDTs like Y.js, with the ability to write application logic inside the object.
 
-- Models define your database schema.
-- Actions define mutations that users can make to the database, like API routes.
+Your application logic goes inside `actions` on the JS class, where each action has access to a multiwriter relational database.
 
-Because actions are embedded in the database, every
-peer can validate the history of your application,
-without a central server.
+Actions sync between peers using event sourcing, so every peer can validate the history of your application, without a central server.
 
-Now, run your app from the command line:
+Users log in through `signers`, which are used to authenticate their actions. Each signer is a DID, so you can use Ethereum, ATProto, or services like Clerk and Privy for login.
+
+Applications run across platforms, using IndexedDB in the browser or SQLite/Postgres in Node.js.
 
 ```sh
 canvas run contract.ts --topic example.xyz
@@ -259,8 +240,9 @@ We've published some of our technical presentations here:
 
 The current release of Canvas is an early developer preview that we
 are using in a limited set of production pilots. This first release is
-recommended for *protocolized applications* - applications with public
-data that anyone can permissionlessly interoperate with.
+particularly recommended for mini apps and protocolized
+applications with public data, that anyone can permissionlessly
+interoperate with.
 
 In 2025, we are working to expand the categories of applications that
 we can support, and provide support to developers building on the system.
@@ -276,8 +258,8 @@ For more information, please reach out on [Discord](https://discord.gg/EjczssxKp
 .sectionHeader h1,
 .sectionHeaderCol h1 { font-family: "Space Grotesk"; }
 
-.main, .partial { max-width: 620px; }
-.mainInner { max-width: 620px; } /* make room for jellyfish */
+.main, .partial { max-width: 520px; }
+.mainInner { max-width: 520px; } /* make room for jellyfish */
 @media (max-width: 960px) {
   .main, .partial { margin: 0 auto; }
   .mainInner { max-width: none; }
