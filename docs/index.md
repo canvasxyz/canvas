@@ -141,7 +141,7 @@ const app = await Canvas.initialize({
 app.actions.createMessage("Hello world!")
 ```
 
-```ts [React]
+```ts [React Usage]
 import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
 import { Chat } from "./contract.ts"
 
@@ -161,26 +161,6 @@ export const App = () => {
     <ItemView content={items}></ItemView>
   </div>)
 }
-```
-
-```ts [CLI]
-// In contract.ts:
-export const models = {
-  messages: {
-    id: "primary",
-    text: "string"
-  }
-}
-
-export const actions = {
-  createMessage: ({ text }) => {
-    const { address, db, id } = this
-    db.set("messages", { id, text })
-  }
-}
-
-// From the command line:
-$ canvas run contract.ts --topic example.xyz // [!code highlight]
 ```
 
 :::
