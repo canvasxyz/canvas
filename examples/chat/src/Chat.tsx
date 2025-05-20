@@ -3,7 +3,7 @@ import { Virtuoso, VirtuosoHandle } from "react-virtuoso"
 
 import { useLiveQuery } from "@canvas-js/hooks"
 
-import { models } from "./contract.js"
+import Chat from "./contract.js"
 import { AppContext } from "./AppContext.js"
 
 export interface MessagesProps {
@@ -19,7 +19,7 @@ export const Messages: React.FC<MessagesProps> = ({ address }) => {
 	const scrollboxRef = useRef<HTMLDivElement | null>(null)
 
 	const messages =
-		useLiveQuery<typeof models, "message">(app, "message", {
+		useLiveQuery<typeof Chat.models, "message">(app, "message", {
 			orderBy: { timestamp: "asc" },
 		}) || []
 

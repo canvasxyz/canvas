@@ -1,20 +1,22 @@
 import test from "ava"
 
-import { Canvas } from "@canvas-js/core"
+import { Canvas, ModelSchema } from "@canvas-js/core"
+import { Contract } from "@canvas-js/core/contract"
 
 import { PRNGSigner } from "./utils.js"
 
 test("generate random values inside a contract", async (t) => {
+	class MyApp extends Contract<typeof MyApp.models> {
+		static models = {}
+
+		async getRandom() {
+			const { db } = this
+			return db.random()
+		}
+	}
+
 	const app = await Canvas.initialize({
-		contract: {
-			models: {},
-			actions: {
-				async getRandom() {
-					const { db } = this
-					return db.random()
-				},
-			},
-		},
+		contract: MyApp,
 		topic: "com.example.app",
 		signers: [new PRNGSigner(0)],
 	})
@@ -43,13 +45,14 @@ test("generate random values inside a contract", async (t) => {
 
 test("generate random values inside a string contract", async (t) => {
 	const app = await Canvas.initialize({
-		contract: `export const models = {};
-export const actions = {
-	async getRandom() {
-		const { db } = this
-		return db.random()
-	},
-};`,
+		contract: `
+		export default class {
+  		static models = {}
+     	async getRandom() {
+        const { db } = this
+        return db.random()
+     	}
+    }`,
 		topic: "com.example.app",
 		signers: [new PRNGSigner(0)],
 	})

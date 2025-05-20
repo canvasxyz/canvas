@@ -1,13 +1,13 @@
 import test from "ava"
-import refs, { models } from "./refs.js"
+import Refs from "./refs.js"
 
 import { Canvas, DeriveModelTypes } from "@canvas-js/core"
 
-type Models = DeriveModelTypes<typeof models>
+type Models = DeriveModelTypes<typeof Refs.models>
 
 const getApp = async () => {
 	const app = await Canvas.initialize({
-		contract: refs,
+		contract: Refs,
 		topic: "refs.nyc.test",
 	})
 	const did = await app.signers.getFirst().getDid()
@@ -115,7 +115,7 @@ test("only you can update your profiles or connections", async (t) => {
 	const fakeConnection = {
 		...newConnection,
 		id: "did:fake/123",
-		creator: "did:fake"
+		creator: "did:fake",
 	}
 	await t.throwsAsync(async () => await app.update("connection", fakeConnection))
 
@@ -125,7 +125,7 @@ test("only you can update your profiles or connections", async (t) => {
 	// Successfully update own connection
 	const updatedConnection = {
 		...newConnection,
-		text: "Updated connection text"
+		text: "Updated connection text",
 	}
 	await app.update("connection", updatedConnection)
 	t.deepEqual(await app.db.query("connection"), [updatedConnection])
@@ -144,7 +144,7 @@ test("only you can delete connections", async (t) => {
 	const fakeConnection = {
 		...newConnection,
 		id: "did:fake/123",
-		creator: "did:fake"
+		creator: "did:fake",
 	}
 	await t.throwsAsync(async () => await app.delete("connection", fakeConnection.id))
 

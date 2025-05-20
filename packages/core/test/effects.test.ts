@@ -3,35 +3,36 @@ import { nanoid } from "nanoid"
 import PQueue from "p-queue"
 
 import { SIWESigner } from "@canvas-js/signer-ethereum"
-import { Actions, Canvas, ModelSchema } from "@canvas-js/core"
+import { Canvas, ModelSchema } from "@canvas-js/core"
+import { Contract } from "@canvas-js/core/contract"
 
-const models = {
-	posts: { id: "primary", content: "string" },
-} satisfies ModelSchema
+class MyApp extends Contract<typeof MyApp.models> {
+	static models = {
+		posts: { id: "primary", content: "string" },
+	} satisfies ModelSchema
 
-const actions = {
 	async createPost(content: string) {
 		await this.db.set("posts", { id: this.id, content })
-	},
+	}
 
 	async updatePost(postId: string, content: string) {
 		await this.db.set("posts", { id: postId, content })
-	},
+	}
 
 	async deletePost(postId: string) {
 		await this.db.delete("posts", postId)
-	},
+	}
 
 	async getPostContent(postId: string) {
 		const post = await this.db.get("posts", postId)
 		return post?.content ?? null
-	},
-} satisfies Actions<typeof models>
+	}
+}
 
 const init = async (t: ExecutionContext<unknown>) => {
 	const signer = new SIWESigner({ burner: true })
 	const app = await Canvas.initialize({
-		contract: { models, actions },
+		contract: MyApp,
 		topic: "com.example.app",
 		signers: [signer],
 	})

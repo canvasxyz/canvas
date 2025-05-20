@@ -9,7 +9,7 @@ import { useCanvas, AuthProvider } from "@canvas-js/hooks"
 
 import { App } from "./App.js"
 import { AppContext } from "./AppContext.js"
-import { models, actions } from "./contract.js"
+import Counter from "./contract.js"
 
 const wsURL =
 	document.location.hostname === "localhost"
@@ -17,10 +17,10 @@ const wsURL =
 		: `wss://${document.location.hostname}`
 
 const Container: React.FC<{}> = ({}) => {
-	const { app, ws, error } = useCanvas<typeof models, typeof actions>(wsURL, {
+	const { app, ws, error } = useCanvas(wsURL, {
 		signers: [new SIWESigner({ burner: true })],
 		topic: "starter-example.canvas.xyz",
-		contract: { models, actions },
+		contract: Counter,
 	})
 
 	return (

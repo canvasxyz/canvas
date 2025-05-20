@@ -1,5 +1,5 @@
 import type { ModelValue } from "@canvas-js/modeldb"
-import type { Awaitable } from "@canvas-js/interfaces"
+import type { Action, Awaitable } from "@canvas-js/interfaces"
 
 export type { ModelValue } from "@canvas-js/modeldb"
 import type {
@@ -9,43 +9,48 @@ import type {
 	DeriveModelType as DbDeriveModelType,
 } from "@canvas-js/modeldb"
 
+import { Contract } from "@canvas-js/core/contract"
+import { SignedMessage } from "@canvas-js/gossiplog"
+
 export type RulesInit = { create: string | boolean; update: string | boolean; delete: string | boolean }
 export type ModelInit = DbModelInit<{ $rules?: RulesInit }>
 export type ModelSchema = DbModelSchema<{ $rules?: RulesInit }>
 export type DeriveModelType<T extends ModelSchema> = DbDeriveModelType<T, { $rules?: RulesInit }>
 export type DeriveModelTypes<T extends ModelSchema> = DbDeriveModelTypes<T, { $rules?: RulesInit }>
 
-export type DeriveActions<T extends ModelSchema> = {
-	[K in keyof T as T[K] extends { $rules: any } ? `create${Capitalize<string & K>}` : never]: (
-		item: Partial<DeriveModelTypes<T>[K]>,
-	) => Promise<void>
-} & {
-	[K in keyof T as T[K] extends { $rules: any } ? `update${Capitalize<string & K>}` : never]: (
-		item: DeriveModelTypes<T>[K],
-	) => Promise<void>
-} & {
-	[K in keyof T as T[K] extends { $rules: any } ? `delete${Capitalize<string & K>}` : never]: (
-		id: string,
-	) => Promise<void>
-}
-
-export type Contract<
+export type ContractClass<
 	ModelsT extends ModelSchema = ModelSchema,
-	ActionsT extends Actions<ModelsT> = Actions<ModelsT>,
+	InstanceT extends Contract<ModelsT> = Contract<ModelsT> & Record<string, ContractAction<ModelsT>>,
 > = {
 	models: ModelsT
-	actions?: ActionsT
+	new (topic: string): InstanceT
 }
 
-export type Actions<ModelsT extends ModelSchema> = Record<string, ActionImplementation<ModelsT>>
+export type ContractAction<ModelsT extends ModelSchema = ModelSchema, Args extends any[] = any[], Result = any> = (
+	this: Contract<ModelsT>,
+	...args: Args
+) => Promise<Result>
 
-export type ActionImplementation<
-	ModelsT extends ModelSchema = ModelSchema,
-	Args extends Array<any> = any,
-	Result = any,
-> = (this: ActionContext<DeriveModelTypes<ModelsT>>, ...args: Args) => Awaitable<Result>
+export type TypeError<Message extends string> = Message
 
-export type ModelAPI<ModelTypes extends Record<string, ModelValue>> = {
+export type ActionAPI<Args extends any[] = any[], Result = any> = (
+	...args: Args
+) => Promise<SignedMessage<Action, Result> & { result: Result }>
+
+export type GetActionsType<ModelsT extends ModelSchema, InstanceT extends Contract<ModelsT>> = {
+	[K in Exclude<keyof InstanceT, "topic" | keyof Contract<ModelsT>>]: InstanceT[K] extends ContractAction<
+		ModelsT,
+		infer Args,
+		infer Result
+	>
+		? ActionAPI<Args, Result>
+		: never
+	// : InstanceT[K] extends (this: Contract<ModelsT>, ...args: any[]) => infer Result
+	// 	? TypeError<"Contract actions must be marked `async`">
+	// 	: never
+}
+
+export type ModelAPI<ModelTypes extends Record<string, ModelValue> = Record<string, ModelValue>> = {
 	id: () => string
 	random: () => number
 	get: <T extends keyof ModelTypes & string>(model: T, key: string) => Promise<ModelTypes[T] | null>
@@ -70,8 +75,8 @@ export type ModelAPI<ModelTypes extends Record<string, ModelValue>> = {
 	transaction: <T>(callback: () => Awaitable<T>) => Promise<T>
 }
 
-export type ActionContext<T extends Record<string, ModelValue>> = {
-	db: ModelAPI<T>
+export type ActionContext<ModelTypes extends Record<string, ModelValue> = Record<string, ModelValue>> = {
+	db: ModelAPI<ModelTypes>
 	id: string
 	did: string
 	address: string

@@ -1,78 +1,105 @@
 import PQueue from "p-queue"
 
-import type { SignerCache } from "@canvas-js/interfaces"
-import { DeriveModelTypes } from "@canvas-js/modeldb"
-import { assert } from "@canvas-js/utils"
-import { encodeId } from "@canvas-js/gossiplog"
 import { bytesToHex } from "@noble/hashes/utils"
 import { sha256 } from "@noble/hashes/sha256"
+import { assert } from "@canvas-js/utils"
 
-import { ModelSchema, ActionContext, ActionImplementation, Contract, ModelAPI } from "../types.js"
+import type { SignerCache } from "@canvas-js/interfaces"
+import { DeriveModelTypes } from "@canvas-js/modeldb"
+import { encodeId } from "@canvas-js/gossiplog"
+
+import { Contract as BaseContract } from "@canvas-js/core/contract"
+
+import { ModelSchema, ModelAPI, ContractClass, ContractAction } from "../types.js"
 import { ExecutionContext } from "../ExecutionContext.js"
 import { AbstractRuntime } from "./AbstractRuntime.js"
-import { generateActionsFromRules } from "./rules.js"
+import { ActionAPI } from "../index.js"
+import { extractRules, generateActionsFromRules } from "./rules.js"
 
-// Check if all models have $rules defined
-const hasAllRules = (models: ModelSchema) => {
-	return Object.values(models).every((model) => "$rules" in model)
-}
-const hasNoRules = (models: ModelSchema) => {
-	return Object.values(models).every((model) => !("$rules" in model))
+function isContractClass(a: any): a is ContractClass {
+	const prototype = Object.getPrototypeOf(a)
+	if (prototype === null) {
+		return false
+	} else if (prototype === BaseContract) {
+		return true
+	} else {
+		return isContractClass(prototype)
+	}
 }
 
-export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntime {
-	public static async init<ModelsT extends ModelSchema>(
+export class ClassFunctionRuntime extends AbstractRuntime {
+	public static async init(
 		topic: string,
 		signers: SignerCache,
-		contract: Contract<ModelsT>,
-	): Promise<FunctionRuntime<ModelsT>> {
-		assert(contract.models !== undefined, "contract initialized without models")
-		assert(
-			contract.actions !== undefined || hasAllRules(contract.models),
-			"contracts without actions must have $rules on all models",
-		)
-		assert(
-			hasNoRules(contract.models) || hasAllRules(contract.models),
-			"contracts with rules must have them on all models",
-		)
+		contract: { models: ModelSchema } | ContractClass<ModelSchema, BaseContract<ModelSchema>>,
+	): Promise<ClassFunctionRuntime> {
+		assert(contract.models !== undefined, "missing `static models` value in contract class")
+
 		assert(
 			Object.keys(contract.models).every((key) => !key.startsWith("$")),
 			"contract model names cannot start with '$'",
 		)
 
-		return new FunctionRuntime(topic, signers, contract)
-	}
+		let contractInstance: BaseContract<ModelSchema>
+		let actionNames: string[]
+		if (isContractClass(contract)) {
+			assert(
+				Object.values(contract.models).every((model) => model.$rules === undefined),
+				"class contracts cannot have model $rules",
+			)
 
-	public readonly contract: string
-	public readonly actions: Record<string, ActionImplementation<ModelsT, any>>
+			contractInstance = new contract(topic)
+			actionNames = Object.getOwnPropertyNames(contract.prototype).filter((name) => name !== "constructor")
+		} else {
+			for (const [name, model] of Object.entries(contract.models)) {
+				if (model.$rules === undefined) {
+					throw new Error(`missing $rules from model "${name}"`)
+				}
+			}
+
+			contractInstance = new BaseContract(topic)
+			actionNames = Object.keys(contract.models).flatMap((name) => [
+				`${name}/create`,
+				`${name}/update`,
+				`${name}/delete`,
+			])
+
+			const { rules, baseModels } = extractRules(contract.models)
+			const actionEntries = Object.entries(generateActionsFromRules(rules, baseModels)).flatMap(([name, actions]) => [
+				[`${name}/create`, actions.create],
+				[`${name}/update`, actions.update],
+				[`${name}/delete`, actions.delete],
+			])
+
+			Object.assign(contractInstance, Object.fromEntries(actionEntries))
+		}
+
+		return new ClassFunctionRuntime(topic, signers, actionNames, contract.models, contractInstance)
+	}
 
 	#context: ExecutionContext | null = null
 	#txnId = 0
 	#nextId: Uint8Array | null = null
 	#transaction = false
-	#thisValue: ActionContext<DeriveModelTypes<ModelsT>> | null = null
+	#thisValue: BaseContract<ModelSchema> | null = null
 	#queue = new PQueue({ concurrency: 1 })
-	#db: ModelAPI<DeriveModelTypes<ModelsT>>
+	#db: ModelAPI
+
+	#contract: BaseContract<ModelSchema>
 
 	constructor(
 		public readonly topic: string,
 		public readonly signers: SignerCache,
-		contract: Contract<ModelsT>,
+		public readonly actionNames: string[],
+		models: ModelSchema,
+		contractInstance: BaseContract<ModelSchema>,
 	) {
-		super(contract.models)
-		this.actions = contract.actions ?? generateActionsFromRules(this.rules, contract.models)
-		this.contract = [
-			`export const models = ${JSON.stringify(contract.models, null, "  ")};`,
-			`export const actions = {\n${Object.entries(this.actions)
-				.map(([name, action]) => `${name}: ${action}`)
-				.join(", \n")}};`,
-		].join("\n")
+		super(models)
 
+		this.#contract = contractInstance
 		this.#db = {
-			get: async <T extends keyof DeriveModelTypes<ModelsT> & string>(model: T, key: string) => {
-				const result = await this.#queue.add(() =>
-					this.context.getModelValue<DeriveModelTypes<ModelsT>[T]>(model, key, this.#transaction),
-				)
+			get: async <T extends keyof DeriveModelTypes<ModelSchema> & string>(model: T, key: string) => {
+				const result = await this.#queue.add(() => this.context.getModelValue(model, key, this.#transaction))
 				return result ?? null
 			},
 
@@ -112,16 +139,12 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 				this.#nextId = sha256(this.#nextId)
 				// use the first 4 bytes (32 bits) of the hash, normalized to [0,1]
 				const view = new DataView(this.#nextId.buffer, this.#nextId.byteOffset, 4)
-				return view.getUint32(0, false) / 0xFFFFFFFF
+				return view.getUint32(0, false) / 0xffffffff
 			},
 		}
 	}
 
 	public close() {}
-
-	public get actionNames() {
-		return Object.keys(this.actions)
-	}
 
 	private get context() {
 		assert(this.#context !== null, "expected this.#context !== null")
@@ -141,12 +164,12 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 			context: { blockhash, timestamp },
 		} = exec.message.payload
 
-		const action = this.actions[name]
-		if (action === undefined) {
+		const { [name]: actionAPI } = this.#contract as unknown as Record<string, ActionAPI>
+		if (actionAPI === undefined) {
 			throw new Error(`invalid action name: ${name}`)
 		}
 
-		const thisValue: ActionContext<DeriveModelTypes<ModelsT>> = {
+		const thisValue = {
 			db: this.#db,
 			id: exec.id,
 			publicKey: exec.signature.publicKey,
@@ -154,7 +177,8 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 			address: exec.address,
 			blockhash: blockhash ?? null,
 			timestamp: timestamp,
-		}
+			topic: this.topic,
+		} as BaseContract<ModelSchema>
 
 		try {
 			this.#txnId = 0
@@ -162,7 +186,7 @@ export class FunctionRuntime<ModelsT extends ModelSchema> extends AbstractRuntim
 			this.#context = exec
 			this.#thisValue = thisValue
 
-			const result = await action.apply(thisValue, Array.isArray(args) ? args : [args])
+			const result = await actionAPI.apply(thisValue, Array.isArray(args) ? args : [args])
 			await this.#queue.onIdle()
 
 			return result

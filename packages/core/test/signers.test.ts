@@ -1,25 +1,26 @@
 import test from "ava"
 
-import { Canvas } from "@canvas-js/core"
+import { Canvas, ModelSchema } from "@canvas-js/core"
+import { Contract } from "@canvas-js/core/contract"
 import { PRNGSigner } from "./utils.js"
 import { setTimeout } from "timers/promises"
 
 test("test PRNGSigner", async (t) => {
+	class MyApp extends Contract<typeof MyApp.models> {
+		static models = {} satisfies ModelSchema
+
+		async hello() {}
+	}
+
 	const app1 = await Canvas.initialize({
 		topic: "com.example.app",
-		contract: {
-			models: {},
-			actions: { hello: () => {} },
-		},
+		contract: MyApp,
 		signers: [new PRNGSigner(0)],
 	})
 
 	const app2 = await Canvas.initialize({
 		topic: "com.example.app",
-		contract: {
-			models: {},
-			actions: { hello: () => {} },
-		},
+		contract: MyApp,
 		signers: [new PRNGSigner(0)],
 	})
 

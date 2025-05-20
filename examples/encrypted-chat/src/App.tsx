@@ -7,7 +7,7 @@ import { useCanvas, useLiveQuery, AppInfo } from "@canvas-js/hooks"
 import { SIWESigner } from "@canvas-js/signer-ethereum"
 
 import { usePrivkey } from "./components/privkeys"
-import * as contract from "./contract"
+import EncryptedChat from "./contract"
 
 const wsURL = import.meta.env.VITE_CANVAS_WS_URL ?? null
 console.log("websocket API URL:", wsURL)
@@ -23,10 +23,10 @@ const useChat = (topic: string, wallet: ethers.Wallet) => {
 	const { app, ws } = useCanvas(wsURL, {
 		topic,
 		signers: [new SIWESigner({ signer: wallet })],
-		contract,
+		contract: EncryptedChat,
 	})
 
-	const people = useLiveQuery<typeof contract.models, "encryptionKeys">(app, "encryptionKeys", {
+	const people = useLiveQuery<typeof EncryptedChat.models, "encryptionKeys">(app, "encryptionKeys", {
 		orderBy: { address: "desc" },
 	})
 
@@ -111,10 +111,10 @@ function App({ wallet1, wallet2 }: { wallet1: ethers.Wallet; wallet2: ethers.Wal
 
 	const { registerEncryptionKey: registerEncryptionKey2 } = useChat("chat-encrypted.canvas.xyz", wallet2)
 
-	const registration1 = useLiveQuery<typeof contract.models, "encryptionKeys">(app, "encryptionKeys", {
+	const registration1 = useLiveQuery<typeof EncryptedChat.models, "encryptionKeys">(app, "encryptionKeys", {
 		where: { address: wallet1?.address },
 	})
-	const registration2 = useLiveQuery<typeof contract.models, "encryptionKeys">(app, "encryptionKeys", {
+	const registration2 = useLiveQuery<typeof EncryptedChat.models, "encryptionKeys">(app, "encryptionKeys", {
 		where: { address: wallet2?.address },
 	})
 
@@ -212,11 +212,11 @@ const Conversation = ({
 	createEncryptionGroup: (recipient: string) => Promise<void>
 	sendPrivateMessage: (recipient: string, message: string) => Promise<void>
 }) => {
-	const groups = useLiveQuery<typeof contract.models, "encryptionGroups">(app, "encryptionGroups", {
+	const groups = useLiveQuery<typeof EncryptedChat.models, "encryptionGroups">(app, "encryptionGroups", {
 		where: { id: getGroupId(wallet.address, conversationAddress) },
 	})
 
-	const messages = useLiveQuery<typeof contract.models, "privateMessages">(app, "privateMessages", {
+	const messages = useLiveQuery<typeof EncryptedChat.models, "privateMessages">(app, "privateMessages", {
 		where: { group: getGroupId(wallet.address, conversationAddress) },
 	})
 

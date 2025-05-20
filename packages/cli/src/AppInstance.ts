@@ -15,7 +15,7 @@ import { WebSockets, WebSocketsSecure } from "@multiformats/multiaddr-matcher"
 import stoppable from "stoppable"
 
 import { SessionSigner } from "@canvas-js/interfaces"
-import { Canvas, PeerId, Snapshot, hashSnapshot, ModelSchema, Actions, Contract } from "@canvas-js/core"
+import { Canvas, PeerId, Snapshot, hashSnapshot, ModelSchema, ContractClass } from "@canvas-js/core"
 import { createAPI } from "@canvas-js/core/api"
 
 import { NetworkServer } from "@canvas-js/gossiplog/server"
@@ -36,7 +36,7 @@ export type AppInstanceConfig = {
 	/** Networking configuration options */
 	config: AppConfig
 
-	contract: string | Contract<ModelSchema, Actions<any>>
+	contract: string | ContractClass | { models: ModelSchema }
 	signers?: SessionSigner[]
 	snapshot?: Snapshot | null | undefined
 	reset?: boolean

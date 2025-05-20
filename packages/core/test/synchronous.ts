@@ -2,7 +2,9 @@ import test, { ExecutionContext } from "ava"
 import { ethers } from "ethers"
 
 import { SIWESigner } from "@canvas-js/signer-ethereum"
+import { Contract } from "@canvas-js/core/contract"
 import { Canvas } from "@canvas-js/core/sync"
+import { ModelSchema } from "@canvas-js/modeldb"
 
 const contract = `
 export const models = {
@@ -85,26 +87,28 @@ test("with sync initializer, create and delete a post", async (t) => {
 
 test("with sync initializer, create and delete a post using an inline contract", async (t) => {
 	const wallet = ethers.Wallet.createRandom()
+
+	class MyApp extends Contract<typeof MyApp.models> {
+		static models = {
+			posts: {
+				id: "primary",
+				content: "string",
+				timestamp: "integer",
+				address: "string",
+			},
+		} satisfies ModelSchema
+
+		async createPost({ content }: { content: string }) {
+			const { id, did, timestamp, db, address } = this
+			const postId = [did, id].join("/")
+			await db.set("posts", { id: postId, content, timestamp, address })
+			return content
+		}
+	}
+
 	const app = new Canvas({
 		topic: "com.example.app",
-		contract: {
-			models: {
-				posts: {
-					id: "primary",
-					content: "string",
-					timestamp: "integer",
-					address: "string",
-				},
-			},
-			actions: {
-				async createPost({ content }: { content: string }) {
-					const { id, did, timestamp, db, address } = this
-					const postId = [did, id].join("/")
-					await db.set("posts", { id: postId, content, timestamp, address })
-					return content
-				},
-			},
-		},
+		contract: MyApp,
 		signers: [new SIWESigner({ signer: wallet })],
 	})
 

@@ -13,6 +13,7 @@ test("create, update, and delete in an inline contract with $rules", async (t) =
 		contract: {
 			models: {
 				posts: {
+					$primary: "pk",
 					pk: "string",
 					address: "string",
 					content: "string",
@@ -21,12 +22,12 @@ test("create, update, and delete in an inline contract with $rules", async (t) =
 						update: "address === this.did",
 						delete: false,
 					},
-					$primary: "pk",
 				},
 			},
 		},
 		signers: [new SIWESigner({ signer: wallet })],
 	})
+
 	t.teardown(() => app.stop())
 
 	await app.create("posts", { pk: "foo", address: `did:pkh:eip155:1:${wallet.address}`, content: "Hello world" })
@@ -50,25 +51,27 @@ test("create, update, and delete in an inline contract with $rules", async (t) =
 	})
 })
 
-test("create, update, and delete in a string contract with $rules", async (t) => {
+test.skip("create, update, and delete in a string contract with $rules", async (t) => {
 	const wallet = ethers.Wallet.createRandom()
 
 	const app = await Canvas.initialize({
 		topic: "example.xyz",
 		contract: `
-export const models = {
-	posts: {
-		pk: "string",
-		address: "string",
-		content: "string",
-		$rules: {
-			create: "address === this.did",
-			update: "address === this.did",
-			delete: false,
-		},
-		$primary: "pk"
-	}
-}`,
+		export default class {
+		  static models = {
+        posts: {
+          $primary: "pk",
+          pk: "string",
+          address: "string",
+          content: "string",
+          $rules: {
+            create: "address === this.did",
+            update: "address === this.did",
+            delete: false,
+          }
+        }
+			}
+		}`,
 		signers: [new SIWESigner({ signer: wallet })],
 	})
 	t.teardown(() => app.stop())

@@ -5,9 +5,10 @@ import * as cbor from "@ipld/dag-cbor"
 import { Snapshot } from "@canvas-js/interfaces"
 import type { PrimitiveType, Property, PropertyType } from "@canvas-js/modeldb"
 
+import { Contract } from "@canvas-js/core/contract"
 import { Canvas } from "./Canvas.js"
 
-import { Contract, ModelSchema, ModelValue } from "./types.js"
+import { ContractClass, ModelSchema, ModelValue } from "./types.js"
 
 // typeguards
 export const isIndexInit = (value: unknown): value is string[] => Array.isArray(value)
@@ -45,18 +46,12 @@ export type TableChange =
 	| RemoveColumnChange
 	| MakeOptionalColumnChange
 
-export function hashContract<T extends Contract<any>>(contract: T | string): string {
+export function hashContract<T extends ContractClass<ModelSchema>>(contract: T | string): string {
 	if (typeof contract === "string") {
 		const hash = sha256(contract)
 		return bytesToHex(hash)
 	} else {
-		const contractCodeMap: Record<string, string> = Object.fromEntries(
-			Object.entries(contract.actions ?? {}).map(([name, fn]) => [name, fn.toString()]),
-		)
-		const actionHash = sha256(cbor.encode(contractCodeMap))
-		const modelHash = sha256(cbor.encode(contract.models))
-		const hash = sha256(cbor.encode({ actions: actionHash, models: modelHash }))
-		return bytesToHex(hash)
+		throw new Error("not implemented (hash class contract)")
 	}
 }
 
@@ -90,10 +85,7 @@ export type CreateSnapshotArgs = {
  * If changesets are provided, then apply them to snapshotted tables, so
  * the new snapshot can be used with a contract matching them immediately.
  */
-export async function createSnapshot<T extends Contract<any>>(
-	app: Canvas,
-	changes?: CreateSnapshotArgs,
-): Promise<Snapshot> {
+export async function createSnapshot(app: Canvas, changes?: CreateSnapshotArgs): Promise<Snapshot> {
 	const changesets = changes?.changesets ?? []
 	const changedRows = changes?.changedRows ?? {}
 

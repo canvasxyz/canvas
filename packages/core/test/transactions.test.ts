@@ -4,7 +4,8 @@ import Prando from "prando"
 import test, { ExecutionContext } from "ava"
 
 import { AbstractModelDB, ModelValue } from "@canvas-js/modeldb"
-import { Actions, Canvas, decodeRecordValue, ModelSchema } from "@canvas-js/core"
+import { Canvas, decodeRecordValue, ModelSchema } from "@canvas-js/core"
+import { Contract } from "@canvas-js/core/contract"
 import { SECONDS } from "@canvas-js/utils"
 
 import { PRNGSigner } from "./utils.js"
@@ -17,11 +18,11 @@ test("increment a counter, reading outside the transaction", async (t) => {
 
 	const random = (n: number) => rng.nextInt(0, n - 1)
 
-	const models = {
-		counter: { id: "primary", value: "integer" },
-	} satisfies ModelSchema
+	class MyApp extends Contract<typeof MyApp.models> {
+		static models = {
+			counter: { id: "primary", value: "integer" },
+		} satisfies ModelSchema
 
-	const actions = {
 		async increment() {
 			const { db } = this
 			const record = await db.get("counter", "counter")
@@ -32,12 +33,12 @@ test("increment a counter, reading outside the transaction", async (t) => {
 					await db.set("counter", { id: "counter", value: record.value + 1 })
 				}
 			})
-		},
-	} satisfies Actions<typeof models>
+		}
+	}
 
 	const init = async (t: ExecutionContext<unknown>, seed: number) => {
 		const app = await Canvas.initialize({
-			contract: { models, actions },
+			contract: MyApp,
 			topic: "com.example.app",
 			signers: [new PRNGSigner(seed)],
 		})
@@ -100,11 +101,11 @@ test("increment a counter, reading inside the transaction", async (t) => {
 	const rng = new Prando.default(0)
 	const random = (n: number) => rng.nextInt(0, n - 1)
 
-	const models = {
-		counter: { id: "primary", value: "integer" },
-	} satisfies ModelSchema
+	class MyApp extends Contract<typeof MyApp.models> {
+		static models = {
+			counter: { id: "primary", value: "integer" },
+		} satisfies ModelSchema
 
-	const actions = {
 		async increment() {
 			const { db } = this
 			let value = 1
@@ -117,12 +118,12 @@ test("increment a counter, reading inside the transaction", async (t) => {
 			})
 
 			return value
-		},
-	} satisfies Actions<typeof models>
+		}
+	}
 
 	const init = async (t: ExecutionContext<unknown>, seed: number) => {
 		const app = await Canvas.initialize({
-			contract: { models, actions },
+			contract: MyApp,
 			topic: "com.example.app",
 			signers: [new PRNGSigner(seed)],
 		})
@@ -196,18 +197,20 @@ test("test read conflict", async (t) => {
 
 	type Room = { id: string; admins: string[]; members: string[] }
 	type Post = { id: string; room: string; author: string; content: string }
-	const models = {
-		rooms: { id: "primary", admins: "json", members: "json" },
-		posts: { id: "primary", room: "@rooms", author: "string", content: "string" },
-	} satisfies ModelSchema
 
-	const actions = {
+	class MyApp extends Contract<typeof MyApp.models> {
+		static models = {
+			rooms: { id: "primary", admins: "json", members: "json" },
+			posts: { id: "primary", room: "@rooms", author: "string", content: "string" },
+		} satisfies ModelSchema
+
 		async createRoom() {
 			await this.db.transaction(() =>
 				this.db.set("rooms", { id: this.id, admins: [this.did], members: [this.did] } satisfies Room),
 			)
+
 			return this.id
-		},
+		}
 
 		async createPost(roomId: string, content: string) {
 			const { db } = this
@@ -219,7 +222,7 @@ test("test read conflict", async (t) => {
 				await db.set("posts", { id: this.id, room: roomId, author: this.did, content } satisfies Post)
 				return this.id
 			})
-		},
+		}
 
 		async addMember(roomId: string, member: string) {
 			const { db } = this
@@ -231,7 +234,7 @@ test("test read conflict", async (t) => {
 				assert(!members.includes(member), "already a member")
 				await db.set("rooms", { ...room, members: [...members, member] })
 			})
-		},
+		}
 
 		async removeMember(roomId: string, member: string) {
 			const { db } = this
@@ -243,12 +246,12 @@ test("test read conflict", async (t) => {
 				assert(members.includes(member), "not a member")
 				await db.set("rooms", { ...room, members: members.filter((did) => did !== member) })
 			})
-		},
-	} satisfies Actions<typeof models>
+		}
+	}
 
 	const init = async (t: ExecutionContext<unknown>, seed: number) => {
 		const app = await Canvas.initialize({
-			contract: { models, actions },
+			contract: MyApp,
 			topic: "com.example.app",
 			signers: [new PRNGSigner(seed)],
 		})

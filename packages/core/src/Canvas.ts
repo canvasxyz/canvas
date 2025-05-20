@@ -4,31 +4,43 @@ import * as pg from "pg"
 import type { SqlStorage } from "@cloudflare/workers-types"
 import { bytesToHex } from "@noble/hashes/utils"
 
+import { Contract } from "@canvas-js/core/contract"
 import { Signature, Action, Message, Snapshot, SessionSigner, SignerCache, MessageType } from "@canvas-js/interfaces"
 import { AbstractModelDB, Model, Effect } from "@canvas-js/modeldb"
 import { SIWESigner } from "@canvas-js/signer-ethereum"
 import { AbstractGossipLog, GossipLogEvents, NetworkClient, SignedMessage } from "@canvas-js/gossiplog"
 import type { ServiceMap, NetworkConfig } from "@canvas-js/gossiplog/libp2p"
 
-import { assert, mapValues } from "@canvas-js/utils"
+import { assert, JSValue, mapValues } from "@canvas-js/utils"
 import { SnapshotSignatureScheme } from "@canvas-js/signatures"
 
 import target from "#target"
 
-import type { Contract, Actions, ActionImplementation, ModelSchema, ModelAPI, DeriveModelTypes } from "./types.js"
+import type {
+	ContractAction,
+	ModelSchema,
+	ModelAPI,
+	DeriveModelTypes,
+	ContractClass,
+	GetActionsType,
+	ActionAPI,
+} from "./types.js"
 import { Runtime, createRuntime } from "./runtime/index.js"
 import { ActionRecord } from "./runtime/AbstractRuntime.js"
 import { validatePayload } from "./schema.js"
 import { CreateSnapshotArgs, createSnapshot, hashSnapshot } from "./snapshot.js"
 import { baseVersion, initialUpgradeSchema, initialUpgradeVersion, upgrade } from "./migrations.js"
-import { capitalize, topicPattern } from "./utils.js"
+import { topicPattern } from "./utils.js"
 
 export type { Model } from "@canvas-js/modeldb"
 export type { PeerId } from "@libp2p/interface"
 
-export type Config<ModelsT extends ModelSchema = any, ActionsT extends Actions<ModelsT> = Actions<ModelsT>> = {
+export type Config<
+	ModelsT extends ModelSchema = ModelSchema,
+	InstanceT extends Contract<ModelsT> = Contract<ModelsT> & Record<string, ContractAction<ModelsT>>,
+> = {
 	topic: string
-	contract: string | Contract<ModelsT, ActionsT>
+	contract: string | { models: ModelsT } | ContractClass<ModelsT, InstanceT>
 	signers?: SessionSigner[]
 
 	/** data directory path (NodeJS/sqlite), postgres connection config (NodeJS/pg), or storage backend (Cloudflare DO) */
@@ -46,10 +58,6 @@ export type Config<ModelsT extends ModelSchema = any, ActionsT extends Actions<M
 	/** provide a snapshot to initialize the runtime database with, requires `reset: true` */
 	snapshot?: Snapshot | null
 }
-
-export type ActionAPI<Args extends Array<any> = any, Result = any> = (
-	...args: Args
-) => Promise<SignedMessage<Action, Result> & { result: Result }>
 
 export interface CanvasEvents extends GossipLogEvents<MessageType> {
 	stop: Event
@@ -81,14 +89,15 @@ export type ApplicationData = {
 
 export class Canvas<
 	ModelsT extends ModelSchema = ModelSchema,
-	ActionsT extends Actions<ModelsT> = Actions<ModelsT>,
+	InstanceT extends Contract<ModelsT> = Contract<ModelsT> & Record<string, ContractAction<ModelsT>>,
 > extends TypedEventEmitter<CanvasEvents> {
 	public static namespace = "canvas"
 	public static version = 4
 
-	public static async initialize<ModelsT extends ModelSchema, ActionsT extends Actions<ModelsT> = Actions<ModelsT>>(
-		config: Config<ModelsT, ActionsT>,
-	): Promise<Canvas<ModelsT, ActionsT>> {
+	public static async initialize<
+		ModelsT extends ModelSchema = ModelSchema,
+		InstanceT extends Contract<ModelsT> = Contract<ModelsT> & Record<string, ContractAction<ModelsT>>,
+	>(config: Config<ModelsT, InstanceT>): Promise<Canvas<ModelsT, InstanceT>> {
 		const { topic, path = null, contract, signers: initSigners = [], runtimeMemoryLimit } = config
 
 		if (config.snapshot) {
@@ -117,7 +126,8 @@ export class Canvas<
 			}
 		}
 
-		const runtime = await createRuntime(topic, signers, contract, { runtimeMemoryLimit })
+		const runtime = await createRuntime(topic, signers, contract as string | ContractClass, { runtimeMemoryLimit })
+
 		const messageLog = await target.openGossipLog(
 			{ topic, path },
 			{
@@ -162,7 +172,7 @@ export class Canvas<
 			}
 		}
 
-		const app = new Canvas<ModelsT, ActionsT>(signers, messageLog, runtime)
+		const app = new Canvas<ModelsT, InstanceT>(signers, messageLog, runtime)
 
 		if (config.snapshot) {
 			assert(topic.endsWith(`#${hashSnapshot(config.snapshot)}`), "invalid snapshot")
@@ -245,16 +255,10 @@ export class Canvas<
 	}
 
 	public readonly db: AbstractModelDB
-	public readonly actions = {} as {
-		[K in keyof ActionsT]: ActionsT[K] extends ActionImplementation<ModelsT, infer Args, infer Result>
-			? ActionAPI<Args, Result>
-			: never
-	}
-	public readonly as: (signer: SessionSigner<any>) => {
-		[K in keyof ActionsT]: ActionsT[K] extends ActionImplementation<ModelsT, infer Args, infer Result>
-			? ActionAPI<Args, Result>
-			: never
-	}
+	public readonly actions = {} as GetActionsType<ModelsT, InstanceT>
+
+	public readonly as: (signer: SessionSigner<any>) => GetActionsType<ModelsT, InstanceT>
+
 	public readonly create: <M extends string>(
 		model: M,
 		modelValue: Partial<DeriveModelTypes<ModelsT>[M]>, // TODO: optional primary key only
@@ -268,8 +272,8 @@ export class Canvas<
 		primaryKey: string,
 	) => Promise<SignedMessage<Action, unknown> & { result: unknown }>
 
-	private readonly controller = new AbortController()
-	private readonly log = logger("canvas:core")
+	protected readonly controller = new AbortController()
+	protected readonly log = logger("canvas:core")
 	private lastMessage: number | null = null
 
 	private libp2p: Libp2p | null = null
@@ -277,7 +281,7 @@ export class Canvas<
 	private wsListen: { port: number } | null = null
 	private wsConnect: { url: string } | null = null
 
-	private constructor(
+	protected constructor(
 		public readonly signers: SignerCache,
 		public readonly messageLog: AbstractGossipLog<MessageType>,
 		private readonly runtime: Runtime,
@@ -293,9 +297,7 @@ export class Canvas<
 
 		this.messageLog.addEventListener("message", (event) => (this.lastMessage = Date.now()))
 
-		const actionCache = {} as {
-			[K in keyof ActionsT]: (signer: SessionSigner<any>, db: ModelAPI<DeriveModelTypes<ModelsT>>, ...args: any) => any
-		}
+		const actionCache = {} as GetActionsType<ModelsT, InstanceT>
 
 		for (const name of runtime.actionNames) {
 			const action = async (signer: SessionSigner<any> | null, ...args: any) => {
@@ -349,22 +351,22 @@ export class Canvas<
 			Object.assign(this.actions, { [name]: action.bind(this, null) })
 		}
 
-		this.as = (signer: SessionSigner<any>) => {
-			return mapValues(actionCache, (action) => action.bind(this, signer)) as {
-				[K in keyof ActionsT]: ActionsT[K] extends ActionImplementation<ModelsT, infer Args, infer Result>
-					? ActionAPI<Args, Result>
-					: never
-			}
-		}
+		this.as = (signer: SessionSigner<any>) =>
+			mapValues(actionCache, (action) => action.bind(this, signer)) as GetActionsType<ModelsT, InstanceT>
 
 		this.create = <T extends string>(model: string, modelValue: Partial<DeriveModelTypes<ModelsT>[T]>) => {
-			return this.actions[`create${capitalize(model)}`].call(this, modelValue)
+			const { [`${model}/create`]: action } = this.actions as Record<string, ActionAPI>
+			return action.call(this, modelValue)
 		}
+
 		this.update = <T extends string>(model: T, modelValue: Partial<DeriveModelTypes<ModelsT>[T]>) => {
-			return this.actions[`update${capitalize(model)}`].call(this, modelValue)
+			const { [`${model}/update`]: action } = this.actions as Record<string, ActionAPI>
+			return action.call(this, modelValue)
 		}
+
 		this.delete = (modelName: string, primaryKey: string) => {
-			return this.actions[`delete${capitalize(modelName)}`].call(this, primaryKey)
+			const { [`${modelName}/delete`]: action } = this.actions as Record<string, ActionAPI>
+			return action.call(this, primaryKey)
 		}
 	}
 
@@ -397,7 +399,7 @@ export class Canvas<
 	}
 
 	public getContract() {
-		return this.runtime.contract
+		return ""
 	}
 
 	public getSchema(internal?: false) {

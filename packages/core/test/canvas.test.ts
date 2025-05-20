@@ -2,40 +2,43 @@ import { randomUUID } from "node:crypto"
 import test, { ExecutionContext } from "ava"
 
 import { ethers } from "ethers"
+import { assert } from "@canvas-js/utils"
 
 import type { Action, Message, Session } from "@canvas-js/interfaces"
 import { ed25519 } from "@canvas-js/signatures"
 import { SIWESigner, Eip712Signer } from "@canvas-js/signer-ethereum"
 import { CosmosSigner } from "@canvas-js/signer-cosmos"
-import { Canvas } from "@canvas-js/core"
-import { assert } from "@canvas-js/utils"
+import { Canvas, ModelSchema } from "@canvas-js/core"
+import { Contract } from "@canvas-js/core/contract"
 
 const contract = `
-export const models = {
-  posts: {
-    id: "primary",
-    content: "string",
-    address: "string",
-    did: "string",
-    timestamp: "integer",
-    isVisible: "boolean",
-		metadata: "json"
-  },
-};
+import { Contract } from "@canvas-js/core/contract"
 
-export const actions = {
+export default class extends Contract {
+  static models = {
+    posts: {
+      id: "primary",
+      content: "string",
+      address: "string",
+      did: "string",
+      timestamp: "integer",
+      isVisible: "boolean",
+  		metadata: "json"
+    },
+  }
+
   async createPost(content, isVisible, metadata) {
     const { id, did, address, timestamp, db } = this
     const postId = [did, id].join("/")
     await db.transaction(() => db.set("posts", { id: postId, content, address, did, isVisible, timestamp, metadata }));
-  },
+  }
 
   async updatePost(postId, content, isVisible, metadata) {
     const { id, did, address, timestamp, db } = this
     const post = await db.get("posts", postId)
     if (post.did !== did) throw new Error("can only update own posts")
     await db.transaction(() => db.update("posts", { id: postId, content, isVisible, metadata }));
-  },
+  }
 
   async deletePost(key) {
     const { did, db } = this
@@ -44,9 +47,9 @@ export const actions = {
 		}
 
 		await db.delete("posts", key)
-  },
-};
-`.trim()
+  }
+}
+`
 
 const init = async (t: ExecutionContext) => {
 	const signer = new SIWESigner({ burner: true })
@@ -127,24 +130,30 @@ test("insert a message into an app with multiple signers", async (t) => {
 	const cosmosSigner = new CosmosSigner()
 
 	const getApp = async () => {
+		class MyApp extends Contract<typeof MyApp.models> {
+			static models = {} satisfies ModelSchema
+			async createPost(content: string) {
+				//
+			}
+		}
+
 		const app = await Canvas.initialize({
 			topic: "test",
-			contract: {
-				models: {},
-				actions: { createPost({ content }: { content: string }) {} },
-			},
+			contract: MyApp,
 			reset: true,
 			signers: [siweSigner, cosmosSigner],
 		})
+
 		t.teardown(() => app.stop())
 		return app
 	}
+
 	const a = await getApp()
 	const b = await getApp()
 
-	await a.as(siweSigner).createPost({ content: "hello siwe" })
-	await a.as(cosmosSigner).createPost({ content: "hello cosmos" })
-	await t.throwsAsync(() => a.as(eipSigner).createPost({ content: "hello eip712" }))
+	await a.as(siweSigner).createPost("hello siwe")
+	await a.as(cosmosSigner).createPost("hello cosmos")
+	await t.throwsAsync(() => a.as(eipSigner).createPost("hello eip712"))
 
 	const records = await a.messageLog.getMessages()
 	t.is(records.length, 4)
@@ -180,15 +189,16 @@ test("accept a manually encoded session/action with a legacy-style object arg", 
 
 	const signer = new SIWESigner({ burner: true })
 
+	class MyApp extends Contract<typeof MyApp.models> {
+		static models = {} satisfies ModelSchema
+
+		async createMessage(arg: string) {
+			t.deepEqual(arg, { objectArg: "1" })
+		}
+	}
+
 	const app = await Canvas.initialize({
-		contract: {
-			actions: {
-				createMessage(arg) {
-					t.deepEqual(arg, { objectArg: "1" })
-				},
-			},
-			models: {},
-		},
+		contract: MyApp,
 		topic: "com.example.app",
 		reset: true,
 		signers: [signer],
@@ -225,27 +235,28 @@ test("accept a manually encoded session/action with a legacy-style object arg", 
 })
 
 test("create an app with an inline contract", async (t) => {
+	class MyApp extends Contract<typeof MyApp.models> {
+		static models = {
+			posts: {
+				id: "primary",
+				content: "string",
+				timestamp: "integer",
+				address: "string",
+			},
+		} satisfies ModelSchema
+
+		async createPost({ content }: { content: string }) {
+			const { id, did, timestamp, db } = this
+			const postId = [did, id].join("/")
+			await db.set("posts", { id: postId, content, timestamp, address: did })
+			return content
+		}
+	}
+
 	const wallet = ethers.Wallet.createRandom()
 	const app = await Canvas.initialize({
 		topic: "com.example.app",
-		contract: {
-			models: {
-				posts: {
-					id: "primary",
-					content: "string",
-					timestamp: "integer",
-					address: "string",
-				},
-			},
-			actions: {
-				async createPost({ content }: { content: string }) {
-					const { id, did, timestamp, db } = this
-					const postId = [did, id].join("/")
-					await db.set("posts", { id: postId, content, timestamp, address: did })
-					return content
-				},
-			},
-		},
+		contract: MyApp,
 		signers: [new SIWESigner({ signer: wallet })],
 	})
 
@@ -263,46 +274,50 @@ test("create an app with an inline contract", async (t) => {
 })
 
 test("merge and update into a value set by another action", async (t) => {
+	class MyApp extends Contract<typeof MyApp.models> {
+		static models = {
+			game: { id: "primary", state: "json", label: "string" },
+		} satisfies ModelSchema
+
+		async createGame() {
+			await this.db.transaction(() =>
+				this.db.set("game", {
+					id: "0",
+					state: { started: false, player1: "foo", player2: "bar" },
+					label: "foobar",
+				}),
+			)
+		}
+
+		async updateGame() {
+			await this.db.transaction(() =>
+				this.db.merge("game", {
+					id: "0",
+					state: { started: true } as any,
+					label: "foosball",
+				}),
+			)
+		}
+
+		async updateGameMultipleMerges() {
+			await this.db.transaction(async () => {
+				await this.db.merge("game", { id: "0", state: { extra1: { a: 1, b: 1 } } })
+				await this.db.merge("game", { id: "0", state: { extra2: "b" } })
+				await this.db.merge("game", { id: "0", state: { extra3: null, extra1: { b: 2, c: 3 } } })
+			})
+		}
+
+		async updateGameMultipleUpdates() {
+			await this.db.transaction(async () => {
+				await this.db.update("game", { id: "0", state: { extra1: { a: 1, b: 2 } } })
+				await this.db.update("game", { id: "0", state: { extra3: null, extra1: { b: 2, c: 3 } } })
+			})
+		}
+	}
+
 	const app = await Canvas.initialize({
 		topic: "com.example.app",
-		contract: {
-			models: {
-				game: { id: "primary", state: "json", label: "string" },
-			},
-			actions: {
-				async createGame() {
-					await this.db.transaction(() =>
-						this.db.set("game", {
-							id: "0",
-							state: { started: false, player1: "foo", player2: "bar" },
-							label: "foobar",
-						}),
-					)
-				},
-				async updateGame() {
-					await this.db.transaction(() =>
-						this.db.merge("game", {
-							id: "0",
-							state: { started: true } as any,
-							label: "foosball",
-						}),
-					)
-				},
-				async updateGameMultipleMerges() {
-					await this.db.transaction(async () => {
-						await this.db.merge("game", { id: "0", state: { extra1: { a: 1, b: 1 } } })
-						await this.db.merge("game", { id: "0", state: { extra2: "b" } })
-						await this.db.merge("game", { id: "0", state: { extra3: null, extra1: { b: 2, c: 3 } } })
-					})
-				},
-				async updateGameMultipleUpdates() {
-					await this.db.transaction(async () => {
-						await this.db.update("game", { id: "0", state: { extra1: { a: 1, b: 2 } } })
-						await this.db.update("game", { id: "0", state: { extra3: null, extra1: { b: 2, c: 3 } } })
-					})
-				},
-			},
-		},
+		contract: MyApp,
 	})
 
 	t.teardown(() => app.stop())
@@ -347,32 +362,34 @@ test("merge and update into a value set by another action", async (t) => {
 })
 
 test("merge and get execute in order", async (t) => {
+	class MyApp extends Contract<typeof MyApp.models> {
+		static models = {
+			test: { id: "primary", foo: "string?", bar: "string?", qux: "string?" },
+		} satisfies ModelSchema
+
+		async testMerges() {
+			return await this.db.transaction(async () => {
+				await this.db.set("test", { id: "0", foo: null, bar: null, qux: "foo" })
+				await this.db.merge("test", { id: "0", foo: "foo", qux: "qux" })
+				await this.db.merge("test", { id: "0", bar: "bar" })
+				return await this.db.get("test", "0")
+			})
+		}
+
+		async testGet(): Promise<any> {
+			return await this.db.transaction(async () => {
+				await this.db.set("test", { id: "1", foo: null, bar: null, qux: "foo" })
+				const result = await this.db.get("test", "1")
+				await this.db.merge("test", { id: "1", foo: "foo", qux: "qux" })
+				await this.db.merge("test", { id: "1", bar: "bar" })
+				return result
+			})
+		}
+	}
+
 	const app = await Canvas.initialize({
 		topic: "com.example.app",
-		contract: {
-			models: {
-				test: { id: "primary", foo: "string?", bar: "string?", qux: "string?" },
-			},
-			actions: {
-				async testMerges() {
-					return await this.db.transaction(async () => {
-						await this.db.set("test", { id: "0", foo: null, bar: null, qux: "foo" })
-						await this.db.merge("test", { id: "0", foo: "foo", qux: "qux" })
-						await this.db.merge("test", { id: "0", bar: "bar" })
-						return await this.db.get("test", "0")
-					})
-				},
-				async testGet(): Promise<any> {
-					return await this.db.transaction(async () => {
-						await this.db.set("test", { id: "1", foo: null, bar: null, qux: "foo" })
-						const result = await this.db.get("test", "1")
-						await this.db.merge("test", { id: "1", foo: "foo", qux: "qux" })
-						await this.db.merge("test", { id: "1", bar: "bar" })
-						return result
-					})
-				},
-			},
-		},
+		contract: MyApp,
 	})
 
 	t.teardown(() => app.stop())
@@ -401,40 +418,39 @@ test("merge and get execute in order", async (t) => {
 })
 
 test("get a value set by another action", async (t) => {
-	const wallet = ethers.Wallet.createRandom()
+	class MyApp extends Contract<typeof MyApp.models> {
+		static models = {
+			user: { id: "primary", name: "string" },
+			post: { id: "primary", from: "@user", content: "string" },
+		} satisfies ModelSchema
 
-	const app = await Canvas.initialize<{
-		user: { id: "primary"; name: "string" }
-		post: { id: "primary"; from: "@user"; content: "string" }
-	}>({
+		async createUser({ name }: { name: string }) {
+			const { did, db } = this
+			await db.set("user", { id: did, name })
+		}
+
+		async createPost({ content }: { content: string }) {
+			const { id, did, db } = this
+			const user = await db.get("user", did)
+			assert(user !== null)
+			await db.set("post", { id, from: did, content })
+		}
+
+		async deletePost({ id }: { id: string }) {
+			const { did, db } = this
+			const post = await db.get("post", id)
+			if (post !== null) {
+				assert(post.from === did, "cannot delete others' posts")
+				await db.delete("post", id)
+			}
+		}
+	}
+
+	const wallet = ethers.Wallet.createRandom()
+	const app = await Canvas.initialize({
 		topic: "com.example.app",
 		signers: [new SIWESigner({ signer: wallet })],
-		contract: {
-			models: {
-				user: { id: "primary", name: "string" },
-				post: { id: "primary", from: "@user", content: "string" },
-			},
-			actions: {
-				async createUser({ name }: { name: string }) {
-					const { did, db } = this
-					await db.set("user", { id: did, name })
-				},
-				async createPost({ content }: { content: string }) {
-					const { id, did, db } = this
-					const user = await db.get("user", did)
-					assert(user !== null)
-					await db.set("post", { id, from: did, content })
-				},
-				async deletePost({ id }: { id: string }) {
-					const { did, db } = this
-					const post = await db.get("post", id)
-					if (post !== null) {
-						assert(post.from === did, "cannot delete others' posts")
-						await db.delete("post", id)
-					}
-				},
-			},
-		},
+		contract: MyApp,
 	})
 
 	t.teardown(() => app.stop())
@@ -505,4 +521,67 @@ test("open custom modeldb tables", async (t) => {
 	const id = randomUUID()
 	await app.db.set("widgets", { id, name: "foobar" })
 	t.deepEqual(await app.db.get("widgets", id), { id, name: "foobar" })
+})
+
+test("class function runtime", async (t) => {
+	class MyApp extends Contract<typeof MyApp.models> {
+		static models = {
+			posts: {
+				id: "primary",
+				content: "string",
+				address: "string",
+				did: "string",
+				timestamp: "integer",
+				isVisible: "boolean",
+			},
+		} satisfies ModelSchema
+
+		async createPost(content: string, isVisible: boolean) {
+			const { id, did, address, timestamp, db } = this
+			const postId = [did, id].join("/")
+			await db.transaction(() => db.set("posts", { id: postId, content, address, did, isVisible, timestamp }))
+		}
+
+		async updatePost(postId: string, content: string, isVisible: boolean) {
+			const { id, did, address, timestamp, db } = this
+			const post = await db.get("posts", postId)
+			if (post?.did !== did) throw new Error("can only update own posts")
+			await db.transaction(() => db.update("posts", { id: postId, content, isVisible }))
+		}
+
+		async deletePost(key: string) {
+			const { did, db } = this
+			if (!key.startsWith(did + "/")) {
+				throw new Error("unauthorized")
+			}
+
+			await db.delete("posts", key)
+		}
+	}
+
+	const app = await Canvas.initialize({
+		topic: "com.example.app",
+		contract: MyApp,
+	})
+
+	t.teardown(() => app.stop())
+
+	const { id, message } = await app.actions.createPost("hello", true)
+
+	t.log(`applied action ${id}`)
+	const postId = [message.payload.did, id].join("/")
+	const value = await app.db.get("posts", postId)
+	t.is(value?.content, "hello")
+
+	const [clock] = await app.messageLog.getClock()
+	t.is(clock, 3)
+
+	const { id: id2 } = await app.actions.createPost("bumping this thread again", true)
+	t.log(`applied action ${id2}`)
+	const [clock2] = await app.messageLog.getClock()
+	t.is(clock2, 4)
+
+	const { id: id3 } = await app.actions.updatePost(postId, "update", false)
+	const [clock3] = await app.messageLog.getClock()
+	t.is(clock3, 5)
 })

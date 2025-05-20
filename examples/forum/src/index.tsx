@@ -14,7 +14,7 @@ import { useCanvas, AppInfo, AuthProvider } from "@canvas-js/hooks"
 
 import { App } from "./App.js"
 import { AppContext } from "./AppContext.js"
-import { models, actions } from "./contract.js"
+import Forum from "./contract.js"
 
 const wsURL =
 	document.location.hostname === "localhost"
@@ -33,15 +33,15 @@ const config = {
 
 export const ADMIN_DID = "did:pkh:eip155:1:0x34C3A5ea06a3A67229fb21a7043243B0eB3e853f"
 
-export type AppT = Canvas<typeof models, typeof actions>
+export type AppT = Canvas<typeof Forum.models, Forum>
 
 const Container: React.FC<{}> = ({}) => {
 	const [isInfoOpen, setIsInfoOpen] = useState<boolean>(false)
 
-	const { app, ws } = useCanvas<typeof models, typeof actions>(wsURL, {
+	const { app, ws } = useCanvas(wsURL, {
 		signers: [new SIWESigner(), new SIWFSigner()],
 		topic: "forum-example.canvas.xyz",
-		contract: { models, actions },
+		contract: Forum,
 		// reset: true,
 	})
 
