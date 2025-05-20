@@ -9,7 +9,7 @@ import { useCanvas, AuthProvider, useLiveQuery } from "@canvas-js/hooks"
 
 import { AppContext } from "./AppContext.js"
 
-import refs, { models } from "./refs.js"
+import { ModelTypes, models } from "./refs.js"
 
 const wsURL =
 	document.location.hostname === "localhost"
@@ -53,8 +53,20 @@ const Container: React.FC<{}> = ({}) => {
 								<div className="flex space-x-3">
 									<button
 										onClick={async () => {
-											const item = {}
-											app.actions.createRef(item)
+											const item: Omit<ModelTypes["ref"], "id"> = {
+												creator: await app.signers.getFirst().getDid(),
+												type: "place",
+												title: "Test Place",
+												image: null,
+												location: "New York",
+												url: null,
+												meta: null,
+												created: new Date().toISOString(),
+												updated: null,
+												deleted: null,
+											}
+											await app.create("ref", item)
+											console.log('created ref')
 										}}
 										className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md text-white"
 									>
