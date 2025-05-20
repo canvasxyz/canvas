@@ -256,6 +256,7 @@ export class Canvas<
 
 	public readonly db: AbstractModelDB
 	public readonly actions = {} as GetActionsType<ModelsT, InstanceT>
+	public signerKeys: string[]
 
 	public readonly as: (signer: SessionSigner<any>) => GetActionsType<ModelsT, InstanceT>
 
@@ -288,6 +289,7 @@ export class Canvas<
 	) {
 		super()
 		this.db = messageLog.db
+		this.signerKeys = this.signers.getAll().map((s) => s.key)
 
 		this.messageLog.addEventListener("message", (event) => this.safeDispatchEvent("message", event))
 		this.messageLog.addEventListener("commit", (event) => this.safeDispatchEvent("commit", event))
@@ -460,6 +462,11 @@ export class Canvas<
 
 	public updateSigners(signers: SessionSigner[]) {
 		this.signers.updateSigners(signers)
+		this.signerKeys = this.signers.getAll().map((s) => s.key)
+	}
+
+	public getSigners() {
+		return this.signers.getAll()
 	}
 
 	public get topic(): string {
