@@ -1,3 +1,3 @@
-export { ConnectSIWE } from "./ConnectSIWE.js"
-export { ConnectSIWF } from "./ConnectSIWF.js"
+export { useSIWE } from "./ConnectSIWE.js"
+export { useSIWF } from "./ConnectSIWF.js"
 export { AuthContext, AuthProvider } from "../AuthContext.js"

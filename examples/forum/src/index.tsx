@@ -9,7 +9,7 @@ import { LuUnplug } from "react-icons/lu"
 
 import { Canvas } from "@canvas-js/core"
 import { SIWESigner, SIWFSigner } from "@canvas-js/signer-ethereum"
-import { ConnectSIWE, ConnectSIWF } from "@canvas-js/hooks/components"
+import { useSIWE, useSIWF } from "@canvas-js/hooks/components"
 import { useCanvas, AppInfo, AuthProvider } from "@canvas-js/hooks"
 
 import { App } from "./App.js"
@@ -44,6 +44,9 @@ const Container: React.FC<{}> = ({}) => {
 		contract: Forum,
 		// reset: true,
 	})
+
+	const { ConnectSIWE } = useSIWE(app)
+	const { ConnectSIWF } = useSIWF(app)
 
 	return (
 		<AppContext.Provider value={{ app: app ?? null }}>
@@ -82,8 +85,8 @@ const Container: React.FC<{}> = ({}) => {
 									}}
 								/>
 								<div className="flex flex-col break-all">
-									<ConnectSIWE app={app} />
-									<ConnectSIWF app={app} />
+									<ConnectSIWE />
+									<ConnectSIWF />
 								</div>
 								<div className="block mt-4 text-gray-600 text-center text-sm">
 									{app.hasSession() ? "Logged in" : "Logged out"}

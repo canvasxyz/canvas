@@ -10,9 +10,13 @@ interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType>({
 	sessionSigner: null,
-	setSessionSigner: () => {},
+	setSessionSigner: () => {
+		throw new Error('AuthProvider not initialized, useSIWE/useSIWF must be called inside the AuthProvider.')
+	},
 	address: null,
-	setAddress: () => {},
+	setAddress: () => {
+		throw new Error('AuthProvider not initialized, useSIWE/useSIWF must be called inside the AuthProvider.')
+	},
 })
 
 interface AuthProviderProps {

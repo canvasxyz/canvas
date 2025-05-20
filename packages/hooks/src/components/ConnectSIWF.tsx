@@ -9,11 +9,7 @@ import { sdk } from "@farcaster/frame-sdk"
 import { bytesToHex } from "@noble/hashes/utils"
 import { AuthContext } from "../AuthContext.js"
 
-export interface ConnectSIWFProps {
-	app: Canvas<any>
-}
-
-export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ app }) => {
+export const useSIWF = (app?: Canvas<any>) => {
 	const { sessionSigner, setSessionSigner, address, setAddress } = useContext(AuthContext)
 
 	useEffect(() => {
@@ -46,7 +42,7 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ app }) => {
 	}, [app, app?.topic, sessionSigner])
 
 	useEffect(() => {
-		if (initializedRef.current) return
+		if (initializedRef.current || !app) return
 		initializedRef.current = true
 
 		if (!app || !app.topic) return
@@ -173,63 +169,85 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ app }) => {
 		app.updateSigners([...otherSigners, new SIWFSigner()])
 	}, [app, app?.topic, sessionSigner])
 
-	if (error !== null) {
-		return (
-			<div className="p-2 border rounded bg-red-100 text-sm">
-				<code>{error.message}</code>
-			</div>
-		)
-	} else if (!newSessionPrivateKey || (!requestId && !nonce) || !app) {
-		return (
-			<div className="p-2 border rounded bg-gray-200">
-				<button disabled>Loading...</button>
-			</div>
-		)
-	} else {
-		return (
-			<div style={{ marginTop: "12px", right: "12px" }}>
-				{/* TODO: combine these states, currently Canvas logins and Farcaster logins are separate. */}
-				{canvasIsAuthenticated && (
-					<div>
+	const ConnectSIWF = () => {
+		if (!app) {
+			return (
+				<div className="p-2 border rounded bg-red-100 text-sm">
+					<code>App not initialized</code>
+				</div>
+			)
+		}
+
+		if (error !== null) {
+			return (
+				<div className="p-2 border rounded bg-red-100 text-sm">
+					<code>{error.message}</code>
+				</div>
+			)
+		} else if (!newSessionPrivateKey || (!requestId && !nonce) || !app) {
+			return (
+				<div className="p-2 border rounded bg-gray-200">
+					<button disabled>Loading...</button>
+				</div>
+			)
+		} else {
+			return (
+				<div style={{ marginTop: "12px", right: "12px" }}>
+					{canvasIsAuthenticated && (
+						<div>
+							<button
+								type="submit"
+								className="w-full p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200"
+								onClick={signOut}
+							>
+								Disconnect Farcaster
+							</button>
+						</div>
+					)}
+					{farcasterIsAuthenticated && (
+						<p>
+							Created new Farcaster session: {displayName} (FID: {fid}, Custody: {custody?.slice(0, 6)})
+						</p>
+					)}
+					{/* frame login */}
+					{nonce && !farcasterIsAuthenticated && !canvasIsAuthenticated && (
 						<button
 							type="submit"
 							className="w-full p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200"
-							onClick={signOut}
+							onClick={frameSignIn}
 						>
-							Disconnect Farcaster
+							Sign in with Farcaster (Frame)
 						</button>
-					</div>
-				)}
-				{farcasterIsAuthenticated && (
-					<p>
-						Created new Farcaster session: {displayName} (FID: {fid}, Custody: {custody?.slice(0, 6)})
-					</p>
-				)}
-				{/* frame login */}
-				{nonce && !farcasterIsAuthenticated && !canvasIsAuthenticated && (
-					<button
-						type="submit"
-						className="w-full p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200"
-						onClick={frameSignIn}
-					>
-						Sign in with Farcaster (Frame)
-					</button>
-				)}
-				{/* non-frame login */}
-				{requestId && !farcasterIsAuthenticated && !canvasIsAuthenticated && (
-					<SignInButton
-						requestId={requestId}
-						onSuccess={browserSignIn}
-						onError={(error: AuthClientError | undefined) => {
-							console.log("Browser SIWF login error:", error)
-						}}
-						onSignOut={() => {
-							setAddress(null)
-							setSessionSigner(null)
-						}}
-					/>
-				)}
-			</div>
-		)
+					)}
+					{/* non-frame login */}
+					{requestId && !farcasterIsAuthenticated && !canvasIsAuthenticated && (
+						<SignInButton
+							requestId={requestId}
+							onSuccess={browserSignIn}
+							onError={(error: AuthClientError | undefined) => {
+								console.log("Browser SIWF login error:", error)
+							}}
+							onSignOut={() => {
+								setAddress(null)
+								setSessionSigner(null)
+							}}
+						/>
+					)}
+				</div>
+			)
+		}
+	}
+
+	return {
+		ConnectSIWF,
+		address,
+		error,
+		farcasterIsAuthenticated,
+		canvasIsAuthenticated,
+		profile: { fid, displayName, custody },
+		signOut,
+		frameSignIn,
+		browserSignIn,
+		isInitialized: !!app
 	}
 }

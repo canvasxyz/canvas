@@ -14,15 +14,14 @@ export interface ConnectSIWEProps {
 	app: Canvas<any>
 }
 
-export const ConnectSIWE: React.FC<ConnectSIWEProps> = ({ app }) => {
+export const useSIWE = (app?: Canvas<any>) => {
 	const { sessionSigner, setSessionSigner, address, setAddress } = useContext(AuthContext)
-
 	const [provider, setProvider] = useState<BrowserProvider | null>(null)
 	const [error, setError] = useState<Error | null>(null)
 
 	const connect = useCallback(
 		async (provider: BrowserProvider | null, isBrowserInit?: boolean) => {
-			if (app === null) {
+			if (!app) {
 				setError(new Error("app not initialized"))
 				return
 			}
@@ -54,14 +53,19 @@ export const ConnectSIWE: React.FC<ConnectSIWEProps> = ({ app }) => {
 			const otherSigners = app.signers.getAll().filter((s) => !(s instanceof SIWESigner))
 			otherSigners.forEach((s) => s.clearSession(app.topic))
 			app.updateSigners([signer, ...otherSigners])
+			console.log('s', signer)
 			setSessionSigner(signer)
+			console.log('ss1', sessionSigner)
+			setTimeout(() => {
+				console.log(sessionSigner)
+			}, 100)
 		},
 		[app, provider],
 	)
 
 	const initialRef = useRef(false)
 	useEffect(() => {
-		if (initialRef.current) {
+		if (initialRef.current || !app) {
 			return
 		}
 
@@ -81,47 +85,68 @@ export const ConnectSIWE: React.FC<ConnectSIWEProps> = ({ app }) => {
 
 		// automatically log back in
 		connect(provider, true)
-	}, [])
+	}, [app])
 
 	const disconnect = useCallback(async () => {
-		if (app?.topic) sessionSigner?.clearSession(app?.topic)
+		if (!app?.topic) return
+		sessionSigner?.clearSession(app.topic)
 		setAddress(null)
 		setSessionSigner(null)
 		const otherSigners = app.signers.getAll().filter((s) => !(s instanceof SIWESigner))
-		app?.updateSigners([...otherSigners, new SIWESigner()])
+		app.updateSigners([...otherSigners, new SIWESigner()])
 	}, [app, sessionSigner])
 
-	if (error !== null) {
-		return (
-			<div className="p-2 border rounded bg-red-100 text-sm">
-				<code>{error.message}</code>
-			</div>
-		)
-	} else if (provider === null) {
-		return (
-			<div className="p-2 border rounded bg-gray-200">
-				<button disabled>Loading...</button>
-			</div>
-		)
-	} else if (address !== null && sessionSigner instanceof SIWESigner) {
-		return (
-			<button
-				onClick={() => disconnect()}
-				className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200"
-			>
-				Disconnect ETH wallet
-			</button>
-		)
-	} else {
-		return (
-			<button
-				onClick={() => {
-					connect(new BrowserProvider(window.ethereum!))
-				}}
-				className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200"
-			>
-				Connect ETH wallet
-			</button>
-		)
+	const ConnectSIWE = () => {
+		console.log('ss2', sessionSigner)
+		if (!app) {
+			return (
+				<div className="p-2 border rounded bg-red-100 text-sm">
+					<code>App not initialized</code>
+				</div>
+			)
+		} else if (error !== null) {
+			return (
+				<div className="p-2 border rounded bg-red-100 text-sm">
+					<code>{error.message}</code>
+				</div>
+			)
+		} else if (provider === null) {
+			return (
+				<div className="p-2 border rounded bg-gray-200">
+					<button disabled>Loading...</button>
+				</div>
+			)
+		} else if (address !== null && sessionSigner instanceof SIWESigner) {
+			return (
+				<button
+					onClick={() => disconnect()}
+					className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200"
+				>
+					Disconnect ETH wallet
+				</button>
+			)
+		} else {
+			return (
+				<button
+					onClick={() => {
+						connect(new BrowserProvider(window.ethereum!))
+					}}
+					className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200"
+				>
+					Connect ETH wallet
+				</button>
+			)
+		}
+	}
+
+	return {
+		ConnectSIWE,
+		address,
+		error,
+		provider,
+		connect,
+		disconnect,
+		sessionSigner,
+		isInitialized: !!app
 	}
 }

@@ -4,7 +4,7 @@ import React from "react"
 import ReactDOM from "react-dom/client"
 
 import { SIWESigner } from "@canvas-js/signer-ethereum"
-import { ConnectSIWE } from "@canvas-js/hooks/components"
+import { useSIWE } from "@canvas-js/hooks/components"
 import { useCanvas, AuthProvider } from "@canvas-js/hooks"
 
 import { App } from "./App.js"
@@ -23,6 +23,8 @@ const Container: React.FC<{}> = ({}) => {
 		contract: Counter,
 	})
 
+	const { ConnectSIWE } = useSIWE(app)
+
 	return (
 		<AppContext.Provider value={{ app: app ?? null }}>
 			<AuthProvider>
@@ -34,7 +36,7 @@ const Container: React.FC<{}> = ({}) => {
 								{ws.error ? <span className="text-red-500 ml-1.5">Connection error</span> : ""}
 							</div>
 							<div className="p-2">
-								<ConnectSIWE app={app} />
+								<ConnectSIWE />
 							</div>
 						</div>
 						<App app={app} />
