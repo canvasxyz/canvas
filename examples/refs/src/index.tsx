@@ -1,41 +1,42 @@
 import "../styles.css"
 
-import React from "react"
+import React, { useEffect } from "react"
 import ReactDOM from "react-dom/client"
 
 import { SIWESigner } from "@canvas-js/signer-ethereum"
-import { ConnectSIWE } from "@canvas-js/hooks/components"
+import { useSIWE } from "@canvas-js/hooks/components"
 import { useCanvas, AuthProvider, useLiveQuery } from "@canvas-js/hooks"
 
 import { AppContext } from "./AppContext.js"
 
 import { ModelTypes, models } from "./refs.js"
+import { MyProfile } from "./MyProfile.js"
 
 // CreateRefForm component for creating a new ref
-const CreateRefForm: React.FC<{ app: ReturnType<typeof useCanvas<typeof models>>['app'] }> = ({ app }) => {
-	const [title, setTitle] = React.useState(() => "Example Ref");
-	const [type, setType] = React.useState("place");
-	const [location, setLocation] = React.useState("New York, NY");
-	const [image, setImage] = React.useState<string | null>(null);
-	const [url, setUrl] = React.useState<string | null>(null);
-	const [meta, setMeta] = React.useState<string | null>(null);
-	const [loading, setLoading] = React.useState(false);
-	const [error, setError] = React.useState<string | null>(null);
-	const [success, setSuccess] = React.useState(false);
+const CreateRefForm: React.FC<{ app: ReturnType<typeof useCanvas<typeof models>>["app"] }> = ({ app }) => {
+	const [title, setTitle] = React.useState(() => "Example Ref")
+	const [type, setType] = React.useState("place")
+	const [location, setLocation] = React.useState("New York, NY")
+	const [image, setImage] = React.useState<string | null>(null)
+	const [url, setUrl] = React.useState<string | null>(null)
+	const [meta, setMeta] = React.useState<string | null>(null)
+	const [loading, setLoading] = React.useState(false)
+	const [error, setError] = React.useState<string | null>(null)
+	const [success, setSuccess] = React.useState(false)
 
 	const handleSubmit = async (e: React.FormEvent) => {
-		e.preventDefault();
-		setError(null);
-		setSuccess(false);
+		e.preventDefault()
+		setError(null)
+		setSuccess(false)
 		if (!app) {
-			setError("App not ready");
-			return;
+			setError("App not ready")
+			return
 		}
 		if (!title || !location) {
-			setError("Title and location are required");
-			return;
+			setError("Title and location are required")
+			return
 		}
-		setLoading(true);
+		setLoading(true)
 		try {
 			const item: Omit<ModelTypes["ref"], "id"> = {
 				creator: await app.signers.getFirst().getDid(),
@@ -48,21 +49,21 @@ const CreateRefForm: React.FC<{ app: ReturnType<typeof useCanvas<typeof models>>
 				created: new Date().toISOString(),
 				updated: null,
 				deleted: null,
-			};
-			await app.create("ref", item);
-			setSuccess(true);
-			setTitle("");
-			setType("place");
-			setLocation("");
-			setImage(null);
-			setUrl(null);
-			setMeta(null);
+			}
+			await app.create("ref", item)
+			setSuccess(true)
+			setTitle("")
+			setType("place")
+			setLocation("")
+			setImage(null)
+			setUrl(null)
+			setMeta(null)
 		} catch (err: any) {
-			setError(err.message || "Failed to create ref");
+			setError(err.message || "Failed to create ref")
 		} finally {
-			setLoading(false);
+			setLoading(false)
 		}
-	};
+	}
 
 	return (
 		<form onSubmit={handleSubmit} className="mb-4 space-y-4">
@@ -71,14 +72,14 @@ const CreateRefForm: React.FC<{ app: ReturnType<typeof useCanvas<typeof models>>
 					type="text"
 					placeholder="Title"
 					value={title}
-					onChange={e => setTitle(e.target.value)}
+					onChange={(e) => setTitle(e.target.value)}
 					className="px-2 py-1 rounded bg-gray-700 text-white w-full"
 					required
 					disabled={!app}
 				/>
 				<select
 					value={type}
-					onChange={e => setType(e.target.value)}
+					onChange={(e) => setType(e.target.value)}
 					className="px-2 py-1 rounded bg-gray-700 text-white w-full"
 					disabled={!app}
 				>
@@ -90,7 +91,7 @@ const CreateRefForm: React.FC<{ app: ReturnType<typeof useCanvas<typeof models>>
 					type="text"
 					placeholder="Location"
 					value={location}
-					onChange={e => setLocation(e.target.value)}
+					onChange={(e) => setLocation(e.target.value)}
 					className="px-2 py-1 rounded bg-gray-700 text-white w-full"
 					required
 					disabled={!app}
@@ -99,7 +100,7 @@ const CreateRefForm: React.FC<{ app: ReturnType<typeof useCanvas<typeof models>>
 					type="text"
 					placeholder="Image URL (optional)"
 					value={image ?? ""}
-					onChange={e => setImage(e.target.value || null)}
+					onChange={(e) => setImage(e.target.value || null)}
 					className="px-2 py-1 rounded bg-gray-700 text-white w-full"
 					disabled={!app}
 				/>
@@ -107,7 +108,7 @@ const CreateRefForm: React.FC<{ app: ReturnType<typeof useCanvas<typeof models>>
 					type="text"
 					placeholder="URL (optional)"
 					value={url ?? ""}
-					onChange={e => setUrl(e.target.value || null)}
+					onChange={(e) => setUrl(e.target.value || null)}
 					className="px-2 py-1 rounded bg-gray-700 text-white w-full"
 					disabled={!app}
 				/>
@@ -115,7 +116,7 @@ const CreateRefForm: React.FC<{ app: ReturnType<typeof useCanvas<typeof models>>
 					type="text"
 					placeholder="Meta (optional)"
 					value={meta ?? ""}
-					onChange={e => setMeta(e.target.value || null)}
+					onChange={(e) => setMeta(e.target.value || null)}
 					className="px-2 py-1 rounded bg-gray-700 text-white w-full"
 					disabled={!app}
 				/>
@@ -132,13 +133,13 @@ const CreateRefForm: React.FC<{ app: ReturnType<typeof useCanvas<typeof models>>
 				{success && <span className="text-green-400 text-sm">Created!</span>}
 			</div>
 		</form>
-	);
-};
+	)
+}
 
 // RefsList component for displaying refs
 const RefsList: React.FC<{ refs: ModelTypes["ref"][] }> = ({ refs }) => {
 	if (refs.length === 0) {
-		return <div className="text-gray-400 text-center py-4">No refs created yet</div>;
+		return <div className="text-gray-400 text-center py-4">No refs created yet</div>
 	}
 
 	return (
@@ -164,16 +165,12 @@ const RefsList: React.FC<{ refs: ModelTypes["ref"][] }> = ({ refs }) => {
 							)}
 							{ref.meta && <p className="text-gray-400 text-sm mt-1">{ref.meta}</p>}
 							<div className="text-gray-400 text-xs mt-2">
-								Created: {ref.created ? new Date(ref.created).toLocaleDateString() : 'Unknown date'}
+								Created: {ref.created ? new Date(ref.created).toLocaleDateString() : "Unknown date"}
 							</div>
 						</div>
 						<div className="w-24 h-24 shrink-0 rounded-md overflow-hidden bg-gray-600 relative">
 							{ref.image ? (
-								<img 
-									src={ref.image} 
-									alt={ref.title ?? undefined} 
-									className="w-full h-full object-cover"
-								/>
+								<img src={ref.image} alt={ref.title ?? undefined} className="w-full h-full object-cover" />
 							) : (
 								<div className="absolute inset-0 flex items-center justify-center">
 									<span className="text-gray-400 text-3xl">?</span>
@@ -184,8 +181,8 @@ const RefsList: React.FC<{ refs: ModelTypes["ref"][] }> = ({ refs }) => {
 				</div>
 			))}
 		</div>
-	);
-};
+	)
+}
 
 const wsURL =
 	document.location.hostname === "localhost"
@@ -200,34 +197,68 @@ const Container: React.FC<{}> = ({}) => {
 		// reset: true,
 	})
 
+	const { ConnectSIWE } = useSIWE(app)
+
 	const refs = useLiveQuery(app, "ref", {}) ?? []
+	const [did, setDid] = React.useState<string | null>(null)
+
+	useEffect(() => {
+		;(async () => {
+			if (!app) return
+
+			const signer = app.signers.getFirst()
+			console.log(app.signers.getAll(), signer.key, await signer.getDid())
+			if (signer) {
+				setDid(await signer.getDid())
+			}
+		})()
+	}, [app?.signerKeys])
 
 	return (
 		<AppContext.Provider value={{ app: app ?? null }}>
-			<AuthProvider>
-				{app && ws ? (
-					<main className="max-w-lg mx-auto my-6">
-						<div className="flex mb-5">
-							<div className="flex-1">
-								{error ? <span className="text-red-500 ml-1.5">{error.toString()}</span> : ""}
-								{ws.error ? <span className="text-red-500 ml-1.5">Connection error</span> : ""}
+			{app && ws ? (
+				<main className="max-w-5xl mx-auto my-6">
+					<div className="flex justify-end mb-6">
+						<ConnectSIWE />
+					</div>
+					<div className="flex mb-5">
+						<div className="flex-1">
+							{error ? <span className="text-red-500 ml-1.5">{error.toString()}</span> : ""}
+							{ws.error ? <span className="text-red-500 ml-1.5">Connection error</span> : ""}
+						</div>
+					</div>
+					<div className="flex gap-8">
+						{/* Left: Refs */}
+						<div className="flex-1 min-w-0">
+							{/* Create Ref Module */}
+							<div className="bg-gray-800 rounded-lg p-6 mb-6">
+								<h2 className="text-xl font-semibold mb-4 flex items-center">
+									<span className="mr-2">✨</span>
+									Create New Ref
+								</h2>
+								<CreateRefForm app={app} />
 							</div>
-							<div className="p-2">
-								<ConnectSIWE app={app} />
+
+							{/* Refs List Module */}
+							<div className="bg-gray-800 rounded-lg p-6">
+								<h2 className="text-xl font-semibold mb-4 flex items-center">
+									<span className="mr-2">📍</span>
+									All Refs
+								</h2>
+								<div>
+									<RefsList refs={refs} />
+								</div>
 							</div>
 						</div>
-						<div className="bg-gray-800 rounded-lg p-6">
-							<h2 className="text-xl font-semibold mb-3">Refs</h2>
-							<CreateRefForm app={app} />
-							<div className="mt-6">
-								<RefsList refs={refs} />
-							</div>
+						{/* Right: Profile */}
+						<div className="w-full max-w-sm">
+							<MyProfile app={app} did={did} />
 						</div>
-					</main>
-				) : (
-					<div className="text-center my-20 text-white">Connecting to {wsURL}...</div>
-				)}
-			</AuthProvider>
+					</div>
+				</main>
+			) : (
+				<div className="text-center my-20 text-white">Connecting to {wsURL}...</div>
+			)}
 		</AppContext.Provider>
 	)
 }
@@ -236,6 +267,8 @@ const root = ReactDOM.createRoot(document.getElementById("root")!)
 
 root.render(
 	<React.StrictMode>
-		<Container />
+		<AuthProvider>
+			<Container />
+		</AuthProvider>
 	</React.StrictMode>,
 )
