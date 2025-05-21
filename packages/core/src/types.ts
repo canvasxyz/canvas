@@ -44,10 +44,9 @@ export type GetActionsType<ModelsT extends ModelSchema, InstanceT extends Contra
 		infer Result
 	>
 		? ActionAPI<Args, Result>
-		: never
-	// : InstanceT[K] extends (this: Contract<ModelsT>, ...args: any[]) => infer Result
-	// 	? TypeError<"Contract actions must be marked `async`">
-	// 	: never
+		: InstanceT[K] extends (this: Contract<ModelSchema>, ...args: infer Args) => infer Result
+			? ActionAPI<Args, Result> // TypeError<"Contract actions must be marked `async`">
+			: never
 }
 
 export type ModelAPI<ModelTypes extends Record<string, ModelValue> = Record<string, ModelValue>> = {
