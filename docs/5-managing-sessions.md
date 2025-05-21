@@ -36,11 +36,14 @@ Each one will render a button, which toggles between logged-in and
 logged-out states, which you can customize with your own styles.
 
 ```ts
-import { ConnectSIWE } from "@canvas-js/hooks/components"
+import { useSIWE } from "@canvas-js/hooks/components"
 
 const MyComponent = () => {
 	const app = useCanvas(...)
 	const buttonStyles = { ... }
+
+  const { ConnectSIWE } = useSIWE(app)
+  const { ConnectSIWF } = useSIWF(app)
 
 	return <div className="user-login">
 		<ConnectSIWE app={app} buttonStyles={buttonStyles} />
