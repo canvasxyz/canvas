@@ -84,3 +84,23 @@ export type ActionContext<ModelTypes extends Record<string, ModelValue> = Record
 	timestamp: number
 	publicKey: string
 }
+
+// export type DeriveActions<T extends ModelSchema> = {
+// 	[K in keyof T as T[K] extends { $rules: any } ? `create${Capitalize<string & K>}` : never]: (
+// 		this: Contract<T>,
+// 		item: Partial<DeriveModelTypes<T>[K]>,
+// 	) => Promise<any>
+// } & {
+// 	[K in keyof T as T[K] extends { $rules: any } ? `update${Capitalize<string & K>}` : never]: (
+// 		this: Contract<T>,
+// 		item: DeriveModelTypes<T>[K],
+// 	) => Promise<any>
+// } & {
+// 	[K in keyof T as T[K] extends { $rules: any } ? `delete${Capitalize<string & K>}` : never]: (
+// 		this: Contract<T>,
+// 		id: string,
+// 	) => Promise<any>
+// }
+
+// export type DeriveContractClass<T extends ModelSchema = ModelSchema> = DeriveActions<T> &
+// 	ContractClass<T, Contract<T> & DeriveActions<T>>

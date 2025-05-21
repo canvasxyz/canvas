@@ -1,5 +1,5 @@
 import test from "ava"
-import Refs from "./refs.js"
+import Refs from "../src/refs.js"
 
 import { Canvas, DeriveModelTypes } from "@canvas-js/core"
 

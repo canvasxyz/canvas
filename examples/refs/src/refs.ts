@@ -1,4 +1,4 @@
-import type { ModelSchema, ModelInit } from "@canvas-js/core"
+import type { ModelSchema, ModelInit, DeriveModelTypes } from "@canvas-js/core"
 import { Contract } from "@canvas-js/core/contract"
 
 export const connection = {
@@ -70,6 +70,14 @@ export const ref = {
 	},
 } as const satisfies ModelInit
 
+export const models = {
+	connection,
+	profile,
+	ref,
+} as const satisfies ModelSchema
+
+export type ModelTypes = DeriveModelTypes<typeof models>
+
 export default class Refs extends Contract<typeof Refs.models> {
 	static models = {
 		connection,
@@ -77,3 +85,4 @@ export default class Refs extends Contract<typeof Refs.models> {
 		ref,
 	} satisfies ModelSchema
 }
+
