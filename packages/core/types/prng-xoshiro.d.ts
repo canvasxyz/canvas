@@ -1,5 +1,5 @@
-class Generator256 {
-	constructor(s1: bigint, s2: bigint, s3: bigint, s4: bigint) {}
+declare class Generator256 {
+	constructor(s1: bigint, s2: bigint, s3: bigint, s4: bigint)
 
 	/**
 	 * Returns a random BigInt in the range 0 to n (exclusive).
@@ -8,9 +8,8 @@ class Generator256 {
 	nextBigInt(n?: bigint): bigint
 }
 
-class Generator128 {
-	constructor() {}
-	constructor(seedLo: number, seedHi: number) {}
+declare class Generator128 {
+	constructor(seedLo: number, seedHi: number)
 
 	/**
 	 * Returns a random number in the range 0 to n (exclusive).
