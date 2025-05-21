@@ -1,6 +1,6 @@
 {
 	"name": "@canvas-js/client",
-	"version": "0.14.1-next.10",
+	"version": "0.15.0-next.1",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"type": "module",
 	"engines": {
@@ -19,7 +19,7 @@
 		"test": "ava"
 	},
 	"dependencies": {
-		"@canvas-js/interfaces": "0.14.1-next.10",
+		"@canvas-js/interfaces": "0.15.0-next.1",
 		"@canvas-js/utils": "1.0.0",
 		"@ipld/dag-json": "^10.2.3",
 		"@noble/hashes": "^1.7.1",
