@@ -1,4 +1,5 @@
 {
+	"private": true,
 	"name": "@canvas-js/refs-example",
 	"version": "0.14.1-next.10",
 	"type": "module",
