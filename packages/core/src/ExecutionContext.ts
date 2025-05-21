@@ -1,17 +1,16 @@
-import type { MessageType, SessionSigner } from "@canvas-js/interfaces"
+import { sha256 } from "@noble/hashes/sha256"
 
-import { Action } from "@canvas-js/interfaces"
+import type { MessageType, SessionSigner, Action } from "@canvas-js/interfaces"
 import {
 	ModelValue,
 	PropertyValue,
+	RelationValue,
+	PrimaryKeyValue,
 	validateModelValue,
 	updateModelValue,
 	mergeModelValue,
-	ReferenceValue,
-	PrimaryKeyValue,
 	isRelationValue,
 	equalReferences,
-	RelationValue,
 } from "@canvas-js/modeldb"
 import { AbstractGossipLog, SignedMessage } from "@canvas-js/gossiplog"
 import { assert, signalInvalidType } from "@canvas-js/utils"
@@ -19,6 +18,8 @@ import { assert, signalInvalidType } from "@canvas-js/utils"
 import { decodeRecordValue, getRecordId } from "./utils.js"
 
 import { View, TransactionalRead } from "./View.js"
+import { bytesToHex } from "@noble/hashes/utils"
+import { PRNG } from "./random.js"
 
 export class ExecutionContext extends View {
 	// recordId -> { version, value, csx }
@@ -38,12 +39,18 @@ export class ExecutionContext extends View {
 		}
 	> = new Map()
 
+	public readonly prng: PRNG
+
 	constructor(
 		public readonly messageLog: AbstractGossipLog<MessageType>,
 		public readonly signedMessage: SignedMessage<Action>,
 		public readonly signer: SessionSigner,
 	) {
 		super(messageLog, signedMessage.parents)
+
+		const hash = sha256(signedMessage.value)
+		const seed = BigInt("0x" + bytesToHex(hash.subarray(0, 8)))
+		this.prng = new PRNG(seed)
 	}
 
 	public get id() {

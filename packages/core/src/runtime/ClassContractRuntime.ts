@@ -85,7 +85,6 @@ export class ClassContractRuntime extends AbstractRuntime {
 	#thisHandle: QuickJSHandle | null = null
 	#transaction = false
 	#txnId = 0
-	#nextId: Uint8Array | null = null
 
 	constructor(
 		public readonly topic: string,
@@ -145,17 +144,15 @@ export class ClassContractRuntime extends AbstractRuntime {
 			}),
 
 			id: vm.context.newFunction("idgen", () => {
-				assert(this.#nextId !== null, "internal error - expected this.#nextId !== null")
-				this.#nextId = sha256(this.#nextId)
-				return vm.wrapValue(bytesToHex(this.#nextId.slice(0, 16)))
+				const prng = this.context.prng
+				const hi = prng.getUint64().toString(16).padStart(16, "0")
+				const lo = prng.getUint64().toString(16).padStart(16, "0")
+				return vm.context.newString(hi + lo)
 			}),
 
 			random: vm.context.newFunction("random", () => {
-				assert(this.#nextId !== null, "internal error - expected this.#nextId !== null")
-				this.#nextId = sha256(this.#nextId)
-				// use the first 4 bytes (32 bits) of the hash, normalized to [0,1]
-				const view = new DataView(this.#nextId.buffer, this.#nextId.byteOffset, 4)
-				return vm.wrapValue(view.getUint32(0, false) / 0xffffffff)
+				const prng = this.context.prng
+				return vm.context.newNumber(prng.getFloat())
 			}),
 		})
 
@@ -207,7 +204,6 @@ export class ClassContractRuntime extends AbstractRuntime {
 
 		try {
 			this.#txnId = 0
-			this.#nextId = encodeId(exec.id)
 			this.#context = exec
 			this.#thisHandle = thisHandle
 
@@ -217,7 +213,6 @@ export class ClassContractRuntime extends AbstractRuntime {
 			argHandles.forEach((handle: QuickJSHandle) => handle.dispose())
 			thisHandle.dispose()
 			this.#txnId = 0
-			this.#nextId = null
 			this.#context = null
 			this.#thisHandle = null
 		}

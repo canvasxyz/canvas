@@ -79,7 +79,6 @@ export class ClassFunctionRuntime extends AbstractRuntime {
 
 	#context: ExecutionContext | null = null
 	#txnId = 0
-	#nextId: Uint8Array | null = null
 	#transaction = false
 	#thisValue: BaseContract<ModelSchema> | null = null
 	#queue = new PQueue({ concurrency: 1 })
@@ -129,18 +128,13 @@ export class ClassFunctionRuntime extends AbstractRuntime {
 			},
 
 			id: () => {
-				if (this.#nextId === null) throw new Error("expected this.#nextId !== null")
-				this.#nextId = sha256(this.#nextId)
-				return bytesToHex(this.#nextId.slice(0, 16))
+				const prng = this.context.prng
+				const hi = prng.getUint64().toString(16).padStart(16, "0")
+				const lo = prng.getUint64().toString(16).padStart(16, "0")
+				return hi + lo
 			},
 
-			random: () => {
-				if (this.#nextId === null) throw new Error("expected this.#nextId !== null")
-				this.#nextId = sha256(this.#nextId)
-				// use the first 4 bytes (32 bits) of the hash, normalized to [0,1]
-				const view = new DataView(this.#nextId.buffer, this.#nextId.byteOffset, 4)
-				return view.getUint32(0, false) / 0xffffffff
-			},
+			random: () => this.context.prng.getFloat(),
 		}
 	}
 
@@ -182,7 +176,6 @@ export class ClassFunctionRuntime extends AbstractRuntime {
 
 		try {
 			this.#txnId = 0
-			this.#nextId = encodeId(exec.id)
 			this.#context = exec
 			this.#thisValue = thisValue
 
@@ -195,7 +188,6 @@ export class ClassFunctionRuntime extends AbstractRuntime {
 			throw err
 		} finally {
 			this.#txnId = 0
-			this.#nextId = null
 			this.#context = null
 			this.#thisValue = null
 		}

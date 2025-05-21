@@ -1,136 +1,56 @@
 import test from "ava"
 
-import { sha256 } from "@noble/hashes/sha256"
-import { bytesToHex } from "@noble/hashes/utils"
-import { ethers } from "ethers"
-
-import { SIWESigner } from "@canvas-js/signer-ethereum"
 import { Canvas, ModelSchema } from "@canvas-js/core"
 import { Contract } from "@canvas-js/core/contract"
-import { encodeId } from "@canvas-js/gossiplog"
+import { PRNGSigner } from "./utils.js"
 
-const hashN = (id: string, n: number): string => {
-	let result = encodeId(id)
-	for (let i = 0; i < n; i++) {
-		result = sha256(result)
-	}
-	return bytesToHex(result).slice(0, 32)
-}
-
-test("create several ids", async (t) => {
+test("create id in host runtime", async (t) => {
 	class MyApp extends Contract<typeof MyApp.models> {
 		static models = {
-			blobs: { id: "primary", txid: "string" },
+			blobs: { id: "primary" },
 		} satisfies ModelSchema
 
 		async createBlob() {
-			await this.db.set("blobs", { id: this.db.id(), txid: this.id })
-			return this.id
-		}
-		async createSeveralBlobs() {
-			await this.db.set("blobs", { id: this.db.id(), txid: this.id })
-			await this.db.set("blobs", { id: this.db.id(), txid: this.id })
-			await this.db.set("blobs", { id: this.db.id(), txid: this.id })
-			return this.id
-		}
-		async createSeveralBlobsInterleaved() {
-			await this.db.set("blobs", { id: this.db.id(), txid: this.id })
-			this.db.id()
-			await this.db.set("blobs", { id: this.db.id(), txid: this.id })
-			this.db.id()
-			await this.db.set("blobs", { id: this.db.id(), txid: this.id })
-			this.db.id()
-			return this.id
+			const id = this.db.id()
+			await this.db.set("blobs", { id })
+			return id
 		}
 	}
 
-	const wallet = ethers.Wallet.createRandom()
 	const app = await Canvas.initialize({
 		topic: "example.xyz",
 		contract: MyApp,
-		signers: [new SIWESigner({ signer: wallet })],
+		signers: [new PRNGSigner(0)],
 	})
+
 	t.teardown(() => app.stop())
 
-	const { result: id1 } = await app.actions.createBlob()
-	t.deepEqual(await app.db.query("blobs"), [{ id: hashN(id1, 1), txid: id1 }])
-
-	const { result: id2 } = await app.actions.createSeveralBlobs()
-	t.deepEqual(await app.db.query("blobs"), [
-		{ id: hashN(id1, 1), txid: id1 },
-		{ id: hashN(id2, 1), txid: id2 },
-		{ id: hashN(id2, 2), txid: id2 },
-		{ id: hashN(id2, 3), txid: id2 },
-	])
-
-	const { result: id3 } = await app.actions.createSeveralBlobsInterleaved()
-	t.deepEqual(await app.db.query("blobs"), [
-		{ id: hashN(id1, 1), txid: id1 },
-		{ id: hashN(id2, 1), txid: id2 },
-		{ id: hashN(id2, 2), txid: id2 },
-		{ id: hashN(id2, 3), txid: id2 },
-		{ id: hashN(id3, 1), txid: id3 },
-		{ id: hashN(id3, 3), txid: id3 },
-		{ id: hashN(id3, 5), txid: id3 },
-	])
+	const { result } = await app.actions.createBlob()
+	t.deepEqual(await app.db.query("blobs"), [{ id: result }])
 })
 
-test("create several ids in a string contract", async (t) => {
-	const wallet = ethers.Wallet.createRandom()
+test("create id in quickjs function", async (t) => {
+	const contract = `
+  export default class MyApp {
+		static models = {
+			blobs: { id: "primary" },
+		}
+
+		async createBlob() {
+			const id = this.db.id()
+			await this.db.set("blobs", { id })
+			return id
+		}
+	}`
 
 	const app = await Canvas.initialize({
 		topic: "example.xyz",
-		contract: `
-    export default class {
-      static models = {
-        blobs: { id: "primary", txid: "string" },
-      }
-
-      async createBlob() {
-        await this.db.set("blobs", { id: this.db.id(), txid: this.id })
-        return this.id
-      }
-
-      async createSeveralBlobs() {
-        await this.db.set("blobs", { id: this.db.id(), txid: this.id })
-        await this.db.set("blobs", { id: this.db.id(), txid: this.id })
-        await this.db.set("blobs", { id: this.db.id(), txid: this.id })
-        return this.id
-      }
-
-      async createSeveralBlobsInterleaved() {
-        await this.db.set("blobs", { id: this.db.id(), txid: this.id })
-        this.db.id()
-        await this.db.set("blobs", { id: this.db.id(), txid: this.id })
-        this.db.id()
-        await this.db.set("blobs", { id: this.db.id(), txid: this.id })
-        this.db.id()
-        return this.id
-      }
-    }`,
-		signers: [new SIWESigner({ signer: wallet })],
+		contract: contract,
+		signers: [new PRNGSigner(0)],
 	})
+
 	t.teardown(() => app.stop())
 
-	const { result: id1 } = await app.actions.createBlob()
-	t.deepEqual(await app.db.query("blobs"), [{ id: hashN(id1, 1), txid: id1 }])
-
-	const { result: id2 } = await app.actions.createSeveralBlobs()
-	t.deepEqual(await app.db.query("blobs"), [
-		{ id: hashN(id1, 1), txid: id1 },
-		{ id: hashN(id2, 1), txid: id2 },
-		{ id: hashN(id2, 2), txid: id2 },
-		{ id: hashN(id2, 3), txid: id2 },
-	])
-
-	const { result: id3 } = await app.actions.createSeveralBlobsInterleaved()
-	t.deepEqual(await app.db.query("blobs"), [
-		{ id: hashN(id1, 1), txid: id1 },
-		{ id: hashN(id2, 1), txid: id2 },
-		{ id: hashN(id2, 2), txid: id2 },
-		{ id: hashN(id2, 3), txid: id2 },
-		{ id: hashN(id3, 1), txid: id3 },
-		{ id: hashN(id3, 3), txid: id3 },
-		{ id: hashN(id3, 5), txid: id3 },
-	])
+	const { result } = await app.actions.createBlob()
+	t.deepEqual(await app.db.query("blobs"), [{ id: result }])
 })

@@ -68,6 +68,7 @@
 		"p-defer": "^4.0.1",
 		"p-queue": "^8.1.0",
 		"pg": "^8.15.6",
+		"prng-xoshiro": "^1.0.1",
 		"prom-client": "^15.1.2",
 		"quickjs-emscripten": "^0.31.0",
 		"uint8arraylist": "^2.4.8",
