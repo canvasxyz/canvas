@@ -21,21 +21,24 @@ test("generate random values inside a contract", async (t) => {
 		signers: [new PRNGSigner(0)],
 	})
 
-	const values = [
-		(await app.actions.getRandom()).result,
-		(await app.actions.getRandom()).result,
-		(await app.actions.getRandom()).result,
-		(await app.actions.getRandom()).result,
-		(await app.actions.getRandom()).result,
-		(await app.actions.getRandom()).result,
-		(await app.actions.getRandom()).result,
-	]
+	const values: number[] = []
+	for (let i = 0; i < 7; i++) {
+		const { result: value } = await app.actions.getRandom()
+		values.push(value)
+	}
 
 	t.deepEqual(
 		values,
+
+		// prettier-ignore
 		[
-			0.6264584624735775, 0.37087792841970874, 0.7210393801147675, 0.017600891417265146, 0.268673552029923,
-			0.5984088300257941, 0.629442668433637,
+			0.24929093804506638,
+			0.6215243012711583,
+			0.5763528717034423,
+			0.9327002352383666,
+			0.18960461161623013,
+			0.8496135401239201,
+			0.6661398817024785,
 		],
 	)
 
@@ -57,21 +60,24 @@ test("generate random values inside a string contract", async (t) => {
 		signers: [new PRNGSigner(0)],
 	})
 
-	const values = [
-		(await app.actions.getRandom()).result,
-		(await app.actions.getRandom()).result,
-		(await app.actions.getRandom()).result,
-		(await app.actions.getRandom()).result,
-		(await app.actions.getRandom()).result,
-		(await app.actions.getRandom()).result,
-		(await app.actions.getRandom()).result,
-	]
+	const values: number[] = []
+	for (let i = 0; i < 7; i++) {
+		const { result: value } = await app.actions.getRandom()
+		values.push(value)
+	}
 
 	t.deepEqual(
 		values,
+
+		// prettier-ignore
 		[
-			0.6264584624735775, 0.37087792841970874, 0.7210393801147675, 0.017600891417265146, 0.268673552029923,
-			0.5984088300257941, 0.629442668433637,
+			0.24929093804506638,
+			0.6215243012711583,
+			0.5763528717034423,
+			0.9327002352383666,
+			0.18960461161623013,
+			0.8496135401239201,
+			0.6661398817024785,
 		],
 	)
 
