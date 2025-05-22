@@ -1,4 +1,6 @@
 import { sha256 } from "@noble/hashes/sha256"
+import { bytesToHex } from "@noble/hashes/utils"
+import { assert, signalInvalidType } from "@canvas-js/utils"
 
 import type { MessageType, SessionSigner, Action } from "@canvas-js/interfaces"
 import {
@@ -13,12 +15,10 @@ import {
 	equalReferences,
 } from "@canvas-js/modeldb"
 import { AbstractGossipLog, SignedMessage } from "@canvas-js/gossiplog"
-import { assert, signalInvalidType } from "@canvas-js/utils"
 
 import { decodeRecordValue, getRecordId } from "./utils.js"
-
 import { View, TransactionalRead } from "./View.js"
-import { bytesToHex } from "@noble/hashes/utils"
+
 import { PRNG } from "./random.js"
 
 export class ExecutionContext extends View {
@@ -48,8 +48,12 @@ export class ExecutionContext extends View {
 	) {
 		super(messageLog, signedMessage.parents)
 
-		const hash = sha256(signedMessage.value)
-		const seed = BigInt("0x" + bytesToHex(hash.subarray(0, 8)))
+		const seed = new DataView(
+			signedMessage.hash.buffer,
+			signedMessage.hash.byteOffset,
+			signedMessage.hash.byteLength,
+		).getBigUint64(0, false)
+
 		this.prng = new PRNG(seed)
 	}
 
