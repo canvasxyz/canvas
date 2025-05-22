@@ -16,11 +16,8 @@ Write your application logic inside the database, and deploy anywhere.
 Every client can use the database concurrently, and interactions are
 automatically synced and merged.
 
-Use it to build mini apps, shared databases, browser extensions, or
-decentralized applications.
-
-Write complex apps that don't fit in CRDTs, like multiplayer games,
-and transactional database applications.
+Use it to build mini apps, shared databases, browser extensions,
+multiplayer games, or decentralized applications.
 
 </div>
 
@@ -168,11 +165,11 @@ export const App = () => {
   </div>
   <div :class="$style.colLeft">
 
-Canvas is a conflict-free replicated object (CRO), similar to CRDTs like Y.js, with the ability to write application logic inside the object.
+Canvas is a conflict-free replicated object, similar to CRDTs like Y.js, that provides the ability to write application logic inside a deterministic environment.
 
 Your application logic goes inside `actions` on the JS class, where each action has access to a multiwriter relational database.
 
-Actions sync between peers using event sourcing, so every peer can validate the history of your application, without a central server.
+Actions sync between peers using a distributed event log, so every peer can validate the history of your application, without a central server.
 
 Users log in through `signers`, which are used to authenticate their actions. Each signer is a DID, so you can use Ethereum, ATProto, or services like Clerk and Privy for login.
 
