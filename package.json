@@ -38,6 +38,7 @@
 		"@canvas-js/modeldb-sqlite-expo": "0.15.0-next.3",
 		"@canvas-js/modeldb-sqlite-wasm": "0.15.0-next.3",
 		"@canvas-js/signatures": "0.15.0-next.3",
+		"@canvas-js/signer-atp": "0.15.0-next.3",
 		"@canvas-js/signer-cosmos": "0.15.0-next.3",
 		"@canvas-js/signer-ethereum": "0.15.0-next.3",
 		"@canvas-js/signer-ethereum-viem": "0.15.0-next.3",
