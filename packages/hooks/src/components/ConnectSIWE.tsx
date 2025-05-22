@@ -10,11 +10,17 @@ declare global {
 	var ethereum: undefined | null | (Eip1193Provider & EventEmitterable<"accountsChanged" | "chainChanged">)
 }
 
-export interface ConnectSIWEProps {
-	app: Canvas<any>
+export interface ConnectSIWEConfig {
+	buttonStyles?: React.CSSProperties
+	buttonTextStyles?: React.CSSProperties
+	errorStyles?: React.CSSProperties
+	errorTextStyes?: React.CSSProperties
+	buttonClassName?: string
+	errorClassName?: string
+	containerClassName?: string
 }
 
-export const useSIWE = (app?: Canvas<any>) => {
+export const useSIWE = (app?: Canvas<any>, config?: ConnectSIWEConfig) => {
 	const { sessionSigner, setSessionSigner, address, setAddress } = useContext(AuthContext)
 	const [provider, setProvider] = useState<BrowserProvider | null>(null)
 	const [error, setError] = useState<Error | null>(null)
@@ -100,27 +106,28 @@ export const useSIWE = (app?: Canvas<any>) => {
 		console.log('ss2', sessionSigner)
 		if (!app) {
 			return (
-				<div className="p-2 border rounded bg-red-100 text-sm">
+				<div className={`p-2 border rounded bg-red-100 text-sm ${config?.errorClassName || ''}`} style={config?.errorStyles ?? {}}>
 					<code>App not initialized</code>
 				</div>
 			)
 		} else if (error !== null) {
 			return (
-				<div className="p-2 border rounded bg-red-100 text-sm">
+				<div className={`p-2 border rounded bg-red-100 text-sm ${config?.errorClassName || ''}`} style={config?.errorStyles ?? {}}>
 					<code>{error.message}</code>
 				</div>
 			)
 		} else if (provider === null) {
 			return (
-				<div className="p-2 border rounded bg-gray-200">
-					<button disabled>Loading...</button>
+				<div className={`p-2 border rounded bg-gray-200 ${config?.containerClassName || ''}`} style={config?.buttonStyles ?? {}}>
+					<button disabled className={config?.buttonClassName || ''}>Loading...</button>
 				</div>
 			)
 		} else if (address !== null && sessionSigner instanceof SIWESigner) {
 			return (
 				<button
 					onClick={() => disconnect()}
-					className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200"
+					className={`p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200 ${config?.buttonClassName || ''}`}
+					style={config?.buttonTextStyles}
 				>
 					Disconnect ETH wallet
 				</button>
@@ -131,7 +138,8 @@ export const useSIWE = (app?: Canvas<any>) => {
 					onClick={() => {
 						connect(new BrowserProvider(window.ethereum!))
 					}}
-					className="p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200"
+					className={`p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200 ${config?.buttonClassName || ''}`}
+					style={config?.buttonTextStyles}
 				>
 					Connect ETH wallet
 				</button>
