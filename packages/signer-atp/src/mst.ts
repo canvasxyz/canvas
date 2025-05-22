@@ -10,6 +10,7 @@ type Entry = { p: number; k: Uint8Array; v?: CID; t?: CID }
 
 async function unpackNode<T>(car: CarReader, path: string, cid: CID, decoder = new TextDecoder()): Promise<T> {
 	const block = await car.get(cid)
+	assert(block !== undefined, "invalid block")
 	const { l, e } = cbor.decode<Node>(block.bytes)
 
 	let node = l
@@ -22,6 +23,7 @@ async function unpackNode<T>(car: CarReader, path: string, cid: CID, decoder = n
 		} else if (needle === path) {
 			assert(v !== undefined, "failed to parse record")
 			const block = await car.get(v)
+			assert(block !== undefined, "invalid block")
 			return cbor.decode<T>(block.bytes)
 		} else {
 			break
@@ -38,6 +40,7 @@ export async function unpackArchive<T extends { $type: string }>(
 	const car = await CarReader.fromBytes(archive)
 	const [root] = await car.getRoots()
 	const block = await car.get(root)
+	assert(block !== undefined, "invalid block")
 	const commit = cbor.decode<Commit>(block.bytes)
 
 	const record = await unpackNode<T>(car, path, commit.data)
