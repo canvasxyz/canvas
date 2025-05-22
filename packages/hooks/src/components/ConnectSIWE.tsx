@@ -4,23 +4,22 @@ import { Eip1193Provider, BrowserProvider, EventEmitterable } from "ethers"
 import { SIWESigner } from "@canvas-js/signer-ethereum"
 import { Canvas } from "@canvas-js/core"
 import { AuthContext } from "../AuthContext.js"
+import { styles } from "./styles.js"
 
 declare global {
 	// eslint-disable-next-line no-var
 	var ethereum: undefined | null | (Eip1193Provider & EventEmitterable<"accountsChanged" | "chainChanged">)
 }
 
-export interface ConnectSIWEConfig {
+export interface ConnectSIWEProps {
 	buttonStyles?: React.CSSProperties
-	buttonTextStyles?: React.CSSProperties
 	errorStyles?: React.CSSProperties
 	errorTextStyes?: React.CSSProperties
 	buttonClassName?: string
 	errorClassName?: string
-	containerClassName?: string
 }
 
-export const useSIWE = (app?: Canvas<any>, config?: ConnectSIWEConfig) => {
+export const useSIWE = (app?: Canvas<any>) => {
 	const { sessionSigner, setSessionSigner, address, setAddress } = useContext(AuthContext)
 	const [provider, setProvider] = useState<BrowserProvider | null>(null)
 	const [error, setError] = useState<Error | null>(null)
@@ -59,12 +58,7 @@ export const useSIWE = (app?: Canvas<any>, config?: ConnectSIWEConfig) => {
 			const otherSigners = app.signers.getAll().filter((s) => !(s instanceof SIWESigner))
 			otherSigners.forEach((s) => s.clearSession(app.topic))
 			app.updateSigners([signer, ...otherSigners])
-			console.log('s', signer)
 			setSessionSigner(signer)
-			console.log('ss1', sessionSigner)
-			setTimeout(() => {
-				console.log(sessionSigner)
-			}, 100)
 		},
 		[app, provider],
 	)
@@ -102,32 +96,58 @@ export const useSIWE = (app?: Canvas<any>, config?: ConnectSIWEConfig) => {
 		app.updateSigners([...otherSigners, new SIWESigner()])
 	}, [app, sessionSigner])
 
-	const ConnectSIWE = () => {
-		console.log('ss2', sessionSigner)
+	const ConnectSIWE = ({
+		buttonStyles,
+		errorStyles,
+		errorClassName,
+		buttonClassName,
+	}: ConnectSIWEProps = {}) => {
 		if (!app) {
 			return (
-				<div className={`p-2 border rounded bg-red-100 text-sm ${config?.errorClassName || ''}`} style={config?.errorStyles ?? {}}>
+				<div
+					className={errorClassName || ""}
+					style={{
+						...styles.errorContainer,
+						...errorStyles
+					}}
+				>
 					<code>App not initialized</code>
 				</div>
 			)
 		} else if (error !== null) {
 			return (
-				<div className={`p-2 border rounded bg-red-100 text-sm ${config?.errorClassName || ''}`} style={config?.errorStyles ?? {}}>
+				<div
+					className={errorClassName || ""}
+					style={{
+						...styles.errorContainer,
+						...errorStyles
+					}}
+				>
 					<code>{error.message}</code>
 				</div>
 			)
 		} else if (provider === null) {
 			return (
-				<div className={`p-2 border rounded bg-gray-200 ${config?.containerClassName || ''}`} style={config?.buttonStyles ?? {}}>
-					<button disabled className={config?.buttonClassName || ''}>Loading...</button>
-				</div>
+				<button 
+					disabled 
+					className={buttonClassName || ""} 
+					style={{
+						...styles.loadingButton,
+						...buttonStyles
+					}}
+				>
+					Loading...
+				</button>
 			)
 		} else if (address !== null && sessionSigner instanceof SIWESigner) {
 			return (
 				<button
 					onClick={() => disconnect()}
-					className={`p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200 ${config?.buttonClassName || ''}`}
-					style={config?.buttonTextStyles}
+					className={buttonClassName || ""}
+					style={{
+						...styles.actionButton,
+						...buttonStyles
+					}}
 				>
 					Disconnect ETH wallet
 				</button>
@@ -138,8 +158,11 @@ export const useSIWE = (app?: Canvas<any>, config?: ConnectSIWEConfig) => {
 					onClick={() => {
 						connect(new BrowserProvider(window.ethereum!))
 					}}
-					className={`p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200 ${config?.buttonClassName || ''}`}
-					style={config?.buttonTextStyles}
+					className={buttonClassName || ""}
+					style={{
+						...styles.actionButton,
+						...buttonStyles
+					}}
 				>
 					Connect ETH wallet
 				</button>
@@ -155,6 +178,6 @@ export const useSIWE = (app?: Canvas<any>, config?: ConnectSIWEConfig) => {
 		connect,
 		disconnect,
 		sessionSigner,
-		isInitialized: !!app
+		isInitialized: !!app,
 	}
 }

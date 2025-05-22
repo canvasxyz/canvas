@@ -8,19 +8,19 @@ import { AuthClientError, SignInButton, useProfile, UseSignInData } from "@farca
 import { sdk } from "@farcaster/frame-sdk"
 import { bytesToHex } from "@noble/hashes/utils"
 import { AuthContext } from "../AuthContext.js"
+import { styles } from "./styles.js"
 
-export interface ConnectSIWFConfig {
-	buttonStyles?: React.CSSProperties
-	buttonTextStyles?: React.CSSProperties
+export interface ConnectSIWFProps {
+	otherButtonStyles?: React.CSSProperties
 	errorStyles?: React.CSSProperties
-	errorTextStyes?: React.CSSProperties
-	buttonClassName?: string
+	errorTextStyles?: React.CSSProperties
+	otherButtonClassName?: string
 	errorClassName?: string
-	containerClassName?: string
 	containerStyles?: React.CSSProperties
+	containerClassName?: string
 }
 
-export const useSIWF = (app?: Canvas<any>, config?: ConnectSIWFConfig) => {
+export const useSIWF = (app?: Canvas<any>) => {
 	const { sessionSigner, setSessionSigner, address, setAddress } = useContext(AuthContext)
 
 	useEffect(() => {
@@ -180,10 +180,20 @@ export const useSIWF = (app?: Canvas<any>, config?: ConnectSIWFConfig) => {
 		app.updateSigners([...otherSigners, new SIWFSigner()])
 	}, [app, app?.topic, sessionSigner])
 
-	const ConnectSIWF = () => {
+	const ConnectSIWF = ({
+		otherButtonStyles: buttonStyles,
+		errorStyles,
+		errorClassName,
+		otherButtonClassName: buttonClassName,
+		containerStyles,
+		containerClassName,
+	}: ConnectSIWFProps = {}) => {
 		if (!app) {
 			return (
-				<div className={`p-2 border rounded bg-red-100 text-sm ${config?.errorClassName || ''}`} style={config?.errorStyles ?? {}}>
+				<div className={errorClassName || ''} style={{
+					...styles.errorContainer,
+					...errorStyles
+				}}>
 					<code>App not initialized</code>
 				</div>
 			)
@@ -191,26 +201,33 @@ export const useSIWF = (app?: Canvas<any>, config?: ConnectSIWFConfig) => {
 
 		if (error !== null) {
 			return (
-				<div className={`p-2 border rounded bg-red-100 text-sm ${config?.errorClassName || ''}`} style={config?.errorStyles ?? {}}>
+				<div className={errorClassName || ''} style={{
+					...styles.errorContainer,
+					...errorStyles
+				}}>
 					<code>{error.message}</code>
 				</div>
 			)
 		} else if (!newSessionPrivateKey || (!requestId && !nonce) || !app) {
 			return (
-				<div className={`p-2 border rounded bg-gray-200 ${config?.containerClassName || ''}`} style={config?.buttonStyles ?? {}}>
-					<button disabled className={config?.buttonClassName || ''}>Loading...</button>
-				</div>
+				<button disabled className={buttonClassName || ''} style={{
+					...styles.loadingButton,
+					...buttonStyles
+				}}>Loading...</button>
 			)
 		} else {
 			return (
-				<div style={{ marginTop: "12px", right: "12px", ...(config?.containerStyles || {}) }} className={config?.containerClassName || ''}>
+				<div style={{ marginTop: "12px", right: "12px", ...containerStyles }} className={containerClassName || ''}>
 					{canvasIsAuthenticated && (
 						<div>
 							<button
 								type="submit"
-								className={`w-full p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200 ${config?.buttonClassName || ''}`}
+								className={buttonClassName || ''}
 								onClick={signOut}
-								style={config?.buttonTextStyles}
+								style={{
+									...styles.actionButton,
+									...buttonStyles
+								}}
 							>
 								Disconnect Farcaster
 							</button>
@@ -225,9 +242,12 @@ export const useSIWF = (app?: Canvas<any>, config?: ConnectSIWFConfig) => {
 					{nonce && !farcasterIsAuthenticated && !canvasIsAuthenticated && (
 						<button
 							type="submit"
-							className={`w-full p-2 border rounded hover:cursor-pointer hover:bg-gray-100 active:bg-gray-200 ${config?.buttonClassName || ''}`}
+							className={buttonClassName || ''}
 							onClick={frameSignIn}
-							style={config?.buttonTextStyles}
+							style={{
+								...styles.actionButton,
+								...buttonStyles
+							}}
 						>
 							Sign in with Farcaster (Frame)
 						</button>
