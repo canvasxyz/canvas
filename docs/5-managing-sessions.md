@@ -52,6 +52,10 @@ const MyComponent = () => {
 }
 ```
 
+Make sure that these hooks are called at a lower level component than
+`AuthProvider`. If you use the hooks in the same component where
+AuthProvider is used, they won't work.
+
 ## Other considerations
 
 If you are using SIWFSigner, you'll need to wrap your application in
@@ -69,10 +73,10 @@ const config = {
 }
 
 root.render(
-	<AuthKitProvider>
+	<AuthProvider>
 		<AuthKitProvider config={farcasterConfig}>
 			<App />
 		</AuthKitProvider>
-	</AuthKitProvider>
+	</AuthProvider>
 )
 ```
