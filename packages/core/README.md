@@ -28,7 +28,7 @@ to a ModelDB database.
 
 Each application accepts several arguments:
 
-- `contract` takes an object with `models` and `actions`, or a string containing a JS module which exports `models` and `actions`.
+- `contract` takes a class that extends `Contract`, or a string containing a JS module which exports a default class that extends `Contract`.
 - `topic` takes a string
 - `snapshot` (optional) takes a `Snapshot` object which provides initial database contents for the application.
 - `signers` (optional) takes an array of signers, which allows different auth methods to be added to the application.
@@ -47,44 +47,46 @@ each of the actions that you have defined.
 Action calls will be signed and proxied to the contract.
 
 ```ts
-import { Canvas } from "@canvas-js/core"
+import { Canvas, Contract } from "@canvas-js/core"
+
+class Chat extends Contract<typeof Chat.models> {
+  static models = {
+    posts: {
+      id: "primary",
+      user: "string",
+      content: "string",
+      updated_at: "integer",
+    },
+  }
+
+  async createPost(content: string) {
+    const { id, chain, address, timestamp, db } = this
+    const user = [chain, address].join(":")
+    await db.set("posts", { id, user, content, updated_at: timestamp })
+  }
+
+  async deletePost(postId: string) {
+    const { chain, address, db } = this
+    const post = await db.get("posts", postId)
+    if (post === null) {
+      return
+    }
+
+    const user = [chain, address].join(":")
+    if (post.user !== user) {
+      throw new Error("not authorized")
+    }
+
+    await db.delete("posts", postId)
+  }
+}
 
 const app = await Canvas.initialize({
   topic: "com.example.my-app",
-  contract: {
-    models: {
-      posts: {
-        id: "primary",
-        user: "string",
-        content: "string",
-        updated_at: "integer",
-      },
-    },
-    actions: {
-      async createPost({ content }) {
-        const { id, chain, address, timestamp } = this
-        const user = [chain, address].join(":")
-        await db.posts.set({ id, user, content, updated_at: timestamp })
-      },
-      async deletePost({ postId }) {
-        const { chain, address } = this
-        const post = await db.posts.get(postId)
-        if (post === null) {
-          return
-        }
-
-        const user = [chain, address].join(":")
-        if (post.user !== user) {
-          throw new Error("not authorized")
-        }
-
-        await db.posts.delete(postId)
-      },
-    },
-  },
+  contract: Chat,
 })
 
-await app.actions.createPost({ content: "hello world!" })
+await app.actions.createPost("hello world!")
 const results = await app.db.query("posts", {})
 // [
 //   {

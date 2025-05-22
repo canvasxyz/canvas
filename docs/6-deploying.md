@@ -10,28 +10,40 @@ To get started, we recommend creating a separate `contract.ts` file
 that's imported from your frontend:
 
 ```ts
-import type { ModelSchema, Actions } from "@canvas-js/core"
+import { Contract } from "@canvas-js/core/contract"
+import type { ModelSchema } from "@canvas-js/core"
 
-export const models = {
-  foo: { id: "primary" }
-} satisfies ModelSchema
+class Chat extends Contract<typeof Chat.models> {
+  static models = {
+    messages: {
+      id: "primary",
+      content: "string",
+      address: "string",
+    }
+  } satisfies ModelSchema
 
-export const actions = {
-  doThing: () => { ... }
-} satisfies Actions<typeof models>
+  async createMessage(content: string) {
+    this.db.create("messages", {
+      content,
+      address: this.address
+    })
+  }
+}
+
+export default Chat
 ```
 
-Then, import the contract.ts file:
+Then, import the contract class:
 
 ```ts
 import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
-import { models, actions } from "./contract.js"
+import Chat from "./contract.js"
 
 const wsURL = process.env.wsURL
 
 export const App = () => {
   const { app, ws } = useCanvas(wsURL, {
-    contract: { models, actions },
+    contract: Chat,
     topic: "example.xyz",
   })
 }

@@ -37,9 +37,13 @@ logged-out states, which you can customize with your own styles.
 
 ```ts
 import { useSIWE } from "@canvas-js/hooks/components"
+import { Chat } from "./contract"
 
 const MyComponent = () => {
-	const app = useCanvas(...)
+	const { app } = useCanvas({
+	  topic: "example.xyz",
+	  contract: Chat
+	})
 	const buttonStyles = { ... }
 
   const { ConnectSIWE } = useSIWE(app)

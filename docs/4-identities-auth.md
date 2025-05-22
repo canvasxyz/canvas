@@ -11,22 +11,39 @@ The `SIWESigner` class exported by `@canvas-js/signer-ethereum` matches actions 
 ```ts
 import { BrowserProvider } from "ethers"
 import { SIWESigner } from "@canvas-js/signer-ethereum"
-import { Canvas } from "@canvas-js/core"
+import { Canvas, Contract } from "@canvas-js/core"
+
+class Chat extends Contract<typeof Chat.models> {
+  static models = {
+    messages: {
+      id: "primary",
+      content: "string",
+      address: "string"
+    }
+  }
+
+  async createMessage(content: string) {
+    this.db.create("messages", {
+      content,
+      address: this.address
+    })
+  }
+}
 
 const provider = new BrowserProvider(window.ethereum)
 const jsonRpcSigner = await provider.getSigner()
 
 const app = await Canvas.initialize({
-  topic,
-  contract: { ... },
+  topic: "example.xyz",
+  contract: Chat,
   signers: [new SIWESigner({ signer: jsonRpcSigner })],
 })
 
 // the user will first be prompted for a SIWE signature
-await app.createPost({ content: "can I get an uhhhh yeah??" })
+await app.actions.createMessage("can I get an uhhhh yeah??")
 
 // subsequent actions calls will use the cached session
-await app.createPost({ content: "uhhhh yeah!!" })
+await app.actions.createMessage("uhhhh yeah!!")
 ```
 
 Before a user can interact with an application, they must first authorize a session. Sessions consist of an ephemeral keypair and a chain-specific payload representing a user's (temporary) authorization of that keypair to sign actions on their behalf.
@@ -39,8 +56,8 @@ You can provide multiple signers to `Canvas.initialize`, and you can control whi
 
 ```ts
 const app = await Canvas.initialize({
-  topic: "...",
-  contract: { ... },
+  topic: "example.xyz",
+  contract: Chat,
   signers: [
     new SIWESigner({ signer: jsonRpcSigner }),
     new SIWESigner({ signer: Wallet.createRandom() }),
@@ -48,10 +65,10 @@ const app = await Canvas.initialize({
 })
 
 // Use a specific signer
-await app.actions.as(app.signers[1]).createPost("foo")
+await app.actions.as(app.signers[1]).createMessage("foo")
 
 // Defaults to the first signer app.signers[0]
-await app.actions.createPost("baz")
+await app.actions.createMessage("baz")
 ```
 
 The SIWESigner class also supports a `burner` parameter, which will
