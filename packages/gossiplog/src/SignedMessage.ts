@@ -1,12 +1,13 @@
+import { sha256 } from "@noble/hashes/sha256"
 import * as cbor from "@ipld/dag-cbor"
 import { compare } from "uint8arrays"
 import { assert } from "@canvas-js/utils"
 
 import type { Signature, Message } from "@canvas-js/interfaces"
 
-import { MessageId, decodeId, getKey, encodeId, KEY_LENGTH } from "./MessageId.js"
+import { MessageId, decodeId, encodeId, KEY_LENGTH } from "./MessageId.js"
 import { MessageSet } from "./MessageSet.js"
-import { decodeClock } from "./clock.js"
+import { decodeClock, encodeClock } from "./clock.js"
 import { gossiplogTopicPattern } from "./utils.js"
 
 export type MessageSourceType = "pubsub" | "push" | "sync"
@@ -45,6 +46,7 @@ export class SignedMessage<Payload = unknown, Result = any> {
 
 	public readonly id: string
 	public readonly key: Uint8Array
+	public readonly hash: Uint8Array
 	public readonly source?: MessageSource
 	public result?: Result
 
@@ -55,7 +57,11 @@ export class SignedMessage<Payload = unknown, Result = any> {
 		public readonly parents: MessageSet,
 		context: MessageContext<Result>,
 	) {
-		this.key = getKey(message.clock, value)
+		this.hash = sha256(value)
+		this.key = new Uint8Array(KEY_LENGTH)
+		const encodingLength = encodeClock(this.key, message.clock)
+		this.key.set(this.hash.subarray(0, KEY_LENGTH - encodingLength), encodingLength)
+
 		this.id = decodeId(this.key)
 		this.source = context.source
 		this.result = context.result

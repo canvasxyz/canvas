@@ -11,27 +11,10 @@ export const MIN_MESSAGE_ID = "00000000000000000000000000000000"
 export const MAX_MESSAGE_ID = "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
 export const messageIdPattern = /^[0123456789abcdefghijklmnopqrstuv]{32}$/
 
-export function getKey(clock: number, value: Uint8Array): Uint8Array {
-	const hash = sha256(value)
-	const key = new Uint8Array(KEY_LENGTH)
-	const encodingLength = encodeClock(key, clock)
-	key.set(hash.subarray(0, KEY_LENGTH - encodingLength), encodingLength)
-	return key
-}
-
 export const encodeId = (id: string) => base32hex.baseDecode(id)
 export const decodeId = (key: Uint8Array) => base32hex.baseEncode(key)
 
 export class MessageId {
-	public static create(clock: number, value: Uint8Array): MessageId {
-		const hash = sha256(value)
-		const key = new Uint8Array(KEY_LENGTH)
-		const encodingLength = encodeClock(key, clock)
-		key.set(hash.subarray(0, KEY_LENGTH - encodingLength), encodingLength)
-		const id = decodeId(key)
-		return new MessageId(id, key, clock)
-	}
-
 	public static decode(key: Uint8Array): MessageId {
 		const id = decodeId(key)
 		const [clock] = decodeClock(key)
@@ -44,7 +27,11 @@ export class MessageId {
 		return new MessageId(id, key, clock)
 	}
 
-	public constructor(public readonly id: string, public readonly key: Uint8Array, public readonly clock: number) {}
+	public constructor(
+		public readonly id: string,
+		public readonly key: Uint8Array,
+		public readonly clock: number,
+	) {}
 
 	public equals(other: MessageId) {
 		return this.id === other.id
