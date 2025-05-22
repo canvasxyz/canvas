@@ -9,20 +9,18 @@ next: false
 
 <div :class="$style.mainInner">
 
-Canvas is a local-first, distributed database similar to Firebase or
-Y.js, built on the same principles as collaborative data types.
+Canvas is a local-first, distributed database similar to Firebase,
+built on the same principles as collaborative data types.
 
-It's an instant-sync database, where user actions are applied locally and
-sent over WebSockets, without waiting for a server to acknowledge them.
-It's also fully local-first and supports advanced features like transactions
-and custom mutation logic.
-
-Write your application logic inside the database, and deploy it
-anywhere. Every client can use the database concurrently, and their
-interactions automatically sync and merge.
+Write your application logic inside the database, and deploy anywhere.
+Every client can use the database concurrently, and interactions are
+automatically synced and merged.
 
 Use it to build mini apps, shared databases, browser extensions, or
 decentralized applications.
+
+Write complex apps that don't fit in CRDTs, like multiplayer games,
+and transactional database applications.
 
 </div>
 

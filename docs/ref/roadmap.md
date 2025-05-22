@@ -12,12 +12,12 @@ For past release notes, please see [Github](https://github.com/canvasxyz/canvas/
 - [ ] Support for partial sync.
 - [ ] Support for private data.
 
-## 0.15 (Upcoming release)
+## 0.15 (2025-05-22)
 
 This is a nonbreaking, backwards compatible change that adds two new syntaxes for
 contracts: class contracts and model-only contracts.
 
-- [ ] Add an API for defining applications as ES6 classes.
+- [x] Add an API for defining applications as ES6 classes.
 - [x] Add an API for defining application contracts/databases without actions,
   where permissions are defined in a `$rules` object, similar to Firebase permissions.
 - [x] Add `db.create()` and `db.id()` methods for creating database records with
