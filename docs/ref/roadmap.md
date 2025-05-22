@@ -14,8 +14,8 @@ For past release notes, please see [Github](https://github.com/canvasxyz/canvas/
 
 ## 0.15 (2025-05-22)
 
-This is a nonbreaking, backwards compatible change that adds two new syntaxes for
-contracts: class contracts and model-only contracts.
+This change implements two new syntaxes for contracts: class contracts
+and model-only contracts.
 
 - [x] Add an API for defining applications as ES6 classes.
 - [x] Add an API for defining application contracts/databases without actions,

@@ -23,9 +23,7 @@ The runtime achieves this by using a virtual snapshot of the database, in which 
 
 However, it is still possible to write non-deterministic JavaScript code inside an action function, with functions like `Math.random()` and `Date.now()`. These functions will break determinism and should not be used.
 
-For generating random identifiers, you can use the `this.db.id()` function. This will generate a new hash every time it is called, and it is safe to use as a deterministic replacement for `Math.random()`.
-
-(Like `Math.random()`, it is not cryptographically secure.)
+For generating random identifiers, you can use the `this.db.id()` function. This will generate a new hash every time it is called, as a deterministic client-side replacement for `Math.random()`.
 
 ## How we achieve convergence
 

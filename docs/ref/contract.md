@@ -78,7 +78,7 @@ const did = await app.signers.getFirst().getDid()
 
 await app.create("items", {
   creator: did,
-  content: "I'm fastened to this hearth and can't stir so much as a foot away."
+  content: "I'm a scary and powerful fire demon!"
 })
 ```
 
