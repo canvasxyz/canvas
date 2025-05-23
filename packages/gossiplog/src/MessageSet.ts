@@ -1,5 +1,5 @@
 import * as cbor from "microcbor"
-import { signalInvalidType } from "@canvas-js/utils"
+import { assert, signalInvalidType } from "@canvas-js/utils"
 
 import { MessageId } from "./MessageId.js"
 
@@ -23,6 +23,10 @@ export class MessageSet {
 				signalInvalidType(messageId)
 			}
 		}
+	}
+
+	public get size() {
+		return this.#map.size
 	}
 
 	public has(messageId: MessageId) {
@@ -50,19 +54,27 @@ export class MessageSet {
 		return cbor.encode(links)
 	}
 
-	public maxClock(): number {
-		let clock = 0
+	public max(): MessageId {
+		assert(this.#map.size > 0, "empty message set")
+		let max: MessageId | null = null
 		for (const messageId of this.#map.values()) {
-			clock = Math.max(clock, messageId.clock)
+			if (max === null || messageId.id > max.id) {
+				max = messageId
+			}
 		}
-		return clock
+
+		return max!
 	}
 
-	public minClock(): number {
-		let clock = Infinity
+	public min(): MessageId {
+		assert(this.#map.size > 0, "empty message set")
+		let min: MessageId | null = null
 		for (const messageId of this.#map.values()) {
-			clock = Math.min(clock, messageId.clock)
+			if (min === null || messageId.id < min.id) {
+				min = messageId
+			}
 		}
-		return clock
+
+		return min!
 	}
 }
