@@ -1,7 +1,7 @@
 import os from "node:os"
+import { createHash } from "node:crypto"
 
 import type { PlatformTarget } from "../index.js"
-import { createHash } from "node:crypto"
 
 const cache = new Map<string, string>()
 

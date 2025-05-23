@@ -1,4 +1,5 @@
 import { SHA256 } from "@noble/hashes/sha256"
+
 import type { PlatformTarget } from "../index.js"
 
 export default {
@@ -56,6 +57,4 @@ export default {
 
 		return hash.digest()
 	},
-
-	// sha256: sha256,
 } satisfies PlatformTarget

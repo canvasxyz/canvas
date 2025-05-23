@@ -1,5 +1,5 @@
-import { MMKV } from "react-native-mmkv"
 import { SHA256 } from "@noble/hashes/sha256"
+import { MMKV } from "react-native-mmkv"
 
 import type { PlatformTarget } from "../index.js"
 
