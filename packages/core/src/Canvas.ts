@@ -401,7 +401,7 @@ export class Canvas<
 	}
 
 	public getContract() {
-		return ""
+		return this.runtime.getContract()
 	}
 
 	public getSchema(internal?: false) {

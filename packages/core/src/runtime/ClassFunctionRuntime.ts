@@ -42,6 +42,7 @@ export class ClassFunctionRuntime extends AbstractRuntime {
 
 		let contractInstance: BaseContract<ModelSchema>
 		let actionNames: string[]
+		let repr: string
 		if (isContractClass(contract)) {
 			assert(
 				Object.values(contract.models).every((model) => model.$rules === undefined),
@@ -50,6 +51,7 @@ export class ClassFunctionRuntime extends AbstractRuntime {
 
 			contractInstance = new contract(topic)
 			actionNames = Object.getOwnPropertyNames(contract.prototype).filter((name) => name !== "constructor")
+			repr = contract.toString()
 		} else {
 			for (const [name, model] of Object.entries(contract.models)) {
 				if (model.$rules === undefined) {
@@ -72,9 +74,10 @@ export class ClassFunctionRuntime extends AbstractRuntime {
 			])
 
 			Object.assign(contractInstance, Object.fromEntries(actionEntries))
+			repr = JSON.stringify(contract)
 		}
 
-		return new ClassFunctionRuntime(topic, signers, actionNames, contract.models, contractInstance)
+		return new ClassFunctionRuntime(topic, signers, actionNames, contract.models, contractInstance, repr)
 	}
 
 	#context: ExecutionContext | null = null
@@ -92,6 +95,7 @@ export class ClassFunctionRuntime extends AbstractRuntime {
 		public readonly actionNames: string[],
 		models: ModelSchema,
 		contractInstance: BaseContract<ModelSchema>,
+		public readonly repr: string,
 	) {
 		super(models)
 
@@ -139,6 +143,10 @@ export class ClassFunctionRuntime extends AbstractRuntime {
 	}
 
 	public close() {}
+
+	public getContract() {
+		return this.repr
+	}
 
 	private get context() {
 		assert(this.#context !== null, "expected this.#context !== null")

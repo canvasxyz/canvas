@@ -143,6 +143,8 @@ export abstract class AbstractRuntime {
 
 	protected abstract execute(context: ExecutionContext): Promise<void | any>
 
+	public abstract getContract(): string
+
 	public abstract close(): Awaitable<void>
 
 	public getConsumer(): GossipLogConsumer<Action | Session | Snapshot> {

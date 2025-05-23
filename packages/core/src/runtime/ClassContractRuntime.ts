@@ -97,6 +97,7 @@ export class ClassContractRuntime extends AbstractRuntime {
 		super(modelSchema)
 
 		this.actionHandles = actionHandles
+		this.contract = contract
 
 		const databaseAPI = vm.wrapObject({
 			get: vm.wrapFunction(async (model, key) => {
@@ -161,6 +162,10 @@ export class ClassContractRuntime extends AbstractRuntime {
 
 	public close() {
 		this.vm.dispose()
+	}
+
+	public getContract() {
+		return this.contract
 	}
 
 	public get actionNames() {
