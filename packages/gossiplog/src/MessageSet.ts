@@ -49,4 +49,20 @@ export class MessageSet {
 
 		return cbor.encode(links)
 	}
+
+	public maxClock(): number {
+		let clock = 0
+		for (const messageId of this.#map.values()) {
+			clock = Math.max(clock, messageId.clock)
+		}
+		return clock
+	}
+
+	public minClock(): number {
+		let clock = Infinity
+		for (const messageId of this.#map.values()) {
+			clock = Math.min(clock, messageId.clock)
+		}
+		return clock
+	}
 }
