@@ -1,5 +1,3 @@
-import { sha256 } from "@noble/hashes/sha256"
-import { bytesToHex } from "@noble/hashes/utils"
 import { assert, signalInvalidType } from "@canvas-js/utils"
 
 import type { MessageType, SessionSigner, Action } from "@canvas-js/interfaces"
