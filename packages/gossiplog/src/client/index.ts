@@ -187,6 +187,11 @@ export class NetworkClient<Payload> {
 
 	private async sync() {
 		this.log("initiating merkle sync with %s", this.sourceURL)
+		this.gossipLog.dispatchEvent(
+			new CustomEvent("sync:status", {
+				detail: { role: "client", status: "incomplete", peer: this.sourceURL },
+			}),
+		)
 
 		do {
 			let stream: Stream
@@ -205,6 +210,12 @@ export class NetworkClient<Payload> {
 			try {
 				const result = await this.gossipLog.sync(client, { peer: this.sourceURL })
 				if (result.complete) {
+					this.gossipLog.dispatchEvent(
+						new CustomEvent("sync:status", {
+							detail: { role: "client", status: "complete", peer: this.sourceURL },
+						}),
+					)
+
 					break
 				} else {
 					continue

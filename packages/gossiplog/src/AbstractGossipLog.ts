@@ -62,6 +62,7 @@ export type GossipLogEvents<Payload = unknown, Result = any> = {
 	message: CustomEvent<SignedMessage<Payload, Result>>
 	commit: CustomEvent<{ root: Node; heads: string[] }>
 	sync: CustomEvent<{ duration: number; messageCount: number; complete: boolean; peer?: string }>
+	"sync:status": CustomEvent<{ status: "complete" | "incomplete"; role: "client" | "server"; peer?: string }>
 	connect: CustomEvent<{ peer: string }>
 	disconnect: CustomEvent<{ peer: string }>
 }
