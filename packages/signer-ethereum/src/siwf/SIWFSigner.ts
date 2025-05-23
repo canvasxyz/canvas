@@ -2,19 +2,11 @@ import { verifyMessage, hexlify, getBytes } from "ethers"
 import * as siwe from "siwe"
 import * as json from "@ipld/dag-json"
 
-import type {
-	Action,
-	Session,
-	Snapshot,
-	AbstractSessionData,
-	DidIdentifier,
-	Signer,
-	MessageType,
-} from "@canvas-js/interfaces"
+import type { Session, AbstractSessionData, DidIdentifier, Signer, MessageType } from "@canvas-js/interfaces"
 import { AbstractSessionSigner, ed25519 } from "@canvas-js/signatures"
 import { assert, DAYS } from "@canvas-js/utils"
 
-import type { SIWFSessionData, SIWFMessage } from "./types.js"
+import type { SIWFSessionData } from "./types.js"
 import { validateSIWFSessionData as validateSIWFSessionDataType, parseAddress, addressPattern } from "./utils.js"
 
 export interface SIWFSignerInit {
@@ -118,8 +110,7 @@ export class SIWFSigner extends AbstractSessionSigner<SIWFSessionData> {
 		topic: string,
 	): { payload: Session<SIWFSessionData>; signer: Signer<MessageType<SIWFSessionData>> } | null {
 		const keyPrefix = `canvas/${topic}/did:pkh:farcaster:` // TODO: refactor
-		const values = this.target.getAll(keyPrefix)
-		for (const value of values) {
+		for (const [_, value] of this.target.entries(keyPrefix)) {
 			try {
 				const { session, type, privateKey } = json.parse<{
 					type: string

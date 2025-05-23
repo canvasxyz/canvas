@@ -1,7 +1,7 @@
 import type { PlatformTarget } from "../index.js"
 
 export default {
-	get(key: string) {
+	get(key: string): string | null {
 		throw new Error("unsupported platform")
 	},
 	set(key: string, value: string) {
@@ -10,16 +10,16 @@ export default {
 	clear(prefix?: string) {
 		throw new Error("unsupported platform")
 	},
-	keys(prefix?: string) {
+	*keys(prefix?: string): IterableIterator<string> {
 		throw new Error("unsupported platform")
 	},
-	getAll(prefix?: string) {
+	*entries(prefix?: string): IterableIterator<[string, string]> {
 		throw new Error("unsupported platform")
 	},
-	getFirst(prefix?: string) {
+	getDomain(): string {
 		throw new Error("unsupported platform")
 	},
-	getDomain() {
+	sha256(input: Uint8Array): Uint8Array {
 		throw new Error("unsupported platform")
 	},
 } satisfies PlatformTarget

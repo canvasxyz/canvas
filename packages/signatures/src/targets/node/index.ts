@@ -1,6 +1,7 @@
 import os from "node:os"
 
 import type { PlatformTarget } from "../index.js"
+import { createHash } from "node:crypto"
 
 const cache = new Map<string, string>()
 
@@ -8,6 +9,7 @@ export default {
 	get(key: string): string | null {
 		return cache.get(key) ?? null
 	},
+
 	set(key: string, value: any) {
 		cache.set(key, value)
 	},
@@ -19,28 +21,38 @@ export default {
 			}
 		}
 	},
-	keys(prefix?: string): string[] {
-		const results: string[] = []
+
+	*keys(prefix: string = ""): IterableIterator<string> {
 		for (const key of cache.keys()) {
-			if (!prefix || key.startsWith(prefix)) results.push(key)
+			if (key.startsWith(prefix)) {
+				yield key
+			}
 		}
-		return results
-	},
-	getAll(prefix?: string): string[] {
-		const results: string[] = []
-		for (const [key, value] of cache.entries()) {
-			if (!prefix || key.startsWith(prefix)) results.push(value)
-		}
-		return results
-	},
-	getFirst(prefix?: string): string | null {
-		for (const [key, value] of cache.entries()) {
-			if (!prefix || key.startsWith(prefix)) return value
-		}
-		return null
 	},
 
-	getDomain() {
+	*entries(prefix: string = ""): IterableIterator<[string, string]> {
+		for (const [key, value] of cache.entries()) {
+			if (key.startsWith(prefix)) {
+				yield [key, value]
+			}
+		}
+	},
+
+	getDomain(): string {
 		return os.hostname()
+	},
+
+	sha256(input: Uint8Array | Iterable<Uint8Array>): Uint8Array {
+		const hash = createHash("sha256")
+		if (input instanceof Uint8Array) {
+			hash.update(input)
+		} else {
+			for (const chunk of input) {
+				hash.update(chunk)
+			}
+		}
+
+		const digest = hash.digest()
+		return new Uint8Array(digest.buffer, digest.byteOffset, digest.byteLength)
 	},
 } satisfies PlatformTarget
