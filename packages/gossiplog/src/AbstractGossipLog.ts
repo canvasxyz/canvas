@@ -59,9 +59,9 @@ export interface GossipLogInit<Payload = unknown, Result = any> {
 }
 
 export type GossipLogEvents<Payload = unknown, Result = any> = {
-	message: CustomEvent<SignedMessage<Payload>>
+	message: CustomEvent<SignedMessage<Payload, Result>>
 	commit: CustomEvent<{ root: Node; heads: string[] }>
-	sync: CustomEvent<{ duration: number; messageCount: number; peer?: string }>
+	sync: CustomEvent<{ duration: number; messageCount: number; complete: boolean; peer?: string }>
 	connect: CustomEvent<{ peer: string }>
 	disconnect: CustomEvent<{ peer: string }>
 }
@@ -531,7 +531,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 
 		this.log("applied %d messages in %dms", messageCount, Math.ceil(executionDuration))
 
-		this.dispatchEvent(new CustomEvent("sync", { detail: { peer: options.peer, messageCount, duration } }))
+		this.dispatchEvent(new CustomEvent("sync", { detail: { peer: options.peer, messageCount, complete, duration } }))
 
 		return { complete, messageCount }
 	}
