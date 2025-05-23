@@ -105,6 +105,7 @@ const target: PlatformTarget = {
 			platform: "node",
 			format: "esm",
 			write: false,
+			external: ["@canvas-js/core"],
 			stdin: {
 				contents: contract,
 				loader: "ts",
@@ -127,6 +128,7 @@ const target: PlatformTarget = {
 			platform: "node",
 			format: "esm",
 			write: false,
+			external: ["@canvas-js/core"],
 			entryPoints: [location],
 		})
 		if (!bundle.outputFiles || bundle.outputFiles.length === 0) {
