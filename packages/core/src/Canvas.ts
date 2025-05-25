@@ -65,6 +65,16 @@ export interface CanvasEvents extends GossipLogEvents<MessageType> {
 
 export type CanvasLogEvent = CustomEvent<SignedMessage<MessageType>>
 
+/**
+ * Sync state, only available on the client.
+ * - Offline is the initial state.
+ * - Starting means the client has a WebSocket connection, but has not received heads to sync to.
+ * - In progress means the client has started a Merkle sync, but has not run to completion.
+ * - Complete means a sync has run to completion. *Not* debounced. The server may new actions during a sync.
+ * - Error is reserved for future use.
+  */
+export type ClientSyncState = "offline" | "starting" | "inProgress" | "complete" | "error"
+
 export type ApplicationData = {
 	peerId: string | null
 	connections: Record<string, { status: string; direction: string; rtt: number | undefined }>
@@ -243,6 +253,26 @@ export class Canvas<
 			}
 		})
 
+		app.messageLog.addEventListener("sync:status", ({ detail: { role, status } }) => {
+			if (role === "server") {
+				return // Only implemented on the client to avoid races between different sync peers.
+			} else if (status === "incomplete") {
+				app.syncState = "inProgress"
+			} else if (status === "complete") {
+				app.syncState = "complete"
+			}
+		})
+
+		app.messageLog.addEventListener("connect", ({ detail: { peer } }) => {
+			if (app.syncState === "offline") {
+				app.syncState = "starting"
+			}			
+		})
+
+		app.messageLog.addEventListener("disconnect", ({ detail: { peer } }) => {
+			app.syncState = "offline"
+		})
+
 		return app
 	}
 
@@ -276,6 +306,7 @@ export class Canvas<
 	protected readonly controller = new AbortController()
 	protected readonly log = logger("canvas:core")
 	private lastMessage: number | null = null
+	public syncState: ClientSyncState = "offline"
 
 	private libp2p: Libp2p | null = null
 	private networkConfig: NetworkConfig | null = null
