@@ -182,6 +182,12 @@ export class NetworkClient<Payload> {
 
 		if (result !== null) {
 			this.sync()
+		} else {
+			this.gossipLog.dispatchEvent(
+				new CustomEvent("sync:status", {
+					detail: { role: "client", status: "complete", peer: this.sourceURL },
+				}),
+			)
 		}
 	}
 
