@@ -31,12 +31,15 @@ const wsURL =
 const Layout: React.FC = () => {
 	const [isInfoOpen, setIsInfoOpen] = useState<boolean>(false)
 
-	const { app, ws } = useCanvas(wsURL, {
+	const { app, ws, useSyncState } = useCanvas(wsURL, {
 		signers: [new SIWESigner(), new SIWFSigner()],
 		topic: "forum-example.canvas.xyz",
 		contract: Forum,
 		// reset: true,
 	})
+
+	const syncState = useSyncState()
+	const [infoOpen, setInfoOpen] = useState(false)
 
 	const { ConnectSIWE } = useSIWE(app)
 	const { ConnectSIWF } = useSIWF(app)
@@ -55,46 +58,31 @@ const Layout: React.FC = () => {
 									✕
 								</button>
 							</div>
-							<AppInfo
-								app={app}
-								ws={ws}
-								styles={{
-									position: "absolute",
-									height: "100%",
-									top: 0,
-									bottom: 0,
-									right: 0,
-								}}
-								buttonStyles={{
-									position: "absolute",
-									right: "1rem",
-									bottom: "1rem",
-								}}
-								popupStyles={{
-									position: "absolute",
-									right: "0.5rem",
-									top: "0.5rem",
-								}}
-							/>
 							<div className="flex flex-col break-all">
 								<ConnectSIWE />
 								<ConnectSIWF />
 							</div>
 							<div className="block mt-4 text-gray-600 text-center text-sm">
-								{app.hasSession() ? "Logged in" : "Logged out"}
+								{app.hasSession() ? "Logged in" : "Logged out"} &middot;{" "}
+								<a href="#" onClick={() => setInfoOpen(!infoOpen)}>
+									Info
+								</a>
 								{ws.error ? <span className="text-red-500 ml-1.5">Connection error</span> : ""}
 							</div>
+							{infoOpen && (
+								<div className="block mt-4">
+									<hr />
+									<AppInfo app={app} ws={ws} styles={{ marginTop: "1em" }} />
+								</div>
+							)}
 						</div>
 						<button
 							onClick={() => setIsInfoOpen(true)}
 							className="fixed top-4 right-5 z-1 bg-white p-2 rounded-full shadow-md border border-gray-200 hover:bg-gray-100 flex"
 						>
-							<span className="mx-0.5">{app.hasSession() ? "Account" : "Login"}</span>
-							{ws.error ? (
-								<span className="text-red-500 mt-1 mx-0.5">
-									<LuUnplug />
-								</span>
-							) : null}
+							<span className="mx-0.5">
+								{app.hasSession() ? "Account" : "Login"} (sync: {syncState})
+							</span>
 						</button>
 					</main>
 				) : (
@@ -105,4 +93,4 @@ const Layout: React.FC = () => {
 	)
 }
 
-export default Layout 
+export default Layout

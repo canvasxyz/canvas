@@ -122,7 +122,6 @@ function App({ wallet1, wallet2 }: { wallet1: ethers.Wallet; wallet2: ethers.Wal
 
 	return (
 		<div style={{ height: "100vh" }}>
-			<AppInfo app={app} ws={ws} />
 			<div style={{ display: "flex", height: "calc(100vh - 120px)" }}>
 				{/* conversation selector */}
 				<div style={{ width: 200 }}>
@@ -161,6 +160,7 @@ function App({ wallet1, wallet2 }: { wallet1: ethers.Wallet; wallet2: ethers.Wal
 						)}
 					</div>
 				</div>
+				<AppInfo app={app} ws={ws} />
 			</div>
 			<div style={{ marginTop: 40 }}>
 				{/* login and reset buttons */}

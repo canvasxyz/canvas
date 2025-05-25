@@ -9,6 +9,7 @@ export default class Forum extends Contract<typeof Forum.models> {
 			text: "string",
 			author: "string",
 			timestamp: "number",
+			$indexes: ["timestamp"],
 		},
 	} satisfies ModelSchema
 

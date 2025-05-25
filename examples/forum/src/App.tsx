@@ -12,7 +12,7 @@ const getAddressFromDid = (did: string) => {
 }
 
 export const App: React.FC<{ app: AppT }> = ({ app }) => {
-	const posts = useLiveQuery(app, "posts") ?? []
+	const posts = useLiveQuery(app, "posts", { orderBy: { timestamp: "desc" } }) ?? []
 
 	const [newMessage, setNewMessage] = useState<string>("")
 	const [newTitle, setNewTitle] = useState<string>("")
@@ -44,13 +44,6 @@ export const App: React.FC<{ app: AppT }> = ({ app }) => {
 			setNewTitle("")
 		})
 	}
-
-	// Scroll to bottom when messages change
-	useEffect(() => {
-		if (window.self === window.top) {
-			messageEndRef.current?.scrollIntoView({ behavior: "smooth" })
-		}
-	}, [posts])
 
 	const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
 		// Check for Cmd+Enter (Mac) or Ctrl+Enter (Windows/Linux)
