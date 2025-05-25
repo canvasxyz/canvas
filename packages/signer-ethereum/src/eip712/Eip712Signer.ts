@@ -8,6 +8,11 @@ import { Eip712SessionData } from "./types.js"
 import { Secp256k1SignatureScheme } from "./Secp256k1DelegateSigner.js"
 import { validateEip712SessionData, addressPattern, parseAddress } from "./utils.js"
 
+export type Eip712SignerInit = ({ signer: AbstractSigner } | { burner: boolean } | { readOnly: boolean }) & {
+	chainId?: number
+	sessionDuration?: number
+}
+
 export class Eip712Signer extends AbstractSessionSigner<Eip712SessionData> {
 	// This is the EIP-712 type actually signed by the end user to authorize a new session.
 	// Like the other "session data" objects, is never saved itself, only re-constructed
@@ -27,14 +32,15 @@ export class Eip712Signer extends AbstractSessionSigner<Eip712SessionData> {
 	public readonly chainId: number
 	_signer: AbstractSigner | null
 
-	constructor(
-		init: { signer?: AbstractSigner; burner?: boolean; chainId?: number; sessionDuration?: number } = {
-			sessionDuration: 14 * DAYS,
-		},
-	) {
-		super("signer-ethereum-eip712", Secp256k1SignatureScheme, { sessionDuration: init.sessionDuration })
+	constructor(init: Eip712SignerInit) {
+		super("signer-ethereum-eip712", Secp256k1SignatureScheme, { sessionDuration: init.sessionDuration ?? 14 * DAYS })
 
-		this._signer = init.signer ?? (init.burner ? Wallet.createRandom() : null)
+		this._signer =
+			"signer" in init && init.signer !== undefined
+				? init.signer
+				: "burner" in init && init.burner !== undefined
+					? Wallet.createRandom()
+					: null
 		this.chainId = init.chainId ?? 1
 	}
 

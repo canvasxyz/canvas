@@ -44,8 +44,8 @@ export const App: React.FC<{}> = ({}) => {
 		topic: "chat-example.canvas.xyz",
 		contract: Chat,
 		signers: [
-			new SIWESigner(),
-			new Eip712Signer(),
+			new SIWESigner({ burner: true }),
+			new Eip712Signer({ burner: true }),
 			new SIWFSigner(),
 			new ATPSigner(),
 			new CosmosSigner(),

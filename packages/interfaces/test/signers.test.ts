@@ -202,7 +202,7 @@ for (const implementation of SIGNER_IMPLEMENTATIONS) {
 test(`ethereum - ethers signer can verify ethereum viem signed data`, async (t) => {
 	const topic = "com.example.app"
 	const signingSigner = new SIWESignerViem({ burner: true })
-	const verifyingSigner = new SIWESigner()
+	const verifyingSigner = new SIWESigner({ readOnly: true })
 
 	const { payload: session } = await signingSigner.newSession(topic)
 	await t.notThrowsAsync(() => Promise.resolve(verifyingSigner.verifySession(topic, session)))

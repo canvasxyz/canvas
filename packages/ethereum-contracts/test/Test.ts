@@ -34,7 +34,7 @@ describe("Contract_Test", function () {
 		const { utils } = await import("ethers")
 
 		async function getArguments(args?: any) {
-			const signer = new Eip712Signer()
+			const signer = new Eip712Signer({ readOnly: true })
 			const { payload: session, signer: delegateSigner } = await signer.newSession(topic)
 			// const session = (args && args.session) || (await signer.newSession(topic))
 
@@ -110,7 +110,7 @@ describe("Contract_Test", function () {
 
 			const { contract } = await loadFixture(deployFixture)
 
-			const signer = new Eip712Signer()
+			const signer = new Eip712Signer({ readOnly: true })
 
 			const { payload: session } = await signer.newSession(topic)
 			signer.verifySession(topic, session)
@@ -149,7 +149,7 @@ describe("Contract_Test", function () {
 
 			const { contract } = await loadFixture(deployFixture)
 
-			const signer = new Eip712Signer()
+			const signer = new Eip712Signer({ readOnly: true })
 			const { payload: session, signer: delegateSigner } = await signer.newSession(topic)
 
 			const clock = 1
@@ -197,7 +197,7 @@ describe("Contract_Test", function () {
 
 			const { contract } = await loadFixture(deployFixture)
 
-			const signer = new Eip712Signer()
+			const signer = new Eip712Signer({ readOnly: true })
 			const { payload: session, signer: delegateSigner } = await signer.newSession(topic)
 
 			// sign an action

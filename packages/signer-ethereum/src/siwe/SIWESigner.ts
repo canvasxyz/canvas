@@ -19,17 +19,24 @@ type AbstractSigner = {
 	signMessage(message: string): Awaitable<string>
 }
 
-export interface SIWESignerInit {
-	/** An abstract signer, implementing a minimal subset of methods on ethers.Signer.
-	 *
-	 * If no signer is provided, SIWESigner will only read/accept actions, and will not
-	 * be able to authorize new sessions or actions.  */
-	signer?: AbstractSigner | null | undefined
-
-	/** Create a random burner account for SIWESigner at the time of initialization.
-	 * Default: false. */
-	burner?: boolean
-
+export type SIWESignerInit = (
+	| {
+			/** An abstract signer, implementing a minimal subset of methods on ethers.Signer.
+			 *
+			 * If no signer is provided, SIWESigner will only read/accept actions, and will not
+			 * be able to authorize new sessions or actions.  */
+			signer: AbstractSigner | null | undefined
+	  }
+	| {
+			/** Create a random burner account for SIWESigner at the time of initialization.
+			 * Default: false. */
+			burner: boolean
+	  }
+	| {
+			/** Initialize SIWESigner as read-only signer. */
+			readOnly: boolean
+	  }
+) & {
 	/** Ethereum Chain ID to issue did:pkh identities on. Default: 1. */
 	chainId?: number
 
@@ -45,12 +52,17 @@ export class SIWESigner extends AbstractSessionSigner<SIWESessionData> {
 
 	_signer: AbstractSigner | null
 
-	public constructor({ sessionDuration, ...init }: SIWESignerInit = { sessionDuration: 14 * DAYS }) {
-		super("signer-ethereum", ed25519, { sessionDuration })
+	public constructor({ sessionDuration, ...init }: SIWESignerInit) {
+		super("signer-ethereum", ed25519, { sessionDuration: sessionDuration ?? 14 * DAYS })
 
-		this._signer = init.signer ?? (init.burner ? Wallet.createRandom() : null)
+		this._signer =
+			"signer" in init && init.signer !== undefined
+				? init.signer
+				: "burner" in init && init.burner !== undefined
+					? Wallet.createRandom()
+					: null
 		this.chainId = init.chainId ?? 1
-		this.key = `signer-ethereum${init.signer ? "-import" : ""}`
+		this.key = `signer-ethereum${"signer" in init && init.signer ? "-import" : ""}`
 	}
 
 	public isReadOnly() {

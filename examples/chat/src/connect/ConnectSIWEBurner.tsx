@@ -23,7 +23,7 @@ export const ConnectSIWEBurner: React.FC<ConnectSIWEBurnerProps> = ({}) => {
 			return
 		}
 
-		const signer = new SIWESigner({ chainId: 1 })
+		const signer = new SIWESigner({ burner: true, chainId: 1 })
 		const did = await signer.getDid()
 		setAddress(did)
 		setSessionSigner(signer)

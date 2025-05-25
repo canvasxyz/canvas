@@ -32,7 +32,7 @@ const Layout: React.FC = () => {
 	const [isInfoOpen, setIsInfoOpen] = useState<boolean>(false)
 
 	const { app, ws, useSyncState } = useCanvas(wsURL, {
-		signers: [new SIWESigner(), new SIWFSigner()],
+		signers: [new SIWESigner({ readOnly: true }), new SIWFSigner()],
 		topic: "forum-example.canvas.xyz",
 		contract: Forum,
 		// reset: true,

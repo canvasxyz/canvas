@@ -95,8 +95,8 @@ export class AppInstance {
 			contract,
 			snapshot,
 			signers: signers ?? [
-				new SIWESigner(),
-				new Eip712Signer(),
+				new SIWESigner({ readOnly: true }),
+				new Eip712Signer({ readOnly: true }),
 				new SIWFSigner(),
 				new ATPSigner(),
 				new CosmosSigner(),

@@ -93,22 +93,17 @@ export const useSIWE = (app?: Canvas<any>) => {
 		setAddress(null)
 		setSessionSigner(null)
 		const otherSigners = app.signers.getAll().filter((s) => !(s instanceof SIWESigner))
-		app.updateSigners([...otherSigners, new SIWESigner()])
+		app.updateSigners([...otherSigners, new SIWESigner({ readOnly: true })])
 	}, [app, sessionSigner])
 
-	const ConnectSIWE = ({
-		buttonStyles,
-		errorStyles,
-		errorClassName,
-		buttonClassName,
-	}: ConnectSIWEProps = {}) => {
+	const ConnectSIWE = ({ buttonStyles, errorStyles, errorClassName, buttonClassName }: ConnectSIWEProps = {}) => {
 		if (!app) {
 			return (
 				<div
 					className={errorClassName || ""}
 					style={{
 						...styles.errorContainer,
-						...errorStyles
+						...errorStyles,
 					}}
 				>
 					<code>App not initialized</code>
@@ -120,7 +115,7 @@ export const useSIWE = (app?: Canvas<any>) => {
 					className={errorClassName || ""}
 					style={{
 						...styles.errorContainer,
-						...errorStyles
+						...errorStyles,
 					}}
 				>
 					<code>{error.message}</code>
@@ -128,12 +123,12 @@ export const useSIWE = (app?: Canvas<any>) => {
 			)
 		} else if (provider === null) {
 			return (
-				<button 
-					disabled 
-					className={buttonClassName || ""} 
+				<button
+					disabled
+					className={buttonClassName || ""}
 					style={{
 						...styles.loadingButton,
-						...buttonStyles
+						...buttonStyles,
 					}}
 				>
 					Loading...
@@ -146,7 +141,7 @@ export const useSIWE = (app?: Canvas<any>) => {
 					className={buttonClassName || ""}
 					style={{
 						...styles.actionButton,
-						...buttonStyles
+						...buttonStyles,
 					}}
 				>
 					Disconnect ETH wallet
@@ -161,7 +156,7 @@ export const useSIWE = (app?: Canvas<any>) => {
 					className={buttonClassName || ""}
 					style={{
 						...styles.actionButton,
-						...buttonStyles
+						...buttonStyles,
 					}}
 				>
 					Connect ETH wallet
