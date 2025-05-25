@@ -9,6 +9,7 @@ import {
 	ContractAction,
 	hashContract,
 	hashSnapshot,
+	ClientSyncState,
 } from "@canvas-js/core"
 import { Contract } from "@canvas-js/core/contract"
 
@@ -37,6 +38,25 @@ export const useCanvas = <
 	const renderedRef = useRef(false) // Ref for skipping extra render in React.StrictMode.
 
 	const contractHash = config && typeof config.contract === "string" ? hashContract(config.contract) : null
+
+	const useSyncState = () => {
+		const [syncState, setSyncState] = useState<ClientSyncState>("offline")
+		useEffect(() => {
+			if (!app) return
+			const updateSyncState = () => {
+				setTimeout(() => setSyncState(app.syncState))
+			}
+			app.messageLog.addEventListener("connect", updateSyncState)
+			app.messageLog.addEventListener("disconnect", updateSyncState)
+			app.messageLog.addEventListener("sync:status", updateSyncState)
+			return () => {
+				app.messageLog.removeEventListener("connect", updateSyncState)
+				app.messageLog.removeEventListener("disconnect", updateSyncState)
+				app.messageLog.removeEventListener("sync:status", updateSyncState)
+			}
+		}, [app])
+		return syncState
+	}
 
 	// useEffect(() => {
 	// 	// keep app signers updated
@@ -175,5 +195,5 @@ export const useCanvas = <
 		}
 	}, [url, contractHash])
 
-	return { app, ws: networkClient, error }
+	return { app, ws: networkClient, error, useSyncState }
 }
