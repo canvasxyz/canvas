@@ -15,7 +15,7 @@ interface ChatMessage {
 	timestamp: number
 }
 
-const burnerWallet = new SIWESigner()
+const burnerWallet = new SIWESigner({ burner: true })
 
 export default function Home() {
 	const provider = useMemo(() => {
