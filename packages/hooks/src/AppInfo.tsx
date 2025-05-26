@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react"
 import { bytesToHex } from "@noble/hashes/utils"
 
-import { Canvas, NetworkClient } from "@canvas-js/core"
+import { Canvas, NetworkClient, renderSyncStatus } from "@canvas-js/core"
 import type { CanvasEvents } from "@canvas-js/core"
 import { MessageId } from "@canvas-js/gossiplog"
 
@@ -121,7 +121,8 @@ export const AppInfo: React.FC<{
 							{ws ? ws.sourceURL : "n/a"}
 						</code>
 						<span style={{ marginLeft: "0.5rem", color: "#6b7280" }}>
-							({!ws ? "No remote provided" : ws.isConnected() ? "Connected" : "Disconnected"}, Sync: {app.syncStatus})
+							({!ws ? "No remote provided" : ws.isConnected() ? "Connected" : "Disconnected"},{" "}
+							{renderSyncStatus(app.syncStatus, true)})
 						</span>
 					</div>
 					<hr style={{ margin: "0.5rem 0" }} />

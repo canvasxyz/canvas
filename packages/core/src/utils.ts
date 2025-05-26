@@ -9,6 +9,7 @@ import { assert, zip } from "@canvas-js/utils"
 import { Action, MessageType, Session, Snapshot } from "@canvas-js/interfaces"
 import { SignedMessage } from "@canvas-js/gossiplog"
 import { Config, isPrimaryKey, ModelValue, PrimaryKeyValue, PropertyValue } from "@canvas-js/modeldb"
+import type { ClientSyncStatus } from "./Canvas.js"
 
 export const isAction = (signedMessage: SignedMessage<MessageType>): signedMessage is SignedMessage<Action> =>
 	signedMessage.message.payload.type === "action"
@@ -169,5 +170,21 @@ export const stripBundleFilename = (bundle: string) => {
 		return bundle.slice(bundle.indexOf("\n") + 1)
 	} else {
 		return bundle
+	}
+}
+
+export const renderSyncStatus = (status: ClientSyncStatus, long?: boolean) => {
+	if (status === "offline") {
+		return long ? "Sync offline" : "Offline"
+	} else if (status === "starting") {
+		return long ? "Sync starting" : "Starting"
+	} else if (status === "inProgress") {
+		return long ? "Syncing..." : "Syncing"
+	} else if (status === "complete") {
+		return long ? "Sync complete" : "Complete"
+	} else if (status === "error") {
+		return long ? "Sync error" : "Error"
+	} else {
+		return long ? "Sync unexpected" : "Unexpected"
 	}
 }

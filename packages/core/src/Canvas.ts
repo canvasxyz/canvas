@@ -71,7 +71,7 @@ export type CanvasLogEvent = CustomEvent<SignedMessage<MessageType>>
  * - Starting means the client has a WebSocket connection, but has not received heads to sync to.
  * - In progress means the client has started a Merkle sync, but has not run to completion.
  * - Complete means a sync has run to completion. *Not* debounced. The server may new actions during a sync.
- * - Error is reserved for future use.
+ * - Error means an error occurred during Merkle sync, and the state of the log is unknown.
  */
 export type ClientSyncStatus = "offline" | "starting" | "inProgress" | "complete" | "error"
 

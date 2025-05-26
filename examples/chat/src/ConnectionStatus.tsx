@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useState } from "react"
 
 import type { Canvas, NetworkClient } from "@canvas-js/core"
+import { renderSyncStatus } from "@canvas-js/core"
 
 import { AppContext } from "./AppContext.js"
 
@@ -39,9 +40,15 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({ topic, ws })
 			</div>
 			<div>
 				<code className="text-sm">{import.meta.env.VITE_CANVAS_WS_URL}</code>
-				<span className="text-sm ml-2 text-gray-500">
-					({ws.isConnected() ? "Connected" : "Disconnected"}, Sync: {app.syncStatus})
-				</span>
+				<span className="text-sm ml-2 text-gray-500">({ws.isConnected() ? "Connected" : "Disconnected"})</span>
+			</div>
+
+			<hr />
+			<div>
+				<span className="text-sm">Sync</span>
+			</div>
+			<div>
+				<div className="text-sm">{renderSyncStatus(app.syncStatus, true)}</div>
 			</div>
 		</div>
 	)
