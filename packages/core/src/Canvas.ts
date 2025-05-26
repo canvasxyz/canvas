@@ -73,7 +73,7 @@ export type CanvasLogEvent = CustomEvent<SignedMessage<MessageType>>
  * - Complete means a sync has run to completion. *Not* debounced. The server may new actions during a sync.
  * - Error is reserved for future use.
  */
-export type ClientSyncState = "offline" | "starting" | "inProgress" | "complete" | "error"
+export type ClientSyncStatus = "offline" | "starting" | "inProgress" | "complete" | "error"
 
 export type ApplicationData = {
 	peerId: string | null
@@ -257,24 +257,24 @@ export class Canvas<
 			if (role === "server") {
 				return // Only implemented on the client to avoid races between different sync peers.
 			} else if (status === "incomplete") {
-				app.syncState = "inProgress"
+				app.syncStatus = "inProgress"
 			} else if (status === "complete") {
-				app.syncState = "complete"
+				app.syncStatus = "complete"
 			}
 		})
 
 		app.messageLog.addEventListener("connect", ({ detail: { peer } }) => {
-			if (app.syncState === "offline") {
-				app.syncState = "starting"
+			if (app.syncStatus === "offline") {
+				app.syncStatus = "starting"
 			}
 		})
 
 		app.messageLog.addEventListener("disconnect", ({ detail: { peer } }) => {
-			app.syncState = "offline"
+			app.syncStatus = "offline"
 		})
 
 		app.messageLog.addEventListener("error", () => {
-			app.syncState = "error"
+			app.syncStatus = "error"
 		})
 
 		return app
@@ -310,7 +310,7 @@ export class Canvas<
 	protected readonly controller = new AbortController()
 	protected readonly log = logger("canvas:core")
 	private lastMessage: number | null = null
-	public syncState: ClientSyncState = "offline"
+	public syncStatus: ClientSyncStatus = "offline"
 
 	private libp2p: Libp2p | null = null
 	private networkConfig: NetworkConfig | null = null

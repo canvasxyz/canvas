@@ -121,7 +121,7 @@ export const AppInfo: React.FC<{
 							{ws ? ws.sourceURL : "n/a"}
 						</code>
 						<span style={{ marginLeft: "0.5rem", color: "#6b7280" }}>
-							({!ws ? "No remote provided" : ws.isConnected() ? "Connected" : "Disconnected"}, Sync: {app.syncState})
+							({!ws ? "No remote provided" : ws.isConnected() ? "Connected" : "Disconnected"}, Sync: {app.syncStatus})
 						</span>
 					</div>
 					<hr style={{ margin: "0.5rem 0" }} />

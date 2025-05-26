@@ -31,14 +31,14 @@ const wsURL =
 const Layout: React.FC = () => {
 	const [isInfoOpen, setIsInfoOpen] = useState<boolean>(false)
 
-	const { app, ws, useSyncState } = useCanvas(wsURL, {
+	const { app, ws, useSyncStatus } = useCanvas(wsURL, {
 		signers: [new SIWESigner({ readOnly: true }), new SIWFSigner()],
 		topic: "forum-example.canvas.xyz",
 		contract: Forum,
 		// reset: true,
 	})
 
-	const syncState = useSyncState()
+	const syncStatus = useSyncStatus()
 	const [infoOpen, setInfoOpen] = useState(false)
 
 	const { ConnectSIWE } = useSIWE(app)
@@ -81,7 +81,7 @@ const Layout: React.FC = () => {
 							className="fixed top-4 right-5 z-1 bg-white p-2 rounded-full shadow-md border border-gray-200 hover:bg-gray-100 flex"
 						>
 							<span className="mx-0.5">
-								{app.hasSession() ? "Account" : "Login"} (sync: {syncState})
+								{app.hasSession() ? "Account" : "Login"} (sync: {syncStatus})
 							</span>
 						</button>
 					</main>
