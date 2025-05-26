@@ -15,7 +15,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({ topic, ws })
 	const [, setTick] = useState(0)
 	useEffect(() => {
 		const timer = setInterval(() => {
-			setTick(t => t + 1)
+			setTick((t) => t + 1)
 		}, 1000)
 		return () => clearInterval(timer)
 	}, [])
@@ -39,7 +39,9 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({ topic, ws })
 			</div>
 			<div>
 				<code className="text-sm">{import.meta.env.VITE_CANVAS_WS_URL}</code>
-				<span className="text-sm ml-2 text-gray-500">({ws.isConnected() ? 'Connected' : 'Disconnected'})</span>
+				<span className="text-sm ml-2 text-gray-500">
+					({ws.isConnected() ? "Connected" : "Disconnected"}, Sync: {app.syncState})
+				</span>
 			</div>
 		</div>
 	)
