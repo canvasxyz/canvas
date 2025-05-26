@@ -74,11 +74,21 @@ export class NetworkClient<Payload> {
 				pipe(this.eventSource, encodeEvents, lp.encode, eventStream.sink).catch((err) => {
 					this.log.error(err)
 					eventStream.close()
+					this.gossipLog.dispatchEvent(
+						new CustomEvent("error", {
+							detail: { error: err, peer: this.sourceURL },
+						}),
+					)
 				})
 
 				pipe(eventStream.source, lp.decode, decodeEvents, this.eventSink).catch((err) => {
 					this.log.error(err)
 					eventStream.close()
+					this.gossipLog.dispatchEvent(
+						new CustomEvent("error", {
+							detail: { error: err, peer: this.sourceURL },
+						}),
+					)
 				})
 
 				const [_, heads] = await gossipLog.getClock()
@@ -89,6 +99,11 @@ export class NetworkClient<Payload> {
 					err.message = `remote was not serving topic ${gossipLog.topic}`
 				}
 				this.error = err
+				this.gossipLog.dispatchEvent(
+					new CustomEvent("error", {
+						detail: { error: err, peer: this.sourceURL },
+					}),
+				)
 				throw err
 			})
 	}
@@ -161,6 +176,11 @@ export class NetworkClient<Payload> {
 				this.sync()
 				return
 			} else {
+				this.gossipLog.dispatchEvent(
+					new CustomEvent("error", {
+						detail: { error: err, peer: this.sourceURL },
+					}),
+				)
 				throw err
 			}
 		}
@@ -205,6 +225,11 @@ export class NetworkClient<Payload> {
 				stream = await this.newStream(this.syncProtocol)
 			} catch (err) {
 				this.log.error("failed to open outgoing sync stream: %O", err)
+				this.gossipLog.dispatchEvent(
+					new CustomEvent("error", {
+						detail: { error: err, peer: this.sourceURL },
+					}),
+				)
 				this.error = err
 				return
 			}

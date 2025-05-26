@@ -65,6 +65,7 @@ export type GossipLogEvents<Payload = unknown, Result = any> = {
 	"sync:status": CustomEvent<{ status: "complete" | "incomplete"; role: "client" | "server"; peer?: string }>
 	connect: CustomEvent<{ peer: string }>
 	disconnect: CustomEvent<{ peer: string }>
+	error: CustomEvent<{ error: Error; peer: string }>
 }
 
 export type MessageRecord = {

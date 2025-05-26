@@ -72,7 +72,7 @@ export type CanvasLogEvent = CustomEvent<SignedMessage<MessageType>>
  * - In progress means the client has started a Merkle sync, but has not run to completion.
  * - Complete means a sync has run to completion. *Not* debounced. The server may new actions during a sync.
  * - Error is reserved for future use.
-  */
+ */
 export type ClientSyncState = "offline" | "starting" | "inProgress" | "complete" | "error"
 
 export type ApplicationData = {
@@ -266,11 +266,15 @@ export class Canvas<
 		app.messageLog.addEventListener("connect", ({ detail: { peer } }) => {
 			if (app.syncState === "offline") {
 				app.syncState = "starting"
-			}			
+			}
 		})
 
 		app.messageLog.addEventListener("disconnect", ({ detail: { peer } }) => {
 			app.syncState = "offline"
+		})
+
+		app.messageLog.addEventListener("error", () => {
+			app.syncState = "error"
 		})
 
 		return app
