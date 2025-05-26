@@ -53,7 +53,7 @@ export class SIWESigner extends AbstractSessionSigner<SIWESessionData> {
 	_signer: AbstractSigner | null
 
 	public constructor({ sessionDuration, ...init }: SIWESignerInit) {
-		super("signer-ethereum", ed25519, { sessionDuration: sessionDuration ?? 14 * DAYS })
+		super("signer-ethereum", ed25519, { sessionDuration })
 
 		this._signer =
 			"signer" in init && init.signer !== undefined

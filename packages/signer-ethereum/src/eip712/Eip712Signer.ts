@@ -33,7 +33,7 @@ export class Eip712Signer extends AbstractSessionSigner<Eip712SessionData> {
 	_signer: AbstractSigner | null
 
 	constructor(init: Eip712SignerInit) {
-		super("signer-ethereum-eip712", Secp256k1SignatureScheme, { sessionDuration: init.sessionDuration ?? 14 * DAYS })
+		super("signer-ethereum-eip712", Secp256k1SignatureScheme, { sessionDuration: init.sessionDuration })
 
 		this._signer =
 			"signer" in init && init.signer !== undefined
