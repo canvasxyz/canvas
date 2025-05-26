@@ -109,7 +109,7 @@ multiplayer games, or decentralized applications.
 ::: code-group
 
 ```ts [Class Contract]
-import { Canvas, Contract } from "@canvas-js/core"
+import { Canvas, Contract, ModelSchema } from "@canvas-js/core"
 
 class Chat extends Contract<typeof Chat.models> {
   static models = {
@@ -118,7 +118,7 @@ class Chat extends Contract<typeof Chat.models> {
       content: "string",
       address: "string",
     }
-  }
+  } satisfies ModelSchema
 
   async createMessage(content: string) {
     this.db.create("messages", {
