@@ -1,6 +1,8 @@
 export * from "./Canvas.js"
 export * from "./types.js"
 
+export { Contract } from "./contract.js"
+
 export { TransformActionParams, transformArrowFns, transformArrowFnsTransactional } from "./compatibility.js"
 export { TableChange, RowChange, hashContract, hashSnapshot, generateChangesets } from "./snapshot.js"
 export { encodeRecordKey, decodeRecordKey, encodeRecordValue, decodeRecordValue } from "./utils.js"
