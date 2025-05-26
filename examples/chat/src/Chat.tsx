@@ -61,7 +61,7 @@ const MessageView: React.FC<MessageViewProps> = ({ message, previous }) => {
 	return (
 		<div>
 			{previous?.address === message.address ? null : <MessageHeader address={message.address} />}
-			<div>{message.content}</div>
+			<div>{message.content || <>&nbsp;</>}</div>
 		</div>
 	)
 }
