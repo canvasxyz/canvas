@@ -1,10 +1,12 @@
-import { Model } from "@canvas-js/modeldb"
 import { SqlStorage, SqlStorageValue } from "@cloudflare/workers-types"
 
 export const quote = (name: string) => `"${name}"`
 
 export class Query<R = Record<string, SqlStorageValue>> {
-	constructor(private readonly db: SqlStorage, private readonly sql: string) {}
+	constructor(
+		private readonly db: SqlStorage,
+		private readonly sql: string,
+	) {}
 
 	public get(params: SqlStorageValue[]): R | null {
 		const cursor = this.db.exec(this.sql, ...params)
@@ -25,7 +27,10 @@ export class Query<R = Record<string, SqlStorageValue>> {
 }
 
 export class Method {
-	constructor(private readonly db: SqlStorage, private readonly sql: string) {}
+	constructor(
+		private readonly db: SqlStorage,
+		private readonly sql: string,
+	) {}
 
 	public run(params: SqlStorageValue[]) {
 		this.db.exec(this.sql, ...params)
