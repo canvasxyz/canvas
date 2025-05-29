@@ -91,37 +91,25 @@ export type QueryParams = {
 // Derives typed PropertyValue = PrimitiveValue | ReferenceValue | RelationValue | JSONValue
 // from a given PropertyType
 
-export type DerivePropertyType<T extends PropertyType, HasIncludes extends boolean = false> = T extends "primary"
-	? string
-	: T extends "integer" | "float" | "number"
-		? number
-		: T extends "integer?" | "float?" | "number?"
-			? number | null
-			: T extends "string"
-				? string
-				: T extends "string?"
-					? string | null
-					: T extends "bytes"
-						? Uint8Array
-						: T extends "bytes?"
-							? Uint8Array | null
-							: T extends "boolean"
-								? boolean
-								: T extends "boolean?"
-									? boolean | null
-									: T extends "json"
-										? JSONValue
-										: T extends `@${string}[]`
-											? HasIncludes extends true
-												? any
-												: RelationValue
-											: T extends `@${string}?`
-												? (HasIncludes extends true ? any : ReferenceValue) | null
-												: T extends `@${string}`
-													? HasIncludes extends true
-														? any
-														: ReferenceValue
-													: never
+// prettier-ignore
+export type DerivePropertyType<T extends PropertyType, HasIncludes extends boolean = false> =
+  T extends "primary" ? string
+: T extends "integer" | "float" | "number" ? number
+: T extends "integer?" | "float?" | "number?" ? number | null
+: T extends "string" ? string
+: T extends "string?" ? string | null
+: T extends "bytes" ? Uint8Array
+: T extends "bytes?" ? Uint8Array | null
+: T extends "boolean" ? boolean
+: T extends "boolean?" ? boolean | null
+: T extends "json" ? JSONValue
+: T extends `@${string}[]`
+  ? HasIncludes extends true ? any : RelationValue
+: T extends `@${string}?`
+  ? (HasIncludes extends true ? any : ReferenceValue) | null
+: T extends `@${string}`
+  ? HasIncludes extends true ? any : ReferenceValue
+: never
 
 export type DeriveModelTypes<T extends ModelSchema, Ext = {}> = {
 	[K in keyof T]: {
