@@ -65,6 +65,7 @@ export default defineConfig({
 						{ text: "Model API", link: "/ref/model" },
 						// { text: "FAQ", link: "/ref/faq" },
 						{ text: "Consistency Model", link: "/ref/consistency" },
+						{ text: "Experimental Features", link: "/ref/experimental" },
 						{ text: "Roadmap", link: "/ref/roadmap" },
 						{
 							text: "Packages",
