@@ -5,19 +5,23 @@ next: false
 
 <div :class="$style.main">
 
-<HeroRow text="Embedded instant database for modular applications" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
+<HeroRow text="Build instant-sync distributed applications" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
 
 <div :class="$style.mainInner">
 
-Canvas is a local-first, distributed database similar to Firebase,
-built on the same principles as collaborative data types.
+Canvas is an instant-sync database like Firebase or Supabase, with
+state management, persistence, and built-in auth.
 
-Write your application logic inside the database, and deploy anywhere.
-Every client can use the database concurrently, and interactions are
-automatically synced and merged.
+Write your application logic inside the database, and it syncs instantly
+with peers. Users can access the database concurrently, and interactions
+are automatically merged.
 
-Use it to build mini apps, shared databases, browser extensions,
-multiplayer games, or decentralized applications.
+Unlike Firebase, Canvas applications are fully decentralized, verifiable,
+and local-first. There are no dependencies on central servers, and nodes
+sync using peer-to-peer networking.
+
+Use it to build mini-apps, multiplayer games, and decentralized
+networks, using the languages you already know.
 
 </div>
 
@@ -33,12 +37,12 @@ multiplayer games, or decentralized applications.
     iconName: 'database'
   },
   {
-    text: 'Realtime',
+    text: 'Realtime sync',
     tooltip: 'Instant-sync via libp2p WebSockets',
     iconName: 'activity'
   },
   {
-    text: 'React hooks',
+    text: 'Live queries',
     tooltip: 'React hooks for live apps & database queries',
     iconName: 'compare'
   },
@@ -53,8 +57,8 @@ multiplayer games, or decentralized applications.
     iconName: 'apps',
   },
   {
-    text: 'MIT Licensed',
-    tooltip: 'Open source, minimal vendor lock-in',
+    text: 'Open source',
+    tooltip: 'MIT Licensed, minimal vendor lock-in',
     iconName: 'crown',
   },
   {
@@ -108,6 +112,35 @@ multiplayer games, or decentralized applications.
 
 ::: code-group
 
+```ts [Rules Contract]
+import { Canvas, Contract, ModelSchema } from "@canvas-js/core"
+
+const Chat = {
+  models:
+    messages: {
+      id: "primary",
+      content: "string",
+      address: "string",
+      $rules: {
+        create: "address === this.address",
+        update: false,
+        delete: false,
+      }
+    }
+  } satisfies ModelSchema
+}
+
+const app = await Canvas.initialize({
+  topic: "example.xyz",
+  contract: Chat,
+})
+
+app.create("messages", {
+  content: "Hello world!",
+  address: this.address
+})
+```
+
 ```ts [Class Contract]
 import { Canvas, Contract, ModelSchema } from "@canvas-js/core"
 
@@ -136,7 +169,7 @@ const app = await Canvas.initialize({
 app.actions.createMessage("Hello world!")
 ```
 
-```ts [React Usage]
+```ts [React]
 import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
 import { Chat } from "./contract.ts"
 
@@ -165,15 +198,14 @@ export const App = () => {
   </div>
   <div :class="$style.colLeft">
 
-Canvas is a conflict-free replicated object, similar to CRDTs like Y.js, that provides the ability to write application logic inside a deterministic environment.
+Define your database by declaring a `Canvas` class, and putting your
+application logic inside `$rules` or methods on the JS class.
 
-Your application logic goes inside `actions` on the JS class, where each action has access to a multiwriter relational database.
-
-Actions sync between peers using a distributed event log, so every peer can validate the history of your application, without a central server.
+Actions sync between peers using distributed event sourcing, so every peer can validate the history of your application, without depending on a central server.
 
 Users log in through `signers`, which are used to authenticate their actions. Each signer is a DID, so you can use Ethereum, ATProto, or services like Clerk and Privy for login.
 
-Applications run across platforms, using IndexedDB in the browser or SQLite/Postgres in Node.js.
+Applications run across platforms, using IndexedDB (in the browser) or SQLite/Postgres.
 
 ```sh
 canvas run contract.ts --topic example.xyz
