@@ -242,14 +242,32 @@ test("create an app with an inline contract", async (t) => {
 				content: "string",
 				timestamp: "integer",
 				address: "string",
+				did: "string",
+				isVisible: "boolean",
 			},
 		} satisfies ModelSchema
 
-		async createPost({ content }: { content: string }) {
-			const { id, did, timestamp, db } = this
+		// Test individual parameter style
+		async createPost(content: string, isVisible: boolean) {
+			const { id, did, address, timestamp, db } = this
 			const postId = [did, id].join("/")
-			await db.set("posts", { id: postId, content, timestamp, address: did })
-			return content
+			await db.transaction(() => db.set("posts", { id: postId, content, address, did, isVisible, timestamp }))
+		}
+
+		async updatePost(postId: string, content: string, isVisible: boolean) {
+			const { id, did, address, timestamp, db } = this
+			const post = await db.get("posts", postId)
+			if (post?.did !== did) throw new Error("can only update own posts")
+			await db.transaction(() => db.update("posts", { id: postId, content, isVisible }))
+		}
+
+		async deletePost(key: string) {
+			const { did, db } = this
+			if (!key.startsWith(did + "/")) {
+				throw new Error("unauthorized")
+			}
+
+			await db.delete("posts", key)
 		}
 	}
 
@@ -262,15 +280,46 @@ test("create an app with an inline contract", async (t) => {
 
 	t.teardown(() => app.stop())
 
-	const { id, message, result } = await app.actions.createPost({ content: "hello world" })
-
+	// Test create post functionality
+	const { id, message } = await app.actions.createPost("hello world", true)
 	t.log(`applied action ${id}`)
 
 	const postId = [message.payload.did, id].join("/")
 	const value = await app.db.get("posts", postId)
 	t.is(value?.content, "hello world")
-	t.is(value?.address, `did:pkh:eip155:1:${wallet.address}`)
-	t.is(result, "hello world")
+	t.is(value?.did, `did:pkh:eip155:1:${wallet.address}`)
+	t.is(value?.isVisible, true)
+
+	const [clock] = await app.messageLog.getClock()
+	t.is(clock, 3) // session + 1 create
+
+	// Test second create and clock verification
+	const { id: id2, message: message2 } = await app.actions.createPost("hello individual", true)
+	t.log(`applied action ${id2}`)
+
+	const postId2 = [message2.payload.did, id2].join("/")
+	const value2 = await app.db.get("posts", postId2)
+	t.is(value2?.content, "hello individual")
+	t.is(value2?.isVisible, true)
+
+	const [clock2] = await app.messageLog.getClock()
+	t.is(clock2, 4) // session + 2 creates
+
+	// Test update functionality
+	const { id: id3 } = await app.actions.updatePost(postId2, "updated content", false)
+	const [clock3] = await app.messageLog.getClock()
+	t.is(clock3, 5)
+
+	const updatedValue = await app.db.get("posts", postId2)
+	t.is(updatedValue?.content, "updated content")
+	t.is(updatedValue?.isVisible, false)
+
+	// Test delete functionality
+	await app.actions.deletePost(postId2)
+	t.is(await app.db.get("posts", postId2), null)
+
+	const [finalClock] = await app.messageLog.getClock()
+	t.is(finalClock, 6)
 })
 
 test("apply an action and read a record from the database using eip712", async (t) => {
@@ -321,65 +370,3 @@ test("open custom modeldb tables", async (t) => {
 	t.deepEqual(await app.db.get("widgets", id), { id, name: "foobar" })
 })
 
-test("class function runtime", async (t) => {
-	class MyApp extends Contract<typeof MyApp.models> {
-		static models = {
-			posts: {
-				id: "primary",
-				content: "string",
-				address: "string",
-				did: "string",
-				timestamp: "integer",
-				isVisible: "boolean",
-			},
-		} satisfies ModelSchema
-
-		async createPost(content: string, isVisible: boolean) {
-			const { id, did, address, timestamp, db } = this
-			const postId = [did, id].join("/")
-			await db.transaction(() => db.set("posts", { id: postId, content, address, did, isVisible, timestamp }))
-		}
-
-		async updatePost(postId: string, content: string, isVisible: boolean) {
-			const { id, did, address, timestamp, db } = this
-			const post = await db.get("posts", postId)
-			if (post?.did !== did) throw new Error("can only update own posts")
-			await db.transaction(() => db.update("posts", { id: postId, content, isVisible }))
-		}
-
-		async deletePost(key: string) {
-			const { did, db } = this
-			if (!key.startsWith(did + "/")) {
-				throw new Error("unauthorized")
-			}
-
-			await db.delete("posts", key)
-		}
-	}
-
-	const app = await Canvas.initialize({
-		topic: "com.example.app",
-		contract: MyApp,
-	})
-
-	t.teardown(() => app.stop())
-
-	const { id, message } = await app.actions.createPost("hello", true)
-
-	t.log(`applied action ${id}`)
-	const postId = [message.payload.did, id].join("/")
-	const value = await app.db.get("posts", postId)
-	t.is(value?.content, "hello")
-
-	const [clock] = await app.messageLog.getClock()
-	t.is(clock, 3)
-
-	const { id: id2 } = await app.actions.createPost("bumping this thread again", true)
-	t.log(`applied action ${id2}`)
-	const [clock2] = await app.messageLog.getClock()
-	t.is(clock2, 4)
-
-	const { id: id3 } = await app.actions.updatePost(postId, "update", false)
-	const [clock3] = await app.messageLog.getClock()
-	t.is(clock3, 5)
-})
