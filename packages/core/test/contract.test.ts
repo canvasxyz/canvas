@@ -369,4 +369,3 @@ test("open custom modeldb tables", async (t) => {
 	await app.db.set("widgets", { id, name: "foobar" })
 	t.deepEqual(await app.db.get("widgets", id), { id, name: "foobar" })
 })
-
