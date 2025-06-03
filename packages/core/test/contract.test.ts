@@ -51,7 +51,7 @@ export default class extends Contract {
 }
 `
 
-const init = async (t: ExecutionContext) => {
+const initSIWEStringContract = async (t: ExecutionContext) => {
 	const signer = new SIWESigner({ burner: true })
 	const app = await Canvas.initialize({
 		contract,
@@ -64,7 +64,7 @@ const init = async (t: ExecutionContext) => {
 	return { app, signer }
 }
 
-const initEIP712 = async (t: ExecutionContext) => {
+const initEIP712StringContract = async (t: ExecutionContext) => {
 	const signer = new Eip712Signer({ burner: true })
 	const app = await Canvas.initialize({
 		contract,
@@ -76,8 +76,56 @@ const initEIP712 = async (t: ExecutionContext) => {
 	return { app, signer }
 }
 
+const initSIWEClassContract = async (t: ExecutionContext) => {
+	class MyApp extends Contract<typeof MyApp.models> {
+		static models = {
+			posts: {
+				id: "primary",
+				content: "string",
+				timestamp: "integer",
+				address: "string",
+				did: "string",
+				isVisible: "boolean",
+			},
+		} satisfies ModelSchema
+
+		// Test individual parameter style
+		async createPost(content: string, isVisible: boolean) {
+			const { id, did, address, timestamp, db } = this
+			const postId = [did, id].join("/")
+			await db.transaction(() => db.set("posts", { id: postId, content, address, did, isVisible, timestamp }))
+		}
+
+		async updatePost(postId: string, content: string, isVisible: boolean) {
+			const { id, did, address, timestamp, db } = this
+			const post = await db.get("posts", postId)
+			if (post?.did !== did) throw new Error("can only update own posts")
+			await db.transaction(() => db.update("posts", { id: postId, content, isVisible }))
+		}
+
+		async deletePost(key: string) {
+			const { did, db } = this
+			if (!key.startsWith(did + "/")) {
+				throw new Error("unauthorized")
+			}
+
+			await db.delete("posts", key)
+		}
+	}
+
+	const signer = ethers.Wallet.createRandom()
+	const app = await Canvas.initialize({
+		topic: "com.example.app",
+		contract: MyApp,
+		signers: [new SIWESigner({ signer })],
+	})
+
+	t.teardown(() => app.stop())
+	return { app, signer }
+}
+
 test("apply an action and read a record from the database", async (t) => {
-	const { app } = await init(t)
+	const { app } = await initSIWEStringContract(t)
 
 	const { id, message } = await app.actions.createPost("hello", true, {})
 
@@ -100,7 +148,7 @@ test("apply an action and read a record from the database", async (t) => {
 })
 
 test("create and delete a post", async (t) => {
-	const { app } = await init(t)
+	const { app } = await initSIWEStringContract(t)
 
 	const { id, message } = await app.actions.createPost("hello world", true, { author: "me" })
 
@@ -115,7 +163,7 @@ test("create and delete a post", async (t) => {
 })
 
 test("insert a message created by another app", async (t) => {
-	const [{ app: a }, { app: b }] = await Promise.all([init(t), init(t)])
+	const [{ app: a }, { app: b }] = await Promise.all([initSIWEStringContract(t), initSIWEStringContract(t)])
 
 	await a.actions.createPost("hello world", true, "bar", {})
 	const records = await a.messageLog.getMessages()
@@ -168,7 +216,7 @@ test("insert a message into an app with multiple signers", async (t) => {
 })
 
 test("reject an invalid message", async (t) => {
-	const { app } = await init(t)
+	const { app } = await initSIWEStringContract(t)
 
 	const scheme = ed25519.create()
 	const invalidMessage: Message<{ type: "fjdskl" }> = {
@@ -235,50 +283,8 @@ test("accept a manually encoded session/action with a legacy-style object arg", 
 })
 
 test("create an app with an inline contract", async (t) => {
-	class MyApp extends Contract<typeof MyApp.models> {
-		static models = {
-			posts: {
-				id: "primary",
-				content: "string",
-				timestamp: "integer",
-				address: "string",
-				did: "string",
-				isVisible: "boolean",
-			},
-		} satisfies ModelSchema
-
-		// Test individual parameter style
-		async createPost(content: string, isVisible: boolean) {
-			const { id, did, address, timestamp, db } = this
-			const postId = [did, id].join("/")
-			await db.transaction(() => db.set("posts", { id: postId, content, address, did, isVisible, timestamp }))
-		}
-
-		async updatePost(postId: string, content: string, isVisible: boolean) {
-			const { id, did, address, timestamp, db } = this
-			const post = await db.get("posts", postId)
-			if (post?.did !== did) throw new Error("can only update own posts")
-			await db.transaction(() => db.update("posts", { id: postId, content, isVisible }))
-		}
-
-		async deletePost(key: string) {
-			const { did, db } = this
-			if (!key.startsWith(did + "/")) {
-				throw new Error("unauthorized")
-			}
-
-			await db.delete("posts", key)
-		}
-	}
-
-	const wallet = ethers.Wallet.createRandom()
-	const app = await Canvas.initialize({
-		topic: "com.example.app",
-		contract: MyApp,
-		signers: [new SIWESigner({ signer: wallet })],
-	})
-
-	t.teardown(() => app.stop())
+	const { app, signer } = await initSIWEClassContract(t)
+	const address = signer.address
 
 	// Test create post functionality
 	const { id, message } = await app.actions.createPost("hello world", true)
@@ -287,7 +293,7 @@ test("create an app with an inline contract", async (t) => {
 	const postId = [message.payload.did, id].join("/")
 	const value = await app.db.get("posts", postId)
 	t.is(value?.content, "hello world")
-	t.is(value?.did, `did:pkh:eip155:1:${wallet.address}`)
+	t.is(value?.did, `did:pkh:eip155:1:${signer.address}`)
 	t.is(value?.isVisible, true)
 
 	const [clock] = await app.messageLog.getClock()
@@ -323,7 +329,7 @@ test("create an app with an inline contract", async (t) => {
 })
 
 test("apply an action and read a record from the database using eip712", async (t) => {
-	const { app } = await initEIP712(t)
+	const { app } = await initEIP712StringContract(t)
 
 	const { id, message } = await app.actions.createPost("hello world", true, -1, 0)
 
@@ -342,7 +348,7 @@ test("apply an action and read a record from the database using eip712", async (
 })
 
 test("call quickjs contract with did uri and wallet address", async (t) => {
-	const { app, signer } = await initEIP712(t)
+	const { app, signer } = await initEIP712StringContract(t)
 	assert(signer._signer !== null)
 	const address = await signer._signer.getAddress()
 
