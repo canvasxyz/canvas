@@ -135,6 +135,20 @@ export class ClassContractRuntime extends AbstractRuntime {
 				await this.context.deleteModelValue(model, key, this.#transaction)
 			}),
 
+			link: vm.wrapFunction(async (modelProperty, source, target) => {
+				assert(typeof modelProperty === "string", 'expected typeof modelProperty === "string"')
+				assert(typeof source === "string", 'expected typeof source === "string"')
+				assert(typeof target === "string", 'expected typeof target === "string"')
+				await this.context.linkModelValue(modelProperty, source, target, this.#transaction)
+			}),
+
+			unlink: vm.wrapFunction(async (modelProperty, source, target) => {
+				assert(typeof modelProperty === "string", 'expected typeof modelProperty === "string"')
+				assert(typeof source === "string", 'expected typeof source === "string"')
+				assert(typeof target === "string", 'expected typeof target === "string"')
+				await this.context.unlinkModelValue(modelProperty, source, target, this.#transaction)
+			}),
+
 			transaction: vm.context.newFunction("transaction", (callbackHandle) => {
 				const promise = vm.context.newPromise()
 				if (this.#txnId === 0) {

@@ -68,15 +68,17 @@ test("link and unlink database items", async (t) => {
 	})
 })
 
-test.skip("link and unlink database items in a string contract", async (t) => {
+test("link and unlink database items in a string contract", async (t) => {
 	const app = await Canvas.initialize({
 		topic: "com.example.app",
 		contract: `
-export const models = {
-				game: { id: "primary", player: "@player[]", manager: "@player[]", observers: "@player[]", status: "json" },
-				player: { id: "primary", game: "@game", status: "json" },
-			}
-export const actions = {
+import { Contract } from "@canvas-js/core/contract"
+
+export default class extends Contract {
+        static models = {
+				  game: { id: "primary", player: "@player[]", manager: "@player[]", observers: "@player[]", status: "json" },
+				  player: { id: "primary", game: "@game", status: "json" },
+        }
 				async createGame() {
 					await this.db.transaction(async () => {
 						const gameId = "0"
@@ -90,13 +92,13 @@ export const actions = {
 						await this.db.set("player", { id: "4", game: gameId, status: "ALIVE" })
 						await this.db.link("game.observers", gameId, "4")
 					})
-				},
+				}
 				async unlinkGame() {
 					await this.db.transaction(async () => {
 						const gameId = "0"
 						await this.db.unlink("game.observers", gameId, "4")
 					})
-				},
+				}
 }`,
 	})
 
