@@ -1,8 +1,21 @@
 import type { ActionContext, DeriveModelTypes, ModelAPI, ModelSchema } from "./types.js"
+import { Canvas } from "@canvas-js/core"
 
 export class Contract<ModelsT extends ModelSchema = ModelSchema> implements ActionContext<DeriveModelTypes<ModelsT>> {
 	public static get models(): ModelSchema {
 		throw new Error("the `Contract` class must be extended by a child class providing `static models`")
+	}
+
+	public static async initialize<
+		M extends ModelSchema,
+		T extends typeof Contract<M> | (new (topic: string) => Contract<any>)
+	>(this: T, topic: string, ...rest: any[]) {
+		const instance = (await Canvas.initialize({
+			topic,
+			contract: this as typeof Contract<M>,
+		})) as Canvas<M, InstanceType<T>>
+
+		return instance
 	}
 
 	public constructor(public readonly topic: string) {}
