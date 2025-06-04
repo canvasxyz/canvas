@@ -7,31 +7,33 @@ import { Canvas } from "@canvas-js/core/sync"
 import { ModelSchema } from "@canvas-js/modeldb"
 
 const contract = `
-export const models = {
-  posts: {
-    id: "primary",
-    content: "string",
-    address: "string",
-    did: "string",
-    timestamp: "integer",
-    isVisible: "boolean",
-    metadata: "json"
-  },
-};
+import { Contract } from "@canvas-js/core/contract"
 
-export const actions = {
+export default class MyApp extends Contract {
+  static models = {
+    posts: {
+      id: "primary",
+      content: "string",
+      address: "string",
+      did: "string",
+      timestamp: "integer",
+      isVisible: "boolean",
+      metadata: "json"
+    },
+  }
+
   async createPost(content, isVisible, metadata) {
     const { id, did, address, timestamp, db } = this
     const postId = [did, id].join("/")
     await db.transaction(() => db.set("posts", { id: postId, content, address, did, isVisible, timestamp, metadata }));
-  },
+  }
 
   async updatePost(postId, content, isVisible, metadata) {
     const { id, did, address, timestamp, db } = this
     const post = await db.get("posts", postId)
     if (post.did !== did) throw new Error("can only update own posts")
     await db.transaction(() => db.update("posts", { id: postId, content, isVisible, metadata }));
-  },
+  }
 
   async deletePost(key) {
     const { did, db } = this
@@ -40,8 +42,8 @@ export const actions = {
     }
 
     await db.delete("posts", key)
-  },
-};
+  }
+}
 `.trim()
 
 class MyApp extends Contract<typeof MyApp.models> {
@@ -101,7 +103,7 @@ const initInlineContract = (t: ExecutionContext) => {
 	return { app, wallet }
 }
 
-test.skip("synchronous string contract: apply an action and read a record from the database", async (t) => {
+test("synchronous string contract: apply an action and read a record from the database", async (t) => {
 	const { app } = initStringContract(t)
 
 	const { id, message } = await app.actions.createPost("hello", true, {})
@@ -109,7 +111,7 @@ test.skip("synchronous string contract: apply an action and read a record from t
 	t.log(`applied action ${id}`)
 	const postId = [message.payload.did, id].join("/")
 	const value = await app.db.get("posts", postId)
-	
+
 	// Verify all fields are stored correctly
 	t.is(value?.content, "hello")
 	t.is(value?.isVisible, true)
@@ -118,7 +120,7 @@ test.skip("synchronous string contract: apply an action and read a record from t
 	t.truthy(value?.address)
 })
 
-test.skip("synchronous string contract: create and delete a post", async (t) => {
+test("synchronous string contract: create and delete a post", async (t) => {
 	const { app } = initStringContract(t)
 
 	const { id, message } = await app.actions.createPost("hello world", true, { author: "me" })
@@ -141,7 +143,7 @@ test("synchronous inline contract: apply an action and read a record from the da
 	t.log(`applied action ${id}`)
 	const postId = [message.payload.did, id].join("/")
 	const value = await app.db.get("posts", postId)
-	
+
 	t.is(value?.content, "hello", "content matches")
 	t.is(value?.address, wallet.address, "address matches")
 	t.truthy(value?.timestamp, "timestamp is set")
