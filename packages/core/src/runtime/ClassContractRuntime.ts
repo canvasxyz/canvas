@@ -58,7 +58,10 @@ export class ClassContractRuntime extends AbstractRuntime {
 			.map((handle) => handle.consume((handle) => vm.context.getString(handle)))
 			.filter((name) => name !== "constructor")
 
-		// using contractHandle = vm.call(createContractHandle, vm.context.null, [])
+		using topicHandle = vm.wrapValue(topic)
+		using contractHandle = vm.call(createContractHandle, vm.context.null, [topicHandle])
+		using instanceTopicHandle = vm.context.getProp(contractHandle, "topic")
+		const instanceTopic = vm.context.getString(instanceTopicHandle)
 
 		using modelsHandle = vm.context.getProp(contractClassHandle, "models")
 		assert(vm.context.typeof(modelsHandle) === "object", "invalid contract class - expected static models object")
@@ -76,7 +79,7 @@ export class ClassContractRuntime extends AbstractRuntime {
 			]),
 		)
 
-		return new ClassContractRuntime(topic, signers, vm, contract, actionHandles, models)
+		return new ClassContractRuntime(instanceTopic, signers, vm, contract, actionHandles, models)
 	}
 
 	readonly #databaseAPI: QuickJSHandle
@@ -119,6 +122,11 @@ export class ClassContractRuntime extends AbstractRuntime {
 			merge: vm.wrapFunction(async (model, value) => {
 				assert(typeof model === "string", 'expected typeof model === "string"')
 				await this.context.mergeModelValue(model, value as ModelValue, this.#transaction)
+			}),
+
+			create: vm.wrapFunction(async (model, value) => {
+				assert(typeof model === "string", 'expected typeof model === "string"')
+				await this.context.createModelValue(model, value as ModelValue, this.#transaction)
 			}),
 
 			delete: vm.wrapFunction(async (model, key) => {

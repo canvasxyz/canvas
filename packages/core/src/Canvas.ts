@@ -139,9 +139,9 @@ export class Canvas<
 		const runtime = await createRuntime(topic, signers, contract as string | ContractClass, { runtimeMemoryLimit })
 
 		const messageLog = await target.openGossipLog(
-			{ topic, path },
+			{ topic: runtime.topic, path },
 			{
-				topic, // topic for signing and execution, in runtime consumer
+				topic: runtime.topic, // topic for signing and execution, in runtime consumer
 				apply: runtime.getConsumer(),
 				validatePayload: validatePayload,
 				verifySignature: verifySignature,
@@ -185,9 +185,9 @@ export class Canvas<
 		const app = new Canvas<ModelsT, InstanceT>(signers, messageLog, runtime)
 
 		if (config.snapshot) {
-			assert(topic.endsWith(`#${hashSnapshot(config.snapshot)}`), "invalid snapshot")
+			assert(runtime.topic.endsWith(`#${hashSnapshot(config.snapshot)}`), "invalid snapshot")
 			const message: Message<Snapshot> = {
-				topic,
+				topic: runtime.topic,
 				clock: 0,
 				parents: [],
 				payload: config.snapshot,

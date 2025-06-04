@@ -23,7 +23,7 @@ test("inline contract initializes with instance topic", async (t) => {
 
 	t.teardown(() => app.stop())
 
-	// t.is(app.topic, "example.xyz.test")
+	t.is(app.topic, "example.xyz.test")
 
 	await app.actions.createPost("hello world")
 	await app.actions.createPost("second post")
@@ -35,7 +35,7 @@ test("inline contract initializes with instance topic", async (t) => {
 test("string contract initializes with instance topic", async (t) => {
 	const wallet = ethers.Wallet.createRandom()
 
-	const contract = `import { Contract } from "@canvas-js/core/contract"
+	const contract = `import { Contract } from "@canvas-js/core/contract";
 
 	export default class extends Contract {
 		static models = { posts: { id: "primary", creator: "string", content: "string" } }
@@ -54,7 +54,7 @@ test("string contract initializes with instance topic", async (t) => {
 
 	t.teardown(() => app.stop())
 
-	// t.is(app.topic, "example.xyz.test")
+	t.is(app.topic, "example.xyz.test")
 
 	await app.actions.createPost("hello world")
 	await app.actions.createPost("second post")
