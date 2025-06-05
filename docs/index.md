@@ -9,19 +9,17 @@ next: false
 
 <div :class="$style.mainInner">
 
-Canvas is an instant-sync database like Firebase or Supabase, with
-state management, persistence, and built-in auth.
+Canvas is an open-source database, like a decentralized, verifiable
+version of Firebase.
 
-Write your application logic inside the database, and it syncs instantly
-with peers. Users can access the database concurrently, and interactions
-are automatically merged.
+Write your application logic inside the database,
+and it syncs instantly with peers.
 
-Unlike Firebase, Canvas applications are fully decentralized, verifiable,
-and local-first. There are no dependencies on central servers, and nodes
-sync using peer-to-peer networking.
+Users can access the database concurrently, and interactions are
+automatically merged, without central servers.
 
-Use it to build mini-apps, multiplayer games, and decentralized
-networks, using the languages you already know.
+Use it to build mini-apps, multiplayer games, protocols, and
+decentralized networks, using the languages you already know.
 
 </div>
 
@@ -37,7 +35,7 @@ networks, using the languages you already know.
     iconName: 'database'
   },
   {
-    text: 'Realtime sync',
+    text: 'Realtime libp2p',
     tooltip: 'Instant-sync via libp2p WebSockets',
     iconName: 'activity'
   },
@@ -112,7 +110,7 @@ networks, using the languages you already know.
 
 ::: code-group
 
-```ts [Rules Contract]
+```ts [Model Contract]
 import { Canvas, Contract, ModelSchema } from "@canvas-js/core"
 
 const Chat = {
@@ -198,14 +196,14 @@ export const App = () => {
   </div>
   <div :class="$style.colLeft">
 
-Define your database by declaring a `Canvas` class, and putting your
-application logic inside `$rules` or methods on the JS class.
+Every application is defined as a `Canvas` class.
 
-Actions sync between peers using distributed event sourcing, so every peer can validate the history of your application, without depending on a central server.
+For simple applications, you can create a database-style Contract, where your backend logic goes in `$rules`.
 
-Users log in through `signers`, which are used to authenticate their actions. Each signer is a DID, so you can use Ethereum, ATProto, or services like Clerk and Privy for login.
+For complex applications, you can create a Class Contract, that lets you define
+custom actions and mutators.
 
-Applications run across platforms, using IndexedDB (in the browser) or SQLite/Postgres.
+Once you have a contract, you can run it from the command line:
 
 ```sh
 canvas run contract.ts --topic example.xyz
@@ -216,6 +214,9 @@ canvas run contract.ts --topic example.xyz
 This starts a peer that you can connect to from your browser. By
 default, it will also connect to other servers on the
 application's topic.
+
+Each contract can run inside the browser (using IndexedDB), on your
+desktop (using SQLite), or on servers (using SQLite/Postgres).
 
 Read on to learn how to [authenticate users](/4-identities-auth),
 [upgrade your app](/6-deploying), or [deploy to a

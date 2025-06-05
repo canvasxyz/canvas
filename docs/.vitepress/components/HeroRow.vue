@@ -229,7 +229,7 @@ const heroImageSlotExists = inject('hero-image-slot-exists') as Ref<boolean>
 .image-container {
   display: none;
   position: absolute;
-  right: -170px;
+  right: -80px;
   margin: 0 auto;
   margin-top: 0;
   width: 320px;
