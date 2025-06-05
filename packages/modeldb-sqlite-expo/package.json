@@ -1,6 +1,6 @@
 {
 	"name": "@canvas-js/modeldb-sqlite-expo",
-	"version": "0.15.0",
+	"version": "0.15.1",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"type": "module",
 	"engines": {
@@ -16,7 +16,7 @@
 		"test": "ava --serial"
 	},
 	"dependencies": {
-		"@canvas-js/modeldb": "0.15.0",
+		"@canvas-js/modeldb": "0.15.1",
 		"@canvas-js/utils": "1.0.0",
 		"@ipld/dag-json": "^10.2.3",
 		"expo-sqlite": "^14.0.6"
