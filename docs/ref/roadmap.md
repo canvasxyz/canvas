@@ -8,9 +8,18 @@ For past release notes, please see [Github](https://github.com/canvasxyz/canvas/
 - [ ] Improving the experience around upgrading and hosting applications.
 - [ ] Support for non-crypto, traditional web2 login.
 - [ ] Support for application deployment on existing EVM chains.
-- [ ] Support for sharding applications into multiple objects.
-- [ ] Support for partial sync.
+- [ ] Support for more efficient sync.
 - [ ] Support for private data.
+
+## 0.15.1 (2025-06-05)
+
+- [x] Allow class contracts to be initialized by calling `async initialize(topic: string)` on the contract directly. The first argument is passed to the contract constructor.
+- [x] Add sync status to apps.
+- [x] Add `useSyncState` hook for showing sync status on apps.
+
+```ts
+export type ClientSyncStatus = "offline" | "starting" | "inProgress" | "complete" | "error"
+```
 
 ## 0.15 (2025-05-22)
 
