@@ -27,12 +27,37 @@ class Chat extends Contract<typeof Chat.models> {
     })
   }
 }
+```
 
+A constructor is optional, but if provided, it should pass the topic to super(). Additionally, actions will only be generated for methods on the contract directly.
+
+```ts
+class NamespacedChat extends Contract<typeof Chat.models> {
+  createMessage(content: string) {
+    super(content)
+  }
+  constructor(namespace: string) {
+    super(namespace + ".chat.canvas.xyz")
+  }
+}
+```
+
+You can initialize a class contract by providing it to `Canvas.initialize`, or calling `initialize()` on it directly:
+
+```ts
 const app = await Canvas.initialize({
   contract: Chat,
   topic: "example.xyz"
 })
+```
 
+```ts
+const app = await NamespacedChat.initialize("mynamespace")
+```
+
+Once initialized, methods on the contract are called via `this.actions`.
+
+```ts
 app.actions.createMessage("I'm a scary and powerful fire demon!")
 ```
 
