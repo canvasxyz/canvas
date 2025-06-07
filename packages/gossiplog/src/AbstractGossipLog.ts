@@ -113,7 +113,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 	public readonly validatePayload: (payload: unknown) => payload is Payload
 	public readonly verifySignature: (signature: Signature, message: Message<Payload>) => Awaitable<void>
 
-	readonly #apply: GossipLogConsumer<Payload, Result>
+	#apply: GossipLogConsumer<Payload, Result>
 
 	protected constructor(
 		public readonly db: AbstractModelDB,
@@ -236,6 +236,10 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 
 		this.log("replay incomplete")
 		return false
+	}
+
+	public setConsumer(apply: GossipLogConsumer<Payload, Result>) {
+		this.#apply = apply
 	}
 
 	public async connect(url: string, options: { signal?: AbortSignal } = {}): Promise<NetworkClient<any>> {
