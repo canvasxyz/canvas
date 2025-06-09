@@ -1,24 +1,25 @@
+import { JSValue } from "@canvas-js/utils"
 import type { ActionContext, DeriveModelTypes, ModelAPI, ModelSchema } from "./types.js"
-import { Canvas } from "@canvas-js/core"
+import { Canvas, Config } from "@canvas-js/core"
 
 export class Contract<ModelsT extends ModelSchema = ModelSchema> implements ActionContext<DeriveModelTypes<ModelsT>> {
 	public static get models(): ModelSchema {
 		throw new Error("the `Contract` class must be extended by a child class providing `static models`")
 	}
 
-	public static async initialize<
-		M extends ModelSchema,
-		T extends typeof Contract<M> | (new (topic: string) => Contract<any>)
-	>(this: T, topic: string, ...rest: any[]) {
-		const instance = (await Canvas.initialize({
-			topic,
+	public static async initialize<M extends ModelSchema, T extends typeof Contract<M> | (new () => Contract<any>)>(
+		this: T,
+		config?: Exclude<Config, "contract">,
+	) {
+		const instance = await Canvas.initialize({
+			...config,
 			contract: this as typeof Contract<M>,
-		})) as Canvas<M, InstanceType<T>>
+		})
 
-		return instance
+		return instance as Canvas<M, InstanceType<T>>
 	}
 
-	public constructor(public readonly topic: string) {}
+	constructor(...args: JSValue[]) {}
 
 	public get db(): ModelAPI<DeriveModelTypes<ModelsT>> {
 		throw new Error("cannot access this.db outside an action handler")

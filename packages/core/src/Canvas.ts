@@ -1,7 +1,9 @@
 import { Libp2p, TypedEventEmitter } from "@libp2p/interface"
 import { logger } from "@libp2p/logger"
-import * as pg from "pg"
 import type { SqlStorage } from "@cloudflare/workers-types"
+import * as pg from "pg"
+import * as cbor from "@ipld/dag-cbor"
+import { sha256 } from "@noble/hashes/sha256"
 import { bytesToHex } from "@noble/hashes/utils"
 
 import { Contract } from "@canvas-js/core/contract"
@@ -19,7 +21,6 @@ import target from "#target"
 import type {
 	ContractAction,
 	ModelSchema,
-	ModelAPI,
 	DeriveModelTypes,
 	ContractClass,
 	GetActionsType,
@@ -30,7 +31,7 @@ import { ActionRecord } from "./runtime/AbstractRuntime.js"
 import { validatePayload } from "./schema.js"
 import { CreateSnapshotArgs, createSnapshot, hashSnapshot } from "./snapshot.js"
 import { baseVersion, initialUpgradeSchema, initialUpgradeVersion, upgrade } from "./migrations.js"
-import { topicPattern } from "./utils.js"
+import { namespacePattern } from "./utils.js"
 
 export type { Model } from "@canvas-js/modeldb"
 export type { PeerId } from "@libp2p/interface"
@@ -39,8 +40,11 @@ export type Config<
 	ModelsT extends ModelSchema = ModelSchema,
 	InstanceT extends Contract<ModelsT> = Contract<ModelsT> & Record<string, ContractAction<ModelsT>>,
 > = {
-	topic: string
-	contract: string | { models: ModelsT } | ContractClass<ModelsT, InstanceT>
+	contract: string | { namespace?: string; models: ModelsT } | ContractClass<ModelsT, InstanceT>
+
+	/** constructor arguments for the contract class */
+	args?: JSValue[]
+
 	signers?: SessionSigner[]
 
 	/** data directory path (NodeJS/sqlite), postgres connection config (NodeJS/pg), or storage backend (Cloudflare DO) */
@@ -57,6 +61,9 @@ export type Config<
 
 	/** provide a snapshot to initialize the runtime database with, requires `reset: true` */
 	snapshot?: Snapshot | null
+
+	/** override the internal GossipLog topic */
+	topic?: string
 }
 
 export interface CanvasEvents extends GossipLogEvents<MessageType> {
@@ -108,20 +115,9 @@ export class Canvas<
 		ModelsT extends ModelSchema = ModelSchema,
 		InstanceT extends Contract<ModelsT> = Contract<ModelsT> & Record<string, ContractAction<ModelsT>>,
 	>(config: Config<ModelsT, InstanceT>): Promise<Canvas<ModelsT, InstanceT>> {
-		const { topic, path = null, contract, signers: initSigners = [], runtimeMemoryLimit } = config
+		const { path = null, contract, args = [], signers: initSigners = [], runtimeMemoryLimit } = config
 
-		if (config.snapshot) {
-			assert(
-				topicPattern.test(topic) && topic.includes("#"),
-				`invalid topic ${topic}, must match the pattern [a-zA-Z0-9\\.\\-]#{snapshotHash}`,
-			)
-			assert(
-				topic.endsWith(`#${hashSnapshot(config.snapshot)}`),
-				`invalid topic ${topic} for this exact snapshot hash: ${hashSnapshot(config.snapshot).slice(0, 5)}...`,
-			)
-		} else {
-			assert(topicPattern.test(topic), "invalid topic, must match [a-zA-Z0-9\\.\\-]")
-		}
+		const argsHash = bytesToHex(sha256(cbor.encode(args)).subarray(0, 4))
 
 		const signers = new SignerCache(initSigners.length === 0 ? [new SIWESigner({ burner: true })] : initSigners)
 
@@ -136,13 +132,22 @@ export class Canvas<
 			}
 		}
 
-		const runtime = await createRuntime(topic, signers, contract as string | ContractClass, { runtimeMemoryLimit })
+		const runtime = await createRuntime(contract as string | ContractClass, args, signers, { runtimeMemoryLimit })
+		assert(namespacePattern.test(runtime.namespace), "invalid namespace, must match [a-zA-Z0-9\\.\\-]")
+
+		const topicComponents = [runtime.namespace, argsHash]
+		if (config.snapshot) {
+			topicComponents.push(hashSnapshot(config.snapshot))
+		}
+
+		const topic = config.topic ?? topicComponents.join(":")
 
 		const messageLog = await target.openGossipLog(
-			{ topic: runtime.topic, path },
+			{ topic: topic, path },
 			{
-				topic: runtime.topic, // topic for signing and execution, in runtime consumer
+				topic: topic,
 				apply: runtime.getConsumer(),
+
 				validatePayload: validatePayload,
 				verifySignature: verifySignature,
 				schema: { ...config.schema, ...runtime.schema },
@@ -185,13 +190,13 @@ export class Canvas<
 		const app = new Canvas<ModelsT, InstanceT>(signers, messageLog, runtime)
 
 		if (config.snapshot) {
-			assert(runtime.topic.endsWith(`#${hashSnapshot(config.snapshot)}`), "invalid snapshot")
 			const message: Message<Snapshot> = {
-				topic: runtime.topic,
+				topic: topic,
 				clock: 0,
 				parents: [],
 				payload: config.snapshot,
 			}
+
 			const signature = SnapshotSignatureScheme.create().sign(message)
 			const signedMessage: SignedMessage<Snapshot> = app.messageLog.encode(signature, message)
 			await app.messageLog.insert(signedMessage)
@@ -407,6 +412,10 @@ export class Canvas<
 		}
 	}
 
+	public get namespace() {
+		return this.runtime.namespace
+	}
+
 	public async replay(): Promise<boolean> {
 		for (const name of Object.keys(this.db.models)) {
 			if (!name.startsWith("$")) {
@@ -516,7 +525,7 @@ export class Canvas<
 		// Close the runtime. If we didn't manage ContractRuntime's
 		// QuickJS lifetimes correctly, this could throw an exception.
 		try {
-			await this.runtime.close()
+			this.runtime.close()
 		} catch (err) {
 			console.error(err)
 		}

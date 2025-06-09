@@ -205,7 +205,7 @@ interface GossipLogInit<Payload> {
 }
 ```
 
-The `topic` is the global topic string identifying the log - we recommend using DNS names like `my-app.example.com`. Topics must match `/^[a-zA-Z0-9\.\-]+$/`.
+The `topic` is the global topic string identifying the log - we recommend using DNS names like `my-app.example.com`. Topics must match `/^[a-zA-Z0-9:\.\-]+$/`.
 
 Logs are generic in a `Payload` parameter. You can provide a `validatePayload` method as a TypeScript type predicate to synchronously validate an `unknown` value as a `Payload` (it is only guaranteed to be an IPLD data model value). Only use `validatePayload` for type/schema validation, not for authn/authz.
 

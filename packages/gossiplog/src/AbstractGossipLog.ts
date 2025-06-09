@@ -28,7 +28,7 @@ import { AncestorIndex } from "./AncestorIndex.js"
 import { MessageSet } from "./MessageSet.js"
 import { MessageId, decodeId, messageIdPattern } from "./MessageId.js"
 import { MessageSource, SignedMessage, getNextClock } from "./SignedMessage.js"
-import { gossiplogTopicPattern } from "./utils.js"
+import { topicPattern } from "./utils.js"
 
 export type GossipLogConsumer<Payload = unknown, Result = any> = (
 	this: AbstractGossipLog<Payload, Result>,
@@ -121,10 +121,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		init: GossipLogInit<Payload, Result>,
 	) {
 		super()
-		assert(
-			gossiplogTopicPattern.test(init.topic),
-			"invalid topic (must be of the form 'topic' or 'topic#hash', where topic matches [a-zA-Z0-9\\.\\-])",
-		)
+		assert(topicPattern.test(init.topic), "invalid topic (must match [a-zA-Z0-9:\\.\\-])")
 
 		this.topic = init.topic
 		this.signer = init.signer ?? ed25519.create()

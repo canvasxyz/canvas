@@ -1,13 +1,5 @@
-import { randomUUID } from "node:crypto"
-import test, { ExecutionContext } from "ava"
+import test from "ava"
 
-import { ethers } from "ethers"
-import { assert } from "@canvas-js/utils"
-
-import type { Action, Message, Session } from "@canvas-js/interfaces"
-import { ed25519 } from "@canvas-js/signatures"
-import { SIWESigner, Eip712Signer } from "@canvas-js/signer-ethereum"
-import { CosmosSigner } from "@canvas-js/signer-cosmos"
 import { Canvas, ModelSchema } from "@canvas-js/core"
 import { Contract } from "@canvas-js/core/contract"
 

@@ -9,7 +9,7 @@ import { bytesToHex } from "@noble/hashes/utils"
 export const cborNull: Uint8Array = cbor.encode(null)
 
 // eslint-disable-next-line no-useless-escape
-export const gossiplogTopicPattern = /^[a-zA-Z0-9\.\-]+(\#[a-zA-Z0-9]+)?$/
+export const topicPattern = /^[a-zA-Z0-9:\.\-]+$/
 
 export function hashSnapshot(snapshot: Snapshot): string {
 	const hash = sha256(cbor.encode(snapshot))

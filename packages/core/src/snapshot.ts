@@ -57,7 +57,7 @@ export function hashContract<T extends ContractClass<ModelSchema>>(contract: T |
 
 export function hashSnapshot(snapshot: Snapshot): string {
 	const hash = sha256(cbor.encode(snapshot))
-	return bytesToHex(hash).slice(0, 16)
+	return bytesToHex(hash).slice(0, 8)
 }
 
 export type RowChange =

@@ -20,7 +20,8 @@ export const isSession = (signedMessage: SignedMessage<MessageType>): signedMess
 export const isSnapshot = (signedMessage: SignedMessage<MessageType>): signedMessage is SignedMessage<Snapshot> =>
 	signedMessage.message.payload.type === "snapshot"
 
-export const topicPattern = /^[a-zA-Z0-9.-]+(#[a-zA-Z0-9]+)?$/
+// eslint-disable-next-line no-useless-escape
+export const namespacePattern = /^[a-zA-Z0-9\.\-]+$/
 
 export function getErrorMessage(err: unknown): string {
 	if (err instanceof Error && err.name === "AggregateError") {

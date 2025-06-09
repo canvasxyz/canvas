@@ -143,7 +143,7 @@ export async function handler(args: Args) {
 			res.json({
 				inMemory: location === null,
 				originalContract: updatedContract,
-				contract: instance.app.getContract().toString(),
+				contract: instance.app.getContract(),
 				admin: args.admin || false,
 				nonce: nonce,
 				snapshotHash: updatedSnapshot ? hashSnapshot(updatedSnapshot) : null,

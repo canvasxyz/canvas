@@ -1,20 +1,18 @@
 import PQueue from "p-queue"
 
-import { bytesToHex } from "@noble/hashes/utils"
-import { sha256 } from "@noble/hashes/sha256"
-import { assert } from "@canvas-js/utils"
+import { assert, JSValue } from "@canvas-js/utils"
 
 import type { SignerCache } from "@canvas-js/interfaces"
 import { DeriveModelTypes } from "@canvas-js/modeldb"
-import { encodeId } from "@canvas-js/gossiplog"
 
 import { Contract as BaseContract } from "@canvas-js/core/contract"
 
-import { ModelSchema, ModelAPI, ContractClass, ContractAction } from "../types.js"
+import { ModelSchema, ModelAPI, ContractClass } from "../types.js"
 import { ExecutionContext } from "../ExecutionContext.js"
 import { AbstractRuntime } from "./AbstractRuntime.js"
 import { ActionAPI } from "../index.js"
 import { extractRules, generateActionsFromRules } from "./rules.js"
+import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 
 function isContractClass(a: any): a is ContractClass {
 	const prototype = Object.getPrototypeOf(a)
@@ -29,9 +27,9 @@ function isContractClass(a: any): a is ContractClass {
 
 export class ClassFunctionRuntime extends AbstractRuntime {
 	public static async init(
-		topic: string,
+		contract: { models: ModelSchema; namespace?: string } | ContractClass<ModelSchema, BaseContract<ModelSchema>>,
+		args: JSValue[],
 		signers: SignerCache,
-		contract: { models: ModelSchema } | ContractClass<ModelSchema, BaseContract<ModelSchema>>,
 	): Promise<ClassFunctionRuntime> {
 		assert(contract.models !== undefined, "missing `static models` value in contract class")
 
@@ -40,20 +38,18 @@ export class ClassFunctionRuntime extends AbstractRuntime {
 			"contract model names cannot start with '$'",
 		)
 
+		let namespace: string
 		let contractInstance: BaseContract<ModelSchema>
 		let actionNames: string[]
-		let repr: string
-		let instanceTopic: string
 		if (isContractClass(contract)) {
 			assert(
 				Object.values(contract.models).every((model) => model.$rules === undefined),
 				"class contracts cannot have model $rules",
 			)
 
-			contractInstance = new contract(topic)
+			namespace = contract.namespace ?? bytesToHex(randomBytes(8))
+			contractInstance = new contract(args)
 			actionNames = Object.getOwnPropertyNames(contract.prototype).filter((name) => name !== "constructor")
-			repr = contract.toString()
-			instanceTopic = contractInstance.topic
 		} else {
 			for (const [name, model] of Object.entries(contract.models)) {
 				if (model.$rules === undefined) {
@@ -61,7 +57,8 @@ export class ClassFunctionRuntime extends AbstractRuntime {
 				}
 			}
 
-			contractInstance = new BaseContract(topic)
+			namespace = contract.namespace ?? bytesToHex(randomBytes(8))
+			contractInstance = new BaseContract(args)
 			actionNames = Object.keys(contract.models).flatMap((name) => [
 				`${name}/create`,
 				`${name}/update`,
@@ -76,11 +73,9 @@ export class ClassFunctionRuntime extends AbstractRuntime {
 			])
 
 			Object.assign(contractInstance, Object.fromEntries(actionEntries))
-			repr = JSON.stringify(contract)
-			instanceTopic = topic
 		}
 
-		return new ClassFunctionRuntime(instanceTopic, signers, actionNames, contract.models, contractInstance, repr)
+		return new ClassFunctionRuntime(namespace, signers, actionNames, contract.models, contractInstance)
 	}
 
 	#context: ExecutionContext | null = null
@@ -93,12 +88,11 @@ export class ClassFunctionRuntime extends AbstractRuntime {
 	#contract: BaseContract<ModelSchema>
 
 	constructor(
-		public readonly topic: string,
+		public readonly namespace: string,
 		public readonly signers: SignerCache,
 		public readonly actionNames: string[],
 		models: ModelSchema,
 		contractInstance: BaseContract<ModelSchema>,
-		public readonly repr: string,
 	) {
 		super(models)
 
@@ -148,7 +142,7 @@ export class ClassFunctionRuntime extends AbstractRuntime {
 	public close() {}
 
 	public getContract() {
-		return this.repr
+		return null
 	}
 
 	private get context() {
@@ -182,7 +176,7 @@ export class ClassFunctionRuntime extends AbstractRuntime {
 			address: exec.address,
 			blockhash: blockhash ?? null,
 			timestamp: timestamp,
-			topic: this.topic,
+			topic: exec.messageLog.topic,
 		} as BaseContract<ModelSchema>
 
 		try {

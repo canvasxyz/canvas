@@ -1,10 +1,7 @@
-import assert from "node:assert"
 import test from "ava"
 
 import { Contract } from "@canvas-js/core/contract"
 import { Canvas, ModelSchema } from "@canvas-js/core"
-
-const id = () => Math.random().toString().slice(2, 10)
 
 test("link and unlink database items", async (t) => {
 	class MyApp extends Contract<typeof MyApp.models> {
@@ -72,34 +69,34 @@ test("link and unlink database items in a string contract", async (t) => {
 	const app = await Canvas.initialize({
 		topic: "com.example.app",
 		contract: `
-import { Contract } from "@canvas-js/core/contract"
+    import { Contract } from "@canvas-js/core/contract"
 
-export default class extends Contract {
-        static models = {
-				  game: { id: "primary", player: "@player[]", manager: "@player[]", observers: "@player[]", status: "json" },
-				  player: { id: "primary", game: "@game", status: "json" },
-        }
-				async createGame() {
-					await this.db.transaction(async () => {
-						const gameId = "0"
-						await this.db.set("game", { id: gameId, player: [], manager: [], observers: [], status: null })
-						await this.db.set("player", { id: "1", game: gameId, status: "ALIVE" })
-						await this.db.link("game.player", gameId, "1")
-						await this.db.set("player", { id: "2", game: gameId, status: "ALIVE" })
-						await this.db.link("game.manager", gameId, "2")
-						await this.db.set("player", { id: "3", game: gameId, status: "ALIVE" })
-						await this.db.link("game.observers", gameId, "3")
-						await this.db.set("player", { id: "4", game: gameId, status: "ALIVE" })
-						await this.db.link("game.observers", gameId, "4")
-					})
-				}
-				async unlinkGame() {
-					await this.db.transaction(async () => {
-						const gameId = "0"
-						await this.db.unlink("game.observers", gameId, "4")
-					})
-				}
-}`,
+    export default class extends Contract {
+      static models = {
+        game: { id: "primary", player: "@player[]", manager: "@player[]", observers: "@player[]", status: "json" },
+        player: { id: "primary", game: "@game", status: "json" },
+      }
+      async createGame() {
+     	await this.db.transaction(async () => {
+      		const gameId = "0"
+      		await this.db.set("game", { id: gameId, player: [], manager: [], observers: [], status: null })
+      		await this.db.set("player", { id: "1", game: gameId, status: "ALIVE" })
+      		await this.db.link("game.player", gameId, "1")
+      		await this.db.set("player", { id: "2", game: gameId, status: "ALIVE" })
+      		await this.db.link("game.manager", gameId, "2")
+      		await this.db.set("player", { id: "3", game: gameId, status: "ALIVE" })
+      		await this.db.link("game.observers", gameId, "3")
+      		await this.db.set("player", { id: "4", game: gameId, status: "ALIVE" })
+      		await this.db.link("game.observers", gameId, "4")
+     	})
+      }
+      async unlinkGame() {
+     	await this.db.transaction(async () => {
+      		const gameId = "0"
+      		await this.db.unlink("game.observers", gameId, "4")
+     	})
+      }
+    }`,
 	})
 
 	t.teardown(() => app.stop())

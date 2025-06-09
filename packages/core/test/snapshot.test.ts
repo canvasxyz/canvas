@@ -5,6 +5,7 @@ import { Contract } from "@canvas-js/core/contract"
 
 test("snapshot persists data across apps", async (t) => {
 	class MyApp extends Contract<typeof MyApp.models> {
+		static namespace = "my-app.example.com"
 		static models = {
 			posts: {
 				id: "primary",
@@ -21,12 +22,7 @@ test("snapshot persists data across apps", async (t) => {
 		}
 	}
 
-	const config = {
-		topic: "com.example.app",
-		contract: MyApp,
-	}
-
-	const app = await Canvas.initialize(config)
+	const app = await Canvas.initialize({ contract: MyApp })
 
 	const [clock0, parents0] = await app.messageLog.getClock()
 	t.is(clock0, 1)
@@ -48,10 +44,9 @@ test("snapshot persists data across apps", async (t) => {
 	await app.stop()
 
 	const app2 = await Canvas.initialize({
-		reset: true,
+		contract: MyApp,
 		snapshot,
-		...config,
-		topic: `${config.topic}#${hashSnapshot(snapshot)}`,
+		reset: true,
 	})
 
 	t.is((await app2.db.get("posts", "a"))?.content, "foo")
@@ -79,10 +74,9 @@ test("snapshot persists data across apps", async (t) => {
 	// snapshot a second time
 	const snapshot2 = await app2.createSnapshot()
 	const app3 = await Canvas.initialize({
-		reset: true,
+		contract: MyApp,
 		snapshot: snapshot2,
-		...config,
-		topic: `${config.topic}#${hashSnapshot(snapshot2)}`,
+		reset: true,
 	})
 
 	t.is((await app3.db.get("posts", "a"))?.content, "1")

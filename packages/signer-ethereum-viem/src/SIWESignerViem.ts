@@ -32,6 +32,11 @@ function isPrivateKeyAccount(signer: WalletClient | PrivateKeyAccount): signer i
 	return (signer as PrivateKeyAccount).source === "privateKey"
 }
 
+function getResourceURI(topic: string) {
+	const [namespace, ...rest] = topic.split(":")
+	return rest.length === 0 ? `canvas://${namespace}` : `canvas://${namespace}/${rest.join(":")}`
+}
+
 export class SIWESignerViem extends AbstractSessionSigner<SIWESessionData> {
 	public readonly match = (address: string) => addressPattern.test(address)
 	public readonly chainId: number
@@ -111,7 +116,7 @@ export class SIWESignerViem extends AbstractSessionSigner<SIWESessionData> {
 			uri: publicKey,
 			issuedAt: new Date(timestamp).toISOString(),
 			expirationTime: duration === undefined ? null : new Date(timestamp + duration).toISOString(),
-			resources: [`canvas://${topic}`],
+			resources: [getResourceURI(topic)],
 		}
 
 		const isValid = await verifyMessage({
@@ -161,7 +166,7 @@ export class SIWESignerViem extends AbstractSessionSigner<SIWESessionData> {
 			nonce: nonce,
 			issuedAt: issuedAt,
 			expirationTime: null,
-			resources: [`canvas://${topic}`],
+			resources: [getResourceURI(topic)],
 		}
 
 		if (this.sessionDuration !== null) {
