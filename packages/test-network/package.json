@@ -43,15 +43,15 @@
 		"@canvas-js/interfaces": "0.15.1",
 		"@canvas-js/relay-server": "0.15.1",
 		"@canvas-js/utils": "1.0.0",
-		"@libp2p/crypto": "^5.0.15",
-		"@libp2p/interface": "^2.7.0",
-		"@libp2p/peer-id": "^5.1.0",
-		"@multiformats/multiaddr": "^12.3.5",
-		"@noble/hashes": "^1.7.1",
+		"@libp2p/crypto": "^5.1.5",
+		"@libp2p/interface": "^2.10.3",
+		"@libp2p/peer-id": "^5.1.6",
+		"@multiformats/multiaddr": "^12.4.1",
+		"@noble/hashes": "^1.8.0",
 		"@types/cors": "^2.8.17",
 		"@types/d3": "^7.4.3",
 		"@types/debug": "^4.1.12",
-		"@types/express": "^5.0.1",
+		"@types/express": "^5.0.3",
 		"@types/react": "^18.3.9",
 		"@types/react-dom": "^18.3.0",
 		"@types/ws": "^8.5.14",
@@ -65,6 +65,6 @@
 		"react": "^18.3.1",
 		"react-dom": "^18.3.1",
 		"weald": "^1.0.2",
-		"ws": "^8.18.0"
+		"ws": "^8.18.2"
 	}
 }

@@ -24,8 +24,8 @@
 		"@canvas-js/modeldb-idb": "0.15.1",
 		"@farcaster/auth-kit": "^0.6.0",
 		"@farcaster/frame-sdk": "^0.0.35",
-		"@ipld/dag-cbor": "^9.2.2",
-		"@noble/hashes": "^1.7.1"
+		"@ipld/dag-cbor": "^9.2.4",
+		"@noble/hashes": "^1.8.0"
 	},
 	"devDependencies": {
 		"@types/react": "^18.3.9",

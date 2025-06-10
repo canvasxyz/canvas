@@ -18,7 +18,7 @@
 	"dependencies": {
 		"@canvas-js/modeldb": "0.15.1",
 		"@canvas-js/utils": "1.0.0",
-		"@ipld/dag-json": "^10.2.3",
+		"@ipld/dag-json": "^10.2.5",
 		"expo-sqlite": "^14.0.6"
 	}
 }

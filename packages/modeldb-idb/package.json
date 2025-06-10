@@ -22,8 +22,8 @@
 	"dependencies": {
 		"@canvas-js/modeldb": "0.15.1",
 		"@canvas-js/utils": "1.0.0",
-		"@ipld/dag-json": "^10.2.3",
+		"@ipld/dag-json": "^10.2.5",
 		"@libp2p/logger": "^5.1.13",
-		"idb": "^8.0.2"
+		"idb": "^8.0.3"
 	}
 }
