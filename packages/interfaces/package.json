@@ -14,6 +14,6 @@
 	},
 	"devDependencies": {
 		"@cosmjs/amino": "^0.32.3",
-		"@noble/curves": "^1.8.1"
+		"@noble/curves": "^1.9.2"
 	}
 }

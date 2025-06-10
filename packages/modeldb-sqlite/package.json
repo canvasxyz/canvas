@@ -15,7 +15,7 @@
 	"dependencies": {
 		"@canvas-js/modeldb": "0.15.1",
 		"@canvas-js/utils": "1.0.0",
-		"@ipld/dag-json": "^10.2.3",
+		"@ipld/dag-json": "^10.2.5",
 		"@types/better-sqlite3": "^7.6.10",
 		"better-sqlite3": "^11.8.1"
 	}
