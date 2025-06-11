@@ -43,7 +43,7 @@ const Layout: React.FC = () => {
 	const syncStatus = useSyncStatus()
 	const [infoOpen, setInfoOpen] = useState(false)
 
-	const { ConnectSIWE } = useSIWE(app)
+	const { ConnectSIWE, ConnectSIWEBurner } = useSIWE(app)
 	const { ConnectSIWF } = useSIWF(app)
 
 	return (
@@ -60,8 +60,9 @@ const Layout: React.FC = () => {
 									✕
 								</button>
 							</div>
-							<div className="flex flex-col break-all">
+							<div className="flex flex-col break-all gap-2">
 								<ConnectSIWE />
+								<ConnectSIWEBurner />
 								<ConnectSIWF />
 							</div>
 							<div className="block mt-4 text-gray-600 text-center text-sm">

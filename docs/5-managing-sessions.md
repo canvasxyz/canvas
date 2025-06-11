@@ -31,6 +31,7 @@ Now you can use any of the provided auth components in your application:
 
 - The `ConnectSIWE` component supports in-browser Ethereum wallets.
 - The `ConnectSIWF` component supports in-browser and in-frame Farcaster miniapps.
+- The `ConnectSIWEBurner` component generates a temporary burner wallet in localStorage.
 
 Each one will render a button, which toggles between logged-in and
 logged-out states, which you can customize with your own styles.
@@ -46,12 +47,13 @@ const MyComponent = () => {
 	})
 	const buttonStyles = { ... }
 
-  const { ConnectSIWE } = useSIWE(app)
+  const { ConnectSIWE, ConnectSIWEBurner } = useSIWE(app)
   const { ConnectSIWF } = useSIWF(app)
 
 	return <div className="user-login">
 		<ConnectSIWE app={app} buttonStyles={buttonStyles} />
-		<ConnectSIWF app={app} buttonStyles={buttonStyles} />
+		<ConnectSIWE app={app} buttonStyles={buttonStyles} />
+		<ConnectSIWEBurner app={app} buttonStyles={buttonStyles} />
 	</div>
 }
 ```

@@ -1,5 +1,5 @@
 import React, { useCallback, useContext, useEffect, useRef, useState } from "react"
-import { Eip1193Provider, BrowserProvider, EventEmitterable } from "ethers"
+import { Wallet, Eip1193Provider, BrowserProvider, EventEmitterable } from "ethers"
 
 import { SIWESigner } from "@canvas-js/signer-ethereum"
 import { Canvas } from "@canvas-js/core"
@@ -17,6 +17,26 @@ export interface ConnectSIWEProps {
 	errorTextStyes?: React.CSSProperties
 	buttonClassName?: string
 	errorClassName?: string
+	label?: string
+}
+
+const BURNER_WALLET_KEY = "canvas-connectsiwe-burner-wallet-key"
+
+const getBurnerWallet = () => {
+	let wallet
+	try {
+		const privateKey = localStorage.getItem(BURNER_WALLET_KEY)
+		if (privateKey) {
+			wallet = new Wallet(privateKey)
+		} else {
+			wallet = Wallet.createRandom()
+			localStorage.setItem(BURNER_WALLET_KEY, wallet.privateKey)
+		}
+	} catch (error) {
+		wallet = Wallet.createRandom()
+		localStorage.setItem(BURNER_WALLET_KEY, wallet.privateKey)
+	}
+	return wallet
 }
 
 export const useSIWE = (app?: Canvas<any>) => {
@@ -25,27 +45,47 @@ export const useSIWE = (app?: Canvas<any>) => {
 	const [error, setError] = useState<Error | null>(null)
 
 	const connect = useCallback(
-		async (provider: BrowserProvider | null, isBrowserInit?: boolean) => {
+		async (
+			config:
+				| {
+						provider: BrowserProvider | null
+						isReturningSession?: boolean
+				  }
+				| {
+						burner: boolean
+						isReturningSession?: boolean
+				  },
+		) => {
+			const provider = "provider" in config ? config.provider : null
+			const burner = "burner" in config ? config.burner : false
+			const isReturningSession = config.isReturningSession
+
 			if (!app) {
 				setError(new Error("app not initialized"))
-				return
+				return null
 			}
 
-			if (provider === null) {
-				setError(new Error("window.ethereum not found"))
-				return
+			let signer
+			if (burner) {
+				const wallet = getBurnerWallet()
+				signer = new SIWESigner({ signer: wallet })
+			} else {
+				if (provider === null) {
+					setError(new Error("window.ethereum not found"))
+					return null
+				}
+
+				setProvider(provider)
+
+				const network = await provider.getNetwork()
+				signer = await provider
+					.getSigner()
+					.then((signer) => new SIWESigner({ signer, chainId: Number(network.chainId) }))
 			}
-
-			setProvider(provider)
-
-			const network = await provider.getNetwork()
-			const signer = await provider
-				.getSigner()
-				.then((signer) => new SIWESigner({ signer, chainId: Number(network.chainId) }))
 
 			if (!(await signer.hasSession(app.topic))) {
-				if (isBrowserInit) {
-					return
+				if (isReturningSession) {
+					return null
 				} else {
 					const session = await signer.newSession(app.topic)
 					await app.messageLog.append(session.payload, { signer: session.signer })
@@ -59,6 +99,8 @@ export const useSIWE = (app?: Canvas<any>) => {
 			otherSigners.forEach((s) => s.clearSession(app.topic))
 			app.updateSigners([signer, ...otherSigners])
 			setSessionSigner(signer)
+
+			return signer
 		},
 		[app, provider],
 	)
@@ -73,6 +115,7 @@ export const useSIWE = (app?: Canvas<any>) => {
 
 		if (window.ethereum === undefined || window.ethereum === null) {
 			setError(new Error("window.ethereum not found"))
+			connect({ burner: true, isReturningSession: true })
 			return
 		}
 
@@ -83,8 +126,12 @@ export const useSIWE = (app?: Canvas<any>) => {
 		const provider = new BrowserProvider(window.ethereum)
 		setProvider(provider)
 
-		// automatically log back in
-		connect(provider, true)
+		// automatically log back in, trying the browser wallet first
+		connect({ provider, isReturningSession: true }).then((result) => {
+			if (result === null) {
+				connect({ burner: true, isReturningSession: true })
+			}
+		})
 	}, [app])
 
 	const disconnect = useCallback(async () => {
@@ -96,7 +143,13 @@ export const useSIWE = (app?: Canvas<any>) => {
 		app.updateSigners([...otherSigners, new SIWESigner({ readOnly: true })])
 	}, [app, sessionSigner])
 
-	const ConnectSIWE = ({ buttonStyles, errorStyles, errorClassName, buttonClassName }: ConnectSIWEProps = {}) => {
+	const ConnectSIWE = ({
+		buttonStyles,
+		errorStyles,
+		errorClassName,
+		buttonClassName,
+		label,
+	}: ConnectSIWEProps = {}) => {
 		if (!app) {
 			return (
 				<div
@@ -144,14 +197,14 @@ export const useSIWE = (app?: Canvas<any>) => {
 						...buttonStyles,
 					}}
 				>
-					Disconnect ETH wallet
+					Disconnect
 				</button>
 			)
 		} else {
 			return (
 				<button
 					onClick={() => {
-						connect(new BrowserProvider(window.ethereum!))
+						connect({ provider: new BrowserProvider(window.ethereum!), isReturningSession: false })
 					}}
 					className={buttonClassName || ""}
 					style={{
@@ -159,7 +212,82 @@ export const useSIWE = (app?: Canvas<any>) => {
 						...buttonStyles,
 					}}
 				>
-					Connect ETH wallet
+					{label ?? "Connect browser wallet"}
+				</button>
+			)
+		}
+	}
+
+	const ConnectSIWEBurner = ({
+		buttonStyles,
+		errorStyles,
+		errorClassName,
+		buttonClassName,
+		label,
+	}: ConnectSIWEProps = {}) => {
+		if (!app) {
+			return (
+				<div
+					className={errorClassName || ""}
+					style={{
+						...styles.errorContainer,
+						...errorStyles,
+					}}
+				>
+					<code>App not initialized</code>
+				</div>
+			)
+		} else if (error !== null) {
+			return (
+				<div
+					className={errorClassName || ""}
+					style={{
+						...styles.errorContainer,
+						...errorStyles,
+					}}
+				>
+					<code>{error.message}</code>
+				</div>
+			)
+		} else if (provider === null) {
+			return (
+				<button
+					disabled
+					className={buttonClassName || ""}
+					style={{
+						...styles.loadingButton,
+						...buttonStyles,
+					}}
+				>
+					Loading...
+				</button>
+			)
+		} else if (address !== null && sessionSigner instanceof SIWESigner) {
+			return (
+				<button
+					onClick={() => disconnect()}
+					className={buttonClassName || ""}
+					style={{
+						...styles.actionButton,
+						...buttonStyles,
+					}}
+				>
+					Disconnect
+				</button>
+			)
+		} else {
+			return (
+				<button
+					onClick={() => {
+						connect({ burner: true, isReturningSession: false })
+					}}
+					className={buttonClassName || ""}
+					style={{
+						...styles.actionButton,
+						...buttonStyles,
+					}}
+				>
+					{label ?? "Connect burner wallet"}
 				</button>
 			)
 		}
@@ -167,6 +295,7 @@ export const useSIWE = (app?: Canvas<any>) => {
 
 	return {
 		ConnectSIWE,
+		ConnectSIWEBurner,
 		address,
 		error,
 		provider,
