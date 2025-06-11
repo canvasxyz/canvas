@@ -1,5 +1,6 @@
 import React, { useState } from "react"
 import { LuUnplug } from "react-icons/lu"
+import { MdOutlineSync, MdOutlineSyncProblem, MdOutlineSyncDisabled } from "react-icons/md"
 import { AuthKitProvider } from "@farcaster/auth-kit"
 import { JsonRpcProvider } from "ethers"
 
@@ -52,7 +53,7 @@ const Layout: React.FC = () => {
 					<main>
 						<App app={app} />
 						<div
-							className={`${isInfoOpen ? "" : "hidden"} fixed top-4 right-5 z-10 bg-white p-4 pr-12 w-[320px] border border-1 shadow-md rounded`}
+							className={`${isInfoOpen ? "" : "hidden"} fixed top-4 right-5 z-10 bg-white p-4 pr-12 w-[340px] border border-1 shadow-md rounded`}
 						>
 							<div className="absolute top-3 right-4">
 								<button onClick={() => setIsInfoOpen(false)} className="text-gray-500 hover:text-gray-700">
@@ -67,6 +68,23 @@ const Layout: React.FC = () => {
 								{app.hasSession() ? "Logged in" : "Logged out"} &middot;{" "}
 								<a href="#" onClick={() => setInfoOpen(!infoOpen)}>
 									Info
+								</a>{" "}
+								&middot; Sync {renderSyncStatus(syncStatus)} &middot;{" "}
+								<a
+									href="#"
+									onClick={async () => {
+										if (confirm("Reset all local data? The app will have to sync again.")) {
+											localStorage.clear()
+											const dbs = await window.indexedDB.databases()
+											dbs.forEach((db) => {
+												if (db.name === undefined) return
+												window.indexedDB.deleteDatabase(db.name)
+											})
+											location.reload()
+										}
+									}}
+								>
+									Reset
 								</a>
 								{ws.error ? <span className="text-red-500 ml-1.5">Connection error</span> : ""}
 							</div>
@@ -82,7 +100,24 @@ const Layout: React.FC = () => {
 							className="fixed top-4 right-5 z-1 bg-white p-2 rounded-full shadow-md border border-gray-200 hover:bg-gray-100 flex"
 						>
 							<span className="mx-0.5">
-								{app.hasSession() ? "Account" : "Login"} - {renderSyncStatus(syncStatus)})
+								<div className="flex">
+									{app.hasSession() ? "Account" : "Login"}{" "}
+									<div className="mt-1 ml-0.5">
+										{syncStatus === "offline" ? (
+											<MdOutlineSyncDisabled />
+										) : syncStatus === "starting" ? (
+											<MdOutlineSync />
+										) : syncStatus === "inProgress" ? (
+											<MdOutlineSync />
+										) : syncStatus === "complete" ? (
+											<></>
+										) : syncStatus === "error" ? (
+											<MdOutlineSyncProblem />
+										) : (
+											<MdOutlineSyncProblem />
+										)}
+									</div>
+								</div>
 							</span>
 						</button>
 					</main>
