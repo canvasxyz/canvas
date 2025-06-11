@@ -11,6 +11,8 @@ These values are collectively called a "contract" and can be provided in two way
 import { Canvas, Contract } from "@canvas-js/core"
 
 class Chat extends Contract<typeof Chat.models> {
+  static namespace = "chat.example.xyz"
+
   static models = {
     posts: {
       id: "primary",
@@ -91,6 +93,8 @@ The context object `this` contains the rest of the action metadata, including
 
 ```ts
 class Chat extends Contract<typeof Chat.models> {
+  static namespace = "chat.example.xyz"
+
   static models = {
     posts: {
       id: "primary",
@@ -114,6 +118,8 @@ Actions also handle authorization and access control. In the example `deletePost
 
 ```ts
 class Chat extends Contract<typeof Chat.models> {
+  static namespace = "chat.example.xyz"
+
   static models = {
     posts: {
       id: "primary",

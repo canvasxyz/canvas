@@ -17,6 +17,8 @@ All database models have a primary key, defined in the model schema using the `"
 import { Canvas, Contract } from "@canvas-js/core"
 
 class Chat extends Contract<typeof Chat.models> {
+  static namespace = "chat.example.xyz"
+
   static models = {
     posts: {
       id: "primary",
@@ -33,7 +35,6 @@ class Chat extends Contract<typeof Chat.models> {
 }
 
 const app = await Canvas.initialize({
-  topic: "example.com",
   contract: Chat,
 })
 
@@ -128,8 +129,7 @@ import { useCanvas, useLiveQuery } from "@canvas-js/hooks"
 import { Chat } from "./contract.ts"
 
 const MyComponent = (props: {}) => {
-  const { app, error } = useCanvas({ 
-    topic: "example.xyz",
+  const { app, error } = useCanvas({
     contract: Chat
   })
 

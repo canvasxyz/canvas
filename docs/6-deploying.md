@@ -14,6 +14,8 @@ import { Contract } from "@canvas-js/core/contract"
 import type { ModelSchema } from "@canvas-js/core"
 
 class Chat extends Contract<typeof Chat.models> {
+  static namespace = "chat.example.xyz"
+
   static models = {
     messages: {
       id: "primary",
@@ -44,7 +46,6 @@ const wsURL = process.env.wsURL
 export const App = () => {
   const { app, ws } = useCanvas(wsURL, {
     contract: Chat,
-    topic: "example.xyz",
   })
 }
 ```

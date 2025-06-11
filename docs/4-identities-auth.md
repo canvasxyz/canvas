@@ -14,6 +14,8 @@ import { SIWESigner } from "@canvas-js/signer-ethereum"
 import { Canvas, Contract } from "@canvas-js/core"
 
 class Chat extends Contract<typeof Chat.models> {
+  static namespace = "example.xyz"
+
   static models = {
     messages: {
       id: "primary",
@@ -34,7 +36,6 @@ const provider = new BrowserProvider(window.ethereum)
 const jsonRpcSigner = await provider.getSigner()
 
 const app = await Canvas.initialize({
-  topic: "example.xyz",
   contract: Chat,
   signers: [new SIWESigner({ signer: jsonRpcSigner })],
 })
@@ -56,7 +57,6 @@ You can provide multiple signers to `Canvas.initialize`, and you can control whi
 
 ```ts
 const app = await Canvas.initialize({
-  topic: "example.xyz",
   contract: Chat,
   signers: [
     new SIWESigner({ signer: jsonRpcSigner }),

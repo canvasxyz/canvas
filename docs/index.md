@@ -129,7 +129,6 @@ const Chat = {
 }
 
 const app = await Canvas.initialize({
-  topic: "example.xyz",
   contract: Chat,
 })
 
@@ -143,6 +142,8 @@ app.create("messages", {
 import { Canvas, Contract, ModelSchema } from "@canvas-js/core"
 
 class Chat extends Contract<typeof Chat.models> {
+  static namespace = "chat.example.xyz"
+
   static models = {
     messages: {
       id: "primary",
@@ -160,7 +161,6 @@ class Chat extends Contract<typeof Chat.models> {
 }
 
 const app = await Canvas.initialize({
-  topic: "example.xyz",
   contract: Chat,
 })
 
@@ -175,7 +175,6 @@ const wsURL = process.env.SERVER_WSURL || null
 
 export const App = () => {
   const { app, ws } = useCanvas(wsURL, {
-    topic: "example.xyz",
     contract: Chat,
   })
   const items = useLiveQuery(app, "messages")

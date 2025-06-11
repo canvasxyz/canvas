@@ -13,6 +13,8 @@ The class syntax is recommended for most applications.
 import { Contract } from "@canvas-js/core/contract"
 
 class Chat extends Contract<typeof Chat.models> {
+  static namespace = "chat.example.xyz"
+
   static models = {
     messages: {
       id: "primary",
@@ -33,12 +35,12 @@ A constructor is optional, but if provided, it should pass the topic to super().
 
 ```ts
 class NamespacedChat extends Contract<typeof Chat.models> {
+  static namespace = "chat2.example.xyz"
+
   createMessage(content: string) {
     super(content)
   }
-  constructor(namespace: string) {
-    super(namespace + ".chat.canvas.xyz")
-  }
+  constructor(room: string) {}
 }
 ```
 
@@ -47,7 +49,6 @@ You can initialize a class contract by providing it to `Canvas.initialize`, or c
 ```ts
 const app = await Canvas.initialize({
   contract: Chat,
-  topic: "example.xyz"
 })
 ```
 
@@ -94,7 +95,6 @@ Once you've set up a contract with rules, you can use the `app.create`, `app.upd
 
 ```ts
 const app = await Canvas.initialize({
-  topic: "example.xyz",
   contract: { models },
   signers: [new SIWESigner({ burner: true })]
 })

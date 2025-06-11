@@ -14,7 +14,6 @@ To support this, we provide a `@canvas-js/core/sync` export:
 import { Canvas } from "@canvas-js/core/sync";
 
 export const app = new Canvas>({
-  topic: "pogiciv.vercel.app",
   contract: MyApp,
 })
 ```
@@ -28,7 +27,6 @@ import { Canvas } from "@canvas-js/core/sync";
 import { MyApp } from "./MyApp.js";
 
 export const app = new Canvas<typeof models, InstanceType<typeof MyApp>>({
-  topic: "pogiciv.vercel.app",
   contract: Pogiciv,
 }) as unknown as Core<typeof models, InstanceType<typeof MyApp>>;
 ```

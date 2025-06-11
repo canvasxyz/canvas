@@ -41,7 +41,6 @@ import { Chat } from "./contract"
 
 const MyComponent = () => {
 	const { app } = useCanvas({
-	  topic: "example.xyz",
 	  contract: Chat
 	})
 	const buttonStyles = { ... }
