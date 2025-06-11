@@ -36,6 +36,12 @@
 			"node": "./lib/targets/node/index.js",
 			"react-native": "./lib/targets/react-native/index.js",
 			"default": "./lib/targets/default/index.js"
+		},
+		"#target/libp2p": {
+			"browser": "./lib/targets/browser/libp2p.js",
+			"node": "./lib/targets/node/libp2p.js",
+			"react-native": "./lib/targets/react-native/libp2p.js",
+			"default": "./lib/targets/default/libp2p.js"
 		}
 	},
 	"scripts": {
@@ -73,6 +79,7 @@
 		"@libp2p/peer-id": "^5.1.6",
 		"@libp2p/ping": "^2.0.33",
 		"@libp2p/prometheus-metrics": "^4.3.22",
+		"@libp2p/webrtc": "^5.2.16",
 		"@libp2p/websockets": "^9.2.14",
 		"@multiformats/multiaddr": "^12.4.1",
 		"@noble/hashes": "^1.8.0",

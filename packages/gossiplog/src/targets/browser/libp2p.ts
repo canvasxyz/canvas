@@ -1,55 +1,31 @@
 import { createLibp2p } from "libp2p"
-import { generateKeyPair } from "@libp2p/crypto/keys"
-import { Libp2p, MultiaddrConnection, PeerId, PrivateKey, PubSub } from "@libp2p/interface"
-import { Identify, identify } from "@libp2p/identify"
+import { Libp2p, MultiaddrConnection, PeerId } from "@libp2p/interface"
+import { identify } from "@libp2p/identify"
 import { webSockets } from "@libp2p/websockets"
 import { yamux } from "@chainsafe/libp2p-yamux"
 import { noise } from "@chainsafe/libp2p-noise"
 import { KadDHT, kadDHT } from "@libp2p/kad-dht"
-import { Ping, ping } from "@libp2p/ping"
+import { ping } from "@libp2p/ping"
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
-import { GossipsubEvents, gossipsub } from "@chainsafe/libp2p-gossipsub"
-export { GossipSub } from "@chainsafe/libp2p-gossipsub"
+import { gossipsub } from "@chainsafe/libp2p-gossipsub"
+import { circuitRelayTransport } from "@libp2p/circuit-relay-v2"
+import { webRTC } from "@libp2p/webrtc"
 
-import type { Registry } from "prom-client"
+import { peerIdFromPrivateKey } from "@libp2p/peer-id"
+import { multiaddr, Multiaddr } from "@multiformats/multiaddr"
+import { rendezvousClient } from "@canvas-js/libp2p-rendezvous/client"
 
-import { Multiaddr } from "@multiformats/multiaddr"
-
-import { RendezvousClient, rendezvousClient } from "@canvas-js/libp2p-rendezvous/client"
 import { AbstractGossipLog } from "@canvas-js/gossiplog"
+import { NetworkConfig, ServiceMap, gossipLogService } from "@canvas-js/gossiplog/libp2p"
 import { defaultBootstrapList } from "@canvas-js/gossiplog/bootstrap"
 
-import { GossipLogService, gossipLogService } from "./service.js"
+import { getDHTProtocol } from "../../utils.js"
+import { getPrivateKey } from "./privateKey.js"
 
-export interface NetworkConfig {
-	/** start libp2p on initialization (default: true) */
-	start?: boolean
-	privateKey?: PrivateKey
-
-	/** array of local WebSocket multiaddrs, e.g. "/ip4/127.0.0.1/tcp/3000/ws" */
-	listen?: string[]
-
-	/** array of public WebSocket multiaddrs, e.g. "/dns4/myapp.com/tcp/443/wss" */
-	announce?: string[]
-
-	bootstrapList?: string[]
-	denyDialMultiaddr?(multiaddr: Multiaddr): Promise<boolean> | boolean
-	denyInboundConnection?(maConn: MultiaddrConnection): Promise<boolean> | boolean
-
-	maxConnections?: number
-	registry?: Registry
-}
-
-export type ServiceMap<Payload> = {
-	identify: Identify
-	ping: Ping
-	pubsub: PubSub<GossipsubEvents>
-	gossipLog: GossipLogService<Payload>
-	dht: KadDHT
-	rendezvous: RendezvousClient
-}
-
-const getDHTProtocol = (topic: string) => `/canvas/kad/1.0.0/${topic}`
+const defaultStunServer = "stun:stun.l.google.com:19302"
+const defaultTurnServer = "turn:canvas-turn-server.fly.dev:3478?transport=udp"
+const defaultRelayServer =
+	"/dns4/canvas-relay-server.fly.dev/tcp/443/wss/p2p/12D3KooWNTYgUGwnAeioNPfACrp1dK2gFLi5M1cyoREWF8963cqT"
 
 export async function getLibp2p<Payload>(
 	gossipLog: AbstractGossipLog<Payload>,
@@ -57,18 +33,37 @@ export async function getLibp2p<Payload>(
 ): Promise<Libp2p<ServiceMap<Payload>>> {
 	let privateKey = config.privateKey
 	if (privateKey === undefined) {
-		privateKey = await generateKeyPair("Ed25519")
+		privateKey = await getPrivateKey()
 	}
 
+	// const relayServer = config.relayServer ?? defaultRelayServer
+	// const relayServerPeerId = multiaddr(relayServer).getPeerId()
+	const relayServer = defaultRelayServer
+
 	const bootstrapList = config.bootstrapList ?? defaultBootstrapList
-	const listen = config.listen ?? ["/ip4/127.0.0.1/tcp/8080/ws"]
-	const announce = config.announce ?? ["/ip4/127.0.0.1/tcp/8080/ws"]
+	if (!bootstrapList.includes(relayServer)) {
+		bootstrapList.push(relayServer)
+	}
+
+	const listen = ["/webrtc"]
+
+	const peerId = peerIdFromPrivateKey(privateKey)
+	const announce: string[] = [`${relayServer}/p2p-circuit/webrtc/p2p/${peerId}`]
 
 	const libp2p = await createLibp2p({
 		privateKey: privateKey,
 		start: config.start ?? true,
 		addresses: { listen, announce },
-		transports: [webSockets({})],
+		transports: [
+			webSockets({}),
+			webRTC({
+				rtcConfiguration: {
+					iceTransportPolicy: "all",
+					iceServers: [{ urls: [defaultStunServer] }, { urls: [defaultTurnServer] }],
+				},
+			}),
+			circuitRelayTransport({}),
+		],
 		connectionGater: {
 			denyDialMultiaddr: config.denyDialMultiaddr ?? ((addr: Multiaddr) => false),
 			denyInboundConnection: config.denyInboundConnection ?? ((maConn: MultiaddrConnection) => false),
@@ -84,8 +79,6 @@ export async function getLibp2p<Payload>(
 
 		streamMuxers: [yamux()],
 		connectionEncrypters: [noise({})],
-
-		metrics: prometheusMetrics({ registry: config.registry }),
 
 		services: {
 			identify: identify({ protocolPrefix: "canvas" }),

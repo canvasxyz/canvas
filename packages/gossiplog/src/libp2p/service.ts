@@ -72,7 +72,10 @@ export class GossipLogService<Payload = unknown> implements Startable {
 	#pushTopologyId: string | null = null
 	#started = false
 
-	constructor(private readonly components: GossipLogServiceComponents, { gossipLog }: GossipLogServiceInit<Payload>) {
+	constructor(
+		private readonly components: GossipLogServiceComponents,
+		{ gossipLog }: GossipLogServiceInit<Payload>,
+	) {
 		this.log = logger(`canvas:gossiplog:[${gossipLog.topic}]:service`)
 		this.pubsub = GossipLogService.extractGossipSub(components)
 		this.syncProtocol = getSyncProtocol(gossipLog.topic)

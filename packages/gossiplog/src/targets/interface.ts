@@ -1,12 +1,18 @@
 import type { Libp2p } from "@libp2p/interface"
-import type { AbstractGossipLog } from "@canvas-js/gossiplog"
+
+import type { AbstractGossipLog } from "../AbstractGossipLog.js"
 import type { NetworkClient } from "@canvas-js/gossiplog/client"
-import type { ServiceMap, NetworkConfig } from "@canvas-js/gossiplog/libp2p"
+
+import type { NetworkConfig, ServiceMap } from "@canvas-js/gossiplog/libp2p"
 
 export type AbortOptions = { signal?: AbortSignal }
 
 export interface PlatformTarget {
-	connect: <Payload>(gossipLog: AbstractGossipLog<Payload>, url: string, options?: AbortOptions) => Promise<NetworkClient<Payload>>
+	connect: <Payload>(
+		gossipLog: AbstractGossipLog<Payload>,
+		url: string,
+		options?: AbortOptions,
+	) => Promise<NetworkClient<Payload>>
 	listen: <Payload>(gossipLog: AbstractGossipLog<Payload>, port: number, options?: AbortOptions) => Promise<void>
 	startLibp2p: <Payload>(
 		gossipLog: AbstractGossipLog<Payload>,

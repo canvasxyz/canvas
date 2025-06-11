@@ -5,12 +5,11 @@ import cors from "cors"
 import { WebSocketServer } from "ws"
 import { anySignal } from "any-signal"
 
-import type { AbstractGossipLog } from "@canvas-js/gossiplog"
 import { NetworkClient } from "@canvas-js/gossiplog/client"
 import { NetworkServer } from "@canvas-js/gossiplog/server"
-import { getLibp2p, ServiceMap, NetworkConfig, GossipSub } from "@canvas-js/gossiplog/libp2p"
 import { createAPI } from "@canvas-js/gossiplog/api"
 import { assert } from "@canvas-js/utils"
+import { getLibp2p } from "./libp2p.js"
 
 import type { PlatformTarget } from "../interface.js"
 import { getPrivateKey } from "./privateKey.js"
