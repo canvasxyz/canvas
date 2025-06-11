@@ -62,7 +62,7 @@ export type Config<
 	/** provide a snapshot to initialize the runtime database with, requires `reset: true` */
 	snapshot?: Snapshot | null
 
-	/** override the internal GossipLog topic */
+	/** override the internal GossipLog topic, by default `<namespace>:<argsHash>:<snapshot>` */
 	topic?: string
 }
 
