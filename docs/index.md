@@ -114,6 +114,7 @@ decentralized networks, using the languages you already know.
 import { Canvas, Contract, ModelSchema } from "@canvas-js/core"
 
 const Chat = {
+  namespace: "chat-db.example.xyz",
   models:
     messages: {
       id: "primary",

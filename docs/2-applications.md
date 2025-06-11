@@ -1,13 +1,16 @@
 # Creating an Application
 
-Canvas applications are configured by two values:
+Canvas applications are configured by three values:
 
 1. `models`: A relational database schema, expressed in a concise JSON DSL documented in [canvas/packages/modeldb/README.md](https://github.com/canvasxyz/canvas/tree/main/packages/modeldb)
 2. `actions`: Methods that execute each type of action
+3. `namespace`: A namespace that the application will live under; this should be a unique name such as your domain.
 
-These values are collectively called a "contract" and can be provided in two ways - either as a JavaScript class, or as a Firebase-like database schema.
+These values are collectively called a "contract" and can be provided in two ways - either as a JavaScript class, or as Firebase-like models.
 
-```ts
+::: code-group
+
+```ts [Class Contract]
 import { Canvas, Contract } from "@canvas-js/core"
 
 class Chat extends Contract<typeof Chat.models> {
@@ -43,6 +46,28 @@ class Chat extends Contract<typeof Chat.models> {
 }
 ```
 
+```ts [Model Contract]
+const Chat = {
+  namespace: "chat-db.example.xyz",
+  models:
+    messages: {
+      id: "primary",
+      content: "string",
+      address: "string",
+      $rules: {
+        create: "address === this.address",
+        update: false,
+        delete: false,
+      }
+    }
+  } satisfies ModelSchema
+}
+```
+
+:::
+
+## Starting your application
+
 Once you've configured your application, the simplest way to start it is to call `Canvas.initialize({ ... })`:
 
 ```ts
@@ -62,7 +87,9 @@ const results = await app.db.query("posts", {})
 // ]
 ```
 
-If you wish, you can maintain a separate TypeScript or JavaScript file for the contract, that exports a default class that extends `Contract`. If you pass that contract as a string to `Canvas.initialize({ contract })`, it will be compiled using `esbuild` and initialized inside a QuickJS WASM VM.
+If you wish, you can maintain a separate TypeScript or JavaScript file for class contracts, that uses `export default class` to expose a class that extends `Contract`.
+
+If you pass that contract as a string to `Canvas.initialize({ contract })`, it will be compiled using `esbuild` and initialized inside a QuickJS WASM VM. Alternatively, you can also run string contracts from the command line (see [Deploying](/6-deploying)).
 
 ## Actions
 
