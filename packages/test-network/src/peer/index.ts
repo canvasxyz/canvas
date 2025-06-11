@@ -61,7 +61,7 @@ async function start() {
 	await setTimeout(1000 + Math.random() * delay)
 	await libp2p.start()
 
-	if (interval !== null && interval !== 0) {
+	if (interval !== 0) {
 		const intervalId = setInterval(() => void gossipLog.append(bytesToHex(randomBytes(8))), interval)
 		gossipLog.controller.signal.addEventListener("abort", () => clearInterval(intervalId))
 	}

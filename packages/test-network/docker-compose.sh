@@ -28,10 +28,10 @@ for t in $(seq 0 $((NUM_TOPICS-1))); do
       - bootstrap
     environment:
       - DELAY=10
-      - INTERVAL=1
+      - INTERVAL=${INTERVAL}
       - TOPIC=${TOPIC}
       - DEBUG=${DEBUG}
-      - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+      - LISTEN=/ip4/0.0.0.0/tcp/8080/ws
       - ANNOUNCE=/dns4/${NAME}/tcp/8080/ws
       - BOOTSTRAP_LIST=/dns4/bootstrap/tcp/8080/ws/p2p/12D3KooWMvSCSeJ6zxJJRQZSpyGqbNcqSJfcJGZLRiMVMePXzMax
 EOF
