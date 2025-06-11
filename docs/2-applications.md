@@ -1,14 +1,11 @@
 # Creating an Application
 
-Canvas applications are configured by three values:
+Canvas applications are configured by two values:
 
-1. `topic`: A global string identifier for the application, e.g. `myapp.canvas.xyz`
-2. `models`: A relational database schema, expressed in a concise JSON DSL documented in [canvas/packages/modeldb/README.md](https://github.com/canvasxyz/canvas/tree/main/packages/modeldb)
-3. `actions`: Methods on your contract class that execute each type of action
+1. `models`: A relational database schema, expressed in a concise JSON DSL documented in [canvas/packages/modeldb/README.md](https://github.com/canvasxyz/canvas/tree/main/packages/modeldb)
+2. `actions`: Methods that execute each type of action
 
-These values are collectively called a "contract" and can be provided in two ways - either as a JavaScript class, or as ESM exports of a JavaScript file.
-
-The simplest way to get started is to import `@canvas-js/core` and call `Canvas.initialize({ ... })` with a contract class.
+These values are collectively called a "contract" and can be provided in two ways - either as a JavaScript class, or as a Firebase-like database schema.
 
 ```ts
 import { Canvas, Contract } from "@canvas-js/core"
@@ -42,9 +39,12 @@ class Chat extends Contract<typeof Chat.models> {
     await db.delete("posts", postId)
   }
 }
+```
 
+Once you've configured your application, the simplest way to start it is to call `Canvas.initialize({ ... })`:
+
+```ts
 const app = await Canvas.initialize({
-  topic: "my-app.example.com",
   contract: Chat,
 })
 
@@ -60,9 +60,7 @@ const results = await app.db.query("posts", {})
 // ]
 ```
 
-You can also maintain contracts as separate JavaScript or TypeScript files that export a default class that extends `Contract`, and pass them as a string to `Canvas.initialize({ contract })`. Canvas will execute them inside a QuickJS WASM VM.
-
-TypeScript contracts are compiled automatically using esbuild.
+If you wish, you can maintain a separate TypeScript or JavaScript file for the contract, that exports a default class that extends `Contract`. If you pass that contract as a string to `Canvas.initialize({ contract })`, it will be compiled using `esbuild` and initialized inside a QuickJS WASM VM.
 
 ## Actions
 
@@ -143,4 +141,4 @@ class Chat extends Contract<typeof Chat.models> {
 
 Every action reads a deterministic snapshot of the database. When actions that call `db.get()` are propagated to other machines or replayed later, each `db.get()` always returns the same value that it saw at the time and place it was first created.
 
-We achieve this by doing extra bookkeeping inside the database, including a compacted history of each database record.
+We achieve this by doing extra bookkeeping inside the database, and maintaining a compacted history of each database record.
