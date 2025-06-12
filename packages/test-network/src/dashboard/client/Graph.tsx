@@ -151,6 +151,15 @@ export const Graph: React.FC<GraphProps> = ({
 						return "5,5"
 					}
 				})
+				.attr("stroke-opacity", (d) => {
+					const sourceToTarget = d.source.id in mesh && mesh[d.source.id].includes(d.target.id)
+					const targetToSource = d.target.id in mesh && mesh[d.target.id].includes(d.source.id)
+					if (sourceToTarget || targetToSource) {
+						return 1
+					} else {
+						return 0.2
+					}
+				})
 
 			newMarkers
 				.attr("x1", (d) => d.source.x!)
