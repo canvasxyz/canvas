@@ -6,12 +6,12 @@ import { yamux } from "@chainsafe/libp2p-yamux"
 import { noise } from "@chainsafe/libp2p-noise"
 import { KadDHT, kadDHT } from "@libp2p/kad-dht"
 import { ping } from "@libp2p/ping"
-import { prometheusMetrics } from "@libp2p/prometheus-metrics"
 import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 import { circuitRelayTransport } from "@libp2p/circuit-relay-v2"
 import { webRTC } from "@libp2p/webrtc"
+import { bootstrap } from "@libp2p/bootstrap"
 
-import { peerIdFromPrivateKey } from "@libp2p/peer-id"
+// import { peerIdFromPrivateKey } from "@libp2p/peer-id"
 import { multiaddr, Multiaddr } from "@multiformats/multiaddr"
 import { rendezvousClient } from "@canvas-js/libp2p-rendezvous/client"
 
@@ -21,11 +21,16 @@ import { defaultBootstrapList } from "@canvas-js/gossiplog/bootstrap"
 
 import { getDHTProtocol } from "../../utils.js"
 import { getPrivateKey } from "./privateKey.js"
+import { bytesToHex } from "@noble/hashes/utils"
+import { sha256 } from "@noble/hashes/sha2"
 
 const defaultStunServer = "stun:stun.l.google.com:19302"
 const defaultTurnServer = "turn:canvas-turn-server.fly.dev:3478?transport=udp"
 const defaultRelayServer =
 	"/dns4/canvas-relay-server.fly.dev/tcp/443/wss/p2p/12D3KooWNTYgUGwnAeioNPfACrp1dK2gFLi5M1cyoREWF8963cqT"
+
+// const defaultRelayServer =
+// 	"/dns6/canvas-relay-server.internal/tcp/8080/ws/p2p/12D3KooWNTYgUGwnAeioNPfACrp1dK2gFLi5M1cyoREWF8963cqT"
 
 export async function getLibp2p<Payload>(
 	gossipLog: AbstractGossipLog<Payload>,
@@ -36,34 +41,43 @@ export async function getLibp2p<Payload>(
 		privateKey = await getPrivateKey()
 	}
 
-	// const relayServer = config.relayServer ?? defaultRelayServer
+	const relayServer = config.relayServer ?? defaultRelayServer
 	// const relayServerPeerId = multiaddr(relayServer).getPeerId()
-	const relayServer = defaultRelayServer
 
 	const bootstrapList = config.bootstrapList ?? defaultBootstrapList
-	if (!bootstrapList.includes(relayServer)) {
-		bootstrapList.push(relayServer)
-	}
 
-	const listen = ["/webrtc"]
-
-	const peerId = peerIdFromPrivateKey(privateKey)
-	const announce: string[] = [`${relayServer}/p2p-circuit/webrtc/p2p/${peerId}`]
+	// TODO: is this a good idea?
+	// if (!bootstrapList.includes(relayServer)) {
+	// 	bootstrapList.push(relayServer)
+	// }
 
 	const libp2p = await createLibp2p({
 		privateKey: privateKey,
 		start: config.start ?? true,
-		addresses: { listen, announce },
+		addresses: {
+			listen: ["/webrtc", "/p2p-circuit"],
+			announce: [],
+			announceFilter: (addrs) =>
+				addrs.filter((addr) => addr.protoNames().slice(-3).join("/") === "p2p-circuit/webrtc/p2p"),
+		},
 		transports: [
 			webSockets({}),
+			circuitRelayTransport({}),
 			webRTC({
 				rtcConfiguration: {
 					iceTransportPolicy: "all",
-					iceServers: [{ urls: [defaultStunServer] }, { urls: [defaultTurnServer] }],
+					iceServers: [
+						{ urls: [defaultStunServer] },
+						{
+							urls: [defaultTurnServer],
+							username: gossipLog.topic,
+							credential: bytesToHex(sha256(gossipLog.topic)),
+						},
+					],
 				},
 			}),
-			circuitRelayTransport({}),
 		],
+
 		connectionGater: {
 			denyDialMultiaddr: config.denyDialMultiaddr ?? ((addr: Multiaddr) => false),
 			denyInboundConnection: config.denyInboundConnection ?? ((maConn: MultiaddrConnection) => false),
@@ -75,7 +89,9 @@ export async function getLibp2p<Payload>(
 			inboundConnectionThreshold: 16,
 		},
 
-		connectionMonitor: { enabled: false, protocolPrefix: "canvas" },
+		connectionMonitor: { enabled: true, protocolPrefix: "canvas" },
+
+		peerDiscovery: [bootstrap({ list: [relayServer] })],
 
 		streamMuxers: [yamux()],
 		connectionEncrypters: [noise({})],
@@ -84,7 +100,9 @@ export async function getLibp2p<Payload>(
 			identify: identify({ protocolPrefix: "canvas" }),
 			ping: ping({ protocolPrefix: "canvas" }),
 
-			dht: kadDHT({ protocol: getDHTProtocol(gossipLog.topic) }),
+			dht: kadDHT({
+				protocol: getDHTProtocol(gossipLog.topic),
+			}),
 
 			pubsub: gossipsub({
 				emitSelf: false,
@@ -105,6 +123,13 @@ export async function getLibp2p<Payload>(
 				autoDiscover: true,
 			}),
 		},
+	})
+
+	libp2p.addEventListener("start", () => {
+		libp2p.services.dht.setMode("server").then(
+			() => console.log("ENABLED DHT SERVER MODE"),
+			(err) => console.error("FAILED TO ENABLE DHT SERVER MODE", err),
+		)
 	})
 
 	libp2p.services.rendezvous.addEventListener("peer", ({ detail: peerInfo }) => {

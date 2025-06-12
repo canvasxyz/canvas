@@ -23,6 +23,7 @@ export interface NetworkConfig {
 	announce?: string[]
 
 	bootstrapList?: string[]
+	relayServer?: string
 	denyDialMultiaddr?(multiaddr: Multiaddr): Promise<boolean> | boolean
 	denyInboundConnection?(maConn: MultiaddrConnection): Promise<boolean> | boolean
 
