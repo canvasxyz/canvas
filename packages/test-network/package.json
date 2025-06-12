@@ -26,8 +26,10 @@
 		"peer:dev": "npm run peer:build -- --watch",
 		"server:build": "esbuild lib/server/index.js --bundle --outdir=dist/server --platform=node --target=node20 --format=esm --external:@canvas-js/okra-lmdb --external:better-sqlite3 --banner:js=\"import { createRequire as yix6bKft } from 'module'; const require = yix6bKft(import.meta.url);\"",
 		"server:dev": "npm run server:build -- --watch",
-		"client:build": "esbuild lib/client/src/index.js --bundle --outdir=dist/client --platform=browser --target=esnext --format=esm",
-		"client:dev": "npm run client:build -- --watch",
+		"client-ws:build": "esbuild lib/client-ws/src/index.js --bundle --outdir=dist/client-ws --platform=browser --target=esnext --format=esm",
+		"client-ws:dev": "npm run client-ws:build -- --watch",
+		"client-webrtc:build": "esbuild lib/client-webrtc/src/index.js --bundle --outdir=dist/client-webrtc --platform=browser --target=esnext --format=esm",
+		"client-webrtc:dev": "npm run client-webrtc:build -- --watch",
 		"relay:build": "esbuild lib/relay/index.js --bundle --outdir=dist/relay --platform=node --target=node20 --format=esm --banner:js=\"import { createRequire as yix6bKft } from 'module'; const require = yix6bKft(import.meta.url);\"",
 		"relay:dev": "npm run relay:build -- --watch"
 	},

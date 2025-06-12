@@ -1,8 +1,16 @@
 import { getLibp2p } from "@canvas-js/bootstrap-peer/libp2p"
+import { createAPI } from "@canvas-js/bootstrap-peer/api"
 
 import { Socket } from "../socket.js"
 
-const libp2p = await getLibp2p()
+const libp2p = await getLibp2p({
+	// path: string | null
+	// privateKey: PrivateKey
+	// listen: string[]
+	// announce: string[]
+	// maxConnections: number
+	// maxDiscoverLimit: 2,
+})
 
 await libp2p.start()
 
@@ -24,3 +32,6 @@ libp2p.addEventListener("connection:close", ({ detail: { id, remotePeer, remoteA
 	console.log(`connection:close ${remotePeer} ${remoteAddr}`)
 	socket.post("connection:close", { id, remotePeer: remotePeer.toString(), remoteAddr: remoteAddr.toString() })
 })
+
+const api = createAPI(libp2p)
+api.listen(3000, () => console.log("api listening on http://localhost:3000"))

@@ -1,5 +1,5 @@
 import { WebSocketServer } from "ws"
-import { PeerId, PrivateKey } from "@libp2p/interface"
+import { PrivateKey } from "@libp2p/interface"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 
 import { GossipLog } from "@canvas-js/gossiplog/sqlite"

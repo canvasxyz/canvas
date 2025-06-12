@@ -14,7 +14,6 @@ type State = {
 const bootstrapPeerIds = ["12D3KooWMvSCSeJ6zxJJRQZSpyGqbNcqSJfcJGZLRiMVMePXzMax"]
 
 function reduce(state: State, event: Event): State {
-	// console.log(event)
 	if (event.type === "start") {
 		if (state.nodes.every((node) => node.id !== event.peerId)) {
 			return {
@@ -39,6 +38,12 @@ function reduce(state: State, event: Event): State {
 			...state,
 			roots: { ...state.roots, [event.peerId]: event.detail.root },
 		}
+	} else if (event.type === "stop") {
+		const { [event.peerId]: _root, ...roots } = state.roots
+		const { [event.peerId]: _mesh, ...mesh } = state.mesh
+		const links = state.links.filter((link) => link.source !== event.peerId && link.target !== event.peerId)
+		const nodes = state.nodes.filter((node) => node.id !== event.peerId)
+		return { roots, mesh, links, nodes }
 	}
 
 	return state

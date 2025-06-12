@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react"
 import * as d3 from "d3"
+import { assert } from "@canvas-js/utils"
 
 interface Node extends d3.SimulationNodeDatum {
 	id: string
@@ -97,11 +98,13 @@ export const Graph: React.FC<GraphProps> = ({
 			return
 		}
 
-		const resolvedLinks = links.map((link) => ({
-			...link,
-			source: nodes.find((n) => n.id === link.source)!,
-			target: nodes.find((n) => n.id === link.target)!,
-		}))
+		const resolvedLinks = links.map((link) => {
+			const source = nodes.find((n) => n.id === link.source)
+			const target = nodes.find((n) => n.id === link.target)
+			assert(source !== undefined, "MISSING SOURCE FROM NODES")
+			assert(target !== undefined, "MISSING TARGET FROM NODES")
+			return { ...link, source, target }
+		})
 
 		simulation.force<d3.ForceLink<Node, { id: string; source: Node; target: Node }>>("link")!.links(resolvedLinks)
 		simulation.alpha(1).restart()
@@ -153,7 +156,7 @@ export const Graph: React.FC<GraphProps> = ({
 		})
 
 		return () => void simulation.on("tick.links", null)
-	}, [svg, simulation, links, mesh])
+	}, [svg, simulation, links, nodes, mesh])
 
 	const rootsRef = useRef(roots)
 

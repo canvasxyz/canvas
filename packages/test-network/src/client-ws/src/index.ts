@@ -5,7 +5,6 @@ import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 import { generateKeyPair } from "@libp2p/crypto/keys"
 import { peerIdFromPrivateKey } from "@libp2p/peer-id"
 
-import { SECONDS } from "@canvas-js/utils"
 import { GossipLog } from "@canvas-js/gossiplog/idb"
 import { NetworkClient } from "@canvas-js/gossiplog/client"
 
@@ -31,41 +30,6 @@ if (window.location.search.length > 1) {
 
 const socket = await Socket.open(`ws://localhost:8000`, peerId, gossipLog)
 
-// libp2p.addEventListener("start", async () => {
-// 	console.log("libp2p started")
-
-// 	const root = await messageLog.tree.read((txn) => txn.getRoot())
-
-// 	socket.post("start", { root: `0:${bytesToHex(root.hash)}` })
-// })
-
-// libp2p.addEventListener("stop", () => {
-// 	console.log("libp2p stopped")
-// 	socket.post("stop", {})
-// })
-
-// const relayServerPeerId = multiaddr(relayServer).getPeerId()
-
-// libp2p.addEventListener("connection:open", ({ detail: { id, remotePeer, remoteAddr } }) => {
-// 	console.log(`connection:open ${remotePeer} ${remoteAddr}`)
-// 	if (relayServerPeerId === remotePeer.toString()) {
-// 		return
-// 	}
-
-// 	socket.post("connection:open", { id, remotePeer: remotePeer.toString(), remoteAddr: remoteAddr.toString() })
-// })
-
-// libp2p.addEventListener("connection:close", ({ detail: { id, remotePeer, remoteAddr } }) => {
-// 	console.log(`connection:close ${remotePeer} ${remoteAddr}`)
-// 	if (relayServerPeerId === remotePeer.toString()) {
-// 		return
-// 	}
-
-// 	socket.post("connection:close", { id, remotePeer: remotePeer.toString(), remoteAddr: remoteAddr.toString() })
-// })
-
-// await gossipLog.append(bytesToHex(randomBytes(8)))
-
 const maxDelay = parseInt(params.delay ?? "1") * 1000
 const delay = maxDelay * Math.random()
 console.log(`waiting ${delay}ms...`)
@@ -85,6 +49,7 @@ const network = new NetworkClient(gossipLog, `ws://localhost:9000`)
 }
 
 const id = setInterval(() => gossipLog.append(bytesToHex(randomBytes(8))), maxDelay)
+
 // const id = setInterval(() => gossipLog.append(bytesToHex(randomBytes(8))), 10 * SECONDS)
 
 // libp2p.addEventListener("stop", () => clearInterval(id))
