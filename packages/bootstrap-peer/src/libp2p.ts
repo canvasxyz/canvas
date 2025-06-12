@@ -3,7 +3,7 @@ import { webSockets } from "@libp2p/websockets"
 import { yamux } from "@chainsafe/libp2p-yamux"
 import { noise } from "@chainsafe/libp2p-noise"
 import { Identify, identify } from "@libp2p/identify"
-import { PingService, ping } from "@libp2p/ping"
+import { Ping, ping } from "@libp2p/ping"
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
 import { peerIdFromPrivateKey } from "@libp2p/peer-id"
 
@@ -13,11 +13,12 @@ import { Config, getConfig } from "./config.js"
 
 export type ServiceMap = {
 	identify: Identify
-	ping: PingService
+	ping: Ping
 	rendezvous: RendezvousServer
 }
 
-export const maxRegistrationTTL = 2 * 60 * 60 // 2h
+const defaultMaxRegistrationTTL = 2 * 60 * 60 // 2h
+const defaultMaxDiscoverLimit = 64
 
 export async function getLibp2p(config: Partial<Config> = {}) {
 	const { path, privateKey, listen, announce, maxConnections } = await getConfig(config)
@@ -34,6 +35,9 @@ export async function getLibp2p(config: Partial<Config> = {}) {
 		announce.map((addr) => `${addr}/p2p/${peerId}`),
 	)
 
+	const maxRegistrationTTL = config.maxRegistrationTTL ?? defaultMaxRegistrationTTL
+	const maxDiscoverLimit = config.maxDiscoverLimit ?? defaultMaxDiscoverLimit
+
 	const libp2p = await createLibp2p<ServiceMap>({
 		privateKey: privateKey,
 		start: false,
@@ -41,7 +45,7 @@ export async function getLibp2p(config: Partial<Config> = {}) {
 		transports: [webSockets({})],
 		connectionGater: { denyDialMultiaddr: (addr) => false },
 		connectionManager: { maxConnections },
-		connectionMonitor: { enabled: false, protocolPrefix: "canvas" },
+		connectionMonitor: { enabled: true, protocolPrefix: "canvas" },
 
 		peerStore: {
 			maxAddressAge: maxRegistrationTTL * 1000,
@@ -56,7 +60,7 @@ export async function getLibp2p(config: Partial<Config> = {}) {
 		services: {
 			identify: identify({ protocolPrefix: "canvas" }),
 			ping: ping({ protocolPrefix: "canvas" }),
-			rendezvous: rendezvousServer({ path, maxRegistrationTTL }),
+			rendezvous: rendezvousServer({ path, maxRegistrationTTL, maxDiscoverLimit }),
 		},
 	})
 
