@@ -1,14 +1,19 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react"
 
+import { formatHeads } from "../../utils.js"
 import type { Event } from "../../types.js"
 import { Graph } from "./Graph.js"
 // import { EventLog } from "./EventLog.js"
 
+type NodeType = { id: string; topic: string | null; clock?: number; heads?: string[] }
+type LinkType = { id: string; source: string; target: string }
+
 type State = {
 	mesh: Record<string, string[]>
-	nodes: { id: string; topic: string | null }[]
-	links: { id: string; source: string; target: string }[]
+	nodes: NodeType[]
+	links: LinkType[]
 	roots: Record<string, string | null>
+	clocks: Record<string, { clock: number; heads: string[] }>
 }
 
 const bootstrapPeerIds = ["12D3KooWMvSCSeJ6zxJJRQZSpyGqbNcqSJfcJGZLRiMVMePXzMax"]
@@ -38,19 +43,29 @@ function reduce(state: State, event: Event): State {
 			...state,
 			roots: { ...state.roots, [event.peerId]: event.detail.root },
 		}
+	} else if (event.type === "clock") {
+		const updatedNodes = state.nodes.map((node) =>
+			node.id === event.peerId ? { ...node, clock: event.detail.clock, heads: event.detail.heads } : node,
+		)
+		return {
+			...state,
+			nodes: updatedNodes,
+			clocks: { ...state.clocks, [event.peerId]: { clock: event.detail.clock, heads: event.detail.heads } },
+		}
 	} else if (event.type === "stop") {
 		const { [event.peerId]: _root, ...roots } = state.roots
 		const { [event.peerId]: _mesh, ...mesh } = state.mesh
+		const { [event.peerId]: _clock, ...clocks } = state.clocks
 		const links = state.links.filter((link) => link.source !== event.peerId && link.target !== event.peerId)
 		const nodes = state.nodes.filter((node) => node.id !== event.peerId)
-		return { roots, mesh, links, nodes }
+		return { roots, mesh, links, nodes, clocks }
 	}
 
 	return state
 }
 
 export const App: React.FC<{}> = ({}) => {
-	const [state, setState] = useState<State>({ nodes: [], links: [], roots: {}, mesh: {} })
+	const [state, setState] = useState<State>({ nodes: [], links: [], roots: {}, mesh: {}, clocks: {} })
 
 	useEffect(() => {
 		const eventSource = new EventSource("/api/events")
@@ -110,6 +125,15 @@ export const App: React.FC<{}> = ({}) => {
 				onLinkClick={handleLinkClick}
 			/>
 			<hr />
+			Nodes:
+			{state.nodes.map((n: NodeType, i: number) => {
+				return (
+					<div key={i}>
+						{n.id.slice(0, 10)} {n.topic}{" "}
+						{n.clock !== undefined ? `(clock: ${n.clock}, heads: ${formatHeads(n.heads)})` : "(no events)"}
+					</div>
+				)
+			})}
 		</section>
 	)
 }

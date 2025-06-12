@@ -5,6 +5,7 @@ type EventTypes = {
 	"connection:close": { id: string; remotePeer: string; remoteAddr: string }
 	"gossipsub:mesh:update": { topic: string; peers: string[] }
 	"gossiplog:commit": { topic: string; root: string }
+	"clock": { clock: number, heads: string[] }
 }
 
 export type Event = {

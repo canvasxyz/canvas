@@ -62,6 +62,16 @@ const libp2p = await gossipLog.startLibp2p({
 
 ;(window as any).libp2p = libp2p
 
+let lastClock: number | null, lastHeads: string[] | null
+setInterval(async () => {
+	const [clock, heads] = await gossipLog.getClock()
+	if (lastClock !== clock || lastHeads === null || lastHeads.join() !== heads.join()) {
+		lastClock = clock
+		lastHeads = heads
+		socket.post("clock", { clock, heads })
+	}
+}, 1000)
+
 libp2p.addEventListener("self:peer:update", ({ detail: { peer } }) => {
 	console.log(
 		`self:peer:update: ${peer.id} [${peer.addresses.map((address) => "\n  " + address.multiaddr.toString()).join(",")}\n]`,
