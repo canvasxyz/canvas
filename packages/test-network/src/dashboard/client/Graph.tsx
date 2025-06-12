@@ -98,12 +98,14 @@ export const Graph: React.FC<GraphProps> = ({
 			return
 		}
 
-		const resolvedLinks = links.map((link) => {
+		const resolvedLinks = links.flatMap((link) => {
 			const source = nodes.find((n) => n.id === link.source)
 			const target = nodes.find((n) => n.id === link.target)
-			assert(source !== undefined, "MISSING SOURCE FROM NODES")
-			assert(target !== undefined, "MISSING TARGET FROM NODES")
-			return { ...link, source, target }
+			if (source !== undefined && target !== undefined) {
+				return [{ ...link, source, target }]
+			} else {
+				return []
+			}
 		})
 
 		simulation.force<d3.ForceLink<Node, { id: string; source: Node; target: Node }>>("link")!.links(resolvedLinks)
