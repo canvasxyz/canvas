@@ -122,6 +122,17 @@ wss.on("connection", (ws) => {
 		const peerId = peerIds.get(ws)
 		if (peerId !== undefined) {
 			sockets.delete(peerId)
+
+			const stopEvent = {
+				type: "stop" as const,
+				peerId,
+				timestamp: Date.now(),
+				detail: {},
+			}
+			events.push(stopEvent)
+			for (const [res, queue] of queues) {
+				queue.add(() => push(res, stopEvent))
+			}
 		}
 	})
 
