@@ -5,7 +5,7 @@ import type { Event } from "../../types.js"
 import { Graph } from "./Graph.js"
 // import { EventLog } from "./EventLog.js"
 
-type NodeType = { id: string; topic: string | null; clock?: number; heads?: string[] }
+type NodeType = { id: string; topic: string | null; clock?: number; heads?: string[]; stopping?: boolean }
 type LinkType = { id: string; source: string; target: string }
 
 type State = {
@@ -52,6 +52,11 @@ function reduce(state: State, event: Event): State {
 			nodes: updatedNodes,
 			clocks: { ...state.clocks, [event.peerId]: { clock: event.detail.clock, heads: event.detail.heads } },
 		}
+	} else if (event.type === "stopping") {
+		const updatedNodes = state.nodes.map((node) =>
+			node.id === event.peerId ? { ...node, stopping: true } : node,
+		)
+		return { ...state, nodes: updatedNodes }
 	} else if (event.type === "stop") {
 		const { [event.peerId]: _root, ...roots } = state.roots
 		const { [event.peerId]: _mesh, ...mesh } = state.mesh
@@ -131,6 +136,7 @@ export const App: React.FC<{}> = ({}) => {
 					<div key={i}>
 						{n.id.slice(0, 10)} {n.topic}{" "}
 						{n.clock !== undefined ? `(clock: ${n.clock}, heads: ${formatHeads(n.heads)})` : "(no events)"}
+						{n.stopping ? " [stopping]" : ""}
 					</div>
 				)
 			})}

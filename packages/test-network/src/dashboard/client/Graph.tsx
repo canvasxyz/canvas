@@ -5,6 +5,7 @@ import { assert } from "@canvas-js/utils"
 interface Node extends d3.SimulationNodeDatum {
 	id: string
 	topic: string | null
+	stopping?: boolean
 }
 
 interface Link {
@@ -201,6 +202,7 @@ export const Graph: React.FC<GraphProps> = ({
 			.attr("r", nodeRadius)
 			.attr("data-id", (d) => d.id)
 			.attr("fill", (d) => getColor(rootsRef.current[d.id]))
+			.attr("opacity", (d) => d.stopping ? 0.2 : 1)
 			.on("click", (event, node) => onNodeClick(node.id, event.shiftKey, event.metaKey))
 			.merge(oldNodes)
 
@@ -226,7 +228,12 @@ export const Graph: React.FC<GraphProps> = ({
 				const root = id && roots[id]
 				return getColor(root)
 			})
-	}, [svg, roots])
+			.attr("opacity", (d, idx, elems) => {
+				const id = elems[idx].getAttribute("data-id")
+				const node = nodes.find(n => n.id === id)
+				return node?.stopping ? 0.2 : 1
+			})
+	}, [svg, roots, nodes])
 
 	// useEffect(() => {
 	// 	if (svg === null || simulation === null) {

@@ -1,11 +1,12 @@
 type EventTypes = {
 	start: { root?: string; topic: string | null }
 	stop: {}
+	stopping: {}
 	"connection:open": { id: string; remotePeer: string; remoteAddr: string }
 	"connection:close": { id: string; remotePeer: string; remoteAddr: string }
 	"gossipsub:mesh:update": { topic: string; peers: string[] }
 	"gossiplog:commit": { topic: string; root: string }
-	"clock": { clock: number, heads: string[] }
+	clock: { clock: number; heads: string[] }
 }
 
 export type Event = {
