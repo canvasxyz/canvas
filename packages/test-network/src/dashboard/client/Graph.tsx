@@ -142,6 +142,15 @@ export const Graph: React.FC<GraphProps> = ({
 				.attr("y1", (d) => d.source.y!)
 				.attr("x2", (d) => d.target.x!)
 				.attr("y2", (d) => d.target.y!)
+				.attr("stroke-dasharray", (d) => {
+					const sourceToTarget = d.source.id in mesh && mesh[d.source.id].includes(d.target.id)
+					const targetToSource = d.target.id in mesh && mesh[d.target.id].includes(d.source.id)
+					if (sourceToTarget || targetToSource) {
+						return null
+					} else {
+						return "5,5"
+					}
+				})
 
 			newMarkers
 				.attr("x1", (d) => d.source.x!)
