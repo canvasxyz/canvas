@@ -63,7 +63,7 @@ export const ConnectSIWF: React.FC<ConnectSIWFProps> = ({ topic, frame }) => {
 		)
 	} else {
 		return (
-			<div style={{ marginTop: "12px", right: "12px" }}>
+			<div>
 				{isAuthenticated && (
 					<div>
 						<p>

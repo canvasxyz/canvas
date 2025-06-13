@@ -190,10 +190,13 @@ export const useSIWF = (app?: Canvas<any>) => {
 	}: ConnectSIWFProps = {}) => {
 		if (!app) {
 			return (
-				<div className={errorClassName || ''} style={{
-					...styles.errorContainer,
-					...errorStyles
-				}}>
+				<div
+					className={errorClassName || ""}
+					style={{
+						...styles.errorContainer,
+						...errorStyles,
+					}}
+				>
 					<code>App not initialized</code>
 				</div>
 			)
@@ -201,32 +204,41 @@ export const useSIWF = (app?: Canvas<any>) => {
 
 		if (error !== null) {
 			return (
-				<div className={errorClassName || ''} style={{
-					...styles.errorContainer,
-					...errorStyles
-				}}>
+				<div
+					className={errorClassName || ""}
+					style={{
+						...styles.errorContainer,
+						...errorStyles,
+					}}
+				>
 					<code>{error.message}</code>
 				</div>
 			)
 		} else if (!newSessionPrivateKey || (!requestId && !nonce) || !app) {
 			return (
-				<button disabled className={buttonClassName || ''} style={{
-					...styles.loadingButton,
-					...buttonStyles
-				}}>Loading...</button>
+				<button
+					disabled
+					className={buttonClassName || ""}
+					style={{
+						...styles.loadingButton,
+						...buttonStyles,
+					}}
+				>
+					Loading...
+				</button>
 			)
 		} else {
 			return (
-				<div style={{ marginTop: "12px", right: "12px", ...containerStyles }} className={containerClassName || ''}>
+				<div style={{ ...containerStyles }} className={containerClassName || ""}>
 					{canvasIsAuthenticated && (
 						<div>
 							<button
 								type="submit"
-								className={buttonClassName || ''}
+								className={buttonClassName || ""}
 								onClick={signOut}
 								style={{
 									...styles.actionButton,
-									...buttonStyles
+									...buttonStyles,
 								}}
 							>
 								Disconnect Farcaster
@@ -242,11 +254,11 @@ export const useSIWF = (app?: Canvas<any>) => {
 					{nonce && !farcasterIsAuthenticated && !canvasIsAuthenticated && (
 						<button
 							type="submit"
-							className={buttonClassName || ''}
+							className={buttonClassName || ""}
 							onClick={frameSignIn}
 							style={{
 								...styles.actionButton,
-								...buttonStyles
+								...buttonStyles,
 							}}
 						>
 							Sign in with Farcaster (Frame)
@@ -281,6 +293,6 @@ export const useSIWF = (app?: Canvas<any>) => {
 		signOut,
 		frameSignIn,
 		browserSignIn,
-		isInitialized: !!app
+		isInitialized: !!app,
 	}
 }

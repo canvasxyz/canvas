@@ -1,6 +1,6 @@
 {
 	"name": "@canvas-js/signer-atp",
-	"version": "0.15.1",
+	"version": "0.15.2-next.0",
 	"type": "module",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"main": "lib/index.js",
@@ -16,8 +16,8 @@
 	"dependencies": {
 		"@atproto/api": "^0.14.7",
 		"@atproto/crypto": "^0.4.4",
-		"@canvas-js/interfaces": "0.15.1",
-		"@canvas-js/signatures": "0.15.1",
+		"@canvas-js/interfaces": "0.15.2-next.0",
+		"@canvas-js/signatures": "0.15.2-next.0",
 		"@canvas-js/utils": "1.0.0",
 		"@ipld/car": "^5.4.2",
 		"@ipld/dag-cbor": "^9.2.4",
@@ -27,6 +27,6 @@
 		"multiformats": "^13.3.7"
 	},
 	"devDependencies": {
-		"@canvas-js/signer-atp": "0.15.1"
+		"@canvas-js/signer-atp": "0.15.2-next.0"
 	}
 }
