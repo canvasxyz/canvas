@@ -18,6 +18,8 @@ export interface ConnectSIWFProps {
 	errorClassName?: string
 	containerStyles?: React.CSSProperties
 	containerClassName?: string
+	loadingText?: string
+	logoutText?: string
 }
 
 export const useSIWF = (app?: Canvas<any>) => {
@@ -187,6 +189,8 @@ export const useSIWF = (app?: Canvas<any>) => {
 		otherButtonClassName: buttonClassName,
 		containerStyles,
 		containerClassName,
+		loadingText,
+		logoutText,
 	}: ConnectSIWFProps = {}) => {
 		if (!app) {
 			return (
@@ -224,7 +228,7 @@ export const useSIWF = (app?: Canvas<any>) => {
 						...buttonStyles,
 					}}
 				>
-					Loading...
+					{loadingText ?? "Loading..."}
 				</button>
 			)
 		} else {
@@ -241,7 +245,7 @@ export const useSIWF = (app?: Canvas<any>) => {
 									...buttonStyles,
 								}}
 							>
-								Disconnect Farcaster
+								{logoutText ?? "Disconnect Farcaster"}
 							</button>
 						</div>
 					)}

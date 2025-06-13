@@ -18,6 +18,8 @@ export interface ConnectSIWEProps {
 	buttonClassName?: string
 	errorClassName?: string
 	label?: string
+	loadingText?: string
+	logoutText?: string
 }
 
 const BURNER_WALLET_KEY = "canvas-connectsiwe-burner-wallet-key"
@@ -166,6 +168,8 @@ export const useSIWE = (app?: Canvas<any>) => {
 		errorClassName,
 		buttonClassName,
 		label,
+		loadingText,
+		logoutText,
 	}: ConnectSIWEProps = {}) => {
 		if (!app) {
 			return (
@@ -201,7 +205,7 @@ export const useSIWE = (app?: Canvas<any>) => {
 						...buttonStyles,
 					}}
 				>
-					Loading...
+					{loadingText ?? "Loading..."}
 				</button>
 			)
 		} else if (address !== null && browserWalletLoggedIn && sessionSigner instanceof SIWESigner) {
@@ -214,7 +218,7 @@ export const useSIWE = (app?: Canvas<any>) => {
 						...buttonStyles,
 					}}
 				>
-					Disconnect
+					{logoutText ?? "Disconnect"}
 				</button>
 			)
 		} else {
@@ -243,6 +247,8 @@ export const useSIWE = (app?: Canvas<any>) => {
 		errorClassName,
 		buttonClassName,
 		label,
+		loadingText,
+		logoutText,
 	}: ConnectSIWEProps = {}) => {
 		if (!app) {
 			return (
@@ -278,7 +284,7 @@ export const useSIWE = (app?: Canvas<any>) => {
 						...buttonStyles,
 					}}
 				>
-					Loading...
+					{loadingText ?? "Loading..."}
 				</button>
 			)
 		} else if (address !== null && burnerWalletLoggedIn && sessionSigner instanceof SIWESigner) {
@@ -291,7 +297,7 @@ export const useSIWE = (app?: Canvas<any>) => {
 						...buttonStyles,
 					}}
 				>
-					Disconnect
+					{logoutText ?? "Disconnect"}
 				</button>
 			)
 		} else {
