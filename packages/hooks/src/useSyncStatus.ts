@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { Canvas, ClientSyncStatus } from "@canvas-js/core"
 
-export const useSyncStatus = (app: Canvas) => {
+export const useSyncStatus = (app: Canvas | null | undefined) => {
 	const [syncStatus, setSyncStatus] = useState<ClientSyncStatus>("offline")
 	useEffect(() => {
 		if (!app) return

@@ -41,7 +41,7 @@ const getBurnerWallet = () => {
 	return wallet
 }
 
-export const useSIWE = (app?: Canvas<any>) => {
+export const useSIWE = (app: Canvas | null | undefined) => {
 	const { sessionSigner, setSessionSigner, address, setAddress } = useContext(AuthContext)
 	const [provider, setProvider] = useState<BrowserProvider | null>(null)
 	const [error, setError] = useState<Error | null>(null)

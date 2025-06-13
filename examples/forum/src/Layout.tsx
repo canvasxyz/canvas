@@ -6,7 +6,7 @@ import { JsonRpcProvider } from "ethers"
 
 import { renderSyncStatus } from "@canvas-js/core"
 import { AppInfo } from "@canvas-js/hooks"
-import { useCanvas, useSIWE, useSIWF, useLogout, AuthContext } from "@canvas-js/hooks"
+import { useCanvas, useSIWE, useSIWF, useLogout, useSyncStatus, useClock, AuthContext } from "@canvas-js/hooks"
 import { SIWESigner, SIWFSigner } from "@canvas-js/signer-ethereum"
 
 import { App } from "./App.js"
@@ -33,19 +33,20 @@ const Layout: React.FC = () => {
 	const { address } = useContext(AuthContext)
 	const [isInfoOpen, setIsInfoOpen] = useState<boolean>(false)
 
-	const { app, ws, useSyncStatus } = useCanvas(wsURL, {
+	const { app, ws } = useCanvas(wsURL, {
 		signers: [new SIWESigner({ readOnly: true }), new SIWFSigner()],
 		topic: "forum-example.canvas.xyz",
 		contract: Forum,
 		// reset: true,
 	})
 
-	const syncStatus = useSyncStatus()
 	const [infoOpen, setInfoOpen] = useState(false)
 
 	const { ConnectSIWE, ConnectSIWEBurner } = useSIWE(app)
 	const { ConnectSIWF } = useSIWF(app)
 	const { Logout } = useLogout(app)
+	const syncStatus = useSyncStatus(app)
+	const clock = useClock(app)
 
 	return (
 		<AppContext.Provider value={{ app: app ?? null }}>
@@ -54,7 +55,7 @@ const Layout: React.FC = () => {
 					<main>
 						<App app={app} />
 						<div
-							className={`${isInfoOpen ? "" : "hidden"} fixed top-4 right-5 z-10 bg-white p-4 pr-12 w-[340px] border border-1 shadow-md rounded`}
+							className={`${isInfoOpen ? "" : "hidden"} fixed top-4 right-5 z-10 bg-white p-4 pr-12 w-[380px] border border-1 shadow-md rounded`}
 						>
 							<div className="absolute top-3 right-4">
 								<button onClick={() => setIsInfoOpen(false)} className="text-gray-500 hover:text-gray-700">
@@ -72,7 +73,7 @@ const Layout: React.FC = () => {
 								<a href="#" onClick={() => setInfoOpen(!infoOpen)}>
 									Info
 								</a>{" "}
-								&middot; Sync {renderSyncStatus(syncStatus)} &middot;{" "}
+								&middot; Sync {renderSyncStatus(syncStatus)} ({clock}) &middot;{" "}
 								<a
 									href="#"
 									onClick={async () => {

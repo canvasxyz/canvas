@@ -22,7 +22,7 @@ export interface ConnectSIWFProps {
 	logoutText?: string
 }
 
-export const useSIWF = (app?: Canvas<any>) => {
+export const useSIWF = (app: Canvas | null | undefined) => {
 	const { sessionSigner, setSessionSigner, address, setAddress } = useContext(AuthContext)
 
 	useEffect(() => {

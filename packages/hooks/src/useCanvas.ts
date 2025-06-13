@@ -39,25 +39,6 @@ export const useCanvas = <
 
 	const contractHash = config && typeof config.contract === "string" ? hashContract(config.contract) : null
 
-	const useSyncStatus = () => {
-		const [syncStatus, setSyncStatus] = useState<ClientSyncStatus>("offline")
-		useEffect(() => {
-			if (!app) return
-			const updateSyncStatus = () => {
-				setTimeout(() => setSyncStatus(app.syncStatus))
-			}
-			app.messageLog.addEventListener("connect", updateSyncStatus)
-			app.messageLog.addEventListener("disconnect", updateSyncStatus)
-			app.messageLog.addEventListener("sync:status", updateSyncStatus)
-			return () => {
-				app.messageLog.removeEventListener("connect", updateSyncStatus)
-				app.messageLog.removeEventListener("disconnect", updateSyncStatus)
-				app.messageLog.removeEventListener("sync:status", updateSyncStatus)
-			}
-		}, [app])
-		return syncStatus
-	}
-
 	// useEffect(() => {
 	// 	// keep app signers updated
 	// 	if (!app || !config || config.signers === undefined) return
@@ -195,5 +176,5 @@ export const useCanvas = <
 		}
 	}, [url, contractHash])
 
-	return { app, ws: networkClient, error, useSyncStatus }
+	return { app, ws: networkClient, error }
 }
