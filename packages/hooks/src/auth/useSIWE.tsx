@@ -323,6 +323,16 @@ export const useSIWE = (app?: Canvas<any>) => {
 	return {
 		ConnectSIWE,
 		ConnectSIWEBurner,
+		connectSIWE: () => {
+			connect({ provider: new BrowserProvider(window.ethereum!), isReturningSession: false }).then((result) => {
+				if (result !== null) setBrowserWalletLoggedIn(true)
+			})
+		},
+		connectSIWEBurner: () => {
+			connect({ burner: true, isReturningSession: false }).then((result) => {
+				if (result !== null) setBurnerWalletLoggedIn(true)
+			})
+		},
 		address,
 		error,
 		provider,
