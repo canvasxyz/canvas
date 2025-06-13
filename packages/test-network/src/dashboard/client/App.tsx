@@ -15,8 +15,12 @@ export const App: React.FC<{}> = ({}) => {
 		eventSource.addEventListener("error", (event) => console.error("error in event source", event))
 		eventSource.addEventListener("close", (event) => console.log("closed event source", event))
 		eventSource.addEventListener("message", ({ data }) => {
-			const event = JSON.parse(data) as Event
-			setState((state) => reduce(state, event))
+			const event = JSON.parse(data) as Event | { type: "snapshot"; state: State }
+			if (event.type === "snapshot") {
+				setState(event.state)
+			} else {
+				setState((state) => reduce(state, event))
+			}
 		})
 
 		return () => eventSource.close()

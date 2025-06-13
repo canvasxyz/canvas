@@ -4,12 +4,17 @@ import express from "express"
 import cors from "cors"
 import { WebSocket, WebSocketServer } from "ws"
 
-import PQueue from "p-queue"
+import { initialState, reduce, type Event, type State } from "../../events.js"
 
-import type { Event } from "../../events.js"
+let state: State = initialState
+const clients = new Set<express.Response>()
 
-const events: Event[] = []
-const queues = new Map<express.Response, PQueue>()
+function dispatch(event: Event) {
+	state = reduce(state, event)
+	for (const res of clients) {
+		push(res, event)
+	}
+}
 
 function push(res: express.Response, body: any) {
 	if (res.closed) {
@@ -52,7 +57,6 @@ app.post("/api/provide/:peerId", (req, res) => {
 })
 
 app.post("/api/query/:peerId", (req, res) => {
-	console.log("QUERY", req.params.peerId)
 	const ws = sockets.get(req.params.peerId)
 	if (ws === undefined) {
 		return void res.status(404).end()
@@ -75,12 +79,7 @@ app.post("/api/append/:peerId", (req, res) => {
 })
 
 app.post("/api/events", (req, res) => {
-	const event = req.body
-	events.push(event)
-	for (const [res, queue] of queues) {
-		queue.add(() => push(res, event))
-	}
-
+	dispatch(req.body)
 	return void res.status(200).end()
 })
 
@@ -91,20 +90,12 @@ app.get("/api/events", (req, res) => {
 		["Connection"]: "keep-alive",
 	})
 
-	const queue = new PQueue({ concurrency: 1 })
-	queues.set(res, queue)
-
-	for (const event of events) {
-		queue.add(() => push(res, event))
-	}
-
-	res.on("close", () => {
-		queue.clear()
-		queues.delete(res)
-	})
+	clients.add(res)
+	push(res, { type: "snapshot", state })
+	res.on("close", () => void clients.delete(res))
 })
 
-const workerQueues = new Map<express.Response, PQueue>()
+const workers = new Set<express.Response>()
 
 app.get("/api/workers", (req, res) => {
 	res.writeHead(200, {
@@ -113,17 +104,8 @@ app.get("/api/workers", (req, res) => {
 		["Connection"]: "keep-alive",
 	})
 
-	const queue = new PQueue({ concurrency: 1 })
-	workerQueues.set(res, queue)
-
-	for (const event of events) {
-		queue.add(() => push(res, event))
-	}
-
-	res.on("close", () => {
-		queue.clear()
-		workerQueues.delete(res)
-	})
+	workers.add(res)
+	res.on("close", () => void workers.delete(res))
 })
 
 const server = http.createServer(app)
@@ -144,6 +126,7 @@ wss.on("connection", (ws) => {
 		const peerId = peerIds.get(ws)
 		if (peerId !== undefined) {
 			sockets.delete(peerId)
+			peerIds.delete(ws)
 		}
 	})
 
@@ -156,10 +139,7 @@ wss.on("connection", (ws) => {
 			peerIds.set(ws, event.peerId)
 		}
 
-		events.push(event)
-		for (const [res, queue] of queues) {
-			queue.add(() => push(res, event))
-		}
+		dispatch(event)
 	})
 })
 

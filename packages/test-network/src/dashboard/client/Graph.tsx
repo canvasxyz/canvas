@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from "react"
 import * as d3 from "d3"
-import { assert } from "@canvas-js/utils"
 
 interface Node extends d3.SimulationNodeDatum {
 	id: string

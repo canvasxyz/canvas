@@ -18,6 +18,8 @@ export type State = {
 	roots: Record<string, string | null>
 }
 
+export const initialState: State = { mesh: {}, nodes: [], links: [], roots: {} }
+
 export function reduce(state: State, event: Event): State {
 	if (event.type === "start") {
 		if (state.nodes.every((node) => node.id !== event.peerId)) {
