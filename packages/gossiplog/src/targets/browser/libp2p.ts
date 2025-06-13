@@ -117,6 +117,7 @@ export async function getLibp2p<Payload>(
 
 			rendezvous: rendezvousClient({
 				autoRegister: {
+					ttl: 60,
 					multiaddrs: bootstrapList,
 					namespaces: [gossipLog.topic],
 				},
