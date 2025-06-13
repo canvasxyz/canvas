@@ -1,7 +1,7 @@
 {
 	"name": "@canvas-js/network-explorer",
 	"type": "module",
-	"version": "0.16.0-next.2",
+	"version": "0.16.0-next.3",
 	"scripts": {
 		"client:dev": "npx vite dev",
 		"dev": "npx vite build --watch",
@@ -10,9 +10,9 @@
 	},
 	"sideEffects": false,
 	"dependencies": {
-		"@canvas-js/core": "0.16.0-next.2",
-		"@canvas-js/interfaces": "0.16.0-next.2",
-		"@canvas-js/modeldb": "0.16.0-next.2",
+		"@canvas-js/core": "0.16.0-next.3",
+		"@canvas-js/interfaces": "0.16.0-next.3",
+		"@canvas-js/modeldb": "0.16.0-next.3",
 		"@codemirror/commands": "^6.8.0",
 		"@codemirror/lang-javascript": "^6.2.3",
 		"@codemirror/language": "^6.11.0",
