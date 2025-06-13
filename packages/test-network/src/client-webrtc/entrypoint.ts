@@ -84,4 +84,4 @@ async function newPeer() {
 	}, lifetime * 1000)
 }
 
-new SporadicEmitter(10 * 1000, true).addListener("event", () => newPeer())
+new SporadicEmitter(8 * 1000, true).addListener("event", () => newPeer())
