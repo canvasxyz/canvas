@@ -1,10 +1,10 @@
 {
 	"name": "@canvas-js/contracts",
-	"version": "0.15.2-next.0",
+	"version": "0.16.0-next.0",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"type": "module",
 	"engines": {
-		"node": ">=20.0.0"
+		"node": ">=22.0.0"
 	},
 	"files": [
 		"lib"
@@ -16,9 +16,9 @@
 		"test": "ava --serial"
 	},
 	"dependencies": {
-		"@canvas-js/core": "0.15.2-next.0",
-		"@canvas-js/modeldb": "0.15.2-next.0",
-		"@canvas-js/signer-ethereum": "0.15.2-next.0",
+		"@canvas-js/core": "0.16.0-next.0",
+		"@canvas-js/modeldb": "0.16.0-next.0",
+		"@canvas-js/signer-ethereum": "0.16.0-next.0",
 		"@canvas-js/utils": "1.0.0"
 	}
 }
