@@ -40,3 +40,27 @@ Some considerations:
 - The loader uses a proxy to defer action calls to the object, which specifically proxies
   the  `actions` and `db` APIs. **Other calls on the Canvas object may not work.**
 - If you execute any actions before the app has initialized, they will fail with an error.
+
+## Sync Status API
+
+The `app.syncStatus` property exposes the sync status of a browser-to-server application.
+
+Browser-to-server sync runs over multiple sessions, in case a sync is interrupted or
+internet connectivity is momentarily lost. Each sync session either runs to completion,
+or times out after a predetermined period, triggering another sync session.
+
+```ts
+export type ClientSyncStatus = "offline" | "starting" | "inProgress" | "complete" | "error"
+```
+
+- When an initial connection is established, the sync status is set to "starting".
+- When part of a longer sync is completed, the sync status is set to "inProgress".
+- When a sync session runs to completion, the sync status is set to "complete".
+
+Finally, you can also observe changes to the sync status by listening to the app's message log:
+
+```ts
+app.messageLog.addEventListener("connect", updateSyncStatus)
+app.messageLog.addEventListener("disconnect", updateSyncStatus)
+app.messageLog.addEventListener("sync:status", updateSyncStatus)
+```
