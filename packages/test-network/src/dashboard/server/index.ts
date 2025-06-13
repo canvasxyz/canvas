@@ -4,7 +4,7 @@ import express from "express"
 import cors from "cors"
 import { WebSocket, WebSocketServer } from "ws"
 
-import { initialState, reduce, type Event, type State } from "../../events.js"
+import { Event, State, initialState, reduce } from "@canvas-js/test-network/events"
 
 let state: State = initialState
 const clients = new Set<express.Response>()
@@ -33,8 +33,6 @@ app.use(express.static("dist"))
 
 app.post("/api/disconnect/:source/:target", (req, res) => {
 	const { source, target } = req.params
-	console.log(`disconnect ${source} from ${target}`)
-
 	const ws = sockets.get(source)
 	if (ws === undefined) {
 		return void res.status(404).end()
@@ -45,8 +43,6 @@ app.post("/api/disconnect/:source/:target", (req, res) => {
 })
 
 app.post("/api/provide/:peerId", (req, res) => {
-	console.log("PROVIDE", req.params.peerId)
-
 	const ws = sockets.get(req.params.peerId)
 	if (ws === undefined) {
 		return void res.status(404).end()
@@ -67,8 +63,6 @@ app.post("/api/query/:peerId", (req, res) => {
 })
 
 app.post("/api/append/:peerId", (req, res) => {
-	console.log("append", req.params.peerId)
-
 	const ws = sockets.get(req.params.peerId)
 	if (ws === undefined) {
 		return void res.status(404).end()
@@ -116,13 +110,7 @@ const sockets = new Map<string, WebSocket>()
 const wss = new WebSocketServer({ server })
 
 wss.on("connection", (ws) => {
-	console.log("new socket connection")
-	ws.on("open", () => {
-		console.log("socket open")
-	})
-
 	ws.on("close", () => {
-		console.log("socket close")
 		const peerId = peerIds.get(ws)
 		if (peerId !== undefined) {
 			sockets.delete(peerId)

@@ -1,5 +1,5 @@
 import React, { useState } from "react"
-import type { Event } from "../../events.js"
+import { Event } from "@canvas-js/test-network/events"
 
 export const EventLog: React.FC<{ events: Event[] }> = ({ events }) => {
 	const [visible, setVisible] = useState(false)

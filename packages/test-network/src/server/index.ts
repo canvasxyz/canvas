@@ -5,8 +5,8 @@ import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 import { GossipLog } from "@canvas-js/gossiplog/sqlite"
 import { NetworkServer } from "@canvas-js/gossiplog/server"
 
-import { Socket } from "../socket.js"
-import { topic } from "../constants.js"
+import { Socket } from "@canvas-js/test-network/socket"
+import { topic } from "@canvas-js/test-network/constants"
 import { generateKeyPair, privateKeyFromProtobuf } from "@libp2p/crypto/keys"
 import { peerIdFromPrivateKey } from "@libp2p/peer-id"
 

@@ -3,7 +3,7 @@ import { randomBytes, bytesToHex } from "@noble/hashes/utils"
 import { TypedEventEmitter, PeerId } from "@libp2p/interface"
 import { AbstractGossipLog } from "@canvas-js/gossiplog"
 
-import type { Event } from "./events.js"
+import { Event } from "@canvas-js/test-network/events"
 
 export type SocketEvents = {
 	append: CustomEvent<{}>

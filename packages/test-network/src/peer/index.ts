@@ -3,7 +3,7 @@ import { randomBytes, bytesToHex } from "@noble/hashes/utils"
 
 import { GossipLog } from "@canvas-js/gossiplog/sqlite"
 
-import { Socket } from "../socket.js"
+import { Socket } from "@canvas-js/test-network/socket"
 import { bootstrapList, listen, announce, topic, delay, interval } from "./config.js"
 
 async function start() {

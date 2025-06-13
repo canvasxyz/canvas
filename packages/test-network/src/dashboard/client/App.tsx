@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react"
 
-import { Event, State, reduce } from "../../events.js"
+import { Event, State, initialState, reduce } from "@canvas-js/test-network/events"
 import { Graph } from "./Graph.js"
 
 // import { EventLog } from "./EventLog.js"
@@ -8,7 +8,7 @@ import { Graph } from "./Graph.js"
 const bootstrapPeerIds = ["12D3KooWMvSCSeJ6zxJJRQZSpyGqbNcqSJfcJGZLRiMVMePXzMax"]
 
 export const App: React.FC<{}> = ({}) => {
-	const [state, setState] = useState<State>({ nodes: [], links: [], roots: {}, mesh: {} })
+	const [state, setState] = useState<State>(initialState)
 
 	useEffect(() => {
 		const eventSource = new EventSource("/api/events")

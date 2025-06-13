@@ -8,8 +8,8 @@ import { peerIdFromPrivateKey } from "@libp2p/peer-id"
 import { GossipLog } from "@canvas-js/gossiplog/idb"
 import { NetworkClient } from "@canvas-js/gossiplog/client"
 
-import { Socket } from "../../socket.js"
-import { topic } from "../../constants.js"
+import { Socket } from "@canvas-js/test-network/socket"
+import { topic } from "@canvas-js/test-network/constants"
 
 const privateKey = await generateKeyPair("Ed25519")
 const peerId = peerIdFromPrivateKey(privateKey)

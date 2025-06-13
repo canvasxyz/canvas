@@ -10,8 +10,8 @@ import { SECONDS } from "@canvas-js/utils"
 
 import { GossipLog } from "@canvas-js/gossiplog/idb"
 
-import { Socket } from "../../socket.js"
-import { topic } from "../../constants.js"
+import { Socket } from "@canvas-js/test-network/socket"
+import { topic } from "@canvas-js/test-network/constants"
 
 const gossipLog = await GossipLog.open<string>({ topic, apply: () => {} })
 

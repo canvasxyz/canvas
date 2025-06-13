@@ -1,7 +1,7 @@
 import { getLibp2p } from "@canvas-js/bootstrap-peer/libp2p"
 import { createAPI } from "@canvas-js/bootstrap-peer/api"
 
-import { Socket } from "../socket.js"
+import { Socket } from "@canvas-js/test-network/socket"
 
 const libp2p = await getLibp2p({
 	// path: string | null

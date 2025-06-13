@@ -10,7 +10,9 @@
 		"lib"
 	],
 	"exports": {
-		".": "./lib/index.js"
+		"./events": "./lib/events.js",
+		"./socket": "./lib/socket.js",
+		"./constants": "./lib/constants.js"
 	},
 	"scripts": {
 		"start": "./docker-compose.sh && docker compose rm -f && docker compose up --build --remove-orphans",
