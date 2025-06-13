@@ -1,17 +1,17 @@
 import Debugger from "weald"
 ;(Debugger as any).useColors = () => false
 
-import { bytesToHex, hexToBytes, randomBytes } from "@noble/hashes/utils"
-import { generateKeyPair, privateKeyFromProtobuf } from "@libp2p/crypto/keys"
+import { PrivateKey } from "@libp2p/interface"
 import { peerIdFromPrivateKey } from "@libp2p/peer-id"
+import { generateKeyPair, privateKeyFromProtobuf } from "@libp2p/crypto/keys"
+import { bytesToHex, hexToBytes, randomBytes } from "@noble/hashes/utils"
 import { multiaddr } from "@multiformats/multiaddr"
+import { SECONDS } from "@canvas-js/utils"
 
 import { GossipLog } from "@canvas-js/gossiplog/idb"
 
 import { Socket } from "../../socket.js"
 import { topic } from "../../constants.js"
-import { SECONDS } from "@canvas-js/utils"
-import { PrivateKey } from "@libp2p/interface"
 
 const gossipLog = await GossipLog.open<string>({ topic, apply: () => {} })
 
@@ -61,12 +61,6 @@ const libp2p = await gossipLog.startLibp2p({
 })
 
 ;(window as any).libp2p = libp2p
-
-libp2p.addEventListener("self:peer:update", ({ detail: { peer } }) => {
-	console.log(
-		`self:peer:update: ${peer.id} [${peer.addresses.map((address) => "\n  " + address.multiaddr.toString()).join(",")}\n]`,
-	)
-})
 
 libp2p.addEventListener("peer:discovery", ({ detail: { id, multiaddrs } }) => {
 	console.log(`peer:discovery: ${id} [\n${multiaddrs.map((addr) => `  ${addr.toString()}\n`).join("")}]`)
