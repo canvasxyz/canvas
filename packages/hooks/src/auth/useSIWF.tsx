@@ -7,7 +7,7 @@ import { SIWFSigner } from "@canvas-js/signer-ethereum"
 import { AuthClientError, SignInButton, useProfile, UseSignInData } from "@farcaster/auth-kit"
 import { sdk } from "@farcaster/frame-sdk"
 import { bytesToHex } from "@noble/hashes/utils"
-import { AuthContext } from "../AuthContext.js"
+import { AuthContext } from "./AuthContext.js"
 import { styles } from "./styles.js"
 
 export interface ConnectSIWFProps {

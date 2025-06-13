@@ -10,8 +10,7 @@
 		"lib"
 	],
 	"exports": {
-		".": "./lib/index.js",
-		"./components": "./lib/components/index.js"
+		".": "./lib/index.js"
 	},
 	"peerDependencies": {
 		"react": "^18.3.1"

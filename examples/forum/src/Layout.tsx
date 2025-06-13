@@ -6,8 +6,7 @@ import { JsonRpcProvider } from "ethers"
 
 import { renderSyncStatus } from "@canvas-js/core"
 import { AppInfo } from "@canvas-js/hooks"
-import { useSIWE, useSIWF } from "@canvas-js/hooks/components"
-import { useCanvas } from "@canvas-js/hooks"
+import { useCanvas, useSIWE, useSIWF, useLogout } from "@canvas-js/hooks"
 import { SIWESigner, SIWFSigner } from "@canvas-js/signer-ethereum"
 
 import { App } from "./App.js"
@@ -45,6 +44,7 @@ const Layout: React.FC = () => {
 
 	const { ConnectSIWE, ConnectSIWEBurner } = useSIWE(app)
 	const { ConnectSIWF } = useSIWF(app)
+	const { Logout } = useLogout(app)
 
 	return (
 		<AppContext.Provider value={{ app: app ?? null }}>
@@ -64,6 +64,7 @@ const Layout: React.FC = () => {
 								<ConnectSIWE />
 								<ConnectSIWEBurner />
 								<ConnectSIWF />
+								<Logout />
 							</div>
 							<div className="block mt-4 text-gray-600 text-center text-sm">
 								{app.hasSession() ? "Logged in" : "Logged out"} &middot;{" "}

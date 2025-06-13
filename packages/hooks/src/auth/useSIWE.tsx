@@ -3,7 +3,7 @@ import { Wallet, Eip1193Provider, BrowserProvider, EventEmitterable } from "ethe
 
 import { SIWESigner } from "@canvas-js/signer-ethereum"
 import { Canvas } from "@canvas-js/core"
-import { AuthContext } from "../AuthContext.js"
+import { AuthContext } from "./AuthContext.js"
 import { styles } from "./styles.js"
 
 declare global {
