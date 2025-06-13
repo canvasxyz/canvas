@@ -43,6 +43,8 @@ export const useSIWE = (app?: Canvas<any>) => {
 	const { sessionSigner, setSessionSigner, address, setAddress } = useContext(AuthContext)
 	const [provider, setProvider] = useState<BrowserProvider | null>(null)
 	const [error, setError] = useState<Error | null>(null)
+	const [browserWalletLoggedIn, setBrowserWalletLoggedIn] = useState(false)
+	const [burnerWalletLoggedIn, setBurnerWalletLoggedIn] = useState(false)
 
 	const connect = useCallback(
 		async (
@@ -100,6 +102,9 @@ export const useSIWE = (app?: Canvas<any>) => {
 			app.updateSigners([signer, ...otherSigners])
 			setSessionSigner(signer)
 
+			setBrowserWalletLoggedIn(false)
+			setBurnerWalletLoggedIn(false)
+
 			return signer
 		},
 		[app, provider],
@@ -115,7 +120,11 @@ export const useSIWE = (app?: Canvas<any>) => {
 
 		if (window.ethereum === undefined || window.ethereum === null) {
 			setError(new Error("window.ethereum not found"))
-			connect({ burner: true, isReturningSession: true })
+			connect({ burner: true, isReturningSession: true }).then((result) => {
+				if (result !== null) {
+					setBurnerWalletLoggedIn(true)
+				}
+			})
 			return
 		}
 
@@ -129,7 +138,13 @@ export const useSIWE = (app?: Canvas<any>) => {
 		// automatically log back in, trying the browser wallet first
 		connect({ provider, isReturningSession: true }).then((result) => {
 			if (result === null) {
-				connect({ burner: true, isReturningSession: true })
+				connect({ burner: true, isReturningSession: true }).then((result2) => {
+					if (result2 !== null) {
+						setBurnerWalletLoggedIn(true)
+					}
+				})
+			} else {
+				setBrowserWalletLoggedIn(true)
 			}
 		})
 	}, [app])
@@ -139,6 +154,8 @@ export const useSIWE = (app?: Canvas<any>) => {
 		sessionSigner?.clearSession(app.topic)
 		setAddress(null)
 		setSessionSigner(null)
+		setBrowserWalletLoggedIn(false)
+		setBurnerWalletLoggedIn(false)
 		const otherSigners = app.signers.getAll().filter((s) => !(s instanceof SIWESigner))
 		app.updateSigners([...otherSigners, new SIWESigner({ readOnly: true })])
 	}, [app, sessionSigner])
@@ -187,7 +204,7 @@ export const useSIWE = (app?: Canvas<any>) => {
 					Loading...
 				</button>
 			)
-		} else if (address !== null && sessionSigner instanceof SIWESigner) {
+		} else if (address !== null && browserWalletLoggedIn && sessionSigner instanceof SIWESigner) {
 			return (
 				<button
 					onClick={() => disconnect()}
@@ -204,7 +221,9 @@ export const useSIWE = (app?: Canvas<any>) => {
 			return (
 				<button
 					onClick={() => {
-						connect({ provider: new BrowserProvider(window.ethereum!), isReturningSession: false })
+						connect({ provider: new BrowserProvider(window.ethereum!), isReturningSession: false }).then((result) => {
+							if (result !== null) setBrowserWalletLoggedIn(true)
+						})
 					}}
 					className={buttonClassName || ""}
 					style={{
@@ -262,7 +281,7 @@ export const useSIWE = (app?: Canvas<any>) => {
 					Loading...
 				</button>
 			)
-		} else if (address !== null && sessionSigner instanceof SIWESigner) {
+		} else if (address !== null && burnerWalletLoggedIn && sessionSigner instanceof SIWESigner) {
 			return (
 				<button
 					onClick={() => disconnect()}
@@ -279,7 +298,9 @@ export const useSIWE = (app?: Canvas<any>) => {
 			return (
 				<button
 					onClick={() => {
-						connect({ burner: true, isReturningSession: false })
+						connect({ burner: true, isReturningSession: false }).then((result) => {
+							if (result !== null) setBurnerWalletLoggedIn(true)
+						})
 					}}
 					className={buttonClassName || ""}
 					style={{

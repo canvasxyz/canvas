@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useState, useContext } from "react"
 import { LuUnplug } from "react-icons/lu"
 import { MdOutlineSync, MdOutlineSyncProblem, MdOutlineSyncDisabled } from "react-icons/md"
 import { AuthKitProvider } from "@farcaster/auth-kit"
@@ -6,7 +6,7 @@ import { JsonRpcProvider } from "ethers"
 
 import { renderSyncStatus } from "@canvas-js/core"
 import { AppInfo } from "@canvas-js/hooks"
-import { useCanvas, useSIWE, useSIWF, useLogout } from "@canvas-js/hooks"
+import { useCanvas, useSIWE, useSIWF, useLogout, AuthContext } from "@canvas-js/hooks"
 import { SIWESigner, SIWFSigner } from "@canvas-js/signer-ethereum"
 
 import { App } from "./App.js"
@@ -30,6 +30,7 @@ const wsURL =
 		: `wss://${document.location.hostname}`
 
 const Layout: React.FC = () => {
+	const { address } = useContext(AuthContext)
 	const [isInfoOpen, setIsInfoOpen] = useState<boolean>(false)
 
 	const { app, ws, useSyncStatus } = useCanvas(wsURL, {
@@ -90,6 +91,9 @@ const Layout: React.FC = () => {
 								</a>
 								{ws.error ? <span className="text-red-500 ml-1.5">Connection error</span> : ""}
 							</div>
+							{address ? (
+								<div className="block mt-1 text-gray-600 text-center text-sm">{address.slice(0, 32)}...</div>
+							) : null}
 							{infoOpen && (
 								<div className="block mt-4">
 									<hr />
