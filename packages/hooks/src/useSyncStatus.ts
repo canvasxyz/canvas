@@ -6,8 +6,11 @@ export const useSyncStatus = (app: Canvas | null | undefined) => {
 	useEffect(() => {
 		if (!app) return
 		const updateSyncStatus = () => {
-			setTimeout(() => setSyncStatus(app.syncStatus))
+			if (syncStatus !== app.syncStatus) {
+				setTimeout(() => setSyncStatus(app.syncStatus))
+			}
 		}
+		updateSyncStatus()
 		app.messageLog.addEventListener("connect", updateSyncStatus)
 		app.messageLog.addEventListener("disconnect", updateSyncStatus)
 		app.messageLog.addEventListener("sync:status", updateSyncStatus)

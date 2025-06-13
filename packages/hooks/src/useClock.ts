@@ -6,10 +6,11 @@ export const useClock = (app: Canvas | null | undefined) => {
 	useEffect(() => {
 		if (!app) return
 		const updateClock = () => {
-			app.messageLog.getClock().then(([clock, heads]: [number, string[]]) => {
-				setClock(clock)
+			app.messageLog.getClock().then(([newClock, heads]: [number, string[]]) => {
+				if (newClock > clock) setClock(newClock)
 			})
 		}
+		updateClock()
 		app.messageLog.addEventListener("message", updateClock)
 		app.messageLog.addEventListener("sync", updateClock)
 		app.messageLog.addEventListener("sync:status", updateClock)
