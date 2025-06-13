@@ -169,7 +169,9 @@ export class GossipLogService<Payload = unknown> implements Startable {
 		this.pubsub.removeEventListener("gossipsub:graft", this.handleGossipsubGraft)
 		this.pubsub.removeEventListener("gossipsub:prune", this.handleGossipsubPrune)
 
-		this.pubsub.unsubscribe(this.messageLog.topic)
+		if (this.pubsub.isStarted()) {
+			this.pubsub.unsubscribe(this.messageLog.topic)
+		}
 	}
 
 	public async stop() {
