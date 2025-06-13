@@ -6,17 +6,17 @@ import { WebSocket, WebSocketServer } from "ws"
 
 import PQueue from "p-queue"
 
-import type { Event } from "../../types.js"
+import type { Event } from "../../events.js"
 
 const events: Event[] = []
 const queues = new Map<express.Response, PQueue>()
 
-function push(res: express.Response, event: Event) {
+function push(res: express.Response, body: any) {
 	if (res.closed) {
 		return
 	}
 
-	res.write(`data: ${JSON.stringify(event)}\n\n`)
+	res.write(`data: ${JSON.stringify(body)}\n\n`)
 }
 
 const app = express()
@@ -101,6 +101,28 @@ app.get("/api/events", (req, res) => {
 	res.on("close", () => {
 		queue.clear()
 		queues.delete(res)
+	})
+})
+
+const workerQueues = new Map<express.Response, PQueue>()
+
+app.get("/api/workers", (req, res) => {
+	res.writeHead(200, {
+		["Content-Type"]: "text/event-stream",
+		["Cache-Control"]: "no-cache",
+		["Connection"]: "keep-alive",
+	})
+
+	const queue = new PQueue({ concurrency: 1 })
+	workerQueues.set(res, queue)
+
+	for (const event of events) {
+		queue.add(() => push(res, event))
+	}
+
+	res.on("close", () => {
+		queue.clear()
+		workerQueues.delete(res)
 	})
 })
 

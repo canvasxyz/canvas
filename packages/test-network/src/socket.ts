@@ -3,7 +3,7 @@ import { randomBytes, bytesToHex } from "@noble/hashes/utils"
 import { TypedEventEmitter, PeerId } from "@libp2p/interface"
 import { AbstractGossipLog } from "@canvas-js/gossiplog"
 
-import type { Event } from "./types.js"
+import type { Event } from "./events.js"
 
 export type SocketEvents = {
 	append: CustomEvent<{}>
@@ -19,7 +19,11 @@ export class Socket extends TypedEventEmitter<SocketEvents> {
 		return new Socket(ws, peerId, gossipLog)
 	}
 
-	private constructor(readonly ws: WebSocket, readonly peerId: PeerId, readonly gossipLog?: AbstractGossipLog<string>) {
+	private constructor(
+		readonly ws: WebSocket,
+		readonly peerId: PeerId,
+		readonly gossipLog?: AbstractGossipLog<string>,
+	) {
 		super()
 
 		ws.addEventListener("message", (msg) => {

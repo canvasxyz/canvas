@@ -58,6 +58,7 @@
 		"@types/ws": "^8.5.14",
 		"cors": "^2.8.5",
 		"d3": "^7.9.0",
+		"eventsource": "^4.0.0",
 		"express": "^5.1.0",
 		"http-status-codes": "^2.3.0",
 		"isomorphic-ws": "^5.0.0",
