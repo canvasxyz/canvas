@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 	<head>
 		<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
@@ -12,9 +12,16 @@
 		/>
 		<script type="module" src="/src/dashboard/client/index.tsx"></script>
 		<style>
+			#root {
+				display: flex;
+				gap: 1em;
+			}
+
 			svg {
 				border: 2px solid #222;
 				border-radius: 2px;
+
+				min-width: 600px;
 			}
 
 			svg g.links {
@@ -23,6 +30,41 @@
 
 			svg g.nodes {
 				cursor: pointer;
+			}
+
+			.worker-list {
+				display: flex;
+				flex-direction: row;
+				overflow-x: scroll;
+			}
+
+			.worker {
+				width: 240px;
+				border-left: 1px solid grey;
+				padding: 0 1em;
+			}
+
+			.worker:first-child {
+				border-left: none;
+			}
+
+			.worker-header {
+				display: flex;
+				gap: 1em;
+				justify-content: space-between;
+				align-items: center;
+			}
+
+			.worker ul {
+				margin: 4px 0;
+			}
+
+			.worker-peer {
+				width: 100%;
+				display: inline-flex;
+				gap: 1em;
+				justify-content: space-between;
+				align-items: center;
 			}
 		</style>
 	</head>

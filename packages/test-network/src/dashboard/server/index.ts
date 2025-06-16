@@ -1,27 +1,36 @@
 import http from "node:http"
+import assert from "node:assert"
 
 import express from "express"
 import cors from "cors"
 import { WebSocket, WebSocketServer } from "ws"
 
-import { Event, State, initialState, reduce } from "@canvas-js/test-network/events"
+import {
+	PeerEvent,
+	WorkerEvent,
+	NetworkState,
+	initialState,
+	reduce,
+	NetworkEvent,
+} from "@canvas-js/test-network/events"
+import { StatusCodes } from "http-status-codes"
 
-let state: State = initialState
-const clients = new Set<express.Response>()
+let state: NetworkState = initialState
+const eventSourceClients = new Set<express.Response>()
 
-function dispatch(event: Event) {
+function handleEvent(event: PeerEvent | WorkerEvent) {
 	state = reduce(state, event)
-	for (const res of clients) {
-		push(res, event)
+	for (const res of eventSourceClients) {
+		pushEventSource(res, event)
 	}
 }
 
-function push(res: express.Response, body: any) {
+function pushEventSource(res: express.Response, event: NetworkEvent) {
 	if (res.closed) {
 		return
 	}
 
-	res.write(`data: ${JSON.stringify(body)}\n\n`)
+	res.write(`data: ${JSON.stringify(event)}\n\n`)
 }
 
 const app = express()
@@ -33,102 +42,139 @@ app.use(express.static("dist"))
 
 app.post("/api/disconnect/:source/:target", (req, res) => {
 	const { source, target } = req.params
-	const ws = sockets.get(source)
+	const ws = peerSockets.get(source)
 	if (ws === undefined) {
-		return void res.status(404).end()
+		return void res.status(StatusCodes.NOT_FOUND).end()
 	}
 
 	ws.send(JSON.stringify({ type: "disconnect", target }))
-	return void res.status(200).end()
+	return void res.status(StatusCodes.OK).end()
 })
 
 app.post("/api/provide/:peerId", (req, res) => {
-	const ws = sockets.get(req.params.peerId)
+	const ws = peerSockets.get(req.params.peerId)
 	if (ws === undefined) {
-		return void res.status(404).end()
+		return void res.status(StatusCodes.NOT_FOUND).end()
 	}
 
 	ws.send(JSON.stringify({ type: "provide" }))
-	return void res.status(200).end()
+	return void res.status(StatusCodes.OK).end()
 })
 
 app.post("/api/query/:peerId", (req, res) => {
-	const ws = sockets.get(req.params.peerId)
+	const ws = peerSockets.get(req.params.peerId)
 	if (ws === undefined) {
-		return void res.status(404).end()
+		return void res.status(StatusCodes.NOT_FOUND).end()
 	}
 
 	ws.send(JSON.stringify({ type: "query" }))
-	return void res.status(200).end()
+	return void res.status(StatusCodes.OK).end()
 })
 
 app.post("/api/append/:peerId", (req, res) => {
-	const ws = sockets.get(req.params.peerId)
+	const ws = peerSockets.get(req.params.peerId)
 	if (ws === undefined) {
-		return void res.status(404).end()
+		return void res.status(StatusCodes.NOT_FOUND).end()
 	}
 
 	ws.send(JSON.stringify({ type: "append" }))
-	return void res.status(200).end()
+	return void res.status(StatusCodes.OK).end()
+})
+
+app.post("/api/worker/:workerId/start", (req, res) => {
+	const ws = workerSockets.get(req.params.workerId)
+	if (ws === undefined) {
+		return void res.status(StatusCodes.NOT_FOUND).end()
+	}
+
+	ws.send(JSON.stringify({ type: "peer:start", interval: null }))
+})
+
+app.post("/api/worker/:workerId/stop", (req, res) => {
+	const { peerId } = req.query
+	if (typeof peerId !== "string") {
+		return void res.status(StatusCodes.BAD_REQUEST).end("missing peerId query param")
+	}
+
+	const ws = workerSockets.get(req.params.workerId)
+	if (ws === undefined) {
+		return void res.status(StatusCodes.NOT_FOUND).end()
+	}
+
+	ws.send(JSON.stringify({ type: "peer:stop", id: peerId }))
 })
 
 app.post("/api/events", (req, res) => {
-	dispatch(req.body)
-	return void res.status(200).end()
+	handleEvent(req.body)
+	return void res.status(StatusCodes.OK).end()
 })
 
 app.get("/api/events", (req, res) => {
-	res.writeHead(200, {
+	res.writeHead(StatusCodes.OK, {
 		["Content-Type"]: "text/event-stream",
 		["Cache-Control"]: "no-cache",
 		["Connection"]: "keep-alive",
 	})
 
-	clients.add(res)
-	push(res, { type: "snapshot", state })
-	res.on("close", () => void clients.delete(res))
-})
-
-const workers = new Set<express.Response>()
-
-app.get("/api/workers", (req, res) => {
-	res.writeHead(200, {
-		["Content-Type"]: "text/event-stream",
-		["Cache-Control"]: "no-cache",
-		["Connection"]: "keep-alive",
-	})
-
-	workers.add(res)
-	res.on("close", () => void workers.delete(res))
+	eventSourceClients.add(res)
+	pushEventSource(res, { source: "network", type: "snapshot", state })
+	res.on("close", () => void eventSourceClients.delete(res))
 })
 
 const server = http.createServer(app)
 
-const peerIds = new WeakMap<WebSocket, string>()
-const sockets = new Map<string, WebSocket>()
+const workerIds = new Map<WebSocket, string>()
+const workerSockets = new Map<string, WebSocket>()
+
+const peerIds = new Map<WebSocket, string>()
+const peerSockets = new Map<string, WebSocket>()
 
 const wss = new WebSocketServer({ server })
 
-wss.on("connection", (ws) => {
-	ws.on("close", () => {
-		const peerId = peerIds.get(ws)
-		if (peerId !== undefined) {
-			sockets.delete(peerId)
+wss.on("connection", (ws, req) => {
+	assert(req.url, "missing req.url string")
+	const url = new URL(req.url, `http://${req.headers.host}`)
+	const peerId = url.searchParams.get("peerId")
+	const workerId = url.searchParams.get("workerId")
+
+	if (peerId === null && workerId !== null) {
+		workerSockets.set(workerId, ws)
+		workerIds.set(ws, workerId)
+
+		handleEvent({ source: "worker", type: "worker:start", workerId, timestamp: Date.now(), detail: {} })
+
+		ws.on("close", () => {
+			workerSockets.delete(workerId)
+			workerIds.delete(ws)
+			handleEvent({ source: "worker", type: "worker:stop", workerId, timestamp: Date.now(), detail: {} })
+		})
+
+		ws.on("error", (err) => console.error(err))
+		ws.on("message", (msg) => {
+			const event = JSON.parse(msg.toString()) as WorkerEvent
+			handleEvent(event)
+		})
+	} else if (peerId !== null && workerId === null) {
+		peerSockets.set(peerId, ws)
+		peerIds.set(ws, peerId)
+
+		ws.on("close", () => {
+			peerSockets.delete(peerId)
 			peerIds.delete(ws)
-		}
-	})
+		})
 
-	ws.on("error", (err) => console.error(err))
-	ws.on("message", (msg) => {
-		const event = JSON.parse(msg.toString()) as Event
+		ws.on("error", (err) => console.error(err))
+		ws.on("message", (msg) => {
+			const event = JSON.parse(msg.toString()) as PeerEvent
+			handleEvent(event)
+		})
+	} else {
+		console.error("invalid websocket URL (expected either peerId or workerId)", {
+			url: req.url,
+		})
 
-		if (!sockets.has(event.peerId)) {
-			sockets.set(event.peerId, ws)
-			peerIds.set(ws, event.peerId)
-		}
-
-		dispatch(event)
-	})
+		ws.close()
+	}
 })
 
 server.listen(8000, () => {

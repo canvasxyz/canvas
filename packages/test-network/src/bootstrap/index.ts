@@ -1,7 +1,7 @@
 import { getLibp2p } from "@canvas-js/bootstrap-peer/libp2p"
 import { createAPI } from "@canvas-js/bootstrap-peer/api"
 
-import { Socket } from "@canvas-js/test-network/socket"
+import { PeerSocket } from "@canvas-js/test-network/socket-peer"
 
 const libp2p = await getLibp2p({
 	// path: string | null
@@ -14,13 +14,12 @@ const libp2p = await getLibp2p({
 
 await libp2p.start()
 
-const socket = await Socket.open(`ws://dashboard:8000`, libp2p.peerId)
+const socket = await PeerSocket.open(`ws://dashboard:8000`, libp2p.peerId)
 
-socket.post("start", { topic: null })
+socket.post("start", { workerId: null, topic: null, root: null })
 
 libp2p.addEventListener("stop", () => {
 	console.log("libp2p stopped")
-	socket.post("stop", {})
 })
 
 libp2p.addEventListener("connection:open", ({ detail: { id, remotePeer, remoteAddr } }) => {

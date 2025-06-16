@@ -1,9 +1,13 @@
 import { randomBytes } from "node:crypto"
+
 import puppeteer from "puppeteer"
-import { generateKeyPair, privateKeyToProtobuf } from "@libp2p/crypto/keys"
+
+import { PeerId } from "@libp2p/interface"
 import { peerIdFromPrivateKey } from "@libp2p/peer-id"
-import { SporadicEmitter } from "./SporadicEmitter.js"
+import { generateKeyPair, privateKeyToProtobuf } from "@libp2p/crypto/keys"
 import { bytesToHex } from "@noble/hashes/utils"
+
+import { WorkerSocket } from "@canvas-js/test-network/socket-worker"
 
 const browser = await puppeteer.launch({
 	userDataDir: `data/${randomBytes(8).toString("hex")}`,
@@ -18,70 +22,132 @@ const browser = await puppeteer.launch({
 
 process.addListener("SIGINT", async () => {
 	process.stdout.write("\nReceived SIGINT\n")
+	worker.ws.close()
 	browser.close()
 })
 
-let nextPageId = 0
-async function newPeer() {
-	const i = nextPageId++
+/** { [name] -> Peer } */
+const peers = new Map<string, Peer>()
 
-	const privateKey = await generateKeyPair("Ed25519")
-	const peerId = peerIdFromPrivateKey(privateKey)
+class Peer {
+	static async start(options: { interval?: number | null } = {}) {
+		const privateKey = await generateKeyPair("Ed25519")
+		const context = await browser.createBrowserContext()
 
-	const query: Record<string, string> = {
-		privateKey: bytesToHex(privateKeyToProtobuf(privateKey)),
+		let page: puppeteer.Page
+		try {
+			page = await context.newPage()
+		} catch (err) {
+			await context.close()
+			throw err
+		}
+
+		const peerId = peerIdFromPrivateKey(privateKey)
+
+		const query: Record<string, string> = {
+			workerId: worker.workerId,
+			privateKey: bytesToHex(privateKeyToProtobuf(privateKey)),
+		}
+
+		if (typeof options.interval === "number") {
+			query.interval = options.interval.toString()
+		}
+
+		const q = Object.entries(query)
+			.map(([name, value]) => `${name}=${encodeURIComponent(value)}`)
+			.join("&")
+
+		const url = `http://localhost:8000/client-webrtc/index.html?${q}`
+
+		return new Peer(peerId, context, page, url)
 	}
 
-	const q = Object.entries(query)
-		.map(([name, value]) => `${name}=${encodeURIComponent(value)}`)
-		.join("&")
+	readonly name: string
 
-	const url = `http://localhost:8000/client-webrtc/index.html?${q}`
+	private constructor(
+		readonly peerId: PeerId,
+		readonly context: puppeteer.BrowserContext,
+		readonly page: puppeteer.Page,
+		url: string,
+	) {
+		this.name = peerId.toString().slice(-6)
+		page.on("console", this.handleConsole)
+		page.on("error", (err) => console.error(`[page-${this.name}] [error] ${err}`))
+		page.on("pageerror", (err) => console.error(`[page-${this.name}] [pageerror] ${err}`))
+		page.goto(url).catch((err) => {
+			// possible timeout
+			console.error(err)
+			this.stop()
+		})
 
-	const context = await browser.createBrowserContext()
-	const page = await context.newPage()
+		peers.set(peerId.toString(), this)
+	}
 
-	const formatValue = (value: unknown) => {
+	public async stop() {
+		console.log(`[page-${this.name}] stopping...`)
+		peers.delete(this.name)
+
+		worker.post("peer:stop", { id: this.peerId.toString() })
+
+		if (!this.page.isClosed()) {
+			try {
+				await this.page.close({ runBeforeUnload: true })
+			} catch (err) {
+				console.error(err)
+			} finally {
+				this.page.removeAllListeners()
+			}
+		}
+
+		if (!this.context.closed) {
+			try {
+				await this.context.close()
+			} catch (err) {
+				console.error(err)
+			} finally {
+				this.context.removeAllListeners()
+			}
+		}
+
+		console.log(`[page-${this.name}] stopped`)
+	}
+
+	private handleConsole = async (msg: puppeteer.ConsoleMessage) => {
+		if (this.page.isClosed()) return
+		const args = await Promise.all(
+			msg.args().map(async (arg) => {
+				try {
+					return await arg.evaluate(this.formatValue)
+				} catch (err) {
+					return arg.toString()
+				}
+			}),
+		)
+
+		console.log(`[page-${this.name}] [${msg.type()}]`, args.join(" "))
+	}
+
+	private formatValue = (value: unknown) => {
 		if (value instanceof Error) {
 			return `${value.name}: ${value.message}\n${value.stack}`
 		}
 
 		return String(value)
 	}
-
-	page.on("console", async (msg) => {
-		if (page.isClosed()) return
-		const args = await Promise.all(msg.args().map((arg) => arg.evaluate(formatValue).catch(() => arg.toString())))
-		console.log(`[page-${i}] [${msg.type()}]`, args.join(" "))
-	})
-
-	page.on("error", (err) => console.error(`[page-${i}] [error] ${err}`))
-	page.on("pageerror", (err) => console.error(`[page-${i}] [pageerror] ${err}`))
-	page.goto(url)
-
-	// min: 10s, max: 50s
-	const lifetime = 10 + Math.random() * 50
-	setTimeout(async () => {
-		fetch("http://localhost:8000/api/events", {
-			method: "POST",
-			headers: { "content-type": "application/json" },
-			body: JSON.stringify({ type: "stop", peerId: peerId.toString(), timestamp: Date.now(), detail: {} }),
-		}).then((res) => {
-			if (!res.ok) {
-				console.error("failed to post stop event:", res.statusText)
-			}
-		})
-
-		if (page.isClosed()) return
-		try {
-			page.removeAllListeners()
-			await page.close({ runBeforeUnload: true })
-		} catch (err) {
-			console.error(err)
-		}
-
-		await context.close().catch((err) => console.error(err))
-	}, lifetime * 1000)
 }
 
-new SporadicEmitter(8 * 1000, true).addListener("event", () => newPeer())
+const worker = await WorkerSocket.open("http://localhost:8000")
+
+worker.addEventListener("peer:start", ({ detail: { interval } }) => {
+	Peer.start({ interval }).then(
+		(peer) => console.log(`started peer ${peer.peerId}`),
+		(err) => console.error(`failed to start peer`, err),
+	)
+})
+
+worker.addEventListener("peer:stop", ({ detail: { id } }) => {
+	const peer = peers.get(id)
+	if (peer !== undefined) {
+		peer.stop()
+	}
+})

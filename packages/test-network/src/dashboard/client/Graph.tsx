@@ -24,7 +24,7 @@ export interface GraphProps {
 }
 
 export const nodeRadius = 10
-export const width = 800
+export const width = 600
 export const height = 600
 
 const getColor = (root?: string | null) => (root ? "#" + root.slice(-6) : "#000")
@@ -218,38 +218,9 @@ export const Graph: React.FC<GraphProps> = ({
 			})
 	}, [svg, roots])
 
-	// useEffect(() => {
-	// 	if (svg === null || simulation === null) {
-	// 		return
-	// 	}
-
-	// 	const resolvedMessages = messages.map(({ data, peerId }) => ({ data, node: nodes.find((n) => n.id === peerId)! }))
-
-	// 	const oldMessages = svg
-	// 		.select<SVGGElement>(".messages")
-	// 		.selectAll<SVGCircleElement, { data: string; node: Node }>("circle")
-	// 		.data(resolvedMessages, (d) => `${d.node.id}/${d.data}`)
-
-	// 	oldMessages.exit().remove()
-
-	// 	const newMessages = oldMessages
-	// 		.enter()
-	// 		.append("circle")
-	// 		.attr("r", nodeRadius * 1.5)
-	// 		.attr("fill", (d) => "#007")
-	// 		.attr("cx", (d) => d.node.x!)
-	// 		.attr("cy", (d) => d.node.y!)
-	// 		.merge(oldMessages)
-
-	// 	simulation.on("tick.messages", () => {
-	// 		newMessages.attr("cx", (d) => d.node.x!).attr("cy", (d) => d.node.y!)
-	// 	})
-
-	// 	return () => void simulation.on("tick.messages", null)
-	// }, [svg, simulation, nodes, messages])
-
 	return (
 		<svg
+			id="graph"
 			style={{ cursor: isMouseDown ? "crosshair" : "initial" }}
 			width={width}
 			height={height}

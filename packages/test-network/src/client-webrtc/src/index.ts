@@ -10,7 +10,7 @@ import { SECONDS } from "@canvas-js/utils"
 
 import { GossipLog } from "@canvas-js/gossiplog/idb"
 
-import { Socket } from "@canvas-js/test-network/socket"
+import { PeerSocket } from "@canvas-js/test-network/socket-peer"
 import { topic } from "@canvas-js/test-network/constants"
 
 const gossipLog = await GossipLog.open<string>({ topic, apply: () => {} })
@@ -25,6 +25,8 @@ if (window.location.search.length > 1) {
 	}
 }
 
+const workerId = params.workerId ?? null
+
 let privateKey: PrivateKey
 if (params.privateKey !== undefined) {
 	privateKey = privateKeyFromProtobuf(hexToBytes(params.privateKey))
@@ -36,14 +38,7 @@ const peerId = peerIdFromPrivateKey(privateKey)
 
 console.log(`using peer id ${peerId}`)
 
-const socket = await Socket.open(`ws://localhost:8000`, peerId, gossipLog)
-
-// await gossipLog.append(bytesToHex(randomBytes(8)))
-
-// const maxDelay = parseInt(params.delay ?? "1") * 1000
-// const delay = maxDelay * Math.random()
-// console.log(`waiting ${delay}ms...`)
-// await new Promise((resolve) => setTimeout(resolve, delay))
+const socket = await PeerSocket.open(`ws://localhost:8000`, peerId, gossipLog)
 
 const bootstrapServer =
 	params.bootstrapServer ?? "/dns4/localhost/tcp/8080/ws/p2p/12D3KooWMvSCSeJ6zxJJRQZSpyGqbNcqSJfcJGZLRiMVMePXzMax"
@@ -69,19 +64,8 @@ libp2p.addEventListener("peer:discovery", ({ detail: { id, multiaddrs } }) => {
 libp2p.addEventListener("start", async () => {
 	console.log("libp2p started")
 	const root = await gossipLog.tree.read((txn) => txn.getRoot())
-	socket.post("start", { topic: gossipLog.topic, root: `0:${bytesToHex(root.hash)}` })
+	socket.post("start", { workerId, topic: gossipLog.topic, root: `0:${bytesToHex(root.hash)}` })
 })
-
-// window.addEventListener("beforeunload", () => {
-// 	console.log("GOOD BYE GOOD BYE GOOD BYE GOOD BYE GOOD BYE GOOD BYE")
-// 	socket.post("stop", {})
-// })
-
-// window.addEventListener("beforeunload", () => libp2p.stop())
-// libp2p.addEventListener("stop", () => {
-// 	console.log("libp2p stopped")
-// 	socket.post("stop", {})
-// })
 
 libp2p.addEventListener("connection:open", ({ detail: { id, remotePeer, remoteAddr } }) => {
 	console.log(`connection:open ${remotePeer} ${remoteAddr}`)
@@ -119,22 +103,9 @@ libp2p.services.pubsub.addEventListener("gossipsub:prune", ({ detail: { peerId, 
 	}
 })
 
-libp2p.start()
+await libp2p.start()
 
-// {
-// 	const root = await gossipLog.tree.read((txn) => txn.getRoot())
-// 	socket.post("start", { topic: gossipLog.topic, root: `0:${bytesToHex(root.hash)}` })
-
-// 	Promise.resolve(libp2p.start()).then(() => console.log("libp2p started"))
-
-// 	socket.post("connection:open", {
-// 		id: bytesToHex(randomBytes(8)),
-// 		remotePeer: "12D3KooWGrTsJkCdCsVdWFzTUdxsxHPRfbAhUp6qw6RhdtNvnW2Z",
-// 		remoteAddr: network.sourceURL,
-// 	})
-// }
-
-// const id = setInterval(() => gossipLog.append(bytesToHex(randomBytes(8))), maxDelay)
-setInterval(() => gossipLog.append(bytesToHex(randomBytes(8))), 5 * SECONDS)
-
-// // libp2p.addEventListener("stop", () => clearInterval(id))
+if (params.interval !== undefined) {
+	const interval = parseInt(params.interval)
+	setInterval(() => gossipLog.append(bytesToHex(randomBytes(8))), interval * SECONDS)
+}

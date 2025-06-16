@@ -8,7 +8,7 @@ import { peerIdFromPrivateKey } from "@libp2p/peer-id"
 import { GossipLog } from "@canvas-js/gossiplog/idb"
 import { NetworkClient } from "@canvas-js/gossiplog/client"
 
-import { Socket } from "@canvas-js/test-network/socket"
+import { PeerSocket } from "@canvas-js/test-network/socket-peer"
 import { topic } from "@canvas-js/test-network/constants"
 
 const privateKey = await generateKeyPair("Ed25519")
@@ -28,7 +28,9 @@ if (window.location.search.length > 1) {
 	}
 }
 
-const socket = await Socket.open(`ws://localhost:8000`, peerId, gossipLog)
+const workerId = params.workerId ?? null
+
+const socket = await PeerSocket.open(`ws://localhost:8000`, peerId, gossipLog)
 
 const maxDelay = parseInt(params.delay ?? "1") * 1000
 const delay = maxDelay * Math.random()
@@ -39,7 +41,7 @@ const network = new NetworkClient(gossipLog, `ws://localhost:9000`)
 
 {
 	const root = await gossipLog.tree.read((txn) => txn.getRoot())
-	socket.post("start", { topic: gossipLog.topic, root: `0:${bytesToHex(root.hash)}` })
+	socket.post("start", { topic: gossipLog.topic, root: `0:${bytesToHex(root.hash)}`, workerId })
 
 	socket.post("connection:open", {
 		id: bytesToHex(randomBytes(8)),
