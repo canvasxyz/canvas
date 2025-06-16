@@ -1,10 +1,10 @@
-import React, { useMemo } from "react"
+import React, { useMemo, useState } from "react"
 
 export interface WorkerListProps {
 	workers: { id: string }[]
 	nodes: { id: string; topic: string | null; workerId: string | null }[]
 
-	startPeer: (workerId: string) => void
+	startPeer: (workerId: string, times: number, interval: number) => void
 	stopPeer: (workerId: string, peerId: string) => void
 }
 
@@ -31,7 +31,7 @@ interface WorkerProps {
 	workerId: string
 	nodes: { id: string; topic: string | null; workerId: string | null }[]
 
-	startPeer: (workerId: string) => void
+	startPeer: (workerId: string, times: number, interval: number) => void
 	stopPeer: (workerId: string, peerId: string) => void
 }
 
@@ -40,12 +40,29 @@ const Worker: React.FC<WorkerProps> = (props) => {
 		() => props.nodes.filter((node) => node.workerId === props.workerId),
 		[props.workerId, props.nodes],
 	)
+	const [interval, setInterval] = useState(10)
 
 	return (
 		<div className="worker">
-			<div className="worker-header" style={{ display: "flex", gap: "1em" }}>
+			<div style={{ marginBottom: "0.5em" }}>
 				<code>{props.workerId}</code>
-				<button onClick={() => props.startPeer(props.workerId)}>add peer</button>
+			</div>
+			<div style={{ marginBottom: "0.5em" }}>
+				<label>
+					Generate messages with interval:
+					<input
+						type="number"
+						min={1}
+						value={interval}
+						onChange={e => setInterval(Number(e.target.value))}
+						style={{ width: 60, marginLeft: 8 }}
+					/>
+				</label>
+			</div>
+			<div className="worker-header" style={{ display: "flex", gap: "1em" }}>
+				<button onClick={() => props.startPeer(props.workerId, 1, interval)}>add peer</button>
+				<button onClick={() => props.startPeer(props.workerId, 5, interval)}>add x5</button>
+				<button onClick={() => props.startPeer(props.workerId, 10, interval)}>add x10</button>
 			</div>
 			<div>
 				{peers.length === 0 ? (

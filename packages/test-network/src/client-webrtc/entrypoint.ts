@@ -48,8 +48,8 @@ class Peer {
 			privateKey: bytesToHex(privateKeyToProtobuf(privateKey)),
 		}
 
-		if (typeof options.interval === "number") {
-			query.interval = options.interval.toString()
+		if (options.interval) {
+			query.interval = options.interval
 		}
 
 		const q = Object.entries(query)
@@ -143,11 +143,13 @@ worker.addEventListener("disconnect", () => {
 	}
 })
 
-worker.addEventListener("peer:start", ({ detail: { interval } }) => {
-	Peer.start({ interval }).then(
-		(peer) => console.log(`started peer ${peer.peerId}`),
-		(err) => console.error(`failed to start peer`, err),
-	)
+worker.addEventListener("peer:start", ({ detail: { interval, times } }) => {
+	for (let i = 0; i < (times ?? 1); i++) {
+		Peer.start({ interval }).then(
+			(peer) => console.log(`started peer ${peer.peerId}`),
+			(err) => console.error(`failed to start peer`, err),
+		)
+	}
 })
 
 worker.addEventListener("peer:stop", ({ detail: { id } }) => {

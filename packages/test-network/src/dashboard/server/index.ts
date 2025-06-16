@@ -82,12 +82,14 @@ app.post("/api/append/:peerId", (req, res) => {
 })
 
 app.post("/api/worker/:workerId/start", (req, res) => {
+	const times = req.query.times
+	const interval = req.query.interval
 	const ws = workerSockets.get(req.params.workerId)
 	if (ws === undefined) {
 		return void res.status(StatusCodes.NOT_FOUND).end()
 	}
 
-	ws.send(JSON.stringify({ type: "peer:start", interval: null }))
+	ws.send(JSON.stringify({ type: "peer:start", times, interval }))
 	return void res.status(StatusCodes.OK).end()
 })
 

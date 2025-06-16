@@ -20,7 +20,7 @@ export type WorkerEvent = {
 }[keyof WorkerEventTypes]
 
 export type WorkerActions = {
-	"peer:start": CustomEvent<{ interval?: number | null }>
+	"peer:start": CustomEvent<{ interval?: number | null; times?: number | null }>
 	"peer:stop": CustomEvent<{ id: string }>
 }
 

@@ -58,8 +58,8 @@ export const App: React.FC<{}> = ({}) => {
 		})
 	}, [])
 
-	const startPeer = useCallback((workerId: string) => {
-		fetch(`/api/worker/${workerId}/start`, { method: "POST" }).then((res) => {
+	const startPeer = useCallback((workerId: string, times: number, interval: number) => {
+		fetch(`/api/worker/${workerId}/start?times=${times}&interval=${interval}`, { method: "POST" }).then((res) => {
 			if (!res.ok) {
 				res.text().then((err) => console.error(`[${res.status} ${res.statusText}]`, err))
 			}
