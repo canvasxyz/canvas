@@ -22,7 +22,6 @@ const browser = await puppeteer.launch({
 
 process.addListener("SIGINT", async () => {
 	process.stdout.write("\nReceived SIGINT\n")
-	worker.ws.close()
 	browser.close()
 })
 
@@ -137,6 +136,12 @@ class Peer {
 }
 
 const worker = await WorkerSocket.open("http://localhost:8000")
+
+worker.addEventListener("disconnect", () => {
+	for (const peer of peers.values()) {
+		peer.stop()
+	}
+})
 
 worker.addEventListener("peer:start", ({ detail: { interval } }) => {
 	Peer.start({ interval }).then(

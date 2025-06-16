@@ -103,7 +103,25 @@ export function reduce(state: NetworkState, event: NetworkEvent): NetworkState {
 				return { ...state, workers: [...state.workers, { id: event.workerId }] }
 			}
 		} else if (event.type === "worker:stop") {
-			return { ...state, workers: state.workers.filter((worker) => worker.id !== event.workerId) }
+			const roots = { ...state.roots }
+			const mesh = { ...state.mesh }
+			const nodes = new Set<string>()
+			for (const node of state.nodes) {
+				if (node.workerId === event.workerId) {
+					delete roots[node.id]
+					delete mesh[node.id]
+					nodes.add(node.id)
+				}
+			}
+
+			return {
+				...state,
+				nodes: state.nodes.filter((node) => node.workerId !== event.workerId),
+				links: state.links.filter((link) => !nodes.has(link.source) && !nodes.has(link.target)),
+				roots,
+				mesh,
+				workers: state.workers.filter((worker) => worker.id !== event.workerId),
+			}
 		} else if (event.type === "peer:start") {
 			// ...
 		} else if (event.type === "peer:stop") {

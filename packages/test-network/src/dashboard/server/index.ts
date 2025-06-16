@@ -88,6 +88,7 @@ app.post("/api/worker/:workerId/start", (req, res) => {
 	}
 
 	ws.send(JSON.stringify({ type: "peer:start", interval: null }))
+	return void res.status(StatusCodes.OK).end()
 })
 
 app.post("/api/worker/:workerId/stop", (req, res) => {
@@ -102,6 +103,7 @@ app.post("/api/worker/:workerId/stop", (req, res) => {
 	}
 
 	ws.send(JSON.stringify({ type: "peer:stop", id: peerId }))
+	return void res.status(StatusCodes.OK).end()
 })
 
 app.post("/api/events", (req, res) => {
