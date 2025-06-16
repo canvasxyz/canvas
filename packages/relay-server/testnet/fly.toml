@@ -11,16 +11,6 @@ DEBUG = 'libp2p:circuit-relay:*'
 LISTEN = '/ip4/0.0.0.0/tcp/8080/ws'
 PORT = '8000'
 
-[[services]]
-protocol = 'tcp'
-internal_port = 8080
-processes = ['app']
-
-[services.concurrency]
-type = 'connections'
-hard_limit = 1024
-soft_limit = 512
-
 [[vm]]
 memory = '2gb'
 cpu_kind = 'shared'
