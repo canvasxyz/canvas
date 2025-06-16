@@ -32,6 +32,8 @@ const defaultRelayServer =
 // const defaultRelayServer =
 // 	"/dns6/canvas-relay-server.internal/tcp/8080/ws/p2p/12D3KooWNTYgUGwnAeioNPfACrp1dK2gFLi5M1cyoREWF8963cqT"
 
+const isWebRTC = (addr: Multiaddr) => addr.protoNames().slice(-3).join("/") === "p2p-circuit/webrtc/p2p"
+
 export async function getLibp2p<Payload>(
 	gossipLog: AbstractGossipLog<Payload>,
 	config: NetworkConfig,
@@ -57,8 +59,7 @@ export async function getLibp2p<Payload>(
 		addresses: {
 			listen: ["/webrtc", "/p2p-circuit"],
 			announce: [],
-			announceFilter: (addrs) =>
-				addrs.filter((addr) => addr.protoNames().slice(-3).join("/") === "p2p-circuit/webrtc/p2p"),
+			announceFilter: (addrs) => addrs.filter(isWebRTC),
 		},
 		transports: [
 			webSockets({}),
@@ -102,6 +103,7 @@ export async function getLibp2p<Payload>(
 
 			dht: kadDHT({
 				protocol: getDHTProtocol(gossipLog.topic),
+				clientMode: true,
 			}),
 
 			pubsub: gossipsub({
@@ -126,19 +128,28 @@ export async function getLibp2p<Payload>(
 		},
 	})
 
-	libp2p.addEventListener("start", () => {
-		libp2p.services.dht.setMode("server").then(
-			() => console.log("ENABLED DHT SERVER MODE"),
-			(err) => console.error("FAILED TO ENABLE DHT SERVER MODE", err),
-		)
-	})
+	// libp2p.addEventListener("start", () => {
+	// 	libp2p.services.dht.setMode("server").then(
+	// 		() => console.log("ENABLED DHT SERVER MODE"),
+	// 		(err) => console.error("FAILED TO ENABLE DHT SERVER MODE", err),
+	// 	)
+	// })
+
+	// libp2p.services.rendezvous.addEventListener("peer", ({ detail: peerInfo }) => {
+	// 	const dht = libp2p.services.dht as KadDHT & {
+	// 		routingTable: { size: number; add: (peerId: PeerId) => Promise<void> }
+	// 	}
+
+	// 	dht.routingTable.add(peerInfo.id)
+	// })
+
+	const maxConnections = config.maxConnections ?? Infinity
 
 	libp2p.services.rendezvous.addEventListener("peer", ({ detail: peerInfo }) => {
-		const dht = libp2p.services.dht as KadDHT & {
-			routingTable: { size: number; add: (peerId: PeerId) => Promise<void> }
+		const connections = libp2p.getConnections()
+		if (connections.length < maxConnections) {
+			libp2p.dial(peerInfo.id)
 		}
-
-		dht.routingTable.add(peerInfo.id)
 	})
 
 	return libp2p
