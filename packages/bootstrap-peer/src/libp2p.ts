@@ -6,6 +6,7 @@ import { Identify, identify } from "@libp2p/identify"
 import { Ping, ping } from "@libp2p/ping"
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
 import { peerIdFromPrivateKey } from "@libp2p/peer-id"
+import { Multiaddr } from "@multiformats/multiaddr"
 
 import { rendezvousServer, RendezvousServer } from "@canvas-js/libp2p-rendezvous/server"
 
@@ -19,6 +20,8 @@ export type ServiceMap = {
 
 const defaultMaxRegistrationTTL = 2 * 60 * 60 // 2h
 const defaultMaxDiscoverLimit = 64
+
+const isWebRTC = (addr: Multiaddr) => addr.protoNames().slice(-3).join("/") === "p2p-circuit/webrtc/p2p"
 
 export async function getLibp2p(config: Partial<Config> = {}) {
 	const { path, privateKey, listen, announce, maxConnections } = await getConfig(config)
@@ -60,7 +63,21 @@ export async function getLibp2p(config: Partial<Config> = {}) {
 		services: {
 			identify: identify({ protocolPrefix: "canvas" }),
 			ping: ping({ protocolPrefix: "canvas" }),
-			rendezvous: rendezvousServer({ path, maxRegistrationTTL, maxDiscoverLimit }),
+			rendezvous: rendezvousServer({
+				path,
+				maxRegistrationTTL,
+				maxDiscoverLimit,
+				discoverFilter: (namespace, peerId, multiaddrs) => {
+					if (multiaddrs.some(isWebRTC)) {
+						const connections = libp2p.getConnections(peerId)
+						if (connections.length === 0) {
+							return false
+						}
+					}
+
+					return true
+				},
+			}),
 		},
 	})
 
