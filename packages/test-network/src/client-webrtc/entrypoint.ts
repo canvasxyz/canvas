@@ -29,7 +29,7 @@ process.addListener("SIGINT", async () => {
 const peers = new Map<string, Peer>()
 
 class Peer {
-	static async start(options: { interval?: number | null } = {}) {
+	static async start(options: { interval?: string | number | null } = {}) {
 		const privateKey = await generateKeyPair("Ed25519")
 		const context = await browser.createBrowserContext()
 
@@ -49,7 +49,7 @@ class Peer {
 		}
 
 		if (options.interval) {
-			query.interval = options.interval
+			query.interval = options.interval.toString()
 		}
 
 		const q = Object.entries(query)
