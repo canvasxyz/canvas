@@ -23,12 +23,12 @@ libp2p.addEventListener("stop", () => {
 })
 
 libp2p.addEventListener("connection:open", ({ detail: { id, remotePeer, remoteAddr } }) => {
-	console.log(`connection:open ${remotePeer} ${remoteAddr}`)
+	// console.log(`connection:open ${remotePeer} ${remoteAddr}`)
 	socket.post("connection:open", { id, remotePeer: remotePeer.toString(), remoteAddr: remoteAddr.toString() })
 })
 
 libp2p.addEventListener("connection:close", ({ detail: { id, remotePeer, remoteAddr } }) => {
-	console.log(`connection:close ${remotePeer} ${remoteAddr}`)
+	// console.log(`connection:close ${remotePeer} ${remoteAddr}`)
 	socket.post("connection:close", { id, remotePeer: remotePeer.toString(), remoteAddr: remoteAddr.toString() })
 })
 

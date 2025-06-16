@@ -74,6 +74,31 @@ export const App: React.FC<{}> = ({}) => {
 		})
 	}, [])
 
+	const startPeerAuto = useCallback(
+		(workerId: string, options: { total: number; lifetime: number; publishInterval: number }) => {
+			const query = Object.entries(options)
+				.map(([name, value]) => `${name}=${value}`)
+				.join("&")
+
+			fetch(`/api/worker/${workerId}/start/auto?${query}`, {
+				method: "POST",
+			}).then((res) => {
+				if (!res.ok) {
+					res.text().then((err) => console.error(`[${res.status} ${res.statusText}]`, err))
+				}
+			})
+		},
+		[],
+	)
+
+	const stopPeerAuto = useCallback((workerId: string) => {
+		fetch(`/api/worker/${workerId}/stop/auto`, { method: "POST" }).then((res) => {
+			if (!res.ok) {
+				res.text().then((err) => console.error(`[${res.status} ${res.statusText}]`, err))
+			}
+		})
+	}, [])
+
 	return (
 		<>
 			<Graph
@@ -83,7 +108,14 @@ export const App: React.FC<{}> = ({}) => {
 				onLinkClick={handleLinkClick}
 			/>
 			<div>
-				<WorkerList workers={state.workers} nodes={state.nodes} startPeer={startPeer} stopPeer={stopPeer} />
+				<WorkerList
+					workers={state.workers}
+					nodes={state.nodes}
+					startPeer={startPeer}
+					stopPeer={stopPeer}
+					startPeerAuto={startPeerAuto}
+					stopPeerAuto={stopPeerAuto}
+				/>
 			</div>
 		</>
 	)

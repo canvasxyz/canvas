@@ -58,7 +58,9 @@ const libp2p = await gossipLog.startLibp2p({
 ;(window as any).libp2p = libp2p
 
 libp2p.addEventListener("peer:discovery", ({ detail: { id, multiaddrs } }) => {
-	console.log(`peer:discovery: ${id} [\n${multiaddrs.map((addr) => `  ${addr.toString()}\n`).join("")}]`)
+	if (multiaddrs.length > 0) {
+		console.log(`peer:discovery: ${id} [\n${multiaddrs.map((addr) => `  ${addr.toString()}\n`).join("")}]`)
+	}
 })
 
 libp2p.addEventListener("start", async () => {
@@ -68,7 +70,6 @@ libp2p.addEventListener("start", async () => {
 })
 
 libp2p.addEventListener("connection:open", ({ detail: { id, remotePeer, remoteAddr } }) => {
-	console.log(`connection:open ${remotePeer} ${remoteAddr}`)
 	if (relayServerPeerId === remotePeer.toString()) {
 		return
 	}
@@ -77,7 +78,6 @@ libp2p.addEventListener("connection:open", ({ detail: { id, remotePeer, remoteAd
 })
 
 libp2p.addEventListener("connection:close", ({ detail: { id, remotePeer, remoteAddr } }) => {
-	console.log(`connection:close ${remotePeer} ${remoteAddr}`)
 	if (relayServerPeerId === remotePeer.toString()) {
 		return
 	}
@@ -88,7 +88,6 @@ libp2p.addEventListener("connection:close", ({ detail: { id, remotePeer, remoteA
 const meshPeers = new Set<string>()
 
 libp2p.services.pubsub.addEventListener("gossipsub:graft", ({ detail: { peerId, topic } }) => {
-	console.log("gossipsub:graft", peerId.toString())
 	if (topic === gossipLog.topic) {
 		meshPeers.add(peerId.toString())
 		socket.post("gossipsub:mesh:update", { topic, peers: Array.from(meshPeers) })
@@ -96,7 +95,6 @@ libp2p.services.pubsub.addEventListener("gossipsub:graft", ({ detail: { peerId, 
 })
 
 libp2p.services.pubsub.addEventListener("gossipsub:prune", ({ detail: { peerId, topic } }) => {
-	console.log("gossipsub:prune", peerId.toString())
 	if (topic === gossipLog.topic) {
 		meshPeers.delete(peerId.toString())
 		socket.post("gossipsub:mesh:update", { topic, peers: Array.from(meshPeers) })

@@ -7,6 +7,11 @@ type WorkerEventTypes = {
 	"worker:stop": {}
 	"peer:start": { id: string }
 	"peer:stop": { id: string }
+	"worker:autospawn": {
+		total: number | null
+		lifetime: number | null
+		publishInterval: number | null
+	}
 }
 
 export type WorkerEvent = {
@@ -20,7 +25,7 @@ export type WorkerEvent = {
 }[keyof WorkerEventTypes]
 
 export type WorkerActions = {
-	"peer:start": CustomEvent<{ interval?: number | null }>
+	"peer:start": CustomEvent<{ publishInterval?: number | null; lifetime?: number | null }>
 	"peer:stop": CustomEvent<{ id: string }>
 }
 
@@ -51,7 +56,14 @@ export type NetworkEvent = PeerEvent | WorkerEvent | { source: "network"; type: 
 
 export type NetworkState = {
 	// Workers
-	workers: { id: string }[]
+	workers: {
+		id: string
+		autospawn: {
+			total: number
+			lifetime: number
+			publishInterval: number
+		} | null
+	}[]
 
 	// Peers
 	mesh: Record<string, string[]>
@@ -100,7 +112,7 @@ export function reduce(state: NetworkState, event: NetworkEvent): NetworkState {
 	} else if (event.source === "worker") {
 		if (event.type === "worker:start") {
 			if (state.workers.every((worker) => worker.id !== event.workerId)) {
-				return { ...state, workers: [...state.workers, { id: event.workerId }] }
+				return { ...state, workers: [...state.workers, { id: event.workerId, autospawn: null }] }
 			}
 		} else if (event.type === "worker:stop") {
 			const roots = { ...state.roots }
@@ -121,6 +133,22 @@ export function reduce(state: NetworkState, event: NetworkEvent): NetworkState {
 				roots,
 				mesh,
 				workers: state.workers.filter((worker) => worker.id !== event.workerId),
+			}
+		} else if (event.type === "worker:autospawn") {
+			return {
+				...state,
+				workers: state.workers.map((worker) => {
+					if (worker.id !== event.workerId) {
+						return worker
+					}
+
+					const { lifetime, total, publishInterval } = event.detail
+					if (lifetime !== null && total !== null && publishInterval !== null) {
+						return { ...worker, autospawn: { lifetime, total, publishInterval } }
+					} else {
+						return { ...worker, autospawn: null }
+					}
+				}),
 			}
 		} else if (event.type === "peer:start") {
 			// ...

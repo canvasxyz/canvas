@@ -29,7 +29,7 @@ process.addListener("SIGINT", async () => {
 const peers = new Map<string, Peer>()
 
 class Peer {
-	static async start(options: { interval?: number | null } = {}) {
+	static async start(options: { publishInterval?: number | null } = {}) {
 		const privateKey = await generateKeyPair("Ed25519")
 		const context = await browser.createBrowserContext()
 
@@ -48,8 +48,8 @@ class Peer {
 			privateKey: bytesToHex(privateKeyToProtobuf(privateKey)),
 		}
 
-		if (typeof options.interval === "number") {
-			query.interval = options.interval.toString()
+		if (typeof options.publishInterval === "number") {
+			query.interval = options.publishInterval.toString()
 		}
 
 		const q = Object.entries(query)
@@ -143,9 +143,14 @@ worker.addEventListener("disconnect", () => {
 	}
 })
 
-worker.addEventListener("peer:start", ({ detail: { interval } }) => {
-	Peer.start({ interval }).then(
-		(peer) => console.log(`started peer ${peer.peerId}`),
+worker.addEventListener("peer:start", ({ detail: { publishInterval, lifetime } }) => {
+	Peer.start({ publishInterval }).then(
+		(peer) => {
+			console.log(`started peer ${peer.peerId}`)
+			if (typeof lifetime === "number") {
+				setTimeout(() => peer.stop(), 1000 * lifetime)
+			}
+		},
 		(err) => console.error(`failed to start peer`, err),
 	)
 })

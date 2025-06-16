@@ -15,7 +15,7 @@ services:
     ports:
       - "8081:8081"
     environment:
-      - DEBUG=libp2p:circuit-relay:*
+      # - DEBUG=libp2p:circuit-relay:*
       # 12D3KooWPZ12MFRfJv2S13g7aRPYYQ3pSZ7ZsJCj9whnhF3j8WNr
       - LIBP2P_PRIVATE_KEY=CAESQBK9TaWjp+9E8pDLXCLixTGiEr0su0RcyPl3E2mHn0gEzBP/FIYeaqg2r799CKytc30guQeQEe94LVLof6ua2X8=
       - LISTEN=/ip4/0.0.0.0/tcp/8081/ws
@@ -44,7 +44,7 @@ services:
       - "8080:8080"
       - "3000:3000"
     environment:
-      - DEBUG=canvas:*
+      # - DEBUG=canvas:*
       # 12D3KooWMvSCSeJ6zxJJRQZSpyGqbNcqSJfcJGZLRiMVMePXzMax
       - LIBP2P_PRIVATE_KEY=CAESQBo16VWKm49tGi+/Ta5PFDkWAPybZOlnCAWvx2m/en2as9pIrXgwHnvSNDxC1/YySl3XTBKkBMijTVuk0LycFkk=
       - LISTEN=/ip4/0.0.0.0/tcp/8080/ws

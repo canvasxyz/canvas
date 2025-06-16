@@ -87,7 +87,7 @@ app.post("/api/worker/:workerId/start", (req, res) => {
 		return void res.status(StatusCodes.NOT_FOUND).end()
 	}
 
-	ws.send(JSON.stringify({ type: "peer:start", interval: null }))
+	ws.send(JSON.stringify({ type: "peer:start", publishInterval: null }))
 	return void res.status(StatusCodes.OK).end()
 })
 
@@ -103,6 +103,77 @@ app.post("/api/worker/:workerId/stop", (req, res) => {
 	}
 
 	ws.send(JSON.stringify({ type: "peer:stop", id: peerId }))
+	return void res.status(StatusCodes.OK).end()
+})
+
+// autospawn state
+
+const autoSpawnIntervals = new Map<string, NodeJS.Timeout>()
+
+app.post("/api/worker/:workerId/start/auto", (req, res) => {
+	const { workerId } = req.params
+	const ws = workerSockets.get(workerId)
+	if (ws === undefined) {
+		return void res.status(StatusCodes.NOT_FOUND).end()
+	}
+
+	assert(typeof req.query.total === "string", "missing 'total' query param")
+	assert(typeof req.query.lifetime === "string", "missing 'lifetime' query param")
+	assert(typeof req.query.publishInterval === "string", "missing 'publishInterval' query param")
+	const total = parseInt(req.query.total)
+	const lifetime = parseInt(req.query.lifetime)
+	const publishInterval = parseInt(req.query.publishInterval)
+	assert(!isNaN(total), "invalid 'total' param")
+	assert(!isNaN(lifetime), "invalid 'lifetime' param")
+	assert(!isNaN(publishInterval), "invalid 'publishInterval' param")
+
+	const timestamp = Date.now()
+	handleEvent({
+		source: "worker",
+		type: "worker:autospawn",
+		workerId,
+		timestamp,
+		detail: { total, lifetime, publishInterval },
+	})
+
+	const spawn = () => {
+		console.log(`auto-spawning peer on worker ${workerId}`)
+		const ws = workerSockets.get(workerId)
+		if (ws === undefined) {
+			clearInterval(autoSpawnIntervals.get(workerId))
+			return
+		}
+
+		ws.send(JSON.stringify({ type: "peer:start", publishInterval, lifetime }))
+	}
+
+	clearInterval(autoSpawnIntervals.get(workerId))
+	const interval = (1000 * lifetime) / total
+	autoSpawnIntervals.set(workerId, setInterval(spawn, interval))
+	spawn()
+
+	return void res.status(StatusCodes.OK).end()
+})
+
+app.post("/api/worker/:workerId/stop/auto", (req, res) => {
+	const { workerId } = req.params
+
+	const ws = workerSockets.get(req.params.workerId)
+	if (ws === undefined) {
+		return void res.status(StatusCodes.NOT_FOUND).end()
+	}
+
+	const timestamp = Date.now()
+	handleEvent({
+		source: "worker",
+		type: "worker:autospawn",
+		workerId,
+		timestamp,
+		detail: { total: null, lifetime: null, publishInterval: null },
+	})
+
+	clearInterval(autoSpawnIntervals.get(workerId))
+
 	return void res.status(StatusCodes.OK).end()
 })
 
@@ -148,6 +219,7 @@ wss.on("connection", (ws, req) => {
 		ws.on("close", () => {
 			workerSockets.delete(workerId)
 			workerIds.delete(ws)
+			clearInterval(autoSpawnIntervals.get(workerId))
 			handleEvent({ source: "worker", type: "worker:stop", workerId, timestamp: Date.now(), detail: {} })
 		})
 
