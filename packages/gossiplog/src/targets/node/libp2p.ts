@@ -44,8 +44,8 @@ export async function getLibp2p<Payload>(
 
 		connectionManager: {
 			maxConnections: config.maxConnections,
-			maxIncomingPendingConnections: 256,
-			inboundConnectionThreshold: 16,
+			maxIncomingPendingConnections: config.maxIncomingPendingConnections ?? 256,
+			inboundConnectionThreshold: config.inboundConnectionThreshold ?? 16,
 		},
 
 		connectionMonitor: { enabled: false, protocolPrefix: "canvas" },

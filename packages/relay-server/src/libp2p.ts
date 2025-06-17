@@ -50,9 +50,12 @@ export async function getLibp2p(config: Partial<Config> = {}) {
 			identify: identify({ protocolPrefix: "canvas" }),
 			circuitRelay: circuitRelayServer({
 				reservations: {
-					maxReservations: 256,
-					reservationClearInterval: 1 * 60 * 1000,
+					maxReservations: 256, // default: 15
+					reservationClearInterval: 1 * 60 * 1000, // 60 sec, default: 300 sec
 				},
+				maxInboundHopStreams: 64, // 2x
+				maxOutboundHopStreams: 128, // 2x
+				maxOutboundStopStreams: 300,			
 			}),
 			ping: ping({ protocolPrefix: "canvas" }),
 		},

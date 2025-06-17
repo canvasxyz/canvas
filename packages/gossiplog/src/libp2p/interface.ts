@@ -27,6 +27,8 @@ export interface NetworkConfig {
 	denyDialMultiaddr?(multiaddr: Multiaddr): Promise<boolean> | boolean
 	denyInboundConnection?(maConn: MultiaddrConnection): Promise<boolean> | boolean
 
+	inboundConnectionThreshold?: number
+	maxIncomingPendingConnections?: number
 	maxConnections?: number
 	registry?: Registry
 }

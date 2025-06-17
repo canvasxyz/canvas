@@ -53,6 +53,8 @@ const libp2p = await gossipLog.startLibp2p({
 	relayServer,
 	bootstrapList: [bootstrapServer],
 	privateKey,
+	inboundConnectionThreshold: 40,
+	maxIncomingPendingConnections: 256,
 })
 
 ;(window as any).libp2p = libp2p
