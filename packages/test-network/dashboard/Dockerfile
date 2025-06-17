@@ -2,9 +2,6 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-# COPY package.json package.json
-# RUN npm install --omit-dev
-# COPY lib/dashboard/server lib/
 COPY dist/dashboard/server/index.js lib/index.mjs
 
 COPY dist/dashboard/client dist/

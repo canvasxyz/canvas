@@ -3,7 +3,7 @@ services:
     init: true
     build:
       context: .
-      dockerfile: Dockerfile.dashboard
+      dockerfile: dashboard/Dockerfile
     ports:
       - "8000:8000"
 
@@ -11,7 +11,7 @@ services:
     init: true
     build:
       context: .
-      dockerfile: Dockerfile.relay
+      dockerfile: relay/Dockerfile
     ports:
       - "8081:8081"
     environment:
@@ -25,7 +25,7 @@ services:
   #   init: true
   #   build:
   #     context: .
-  #     dockerfile: Dockerfile.server
+  #     dockerfile: server-ws/Dockerfile
   #   ports:
   #     - "9000:9000"
   #   environment:
@@ -37,7 +37,7 @@ services:
     init: true
     build:
       context: .
-      dockerfile: Dockerfile.bootstrap
+      dockerfile: bootstrap/Dockerfile
     depends_on:
       - dashboard
     ports:

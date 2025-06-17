@@ -23,7 +23,7 @@ for t in $(seq 0 $((NUM_TOPICS-1))); do
     init: true
     build:
       context: .
-      dockerfile: Dockerfile.peer
+      dockerfile: server-libp2p/Dockerfile
     depends_on:
       - bootstrap
     environment:
