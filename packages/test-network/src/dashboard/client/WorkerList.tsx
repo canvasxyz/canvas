@@ -68,9 +68,9 @@ const Worker: React.FC<WorkerProps> = (props) => {
 		[props.workerId, props.nodes],
 	)
 
-	const [total, setTotal] = useState(10)
-	const [lifetime, setLifetime] = useState(40)
-	const [publishInterval, setPublishInterval] = useState(10)
+	const [total, setTotal] = useState(5)
+	const [lifetime, setLifetime] = useState(60)
+	const [publishInterval, setPublishInterval] = useState(1)
 
 	return (
 		<div className="worker">
