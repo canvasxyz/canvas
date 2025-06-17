@@ -48,7 +48,7 @@ app.post("/api/disconnect/:source/:target", (req, res) => {
 	}
 
 	ws.send(JSON.stringify({ type: "disconnect", target }))
-	return void res.status(StatusCodes.OK).end()
+	return void res.status(StatusCodes.OK).json({}).end()
 })
 
 app.post("/api/provide/:peerId", (req, res) => {
@@ -58,7 +58,7 @@ app.post("/api/provide/:peerId", (req, res) => {
 	}
 
 	ws.send(JSON.stringify({ type: "provide" }))
-	return void res.status(StatusCodes.OK).end()
+	return void res.status(StatusCodes.OK).json({}).end()
 })
 
 app.post("/api/query/:peerId", (req, res) => {
@@ -68,7 +68,7 @@ app.post("/api/query/:peerId", (req, res) => {
 	}
 
 	ws.send(JSON.stringify({ type: "query" }))
-	return void res.status(StatusCodes.OK).end()
+	return void res.status(StatusCodes.OK).json({}).end()
 })
 
 app.post("/api/append/:peerId", (req, res) => {
@@ -78,7 +78,7 @@ app.post("/api/append/:peerId", (req, res) => {
 	}
 
 	ws.send(JSON.stringify({ type: "append" }))
-	return void res.status(StatusCodes.OK).end()
+	return void res.status(StatusCodes.OK).json({}).end()
 })
 
 app.post("/api/worker/:workerId/start", (req, res) => {
@@ -88,7 +88,7 @@ app.post("/api/worker/:workerId/start", (req, res) => {
 	}
 
 	ws.send(JSON.stringify({ type: "peer:start", publishInterval: null }))
-	return void res.status(StatusCodes.OK).end()
+	return void res.status(StatusCodes.OK).json({}).end()
 })
 
 app.post("/api/worker/:workerId/stop", (req, res) => {
@@ -103,7 +103,7 @@ app.post("/api/worker/:workerId/stop", (req, res) => {
 	}
 
 	ws.send(JSON.stringify({ type: "peer:stop", id: peerId }))
-	return void res.status(StatusCodes.OK).end()
+	return void res.status(StatusCodes.OK).json({}).end()
 })
 
 // autospawn state
@@ -152,7 +152,7 @@ app.post("/api/worker/:workerId/start/auto", (req, res) => {
 	autoSpawnIntervals.set(workerId, setInterval(spawn, interval))
 	spawn()
 
-	return void res.status(StatusCodes.OK).end()
+	return void res.status(StatusCodes.OK).json({}).end()
 })
 
 app.post("/api/worker/:workerId/stop/auto", (req, res) => {
@@ -174,12 +174,12 @@ app.post("/api/worker/:workerId/stop/auto", (req, res) => {
 
 	clearInterval(autoSpawnIntervals.get(workerId))
 
-	return void res.status(StatusCodes.OK).end()
+	return void res.status(StatusCodes.OK).json({}).end()
 })
 
 app.post("/api/events", (req, res) => {
 	handleEvent(req.body)
-	return void res.status(StatusCodes.OK).end()
+	return void res.status(StatusCodes.OK).json({}).end()
 })
 
 app.get("/api/events", (req, res) => {
