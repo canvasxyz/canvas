@@ -22,6 +22,10 @@ const browser = await puppeteer.launch({
 		"--no-sandbox",
 		"--disable-setuid-sandbox",
 		"--disable-web-security",
+		"--disable-dev-shm-usage",
+		"--disable-gpu",
+		"--disable-extensions",
+		"--disable-background-timer-throttling",
 		"--disable-features=IsolateOrigins,site-per-process",
 	],
 })
