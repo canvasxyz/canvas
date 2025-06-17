@@ -24,7 +24,10 @@ export class PeerSocket extends TypedEventEmitter<PeerActions> {
 			this.dispatchEvent(new CustomEvent(type, { detail }))
 		})
 
-		this.addEventListener("append", () => gossipLog?.append(bytesToHex(randomBytes(8))))
+		this.addEventListener("append", () => {
+			console.log("append received")
+			gossipLog?.append(bytesToHex(randomBytes(8)))
+		})
 
 		gossipLog?.addEventListener("sync", ({ detail: { peer, messageCount, duration } }) => {
 			console.log(`completed sync with ${peer} (${messageCount} messages in ${duration}ms)`)
