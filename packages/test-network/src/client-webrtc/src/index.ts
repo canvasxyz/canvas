@@ -105,5 +105,8 @@ await libp2p.start()
 
 if (params.interval !== undefined) {
 	const interval = parseInt(params.interval)
-	setInterval(() => gossipLog.append(bytesToHex(randomBytes(8))), interval * SECONDS)
+	setInterval(() => {
+		if (meshPeers.size === 0) return
+		gossipLog.append(bytesToHex(randomBytes(8)))
+	}, interval * SECONDS)
 }
