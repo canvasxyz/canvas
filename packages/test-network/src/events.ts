@@ -11,6 +11,7 @@ type WorkerEventTypes = {
 		total: number | null
 		lifetime: number | null
 		publishInterval: number | null
+		spawnInterval: number | null
 	}
 }
 
@@ -62,6 +63,7 @@ export type NetworkState = {
 			total: number
 			lifetime: number
 			publishInterval: number
+			spawnInterval: number
 		} | null
 	}[]
 
@@ -142,9 +144,9 @@ export function reduce(state: NetworkState, event: NetworkEvent): NetworkState {
 						return worker
 					}
 
-					const { lifetime, total, publishInterval } = event.detail
-					if (lifetime !== null && total !== null && publishInterval !== null) {
-						return { ...worker, autospawn: { lifetime, total, publishInterval } }
+					const { lifetime, total, publishInterval, spawnInterval } = event.detail
+					if (lifetime !== null && total !== null && publishInterval !== null && spawnInterval !== null) {
+						return { ...worker, autospawn: { lifetime, total, publishInterval, spawnInterval } }
 					} else {
 						return { ...worker, autospawn: null }
 					}

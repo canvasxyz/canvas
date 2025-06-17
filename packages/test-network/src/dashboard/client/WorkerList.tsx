@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react"
 
 export interface WorkerListProps {
-	workers: { id: string; autospawn: { total: number; lifetime: number; publishInterval: number } | null }[]
+	workers: { id: string; autospawn: { total: number; lifetime: number; publishInterval: number; spawnInterval: number } | null }[]
 	nodes: { id: string; topic: string | null; workerId: string | null }[]
 
 	startPeer: (workerId: string) => void
@@ -12,6 +12,7 @@ export interface WorkerListProps {
 			total: number
 			lifetime: number
 			publishInterval: number
+			spawnInterval: number
 		},
 	) => void
 	stopPeerAuto: (workerId: string) => void
@@ -46,7 +47,7 @@ export const WorkerList: React.FC<WorkerListProps> = (props) => {
 
 interface WorkerProps {
 	workerId: string
-	autospawn: { total: number; lifetime: number; publishInterval: number } | null
+	autospawn: { total: number; lifetime: number; publishInterval: number; spawnInterval: number } | null
 	nodes: { id: string; topic: string | null; workerId: string | null }[]
 
 	startPeer: (workerId: string) => void
@@ -57,6 +58,7 @@ interface WorkerProps {
 			total: number
 			lifetime: number
 			publishInterval: number
+			spawnInterval: number
 		},
 	) => void
 	stopPeerAuto: (workerId: string) => void
@@ -71,6 +73,7 @@ const Worker: React.FC<WorkerProps> = (props) => {
 	const [total, setTotal] = useState(5)
 	const [lifetime, setLifetime] = useState(60)
 	const [publishInterval, setPublishInterval] = useState(1)
+	const [spawnInterval, setSpawnInterval] = useState(1)
 
 	return (
 		<div className="worker">
@@ -109,8 +112,18 @@ const Worker: React.FC<WorkerProps> = (props) => {
 					/>
 				</label>
 
+				<label>
+					spawn interval (s):
+					<input
+						type="number"
+						disabled={props.autospawn !== null}
+						value={spawnInterval}
+						onChange={(event) => setSpawnInterval(parseInt(event.target.value))}
+					/>
+				</label>
+
 				{props.autospawn === null ? (
-					<button onClick={() => props.startPeerAuto(props.workerId, { total, lifetime, publishInterval })}>
+					<button onClick={() => props.startPeerAuto(props.workerId, { total, lifetime, publishInterval, spawnInterval })}>
 						start auto-spawn
 					</button>
 				) : (

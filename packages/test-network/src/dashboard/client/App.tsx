@@ -75,7 +75,7 @@ export const App: React.FC<{}> = ({}) => {
 	}, [])
 
 	const startPeerAuto = useCallback(
-		(workerId: string, options: { total: number; lifetime: number; publishInterval: number }) => {
+		(workerId: string, options: { total: number; lifetime: number; publishInterval: number; spawnInterval: number }) => {
 			const query = Object.entries(options)
 				.map(([name, value]) => `${name}=${value}`)
 				.join("&")
