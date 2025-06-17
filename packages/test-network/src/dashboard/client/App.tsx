@@ -8,6 +8,7 @@ const bootstrapPeerIds = ["12D3KooWMvSCSeJ6zxJJRQZSpyGqbNcqSJfcJGZLRiMVMePXzMax"
 
 export const App: React.FC<{}> = ({}) => {
 	const [state, setState] = useState<NetworkState>(initialState)
+	const [hasAutoStarted, setHasAutoStarted] = useState(false)
 
 	useEffect(() => {
 		const eventSource = new EventSource("/api/events")
@@ -20,6 +21,24 @@ export const App: React.FC<{}> = ({}) => {
 
 		return () => eventSource.close()
 	}, [])
+
+	// Auto-start autospawn for all workers once when page loads.
+	// Each autospawn replaces the last, and in the worst case, this
+	// may cause an extra peer to be created if spawn() was called
+	// but the peer has not yet come online.
+	useEffect(() => {
+		if (!hasAutoStarted && state.workers.length > 0) {
+			state.workers.forEach((worker) => {
+				startPeerAuto(worker.id, {
+					total: 3,
+					lifetime: 60,
+					publishInterval: 1,
+					spawnInterval: 1,
+				})
+			})
+			setHasAutoStarted(true)
+		}
+	}, [state.workers, hasAutoStarted])
 
 	const handleNodeClick = useCallback((id: string, shiftKey: boolean, metaKey: boolean) => {
 		if (shiftKey && metaKey) {
@@ -75,7 +94,10 @@ export const App: React.FC<{}> = ({}) => {
 	}, [])
 
 	const startPeerAuto = useCallback(
-		(workerId: string, options: { total: number; lifetime: number; publishInterval: number; spawnInterval: number }) => {
+		(
+			workerId: string,
+			options: { total: number; lifetime: number; publishInterval: number; spawnInterval: number },
+		) => {
 			const query = Object.entries(options)
 				.map(([name, value]) => `${name}=${value}`)
 				.join("&")

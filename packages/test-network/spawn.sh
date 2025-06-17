@@ -3,11 +3,9 @@
 # Number of processes
 PROCESS_COUNT="${1:-1}"
 
-# Peers per process
-export PEER_COUNT="${2:-10}"
 export DELAY=12
 
-echo "starting $PROCESS_COUNT processes of $PEER_COUNT peers"
+echo "starting $PROCESS_COUNT processes"
 
 # command="node lib/client-ws/entrypoint.js"
 command="node lib/client-webrtc/entrypoint.js"
