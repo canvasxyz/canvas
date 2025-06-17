@@ -30,10 +30,11 @@ export class PeerSocket extends TypedEventEmitter<PeerActions> {
 			console.log(`completed sync with ${peer} (${messageCount} messages in ${duration}ms)`)
 		})
 
-		gossipLog?.addEventListener("commit", ({ detail: commit }) => {
+		gossipLog?.addEventListener("commit", async ({ detail: commit }) => {
 			const { hash, level } = commit.root
 			const root = `${level}:${bytesToHex(hash)}`
-			this.post("gossiplog:commit", { topic: gossipLog.topic, root })
+			const [clock, heads] = await gossipLog.getClock()
+			this.post("gossiplog:commit", { topic: gossipLog.topic, root, clock, heads })
 		})
 	}
 

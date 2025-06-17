@@ -33,11 +33,11 @@ export type WorkerActions = {
 // Peers
 
 type PeerEventTypes = {
-	start: { workerId: string | null; root: string | null; topic: string | null }
+	start: { workerId: string | null; root: string | null; topic: string | null; clock: number; heads: string[] }
 	"connection:open": { id: string; remotePeer: string; remoteAddr: string }
 	"connection:close": { id: string; remotePeer: string; remoteAddr: string }
 	"gossipsub:mesh:update": { topic: string; peers: string[] }
-	"gossiplog:commit": { topic: string; root: string }
+	"gossiplog:commit": { topic: string; root: string; clock: number; heads: string[] }
 }
 
 export type PeerEvent = {
@@ -72,9 +72,11 @@ export type NetworkState = {
 	nodes: { id: string; topic: string | null; workerId: string | null }[]
 	links: { id: string; source: string; target: string }[]
 	roots: Record<string, string | null>
+	clocks: Record<string, number>
+	heads: Record<string, string[]>
 }
 
-export const initialState: NetworkState = { mesh: {}, nodes: [], links: [], roots: {}, workers: [] }
+export const initialState: NetworkState = { mesh: {}, nodes: [], links: [], roots: {}, clocks: {}, heads: {}, workers: [] }
 
 export function reduce(state: NetworkState, event: NetworkEvent): NetworkState {
 	if (event.source === "network") {
@@ -90,6 +92,8 @@ export function reduce(state: NetworkState, event: NetworkEvent): NetworkState {
 					...state,
 					nodes: [...state.nodes, { id: event.peerId, topic: event.detail.topic, workerId: event.detail.workerId }],
 					roots: { ...state.roots, [event.peerId]: event.detail.root },
+					clocks: { ...state.clocks, [event.peerId]: event.detail.clock },
+					heads: { ...state.heads, [event.peerId]: event.detail.heads },
 				}
 			}
 		} else if (event.type === "connection:open") {
@@ -107,6 +111,8 @@ export function reduce(state: NetworkState, event: NetworkEvent): NetworkState {
 			return {
 				...state,
 				roots: { ...state.roots, [event.peerId]: event.detail.root },
+				clocks: { ...state.clocks, [event.peerId]: event.detail.clock },
+				heads: { ...state.heads, [event.peerId]: event.detail.heads },
 			}
 		} else {
 			signalInvalidType(event)
@@ -118,11 +124,15 @@ export function reduce(state: NetworkState, event: NetworkEvent): NetworkState {
 			}
 		} else if (event.type === "worker:stop") {
 			const roots = { ...state.roots }
+			const clocks = { ...state.clocks }
+			const heads = { ...state.heads }
 			const mesh = { ...state.mesh }
 			const nodes = new Set<string>()
 			for (const node of state.nodes) {
 				if (node.workerId === event.workerId) {
 					delete roots[node.id]
+					delete clocks[node.id]
+					delete heads[node.id]
 					delete mesh[node.id]
 					nodes.add(node.id)
 				}
@@ -133,6 +143,8 @@ export function reduce(state: NetworkState, event: NetworkEvent): NetworkState {
 				nodes: state.nodes.filter((node) => node.workerId !== event.workerId),
 				links: state.links.filter((link) => !nodes.has(link.source) && !nodes.has(link.target)),
 				roots,
+				clocks,
+				heads,
 				mesh,
 				workers: state.workers.filter((worker) => worker.id !== event.workerId),
 			}
@@ -157,10 +169,12 @@ export function reduce(state: NetworkState, event: NetworkEvent): NetworkState {
 		} else if (event.type === "peer:stop") {
 			const peerId = event.detail.id
 			const { [peerId]: oldRoot, ...roots } = state.roots
+			const { [peerId]: oldClock, ...clocks } = state.clocks
+			const { [peerId]: oldHeads, ...heads } = state.heads
 			const { [peerId]: oldMesh, ...mesh } = state.mesh
 			const links = state.links.filter((link) => link.source !== peerId && link.target !== peerId)
 			const nodes = state.nodes.filter((node) => node.id !== peerId)
-			return { ...state, roots, mesh, links, nodes }
+			return { ...state, roots, clocks, heads, mesh, links, nodes }
 		} else {
 			signalInvalidType(event)
 		}

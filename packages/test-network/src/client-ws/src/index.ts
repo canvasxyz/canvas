@@ -40,8 +40,9 @@ await new Promise((resolve) => setTimeout(resolve, delay))
 const network = new NetworkClient(gossipLog, `ws://localhost:9000`)
 
 {
+	const [clock, heads] = await gossipLog.getClock()
 	const root = await gossipLog.tree.read((txn) => txn.getRoot())
-	socket.post("start", { topic: gossipLog.topic, root: `0:${bytesToHex(root.hash)}`, workerId })
+	socket.post("start", { topic: gossipLog.topic, root: `0:${bytesToHex(root.hash)}`, workerId, clock, heads })
 
 	socket.post("connection:open", {
 		id: bytesToHex(randomBytes(8)),

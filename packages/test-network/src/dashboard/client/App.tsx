@@ -133,6 +133,8 @@ export const App: React.FC<{}> = ({}) => {
 				<WorkerList
 					workers={state.workers}
 					nodes={state.nodes}
+					clocks={state.clocks}
+					heads={state.heads}
 					startPeer={startPeer}
 					stopPeer={stopPeer}
 					startPeerAuto={startPeerAuto}

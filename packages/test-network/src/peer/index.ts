@@ -15,10 +15,17 @@ async function start() {
 
 	libp2p.addEventListener("start", async () => {
 		console.log("libp2p started")
+		const [clock, heads] = await gossipLog.getClock()
 		const root = await gossipLog.tree.read((txn) => txn.getRoot())
 
 		// TODO: add worker id
-		socket.post("start", { topic, root: `${root.level}:${bytesToHex(root.hash)}`, workerId: null })
+		socket.post("start", {
+			topic,
+			root: `${root.level}:${bytesToHex(root.hash)}`,
+			clock,
+			heads,
+			workerId: null,
+		})
 	})
 
 	libp2p.addEventListener("connection:open", ({ detail: { id, remotePeer, remoteAddr } }) => {

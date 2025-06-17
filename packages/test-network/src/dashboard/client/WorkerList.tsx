@@ -1,8 +1,13 @@
 import React, { useMemo, useState } from "react"
 
 export interface WorkerListProps {
-	workers: { id: string; autospawn: { total: number; lifetime: number; publishInterval: number; spawnInterval: number } | null }[]
+	workers: {
+		id: string
+		autospawn: { total: number; lifetime: number; publishInterval: number; spawnInterval: number } | null
+	}[]
 	nodes: { id: string; topic: string | null; workerId: string | null }[]
+	clocks: Record<string, number>
+	heads: Record<string, string[]>
 
 	startPeer: (workerId: string) => void
 	stopPeer: (workerId: string, peerId: string) => void
@@ -33,6 +38,8 @@ export const WorkerList: React.FC<WorkerListProps> = (props) => {
 							workerId={worker.id}
 							autospawn={worker.autospawn}
 							nodes={props.nodes}
+							clocks={props.clocks}
+							heads={props.heads}
 							startPeer={props.startPeer}
 							stopPeer={props.stopPeer}
 							startPeerAuto={props.startPeerAuto}
@@ -49,6 +56,8 @@ interface WorkerProps {
 	workerId: string
 	autospawn: { total: number; lifetime: number; publishInterval: number; spawnInterval: number } | null
 	nodes: { id: string; topic: string | null; workerId: string | null }[]
+	clocks: Record<string, number>
+	heads: Record<string, string[]>
 
 	startPeer: (workerId: string) => void
 	stopPeer: (workerId: string, peerId: string) => void
@@ -140,7 +149,13 @@ const Worker: React.FC<WorkerProps> = (props) => {
 						{peers.map((peer) => (
 							<li key={peer.id}>
 								<span className="worker-peer">
-									<code>p-{peer.id.slice(-6)}</code>
+									<code>
+										p-{peer.id.slice(-6)} ({props.clocks[peer.id] ?? 0}
+										{props.heads[peer.id].map((h) => (
+											<>*</>
+										))}
+										)
+									</code>
 									<button onClick={() => props.stopPeer(props.workerId, peer.id)}>stop</button>
 								</span>
 							</li>
