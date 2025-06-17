@@ -17,11 +17,20 @@ import { StatusCodes } from "http-status-codes"
 
 let state: NetworkState = initialState
 const eventSourceClients = new Set<express.Response>()
+const startingPeers: Record<string, number> = {}
 
 function handleEvent(event: PeerEvent | WorkerEvent) {
 	state = reduce(state, event)
 	for (const res of eventSourceClients) {
 		pushEventSource(res, event)
+	}
+
+	// There is a race condition here, where if the user starts a peer
+	// while autospawn is running, the user's peer could decrement
+	// startingPeers and cause autospawn to think that it needs to start
+	// more peers than it's supposed to.
+	if (event.source === "worker" && event.type === "worker:start") {
+		startingPeers[event.workerId] = (startingPeers[event.workerId] ?? 0) - 1
 	}
 }
 
@@ -139,14 +148,19 @@ app.post("/api/worker/:workerId/start/auto", (req, res) => {
 		detail: { total, lifetime, publishInterval, spawnInterval },
 	})
 
-	const spawn = () => {
-		console.log(`auto-spawning peer on worker ${workerId}`)
+	const spawn = async () => {
+		const nStarted = state.nodes.filter((node) => node.workerId === workerId).length
+		const nStarting = startingPeers[workerId] ?? 0
+		if (nStarted + nStarting >= total) return
+
+		console.log(`auto-spawning peer on worker ${workerId}: ${nStarting}, ${nStarted}, ${total}`)
 		const ws = workerSockets.get(workerId)
 		if (ws === undefined) {
 			clearInterval(autoSpawnIntervals.get(workerId))
 			return
 		}
 
+		startingPeers[workerId] = (startingPeers[workerId] ?? 0) + 1
 		ws.send(JSON.stringify({ type: "peer:start", publishInterval, lifetime }))
 	}
 
