@@ -147,8 +147,21 @@ export async function getLibp2p<Payload>(
 
 	libp2p.services.rendezvous.addEventListener("peer", ({ detail: peerInfo }) => {
 		const connections = libp2p.getConnections()
-		if (connections.length < maxConnections) {
-			libp2p.dial(peerInfo.id)
+		if (connections.length < maxConnections && connections.length < 10) {
+			let dialSucceeded = false
+			libp2p
+				.dial(peerInfo.id)
+				.then((success) => {
+					console.log("dial succeeded", success)
+					dialSucceeded = true
+				})
+				.catch((err) => {
+					console.log("dial failed", err)
+				})
+			setTimeout(() => {
+				if (dialSucceeded) return
+				console.log("dial failed after 2500ms")
+			}, 2500)
 		}
 	})
 
