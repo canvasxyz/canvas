@@ -1,5 +1,13 @@
 #!/bin/bash
 
+# Kill background processes when finished
+trap 'kill 0' INT
+
+./docker-compose.sh
+
+# Run the docker-compose network in the background
+docker compose rm -f && docker compose up --build --remove-orphans &
+
 # Number of processes
 PROCESS_COUNT="${1:-1}"
 
