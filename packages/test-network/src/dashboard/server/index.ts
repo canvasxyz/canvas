@@ -29,8 +29,8 @@ function handleEvent(event: PeerEvent | WorkerEvent) {
 	// while autospawn is running, the user's peer could decrement
 	// startingPeers and cause autospawn to think that it needs to start
 	// more peers than it's supposed to.
-	if (event.source === "worker" && event.type === "worker:start") {
-		startingPeers[event.workerId] = (startingPeers[event.workerId] ?? 0) - 1
+	if (event.source === "peer" && event.type === "start" && event.detail.workerId !== null) {
+		startingPeers[event.detail.workerId] = (startingPeers[event.detail.workerId] ?? 1) - 1
 	}
 }
 
@@ -151,9 +151,12 @@ app.post("/api/worker/:workerId/start/auto", (req, res) => {
 	const spawn = async () => {
 		const nStarted = state.nodes.filter((node) => node.workerId === workerId).length
 		const nStarting = startingPeers[workerId] ?? 0
-		if (nStarted + nStarting >= total) return
+		if (nStarted + nStarting >= total) {
+			console.log(`enough peers on worker ${workerId}: ${nStarted} started, ${nStarting} starting, ${total} wanted`)
+			return
+		}
 
-		console.log(`auto-spawning peer on worker ${workerId}: ${nStarting}, ${nStarted}, ${total}`)
+		console.log(`auto-spawning peer on worker ${workerId}: ${nStarted} started, ${nStarting} starting, ${total} wanted`)
 		const ws = workerSockets.get(workerId)
 		if (ws === undefined) {
 			clearInterval(autoSpawnIntervals.get(workerId))

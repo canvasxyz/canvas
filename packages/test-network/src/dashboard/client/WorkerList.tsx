@@ -70,7 +70,7 @@ const Worker: React.FC<WorkerProps> = (props) => {
 		[props.workerId, props.nodes],
 	)
 
-	const [total, setTotal] = useState(5)
+	const [total, setTotal] = useState(3)
 	const [lifetime, setLifetime] = useState(60)
 	const [publishInterval, setPublishInterval] = useState(1)
 	const [spawnInterval, setSpawnInterval] = useState(1)
@@ -123,7 +123,9 @@ const Worker: React.FC<WorkerProps> = (props) => {
 				</label>
 
 				{props.autospawn === null ? (
-					<button onClick={() => props.startPeerAuto(props.workerId, { total, lifetime, publishInterval, spawnInterval })}>
+					<button
+						onClick={() => props.startPeerAuto(props.workerId, { total, lifetime, publishInterval, spawnInterval })}
+					>
 						start auto-spawn
 					</button>
 				) : (
