@@ -29,6 +29,10 @@ export const height = 600
 
 const getColor = (root?: string | null) => (root ? "#" + root.slice(-6) : "#000")
 
+const truncatePeerId = (peerId: string) => {
+	return peerId.slice(0, 10) + "..." + peerId.slice(peerId.length - 3)
+}
+
 export const Graph: React.FC<GraphProps> = ({
 	mesh,
 	nodes,
@@ -40,6 +44,7 @@ export const Graph: React.FC<GraphProps> = ({
 	const svgRef = useRef<SVGSVGElement>(null)
 	const [svg, setSvg] = useState<d3.Selection<SVGSVGElement, unknown, null, undefined> | null>(null)
 	const [simulation, setSimulation] = useState<d3.Simulation<Node, { source: Node; target: Node }> | null>(null)
+	const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null)
 
 	useEffect(() => {
 		if (svgRef.current === null) {
@@ -192,6 +197,17 @@ export const Graph: React.FC<GraphProps> = ({
 			.attr("data-id", (d) => d.id)
 			.attr("fill", (d) => getColor(rootsRef.current[d.id]))
 			.on("click", (event, node) => onNodeClick(node.id, event.shiftKey, event.metaKey))
+			.on("mouseover", (event, node) => {
+				const rect = svgRef.current!.getBoundingClientRect()
+				setTooltip({
+					x: event.clientX - rect.left + 10,
+					y: event.clientY - rect.top - 10,
+					text: truncatePeerId(node.id),
+				})
+			})
+			.on("mouseout", () => {
+				setTooltip(null)
+			})
 			.merge(oldNodes)
 
 		simulation.on("tick.nodes", () => {
@@ -219,15 +235,36 @@ export const Graph: React.FC<GraphProps> = ({
 	}, [svg, roots])
 
 	return (
-		<svg
-			id="graph"
-			style={{ cursor: isMouseDown ? "crosshair" : "initial" }}
-			width={width}
-			height={height}
-			ref={svgRef}
-			onMouseDown={() => setIsMouseDown((isMouseDownRef.current = true))}
-			onMouseUp={() => setIsMouseDown((isMouseDownRef.current = false))}
-			onMouseLeave={() => setIsMouseDown((isMouseDownRef.current = false))}
-		></svg>
+		<div style={{ position: "relative" }}>
+			<svg
+				id="graph"
+				style={{ cursor: isMouseDown ? "crosshair" : "initial" }}
+				width={width}
+				height={height}
+				ref={svgRef}
+				onMouseDown={() => setIsMouseDown((isMouseDownRef.current = true))}
+				onMouseUp={() => setIsMouseDown((isMouseDownRef.current = false))}
+				onMouseLeave={() => setIsMouseDown((isMouseDownRef.current = false))}
+			></svg>
+			{tooltip && (
+				<div
+					style={{
+						position: "absolute",
+						left: tooltip.x,
+						top: tooltip.y,
+						backgroundColor: "rgba(0, 0, 0, 0.8)",
+						color: "white",
+						padding: "4px 8px",
+						borderRadius: "4px",
+						fontSize: "12px",
+						pointerEvents: "none",
+						zIndex: 1000,
+						whiteSpace: "nowrap",
+					}}
+				>
+					{tooltip.text}
+				</div>
+			)}
+		</div>
 	)
 }
