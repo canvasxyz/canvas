@@ -31,7 +31,7 @@ export const App: React.FC<{}> = ({}) => {
 			state.workers.forEach((worker) => {
 				startPeerAuto(worker.id, {
 					total: 3,
-					lifetime: 60,
+					lifetime: 0,
 					publishInterval: 1,
 					spawnInterval: 1,
 				})

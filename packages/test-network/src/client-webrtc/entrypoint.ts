@@ -151,7 +151,7 @@ worker.addEventListener("peer:start", ({ detail: { publishInterval, lifetime } }
 	Peer.start({ publishInterval }).then(
 		(peer) => {
 			console.log(`started peer ${peer.peerId}`)
-			if (typeof lifetime === "number") {
+			if (typeof lifetime === "number" && lifetime !== 0) {
 				setTimeout(() => peer.stop(), 1000 * lifetime)
 			}
 		},
