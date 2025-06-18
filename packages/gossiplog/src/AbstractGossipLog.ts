@@ -15,8 +15,8 @@ import type {
 import { ed25519, prepareMessage } from "@canvas-js/signatures"
 import { assert, zip } from "@canvas-js/utils"
 
-import { NetworkConfig, ServiceMap } from "@canvas-js/gossiplog/libp2p"
 import { NetworkClient } from "@canvas-js/gossiplog/client"
+import { NetworkConfig, ServiceMap } from "@canvas-js/gossiplog/libp2p"
 import { AbortError, MessageNotFoundError, MissingParentError } from "@canvas-js/gossiplog/errors"
 import * as sync from "@canvas-js/gossiplog/sync"
 

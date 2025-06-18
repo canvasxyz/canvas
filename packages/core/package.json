@@ -59,7 +59,7 @@
 		"any-signal": "^4.1.1",
 		"chalk": "^5.4.1",
 		"cors": "^2.8.5",
-		"esbuild": "^0.24.2",
+		"esbuild": "^0.25.5",
 		"esbuild-wasm": "^0.25.1",
 		"ethers": "^6.13.5",
 		"express": "^5.1.0",

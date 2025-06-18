@@ -10,7 +10,10 @@
 		"lib"
 	],
 	"exports": {
-		".": "./lib/index.js"
+		"./events": "./lib/events.js",
+		"./socket-peer": "./lib/socket-peer.js",
+		"./socket-worker": "./lib/socket-worker.js",
+		"./constants": "./lib/constants.js"
 	},
 	"scripts": {
 		"start": "./docker-compose.sh && docker compose rm -f && docker compose up --build --remove-orphans",
@@ -26,15 +29,16 @@
 		"peer:dev": "npm run peer:build -- --watch",
 		"server:build": "esbuild lib/server/index.js --bundle --outdir=dist/server --platform=node --target=node20 --format=esm --external:@canvas-js/okra-lmdb --external:better-sqlite3 --banner:js=\"import { createRequire as yix6bKft } from 'module'; const require = yix6bKft(import.meta.url);\"",
 		"server:dev": "npm run server:build -- --watch",
-		"client:build": "esbuild lib/client/src/index.js --bundle --outdir=dist/client --platform=browser --target=esnext --format=esm",
-		"client:dev": "npm run client:build -- --watch",
+		"client-ws:build": "esbuild lib/client-ws/src/index.js --bundle --outdir=dist/client-ws --platform=browser --target=esnext --format=esm",
+		"client-ws:dev": "npm run client-ws:build -- --watch",
+		"client-webrtc:build": "esbuild lib/client-webrtc/src/index.js --bundle --outdir=dist/client-webrtc --platform=browser --target=esnext --format=esm",
+		"client-webrtc:dev": "npm run client-webrtc:build -- --watch",
 		"relay:build": "esbuild lib/relay/index.js --bundle --outdir=dist/relay --platform=node --target=node20 --format=esm --banner:js=\"import { createRequire as yix6bKft } from 'module'; const require = yix6bKft(import.meta.url);\"",
 		"relay:dev": "npm run relay:build -- --watch"
 	},
 	"devDependencies": {
-		"@flydotio/dockerfile": "^0.5.7",
 		"concurrently": "^9.1.2",
-		"esbuild": "^0.24.2",
+		"esbuild": "^0.25.5",
 		"vite": "^6.3.2"
 	},
 	"dependencies": {
@@ -57,11 +61,13 @@
 		"@types/ws": "^8.5.14",
 		"cors": "^2.8.5",
 		"d3": "^7.9.0",
+		"eventsource": "^4.0.0",
 		"express": "^5.1.0",
 		"http-status-codes": "^2.3.0",
 		"isomorphic-ws": "^5.0.0",
+		"multiformats": "^13.3.7",
 		"p-queue": "^8.1.0",
-		"puppeteer": "^23.4.1",
+		"puppeteer": "^24.10.0",
 		"react": "^18.3.1",
 		"react-dom": "^18.3.1",
 		"weald": "^1.0.2",

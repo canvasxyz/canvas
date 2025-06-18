@@ -3,7 +3,7 @@ import { randomBytes, bytesToHex } from "@noble/hashes/utils"
 
 import { GossipLog } from "@canvas-js/gossiplog/sqlite"
 
-import { Socket } from "../socket.js"
+import { PeerSocket } from "@canvas-js/test-network/socket-peer"
 import { bootstrapList, listen, announce, topic, delay, interval } from "./config.js"
 
 async function start() {
@@ -11,17 +11,14 @@ async function start() {
 
 	const libp2p = await gossipLog.startLibp2p({ start: false, listen, announce, bootstrapList })
 
-	const socket = await Socket.open(`ws://dashboard:8000`, libp2p.peerId, gossipLog)
+	const socket = await PeerSocket.open(`ws://dashboard:8000`, libp2p.peerId, gossipLog)
 
 	libp2p.addEventListener("start", async () => {
 		console.log("libp2p started")
 		const root = await gossipLog.tree.read((txn) => txn.getRoot())
-		socket.post("start", { topic, root: `${root.level}:${bytesToHex(root.hash)}` })
-	})
 
-	libp2p.addEventListener("stop", () => {
-		console.log("libp2p stopped")
-		socket.post("stop", {})
+		// TODO: add worker id
+		socket.post("start", { topic, root: `${root.level}:${bytesToHex(root.hash)}`, workerId: null })
 	})
 
 	libp2p.addEventListener("connection:open", ({ detail: { id, remotePeer, remoteAddr } }) => {

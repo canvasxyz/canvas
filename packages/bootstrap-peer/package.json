@@ -14,10 +14,11 @@
 	},
 	"exports": {
 		".": "./lib/index.js",
-		"./libp2p": "./lib/libp2p.js"
+		"./libp2p": "./lib/libp2p.js",
+		"./api": "./lib/api.js"
 	},
 	"dependencies": {
-		"@canvas-js/libp2p-rendezvous": "^0.4.5",
+		"@canvas-js/libp2p-rendezvous": "^0.5.2",
 		"@chainsafe/libp2p-noise": "^16.1.3",
 		"@chainsafe/libp2p-yamux": "^7.0.1",
 		"@ipld/dag-cbor": "^9.2.4",

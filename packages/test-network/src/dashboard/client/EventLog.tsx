@@ -1,7 +1,7 @@
 import React, { useState } from "react"
-import type { Event } from "../../types.js"
+import { PeerEvent } from "@canvas-js/test-network/events"
 
-export const EventLog: React.FC<{ events: Event[] }> = ({ events }) => {
+export const EventLog: React.FC<{ events: PeerEvent[] }> = ({ events }) => {
 	const [visible, setVisible] = useState(false)
 
 	if (visible) {

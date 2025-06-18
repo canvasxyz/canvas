@@ -1,12 +1,12 @@
 import { WebSocketServer } from "ws"
-import { PeerId, PrivateKey } from "@libp2p/interface"
+import { PrivateKey } from "@libp2p/interface"
 import { bytesToHex, randomBytes } from "@noble/hashes/utils"
 
 import { GossipLog } from "@canvas-js/gossiplog/sqlite"
 import { NetworkServer } from "@canvas-js/gossiplog/server"
 
-import { Socket } from "../socket.js"
-import { topic } from "../constants.js"
+import { PeerSocket } from "@canvas-js/test-network/socket-peer"
+import { topic } from "@canvas-js/test-network/constants"
 import { generateKeyPair, privateKeyFromProtobuf } from "@libp2p/crypto/keys"
 import { peerIdFromPrivateKey } from "@libp2p/peer-id"
 
@@ -27,7 +27,7 @@ const directory = `data/${bytesToHex(randomBytes(8))}`
 console.log("[server] Using directory", directory)
 const gossipLog = await GossipLog.open<string>(directory, { topic, apply: () => {} })
 
-const socket = await Socket.open(`ws://dashboard:8000`, peerId, gossipLog)
+const socket = await PeerSocket.open(`ws://dashboard:8000`, peerId, gossipLog)
 
 const server = new NetworkServer(gossipLog)
 const wss = new WebSocketServer({ port })
@@ -36,7 +36,7 @@ wss.on("connection", server.handleConnection)
 {
 	const root = await gossipLog.tree.read((txn) => txn.getRoot())
 	console.log("[server] starting")
-	socket.post("start", { topic: gossipLog.topic, root: `${root.level}:${bytesToHex(root.hash)}` })
+	socket.post("start", { topic: gossipLog.topic, root: `${root.level}:${bytesToHex(root.hash)}`, workerId: null })
 }
 
 process.addListener("SIGINT", () => {

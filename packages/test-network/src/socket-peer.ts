@@ -3,23 +3,20 @@ import { randomBytes, bytesToHex } from "@noble/hashes/utils"
 import { TypedEventEmitter, PeerId } from "@libp2p/interface"
 import { AbstractGossipLog } from "@canvas-js/gossiplog"
 
-import type { Event } from "./types.js"
+import { PeerEvent, PeerActions } from "@canvas-js/test-network/events"
 
-export type SocketEvents = {
-	append: CustomEvent<{}>
-	provide: CustomEvent<{}>
-	query: CustomEvent<{}>
-	disconnect: CustomEvent<{ target: string }>
-}
-
-export class Socket extends TypedEventEmitter<SocketEvents> {
+export class PeerSocket extends TypedEventEmitter<PeerActions> {
 	public static async open(url: string, peerId: PeerId, gossipLog?: AbstractGossipLog<string>) {
-		const ws = new WebSocket(url)
+		const ws = new WebSocket(url + "?peerId=" + peerId)
 		await new Promise((resolve) => ws.addEventListener("open", resolve, { once: true }))
-		return new Socket(ws, peerId, gossipLog)
+		return new PeerSocket(ws, peerId.toString(), gossipLog)
 	}
 
-	private constructor(readonly ws: WebSocket, readonly peerId: PeerId, readonly gossipLog?: AbstractGossipLog<string>) {
+	private constructor(
+		readonly ws: WebSocket,
+		readonly peerId: string,
+		readonly gossipLog?: AbstractGossipLog<string>,
+	) {
 		super()
 
 		ws.addEventListener("message", (msg) => {
@@ -40,9 +37,9 @@ export class Socket extends TypedEventEmitter<SocketEvents> {
 		})
 	}
 
-	public post<T extends Event["type"]>(type: T, detail: (Event & { type: T })["detail"]) {
+	public post<T extends PeerEvent["type"]>(type: T, detail: (PeerEvent & { type: T })["detail"]) {
 		const timestamp = Date.now()
-		const event = { type, peerId: this.peerId.toString(), timestamp, detail }
+		const event = { source: "peer", type, peerId: this.peerId, timestamp, detail }
 		this.ws.send(JSON.stringify(event), { binary: false })
 	}
 }

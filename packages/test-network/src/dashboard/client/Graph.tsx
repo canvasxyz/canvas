@@ -24,7 +24,7 @@ export interface GraphProps {
 }
 
 export const nodeRadius = 10
-export const width = 800
+export const width = 600
 export const height = 600
 
 const getColor = (root?: string | null) => (root ? "#" + root.slice(-6) : "#000")
@@ -97,11 +97,15 @@ export const Graph: React.FC<GraphProps> = ({
 			return
 		}
 
-		const resolvedLinks = links.map((link) => ({
-			...link,
-			source: nodes.find((n) => n.id === link.source)!,
-			target: nodes.find((n) => n.id === link.target)!,
-		}))
+		const resolvedLinks = links.flatMap((link) => {
+			const source = nodes.find((n) => n.id === link.source)
+			const target = nodes.find((n) => n.id === link.target)
+			if (source !== undefined && target !== undefined) {
+				return [{ ...link, source, target }]
+			} else {
+				return []
+			}
+		})
 
 		simulation.force<d3.ForceLink<Node, { id: string; source: Node; target: Node }>>("link")!.links(resolvedLinks)
 		simulation.alpha(1).restart()
@@ -137,6 +141,15 @@ export const Graph: React.FC<GraphProps> = ({
 				.attr("y1", (d) => d.source.y!)
 				.attr("x2", (d) => d.target.x!)
 				.attr("y2", (d) => d.target.y!)
+				.attr("stroke-dasharray", (d) => {
+					const sourceToTarget = d.source.id in mesh && mesh[d.source.id].includes(d.target.id)
+					const targetToSource = d.target.id in mesh && mesh[d.target.id].includes(d.source.id)
+					if (sourceToTarget || targetToSource) {
+						return null
+					} else {
+						return "5,5"
+					}
+				})
 
 			newMarkers
 				.attr("x1", (d) => d.source.x!)
@@ -153,7 +166,7 @@ export const Graph: React.FC<GraphProps> = ({
 		})
 
 		return () => void simulation.on("tick.links", null)
-	}, [svg, simulation, links, mesh])
+	}, [svg, simulation, links, nodes, mesh])
 
 	const rootsRef = useRef(roots)
 
@@ -205,38 +218,9 @@ export const Graph: React.FC<GraphProps> = ({
 			})
 	}, [svg, roots])
 
-	// useEffect(() => {
-	// 	if (svg === null || simulation === null) {
-	// 		return
-	// 	}
-
-	// 	const resolvedMessages = messages.map(({ data, peerId }) => ({ data, node: nodes.find((n) => n.id === peerId)! }))
-
-	// 	const oldMessages = svg
-	// 		.select<SVGGElement>(".messages")
-	// 		.selectAll<SVGCircleElement, { data: string; node: Node }>("circle")
-	// 		.data(resolvedMessages, (d) => `${d.node.id}/${d.data}`)
-
-	// 	oldMessages.exit().remove()
-
-	// 	const newMessages = oldMessages
-	// 		.enter()
-	// 		.append("circle")
-	// 		.attr("r", nodeRadius * 1.5)
-	// 		.attr("fill", (d) => "#007")
-	// 		.attr("cx", (d) => d.node.x!)
-	// 		.attr("cy", (d) => d.node.y!)
-	// 		.merge(oldMessages)
-
-	// 	simulation.on("tick.messages", () => {
-	// 		newMessages.attr("cx", (d) => d.node.x!).attr("cy", (d) => d.node.y!)
-	// 	})
-
-	// 	return () => void simulation.on("tick.messages", null)
-	// }, [svg, simulation, nodes, messages])
-
 	return (
 		<svg
+			id="graph"
 			style={{ cursor: isMouseDown ? "crosshair" : "initial" }}
 			width={width}
 			height={height}

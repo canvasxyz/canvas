@@ -1,55 +1,23 @@
 import { createLibp2p } from "libp2p"
 import { generateKeyPair } from "@libp2p/crypto/keys"
-import { Libp2p, MultiaddrConnection, PeerId, PrivateKey, PubSub } from "@libp2p/interface"
-import { Identify, identify } from "@libp2p/identify"
+import { Libp2p, MultiaddrConnection, PeerId } from "@libp2p/interface"
+import { identify } from "@libp2p/identify"
 import { webSockets } from "@libp2p/websockets"
 import { yamux } from "@chainsafe/libp2p-yamux"
 import { noise } from "@chainsafe/libp2p-noise"
 import { KadDHT, kadDHT } from "@libp2p/kad-dht"
-import { Ping, ping } from "@libp2p/ping"
+import { ping } from "@libp2p/ping"
 import { prometheusMetrics } from "@libp2p/prometheus-metrics"
-import { GossipsubEvents, gossipsub } from "@chainsafe/libp2p-gossipsub"
-export { GossipSub } from "@chainsafe/libp2p-gossipsub"
-
-import type { Registry } from "prom-client"
+import { gossipsub } from "@chainsafe/libp2p-gossipsub"
 
 import { Multiaddr } from "@multiformats/multiaddr"
+import { rendezvousClient } from "@canvas-js/libp2p-rendezvous/client"
 
-import { RendezvousClient, rendezvousClient } from "@canvas-js/libp2p-rendezvous/client"
 import { AbstractGossipLog } from "@canvas-js/gossiplog"
+import { NetworkConfig, ServiceMap, gossipLogService } from "@canvas-js/gossiplog/libp2p"
 import { defaultBootstrapList } from "@canvas-js/gossiplog/bootstrap"
 
-import { GossipLogService, gossipLogService } from "./service.js"
-
-export interface NetworkConfig {
-	/** start libp2p on initialization (default: true) */
-	start?: boolean
-	privateKey?: PrivateKey
-
-	/** array of local WebSocket multiaddrs, e.g. "/ip4/127.0.0.1/tcp/3000/ws" */
-	listen?: string[]
-
-	/** array of public WebSocket multiaddrs, e.g. "/dns4/myapp.com/tcp/443/wss" */
-	announce?: string[]
-
-	bootstrapList?: string[]
-	denyDialMultiaddr?(multiaddr: Multiaddr): Promise<boolean> | boolean
-	denyInboundConnection?(maConn: MultiaddrConnection): Promise<boolean> | boolean
-
-	maxConnections?: number
-	registry?: Registry
-}
-
-export type ServiceMap<Payload> = {
-	identify: Identify
-	ping: Ping
-	pubsub: PubSub<GossipsubEvents>
-	gossipLog: GossipLogService<Payload>
-	dht: KadDHT
-	rendezvous: RendezvousClient
-}
-
-const getDHTProtocol = (topic: string) => `/canvas/kad/1.0.0/${topic}`
+import { getDHTProtocol } from "../../utils.js"
 
 export async function getLibp2p<Payload>(
 	gossipLog: AbstractGossipLog<Payload>,

@@ -1,4 +1,4 @@
-import { bytesToHex, randomBytes } from "@noble/hashes/utils"
+import { randomBytes } from "node:crypto"
 import puppeteer from "puppeteer"
 
 const { DELAY, PEER_COUNT } = process.env
@@ -13,10 +13,10 @@ const q = Object.entries(query)
 	.map(([name, value]) => `${name}=${encodeURIComponent(value)}`)
 	.join("&")
 
-const url = `http://localhost:8000/client/index.html?${q}`
+const url = `http://localhost:8000/client-ws/index.html?${q}`
 
 const browser = await puppeteer.launch({
-	userDataDir: `data/${bytesToHex(randomBytes(8))}`,
+	userDataDir: `data/${randomBytes(8).toString("hex")}`,
 	headless: true,
 	args: [
 		"--no-sandbox",

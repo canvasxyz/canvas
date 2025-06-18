@@ -1,17 +1,31 @@
 import http from "node:http"
+import assert from "node:assert"
 
 import express from "express"
 import cors from "cors"
 import { WebSocket, WebSocketServer } from "ws"
 
-import PQueue from "p-queue"
+import {
+	PeerEvent,
+	WorkerEvent,
+	NetworkState,
+	initialState,
+	reduce,
+	NetworkEvent,
+} from "@canvas-js/test-network/events"
+import { StatusCodes } from "http-status-codes"
 
-import type { Event } from "../../types.js"
+let state: NetworkState = initialState
+const eventSourceClients = new Set<express.Response>()
 
-const events: Event[] = []
-const queues = new Map<express.Response, PQueue>()
+function handleEvent(event: PeerEvent | WorkerEvent) {
+	state = reduce(state, event)
+	for (const res of eventSourceClients) {
+		pushEventSource(res, event)
+	}
+}
 
-function push(res: express.Response, event: Event) {
+function pushEventSource(res: express.Response, event: NetworkEvent) {
 	if (res.closed) {
 		return
 	}
@@ -28,117 +42,213 @@ app.use(express.static("dist"))
 
 app.post("/api/disconnect/:source/:target", (req, res) => {
 	const { source, target } = req.params
-	console.log(`disconnect ${source} from ${target}`)
-
-	const ws = sockets.get(source)
+	const ws = peerSockets.get(source)
 	if (ws === undefined) {
-		return void res.status(404).end()
+		return void res.status(StatusCodes.NOT_FOUND).end()
 	}
 
 	ws.send(JSON.stringify({ type: "disconnect", target }))
-	return void res.status(200).end()
+	return void res.status(StatusCodes.OK).end()
 })
 
 app.post("/api/provide/:peerId", (req, res) => {
-	console.log("PROVIDE", req.params.peerId)
-
-	const ws = sockets.get(req.params.peerId)
+	const ws = peerSockets.get(req.params.peerId)
 	if (ws === undefined) {
-		return void res.status(404).end()
+		return void res.status(StatusCodes.NOT_FOUND).end()
 	}
 
 	ws.send(JSON.stringify({ type: "provide" }))
-	return void res.status(200).end()
+	return void res.status(StatusCodes.OK).end()
 })
 
 app.post("/api/query/:peerId", (req, res) => {
-	console.log("QUERY", req.params.peerId)
-	const ws = sockets.get(req.params.peerId)
+	const ws = peerSockets.get(req.params.peerId)
 	if (ws === undefined) {
-		return void res.status(404).end()
+		return void res.status(StatusCodes.NOT_FOUND).end()
 	}
 
 	ws.send(JSON.stringify({ type: "query" }))
-	return void res.status(200).end()
+	return void res.status(StatusCodes.OK).end()
 })
 
 app.post("/api/append/:peerId", (req, res) => {
-	console.log("append", req.params.peerId)
-
-	const ws = sockets.get(req.params.peerId)
+	const ws = peerSockets.get(req.params.peerId)
 	if (ws === undefined) {
-		return void res.status(404).end()
+		return void res.status(StatusCodes.NOT_FOUND).end()
 	}
 
 	ws.send(JSON.stringify({ type: "append" }))
-	return void res.status(200).end()
+	return void res.status(StatusCodes.OK).end()
+})
+
+app.post("/api/worker/:workerId/start", (req, res) => {
+	const ws = workerSockets.get(req.params.workerId)
+	if (ws === undefined) {
+		return void res.status(StatusCodes.NOT_FOUND).end()
+	}
+
+	ws.send(JSON.stringify({ type: "peer:start", publishInterval: null }))
+	return void res.status(StatusCodes.OK).end()
+})
+
+app.post("/api/worker/:workerId/stop", (req, res) => {
+	const { peerId } = req.query
+	if (typeof peerId !== "string") {
+		return void res.status(StatusCodes.BAD_REQUEST).end("missing peerId query param")
+	}
+
+	const ws = workerSockets.get(req.params.workerId)
+	if (ws === undefined) {
+		return void res.status(StatusCodes.NOT_FOUND).end()
+	}
+
+	ws.send(JSON.stringify({ type: "peer:stop", id: peerId }))
+	return void res.status(StatusCodes.OK).end()
+})
+
+// autospawn state
+
+const autoSpawnIntervals = new Map<string, NodeJS.Timeout>()
+
+app.post("/api/worker/:workerId/start/auto", (req, res) => {
+	const { workerId } = req.params
+	const ws = workerSockets.get(workerId)
+	if (ws === undefined) {
+		return void res.status(StatusCodes.NOT_FOUND).end()
+	}
+
+	assert(typeof req.query.total === "string", "missing 'total' query param")
+	assert(typeof req.query.lifetime === "string", "missing 'lifetime' query param")
+	assert(typeof req.query.publishInterval === "string", "missing 'publishInterval' query param")
+	const total = parseInt(req.query.total)
+	const lifetime = parseInt(req.query.lifetime)
+	const publishInterval = parseInt(req.query.publishInterval)
+	assert(!isNaN(total), "invalid 'total' param")
+	assert(!isNaN(lifetime), "invalid 'lifetime' param")
+	assert(!isNaN(publishInterval), "invalid 'publishInterval' param")
+
+	const timestamp = Date.now()
+	handleEvent({
+		source: "worker",
+		type: "worker:autospawn",
+		workerId,
+		timestamp,
+		detail: { total, lifetime, publishInterval },
+	})
+
+	const spawn = () => {
+		console.log(`auto-spawning peer on worker ${workerId}`)
+		const ws = workerSockets.get(workerId)
+		if (ws === undefined) {
+			clearInterval(autoSpawnIntervals.get(workerId))
+			return
+		}
+
+		ws.send(JSON.stringify({ type: "peer:start", publishInterval, lifetime }))
+	}
+
+	clearInterval(autoSpawnIntervals.get(workerId))
+	const interval = (1000 * lifetime) / total
+	autoSpawnIntervals.set(workerId, setInterval(spawn, interval))
+	spawn()
+
+	return void res.status(StatusCodes.OK).end()
+})
+
+app.post("/api/worker/:workerId/stop/auto", (req, res) => {
+	const { workerId } = req.params
+
+	const ws = workerSockets.get(req.params.workerId)
+	if (ws === undefined) {
+		return void res.status(StatusCodes.NOT_FOUND).end()
+	}
+
+	const timestamp = Date.now()
+	handleEvent({
+		source: "worker",
+		type: "worker:autospawn",
+		workerId,
+		timestamp,
+		detail: { total: null, lifetime: null, publishInterval: null },
+	})
+
+	clearInterval(autoSpawnIntervals.get(workerId))
+
+	return void res.status(StatusCodes.OK).end()
 })
 
 app.post("/api/events", (req, res) => {
-	const event = req.body
-	events.push(event)
-	for (const [res, queue] of queues) {
-		queue.add(() => push(res, event))
-	}
-
-	return void res.status(200).end()
+	handleEvent(req.body)
+	return void res.status(StatusCodes.OK).end()
 })
 
 app.get("/api/events", (req, res) => {
-	res.writeHead(200, {
+	res.writeHead(StatusCodes.OK, {
 		["Content-Type"]: "text/event-stream",
 		["Cache-Control"]: "no-cache",
 		["Connection"]: "keep-alive",
 	})
 
-	const queue = new PQueue({ concurrency: 1 })
-	queues.set(res, queue)
-
-	for (const event of events) {
-		queue.add(() => push(res, event))
-	}
-
-	res.on("close", () => {
-		queue.clear()
-		queues.delete(res)
-	})
+	eventSourceClients.add(res)
+	pushEventSource(res, { source: "network", type: "snapshot", state })
+	res.on("close", () => void eventSourceClients.delete(res))
 })
 
 const server = http.createServer(app)
 
-const peerIds = new WeakMap<WebSocket, string>()
-const sockets = new Map<string, WebSocket>()
+const workerIds = new Map<WebSocket, string>()
+const workerSockets = new Map<string, WebSocket>()
+
+const peerIds = new Map<WebSocket, string>()
+const peerSockets = new Map<string, WebSocket>()
 
 const wss = new WebSocketServer({ server })
 
-wss.on("connection", (ws) => {
-	console.log("new socket connection")
-	ws.on("open", () => {
-		console.log("socket open")
-	})
+wss.on("connection", (ws, req) => {
+	assert(req.url, "missing req.url string")
+	const url = new URL(req.url, `http://${req.headers.host}`)
+	const peerId = url.searchParams.get("peerId")
+	const workerId = url.searchParams.get("workerId")
 
-	ws.on("close", () => {
-		console.log("socket close")
-		const peerId = peerIds.get(ws)
-		if (peerId !== undefined) {
-			sockets.delete(peerId)
-		}
-	})
+	if (peerId === null && workerId !== null) {
+		workerSockets.set(workerId, ws)
+		workerIds.set(ws, workerId)
 
-	ws.on("error", (err) => console.error(err))
-	ws.on("message", (msg) => {
-		const event = JSON.parse(msg.toString()) as Event
+		handleEvent({ source: "worker", type: "worker:start", workerId, timestamp: Date.now(), detail: {} })
 
-		if (!sockets.has(event.peerId)) {
-			sockets.set(event.peerId, ws)
-			peerIds.set(ws, event.peerId)
-		}
+		ws.on("close", () => {
+			workerSockets.delete(workerId)
+			workerIds.delete(ws)
+			clearInterval(autoSpawnIntervals.get(workerId))
+			handleEvent({ source: "worker", type: "worker:stop", workerId, timestamp: Date.now(), detail: {} })
+		})
 
-		events.push(event)
-		for (const [res, queue] of queues) {
-			queue.add(() => push(res, event))
-		}
-	})
+		ws.on("error", (err) => console.error(err))
+		ws.on("message", (msg) => {
+			const event = JSON.parse(msg.toString()) as WorkerEvent
+			handleEvent(event)
+		})
+	} else if (peerId !== null && workerId === null) {
+		peerSockets.set(peerId, ws)
+		peerIds.set(ws, peerId)
+
+		ws.on("close", () => {
+			peerSockets.delete(peerId)
+			peerIds.delete(ws)
+		})
+
+		ws.on("error", (err) => console.error(err))
+		ws.on("message", (msg) => {
+			const event = JSON.parse(msg.toString()) as PeerEvent
+			handleEvent(event)
+		})
+	} else {
+		console.error("invalid websocket URL (expected either peerId or workerId)", {
+			url: req.url,
+		})
+
+		ws.close()
+	}
 })
 
 server.listen(8000, () => {

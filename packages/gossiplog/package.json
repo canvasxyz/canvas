@@ -36,6 +36,12 @@
 			"node": "./lib/targets/node/index.js",
 			"react-native": "./lib/targets/react-native/index.js",
 			"default": "./lib/targets/default/index.js"
+		},
+		"#target/libp2p": {
+			"browser": "./lib/targets/browser/libp2p.js",
+			"node": "./lib/targets/node/libp2p.js",
+			"react-native": "./lib/targets/react-native/libp2p.js",
+			"default": "./lib/targets/default/libp2p.js"
 		}
 	},
 	"scripts": {
@@ -46,7 +52,7 @@
 	},
 	"dependencies": {
 		"@canvas-js/interfaces": "0.16.0-next.3",
-		"@canvas-js/libp2p-rendezvous": "^0.4.5",
+		"@canvas-js/libp2p-rendezvous": "^0.5.2",
 		"@canvas-js/modeldb": "0.16.0-next.3",
 		"@canvas-js/modeldb-durable-objects": "0.16.0-next.3",
 		"@canvas-js/modeldb-idb": "0.16.0-next.3",
@@ -63,6 +69,8 @@
 		"@chainsafe/libp2p-yamux": "^7.0.1",
 		"@ipld/dag-cbor": "^9.2.4",
 		"@ipld/dag-json": "^10.2.5",
+		"@libp2p/bootstrap": "^11.0.39",
+		"@libp2p/circuit-relay-v2": "^3.2.15",
 		"@libp2p/crypto": "^5.1.5",
 		"@libp2p/identify": "^3.0.33",
 		"@libp2p/interface": "^2.10.3",
@@ -73,6 +81,7 @@
 		"@libp2p/peer-id": "^5.1.6",
 		"@libp2p/ping": "^2.0.33",
 		"@libp2p/prometheus-metrics": "^4.3.22",
+		"@libp2p/webrtc": "^5.2.16",
 		"@libp2p/websockets": "^9.2.14",
 		"@multiformats/multiaddr": "^12.4.1",
 		"@noble/hashes": "^1.8.0",

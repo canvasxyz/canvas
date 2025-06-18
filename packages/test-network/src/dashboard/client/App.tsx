@@ -1,58 +1,20 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react"
+import React, { useCallback, useEffect, useState } from "react"
 
-import type { Event } from "../../types.js"
+import { NetworkEvent, NetworkState, initialState, reduce } from "@canvas-js/test-network/events"
 import { Graph } from "./Graph.js"
-// import { EventLog } from "./EventLog.js"
-
-type State = {
-	mesh: Record<string, string[]>
-	nodes: { id: string; topic: string | null }[]
-	links: { id: string; source: string; target: string }[]
-	roots: Record<string, string | null>
-}
+import { WorkerList } from "./WorkerList.js"
 
 const bootstrapPeerIds = ["12D3KooWMvSCSeJ6zxJJRQZSpyGqbNcqSJfcJGZLRiMVMePXzMax"]
 
-function reduce(state: State, event: Event): State {
-	// console.log(event)
-	if (event.type === "start") {
-		if (state.nodes.every((node) => node.id !== event.peerId)) {
-			return {
-				...state,
-				nodes: [...state.nodes, { id: event.peerId, topic: event.detail.topic }],
-				roots: { ...state.roots, [event.peerId]: event.detail.root ?? null },
-			}
-		}
-	} else if (event.type === "connection:open") {
-		if (state.links.every((link) => link.id !== event.detail.id)) {
-			return {
-				...state,
-				links: [...state.links, { id: event.detail.id, source: event.peerId, target: event.detail.remotePeer }],
-			}
-		}
-	} else if (event.type === "connection:close") {
-		return { ...state, links: state.links.filter((link) => link.id !== event.detail.id) }
-	} else if (event.type === "gossipsub:mesh:update") {
-		return { ...state, mesh: { ...state.mesh, [event.peerId]: event.detail.peers } }
-	} else if (event.type === "gossiplog:commit") {
-		return {
-			...state,
-			roots: { ...state.roots, [event.peerId]: event.detail.root },
-		}
-	}
-
-	return state
-}
-
 export const App: React.FC<{}> = ({}) => {
-	const [state, setState] = useState<State>({ nodes: [], links: [], roots: {}, mesh: {} })
+	const [state, setState] = useState<NetworkState>(initialState)
 
 	useEffect(() => {
 		const eventSource = new EventSource("/api/events")
 		eventSource.addEventListener("error", (event) => console.error("error in event source", event))
 		eventSource.addEventListener("close", (event) => console.log("closed event source", event))
 		eventSource.addEventListener("message", ({ data }) => {
-			const event = JSON.parse(data) as Event
+			const event = JSON.parse(data) as NetworkEvent
 			setState((state) => reduce(state, event))
 		})
 
@@ -96,15 +58,65 @@ export const App: React.FC<{}> = ({}) => {
 		})
 	}, [])
 
+	const startPeer = useCallback((workerId: string) => {
+		fetch(`/api/worker/${workerId}/start`, { method: "POST" }).then((res) => {
+			if (!res.ok) {
+				res.text().then((err) => console.error(`[${res.status} ${res.statusText}]`, err))
+			}
+		})
+	}, [])
+
+	const stopPeer = useCallback((workerId: string, peerId: string) => {
+		fetch(`/api/worker/${workerId}/stop?peerId=${peerId}`, { method: "POST" }).then((res) => {
+			if (!res.ok) {
+				res.text().then((err) => console.error(`[${res.status} ${res.statusText}]`, err))
+			}
+		})
+	}, [])
+
+	const startPeerAuto = useCallback(
+		(workerId: string, options: { total: number; lifetime: number; publishInterval: number }) => {
+			const query = Object.entries(options)
+				.map(([name, value]) => `${name}=${value}`)
+				.join("&")
+
+			fetch(`/api/worker/${workerId}/start/auto?${query}`, {
+				method: "POST",
+			}).then((res) => {
+				if (!res.ok) {
+					res.text().then((err) => console.error(`[${res.status} ${res.statusText}]`, err))
+				}
+			})
+		},
+		[],
+	)
+
+	const stopPeerAuto = useCallback((workerId: string) => {
+		fetch(`/api/worker/${workerId}/stop/auto`, { method: "POST" }).then((res) => {
+			if (!res.ok) {
+				res.text().then((err) => console.error(`[${res.status} ${res.statusText}]`, err))
+			}
+		})
+	}, [])
+
 	return (
-		<section>
+		<>
 			<Graph
 				{...state}
 				bootstrapPeerIds={bootstrapPeerIds}
 				onNodeClick={handleNodeClick}
 				onLinkClick={handleLinkClick}
 			/>
-			<hr />
-		</section>
+			<div>
+				<WorkerList
+					workers={state.workers}
+					nodes={state.nodes}
+					startPeer={startPeer}
+					stopPeer={stopPeer}
+					startPeerAuto={startPeerAuto}
+					stopPeerAuto={stopPeerAuto}
+				/>
+			</div>
+		</>
 	)
 }

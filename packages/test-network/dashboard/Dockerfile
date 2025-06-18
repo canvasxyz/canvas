@@ -1,0 +1,14 @@
+FROM node:22-alpine
+
+WORKDIR /app
+
+COPY dist/dashboard/server/index.js lib/index.mjs
+
+COPY dist/dashboard/client dist/
+COPY dist/client-ws/index.js dist/client-ws/index.js
+COPY src/client-ws/src/index.html dist/client-ws/index.html
+COPY dist/client-webrtc/index.js dist/client-webrtc/index.js
+COPY src/client-webrtc/src/index.html dist/client-webrtc/index.html
+
+ENTRYPOINT ["node"]
+CMD ["lib/index.mjs"]
