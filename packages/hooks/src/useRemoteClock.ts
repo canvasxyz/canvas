@@ -7,13 +7,13 @@ export const useRemoteClock = (app: Canvas | null | undefined) => {
 		if (!app) return
 
 		const updateClock = () => {
-            const newClock = app.messageLog.getLatestRemoteClock()
-            if (newClock !== undefined) setClock(newClock)
+			const newClock = app.messageLog.getLatestRemoteClock()
+			if (newClock !== undefined) setClock(newClock)
 		}
 		updateClock()
 		app.messageLog.addEventListener("message", updateClock)
-        app.messageLog.addEventListener("connect", updateClock)
-        app.messageLog.addEventListener("disconnect", updateClock)
+		app.messageLog.addEventListener("connect", updateClock)
+		app.messageLog.addEventListener("disconnect", updateClock)
 		app.messageLog.addEventListener("sync:status", updateClock)
 		return () => {
 			app.messageLog.removeEventListener("message", updateClock)
