@@ -1,18 +1,16 @@
 import React, { useState, useContext } from "react"
-import { LuUnplug } from "react-icons/lu"
 import { MdOutlineSync, MdOutlineSyncProblem, MdOutlineSyncDisabled } from "react-icons/md"
 import { AuthKitProvider } from "@farcaster/auth-kit"
 import { JsonRpcProvider } from "ethers"
 
 import { renderSyncStatus } from "@canvas-js/core"
 import { AppInfo } from "@canvas-js/hooks"
-import { useCanvas, useSIWE, useSIWF, useLogout, useSyncStatus, useClock, AuthContext } from "@canvas-js/hooks"
+import { useCanvas, useSIWE, useSIWF, useLogout, useSyncStatus, useClock, useRemoteClock, AuthContext } from "@canvas-js/hooks"
 import { SIWESigner, SIWFSigner } from "@canvas-js/signer-ethereum"
 
 import { App } from "./App.js"
 import { AppContext } from "./AppContext.js"
 import Forum from "./contract.js"
-import { AppT } from "./index.js"
 
 const config = {
 	// For a production app, replace this with an Optimism Mainnet
@@ -47,6 +45,7 @@ const Layout: React.FC = () => {
 	const { Logout } = useLogout(app)
 	const syncStatus = useSyncStatus(app)
 	const clock = useClock(app)
+	const remoteClock = useRemoteClock(app)
 
 	return (
 		<AppContext.Provider value={{ app: app ?? null }}>
@@ -73,7 +72,7 @@ const Layout: React.FC = () => {
 								<a href="#" onClick={() => setInfoOpen(!infoOpen)}>
 									Info
 								</a>{" "}
-								&middot; Sync {renderSyncStatus(syncStatus)} ({clock}) &middot;{" "}
+								&middot; Sync {renderSyncStatus(syncStatus)} ({clock} / {remoteClock}) &middot;{" "}
 								<a
 									href="#"
 									onClick={async () => {

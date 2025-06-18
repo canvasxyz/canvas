@@ -6,6 +6,7 @@ import { QueryParams } from "@canvas-js/modeldb"
 import { CanvasContext } from "./provider.js"
 import { useLiveQuery as _useLiveQuery } from "../useLiveQuery.js"
 import { useClock as _useClock } from "../useClock.js"
+import { useRemoteClock as _useRemoteClock } from "../useRemoteClock.js"
 import { useSyncStatus as _useSyncStatus } from "../useSyncStatus.js"
 import { useSIWE as _useSIWE } from "../auth/useSIWE.js"
 import { useSIWF as _useSIWF } from "../auth/useSIWF.js"
@@ -24,6 +25,11 @@ export function useLiveQuery<ModelsT extends ModelSchema, K extends keyof Models
 export function useClock() {
   const app = useApp()
   return _useClock(app)
+}
+
+export function useRemoteClock() {
+  const app = useApp()
+  return _useRemoteClock(app)
 }
 
 export function useSyncStatus() {
