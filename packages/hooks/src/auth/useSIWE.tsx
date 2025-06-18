@@ -162,7 +162,8 @@ export const useSIWE = (app: Canvas | null | undefined) => {
 		app.updateSigners([...otherSigners, new SIWESigner({ readOnly: true })])
 	}, [app, sessionSigner])
 
-	const ConnectSIWE = ({
+	const ConnectButton = ({
+		type,
 		buttonStyles,
 		errorStyles,
 		errorClassName,
@@ -170,86 +171,21 @@ export const useSIWE = (app: Canvas | null | undefined) => {
 		label,
 		loadingText,
 		logoutText,
-	}: ConnectSIWEProps = {}) => {
-		if (!app) {
-			return (
-				<div
-					className={errorClassName || ""}
-					style={{
-						...styles.errorContainer,
-						...errorStyles,
-					}}
-				>
-					<code>App not initialized</code>
-				</div>
-			)
-		} else if (error !== null) {
-			return (
-				<div
-					className={errorClassName || ""}
-					style={{
-						...styles.errorContainer,
-						...errorStyles,
-					}}
-				>
-					<code>{error.message}</code>
-				</div>
-			)
-		} else if (provider === null) {
-			return (
-				<button
-					disabled
-					className={buttonClassName || ""}
-					style={{
-						...styles.loadingButton,
-						...buttonStyles,
-					}}
-				>
-					{loadingText ?? "Loading..."}
-				</button>
-			)
-		} else if (address !== null && browserWalletLoggedIn && sessionSigner instanceof SIWESigner) {
-			return (
-				<button
-					onClick={() => disconnect()}
-					className={buttonClassName || ""}
-					style={{
-						...styles.actionButton,
-						...buttonStyles,
-					}}
-				>
-					{logoutText ?? "Disconnect"}
-				</button>
-			)
-		} else {
-			return (
-				<button
-					onClick={() => {
-						connect({ provider: new BrowserProvider(window.ethereum!), isReturningSession: false }).then((result) => {
-							if (result !== null) setBrowserWalletLoggedIn(true)
-						})
-					}}
-					className={buttonClassName || ""}
-					style={{
-						...styles.actionButton,
-						...buttonStyles,
-					}}
-				>
-					{label ?? "Connect browser wallet"}
-				</button>
-			)
+	}: ConnectSIWEProps & { type: "browser" | "burner" }) => {
+		const isBurner = type === "burner"
+		const loggedIn = isBurner ? burnerWalletLoggedIn : browserWalletLoggedIn
+		const connectHandler = () => {
+			if (isBurner) {
+				connect({ burner: true, isReturningSession: false }).then((result) => {
+					if (result !== null) setBurnerWalletLoggedIn(true)
+				})
+			} else {
+				connect({ provider: new BrowserProvider(window.ethereum!), isReturningSession: false }).then((result) => {
+					if (result !== null) setBrowserWalletLoggedIn(true)
+				})
+			}
 		}
-	}
 
-	const ConnectSIWEBurner = ({
-		buttonStyles,
-		errorStyles,
-		errorClassName,
-		buttonClassName,
-		label,
-		loadingText,
-		logoutText,
-	}: ConnectSIWEProps = {}) => {
 		if (!app) {
 			return (
 				<div
@@ -287,7 +223,7 @@ export const useSIWE = (app: Canvas | null | undefined) => {
 					{loadingText ?? "Loading..."}
 				</button>
 			)
-		} else if (address !== null && burnerWalletLoggedIn && sessionSigner instanceof SIWESigner) {
+		} else if (address !== null && loggedIn && sessionSigner instanceof SIWESigner) {
 			return (
 				<button
 					onClick={() => disconnect()}
@@ -303,26 +239,22 @@ export const useSIWE = (app: Canvas | null | undefined) => {
 		} else {
 			return (
 				<button
-					onClick={() => {
-						connect({ burner: true, isReturningSession: false }).then((result) => {
-							if (result !== null) setBurnerWalletLoggedIn(true)
-						})
-					}}
+					onClick={connectHandler}
 					className={buttonClassName || ""}
 					style={{
 						...styles.actionButton,
 						...buttonStyles,
 					}}
 				>
-					{label ?? "Connect burner wallet"}
+					{label ?? (isBurner ? "Connect burner wallet" : "Connect browser wallet")}
 				</button>
 			)
 		}
 	}
 
 	return {
-		ConnectSIWE,
-		ConnectSIWEBurner,
+		ConnectSIWE: (props: ConnectSIWEProps) => <ConnectButton {...props} type="browser" />,
+		ConnectSIWEBurner: (props: ConnectSIWEProps) => <ConnectButton {...props} type="burner" />,
 		connectSIWE: () => {
 			connect({ provider: new BrowserProvider(window.ethereum!), isReturningSession: false }).then((result) => {
 				if (result !== null) setBrowserWalletLoggedIn(true)
