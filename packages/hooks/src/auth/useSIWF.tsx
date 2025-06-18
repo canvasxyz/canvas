@@ -22,6 +22,14 @@ export interface ConnectSIWFProps {
 	logoutText?: string
 }
 
+export enum SIWFStatus {
+	NotInitialized = "NotInitialized",
+	Loading = "Loading",
+	Disconnected = "Disconnected",
+	Connected = "Connected",
+	Error = "Error",
+}
+
 export const useSIWF = (app: Canvas | null | undefined) => {
 	const { sessionSigner, setSessionSigner, address, setAddress } = useContext(AuthContext)
 
@@ -287,6 +295,22 @@ export const useSIWF = (app: Canvas | null | undefined) => {
 		}
 	}
 
+	const getStatus = (
+		app: Canvas | null | undefined,
+		error: Error | null,
+		newSessionPrivateKey: string | null,
+		requestId: string | null,
+		nonce: string | null,
+		canvasIsAuthenticated: boolean,
+		farcasterIsAuthenticated: boolean
+	) => {
+		if (!app) return SIWFStatus.NotInitialized
+		if (error !== null) return SIWFStatus.Error
+		if (!newSessionPrivateKey || (!requestId && !nonce)) return SIWFStatus.Loading
+		if (canvasIsAuthenticated || farcasterIsAuthenticated) return SIWFStatus.Connected
+		return SIWFStatus.Disconnected
+	}
+
 	return {
 		ConnectSIWF,
 		address,
@@ -298,5 +322,15 @@ export const useSIWF = (app: Canvas | null | undefined) => {
 		frameSignIn,
 		browserSignIn,
 		isInitialized: !!app,
+		SIWFStatus,
+		connectSIWFStatus: getStatus(
+			app,
+			error,
+			newSessionPrivateKey,
+			requestId,
+			nonce,
+			canvasIsAuthenticated,
+			farcasterIsAuthenticated
+		),
 	}
 }
