@@ -22,6 +22,15 @@ export interface ConnectSIWEProps {
 	logoutText?: string
 }
 
+export enum SIWEStatus {
+	NotInitialized = "NotInitialized",
+	Loading = "Loading",
+	Disconnected = "Disconnected",
+	Connected = "Connected",
+	Error = "Error",
+	WaitingForSignature = "WaitingForSignature",
+}
+
 const BURNER_WALLET_KEY = "canvas-connectsiwe-burner-wallet-key"
 
 const getBurnerWallet = () => {
@@ -47,6 +56,7 @@ export const useSIWE = (app: Canvas | null | undefined) => {
 	const [error, setError] = useState<Error | null>(null)
 	const [browserWalletLoggedIn, setBrowserWalletLoggedIn] = useState(false)
 	const [burnerWalletLoggedIn, setBurnerWalletLoggedIn] = useState(false)
+	const [isWaitingForSignature, setIsWaitingForSignature] = useState(false)
 
 	const connect = useCallback(
 		async (
@@ -91,8 +101,13 @@ export const useSIWE = (app: Canvas | null | undefined) => {
 				if (isReturningSession) {
 					return null
 				} else {
-					const session = await signer.newSession(app.topic)
-					await app.messageLog.append(session.payload, { signer: session.signer })
+					setIsWaitingForSignature(true)
+					try {
+						const session = await signer.newSession(app.topic)
+						await app.messageLog.append(session.payload, { signer: session.signer })
+					} finally {
+						setIsWaitingForSignature(false)
+					}
 				}
 			}
 
@@ -162,6 +177,23 @@ export const useSIWE = (app: Canvas | null | undefined) => {
 		app.updateSigners([...otherSigners, new SIWESigner({ readOnly: true })])
 	}, [app, sessionSigner])
 
+	const getStatus = (
+		app: Canvas | null | undefined,
+		error: Error | null,
+		provider: BrowserProvider | null,
+		address: string | null,
+		loggedIn: boolean,
+		sessionSigner: any,
+		isWaitingForSignature: boolean,
+	) => {
+		if (!app) return SIWEStatus.NotInitialized
+		if (error !== null) return SIWEStatus.Error
+		if (isWaitingForSignature) return SIWEStatus.WaitingForSignature
+		if (provider === null) return SIWEStatus.Loading
+		if (address !== null && loggedIn && sessionSigner instanceof SIWESigner) return SIWEStatus.Connected
+		return SIWEStatus.Disconnected
+	}
+
 	const ConnectButton = ({
 		type,
 		buttonStyles,
@@ -174,6 +206,7 @@ export const useSIWE = (app: Canvas | null | undefined) => {
 	}: ConnectSIWEProps & { type: "browser" | "burner" }) => {
 		const isBurner = type === "burner"
 		const loggedIn = isBurner ? burnerWalletLoggedIn : browserWalletLoggedIn
+		const status = getStatus(app, error, provider, address, loggedIn, sessionSigner, isWaitingForSignature)
 		const connectHandler = () => {
 			if (isBurner) {
 				connect({ burner: true, isReturningSession: false }).then((result) => {
@@ -186,7 +219,7 @@ export const useSIWE = (app: Canvas | null | undefined) => {
 			}
 		}
 
-		if (!app) {
+		if (status === SIWEStatus.NotInitialized) {
 			return (
 				<div
 					className={errorClassName || ""}
@@ -198,7 +231,7 @@ export const useSIWE = (app: Canvas | null | undefined) => {
 					<code>App not initialized</code>
 				</div>
 			)
-		} else if (error !== null) {
+		} else if (status === SIWEStatus.Error) {
 			return (
 				<div
 					className={errorClassName || ""}
@@ -207,10 +240,10 @@ export const useSIWE = (app: Canvas | null | undefined) => {
 						...errorStyles,
 					}}
 				>
-					<code>{error.message}</code>
+					<code>{error?.message}</code>
 				</div>
 			)
-		} else if (provider === null) {
+		} else if (status === SIWEStatus.Loading) {
 			return (
 				<button
 					disabled
@@ -223,7 +256,7 @@ export const useSIWE = (app: Canvas | null | undefined) => {
 					{loadingText ?? "Loading..."}
 				</button>
 			)
-		} else if (address !== null && loggedIn && sessionSigner instanceof SIWESigner) {
+		} else if (status === SIWEStatus.Connected) {
 			return (
 				<button
 					onClick={() => disconnect()}
@@ -234,6 +267,19 @@ export const useSIWE = (app: Canvas | null | undefined) => {
 					}}
 				>
 					{logoutText ?? "Disconnect"}
+				</button>
+			)
+		} else if (!isBurner && status === SIWEStatus.WaitingForSignature) {
+			return (
+				<button
+					onClick={connectHandler}
+					className={buttonClassName || ""}
+					style={{
+						...styles.loadingButton,
+						...buttonStyles,
+					}}
+				>
+					Waiting for signature...
 				</button>
 			)
 		} else {
@@ -260,11 +306,29 @@ export const useSIWE = (app: Canvas | null | undefined) => {
 				if (result !== null) setBrowserWalletLoggedIn(true)
 			})
 		},
+		connectSIWEStatus: getStatus(
+			app,
+			error,
+			provider,
+			address,
+			browserWalletLoggedIn,
+			sessionSigner,
+			isWaitingForSignature,
+		),
 		connectSIWEBurner: () => {
 			connect({ burner: true, isReturningSession: false }).then((result) => {
 				if (result !== null) setBurnerWalletLoggedIn(true)
 			})
 		},
+		connectSIWEBurnerStatus: getStatus(
+			app,
+			error,
+			provider,
+			address,
+			burnerWalletLoggedIn,
+			sessionSigner,
+			isWaitingForSignature,
+		),
 		address,
 		error,
 		provider,
