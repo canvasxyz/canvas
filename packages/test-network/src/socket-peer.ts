@@ -1,7 +1,7 @@
 import WebSocket from "isomorphic-ws"
 import { randomBytes, bytesToHex } from "@noble/hashes/utils"
 import { TypedEventEmitter, PeerId } from "@libp2p/interface"
-import { AbstractGossipLog } from "@canvas-js/gossiplog"
+import { AbstractGossipLog, decodeClock, encodeId } from "@canvas-js/gossiplog"
 
 import { PeerEvent, PeerActions } from "@canvas-js/test-network/events"
 
@@ -33,7 +33,11 @@ export class PeerSocket extends TypedEventEmitter<PeerActions> {
 		gossipLog?.addEventListener("commit", ({ detail: commit }) => {
 			const { hash, level } = commit.root
 			const root = `${level}:${bytesToHex(hash)}`
-			this.post("gossiplog:commit", { topic: gossipLog.topic, root })
+			const clock = commit.heads
+				.map((id) => decodeClock(encodeId(id)))
+				.reduce((max, [clock]) => Math.max(max, clock), 0)
+
+			this.post("gossiplog:commit", { topic: gossipLog.topic, root, clock, heads: commit.heads })
 		})
 	}
 

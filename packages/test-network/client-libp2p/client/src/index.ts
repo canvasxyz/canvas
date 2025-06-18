@@ -67,7 +67,8 @@ libp2p.addEventListener("peer:discovery", ({ detail: { id, multiaddrs } }) => {
 libp2p.addEventListener("start", async () => {
 	console.log("libp2p started")
 	const root = await gossipLog.tree.read((txn) => txn.getRoot())
-	socket.post("start", { workerId, topic: gossipLog.topic, root: `0:${bytesToHex(root.hash)}` })
+	const [clock, heads] = await gossipLog.getClock()
+	socket.post("start", { workerId, topic: gossipLog.topic, root: `0:${bytesToHex(root.hash)}`, clock, heads })
 })
 
 libp2p.addEventListener("connection:open", ({ detail: { id, remotePeer, remoteAddr } }) => {

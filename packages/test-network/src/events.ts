@@ -11,6 +11,7 @@ type WorkerEventTypes = {
 		total: number | null
 		lifetime: number | null
 		publishInterval: number | null
+		spawnInterval: number | null
 	}
 }
 
@@ -32,11 +33,17 @@ export type WorkerActions = {
 // Peers
 
 type PeerEventTypes = {
-	start: { workerId: string | null; root: string | null; topic: string | null }
+	start: {
+		workerId: string | null
+		root: string | null
+		topic: string | null
+		clock: number | null
+		heads: string[] | null
+	}
 	"connection:open": { id: string; remotePeer: string; remoteAddr: string }
 	"connection:close": { id: string; remotePeer: string; remoteAddr: string }
 	"gossipsub:mesh:update": { topic: string; peers: string[] }
-	"gossiplog:commit": { topic: string; root: string }
+	"gossiplog:commit": { topic: string; root: string; clock: number; heads: string[] }
 }
 
 export type PeerEvent = {
@@ -62,6 +69,7 @@ export type NetworkState = {
 			total: number
 			lifetime: number
 			publishInterval: number
+			spawnInterval: number
 		} | null
 	}[]
 
@@ -69,7 +77,7 @@ export type NetworkState = {
 	mesh: Record<string, string[]>
 	nodes: { id: string; topic: string | null; workerId: string | null }[]
 	links: { id: string; source: string; target: string }[]
-	roots: Record<string, string | null>
+	roots: Record<string, { clock: number | null; heads: string[] | null; root: string | null }>
 }
 
 export const initialState: NetworkState = { mesh: {}, nodes: [], links: [], roots: {}, workers: [] }
@@ -84,10 +92,11 @@ export function reduce(state: NetworkState, event: NetworkEvent): NetworkState {
 	} else if (event.source === "peer") {
 		if (event.type === "start") {
 			if (state.nodes.every((node) => node.id !== event.peerId)) {
+				const { topic, workerId, clock, heads, root } = event.detail
 				return {
 					...state,
-					nodes: [...state.nodes, { id: event.peerId, topic: event.detail.topic, workerId: event.detail.workerId }],
-					roots: { ...state.roots, [event.peerId]: event.detail.root },
+					nodes: [...state.nodes, { id: event.peerId, topic, workerId }],
+					roots: { ...state.roots, [event.peerId]: { clock, heads, root } },
 				}
 			}
 		} else if (event.type === "connection:open") {
@@ -102,9 +111,11 @@ export function reduce(state: NetworkState, event: NetworkEvent): NetworkState {
 		} else if (event.type === "gossipsub:mesh:update") {
 			return { ...state, mesh: { ...state.mesh, [event.peerId]: event.detail.peers } }
 		} else if (event.type === "gossiplog:commit") {
+			const prev = state.roots[event.peerId] ?? {}
+			const { clock, heads, root } = event.detail
 			return {
 				...state,
-				roots: { ...state.roots, [event.peerId]: event.detail.root },
+				roots: { ...state.roots, [event.peerId]: { ...prev, clock, heads, root } },
 			}
 		} else {
 			signalInvalidType(event)
@@ -142,9 +153,9 @@ export function reduce(state: NetworkState, event: NetworkEvent): NetworkState {
 						return worker
 					}
 
-					const { lifetime, total, publishInterval } = event.detail
-					if (lifetime !== null && total !== null && publishInterval !== null) {
-						return { ...worker, autospawn: { lifetime, total, publishInterval } }
+					const { lifetime, total, publishInterval, spawnInterval } = event.detail
+					if (lifetime !== null && total !== null && publishInterval !== null && spawnInterval !== null) {
+						return { ...worker, autospawn: { lifetime, total, publishInterval, spawnInterval } }
 					} else {
 						return { ...worker, autospawn: null }
 					}

@@ -16,7 +16,7 @@ export interface GraphProps {
 	mesh: Record<string, string[]>
 	nodes: Node[]
 	links: Link[]
-	roots: Record<string, string | null>
+	roots: Record<string, { root: string | null }>
 
 	bootstrapPeerIds?: string[]
 	onNodeClick?: (id: string, shift: boolean, meta: boolean) => void
@@ -29,6 +29,10 @@ export const height = 600
 
 const getColor = (root?: string | null) => (root ? "#" + root.slice(-6) : "#000")
 
+const truncatePeerId = (peerId: string) => {
+	return peerId.slice(0, 10) + "…" + peerId.slice(-4)
+}
+
 export const Graph: React.FC<GraphProps> = ({
 	mesh,
 	nodes,
@@ -40,6 +44,7 @@ export const Graph: React.FC<GraphProps> = ({
 	const svgRef = useRef<SVGSVGElement>(null)
 	const [svg, setSvg] = useState<d3.Selection<SVGSVGElement, unknown, null, undefined> | null>(null)
 	const [simulation, setSimulation] = useState<d3.Simulation<Node, { source: Node; target: Node }> | null>(null)
+	const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null)
 
 	useEffect(() => {
 		if (svgRef.current === null) {
@@ -190,8 +195,17 @@ export const Graph: React.FC<GraphProps> = ({
 			.append("circle")
 			.attr("r", nodeRadius)
 			.attr("data-id", (d) => d.id)
-			.attr("fill", (d) => getColor(rootsRef.current[d.id]))
+			.attr("fill", (d) => getColor(rootsRef.current[d.id]?.root))
 			.on("click", (event, node) => onNodeClick(node.id, event.shiftKey, event.metaKey))
+			.on("mouseover", (event, node) => {
+				const rect = svgRef.current!.getBoundingClientRect()
+				setTooltip({
+					x: event.clientX - rect.left + 10,
+					y: event.clientY - rect.top - 10,
+					text: truncatePeerId(node.id),
+				})
+			})
+			.on("mouseout", () => void setTooltip(null))
 			.merge(oldNodes)
 
 		simulation.on("tick.nodes", () => {
@@ -213,7 +227,7 @@ export const Graph: React.FC<GraphProps> = ({
 			.selectAll<SVGCircleElement, Node>("circle")
 			.attr("fill", (d, idx, elems) => {
 				const id = elems[idx].getAttribute("data-id")
-				const root = id && roots[id]
+				const { root = null } = id !== null ? (roots[id] ?? {}) : {}
 				return getColor(root)
 			})
 	}, [svg, roots])

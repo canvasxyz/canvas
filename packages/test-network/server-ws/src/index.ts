@@ -35,8 +35,15 @@ wss.on("connection", server.handleConnection)
 
 {
 	const root = await gossipLog.tree.read((txn) => txn.getRoot())
+	const [clock, heads] = await gossipLog.getClock()
 	console.log("[server] starting")
-	socket.post("start", { topic: gossipLog.topic, root: `${root.level}:${bytesToHex(root.hash)}`, workerId: null })
+	socket.post("start", {
+		topic: gossipLog.topic,
+		root: `${root.level}:${bytesToHex(root.hash)}`,
+		workerId: null,
+		clock,
+		heads,
+	})
 }
 
 process.addListener("SIGINT", () => {

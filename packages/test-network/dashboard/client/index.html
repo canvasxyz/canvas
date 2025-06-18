@@ -32,7 +32,19 @@
 				cursor: pointer;
 			}
 
+			.worker-list-container {
+				display: flex;
+				flex-direction: column;
+			}
+
+			.worker-list-header {
+				align-items: baseline;
+				display: inline-flex;
+				gap: 2em;
+			}
+
 			.worker-list {
+				flex-grow: 1;
 				display: flex;
 				flex-direction: row;
 				overflow-x: scroll;
@@ -73,8 +85,9 @@
 				float: right;
 			}
 
-			.worker ul {
+			.worker-peer-list {
 				margin: 4px 0;
+				padding-left: 1em;
 			}
 
 			.worker-peer {

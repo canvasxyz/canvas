@@ -79,13 +79,14 @@ class Peer {
 	) {
 		this.name = peerId.toString().slice(-6)
 		page.on("console", this.handleConsole)
-		page.on("error", (err) => console.error(`[page-${this.name}] [error] ${err}`))
+		page.on("error", (err) => console.error(`[page-${this.name}] [error] ${err.name} ${err.message} ${err.stack}`))
 		page.on("pageerror", (err) =>
-			console.error(`[page-${this.name}] [pageerror] ${err.name} ${err.message} ${err.cause} ${err.stack}`),
+			console.error(`[page-${this.name}] [pageerror] ${err.name} ${err.message} ${err.stack}`),
 		)
+
 		page.goto(url).catch((err) => {
 			// possible timeout
-			console.error(err)
+			console.error(`[page-${this.name}] [puppeteer] ${err.name} ${err.message} ${err.stack}`)
 			this.stop()
 		})
 
@@ -102,7 +103,7 @@ class Peer {
 			try {
 				await this.page.close({ runBeforeUnload: true })
 			} catch (err) {
-				console.error(err)
+				console.error(`[page-${this.name}] [puppeteer] ${err}`)
 			} finally {
 				this.page.removeAllListeners()
 			}
@@ -112,7 +113,7 @@ class Peer {
 			try {
 				await this.context.close()
 			} catch (err) {
-				console.error(err)
+				console.error(`[page-${this.name}] [puppeteer] ${err}`)
 			} finally {
 				this.context.removeAllListeners()
 			}

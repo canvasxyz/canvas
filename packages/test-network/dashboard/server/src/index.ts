@@ -17,11 +17,21 @@ import { StatusCodes } from "http-status-codes"
 
 let state: NetworkState = initialState
 const eventSourceClients = new Set<express.Response>()
+const startingPeers: Record<string, number> = {}
 
 function handleEvent(event: PeerEvent | WorkerEvent) {
 	state = reduce(state, event)
 	for (const res of eventSourceClients) {
 		pushEventSource(res, event)
+	}
+
+	// There is a race condition here, where if the user starts a peerAdd commentMore actions
+	// while autospawn is running, the user's peer could decrement
+	// startingPeers and cause autospawn to think that it needs to start
+	// more peers than it's supposed to.
+	if (event.source === "peer" && event.type === "start" && event.detail.workerId !== null) {
+		startingPeers[event.detail.workerId] ??= 1
+		startingPeers[event.detail.workerId]--
 	}
 }
 
@@ -120,12 +130,15 @@ app.post("/api/worker/:workerId/start/auto", (req, res) => {
 	assert(typeof req.query.total === "string", "missing 'total' query param")
 	assert(typeof req.query.lifetime === "string", "missing 'lifetime' query param")
 	assert(typeof req.query.publishInterval === "string", "missing 'publishInterval' query param")
+	assert(typeof req.query.spawnInterval === "string", "missing 'spawnInterval' query param")
 	const total = parseInt(req.query.total)
 	const lifetime = parseInt(req.query.lifetime)
 	const publishInterval = parseInt(req.query.publishInterval)
+	const spawnInterval = parseInt(req.query.spawnInterval)
 	assert(!isNaN(total), "invalid 'total' param")
 	assert(!isNaN(lifetime), "invalid 'lifetime' param")
 	assert(!isNaN(publishInterval), "invalid 'publishInterval' param")
+	assert(!isNaN(spawnInterval), "invalid 'spawnInterval' param")
 
 	const timestamp = Date.now()
 	handleEvent({
@@ -133,23 +146,32 @@ app.post("/api/worker/:workerId/start/auto", (req, res) => {
 		type: "worker:autospawn",
 		workerId,
 		timestamp,
-		detail: { total, lifetime, publishInterval },
+		detail: { total, lifetime, publishInterval, spawnInterval },
 	})
 
-	const spawn = () => {
-		console.log(`auto-spawning peer on worker ${workerId}`)
+	const spawn = async () => {
 		const ws = workerSockets.get(workerId)
 		if (ws === undefined) {
 			clearInterval(autoSpawnIntervals.get(workerId))
 			return
 		}
 
+		const nStarted = state.nodes.filter((node) => node.workerId === workerId).length
+		const nStarting = startingPeers[workerId] ?? 0
+		if (nStarted + nStarting >= total) {
+			return
+		}
+
+		console.log(`auto-spawning peer on worker ${workerId}: ${nStarting}, ${nStarted}, ${total}`)
+
+		startingPeers[workerId] ??= 0
+		startingPeers[workerId]++
+
 		ws.send(JSON.stringify({ type: "peer:start", publishInterval, lifetime }))
 	}
 
 	clearInterval(autoSpawnIntervals.get(workerId))
-	const interval = (1000 * lifetime) / total
-	autoSpawnIntervals.set(workerId, setInterval(spawn, interval))
+	autoSpawnIntervals.set(workerId, setInterval(spawn, spawnInterval * 1000))
 	spawn()
 
 	return void res.status(StatusCodes.OK).end()
@@ -169,7 +191,7 @@ app.post("/api/worker/:workerId/stop/auto", (req, res) => {
 		type: "worker:autospawn",
 		workerId,
 		timestamp,
-		detail: { total: null, lifetime: null, publishInterval: null },
+		detail: { total: null, lifetime: null, publishInterval: null, spawnInterval: null },
 	})
 
 	clearInterval(autoSpawnIntervals.get(workerId))

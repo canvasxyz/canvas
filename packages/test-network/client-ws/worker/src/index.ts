@@ -41,8 +41,8 @@ for (let i = 0; i < peerCount; i++) {
 				console.log(`[page-${i}] [${msg.type()}] ${msg.text()}`)
 			})
 
-			page.on("error", (err) => console.error(`[page-${i}] [error] ${err}`))
-			page.on("pageerror", (err) => console.error(`[page-${i}] [pageerror] ${err}`))
+			page.on("error", (err) => console.error(`[page-${i}] [error] ${err.name} ${err.message} ${err.stack}`))
+			page.on("pageerror", (err) => console.error(`[page-${i}] [pageerror] ${err.name} ${err.message} ${err.stack}`))
 
 			page.goto(url)
 		})
