@@ -5,21 +5,19 @@ next: false
 
 <div :class="$style.main">
 
-<HeroRow text="Build instant-sync distributed applications" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
+<HeroRow text="Build instant-sync decentralized applications" :image="{ light: '/graphic_jellyfish_dark.png', dark: '/graphic_jellyfish.png' }" />
 
 <div :class="$style.mainInner">
 
-Canvas is an open-source database, like a decentralized, verifiable
-version of Firebase.
+Canvas is an open-source embedded database, similar to Firebase or
+Supabase, with sync over a peer-to-peer mesh.
 
-Write your application logic inside the database,
-and it syncs instantly with peers.
+Write your application logic inside the database. Your users'
+interactions are synced instantly with peers. Concurrent changes
+are merged automatically without central servers.
 
-Users can access the database concurrently, and interactions are
-automatically merged, without central servers.
-
-Use it to build mini-apps, multiplayer games, protocols, and
-decentralized networks, using the languages you already know.
+Use it to build mini-apps, multiplayer games, and decentralized
+networks, using the web stack you already know.
 
 </div>
 
@@ -110,7 +108,7 @@ decentralized networks, using the languages you already know.
 
 ::: code-group
 
-```ts [Model Contract]
+```ts [Database Contract]
 import { Canvas, Contract, ModelSchema } from "@canvas-js/core"
 
 const Chat = {
@@ -196,12 +194,12 @@ export const App = () => {
   </div>
   <div :class="$style.colLeft">
 
-Every application is defined as a `Canvas` class.
+Every application is defined as a `Canvas` object.
 
-For simple applications, you can create a database-style Contract, where your backend logic goes in `$rules`.
-
-For complex applications, you can create a Class Contract, that lets you define
-custom actions and mutators.
+- For simple applications, create a database-style Contract,
+  which defines access control rules.
+- For complex applications, create a Class Contract, with
+  custom actions and mutators.
 
 Once you have a contract, you can run it from the command line:
 
