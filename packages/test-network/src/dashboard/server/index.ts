@@ -120,12 +120,15 @@ app.post("/api/worker/:workerId/start/auto", (req, res) => {
 	assert(typeof req.query.total === "string", "missing 'total' query param")
 	assert(typeof req.query.lifetime === "string", "missing 'lifetime' query param")
 	assert(typeof req.query.publishInterval === "string", "missing 'publishInterval' query param")
+	assert(typeof req.query.spawnInterval === "string", "missing 'spawnInterval' query param")
 	const total = parseInt(req.query.total)
 	const lifetime = parseInt(req.query.lifetime)
 	const publishInterval = parseInt(req.query.publishInterval)
+	const spawnInterval = parseInt(req.query.spawnInterval)
 	assert(!isNaN(total), "invalid 'total' param")
 	assert(!isNaN(lifetime), "invalid 'lifetime' param")
 	assert(!isNaN(publishInterval), "invalid 'publishInterval' param")
+	assert(!isNaN(spawnInterval), "invalid 'spawnInterval' param")
 
 	const timestamp = Date.now()
 	handleEvent({
@@ -133,7 +136,7 @@ app.post("/api/worker/:workerId/start/auto", (req, res) => {
 		type: "worker:autospawn",
 		workerId,
 		timestamp,
-		detail: { total, lifetime, publishInterval },
+		detail: { total, lifetime, publishInterval, spawnInterval },
 	})
 
 	const spawn = () => {
@@ -169,7 +172,7 @@ app.post("/api/worker/:workerId/stop/auto", (req, res) => {
 		type: "worker:autospawn",
 		workerId,
 		timestamp,
-		detail: { total: null, lifetime: null, publishInterval: null },
+		detail: { total: null, lifetime: null, publishInterval: null, spawnInterval: null },
 	})
 
 	clearInterval(autoSpawnIntervals.get(workerId))

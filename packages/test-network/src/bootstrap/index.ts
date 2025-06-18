@@ -16,7 +16,7 @@ await libp2p.start()
 
 const socket = await PeerSocket.open(`ws://dashboard:8000`, libp2p.peerId)
 
-socket.post("start", { workerId: null, topic: null, root: null })
+socket.post("start", { workerId: null, topic: null, root: null, clock: null, heads: null })
 
 libp2p.addEventListener("stop", () => {
 	console.log("libp2p stopped")
