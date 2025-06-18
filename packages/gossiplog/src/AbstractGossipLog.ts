@@ -16,7 +16,7 @@ import { ed25519, prepareMessage } from "@canvas-js/signatures"
 import { assert, zip } from "@canvas-js/utils"
 
 import { NetworkClient } from "@canvas-js/gossiplog/client"
-import { NetworkConfig, ServiceMap } from "@canvas-js/gossiplog/libp2p"
+import { GossipLogService, NetworkConfig, ServiceMap } from "@canvas-js/gossiplog/libp2p"
 import { AbortError, MessageNotFoundError, MissingParentError } from "@canvas-js/gossiplog/errors"
 import * as sync from "@canvas-js/gossiplog/sync"
 
@@ -109,6 +109,9 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 
 	protected readonly log: Logger
 	protected readonly ancestorIndex: AncestorIndex
+
+	private networkClients = new Set<NetworkClient<Payload>>()
+	private libp2pService?: GossipLogService<Payload>
 
 	public readonly validatePayload: (payload: unknown) => payload is Payload
 	public readonly verifySignature: (signature: Signature, message: Message<Payload>) => Awaitable<void>
@@ -243,7 +246,16 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 	}
 
 	public async connect(url: string, options: { signal?: AbortSignal } = {}): Promise<NetworkClient<any>> {
-		return await target.connect(this, url, options)
+		const client = await target.connect(this, url, options)
+		this.networkClients.add(client)
+
+		const originalClose = client.close.bind(client)
+		client.close = async () => {
+			this.networkClients.delete(client)
+			return originalClose()
+		}
+
+		return client
 	}
 
 	public async listen(port: number, options: { signal?: AbortSignal } = {}): Promise<void> {
@@ -252,6 +264,9 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 
 	public async startLibp2p(config: NetworkConfig): Promise<Libp2p<ServiceMap<Payload>>> {
 		const libp2p = await target.startLibp2p(this, config)
+
+		// Store reference to the libp2p service for remote clock access
+		this.libp2pService = libp2p.services.gossipLog
 
 		this.controller.signal.addEventListener("abort", () => libp2p.stop())
 
@@ -567,5 +582,25 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 				},
 			}),
 		)
+	}
+
+	public getLatestRemoteClock(): number | undefined {
+		const clocks: number[] = []
+
+		if (this.libp2pService) {
+			const libp2pMaxClock = this.libp2pService.getMaxPeerClock()
+			if (libp2pMaxClock !== undefined) {
+				clocks.push(libp2pMaxClock)
+			}
+		}
+
+		for (const client of this.networkClients) {
+			const remoteClock = client.getRemoteClock()
+			if (remoteClock !== undefined) {
+				clocks.push(remoteClock)
+			}
+		}
+
+		return clocks.length > 0 ? Math.max(...clocks) : undefined
 	}
 }

@@ -29,7 +29,7 @@ import { MissingParentError } from "@canvas-js/gossiplog/errors"
 import { AbstractGossipLog, GossipLogEvents } from "../AbstractGossipLog.js"
 import { SignedMessage } from "../SignedMessage.js"
 
-import { decodeId, encodeId } from "../MessageId.js"
+import { decodeId, encodeId, MessageId } from "../MessageId.js"
 
 import {
 	DEFAULT_PROTOCOL_SELECT_TIMEOUT,
@@ -68,6 +68,7 @@ export class GossipLogService<Payload = unknown> implements Startable {
 
 	private readonly pushTopology = new Set<string>()
 	private readonly eventSources = new Map<string, Pushable<Event>>()
+	private readonly peerClocks = new Map<string, number>()
 
 	#pushTopologyId: string | null = null
 	#started = false
@@ -151,12 +152,28 @@ export class GossipLogService<Payload = unknown> implements Startable {
 			onDisconnect: (peerId) => {
 				this.log("disconnected %p", peerId)
 				this.pushTopology.delete(peerId.toString())
+				this.peerClocks.delete(peerId.toString())
 			},
 		})
 	}
 
 	public afterStart() {
 		this.pubsub.subscribe(this.messageLog.topic)
+	}
+
+	public getPeerClock(peerId: string): number | undefined {
+		return this.peerClocks.get(peerId)
+	}
+
+	public getAllPeerClocks(): ReadonlyMap<string, number> {
+		return this.peerClocks
+	}
+
+	public getMaxPeerClock(): number | undefined {
+		if (this.peerClocks.size === 0) {
+			return undefined
+		}
+		return Math.max(...this.peerClocks.values())
 	}
 
 	public beforeStop() {
@@ -305,6 +322,8 @@ export class GossipLogService<Payload = unknown> implements Startable {
 			return
 		}
 
+		this.updatePeerClock(sourceId, signedMessage.id)
+
 		this.messageLog.insert(signedMessage).then(
 			() => {
 				this.log.trace("accepting gossipsub message %s", msgId)
@@ -345,6 +364,8 @@ export class GossipLogService<Payload = unknown> implements Startable {
 		})
 
 		assert(equals(key, signedMessage.key), "invalid key")
+
+		this.updatePeerClock(peerId.toString(), signedMessage.id)
 
 		try {
 			await this.messageLog.insert(signedMessage)
@@ -418,6 +439,15 @@ export class GossipLogService<Payload = unknown> implements Startable {
 			}
 		} finally {
 			this.log("closed incoming sync stream %s from peer %p", stream.id, peerId)
+		}
+	}
+
+	private updatePeerClock(peerId: string, messageId: string) {
+		const msgId = MessageId.encode(messageId)
+		const currentClock = this.peerClocks.get(peerId)
+
+		if (currentClock === undefined || msgId.clock > currentClock) {
+			this.peerClocks.set(peerId, msgId.clock)
 		}
 	}
 
