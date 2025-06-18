@@ -48,6 +48,10 @@ export const WorkerList: React.FC<WorkerListProps> = (props) => {
 					))}
 				</div>
 			)}
+			<br />
+			<a href="/client-webrtc" target="_blank">
+				Open browser peer
+			</a>
 		</div>
 	)
 }
