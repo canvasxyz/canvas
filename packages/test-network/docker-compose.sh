@@ -22,12 +22,7 @@ for t in $(seq 0 $((NUM_TOPICS-1))); do
   ${NAME}:
     init: true
     build:
-<<<<<<< HEAD
       context: server-libp2p
-=======
-      context: .
-      dockerfile: server-libp2p/Dockerfile
->>>>>>> main
     depends_on:
       - rendezvous
     environment:
