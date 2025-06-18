@@ -6,21 +6,10 @@ kill_timeout = '30s'
 [build]
 
 [env]
-<<<<<<< HEAD
-=======
-ANNOUNCE = '/dns6/canvas-testnet-dashboard.internal/tcp/8080/ws'
-LISTEN = '/ip6/::/tcp/8080/ws'
->>>>>>> main
 PORT = '8000'
 
 [[vm]]
 memory = '2gb'
 cpu_kind = 'shared'
 cpus = 2
-<<<<<<< HEAD
-=======
-
 [[metrics]]
-port = 8000
-path = '/metrics'
->>>>>>> main
