@@ -41,8 +41,7 @@ const network = new NetworkClient(gossipLog, `ws://localhost:9000`)
 
 {
 	const root = await gossipLog.tree.read((txn) => txn.getRoot())
-	const [clock, heads ] = await gossipLog.getClock()
-	socket.post("start", { topic: gossipLog.topic, root: `0:${bytesToHex(root.hash)}`, workerId , clock, heads})
+	socket.post("start", { topic: gossipLog.topic, root: `0:${bytesToHex(root.hash)}`, workerId })
 
 	socket.post("connection:open", {
 		id: bytesToHex(randomBytes(8)),

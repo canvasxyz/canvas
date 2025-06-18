@@ -45,8 +45,14 @@ for (let i = 0; i < peerCount; i++) {
 				console.log(`[page-${i}] [${msg.type()}] ${msg.text()}`)
 			})
 
+<<<<<<<< HEAD:packages/test-network/client-ws/worker/src/index.ts
 			page.on("error", (err) => console.error(`[page-${i}] [error] ${err.name} ${err.message} ${err.stack}`))
 			page.on("pageerror", (err) => console.error(`[page-${i}] [pageerror] ${err.name} ${err.message} ${err.stack}`))
+========
+			page.on("error", (err) => console.error(`[page-${i}] [error] ${err.stack}`))
+			page.on("pageerror", (err) => console.error(`[page-${i}] [pageerror] ${err.stack}`))
+>>>>>>>> main:packages/test-network/src/client-ws/entrypoint.ts
+
 			page.goto(url)
 		})
 }
