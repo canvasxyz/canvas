@@ -1,6 +1,6 @@
 {
 	"name": "@canvas-js/modeldb",
-	"version": "0.16.0-next.3",
+	"version": "0.16.0-next.4",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"type": "module",
 	"engines": {
@@ -16,9 +16,9 @@
 		"test": "ava --serial"
 	},
 	"devDependencies": {
-		"@canvas-js/modeldb-durable-objects": "0.16.0-next.3",
-		"@canvas-js/modeldb-sqlite-expo": "0.16.0-next.3",
-		"@canvas-js/modeldb-sqlite-wasm": "0.16.0-next.3",
+		"@canvas-js/modeldb-durable-objects": "0.16.0-next.4",
+		"@canvas-js/modeldb-sqlite-expo": "0.16.0-next.4",
+		"@canvas-js/modeldb-sqlite-wasm": "0.16.0-next.4",
 		"@cloudflare/workers-types": "^4.20250610.0",
 		"@sqlite.org/sqlite-wasm": "^3.50.1-build1",
 		"fake-indexeddb": "^6.0.1",
