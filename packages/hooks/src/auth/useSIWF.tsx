@@ -156,7 +156,8 @@ export const useSIWF = (app: Canvas | null | undefined) => {
 
 			const { signature, message } = result
 			if (!message || !signature) {
-				setError(new Error("login succeeded but did not return a valid SIWF message"))
+				console.error(message, signature)
+				setError(new Error("login did not return a valid SIWF message"))
 				return
 			}
 
@@ -302,7 +303,7 @@ export const useSIWF = (app: Canvas | null | undefined) => {
 		requestId: string | null,
 		nonce: string | null,
 		canvasIsAuthenticated: boolean,
-		farcasterIsAuthenticated: boolean
+		farcasterIsAuthenticated: boolean,
 	) => {
 		if (!app) return SIWFStatus.NotInitialized
 		if (error !== null) return SIWFStatus.Error
@@ -330,7 +331,7 @@ export const useSIWF = (app: Canvas | null | undefined) => {
 			requestId,
 			nonce,
 			canvasIsAuthenticated,
-			farcasterIsAuthenticated
+			farcasterIsAuthenticated,
 		),
 	}
 }
