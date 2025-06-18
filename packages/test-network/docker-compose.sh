@@ -22,10 +22,9 @@ for t in $(seq 0 $((NUM_TOPICS-1))); do
   ${NAME}:
     init: true
     build:
-      context: .
-      dockerfile: server-libp2p/Dockerfile
+      context: server-libp2p
     depends_on:
-      - bootstrap
+      - rendezvous
     environment:
       - DELAY=10
       - INTERVAL=${INTERVAL}

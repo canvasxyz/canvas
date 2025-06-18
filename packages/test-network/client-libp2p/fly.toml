@@ -1,4 +1,4 @@
-app = 'canvas-testnet-dashboard'
+app = 'canvas-testnet-client-libp2p'
 primary_region = 'ewr'
 kill_signal = 'SIGINT'
 kill_timeout = '30s'

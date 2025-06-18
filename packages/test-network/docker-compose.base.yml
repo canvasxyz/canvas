@@ -2,16 +2,14 @@ services:
   dashboard:
     init: true
     build:
-      context: .
-      dockerfile: dashboard/Dockerfile
+      context: dashboard
     ports:
       - "8000:8000"
 
   relay:
     init: true
     build:
-      context: .
-      dockerfile: relay/Dockerfile
+      context: relay
     ports:
       - "8081:8081"
     environment:
@@ -24,8 +22,7 @@ services:
   # server:
   #   init: true
   #   build:
-  #     context: .
-  #     dockerfile: server-ws/Dockerfile
+  #     context: server-ws
   #   ports:
   #     - "9000:9000"
   #   environment:
@@ -33,11 +30,10 @@ services:
   #     - LIBP2P_PRIVATE_KEY=CAESQEGeD4gUxpd2h/TICt0R9j+GUlnytIHY3uULdT3e6VH4aItqFLTCQBYIhePq3YImXkNZ3RAmhMROgQASC8CL5aY=
   #     - PORT=9000
 
-  bootstrap:
+  rendezvous:
     init: true
     build:
-      context: .
-      dockerfile: bootstrap/Dockerfile
+      context: rendezvous
     depends_on:
       - dashboard
     ports:

@@ -38,7 +38,8 @@ const peerId = peerIdFromPrivateKey(privateKey)
 
 console.log(`using peer id ${peerId}`)
 
-const socket = await PeerSocket.open(`ws://localhost:8000`, peerId, gossipLog)
+const dashboardURL = params.dashboardURL ?? "ws://localhost:8000"
+const socket = await PeerSocket.open(dashboardURL, peerId, gossipLog)
 
 const bootstrapServer =
 	params.bootstrapServer ?? "/dns4/localhost/tcp/8080/ws/p2p/12D3KooWMvSCSeJ6zxJJRQZSpyGqbNcqSJfcJGZLRiMVMePXzMax"

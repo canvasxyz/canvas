@@ -1,5 +1,4 @@
 import { randomBytes } from "node:crypto"
-
 import puppeteer from "puppeteer"
 
 import { PeerId } from "@libp2p/interface"
@@ -9,6 +8,10 @@ import { bytesToHex } from "@noble/hashes/utils"
 
 import { WorkerSocket } from "@canvas-js/test-network/socket-worker"
 
+const { DASHBOARD_URL } = process.env
+
+const dashboardURL = DASHBOARD_URL ?? "http://localhost:8000"
+
 const browser = await puppeteer.launch({
 	userDataDir: `data/${randomBytes(8).toString("hex")}`,
 	headless: true,
@@ -16,6 +19,10 @@ const browser = await puppeteer.launch({
 		"--no-sandbox",
 		"--disable-setuid-sandbox",
 		"--disable-web-security",
+		"--disable-dev-shm-usage",
+		"--disable-gpu",
+		"--disable-extensions",
+		"--disable-background-timer-throttling",
 		"--disable-features=IsolateOrigins,site-per-process",
 	],
 })
@@ -46,6 +53,7 @@ class Peer {
 		const query: Record<string, string> = {
 			workerId: worker.workerId,
 			privateKey: bytesToHex(privateKeyToProtobuf(privateKey)),
+			dashboardURL,
 		}
 
 		if (typeof options.publishInterval === "number") {
@@ -56,7 +64,7 @@ class Peer {
 			.map(([name, value]) => `${name}=${encodeURIComponent(value)}`)
 			.join("&")
 
-		const url = `http://localhost:8000/client-webrtc/index.html?${q}`
+		const url = `${dashboardURL}/client-libp2p/index.html?${q}`
 
 		return new Peer(peerId, context, page, url)
 	}
@@ -72,7 +80,9 @@ class Peer {
 		this.name = peerId.toString().slice(-6)
 		page.on("console", this.handleConsole)
 		page.on("error", (err) => console.error(`[page-${this.name}] [error] ${err}`))
-		page.on("pageerror", (err) => console.error(`[page-${this.name}] [pageerror] ${err}`))
+		page.on("pageerror", (err) =>
+			console.error(`[page-${this.name}] [pageerror] ${err.name} ${err.message} ${err.cause} ${err.stack}`),
+		)
 		page.goto(url).catch((err) => {
 			// possible timeout
 			console.error(err)
@@ -135,7 +145,7 @@ class Peer {
 	}
 }
 
-const worker = await WorkerSocket.open("http://localhost:8000")
+const worker = await WorkerSocket.open(dashboardURL)
 
 worker.addEventListener("disconnect", () => {
 	for (const peer of peers.values()) {
