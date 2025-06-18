@@ -7,7 +7,7 @@ import { SIWFSigner } from "@canvas-js/signer-ethereum"
 import { AuthClientError, SignInButton, useProfile, UseSignInData } from "@farcaster/auth-kit"
 import { sdk } from "@farcaster/frame-sdk"
 import { bytesToHex } from "@noble/hashes/utils"
-import { AuthContext } from "../AuthContext.js"
+import { AuthContext } from "./AuthContext.js"
 import { styles } from "./styles.js"
 
 export interface ConnectSIWFProps {
@@ -18,9 +18,11 @@ export interface ConnectSIWFProps {
 	errorClassName?: string
 	containerStyles?: React.CSSProperties
 	containerClassName?: string
+	loadingText?: string
+	logoutText?: string
 }
 
-export const useSIWF = (app?: Canvas<any>) => {
+export const useSIWF = (app: Canvas | null | undefined) => {
 	const { sessionSigner, setSessionSigner, address, setAddress } = useContext(AuthContext)
 
 	useEffect(() => {
@@ -187,6 +189,8 @@ export const useSIWF = (app?: Canvas<any>) => {
 		otherButtonClassName: buttonClassName,
 		containerStyles,
 		containerClassName,
+		loadingText,
+		logoutText,
 	}: ConnectSIWFProps = {}) => {
 		if (!app) {
 			return (
@@ -224,7 +228,7 @@ export const useSIWF = (app?: Canvas<any>) => {
 						...buttonStyles,
 					}}
 				>
-					Loading...
+					{loadingText ?? "Loading..."}
 				</button>
 			)
 		} else {
@@ -241,7 +245,7 @@ export const useSIWF = (app?: Canvas<any>) => {
 									...buttonStyles,
 								}}
 							>
-								Disconnect Farcaster
+								{logoutText ?? "Disconnect Farcaster"}
 							</button>
 						</div>
 					)}
