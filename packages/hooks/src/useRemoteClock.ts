@@ -13,10 +13,12 @@ export const useRemoteClock = (app: Canvas | null | undefined) => {
 
 		updateClock()
 		app.messageLog.addEventListener("message", updateClock)
+		app.messageLog.addEventListener("disconnect", updateClock)
 		app.messageLog.addEventListener("peer:update", updateClock)
 
 		return () => {
 			app.messageLog.removeEventListener("message", updateClock)
+			app.messageLog.removeEventListener("disconnect", updateClock)
 			app.messageLog.removeEventListener("peer:update", updateClock)
 		}
 	}, [app])
