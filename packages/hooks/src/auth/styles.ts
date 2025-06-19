@@ -17,7 +17,7 @@ export const styles = {
   
   loadingButton: {
     ...button,
-    backgroundColor: "#e5e7eb",
+    backgroundColor: "#transparent",
     width: "100%",
   } satisfies CSSProperties,
   

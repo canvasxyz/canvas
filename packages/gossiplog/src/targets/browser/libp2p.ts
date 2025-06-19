@@ -143,7 +143,7 @@ export async function getLibp2p<Payload>(
 	// 	dht.routingTable.add(peerInfo.id)
 	// })
 
-	const maxConnections = config.maxConnections ?? 6
+	const maxConnections = config.maxConnections ?? Infinity
 
 	libp2p.services.rendezvous.addEventListener("peer", ({ detail: peerInfo }) => {
 		const connections = libp2p.getConnections()

@@ -40,8 +40,8 @@ const Layout: React.FC = () => {
 
 	const [infoOpen, setInfoOpen] = useState(false)
 
-	const { ConnectSIWE, ConnectSIWEBurner } = useSIWE(app)
-	const { ConnectSIWF } = useSIWF(app)
+	const { ConnectSIWE, ConnectSIWEBurner, connectSIWEStatus, connectSIWEBurnerStatus } = useSIWE(app)
+	const { ConnectSIWF, connectSIWFStatus } = useSIWF(app)
 	const { Logout } = useLogout(app)
 	const syncStatus = useSyncStatus(app)
 	const clock = useClock(app)
@@ -65,7 +65,7 @@ const Layout: React.FC = () => {
 								<ConnectSIWE />
 								<ConnectSIWEBurner />
 								<ConnectSIWF />
-								<Logout />
+								{(connectSIWEStatus === "Connected" || connectSIWEBurnerStatus === "Connected" || connectSIWFStatus === "Connected") ? <Logout /> : null}
 							</div>
 							<div className="block mt-4 text-gray-600 text-center text-sm">
 								{app.hasSession() ? "Logged in" : "Logged out"} &middot;{" "}
