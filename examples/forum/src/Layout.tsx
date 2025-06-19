@@ -43,8 +43,7 @@ const Layout: React.FC = () => {
 	const { ConnectSIWE, ConnectSIWEBurner, connectSIWEStatus, connectSIWEBurnerStatus } = useSIWE(app)
 	const { ConnectSIWF, connectSIWFStatus } = useSIWF(app)
 	const { Logout } = useLogout(app)
-	const { syncStatus, remoteClock } = useSyncStatus(app)
-	const clock = useClock(app)
+	const { syncStatus, localClock, remoteClock, progress } = useSyncStatus(app)
 
 	return (
 		<AppContext.Provider value={{ app: app ?? null }}>
@@ -71,7 +70,7 @@ const Layout: React.FC = () => {
 								<a href="#" onClick={() => setInfoOpen(!infoOpen)}>
 									Info
 								</a>{" "}
-								&middot; Sync {renderSyncStatus(syncStatus)} ({clock} / {remoteClock}) &middot;{" "}
+								&middot; Sync {renderSyncStatus(syncStatus)} ({progress * 100}%) &middot;{" "}
 								<a
 									href="#"
 									onClick={async () => {
