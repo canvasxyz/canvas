@@ -4,8 +4,8 @@
 [![node](https://img.shields.io/node/v/@canvas-js/core.svg)](https://www.npmjs.com/package/@canvas-js/core)
 [![npm](https://img.shields.io/npm/v/@canvas-js/core?color=33cd56&logo=npm)](https://www.npmjs.com/package/@canvas-js/core)
 
-Canvas is an embedded application database, similar to Firebase or
-Supabase except fully distributed.
+Canvas is an embedded application database, similar to a
+fully-distributed version of Firebase or Supabase.
 
 It allows you to build multiplayer, real-time, and offline-first
 applications, where each application is defined as a local
@@ -20,8 +20,8 @@ Canvas applications are easy to configure and have several useful properties:
     over libp2p, and use GossipSub topics to broadcast actions.
 - **Eventually consistent and convergent**. Actions can freely read and
     write to a relational database. Every peer's database state will
-    deterministically converge regardless of the order in which the
-    actions are received.
+    deterministically converge regardless of the order in which actions
+    are received.
 - **Self-authenticating**. Every action is signed by a session key
     authorized by a cryptographic identity, e.g. a Sign in with Ethereum
     address or `did:plc` identifier. The entire action log can be
@@ -30,10 +30,7 @@ Canvas applications are easy to configure and have several useful properties:
 - **Cross-platform**. Canvas apps run in the browser, server, or mobile
     devices. They persist data to IndexedDB in-browser, SQLite with
     on-disk storage, or Postgres with an in-memory Merkle index.
-
-Canvas is designed to be maximally interoperable and data-agnostic. We
-expect to support a wide range of signed data formats, plus the
-ability to sync Canvas networks to blockchain data sources.
+- **Open-source**. Built in the same spirit as libp2p and IPFS.
 
 For more information, see the [Canvas documentation](https://docs.canvas.xyz).
 
