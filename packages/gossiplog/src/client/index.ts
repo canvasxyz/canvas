@@ -16,7 +16,7 @@ import * as sync from "@canvas-js/gossiplog/sync"
 import { MissingParentError } from "@canvas-js/gossiplog/errors"
 
 import { AbstractGossipLog, GossipLogEvents } from "../AbstractGossipLog.js"
-import { decodeId, encodeId, MessageId } from "../MessageId.js"
+import { MessageId, encodeId } from "../MessageId.js"
 import { getPushProtocol, getSyncProtocol, chunk, encodeEvents, decodeEvents } from "../utils.js"
 
 export const factory = yamux({})({ logger: { forComponent: logger } })
@@ -31,7 +31,6 @@ export class NetworkClient<Payload> {
 	readonly eventSource = pushable<Event>({ objectMode: true })
 
 	error?: Error | unknown
-	private remoteClock?: number
 
 	constructor(
 		readonly gossipLog: AbstractGossipLog<Payload>,
@@ -127,10 +126,6 @@ export class NetworkClient<Payload> {
 		return this.duplex.socket.readyState === 1
 	}
 
-	public getRemoteClock(): number | undefined {
-		return this.remoteClock
-	}
-
 	private push(event: Event) {
 		this.eventSource.push(event)
 	}
@@ -174,11 +169,6 @@ export class NetworkClient<Payload> {
 
 		this.log("handling insert %s", signedMessage.id)
 
-		const msgId = MessageId.encode(signedMessage.id)
-		if (this.remoteClock === undefined || msgId.clock > this.remoteClock) {
-			this.remoteClock = msgId.clock
-		}
-
 		try {
 			await this.gossipLog.insert(signedMessage)
 		} catch (err) {
@@ -196,23 +186,20 @@ export class NetworkClient<Payload> {
 		}
 	}
 
-	private async handleUpdateEvent({ heads }: Event.Update) {
-		const ids = heads.map(decodeId)
-		this.log("handling update: %o", ids)
+	private async handleUpdateEvent(event: Event.Update) {
+		const messageIds = event.heads.map(MessageId.decode)
+		this.log("handling update: %o", messageIds)
 
-		const clocks = ids.map(MessageId.encode).map((id) => id.clock)
-		if (clocks.length > 0) {
-			const maxClock = Math.max(...clocks)
-			if (this.remoteClock === undefined || maxClock > this.remoteClock) {
-				this.remoteClock = maxClock
-			}
-		}
+		const clock = messageIds.reduce((max, head) => Math.max(max, head.clock), 0)
+		const heads = messageIds.map((id) => id.toString())
+		this.gossipLog.peers.set(this.sourceURL, { clock, heads })
+		this.gossipLog.dispatchEvent(new CustomEvent("peer:update", { detail: { clock, heads } }))
 
 		const result = await this.gossipLog.tree.read((txn) => {
-			for (const key of heads) {
-				const leaf = txn.getNode(0, key)
+			for (const messageId of messageIds) {
+				const leaf = txn.getNode(0, messageId.key)
 				if (leaf === null) {
-					return key
+					return messageId
 				}
 			}
 

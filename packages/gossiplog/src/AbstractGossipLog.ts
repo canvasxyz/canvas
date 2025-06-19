@@ -16,7 +16,7 @@ import { ed25519, prepareMessage } from "@canvas-js/signatures"
 import { assert, zip } from "@canvas-js/utils"
 
 import { NetworkClient } from "@canvas-js/gossiplog/client"
-import { GossipLogService, NetworkConfig, ServiceMap } from "@canvas-js/gossiplog/libp2p"
+import { NetworkConfig, ServiceMap } from "@canvas-js/gossiplog/libp2p"
 import { AbortError, MessageNotFoundError, MissingParentError } from "@canvas-js/gossiplog/errors"
 import * as sync from "@canvas-js/gossiplog/sync"
 
@@ -66,6 +66,7 @@ export type GossipLogEvents<Payload = unknown, Result = any> = {
 	connect: CustomEvent<{ peer: string }>
 	disconnect: CustomEvent<{ peer: string }>
 	error: CustomEvent<{ error: Error; peer: string }>
+	"peer:update": CustomEvent<{ clock: number; heads: string[] }>
 }
 
 export type MessageRecord = {
@@ -110,11 +111,10 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 	protected readonly log: Logger
 	protected readonly ancestorIndex: AncestorIndex
 
-	private networkClients = new Set<NetworkClient<Payload>>()
-	private libp2pService?: GossipLogService<Payload>
-
 	public readonly validatePayload: (payload: unknown) => payload is Payload
 	public readonly verifySignature: (signature: Signature, message: Message<Payload>) => Awaitable<void>
+
+	public readonly peers = new Map<string, { clock: number; heads: string[] }>()
 
 	#apply: GossipLogConsumer<Payload, Result>
 
@@ -138,6 +138,8 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 
 		this.log = logger(`canvas:gossiplog:[${this.topic}]`)
 		this.ancestorIndex = new AncestorIndex(db)
+
+		this.addEventListener("disconnect", ({ detail: { peer } }) => void this.peers.delete(peer))
 	}
 
 	protected async initialize() {
@@ -246,16 +248,7 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 	}
 
 	public async connect(url: string, options: { signal?: AbortSignal } = {}): Promise<NetworkClient<any>> {
-		const client = await target.connect(this, url, options)
-		this.networkClients.add(client)
-
-		const originalClose = client.close.bind(client)
-		client.close = async () => {
-			this.networkClients.delete(client)
-			return originalClose()
-		}
-
-		return client
+		return await target.connect(this, url, options)
 	}
 
 	public async listen(port: number, options: { signal?: AbortSignal } = {}): Promise<void> {
@@ -264,9 +257,6 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 
 	public async startLibp2p(config: NetworkConfig): Promise<Libp2p<ServiceMap<Payload>>> {
 		const libp2p = await target.startLibp2p(this, config)
-
-		// Store reference to the libp2p service for remote clock access
-		this.libp2pService = libp2p.services.gossipLog
 
 		this.controller.signal.addEventListener("abort", () => libp2p.stop())
 
@@ -414,6 +404,18 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		const { clock, parents } = signedMessage.message
 
 		const id = signedMessage.id
+
+		if (signedMessage.source !== undefined) {
+			const { peer } = signedMessage.source
+			const existingPeer = this.peers.get(peer)
+			if (existingPeer === undefined) {
+				this.peers.set(peer, { clock: message.clock, heads: [id] })
+			} else {
+				const clock = Math.max(existingPeer.clock, message.clock)
+				const heads = existingPeer.heads.filter((head) => !message.parents.includes(head))
+				this.peers.set(peer, { clock, heads: [...heads, id] })
+			}
+		}
 
 		this.log("inserting message %s at clock %d with parents %o", id, clock, parents)
 
@@ -584,23 +586,12 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 		)
 	}
 
-	public getLatestRemoteClock(): number | undefined {
-		const clocks: number[] = []
-
-		if (this.libp2pService) {
-			const libp2pMaxClock = this.libp2pService.getMaxPeerClock()
-			if (libp2pMaxClock !== undefined) {
-				clocks.push(libp2pMaxClock)
-			}
+	public getLatestRemoteClock(): number {
+		let clock = 0
+		for (const peer of this.peers.values()) {
+			clock = Math.max(clock, peer.clock)
 		}
 
-		for (const client of this.networkClients) {
-			const remoteClock = client.getRemoteClock()
-			if (remoteClock !== undefined) {
-				clocks.push(remoteClock)
-			}
-		}
-
-		return clocks.length > 0 ? Math.max(...clocks) : undefined
+		return clock
 	}
 }
