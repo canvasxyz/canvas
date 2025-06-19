@@ -16,7 +16,7 @@ import * as sync from "@canvas-js/gossiplog/sync"
 import { MissingParentError } from "@canvas-js/gossiplog/errors"
 
 import { AbstractGossipLog, GossipLogEvents } from "../AbstractGossipLog.js"
-import { decodeId, encodeId } from "../MessageId.js"
+import { MessageId, encodeId } from "../MessageId.js"
 import { getPushProtocol, getSyncProtocol, chunk, encodeEvents, decodeEvents } from "../utils.js"
 
 export const factory = yamux({})({ logger: { forComponent: logger } })
@@ -186,14 +186,20 @@ export class NetworkClient<Payload> {
 		}
 	}
 
-	private async handleUpdateEvent({ heads }: Event.Update) {
-		this.log("handling update: %o", heads.map(decodeId))
+	private async handleUpdateEvent(event: Event.Update) {
+		const messageIds = event.heads.map(MessageId.decode)
+		this.log("handling update: %o", messageIds)
+
+		const clock = messageIds.reduce((max, head) => Math.max(max, head.clock), 0)
+		const heads = messageIds.map((id) => id.toString())
+		this.gossipLog.peers.set(this.sourceURL, { clock, heads })
+		this.gossipLog.dispatchEvent(new CustomEvent("peer:update", { detail: { clock, heads } }))
 
 		const result = await this.gossipLog.tree.read((txn) => {
-			for (const key of heads) {
-				const leaf = txn.getNode(0, key)
+			for (const messageId of messageIds) {
+				const leaf = txn.getNode(0, messageId.key)
 				if (leaf === null) {
-					return key
+					return messageId
 				}
 			}
 

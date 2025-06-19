@@ -29,7 +29,7 @@ import { MissingParentError } from "@canvas-js/gossiplog/errors"
 import { AbstractGossipLog, GossipLogEvents } from "../AbstractGossipLog.js"
 import { SignedMessage } from "../SignedMessage.js"
 
-import { decodeId, encodeId } from "../MessageId.js"
+import { decodeId, encodeId, MessageId } from "../MessageId.js"
 
 import {
 	DEFAULT_PROTOCOL_SELECT_TIMEOUT,
@@ -358,14 +358,20 @@ export class GossipLogService<Payload = unknown> implements Startable {
 		}
 	}
 
-	private async handleUpdateEvent(peerId: PeerId, { heads }: Event.Update): Promise<void> {
-		this.log("handling update: %o", heads.map(decodeId))
+	private async handleUpdateEvent(peerId: PeerId, event: Event.Update): Promise<void> {
+		const messageIds = event.heads.map(MessageId.decode)
+		this.log("handling update: %o", messageIds)
+
+		const clock = messageIds.reduce((max, head) => Math.max(max, head.clock), 0)
+		const heads = messageIds.map((id) => id.toString())
+		this.messageLog.peers.set(peerId.toString(), { clock, heads })
+		this.messageLog.dispatchEvent(new CustomEvent("peer:update", { detail: { clock, heads } }))
 
 		const result = await this.messageLog.tree.read((txn) => {
-			for (const key of heads) {
-				const leaf = txn.getNode(0, key)
+			for (const messageId of messageIds) {
+				const leaf = txn.getNode(0, messageId.key)
 				if (leaf === null) {
-					return key
+					return messageId
 				}
 			}
 

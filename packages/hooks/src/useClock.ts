@@ -6,8 +6,8 @@ export const useClock = (app: Canvas | null | undefined) => {
 	useEffect(() => {
 		if (!app) return
 		const updateClock = () => {
-			app.messageLog.getClock().then(([newClock, heads]: [number, string[]]) => {
-				if (newClock > clock) setClock(newClock)
+			app.messageLog.getClock().then(([nextClock, heads]: [number, string[]]) => {
+				if (nextClock - 1 > clock) setClock(nextClock - 1)
 			})
 		}
 		updateClock()
