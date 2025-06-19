@@ -5,11 +5,11 @@
 [![npm](https://img.shields.io/npm/v/@canvas-js/core?color=33cd56&logo=npm)](https://www.npmjs.com/package/@canvas-js/core)
 
 Canvas is an embedded application database, similar to Firebase or
-Supabase, with full programmability & peer-to-peer instant sync.
+Supabase with a distributed peer-to-peer architecture.
 
-It allows you to build multiplayer, real-time, and local-first
-applications, where each application is defined as an off-chain
-TypeScript smart contract.
+It allows you to build multiplayer, real-time, and offline-first
+applications, where each application is defined as a local
+bundle that replicates and verifies all user interactions.
 
 Canvas applications are easy to configure and have several useful properties:
 
@@ -18,8 +18,8 @@ Canvas applications are easy to configure and have several useful properties:
     waiting for consensus.
 - **Real-time p2p**. Peers connect and sync directly with each other
     over libp2p, and use GossipSub topics to broadcast actions.
-- **Eventually consistent**. Actions can freely read and write to a
-    relational database. Every peer's database state will
+- **Eventually consistent and convergent**. Actions can freely read and
+    write to a relational database. Every peer's database state will
     deterministically converge regardless of the order in which the
     actions are received.
 - **Self-authenticating**. Every action is signed by a session key
