@@ -68,7 +68,6 @@ export class GossipLogService<Payload = unknown> implements Startable {
 
 	private readonly pushTopology = new Set<string>()
 	private readonly eventSources = new Map<string, Pushable<Event>>()
-	private readonly peerClocks = new Map<string, number>()
 
 	#pushTopologyId: string | null = null
 	#started = false
@@ -152,28 +151,12 @@ export class GossipLogService<Payload = unknown> implements Startable {
 			onDisconnect: (peerId) => {
 				this.log("disconnected %p", peerId)
 				this.pushTopology.delete(peerId.toString())
-				this.peerClocks.delete(peerId.toString())
 			},
 		})
 	}
 
 	public afterStart() {
 		this.pubsub.subscribe(this.messageLog.topic)
-	}
-
-	public getPeerClock(peerId: string): number | undefined {
-		return this.peerClocks.get(peerId)
-	}
-
-	public getAllPeerClocks(): ReadonlyMap<string, number> {
-		return this.peerClocks
-	}
-
-	public getMaxPeerClock(): number | undefined {
-		if (this.peerClocks.size === 0) {
-			return undefined
-		}
-		return Math.max(...this.peerClocks.values())
 	}
 
 	public beforeStop() {
@@ -322,8 +305,6 @@ export class GossipLogService<Payload = unknown> implements Startable {
 			return
 		}
 
-		this.updatePeerClock(sourceId, signedMessage.id)
-
 		this.messageLog.insert(signedMessage).then(
 			() => {
 				this.log.trace("accepting gossipsub message %s", msgId)
@@ -365,8 +346,6 @@ export class GossipLogService<Payload = unknown> implements Startable {
 
 		assert(equals(key, signedMessage.key), "invalid key")
 
-		this.updatePeerClock(peerId.toString(), signedMessage.id)
-
 		try {
 			await this.messageLog.insert(signedMessage)
 		} catch (err) {
@@ -379,14 +358,20 @@ export class GossipLogService<Payload = unknown> implements Startable {
 		}
 	}
 
-	private async handleUpdateEvent(peerId: PeerId, { heads }: Event.Update): Promise<void> {
-		this.log("handling update: %o", heads.map(decodeId))
+	private async handleUpdateEvent(peerId: PeerId, event: Event.Update): Promise<void> {
+		const messageIds = event.heads.map(MessageId.decode)
+		this.log("handling update: %o", messageIds)
+
+		const clock = messageIds.reduce((max, head) => Math.max(max, head.clock), 0)
+		const heads = messageIds.map((id) => id.toString())
+		this.messageLog.peers.set(peerId.toString(), { clock, heads })
+		this.messageLog.dispatchEvent(new CustomEvent("peer:update", { detail: { clock, heads } }))
 
 		const result = await this.messageLog.tree.read((txn) => {
-			for (const key of heads) {
-				const leaf = txn.getNode(0, key)
+			for (const messageId of messageIds) {
+				const leaf = txn.getNode(0, messageId.key)
 				if (leaf === null) {
-					return key
+					return messageId
 				}
 			}
 
@@ -439,15 +424,6 @@ export class GossipLogService<Payload = unknown> implements Startable {
 			}
 		} finally {
 			this.log("closed incoming sync stream %s from peer %p", stream.id, peerId)
-		}
-	}
-
-	private updatePeerClock(peerId: string, messageId: string) {
-		const msgId = MessageId.encode(messageId)
-		const currentClock = this.peerClocks.get(peerId)
-
-		if (currentClock === undefined || msgId.clock > currentClock) {
-			this.peerClocks.set(peerId, msgId.clock)
 		}
 	}
 
