@@ -5,7 +5,7 @@ import { JsonRpcProvider } from "ethers"
 
 import { renderSyncStatus } from "@canvas-js/core"
 import { AppInfo } from "@canvas-js/hooks"
-import { useCanvas, useSIWE, useSIWF, useLogout, useSyncStatus, useClock, useRemoteClock, AuthContext } from "@canvas-js/hooks"
+import { useCanvas, useSIWE, useSIWF, useLogout, useSyncStatus, useClock, AuthContext } from "@canvas-js/hooks"
 import { SIWESigner, SIWFSigner } from "@canvas-js/signer-ethereum"
 
 import { App } from "./App.js"
@@ -43,9 +43,8 @@ const Layout: React.FC = () => {
 	const { ConnectSIWE, ConnectSIWEBurner, connectSIWEStatus, connectSIWEBurnerStatus } = useSIWE(app)
 	const { ConnectSIWF, connectSIWFStatus } = useSIWF(app)
 	const { Logout } = useLogout(app)
-	const syncStatus = useSyncStatus(app)
+	const { syncStatus, remoteClock } = useSyncStatus(app)
 	const clock = useClock(app)
-	const remoteClock = useRemoteClock(app)
 
 	return (
 		<AppContext.Provider value={{ app: app ?? null }}>
