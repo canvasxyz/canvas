@@ -5,7 +5,7 @@
 [![npm](https://img.shields.io/npm/v/@canvas-js/core?color=33cd56&logo=npm)](https://www.npmjs.com/package/@canvas-js/core)
 
 Canvas is an embedded application database, similar to Firebase or
-Supabase with a distributed peer-to-peer architecture.
+Supabase except fully distributed.
 
 It allows you to build multiplayer, real-time, and offline-first
 applications, where each application is defined as a local
