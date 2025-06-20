@@ -9,8 +9,7 @@ export DELAY=12
 
 echo "starting $PROCESS_COUNT processes of $PEER_COUNT peers"
 
-# command="node lib/client-ws/entrypoint.js"
-command="node lib/client-webrtc/entrypoint.js"
+command="node client-libp2p/worker/lib/index.js"
 
 for i in $(seq 1 $PROCESS_COUNT)
 do
