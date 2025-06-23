@@ -8,9 +8,13 @@ import { bytesToHex } from "@noble/hashes/utils"
 
 import { WorkerSocket } from "@canvas-js/test-network/socket-worker"
 
-const { DASHBOARD_URL } = process.env
+const { DASHBOARD_URL, BOOTSTRAP_SERVER, RELAY_SERVER } = process.env
 
 const dashboardURL = DASHBOARD_URL ?? "http://localhost:8000"
+const bootstrapServer =
+	BOOTSTRAP_SERVER ?? "/dns4/localhost/tcp/8080/ws/p2p/12D3KooWMvSCSeJ6zxJJRQZSpyGqbNcqSJfcJGZLRiMVMePXzMax"
+const relayServer =
+	RELAY_SERVER ?? "/dns4/localhost/tcp/8081/ws/p2p/12D3KooWPZ12MFRfJv2S13g7aRPYYQ3pSZ7ZsJCj9whnhF3j8WNr"
 
 const browser = await puppeteer.launch({
 	userDataDir: `data/${randomBytes(8).toString("hex")}`,
@@ -26,6 +30,8 @@ const browser = await puppeteer.launch({
 		"--disable-features=IsolateOrigins,site-per-process",
 	],
 })
+
+console.log("started browser process")
 
 process.addListener("SIGINT", async () => {
 	process.stdout.write("\nReceived SIGINT\n")
@@ -54,6 +60,8 @@ class Peer {
 			workerId: worker.workerId,
 			privateKey: bytesToHex(privateKeyToProtobuf(privateKey)),
 			dashboardURL,
+			bootstrapServer,
+			relayServer,
 		}
 
 		if (typeof options.publishInterval === "number") {
@@ -147,6 +155,8 @@ class Peer {
 }
 
 const worker = await WorkerSocket.open(dashboardURL)
+
+console.log("connected to", dashboardURL)
 
 worker.addEventListener("disconnect", () => {
 	for (const peer of peers.values()) {

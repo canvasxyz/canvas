@@ -6,7 +6,9 @@ kill_timeout = '30s'
 [build]
 
 [env]
-PORT = '8000'
+DASHBOARD_URL = 'http://canvas-testnet-dashboard.internal:8000'
+RELAY_SERVER = '/dns6/canvas-testnet-relay.internal/tcp/8080/ws/p2p/12D3KooWNnETFoRgEPW9uYzHLERY7iQR6JHZs12NUzruqXjHdEhr'
+BOOTSTRAP_SERVER = '/dns6/canvas-testnet-rendezvous.internal/tcp/8080/ws/p2p/12D3KooWBKPzBJJKgfq5newmWLUR1ReVQfgrjkyGBSYBQ5CMVsXC'
 
 [[vm]]
 memory = '2gb'
