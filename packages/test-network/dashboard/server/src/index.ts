@@ -257,6 +257,7 @@ wss.on("connection", (ws, req) => {
 		ws.on("close", () => {
 			peerSockets.delete(peerId)
 			peerIds.delete(ws)
+			handleEvent({ source: "peer", type: "stop", peerId, timestamp: Date.now(), detail: {} })
 		})
 
 		ws.on("error", (err) => console.error(err))

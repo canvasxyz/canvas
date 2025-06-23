@@ -40,6 +40,7 @@ type PeerEventTypes = {
 		clock: number | null
 		heads: string[] | null
 	}
+	stop: {}
 	"connection:open": { id: string; remotePeer: string; remoteAddr: string }
 	"connection:close": { id: string; remotePeer: string; remoteAddr: string }
 	"gossipsub:mesh:update": { topic: string; peers: string[] }
@@ -99,6 +100,13 @@ export function reduce(state: NetworkState, event: NetworkEvent): NetworkState {
 					roots: { ...state.roots, [event.peerId]: { clock, heads, root } },
 				}
 			}
+		} else if (event.type === "stop") {
+			const peerId = event.peerId
+			const { [peerId]: oldRoot, ...roots } = state.roots
+			const { [peerId]: oldMesh, ...mesh } = state.mesh
+			const links = state.links.filter((link) => link.source !== peerId && link.target !== peerId)
+			const nodes = state.nodes.filter((node) => node.id !== peerId)
+			return { ...state, roots, mesh, links, nodes }
 		} else if (event.type === "connection:open") {
 			if (state.links.every((link) => link.id !== event.detail.id)) {
 				return {

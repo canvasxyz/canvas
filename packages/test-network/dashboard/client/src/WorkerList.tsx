@@ -25,7 +25,7 @@ export const WorkerList: React.FC<WorkerListProps> = (props) => {
 			<div className="worker-list-header">
 				<h2>Workers</h2>
 
-				<a href="/client-webrtc" target="_blank">
+				<a href="/client-libp2p" target="_blank">
 					open browser peer
 				</a>
 			</div>

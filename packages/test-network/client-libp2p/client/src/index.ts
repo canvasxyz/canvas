@@ -106,6 +106,8 @@ libp2p.services.pubsub.addEventListener("gossipsub:prune", ({ detail: { peerId, 
 await libp2p.start()
 
 if (params.interval !== undefined) {
-	const interval = parseInt(params.interval)
-	setInterval(() => gossipLog.append(bytesToHex(randomBytes(8))), interval * SECONDS)
+	const interval = parseInt(params.interval) * SECONDS
+	setTimeout(() => {
+		setInterval(() => gossipLog.append(bytesToHex(randomBytes(8))), interval)
+	}, Math.random() * interval)
 }
