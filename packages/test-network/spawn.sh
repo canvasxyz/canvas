@@ -9,7 +9,8 @@ export DELAY=12
 
 echo "starting $PROCESS_COUNT processes of $PEER_COUNT peers"
 
-command="node client-libp2p/worker/lib/index.js"
+# command="node client-libp2p/worker/lib/index.js"
+command="node client-libp2p/worker/dist/index.js"
 
 for i in $(seq 1 $PROCESS_COUNT)
 do

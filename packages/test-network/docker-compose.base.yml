@@ -45,5 +45,5 @@ services:
       - LIBP2P_PRIVATE_KEY=CAESQBo16VWKm49tGi+/Ta5PFDkWAPybZOlnCAWvx2m/en2as9pIrXgwHnvSNDxC1/YySl3XTBKkBMijTVuk0LycFkk=
       - LISTEN=/ip4/0.0.0.0/tcp/8080/ws
       - ANNOUNCE=/dns4/bootstrap/tcp/8080/ws
-      - MIN_CONNECTIONS=0
       - DATABASE_PATH=db.sqlite
+      - PORT=3000

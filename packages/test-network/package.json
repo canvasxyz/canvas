@@ -29,8 +29,10 @@
 		"server-libp2p:dev": "npm run server-libp2p:build -- --watch",
 		"server-ws:build": "esbuild server-ws/lib/index.js --bundle --outdir=server-ws/dist --platform=node --target=node20 --format=esm --external:@canvas-js/okra-lmdb --external:better-sqlite3 --banner:js=\"import { createRequire as yix6bKft } from 'module'; const require = yix6bKft(import.meta.url);\"",
 		"server-ws:dev": "npm run server-ws:build -- --watch",
-		"client-libp2p:build": "vite build client-libp2p/client --outDir=../../dashboard/dist/client-libp2p --target=esnext --base=/client-libp2p/",
-		"client-libp2p:dev": "npm run client-libp2p:build -- --watch",
+		"client-libp2p:client:build": "vite build client-libp2p/client --outDir=../../dashboard/dist/client-libp2p --target=esnext --base=/client-libp2p/",
+		"client-libp2p:client:dev": "npm run client-libp2p:client:build -- --watch",
+		"client-libp2p:worker:build": "esbuild client-libp2p/worker/lib/index.js --bundle --outdir=client-libp2p/worker/dist --platform=node --target=node20 --format=esm --external:puppeteer --banner:js=\"import { createRequire as yix6bKft } from 'module'; const require = yix6bKft(import.meta.url);\"",
+		"client-libp2p:worker:dev": "npm run client-libp2p:worker:build -- --watch",
 		"relay:build": "esbuild relay/lib/index.js --bundle --outdir=relay/dist --platform=node --target=node20 --format=esm --banner:js=\"import { createRequire as yix6bKft } from 'module'; const require = yix6bKft(import.meta.url);\"",
 		"relay:dev": "npm run relay:build -- --watch"
 	},

@@ -1,4 +1,4 @@
-app = 'canvas-testnet-dashboard'
+app = 'canvas-testnet-relay'
 primary_region = 'ewr'
 kill_signal = 'SIGINT'
 kill_timeout = '30s'
@@ -6,7 +6,8 @@ kill_timeout = '30s'
 [build]
 
 [env]
-PORT = '8000'
+LISTEN = '/ip4/0.0.0.0/tcp/8080/ws'
+ANNOUNCE = '/dns6/canvas-testnet-relay.internal/tcp/8080/ws'
 
 [[vm]]
 memory = '2gb'
