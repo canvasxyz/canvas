@@ -21,7 +21,7 @@ for (const address of bootstrapList) {
 	}
 }
 
-export const listen = LISTEN?.split(" ") ?? ["/ip4/127.0.0.1/tcp/8080/ws"]
+export const listen = LISTEN?.split(" ") ?? ["/ip4/0.0.0.0/tcp/8080/ws"]
 
 console.log("listening on", listen)
 
