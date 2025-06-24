@@ -1,4 +1,4 @@
-FROM node:20-buster
+FROM node:22-alpine
 
 WORKDIR /app
 

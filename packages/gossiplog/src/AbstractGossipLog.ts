@@ -15,8 +15,8 @@ import type {
 import { ed25519, prepareMessage } from "@canvas-js/signatures"
 import { assert, zip } from "@canvas-js/utils"
 
-import { NetworkConfig, ServiceMap } from "@canvas-js/gossiplog/libp2p"
 import { NetworkClient } from "@canvas-js/gossiplog/client"
+import { NetworkConfig, ServiceMap } from "@canvas-js/gossiplog/libp2p"
 import { AbortError, MessageNotFoundError, MissingParentError } from "@canvas-js/gossiplog/errors"
 import * as sync from "@canvas-js/gossiplog/sync"
 
@@ -66,6 +66,7 @@ export type GossipLogEvents<Payload = unknown, Result = any> = {
 	connect: CustomEvent<{ peer: string }>
 	disconnect: CustomEvent<{ peer: string }>
 	error: CustomEvent<{ error: Error; peer: string }>
+	"peer:update": CustomEvent<{ clock: number; heads: string[] }>
 }
 
 export type MessageRecord = {
@@ -113,6 +114,8 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 	public readonly validatePayload: (payload: unknown) => payload is Payload
 	public readonly verifySignature: (signature: Signature, message: Message<Payload>) => Awaitable<void>
 
+	public readonly peers = new Map<string, { clock: number; heads: string[] }>()
+
 	#apply: GossipLogConsumer<Payload, Result>
 
 	protected constructor(
@@ -132,6 +135,8 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 
 		this.log = logger(`canvas:gossiplog:[${this.topic}]`)
 		this.ancestorIndex = new AncestorIndex(db)
+
+		this.addEventListener("disconnect", ({ detail: { peer } }) => void this.peers.delete(peer))
 	}
 
 	protected async initialize() {
@@ -397,6 +402,18 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 
 		const id = signedMessage.id
 
+		if (signedMessage.source !== undefined) {
+			const { peer } = signedMessage.source
+			const existingPeer = this.peers.get(peer)
+			if (existingPeer === undefined) {
+				this.peers.set(peer, { clock: message.clock, heads: [id] })
+			} else {
+				const clock = Math.max(existingPeer.clock, message.clock)
+				const heads = existingPeer.heads.filter((head) => !message.parents.includes(head))
+				this.peers.set(peer, { clock, heads: [...heads, id] })
+			}
+		}
+
 		this.log("inserting message %s at clock %d with parents %o", id, clock, parents)
 
 		const result = await this.tree.write(async (txn) => {
@@ -564,5 +581,14 @@ export abstract class AbstractGossipLog<Payload = unknown, Result = any> extends
 				},
 			}),
 		)
+	}
+
+	public getLatestRemoteClock(): number {
+		let clock = 0
+		for (const peer of this.peers.values()) {
+			clock = Math.max(clock, peer.clock)
+		}
+
+		return clock
 	}
 }

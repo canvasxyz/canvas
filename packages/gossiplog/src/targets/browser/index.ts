@@ -4,6 +4,8 @@ import { NetworkClient } from "@canvas-js/gossiplog/client"
 import { assert } from "@canvas-js/utils"
 
 import type { PlatformTarget } from "../interface.js"
+import { getLibp2p } from "./libp2p.js"
+import { getPrivateKey } from "./privateKey.js"
 
 const target: PlatformTarget = {
 	async connect(gossipLog, url, options = {}) {
@@ -22,7 +24,12 @@ const target: PlatformTarget = {
 	},
 
 	async startLibp2p(gossipLog, config) {
-		throw new Error("Cannot start libp2p in the browser")
+		let privateKey = config.privateKey
+		if (privateKey === undefined) {
+			privateKey = await getPrivateKey()
+		}
+
+		return await getLibp2p(gossipLog, { ...config, privateKey })
 	},
 }
 

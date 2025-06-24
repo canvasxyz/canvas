@@ -1,0 +1,15 @@
+app = 'canvas-testnet-relay'
+primary_region = 'ewr'
+kill_signal = 'SIGINT'
+kill_timeout = '30s'
+
+[build]
+
+[env]
+LISTEN = '/ip6/::/tcp/8080/ws'
+ANNOUNCE = '/dns6/canvas-testnet-relay.internal/tcp/8080/ws'
+
+[[vm]]
+memory = '2gb'
+cpu_kind = 'shared'
+cpus = 2

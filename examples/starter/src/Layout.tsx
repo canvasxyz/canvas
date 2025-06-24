@@ -1,7 +1,6 @@
 import React from "react"
 import { SIWESigner } from "@canvas-js/signer-ethereum"
-import { useSIWE } from "@canvas-js/hooks/components"
-import { useCanvas } from "@canvas-js/hooks"
+import { useCanvas, useSIWE } from "@canvas-js/hooks"
 
 import { App } from "./App.js"
 import { AppContext } from "./AppContext.js"
@@ -43,4 +42,4 @@ const Layout: React.FC<{}> = ({}) => {
 	)
 }
 
-export default Layout 
+export default Layout

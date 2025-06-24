@@ -4,8 +4,7 @@ import React, { useEffect } from "react"
 import ReactDOM from "react-dom/client"
 
 import { SIWESigner } from "@canvas-js/signer-ethereum"
-import { useSIWE } from "@canvas-js/hooks/components"
-import { useCanvas, AuthProvider, useLiveQuery } from "@canvas-js/hooks"
+import { useCanvas, useSIWE, AuthProvider, useLiveQuery } from "@canvas-js/hooks"
 
 import { AppContext } from "./AppContext.js"
 

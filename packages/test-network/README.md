@@ -23,3 +23,5 @@ DELAY=10
 INTERVAL=10
 DEBUG=canvas:*
 ```
+
+To test WebRTC clients, set NUM_PEERS to 0 in .env and run both `npm run start` and `spawn.sh` in separate terminals.

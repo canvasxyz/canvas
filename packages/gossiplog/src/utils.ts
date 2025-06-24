@@ -6,6 +6,10 @@ import { Snapshot } from "@canvas-js/interfaces"
 import { sha256 } from "@noble/hashes/sha256"
 import { bytesToHex } from "@noble/hashes/utils"
 
+export const getDHTProtocol = (topic: string) => `/canvas/kad/1.0.0/${topic}`
+export const getSyncProtocol = (topic: string) => `/canvas/v1/${topic}/sync`
+export const getPushProtocol = (topic: string) => `/canvas/v1/${topic}/push`
+
 export const cborNull: Uint8Array = cbor.encode(null)
 
 // eslint-disable-next-line no-useless-escape
@@ -28,9 +32,6 @@ export function* getAncestorClocks(clock: number): Iterable<number> {
 		}
 	}
 }
-
-export const getSyncProtocol = (topic: string) => `/canvas/v1/${topic}/sync`
-export const getPushProtocol = (topic: string) => `/canvas/v1/${topic}/push`
 
 export async function* chunk(iter: AsyncIterable<Uint8ArrayList | Uint8Array>) {
 	for await (const item of iter) {

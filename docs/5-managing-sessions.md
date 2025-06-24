@@ -31,6 +31,8 @@ Now you can use any of the provided auth components in your application:
 
 - The `ConnectSIWE` component supports in-browser Ethereum wallets.
 - The `ConnectSIWF` component supports in-browser and in-frame Farcaster miniapps.
+- The `ConnectSIWEBurner` component generates a temporary burner wallet in localStorage.
+- Additionally, the `Logout` component generates a button to sign out.
 
 Each one will render a button, which toggles between logged-in and
 logged-out states, which you can customize with your own styles.
@@ -46,24 +48,24 @@ const MyComponent = () => {
 	})
 	const buttonStyles = { ... }
 
-  const { ConnectSIWE } = useSIWE(app)
+  const { ConnectSIWE, ConnectSIWEBurner } = useSIWE(app)
   const { ConnectSIWF } = useSIWF(app)
 
 	return <div className="user-login">
 		<ConnectSIWE app={app} buttonStyles={buttonStyles} />
-		<ConnectSIWF app={app} buttonStyles={buttonStyles} />
+		<ConnectSIWE app={app} buttonStyles={buttonStyles} />
+		<ConnectSIWEBurner app={app} buttonStyles={buttonStyles} />
 	</div>
 }
 ```
 
-Make sure that these hooks are called at a lower level component than
-`AuthProvider`. If you use the hooks in the same component where
-AuthProvider is used, they won't work.
+Make sure that these hooks are called *inside* `AuthProvider`. If you
+use the hooks in the same component where AuthProvider is used, they won't work.
 
 ## Other considerations
 
-If you are using SIWFSigner, you'll need to wrap your application in
-the provider given to you by @farcaster/auth-kit.
+If you are using SIWFSigner, you must to wrap your application in
+the `@farcaster/auth-kit` provider.
 
 For miniapp frames, you'll also need to set up
 .well-known/farcaster.json in your app's public directory.

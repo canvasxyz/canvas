@@ -2,29 +2,27 @@ services:
   dashboard:
     init: true
     build:
-      context: .
-      dockerfile: Dockerfile.dashboard
+      context: dashboard
     ports:
       - "8000:8000"
 
-  # relay:
-  #   init: true
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.relay
-  #   ports:
-  #     - "8081:8081"
-  #   environment:
-  #     # 12D3KooWPZ12MFRfJv2S13g7aRPYYQ3pSZ7ZsJCj9whnhF3j8WNr
-  #     - LIBP2P_PRIVATE_KEY=CAESQBK9TaWjp+9E8pDLXCLixTGiEr0su0RcyPl3E2mHn0gEzBP/FIYeaqg2r799CKytc30guQeQEe94LVLof6ua2X8=
-  #     - LISTEN=/ip4/127.0.0.1/tcp/8081/ws
-  #     - ANNOUNCE=/dns4/localhost/tcp/8081/ws
+  relay:
+    init: true
+    build:
+      context: relay
+    ports:
+      - "8081:8081"
+    environment:
+      # - DEBUG=libp2p:circuit-relay:*
+      # 12D3KooWPZ12MFRfJv2S13g7aRPYYQ3pSZ7ZsJCj9whnhF3j8WNr
+      - LIBP2P_PRIVATE_KEY=CAESQBK9TaWjp+9E8pDLXCLixTGiEr0su0RcyPl3E2mHn0gEzBP/FIYeaqg2r799CKytc30guQeQEe94LVLof6ua2X8=
+      - LISTEN=/ip4/0.0.0.0/tcp/8081/ws
+      - ANNOUNCE=/dns4/localhost/tcp/8081/ws
 
   # server:
   #   init: true
   #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.server
+  #     context: server-ws
   #   ports:
   #     - "9000:9000"
   #   environment:
@@ -32,20 +30,20 @@ services:
   #     - LIBP2P_PRIVATE_KEY=CAESQEGeD4gUxpd2h/TICt0R9j+GUlnytIHY3uULdT3e6VH4aItqFLTCQBYIhePq3YImXkNZ3RAmhMROgQASC8CL5aY=
   #     - PORT=9000
 
-  bootstrap:
+  rendezvous:
     init: true
     build:
-      context: .
-      dockerfile: Dockerfile.bootstrap
+      context: rendezvous
     depends_on:
       - dashboard
     ports:
       - "8080:8080"
+      - "3000:3000"
     environment:
-      - DEBUG=canvas:*,libp2p:gossipsub,libp2p:gossipsub:*
+      # - DEBUG=canvas:*
       # 12D3KooWMvSCSeJ6zxJJRQZSpyGqbNcqSJfcJGZLRiMVMePXzMax
       - LIBP2P_PRIVATE_KEY=CAESQBo16VWKm49tGi+/Ta5PFDkWAPybZOlnCAWvx2m/en2as9pIrXgwHnvSNDxC1/YySl3XTBKkBMijTVuk0LycFkk=
-      - LISTEN=/ip4/127.0.0.1/tcp/8080/ws
+      - LISTEN=/ip4/0.0.0.0/tcp/8080/ws
       - ANNOUNCE=/dns4/bootstrap/tcp/8080/ws
-      - MIN_CONNECTIONS=0
       - DATABASE_PATH=db.sqlite
+      - PORT=3000

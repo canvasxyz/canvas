@@ -1,10 +1,10 @@
 {
 	"name": "@canvas-js/modeldb-sqlite-wasm",
-	"version": "0.15.1",
+	"version": "0.16.0-next.5",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"type": "module",
 	"engines": {
-		"node": ">=20.0.0"
+		"node": ">=22.0.0"
 	},
 	"files": [
 		"lib"
@@ -13,8 +13,8 @@
 	"types": "./lib/index.d.ts",
 	"sideEffects": false,
 	"dependencies": {
-		"@canvas-js/interfaces": "0.15.1",
-		"@canvas-js/modeldb": "0.15.1",
+		"@canvas-js/interfaces": "0.16.0-next.5",
+		"@canvas-js/modeldb": "0.16.0-next.5",
 		"@canvas-js/utils": "1.0.0",
 		"@ipld/dag-json": "^10.2.5",
 		"@libp2p/logger": "^5.1.13",

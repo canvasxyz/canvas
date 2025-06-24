@@ -7,7 +7,7 @@ import { logger } from "@libp2p/logger"
 import { generateKeyPair } from "@libp2p/crypto/keys"
 import { peerIdFromPrivateKey } from "@libp2p/peer-id"
 
-import { Awaitable, Message, Signature } from "@canvas-js/interfaces"
+import { Awaitable } from "@canvas-js/interfaces"
 import { AbstractGossipLog, SignedMessage } from "@canvas-js/gossiplog"
 import { getLibp2p, ServiceMap } from "@canvas-js/gossiplog/libp2p"
 

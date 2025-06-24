@@ -1,10 +1,10 @@
 {
 	"name": "@canvas-js/core",
-	"version": "0.15.1",
+	"version": "0.16.0-next.5",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"type": "module",
 	"engines": {
-		"node": ">=20.0.0"
+		"node": ">=22.0.0"
 	},
 	"files": [
 		"lib"
@@ -31,17 +31,17 @@
 		"test": "ava"
 	},
 	"dependencies": {
-		"@canvas-js/gossiplog": "0.15.1",
-		"@canvas-js/interfaces": "0.15.1",
-		"@canvas-js/modeldb": "0.15.1",
-		"@canvas-js/modeldb-durable-objects": "0.15.1",
-		"@canvas-js/modeldb-idb": "0.15.1",
-		"@canvas-js/modeldb-pg": "0.15.1",
-		"@canvas-js/modeldb-sqlite": "0.15.1",
-		"@canvas-js/signatures": "0.15.1",
-		"@canvas-js/signer-ethereum": "0.15.1",
+		"@canvas-js/gossiplog": "0.16.0-next.5",
+		"@canvas-js/interfaces": "0.16.0-next.5",
+		"@canvas-js/modeldb": "0.16.0-next.5",
+		"@canvas-js/modeldb-durable-objects": "0.16.0-next.5",
+		"@canvas-js/modeldb-idb": "0.16.0-next.5",
+		"@canvas-js/modeldb-pg": "0.16.0-next.5",
+		"@canvas-js/modeldb-sqlite": "0.16.0-next.5",
+		"@canvas-js/signatures": "0.16.0-next.5",
+		"@canvas-js/signer-ethereum": "0.16.0-next.5",
 		"@canvas-js/utils": "1.0.0",
-		"@canvas-js/vm": "0.15.1",
+		"@canvas-js/vm": "0.16.0-next.5",
 		"@ipld/dag-cbor": "^9.2.4",
 		"@ipld/dag-json": "^10.2.5",
 		"@ipld/schema": "^6.0.6",
@@ -59,7 +59,7 @@
 		"any-signal": "^4.1.1",
 		"chalk": "^5.4.1",
 		"cors": "^2.8.5",
-		"esbuild": "^0.24.2",
+		"esbuild": "^0.25.5",
 		"esbuild-wasm": "^0.25.1",
 		"ethers": "^6.13.5",
 		"express": "^5.1.0",
@@ -76,7 +76,7 @@
 		"ws": "^8.18.2"
 	},
 	"devDependencies": {
-		"@canvas-js/signer-cosmos": "0.15.1",
+		"@canvas-js/signer-cosmos": "0.16.0-next.5",
 		"@cloudflare/workers-types": "^4.20250610.0",
 		"@types/pg": "^8.11.11",
 		"dotenv": "^16.4.7",

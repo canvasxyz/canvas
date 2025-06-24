@@ -1,4 +1,4 @@
-import { SHA256 } from "@noble/hashes/sha256"
+import { SHA256 } from "@noble/hashes/sha2"
 
 import type { PlatformTarget } from "../index.js"
 
