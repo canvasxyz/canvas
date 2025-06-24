@@ -15,6 +15,8 @@ import {
 } from "@canvas-js/test-network/events"
 import { StatusCodes } from "http-status-codes"
 
+const { PORT = "8000" } = process.env
+
 let state: NetworkState = initialState
 const eventSourceClients = new Set<express.Response>()
 const startingPeers: Record<string, number> = {}
@@ -274,6 +276,6 @@ wss.on("connection", (ws, req) => {
 	}
 })
 
-server.listen(8000, () => {
-	console.log("listening on http://localhost:8000")
+server.listen(parseInt(PORT), () => {
+	console.log(`listening on http://localhost:${PORT}`)
 })

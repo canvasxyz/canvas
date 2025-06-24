@@ -21,6 +21,7 @@ RUN apt-get update \
 WORKDIR /app
 
 COPY worker/dist/index.js index.mjs
+COPY client/dist dist
 
 RUN npm i -g puppeteer@24.10.0
 RUN npm link puppeteer

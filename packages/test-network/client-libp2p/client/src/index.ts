@@ -39,7 +39,6 @@ const peerId = peerIdFromPrivateKey(privateKey)
 console.log(`using peer id ${peerId}`)
 
 const dashboardURL = params.dashboardURL ?? "ws://localhost:8000"
-const socket = await PeerSocket.open(dashboardURL, peerId, gossipLog)
 
 const bootstrapServer =
 	params.bootstrapServer ?? "/dns4/localhost/tcp/8080/ws/p2p/12D3KooWMvSCSeJ6zxJJRQZSpyGqbNcqSJfcJGZLRiMVMePXzMax"
@@ -48,6 +47,10 @@ const relayServer =
 	params.relayServer ?? "/dns4/localhost/tcp/8081/ws/p2p/12D3KooWPZ12MFRfJv2S13g7aRPYYQ3pSZ7ZsJCj9whnhF3j8WNr"
 
 const relayServerPeerId = multiaddr(relayServer).getPeerId()
+
+console.log(JSON.stringify({ dashboardURL, bootstrapServer, relayServer }, null, "  "))
+
+const socket = await PeerSocket.open(dashboardURL, peerId, gossipLog)
 
 const libp2p = await gossipLog.startLibp2p({
 	start: false,
