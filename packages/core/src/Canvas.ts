@@ -40,7 +40,7 @@ export type Config<
 	ModelsT extends ModelSchema = ModelSchema,
 	InstanceT extends Contract<ModelsT> = Contract<ModelsT> & Record<string, ContractAction<ModelsT>>,
 > = {
-	contract: string | { namespace?: string; models: ModelsT } | ContractClass<ModelsT, InstanceT>
+	contract: string | { baseTopic?: string; models: ModelsT } | ContractClass<ModelsT, InstanceT>
 
 	/** constructor arguments for the contract class */
 	args?: JSValue[]
@@ -133,9 +133,9 @@ export class Canvas<
 		}
 
 		const runtime = await createRuntime(contract as string | ContractClass, args, signers, { runtimeMemoryLimit })
-		assert(namespacePattern.test(runtime.namespace), "invalid namespace, must match [a-zA-Z0-9\\.\\-]")
+		assert(namespacePattern.test(runtime.baseTopic), "invalid namespace, must match [a-zA-Z0-9\\.\\-]")
 
-		const topicComponents = [runtime.namespace, argsHash]
+		const topicComponents = [runtime.baseTopic, argsHash]
 		if (config.snapshot) {
 			topicComponents.push(hashSnapshot(config.snapshot))
 		}
@@ -412,8 +412,8 @@ export class Canvas<
 		}
 	}
 
-	public get namespace() {
-		return this.runtime.namespace
+	public get baseTopic() {
+		return this.runtime.baseTopic
 	}
 
 	public async replay(): Promise<boolean> {

@@ -33,8 +33,8 @@ function isPrivateKeyAccount(signer: WalletClient | PrivateKeyAccount): signer i
 }
 
 function getResourceURI(topic: string) {
-	const [namespace, ...rest] = topic.split(":")
-	return rest.length === 0 ? `canvas://${namespace}` : `canvas://${namespace}/${rest.join(":")}`
+	const [baseTopic, ...rest] = topic.split(":")
+	return rest.length === 0 ? `canvas://${baseTopic}` : `canvas://${baseTopic}/${rest.join(":")}`
 }
 
 export class SIWESignerViem extends AbstractSessionSigner<SIWESessionData> {

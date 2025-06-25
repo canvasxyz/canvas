@@ -27,7 +27,7 @@ function isContractClass(a: any): a is ContractClass {
 
 export class ClassFunctionRuntime extends AbstractRuntime {
 	public static async init(
-		contract: { models: ModelSchema; namespace?: string } | ContractClass<ModelSchema, BaseContract<ModelSchema>>,
+		contract: { models: ModelSchema; baseTopic?: string } | ContractClass<ModelSchema, BaseContract<ModelSchema>>,
 		args: JSValue[],
 		signers: SignerCache,
 	): Promise<ClassFunctionRuntime> {
@@ -38,7 +38,7 @@ export class ClassFunctionRuntime extends AbstractRuntime {
 			"contract model names cannot start with '$'",
 		)
 
-		let namespace: string
+		let baseTopic: string
 		let contractInstance: BaseContract<ModelSchema>
 		let actionNames: string[]
 		if (isContractClass(contract)) {
@@ -47,7 +47,7 @@ export class ClassFunctionRuntime extends AbstractRuntime {
 				"class contracts cannot have model $rules",
 			)
 
-			namespace = contract.namespace ?? bytesToHex(randomBytes(8))
+			baseTopic = contract.baseTopic ?? bytesToHex(randomBytes(8))
 			contractInstance = new contract(args)
 			actionNames = Object.getOwnPropertyNames(contract.prototype).filter((name) => name !== "constructor")
 		} else {
@@ -57,7 +57,7 @@ export class ClassFunctionRuntime extends AbstractRuntime {
 				}
 			}
 
-			namespace = contract.namespace ?? bytesToHex(randomBytes(8))
+			baseTopic = contract.baseTopic ?? bytesToHex(randomBytes(8))
 			contractInstance = new BaseContract(args)
 			actionNames = Object.keys(contract.models).flatMap((name) => [
 				`${name}/create`,
@@ -75,7 +75,7 @@ export class ClassFunctionRuntime extends AbstractRuntime {
 			Object.assign(contractInstance, Object.fromEntries(actionEntries))
 		}
 
-		return new ClassFunctionRuntime(namespace, signers, actionNames, contract.models, contractInstance)
+		return new ClassFunctionRuntime(baseTopic, signers, actionNames, contract.models, contractInstance)
 	}
 
 	#context: ExecutionContext | null = null
@@ -88,7 +88,7 @@ export class ClassFunctionRuntime extends AbstractRuntime {
 	#contract: BaseContract<ModelSchema>
 
 	constructor(
-		public readonly namespace: string,
+		public readonly baseTopic: string,
 		public readonly signers: SignerCache,
 		public readonly actionNames: string[],
 		models: ModelSchema,

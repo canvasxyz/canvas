@@ -45,8 +45,8 @@ export type SIWESignerInit = (
 }
 
 function getResourceURI(topic: string) {
-	const [namespace, ...rest] = topic.split(":")
-	return rest.length === 0 ? `canvas://${namespace}` : `canvas://${namespace}#${rest.join(":")}`
+	const [baseTopic, ...rest] = topic.split(":")
+	return rest.length === 0 ? `canvas://${baseTopic}` : `canvas://${baseTopic}#${rest.join(":")}`
 }
 
 export class SIWESigner extends AbstractSessionSigner<SIWESessionData> {

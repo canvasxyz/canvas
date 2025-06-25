@@ -118,7 +118,7 @@ export abstract class AbstractRuntime {
 		$dids: { did: "primary" },
 	} satisfies ModelSchema
 
-	public abstract readonly namespace: string
+	public abstract readonly baseTopic: string
 
 	public abstract readonly signers: SignerCache
 	public abstract readonly actionNames: string[]

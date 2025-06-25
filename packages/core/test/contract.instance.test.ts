@@ -11,7 +11,10 @@ test("initialize contract with instance topic", async (t) => {
 	const wallet = ethers.Wallet.createRandom()
 
 	class Blog extends Contract<typeof Blog.models> {
-		static namespace = "example.xyz"
+		site: string
+
+		static baseTopic = "example.xyz"
+
 		static models = {
 			posts: { id: "primary", creator: "string", content: "string" },
 		} satisfies ModelSchema
@@ -19,14 +22,20 @@ test("initialize contract with instance topic", async (t) => {
 		async createPost(content: string) {
 			await this.db.create("posts", { id: this.id, creator: this.address, content })
 		}
+
+		constructor(site: string) {
+			super(site)
+			this.site = site
+		}
 	}
 
-	const app = await Blog.initialize()
+	const app = await Canvas.initialize({ contract: Blog })
 	app.updateSigners([new SIWESigner({ signer: wallet })])
 
 	t.teardown(() => app.stop())
 
-	t.is(app.namespace, "example.xyz")
+	t.is(app.baseTopic, "example.xyz")
+	t.is(app.topic, "example.xyz:76be8b52")
 
 	await app.actions.createPost("hello world")
 	await app.actions.createPost("second post")
@@ -39,11 +48,15 @@ test("initialize string contract with instance topic", async (t) => {
 	const contract = `import { Contract } from "@canvas-js/core/contract";
 
 	export default class extends Contract {
-	  static namespace = "example.xyz"
+	  static baseTopic = "example.xyz"
 		static models = { posts: { id: "primary", creator: "string", content: "string" } }
 		async createPost(content) {
 			await this.db.create("posts", { id: this.id, creator: this.address, content })
 		}
+    constructor(site) {
+      super(site)
+      this.site = site
+    }
 	}`
 
 	const app = await Canvas.initialize({
@@ -53,7 +66,8 @@ test("initialize string contract with instance topic", async (t) => {
 
 	t.teardown(() => app.stop())
 
-	t.is(app.namespace, "example.xyz")
+	t.is(app.baseTopic, "example.xyz")
+	t.is(app.topic, "example.xyz:76be8b52")
 
 	await app.actions.createPost("hello world")
 	await app.actions.createPost("second post")
