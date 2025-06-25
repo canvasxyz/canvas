@@ -1,6 +1,6 @@
 {
 	"name": "@canvas-js/signer-cosmos",
-	"version": "0.16.0-next.6",
+	"version": "0.16.0-next.7",
 	"type": "module",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"main": "lib/index.js",
@@ -13,8 +13,8 @@
 		"test": "ava"
 	},
 	"dependencies": {
-		"@canvas-js/interfaces": "0.16.0-next.6",
-		"@canvas-js/signatures": "0.16.0-next.6",
+		"@canvas-js/interfaces": "0.16.0-next.7",
+		"@canvas-js/signatures": "0.16.0-next.7",
 		"@canvas-js/utils": "1.0.0",
 		"@cosmjs/amino": "^0.32.3",
 		"@cosmjs/crypto": "^0.32.3",
