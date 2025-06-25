@@ -48,6 +48,8 @@ export const useSIWF = (app: Canvas | null | undefined) => {
 	const [nonce, setNonce] = useState<string | null>(null)
 	const [newSessionPrivateKey, setNewSessionPrivateKey] = useState<string | null>(null)
 
+	const [frameContext, setFrameContext] = useState<Awaited<typeof sdk.context> | null>(null)
+
 	const [error, setError] = useState<Error | null>(null)
 	const initializedRef = useRef(false)
 
@@ -92,12 +94,13 @@ export const useSIWF = (app: Canvas | null | undefined) => {
 		}
 
 		sdk.context
-			.then((frameContext) => {
-				if (frameContext) {
+			.then((_frameContext) => {
+				if (_frameContext) {
 					// inside a frame
 					const { nonce, privateKey } = SIWFSigner.newSIWFRequestNonce(topic)
 					setNonce(nonce)
 					setNewSessionPrivateKey(hexlify(privateKey))
+					setFrameContext(frameContext)
 					sdk.actions.ready()
 				} else {
 					// inside the browser
