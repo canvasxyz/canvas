@@ -100,7 +100,7 @@ export const useSIWF = (app: Canvas | null | undefined) => {
 					const { nonce, privateKey } = SIWFSigner.newSIWFRequestNonce(topic)
 					setNonce(nonce)
 					setNewSessionPrivateKey(hexlify(privateKey))
-					setFrameContext(frameContext)
+					setFrameContext(_frameContext)
 					sdk.actions.ready()
 				} else {
 					// inside the browser
