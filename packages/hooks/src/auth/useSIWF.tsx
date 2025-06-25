@@ -324,7 +324,7 @@ export const useSIWF = (app: Canvas | null | undefined) => {
 		profile: { fid, displayName, custody },
 		signOut,
 		frameSignIn,
-		browserSignIn,
+		frameContext,
 		isInitialized: !!app,
 		SIWFStatus,
 		connectSIWFStatus: getStatus(
