@@ -129,7 +129,7 @@ export default function Home() {
 				return
 			}
 
-			client.sendAction("createMessage", { content }).then(
+			client.actions.createMessage({ content }).then(
 				() => setInputValue(""),
 				(err: any) => console.error("Error sending message:", err),
 			)

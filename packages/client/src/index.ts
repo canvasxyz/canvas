@@ -1,13 +1,35 @@
 import * as json from "@ipld/dag-json"
 import { StatusCodes } from "http-status-codes"
 
-import type { Message, MessageType, SessionSigner, Signer } from "@canvas-js/interfaces"
+import type { Action, Message, MessageType, SessionSigner, Signature, Signer } from "@canvas-js/interfaces"
 import { assert } from "@canvas-js/utils"
 
 export class Client {
-	constructor(readonly signer: SessionSigner, readonly host: string, readonly topic: string) {}
+	public readonly actions: Record<
+		string,
+		(...args: any[]) => Promise<{ id: string; signature: Signature; message: Message<Action> }>
+	>
 
-	public async sendAction(name: string, args: any) {
+	constructor(
+		readonly signer: SessionSigner,
+		readonly host: string,
+		readonly topic: string,
+	) {
+		this.actions = new Proxy(
+			{},
+			{
+				get:
+					(target, prop: string) =>
+					(...args: any[]) =>
+						this.sendAction(prop, args),
+			},
+		)
+	}
+
+	private async sendAction(
+		name: string,
+		args: any[],
+	): Promise<{ id: string; signature: Signature; message: Message<Action> }> {
 		const timestamp = Date.now()
 
 		// first check for an existing session
@@ -35,7 +57,7 @@ export class Client {
 
 		if (session === null) {
 			session = await this.signer.newSession(this.topic)
-			const sessionId = await this.insert(session.signer, {
+			const { id: sessionId } = await this.insert(session.signer, {
 				topic: this.topic,
 				clock: head.clock,
 				parents: head.parents,
@@ -46,7 +68,7 @@ export class Client {
 			head.parents = [sessionId]
 		}
 
-		await this.insert(session.signer, {
+		return await this.insert(session.signer, {
 			topic: this.topic,
 			clock: head.clock,
 			parents: head.parents,
@@ -60,7 +82,10 @@ export class Client {
 		})
 	}
 
-	private async insert(delegateSigner: Signer<MessageType>, message: Message<MessageType>): Promise<string> {
+	private async insert<T extends MessageType>(
+		delegateSigner: Signer<T>,
+		message: Message<T>,
+	): Promise<{ id: string; signature: Signature; message: Message<T> }> {
 		const signature = await delegateSigner.sign(message)
 
 		const res = await fetch(`${this.host}/api/messages`, {
@@ -69,12 +94,16 @@ export class Client {
 			body: json.stringify({ signature, message }),
 		})
 
-		assert(res.status === StatusCodes.CREATED)
+		if (res.status !== StatusCodes.CREATED) {
+			const message = await res.text()
+			throw new Error(`failed to insert message: ${message}`)
+		}
+
 		const locationHeader = res.headers.get("location")
 
-		assert(locationHeader !== null && locationHeader.startsWith("messages/"))
+		assert(locationHeader !== null && locationHeader.startsWith("messages/"), "invalid location header in response")
 		const [_, id] = locationHeader.split("/")
 
-		return id
+		return { id, signature, message }
 	}
 }
