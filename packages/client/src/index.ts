@@ -26,6 +26,15 @@ export class Client {
 		)
 	}
 
+	private async getClock(): Promise<{ clock: number; parents: string[] }> {
+		const res = await fetch(`${this.host}/api/clock`)
+		if (res.status !== StatusCodes.OK) {
+			const message = await res.text()
+			throw new Error(`failed to get clock from server: ${message}`)
+		}
+		return await res.json()
+	}
+
 	private async sendAction(
 		name: string,
 		args: any[],
@@ -45,7 +54,10 @@ export class Client {
 				.join("&")
 
 			const res = await fetch(`${this.host}/api/sessions/count?${query}`)
-			assert(res.status === StatusCodes.OK)
+			if (res.status !== StatusCodes.OK) {
+				const message = await res.text()
+				throw new Error(`failed to get session count: ${message}`)
+			}
 
 			const result: { count: number } = await res.json()
 			if (result.count === 0) {
@@ -53,7 +65,7 @@ export class Client {
 			}
 		}
 
-		const head: { clock: number; parents: string[] } = await fetch(`${this.host}/api/clock`).then((res) => res.json())
+		const head = await this.getClock()
 
 		if (session === null) {
 			session = await this.signer.newSession(this.topic)
