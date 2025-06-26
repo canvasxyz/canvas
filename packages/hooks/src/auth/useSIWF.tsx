@@ -49,7 +49,7 @@ export const useSIWF = (app: Canvas | null | undefined) => {
 	const [nonce, setNonce] = useState<string | null>(null)
 	const [newSessionPrivateKey, setNewSessionPrivateKey] = useState<string | null>(null)
 
-	const [frameContext, setFrameContext] = useState<Awaited<typeof FrameContext> | null>(null)
+	const [frameContext, setFrameContext] = useState<typeof FrameContext | null>(null)
 
 	const [error, setError] = useState<Error | null>(null)
 	const initializedRef = useRef(false)
