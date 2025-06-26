@@ -1,6 +1,6 @@
 {
 	"name": "@canvas-js/modeldb-pg",
-	"version": "0.16.0-next.5",
+	"version": "0.16.0-next.7",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"type": "module",
 	"engines": {
@@ -16,7 +16,7 @@
 		"test": "ava --serial"
 	},
 	"dependencies": {
-		"@canvas-js/modeldb": "0.16.0-next.5",
+		"@canvas-js/modeldb": "0.16.0-next.7",
 		"@canvas-js/utils": "1.0.0",
 		"@ipld/dag-json": "^10.2.5",
 		"@types/pg": "^8.11.11",

@@ -6,6 +6,7 @@ import { Canvas } from "@canvas-js/core"
 import { SIWFSigner } from "@canvas-js/signer-ethereum"
 import { AuthClientError, SignInButton, useProfile, UseSignInData } from "@farcaster/auth-kit"
 import { sdk } from "@farcaster/frame-sdk"
+import { Context as FrameContext } from "@farcaster/frame-core"
 import { bytesToHex } from "@noble/hashes/utils"
 import { AuthContext } from "./AuthContext.js"
 import { styles } from "./styles.js"
@@ -47,6 +48,8 @@ export const useSIWF = (app: Canvas | null | undefined) => {
 	const [requestId, setRequestId] = useState<string | null>(null)
 	const [nonce, setNonce] = useState<string | null>(null)
 	const [newSessionPrivateKey, setNewSessionPrivateKey] = useState<string | null>(null)
+
+	const [frameContext, setFrameContext] = useState<Awaited<typeof FrameContext> | null>(null)
 
 	const [error, setError] = useState<Error | null>(null)
 	const initializedRef = useRef(false)
@@ -92,12 +95,13 @@ export const useSIWF = (app: Canvas | null | undefined) => {
 		}
 
 		sdk.context
-			.then((frameContext) => {
-				if (frameContext) {
+			.then((_frameContext) => {
+				if (_frameContext) {
 					// inside a frame
 					const { nonce, privateKey } = SIWFSigner.newSIWFRequestNonce(topic)
 					setNonce(nonce)
 					setNewSessionPrivateKey(hexlify(privateKey))
+					setFrameContext(_frameContext)
 					sdk.actions.ready()
 				} else {
 					// inside the browser
@@ -321,7 +325,7 @@ export const useSIWF = (app: Canvas | null | undefined) => {
 		profile: { fid, displayName, custody },
 		signOut,
 		frameSignIn,
-		browserSignIn,
+		frameContext,
 		isInitialized: !!app,
 		SIWFStatus,
 		connectSIWFStatus: getStatus(
