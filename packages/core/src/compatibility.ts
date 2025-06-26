@@ -14,7 +14,7 @@ export function transactionalize<T extends Record<string, (db: ModelAPI<any>, ..
 	return mapValues(actionsMap, (action: (db: ModelAPI<any>, ...args: any[]) => any) => {
 		return async function (this: ActionContext<any>, ...args: any[]) {
 			return await this.db.transaction(() => {
-				return action(this.db, ...args)
+				return action.apply(this, [this.db, ...args])
 			})
 		} as any
 	}) as TransformActionParams<T, any>
