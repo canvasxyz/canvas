@@ -1,10 +1,13 @@
 import * as json from "@ipld/dag-json"
 import { StatusCodes } from "http-status-codes"
 
-import type { Action, Message, MessageType, SessionSigner, Signature, Signer } from "@canvas-js/interfaces"
+import { Action, Message, MessageType, SessionSigner, Signature, Signer, SignerCache } from "@canvas-js/interfaces"
 import { assert } from "@canvas-js/utils"
 
 export class Client {
+	public topic: string | null = null
+	public signers: SignerCache
+
 	public readonly actions: Record<
 		string,
 		(...args: any[]) => Promise<{ id: string; signature: Signature; message: Message<Action> }>
@@ -15,10 +18,15 @@ export class Client {
 	) => Record<string, (...args: any[]) => Promise<{ id: string; signature: Signature; message: Message<Action> }>>
 
 	constructor(
-		readonly signer: SessionSigner,
 		readonly host: string,
-		readonly topic: string,
+		options: { topic?: string; signers?: SessionSigner[] },
 	) {
+		if (options.topic !== undefined) {
+			this.topic = options.topic
+		}
+
+		this.signers = new SignerCache(options.signers)
+
 		this.actions = new Proxy(
 			{},
 			{
@@ -50,16 +58,34 @@ export class Client {
 		return await res.json()
 	}
 
+	private async getTopic(): Promise<string> {
+		if (this.topic === null) {
+			const res = await fetch(`${this.host}/api/`)
+			if (res.status !== StatusCodes.OK) {
+				const message = await res.text()
+				throw new Error(`failed to get application data from server: ${message}`)
+			}
+
+			const applicationData: { topic: string; actions: string[] } = await res.json()
+			this.topic = applicationData.topic
+		}
+
+		return this.topic
+	}
+
 	private async sendAction(
 		name: string,
 		args: any[],
 		options: { signer?: SessionSigner } = {},
 	): Promise<{ id: string; signature: Signature; message: Message<Action> }> {
+		const topic = await this.getTopic()
+		const signer = options.signer ?? this.signers.getFirst()
+
 		const timestamp = Date.now()
 
 		// first check for an existing session
-		const signer = options.signer ?? this.signer
-		let session = await signer.getSession(this.topic)
+
+		let session = await signer.getSession(topic)
 		if (session !== null) {
 			// then check that it exists in the log and hasn't expired
 			const queryParams = new URLSearchParams({
@@ -83,9 +109,9 @@ export class Client {
 		const head = await this.getClock()
 
 		if (session === null) {
-			session = await this.signer.newSession(this.topic)
+			session = await signer.newSession(topic)
 			const { id: sessionId } = await this.insert(session.signer, {
-				topic: this.topic,
+				topic: topic,
 				clock: head.clock,
 				parents: head.parents,
 				payload: session.payload,
@@ -96,7 +122,7 @@ export class Client {
 		}
 
 		return await this.insert(session.signer, {
-			topic: this.topic,
+			topic: topic,
 			clock: head.clock,
 			parents: head.parents,
 			payload: {
