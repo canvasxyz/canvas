@@ -1,6 +1,5 @@
 import * as json from "@ipld/dag-json"
 import { Logger, logger } from "@libp2p/logger"
-import { randomBytes, bytesToHex } from "@noble/hashes/utils"
 
 import type {
 	Session,
@@ -19,11 +18,8 @@ export interface AbstractSessionSignerOptions {
 	sessionDuration?: number | null
 }
 
-export abstract class AbstractSessionSigner<
-	AuthorizationData,
-	WalletAddress extends string = string,
-	AuthorizationContext = never,
-> implements SessionSigner<AuthorizationData>
+export abstract class AbstractSessionSigner<AuthorizationData, WalletAddress extends string = string>
+	implements SessionSigner<AuthorizationData>
 {
 	public readonly target = target
 	public readonly sessionDuration: number | null
@@ -180,7 +176,7 @@ export abstract class AbstractSessionSigner<
 			}
 		}
 
-		return did ? result.filter(s => s.endsWith(`/${did}`)) : result
+		return did ? result.filter((s) => s.endsWith(`/${did}`)) : result
 	}
 
 	public async clearAll(topic: string) {
@@ -199,7 +195,7 @@ export abstract class AbstractSessionSigner<
 		const did = await this.getDid()
 		return this.listAllSessions(topic, did).length > 0
 	}
-	
+
 	public async clearSession(topic: string) {
 		if (this.isReadOnly()) return
 		const key = `canvas/${topic}/${await this.getDid()}`
