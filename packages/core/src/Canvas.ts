@@ -11,7 +11,7 @@ import { SIWESigner } from "@canvas-js/signer-ethereum"
 import { AbstractGossipLog, GossipLogEvents, NetworkClient, SignedMessage } from "@canvas-js/gossiplog"
 import type { ServiceMap, NetworkConfig } from "@canvas-js/gossiplog/libp2p"
 
-import { assert, JSValue, mapValues } from "@canvas-js/utils"
+import { assert, mapValues } from "@canvas-js/utils"
 import { SnapshotSignatureScheme } from "@canvas-js/signatures"
 
 import target from "#target"
