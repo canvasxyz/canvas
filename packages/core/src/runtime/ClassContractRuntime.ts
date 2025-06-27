@@ -69,12 +69,12 @@ export class ClassContractRuntime extends AbstractRuntime {
 
 		using topicHandle = vm.context.getProp(contractClassHandle, "topic")
 		using nameHandle = vm.context.getProp(contractClassHandle, "name")
-		const baseTopic = vm.context.dump(topicHandle)
-		const name = vm.context.dump(nameHandle)
-		assert(typeof baseTopic === "string", "invalid contract class - expected `static topic: string`")
-		assert(typeof name === "string", "invalid contract class - expected `name: string`")
+		const domain = vm.context.dump(topicHandle)
+		const objName = vm.context.dump(nameHandle)
+		assert(typeof domain === "string", "invalid contract class - expected `static topic: string`")
+		assert(typeof objName === "string", "invalid contract class - expected `name: string`")
 
-		const topic = name === "default" ? baseTopic : `${baseTopic}.${name}`
+		const topic = objName === "default" ? domain : `${domain}.${objName}`
 
 		const actionHandles = Object.fromEntries(
 			actionNames.map((actionName) => [

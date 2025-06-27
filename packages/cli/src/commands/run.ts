@@ -27,11 +27,6 @@ export const builder = (yargs: Argv) =>
 			type: "string",
 			demandOption: true,
 		})
-		.option("baseTopic", {
-			alias: "topic",
-			desc: "Application topic, e.g. my-app.example.com",
-			type: "string",
-		})
 		.option("init", {
 			desc: "Path to a contract to copy if the application directory does not exist",
 			type: "string",
@@ -116,7 +111,7 @@ export const builder = (yargs: Argv) =>
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
-	const { baseTopic, contract, originalContract, location, snapshot } = await getContractLocation(args)
+	const { contract, originalContract, location, snapshot } = await getContractLocation(args)
 
 	let updatedContract: string = originalContract // updated, pre-esbuild version of the running contract
 	let updatedBuild: string = contract // updated, built version of the running contract
@@ -203,7 +198,7 @@ export async function handler(args: Args) {
 					if (location !== null) {
 						writeContract({
 							location,
-							baseTopic,
+							// baseTopic,
 							build,
 							originalContract: newContract,
 						})
@@ -244,7 +239,6 @@ export async function handler(args: Args) {
 							console.log("[canvas] Restarting...")
 							await new Promise((resolve) => setTimeout(resolve, 0))
 							const newInstance = await AppInstance.initialize({
-								baseTopic,
 								contract: updatedBuild,
 								location,
 								snapshot: includeSnapshot ? snapshot : null,
@@ -268,7 +262,7 @@ export async function handler(args: Args) {
 		}
 	}
 
-	const instance = await AppInstance.initialize({ baseTopic, contract, location, snapshot, config: args })
+	const instance = await AppInstance.initialize({ contract, location, snapshot, config: args })
 
 	bindInstanceAPIs(instance)
 
