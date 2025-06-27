@@ -1,19 +1,16 @@
 import express from "express"
 import { StatusCodes } from "http-status-codes"
+import * as json from "@ipld/dag-json"
 
 import { Counter, Gauge, Summary, Registry, register } from "prom-client"
 
-import * as json from "@ipld/dag-json"
-
 import { Action, Message, Session, Signature } from "@canvas-js/interfaces"
+import { ModelValue, ModelValueWithIncludes, QueryParams, WhereCondition } from "@canvas-js/modeldb"
+import { MessageRecord } from "@canvas-js/gossiplog"
 import { createAPI as createBaseAPI, getLimit, getOrder, getRange } from "@canvas-js/gossiplog/api"
 import { assert } from "@canvas-js/utils"
 
 import { Canvas } from "./Canvas.js"
-import { MessageRecord } from "@canvas-js/gossiplog"
-import { WhereCondition } from "@canvas-js/modeldb"
-
-export interface APIOptions {}
 
 export function createAPI(app: Canvas): express.Express {
 	const api = createBaseAPI(app.messageLog)
@@ -212,6 +209,30 @@ export function createAPI(app: Canvas): express.Express {
 			res.writeHead(StatusCodes.OK, { "content-type": "application/json" })
 			return void res.end(json.encode({ error: e.toString() }))
 		}
+	})
+
+	api.get("/subscribe", (req, res) => {
+		const pushResults = (results: ModelValue[] | ModelValueWithIncludes[]) => {
+			if (res.closed) {
+				return
+			}
+
+			res.write(`data: ${json.stringify(results)}\n\n`)
+		}
+
+		// TODO: runtime query validatation
+		assert(typeof req.query.query === "string", "missing query parameter")
+		assert(typeof req.query.model === "string", "missing query parameter")
+		const { id, results } = app.db.subscribe(req.query.model, json.parse(req.query.query), pushResults)
+
+		res.writeHead(StatusCodes.OK, {
+			["Content-Type"]: "text/event-stream",
+			["Cache-Control"]: "no-cache",
+			["Connection"]: "keep-alive",
+		})
+
+		results.then(pushResults, (err) => console.error(err))
+		res.on("close", () => app.db.unsubscribe(id))
 	})
 
 	return api

@@ -1,50 +1,66 @@
 import { mapValues } from "@canvas-js/utils"
-import { ModelAPI, ActionContext } from "./types.js"
+import type { ModelAPI, ModelSchema, ActionContext, ContractClass } from "./types.js"
+import { Contract } from "./contract.js"
 
-export type TransformActionParams<T> = {
+export type TransformActionParams<T, M extends ModelSchema> = {
 	[K in keyof T]: T[K] extends (db: ModelAPI<any>, ...args: infer Args) => any
 		? (...args: Args) => ReturnType<T[K]>
 		: never
-}
+} & Contract<M>
 
-type ArrowFnActionMap = Record<string, (db: ModelAPI<any>, ...args: any[]) => any>
-
-/**
- * Transforms a collection of arrow-function actions of the format
- *
- * `(db: ModelAPI, ...args) => Promise<Result>`
- *
- * into actions compatible with the updated API:
- *
- * `(this: ActionContext, ...args) => Promise<Result>`
- *
- */
-export const transformArrowFns = (actionsMap: ArrowFnActionMap) => {
-	return mapValues(actionsMap, (action: (db: ModelAPI<any>, ...args: any[]) => any) => {
-		return async function (this: ActionContext<any>, ...args: any[]) {
-			return action(this.db, ...args)
-		} as any
-	}) as TransformActionParams<typeof actionsMap>
-}
-
-/**
- * Transforms a collection of arrow-function actions of the format
- *
- * `(db: ModelAPI, ...args) => Promise<Result>`
- *
- * into actions compatible with the updated API:
- *
- * `(this: ActionContext, ...args) => Promise<Result>`
- *
- * while wrapping all actions in a transaction.
- *
- */
-export const transformArrowFnsTransactional = (actionsMap: ArrowFnActionMap) => {
+export function transactionalize<T extends Record<string, (db: ModelAPI<any>, ...args: any[]) => any>>(
+	actionsMap: T,
+): TransformActionParams<T, any> {
 	return mapValues(actionsMap, (action: (db: ModelAPI<any>, ...args: any[]) => any) => {
 		return async function (this: ActionContext<any>, ...args: any[]) {
 			return await this.db.transaction(() => {
-				return action(this.db, ...args)
+				return action.apply(this, [this.db, ...args])
 			})
 		} as any
-	}) as TransformActionParams<typeof actionsMap>
+	}) as TransformActionParams<T, any>
+}
+
+export function createClassContract<
+	M extends ModelSchema,
+	A extends Record<string, (db: ModelAPI<any>, ...args: any[]) => any>,
+>(
+	className: string,
+	models: M,
+	actions: A,
+): ContractClass<typeof models, TransformActionParams<typeof actions, typeof models>> & Contract<typeof models> {
+	const transactionalizedActions = transactionalize(actions)
+
+	const DynamicClass = class DynamicClass extends Contract {
+		static get models() {
+			return models ?? (this as any)._models
+		}
+		constructor(topic: string) {
+			super(topic)
+			for (const [key, value] of Object.entries(transactionalizedActions)) {
+				Object.defineProperty(this, key, {
+					value: value,
+					writable: true,
+					enumerable: true,
+					configurable: true,
+				})
+			}
+		}
+	}
+
+	Object.defineProperty(DynamicClass, "name", {
+		value: className,
+		writable: false,
+	})
+
+	for (const [key, value] of Object.entries(transactionalizedActions)) {
+		Object.defineProperty(DynamicClass.prototype, key, {
+			value: value,
+			writable: true,
+			enumerable: true,
+			configurable: true,
+		})
+	}
+
+	return DynamicClass as unknown as ContractClass<typeof models, TransformActionParams<typeof actions, typeof models>> &
+		Contract<typeof models>
 }

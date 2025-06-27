@@ -65,7 +65,10 @@ export abstract class AbstractModelDB implements DatabaseAPI {
 	protected readonly subscriptions = new Map<number, Subscription>()
 	#subscriptionId = 0
 
-	protected constructor(public readonly config: Config, public readonly version: Record<string, number>) {
+	protected constructor(
+		public readonly config: Config,
+		public readonly version: Record<string, number>,
+	) {
 		this.log = logger(`canvas:modeldb`)
 		this.models = {}
 		for (const model of config.models) {
