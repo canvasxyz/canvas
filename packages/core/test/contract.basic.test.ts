@@ -180,6 +180,7 @@ test("insert a message into an app with multiple signers", async (t) => {
 
 	const getApp = async () => {
 		class MyApp extends Contract<typeof MyApp.models> {
+			static topic = "com.example.app"
 			static models = {} satisfies ModelSchema
 			async createPost(content: string) {
 				//
@@ -238,6 +239,7 @@ test("accept a manually encoded session/action with a legacy-style object arg", 
 	const signer = new SIWESigner({ burner: true })
 
 	class MyApp extends Contract<typeof MyApp.models> {
+		static topic = "com.example.app"
 		static models = {} satisfies ModelSchema
 
 		async createMessage(arg: string) {

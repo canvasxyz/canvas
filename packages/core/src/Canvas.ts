@@ -40,7 +40,7 @@ export type Config<
 	ModelsT extends ModelSchema = ModelSchema,
 	InstanceT extends Contract<ModelsT> = Contract<ModelsT> & Record<string, ContractAction<ModelsT>>,
 > = {
-	contract: string | { baseTopic?: string; models: ModelsT } | ContractClass<ModelsT, InstanceT>
+	contract: string | { topic: string; models: ModelsT } | ContractClass<ModelsT, InstanceT>
 
 	/** constructor arguments for the contract class */
 	args?: JSValue[]
@@ -117,8 +117,6 @@ export class Canvas<
 	>(config: Config<ModelsT, InstanceT>): Promise<Canvas<ModelsT, InstanceT>> {
 		const { path = null, contract, args = [], signers: initSigners = [], runtimeMemoryLimit } = config
 
-		const argsHash = bytesToHex(sha256(cbor.encode(args)).subarray(0, 4))
-
 		const signers = new SignerCache(initSigners.length === 0 ? [new SIWESigner({ burner: true })] : initSigners)
 
 		const verifySignature = (signature: Signature, message: Message<MessageType>) => {
@@ -133,9 +131,11 @@ export class Canvas<
 		}
 
 		const runtime = await createRuntime(contract as string | ContractClass, args, signers, { runtimeMemoryLimit })
-		assert(namespacePattern.test(runtime.baseTopic), "invalid namespace, must match [a-zA-Z0-9\\.\\-]")
+		assert(namespacePattern.test(runtime.topic), "invalid topic, must match [a-zA-Z0-9\\.\\-]")
 
-		const topicComponents = [runtime.baseTopic, argsHash]
+		const topicComponents =
+			args.length === 0 ? [runtime.topic] : [runtime.topic, bytesToHex(sha256(cbor.encode(args)).subarray(0, 4))]
+		// TODO: snapshot should be hashed into the same sha256 hash
 		if (config.snapshot) {
 			topicComponents.push(hashSnapshot(config.snapshot))
 		}
@@ -412,8 +412,14 @@ export class Canvas<
 		}
 	}
 
+	public get topic() {
+		// TODO: fix, this should be the whole thing
+		return this.runtime.topic
+	}
+
 	public get baseTopic() {
-		return this.runtime.baseTopic
+		// TODO: fix, what is this supposed to be? remove it?
+		return this.runtime.topic
 	}
 
 	public async replay(): Promise<boolean> {
@@ -511,10 +517,6 @@ export class Canvas<
 
 	public getSigners() {
 		return this.signers.getAll()
-	}
-
-	public get topic(): string {
-		return this.messageLog.topic
 	}
 
 	public async stop() {

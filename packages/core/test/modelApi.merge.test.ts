@@ -93,6 +93,7 @@ test("merge and update into a value set by another action", async (t) => {
 
 test("merge and get execute in order", async (t) => {
 	class MyApp extends Contract<typeof MyApp.models> {
+		static topic = "com.example.app"
 		static models = {
 			test: { id: "primary", foo: "string?", bar: "string?", qux: "string?" },
 		} satisfies ModelSchema

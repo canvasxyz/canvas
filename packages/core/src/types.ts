@@ -23,7 +23,7 @@ export type ContractClass<
 	ModelsT extends ModelSchema = ModelSchema,
 	InstanceT extends Contract<ModelsT> = Contract<ModelsT> & Record<string, ContractAction<ModelsT>>,
 > = {
-	baseTopic?: string
+	topic: string
 	models: ModelsT
 	new (...args: JSValue[]): InstanceT
 }

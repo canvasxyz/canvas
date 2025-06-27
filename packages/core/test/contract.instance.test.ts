@@ -13,7 +13,7 @@ test("initialize contract with instance topic", async (t) => {
 	class Blog extends Contract<typeof Blog.models> {
 		site: string
 
-		static baseTopic = "example.xyz"
+		static topic = "example.xyz"
 
 		static models = {
 			posts: { id: "primary", creator: "string", content: "string" },
@@ -34,7 +34,7 @@ test("initialize contract with instance topic", async (t) => {
 
 	t.teardown(() => app.stop())
 
-	t.is(app.baseTopic, "example.xyz")
+	t.is(app.topic, "example.xyz")
 	t.is(app.topic, "example.xyz:76be8b52")
 
 	await app.actions.createPost("hello world")

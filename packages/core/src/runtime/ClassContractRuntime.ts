@@ -67,9 +67,9 @@ export class ClassContractRuntime extends AbstractRuntime {
 			"contract model names cannot start with '$'",
 		)
 
-		using baseTopicHandle = vm.context.getProp(contractClassHandle, "baseTopic")
-		const baseTopic = vm.context.dump(baseTopicHandle) ?? contractURI.slice(-16)
-		assert(typeof baseTopic === "string", "invalid contract class - expected `static baseTopic: string`")
+		using topicHandle = vm.context.getProp(contractClassHandle, "topic")
+		const topic = vm.context.dump(topicHandle) ?? contractURI.slice(-16)
+		assert(typeof topic === "string", "invalid contract class - expected `static topic: string`")
 
 		const actionHandles = Object.fromEntries(
 			actionNames.map((actionName) => [
@@ -78,7 +78,7 @@ export class ClassContractRuntime extends AbstractRuntime {
 			]),
 		)
 
-		return new ClassContractRuntime(baseTopic, signers, vm, contract, actionHandles, contractHandle, models)
+		return new ClassContractRuntime(topic, signers, vm, contract, actionHandles, contractHandle, models)
 	}
 
 	readonly #databaseAPI: QuickJSHandle
@@ -90,7 +90,7 @@ export class ClassContractRuntime extends AbstractRuntime {
 	#txnId = 0
 
 	constructor(
-		public readonly baseTopic: string,
+		public readonly topic: string,
 		public readonly signers: SignerCache,
 		public readonly vm: VM,
 		public readonly contract: string,

@@ -3,6 +3,10 @@ import type { ActionContext, DeriveModelTypes, ModelAPI, ModelSchema } from "./t
 import { Canvas, Config } from "@canvas-js/core"
 
 export class Contract<ModelsT extends ModelSchema = ModelSchema> implements ActionContext<DeriveModelTypes<ModelsT>> {
+	public static get topic(): string {
+		throw new Error("the `Contract` class must be extended by a child class providing `static topic`")
+	}
+
 	public static get models(): ModelSchema {
 		throw new Error("the `Contract` class must be extended by a child class providing `static models`")
 	}

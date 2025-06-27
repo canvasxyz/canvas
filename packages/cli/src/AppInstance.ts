@@ -36,7 +36,7 @@ export type AppInstanceConfig = {
 	/** Networking configuration options */
 	config: AppConfig
 
-	contract: string | ContractClass | { models: ModelSchema }
+	contract: string | ContractClass | { topic: string; models: ModelSchema }
 	signers?: SessionSigner[]
 	snapshot?: Snapshot | null | undefined
 	reset?: boolean

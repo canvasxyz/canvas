@@ -199,6 +199,7 @@ test("test read conflict", async (t) => {
 	type Post = { id: string; room: string; author: string; content: string }
 
 	class MyApp extends Contract<typeof MyApp.models> {
+		static topic = "com.example.myapp"
 		static models = {
 			rooms: { id: "primary", admins: "json", members: "json" },
 			posts: { id: "primary", room: "@rooms", author: "string", content: "string" },
