@@ -36,16 +36,22 @@ const actions = {
 		}
 		await db.delete("posts", key)
 	},
-} satisfies Record<string, (this: ActionContext<DeriveModelTypes<typeof models>>, db: ModelAPI<DeriveModelTypes<typeof models>>, ...args: any[]) => any>
+} satisfies Record<
+	string,
+	(
+		this: ActionContext<DeriveModelTypes<typeof models>>,
+		db: ModelAPI<DeriveModelTypes<typeof models>>,
+		...args: any[]
+	) => any
+>
 
 test("create a valid class contract from actions and models", async (t) => {
-	const BlogContract = createClassContract("BlogContract", models, actions)
+	const BlogContract = createClassContract("BlogContract", "com.example.blog", models, actions)
 
 	const wallet = ethers.Wallet.createRandom()
 	const signer = new SIWESigner({ signer: wallet })
 
 	const app = await Canvas.initialize({
-	  topicOverride: "com.example.compat-test", // TODO
 		contract: BlogContract,
 		reset: true,
 		signers: [signer],
@@ -53,6 +59,7 @@ test("create a valid class contract from actions and models", async (t) => {
 
 	t.teardown(() => app.stop())
 
+	t.is(app.topic, "com.example.blog.BlogContract")
 	t.is(BlogContract.name, "BlogContract")
 	t.deepEqual(BlogContract.models, models)
 

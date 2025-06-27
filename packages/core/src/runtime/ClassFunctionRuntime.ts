@@ -72,7 +72,10 @@ export class ClassFunctionRuntime extends AbstractRuntime {
 			Object.assign(contractInstance, Object.fromEntries(actionEntries))
 		}
 
-		return new ClassFunctionRuntime(contract.topic, signers, actionNames, contract.models, contractInstance)
+		const topic =
+			isContractClass(contract) && contract.name !== "default" ? `${contract.topic}.${contract.name}` : contract.topic
+
+		return new ClassFunctionRuntime(topic, signers, actionNames, contract.models, contractInstance)
 	}
 
 	#context: ExecutionContext | null = null

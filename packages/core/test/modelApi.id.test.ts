@@ -26,6 +26,8 @@ test("create id in host runtime", async (t) => {
 
 	t.teardown(() => app.stop())
 
+	t.is(app.topic, "example.xyz.MyApp")
+
 	const { result: result1 } = await app.actions.createBlob()
 	const { result: result2 } = await app.actions.createBlob()
 	const { result: result3 } = await app.actions.createBlob()
@@ -41,11 +43,11 @@ test("create id in host runtime", async (t) => {
 	])
 
 	t.deepEqual(await app.db.query("blobs"), [
-		{ id: "b1c1b65427bf8349b70cbf29ffda5c56" },
-		{ id: "be909ae8ade0d53f5b4c89208ac4ae9e" },
-		{ id: "32054f3ecc85dcaa5f63abc500c36bf1" },
-		{ id: "dff7e4ecf59dda4ef2db032de8c1675c" },
-		{ id: "37f8d99dce9234cf8173b44dcdad7d35" },
+		{ id: "d9a997ded77d50620921aa305b4b31a0" },
+		{ id: "614d9436b38eea14c672bffe1e44e1e9" },
+		{ id: "1ad52196e967e848401dfaf4be8cde78" },
+		{ id: "c76c2b331f8551cb9b273855c89cb54f" },
+		{ id: "95914be05c6eadd5db6d1353e33bc194" },
 	])
 })
 
@@ -72,9 +74,9 @@ test("create id in quickjs function", async (t) => {
 		signers: [new PRNGSigner(0)],
 	})
 
-	t.is(app.topic, "example.xyz")
-
 	t.teardown(() => app.stop())
+
+	t.is(app.topic, "example.xyz.MyApp")
 
 	const { result: result1 } = await app.actions.createBlob()
 	const { result: result2 } = await app.actions.createBlob()
@@ -91,10 +93,10 @@ test("create id in quickjs function", async (t) => {
 	])
 
 	t.deepEqual(await app.db.query("blobs"), [
-		{ id: "b1c1b65427bf8349b70cbf29ffda5c56" },
-		{ id: "be909ae8ade0d53f5b4c89208ac4ae9e" },
-		{ id: "32054f3ecc85dcaa5f63abc500c36bf1" },
-		{ id: "dff7e4ecf59dda4ef2db032de8c1675c" },
-		{ id: "37f8d99dce9234cf8173b44dcdad7d35" },
+		{ id: "d9a997ded77d50620921aa305b4b31a0" },
+		{ id: "614d9436b38eea14c672bffe1e44e1e9" },
+		{ id: "1ad52196e967e848401dfaf4be8cde78" },
+		{ id: "c76c2b331f8551cb9b273855c89cb54f" },
+		{ id: "95914be05c6eadd5db6d1353e33bc194" },
 	])
 })

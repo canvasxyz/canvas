@@ -34,8 +34,7 @@ test("initialize contract with instance topic", async (t) => {
 
 	t.teardown(() => app.stop())
 
-	t.is(app.topic, "example.xyz")
-	t.is(app.topic, "example.xyz:76be8b52")
+	t.is(app.topic, "example.xyz.Blog")
 
 	await app.actions.createPost("hello world")
 	await app.actions.createPost("second post")
@@ -47,8 +46,8 @@ test("initialize contract with instance topic", async (t) => {
 test("initialize string contract with instance topic", async (t) => {
 	const contract = `import { Contract } from "@canvas-js/core/contract";
 
-	export default class extends Contract {
-	  static baseTopic = "example.xyz"
+	export default class Blog extends Contract {
+	  static topic = "example.xyz"
 		static models = { posts: { id: "primary", creator: "string", content: "string" } }
 		async createPost(content) {
 			await this.db.create("posts", { id: this.id, creator: this.address, content })
@@ -66,8 +65,7 @@ test("initialize string contract with instance topic", async (t) => {
 
 	t.teardown(() => app.stop())
 
-	t.is(app.baseTopic, "example.xyz")
-	t.is(app.topic, "example.xyz:76be8b52")
+	t.is(app.topic, "example.xyz.Blog")
 
 	await app.actions.createPost("hello world")
 	await app.actions.createPost("second post")

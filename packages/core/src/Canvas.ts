@@ -413,13 +413,7 @@ export class Canvas<
 	}
 
 	public get topic() {
-		// TODO: fix, this should be the whole thing
-		return this.runtime.topic
-	}
-
-	public get baseTopic() {
-		// TODO: fix, what is this supposed to be? remove it?
-		return this.runtime.topic
+		return this.messageLog.topic
 	}
 
 	public async replay(): Promise<boolean> {

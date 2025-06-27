@@ -31,13 +31,13 @@ test("generate random values inside a contract", async (t) => {
 
 		// prettier-ignore
 		[
-      0.24929093804506638,
-      0.6215243012711583,
-      0.5763528717034423,
-      0.9327002352383666,
-      0.18960461161623013,
-      0.8496135401239201,
-      0.6661398817024785,
+     0.23719689864497184,
+     0.6196255471733731,
+     0.37230217149501255,
+     0.7528334586498452,
+     0.8441302381252208,
+     0.5403482182954353,
+     0.5126781285675837,
 		],
 	)
 
@@ -48,7 +48,7 @@ test("generate random values inside a contract", async (t) => {
 test("generate random values inside a string contract", async (t) => {
 	const app = await Canvas.initialize({
 		contract: `
-		export default class {
+		export default class MyApp {
       static topic = "com.example.app"
   		static models = {}
      	async getRandom() {
@@ -69,13 +69,13 @@ test("generate random values inside a string contract", async (t) => {
 
 		// prettier-ignore
 		[
-      0.24929093804506638,
-      0.6215243012711583,
-      0.5763528717034423,
-      0.9327002352383666,
-      0.18960461161623013,
-      0.8496135401239201,
-      0.6661398817024785,
+     0.23719689864497184,
+     0.6196255471733731,
+     0.37230217149501255,
+     0.7528334586498452,
+     0.8441302381252208,
+     0.5403482182954353,
+     0.5126781285675837,
 		],
 	)
 
