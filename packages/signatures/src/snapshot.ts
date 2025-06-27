@@ -1,4 +1,4 @@
-import type { Action, Session, Snapshot, Message, Signature, SignatureScheme, Signer } from "@canvas-js/interfaces"
+import type { Message, Signature, SignatureScheme, Signer } from "@canvas-js/interfaces"
 import { assert } from "@canvas-js/utils"
 
 const codecs = { snapshot: "canvas-snapshot" }

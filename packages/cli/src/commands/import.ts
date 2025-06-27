@@ -19,11 +19,6 @@ export const builder = (yargs: Argv) =>
 			type: "string",
 			demandOption: true,
 		})
-		.option("baseTopic", {
-			alias: "topic",
-			desc: "Application topic",
-			type: "string",
-		})
 		.option("chain-rpc", {
 			type: "array",
 			desc: "Provide an RPC endpoint for reading on-chain data (format: chain, URL)",
@@ -36,10 +31,10 @@ export const builder = (yargs: Argv) =>
 type Args = ReturnType<typeof builder> extends Argv<infer T> ? T : never
 
 export async function handler(args: Args) {
-	const { baseTopic, location, contract } = await getContractLocation(args)
+	const { location, contract } = await getContractLocation(args)
 	assert(location !== null, "Cannot import to development apps since they do not persist any data")
 
-	const app = await Canvas.initialize({ topic: baseTopic, path: location, contract })
+	const app = await Canvas.initialize({ path: location, contract })
 
 	const rl = readline.createInterface({
 		input: process.stdin,

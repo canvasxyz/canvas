@@ -9,6 +9,8 @@ import { Contract } from "@canvas-js/core/contract"
 
 test("get a value set by another action", async (t) => {
 	class MyApp extends Contract<typeof MyApp.models> {
+		static topic = "com.example.app"
+
 		static models = {
 			user: { id: "primary", name: "string" },
 			post: { id: "primary", from: "@user", content: "string" },
@@ -38,7 +40,6 @@ test("get a value set by another action", async (t) => {
 
 	const wallet = ethers.Wallet.createRandom()
 	const app = await Canvas.initialize({
-		topic: "com.example.app",
 		signers: [new SIWESigner({ signer: wallet })],
 		contract: MyApp,
 	})

@@ -8,5 +8,5 @@ export * from "./MessageSet.js"
 export * from "./SignedMessage.js"
 export type { AncestorRecord } from "./AncestorIndex.js"
 
-export { gossiplogTopicPattern } from "./utils.js"
+export { topicPattern as gossiplogTopicPattern } from "./utils.js"
 export { NetworkClient } from "./client/index.js"

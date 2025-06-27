@@ -1,6 +1,6 @@
 import * as pg from "pg"
 
-import type { Action, MessageType, Session, Snapshot } from "@canvas-js/interfaces"
+import type { MessageType } from "@canvas-js/interfaces"
 import type { AbstractGossipLog, GossipLogInit } from "@canvas-js/gossiplog"
 import type { Canvas } from "@canvas-js/core"
 import type { SqlStorage } from "@cloudflare/workers-types"

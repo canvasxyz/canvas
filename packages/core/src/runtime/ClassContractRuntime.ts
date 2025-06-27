@@ -1,13 +1,10 @@
 import { QuickJSHandle } from "quickjs-emscripten"
 
-import { bytesToHex } from "@noble/hashes/utils"
-import { sha256 } from "@noble/hashes/sha256"
-import { assert } from "@canvas-js/utils"
+import { assert, JSValue } from "@canvas-js/utils"
 
 import type { SignerCache } from "@canvas-js/interfaces"
 import { ModelValue } from "@canvas-js/modeldb"
 import { VM } from "@canvas-js/vm"
-import { encodeId } from "@canvas-js/gossiplog"
 
 import { ModelSchema } from "../types.js"
 import { ExecutionContext } from "../ExecutionContext.js"
@@ -15,9 +12,9 @@ import { AbstractRuntime } from "./AbstractRuntime.js"
 
 export class ClassContractRuntime extends AbstractRuntime {
 	public static async init(
-		topic: string,
-		signers: SignerCache,
 		contract: string,
+		args: JSValue[],
+		signers: SignerCache,
 		options: { runtimeMemoryLimit?: number } = {},
 	): Promise<ClassContractRuntime> {
 		const { runtimeMemoryLimit } = options
@@ -27,7 +24,7 @@ export class ClassContractRuntime extends AbstractRuntime {
 		const contractURI = VM.getFileURI(contract)
 		vm.runtime.setModuleLoader((moduleName, context) => {
 			if (moduleName === "@canvas-js/core/contract") {
-				return `export class Contract { constructor(topic) { this.topic = topic } }`
+				return `export class Contract {}`
 			} else if (moduleName === contractURI) {
 				return contract
 			} else {
@@ -58,10 +55,8 @@ export class ClassContractRuntime extends AbstractRuntime {
 			.map((handle) => handle.consume((handle) => vm.context.getString(handle)))
 			.filter((name) => name !== "constructor")
 
-		using topicHandle = vm.wrapValue(topic)
-		using contractHandle = vm.call(createContractHandle, vm.context.null, [topicHandle])
-		using instanceTopicHandle = vm.context.getProp(contractHandle, "topic")
-		const instanceTopic = vm.context.getString(instanceTopicHandle)
+		const argHandles = args.map(vm.wrapValue)
+		const contractHandle = vm.call(createContractHandle, vm.context.null, argHandles)
 
 		using modelsHandle = vm.context.getProp(contractClassHandle, "models")
 		assert(vm.context.typeof(modelsHandle) === "object", "invalid contract class - expected static models object")
@@ -72,6 +67,15 @@ export class ClassContractRuntime extends AbstractRuntime {
 			"contract model names cannot start with '$'",
 		)
 
+		using topicHandle = vm.context.getProp(contractClassHandle, "topic")
+		using nameHandle = vm.context.getProp(contractClassHandle, "name")
+		const domain = vm.context.dump(topicHandle)
+		const objName = vm.context.dump(nameHandle)
+		assert(typeof domain === "string", "invalid contract class - expected `static topic: string`")
+		assert(typeof objName === "string", "invalid contract class - expected `name: string`")
+
+		const topic = objName === "default" ? domain : `${domain}.${objName}`
+
 		const actionHandles = Object.fromEntries(
 			actionNames.map((actionName) => [
 				actionName,
@@ -79,10 +83,11 @@ export class ClassContractRuntime extends AbstractRuntime {
 			]),
 		)
 
-		return new ClassContractRuntime(instanceTopic, signers, vm, contract, actionHandles, models)
+		return new ClassContractRuntime(topic, signers, vm, contract, actionHandles, contractHandle, models)
 	}
 
 	readonly #databaseAPI: QuickJSHandle
+	readonly #contractHandle: QuickJSHandle
 
 	#context: ExecutionContext | null = null
 	#thisHandle: QuickJSHandle | null = null
@@ -95,12 +100,15 @@ export class ClassContractRuntime extends AbstractRuntime {
 		public readonly vm: VM,
 		public readonly contract: string,
 		public readonly actionHandles: Record<string, QuickJSHandle>,
+		contractHandle: QuickJSHandle,
 		modelSchema: ModelSchema,
 	) {
 		super(modelSchema)
 
 		this.actionHandles = actionHandles
 		this.contract = contract
+
+		this.#contractHandle = contractHandle
 
 		const databaseAPI = vm.wrapObject({
 			get: vm.wrapFunction(async (model, key) => {
@@ -183,6 +191,7 @@ export class ClassContractRuntime extends AbstractRuntime {
 	}
 
 	public close() {
+		this.#contractHandle.dispose()
 		this.vm.dispose()
 	}
 

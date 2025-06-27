@@ -8,7 +8,6 @@ type Models = DeriveModelTypes<typeof Refs.models>
 const getApp = async () => {
 	const app = await Canvas.initialize({
 		contract: Refs,
-		topic: "refs.nyc.test",
 	})
 	const did = await app.signers.getFirst().getDid()
 

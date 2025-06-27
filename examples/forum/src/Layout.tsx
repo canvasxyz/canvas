@@ -33,7 +33,6 @@ const Layout: React.FC = () => {
 
 	const { app, ws } = useCanvas(wsURL, {
 		signers: [new SIWESigner({ readOnly: true }), new SIWFSigner()],
-		topic: "forum-example.canvas.xyz",
 		contract: Forum,
 		// reset: true,
 	})
@@ -63,7 +62,11 @@ const Layout: React.FC = () => {
 								<ConnectSIWE />
 								<ConnectSIWEBurner />
 								<ConnectSIWF />
-								{(connectSIWEStatus === "Connected" || connectSIWEBurnerStatus === "Connected" || connectSIWFStatus === "Connected") ? <Logout /> : null}
+								{connectSIWEStatus === "Connected" ||
+								connectSIWEBurnerStatus === "Connected" ||
+								connectSIWFStatus === "Connected" ? (
+									<Logout />
+								) : null}
 							</div>
 							<div className="block mt-4 text-gray-600 text-center text-sm">
 								{app.hasSession() ? "Logged in" : "Logged out"} &middot;{" "}

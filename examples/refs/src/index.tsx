@@ -191,8 +191,7 @@ const wsURL =
 const Container: React.FC<{}> = ({}) => {
 	const { app, ws, error } = useCanvas<typeof models>(wsURL, {
 		signers: [new SIWESigner({ burner: true })],
-		topic: "refs-example.canvas.xyz",
-		contract: { models },
+		contract: { topic: "refs-example.canvas.xyz", models },
 		// reset: true,
 	})
 

@@ -21,7 +21,7 @@ const getGroupId = (address1: string, address2: string) => {
 
 const useChat = (topic: string, wallet: ethers.Wallet) => {
 	const { app, ws } = useCanvas(wsURL, {
-		topic,
+		topicOverride: topic,
 		signers: [new SIWESigner({ signer: wallet })],
 		contract: EncryptedChat,
 	})

@@ -79,10 +79,10 @@ export const models = {
 export type ModelTypes = DeriveModelTypes<typeof models>
 
 export default class Refs extends Contract<typeof Refs.models> {
+	static topic = "refs.nyc.test"
 	static models = {
 		connection,
 		profile,
 		ref,
 	} satisfies ModelSchema
 }
-

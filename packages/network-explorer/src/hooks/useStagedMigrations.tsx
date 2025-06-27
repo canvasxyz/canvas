@@ -14,12 +14,12 @@ async function getChangesetsForContractDiff(oldContract: string, newContract: st
 	const { build } = await Canvas.buildContract(newContract, { wasmURL: "./esbuild.wasm" })
 	const app = await Canvas.initialize({
 		contract: oldContract,
-		topic: "test.a." + bytesToHex(randomBytes(32)),
+		topicOverride: "test.a." + bytesToHex(randomBytes(32)),
 		reset: true,
 	})
 	const newApp = await Canvas.initialize({
 		contract: build,
-		topic: "test.b." + bytesToHex(randomBytes(32)),
+		topicOverride: "test.b." + bytesToHex(randomBytes(32)),
 		reset: true,
 	})
 	return generateChangesets(app.getSchema(), newApp.getSchema())
@@ -198,7 +198,7 @@ export const StagedMigrationsProvider = ({ children }: { children: React.ReactNo
 		// instantiate a new canvas app with the model schema
 		const app = await Canvas.initialize({
 			contract: contractData.contract,
-			topic: "test.a." + bytesToHex(randomBytes(32)),
+			topicOverride: "test.a." + bytesToHex(randomBytes(32)),
 			reset: true,
 		})
 		const modelSchema = app.getSchema()

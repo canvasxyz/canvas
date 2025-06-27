@@ -2,6 +2,8 @@ import { ModelSchema } from "@canvas-js/core"
 import { Contract } from "@canvas-js/core/contract"
 
 export default class Forum extends Contract<typeof Forum.models> {
+	static topic = "forum-example.canvas.xyz"
+
 	static models = {
 		posts: {
 			id: "primary",

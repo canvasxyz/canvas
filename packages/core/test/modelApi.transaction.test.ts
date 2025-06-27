@@ -19,6 +19,7 @@ test("increment a counter, reading outside the transaction", async (t) => {
 	const random = (n: number) => rng.nextInt(0, n - 1)
 
 	class MyApp extends Contract<typeof MyApp.models> {
+		static topic = "com.example.app"
 		static models = {
 			counter: { id: "primary", value: "integer" },
 		} satisfies ModelSchema
@@ -39,7 +40,6 @@ test("increment a counter, reading outside the transaction", async (t) => {
 	const init = async (t: ExecutionContext<unknown>, seed: number) => {
 		const app = await Canvas.initialize({
 			contract: MyApp,
-			topic: "com.example.app",
 			signers: [new PRNGSigner(seed)],
 		})
 
@@ -102,6 +102,7 @@ test("increment a counter, reading inside the transaction", async (t) => {
 	const random = (n: number) => rng.nextInt(0, n - 1)
 
 	class MyApp extends Contract<typeof MyApp.models> {
+		static topic = "com.example.app"
 		static models = {
 			counter: { id: "primary", value: "integer" },
 		} satisfies ModelSchema
@@ -124,7 +125,6 @@ test("increment a counter, reading inside the transaction", async (t) => {
 	const init = async (t: ExecutionContext<unknown>, seed: number) => {
 		const app = await Canvas.initialize({
 			contract: MyApp,
-			topic: "com.example.app",
 			signers: [new PRNGSigner(seed)],
 		})
 
@@ -199,6 +199,7 @@ test("test read conflict", async (t) => {
 	type Post = { id: string; room: string; author: string; content: string }
 
 	class MyApp extends Contract<typeof MyApp.models> {
+		static topic = "com.example.myapp"
 		static models = {
 			rooms: { id: "primary", admins: "json", members: "json" },
 			posts: { id: "primary", room: "@rooms", author: "string", content: "string" },
@@ -252,7 +253,6 @@ test("test read conflict", async (t) => {
 	const init = async (t: ExecutionContext<unknown>, seed: number) => {
 		const app = await Canvas.initialize({
 			contract: MyApp,
-			topic: "com.example.app",
 			signers: [new PRNGSigner(seed)],
 		})
 

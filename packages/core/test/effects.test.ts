@@ -7,6 +7,7 @@ import { Canvas, ModelSchema } from "@canvas-js/core"
 import { Contract } from "@canvas-js/core/contract"
 
 class MyApp extends Contract<typeof MyApp.models> {
+	static topic = "com.example.app"
 	static models = {
 		posts: { id: "primary", content: "string" },
 	} satisfies ModelSchema
@@ -33,7 +34,6 @@ const init = async (t: ExecutionContext<unknown>) => {
 	const signer = new SIWESigner({ burner: true })
 	const app = await Canvas.initialize({
 		contract: MyApp,
-		topic: "com.example.app",
 		signers: [signer],
 	})
 

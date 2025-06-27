@@ -10,6 +10,7 @@ const contract = `
 import { Contract } from "@canvas-js/core/contract"
 
 export default class MyApp extends Contract {
+  static topic = "com.example.app"
   static models = {
     posts: {
       id: "primary",
@@ -47,6 +48,7 @@ export default class MyApp extends Contract {
 `.trim()
 
 class MyApp extends Contract<typeof MyApp.models> {
+	static topic = "com.example.app"
 	static models = {
 		posts: {
 			id: "primary",
@@ -76,7 +78,6 @@ const initStringContract = (t: ExecutionContext) => {
 	const signer = new SIWESigner({ burner: true })
 	const app = new Canvas({
 		contract,
-		topic: "com.example.app",
 		reset: true,
 		signers: [signer],
 	})
@@ -91,7 +92,6 @@ const initStringContract = (t: ExecutionContext) => {
 const initInlineContract = (t: ExecutionContext) => {
 	const wallet = ethers.Wallet.createRandom()
 	const app = new Canvas({
-		topic: "com.example.app",
 		contract: MyApp,
 		signers: [new SIWESigner({ signer: wallet })],
 	})

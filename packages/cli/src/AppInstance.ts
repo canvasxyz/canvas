@@ -15,7 +15,7 @@ import { WebSockets, WebSocketsSecure } from "@multiformats/multiaddr-matcher"
 import stoppable from "stoppable"
 
 import { SessionSigner } from "@canvas-js/interfaces"
-import { Canvas, PeerId, Snapshot, hashSnapshot, ModelSchema, ContractClass } from "@canvas-js/core"
+import { Canvas, PeerId, Snapshot, ModelSchema, ContractClass } from "@canvas-js/core"
 import { createAPI } from "@canvas-js/core/api"
 
 import { NetworkServer } from "@canvas-js/gossiplog/server"
@@ -30,13 +30,10 @@ import { SolanaSigner } from "@canvas-js/signer-solana"
 const { BOOTSTRAP_LIST } = process.env
 
 export type AppInstanceConfig = {
-	/** Base topic to start the app with. If a snapshot is provided, the snapshot hash will also be appended. */
-	baseTopic: string
-
 	/** Networking configuration options */
 	config: AppConfig
 
-	contract: string | ContractClass | { models: ModelSchema }
+	contract: string | ContractClass | { topic: string; models: ModelSchema }
 	signers?: SessionSigner[]
 	snapshot?: Snapshot | null | undefined
 	reset?: boolean
@@ -76,22 +73,9 @@ export class AppInstance {
 	private closing = false
 	private onProgramInterrupt: () => void
 
-	static async initialize({
-		baseTopic,
-		contract,
-		signers,
-		snapshot,
-		reset,
-		location,
-		config,
-		verbose,
-	}: AppInstanceConfig) {
-		const topic = snapshot ? `${baseTopic}#${hashSnapshot(snapshot)}` : baseTopic
-		AppInstance.printInitialization(topic, location)
-
+	static async initialize({ contract, signers, snapshot, reset, location, config, verbose }: AppInstanceConfig) {
 		const app = await Canvas.initialize({
 			path: process.env.DATABASE_URL ?? location,
-			topic,
 			contract,
 			snapshot,
 			signers: signers ?? [
@@ -105,6 +89,7 @@ export class AppInstance {
 			],
 			reset,
 		})
+		AppInstance.printInitialization(app.topic, location)
 		const instance = new AppInstance(app, config, verbose)
 
 		instance.setupLogging()

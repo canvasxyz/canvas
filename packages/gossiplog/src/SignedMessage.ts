@@ -8,7 +8,7 @@ import type { Signature, Message } from "@canvas-js/interfaces"
 import { MessageId, decodeId, encodeId, KEY_LENGTH } from "./MessageId.js"
 import { MessageSet } from "./MessageSet.js"
 import { decodeClock, encodeClock } from "./clock.js"
-import { gossiplogTopicPattern } from "./utils.js"
+import { topicPattern } from "./utils.js"
 
 export type MessageSourceType = "pubsub" | "push" | "sync"
 export type MessageSource = { type: MessageSourceType; peer: string }
@@ -95,7 +95,7 @@ function validateMessageTuple<Payload>(messageTuple: unknown): asserts messageTu
 	validateSignatureTuple(signature)
 
 	assert(typeof topic === "string", 'expected typeof topic === "string"')
-	assert(gossiplogTopicPattern.test(topic), "invalid topic string")
+	assert(topicPattern.test(topic), "invalid topic string")
 
 	assert(typeof clock === "number", 'expected typeof clock === "number"')
 	validateMessageParents(parents)
