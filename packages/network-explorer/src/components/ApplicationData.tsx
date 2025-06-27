@@ -101,7 +101,7 @@ export const ApplicationData = () => {
 					<Text weight="bold">Database</Text>{" "}
 					<Text color="gray">{applicationInfo ? applicationInfo.database : "-"}</Text>
 					<Text weight="bold">Version</Text> <Text color="gray">v{packageJson.version}</Text>
-					<Text weight="bold">Snapshot</Text> <Text color="gray">{contractInfo?.snapshotHash ?? "-"}</Text>
+					<Text weight="bold">Snapshot</Text> <Text color="gray">{contractInfo?.snapshot ?? "-"}</Text>
 					<Text weight="bold">Last message</Text>{" "}
 					<Text color="gray">
 						<LastMessageTime timestamp={applicationInfo?.lastMessage} />

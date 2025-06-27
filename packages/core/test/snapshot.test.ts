@@ -1,6 +1,6 @@
 import test from "ava"
 
-import { Canvas, hashSnapshot, ModelSchema } from "@canvas-js/core"
+import { Canvas, ModelSchema } from "@canvas-js/core"
 import { Contract } from "@canvas-js/core/contract"
 
 test("snapshot persists data across apps", async (t) => {

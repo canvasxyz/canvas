@@ -15,7 +15,7 @@ import { WebSockets, WebSocketsSecure } from "@multiformats/multiaddr-matcher"
 import stoppable from "stoppable"
 
 import { SessionSigner } from "@canvas-js/interfaces"
-import { Canvas, PeerId, Snapshot, hashSnapshot, ModelSchema, ContractClass } from "@canvas-js/core"
+import { Canvas, PeerId, Snapshot, ModelSchema, ContractClass } from "@canvas-js/core"
 import { createAPI } from "@canvas-js/core/api"
 
 import { NetworkServer } from "@canvas-js/gossiplog/server"

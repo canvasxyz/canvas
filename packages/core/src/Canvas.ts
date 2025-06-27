@@ -29,7 +29,7 @@ import type {
 import { Runtime, createRuntime } from "./runtime/index.js"
 import { ActionRecord } from "./runtime/AbstractRuntime.js"
 import { validatePayload } from "./schema.js"
-import { CreateSnapshotArgs, createSnapshot, hashSnapshot } from "./snapshot.js"
+import { CreateSnapshotArgs, createSnapshot } from "./snapshot.js"
 import { baseVersion, initialUpgradeSchema, initialUpgradeVersion, upgrade } from "./migrations.js"
 import { namespacePattern } from "./utils.js"
 
@@ -133,12 +133,18 @@ export class Canvas<
 		const runtime = await createRuntime(contract as string | ContractClass, args, signers, { runtimeMemoryLimit })
 		assert(namespacePattern.test(runtime.topic), "invalid topic, must match [a-zA-Z0-9\\.\\-]")
 
-		const topicComponents =
-			args.length === 0 ? [runtime.topic] : [runtime.topic, bytesToHex(sha256(cbor.encode(args)).subarray(0, 4))]
-		// TODO: snapshot should be hashed into the same sha256 hash
-		if (config.snapshot) {
-			topicComponents.push(hashSnapshot(config.snapshot))
+		const topicHashComponents: { args?: Uint8Array; snapshot?: Uint8Array } = {}
+		if (args.length > 0) {
+			topicHashComponents.args = cbor.encode(args)
 		}
+		if (config.snapshot) {
+			topicHashComponents.snapshot = sha256(cbor.encode(config.snapshot))
+		}
+
+		const topicComponents =
+			Object.entries(topicHashComponents).length === 0
+				? [runtime.topic]
+				: [runtime.topic, bytesToHex(sha256(cbor.encode(topicHashComponents)).subarray(0, 16))]
 
 		const topic = config.topicOverride ?? topicComponents.join(":")
 

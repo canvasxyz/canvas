@@ -7,9 +7,8 @@ import {
 	Config,
 	Snapshot,
 	ContractAction,
-	hashContract,
-	hashSnapshot,
 	ClientSyncStatus,
+	hashContract,
 } from "@canvas-js/core"
 import { Contract } from "@canvas-js/core/contract"
 
@@ -75,10 +74,7 @@ export const useCanvas = <
 			const contractApi = `${httpRoot}/api/contract`
 			const snapshotApi = `${httpRoot}/api/snapshot`
 
-			async function setupRemoteApplication([info, contractInfo]: [
-				{ topic: string },
-				{ contract: string; snapshotHash: string },
-			]) {
+			async function setupRemoteApplication([info, contractInfo]: [{ topic: string }, { contract: string }]) {
 				if (config === undefined) {
 					console.error("Canvas WebSocket remote did not return a valid application topic or contract")
 					return
@@ -88,13 +84,16 @@ export const useCanvas = <
 				const contract = contractInfo.contract
 				const remoteContractHash = hashContract(contractInfo.contract)
 
-				const snapshot = contractInfo.snapshotHash
-					? await (async () => {
-							const response = await fetch(snapshotApi)
-							const buffer = await response.arrayBuffer()
-							return cbor.decode<Snapshot>(new Uint8Array(buffer))
-						})()
-					: null
+				// TODO: only request this if we know there's a snapshot...
+				const snapshot = await (async () => {
+					try {
+						const response = await fetch(snapshotApi)
+						const buffer = await response.arrayBuffer()
+						return cbor.decode<Snapshot>(new Uint8Array(buffer))
+					} catch (err) {
+						return null
+					}
+				})()
 
 				let reset: boolean
 				if (remoteContractHashRef.current[topic] === undefined) {
@@ -143,7 +142,7 @@ export const useCanvas = <
 					// Application just initialized, or contract remains unchanged
 					await Canvas.initialize({
 						...config,
-						topicOverride: config.snapshot ? `${config.topicOverride}#${hashSnapshot(config.snapshot)}` : config.topicOverride,
+						topicOverride: config.topicOverride,
 					}).then(assign.bind(null, url))
 				} else if ((await app.db.count("$messages")) > 1 && snapshotRef.current) {
 					// Contract changed, reuse the old snapshot
@@ -152,7 +151,7 @@ export const useCanvas = <
 						...config,
 						reset: true,
 						snapshot,
-						topicOverride: config.snapshot ? `${config.topicOverride}#${hashSnapshot(config.snapshot)}` : config.topicOverride,
+						topicOverride: config.topicOverride,
 					}).then(assign.bind(null, url))
 				} else {
 					// Contract changed, make a new snapshot
@@ -161,7 +160,7 @@ export const useCanvas = <
 						...config,
 						reset: true,
 						snapshot,
-						topicOverride: config.snapshot ? `${config.topicOverride}#${hashSnapshot(config.snapshot)}` : config.topicOverride,
+						topicOverride: config.topicOverride,
 					}).then(assign.bind(null, url))
 					snapshotRef.current = snapshot
 				}

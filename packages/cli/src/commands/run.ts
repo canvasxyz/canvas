@@ -8,7 +8,7 @@ import { verifyMessage } from "ethers"
 
 dotenv.config()
 
-import { Canvas, hashSnapshot } from "@canvas-js/core"
+import { Canvas } from "@canvas-js/core"
 import { MAX_CONNECTIONS } from "@canvas-js/core/constants"
 import { Snapshot } from "@canvas-js/core"
 import { AppInstance } from "../AppInstance.js"
@@ -141,7 +141,6 @@ export async function handler(args: Args) {
 				contract: instance.app.getContract(),
 				admin: args.admin || false,
 				nonce: nonce,
-				snapshotHash: updatedSnapshot ? hashSnapshot(updatedSnapshot) : null,
 			})
 		})
 
