@@ -10,6 +10,10 @@ export class Client {
 		(...args: any[]) => Promise<{ id: string; signature: Signature; message: Message<Action> }>
 	>
 
+	public readonly as: (
+		signer: SessionSigner<any>,
+	) => Record<string, (...args: any[]) => Promise<{ id: string; signature: Signature; message: Message<Action> }>>
+
 	constructor(
 		readonly signer: SessionSigner,
 		readonly host: string,
@@ -24,6 +28,17 @@ export class Client {
 						this.sendAction(prop, args),
 			},
 		)
+
+		this.as = (signer) =>
+			new Proxy(
+				{},
+				{
+					get:
+						(target, prop: string) =>
+						(...args: any[]) =>
+							this.sendAction(prop, args, { signer }),
+				},
+			)
 	}
 
 	private async getClock(): Promise<{ clock: number; parents: string[] }> {
@@ -38,22 +53,22 @@ export class Client {
 	private async sendAction(
 		name: string,
 		args: any[],
+		options: { signer?: SessionSigner } = {},
 	): Promise<{ id: string; signature: Signature; message: Message<Action> }> {
 		const timestamp = Date.now()
 
 		// first check for an existing session
-		let session = await this.signer.getSession(this.topic)
+		const signer = options.signer ?? this.signer
+		let session = await signer.getSession(this.topic)
 		if (session !== null) {
 			// then check that it exists in the log and hasn't expired
-			const query = Object.entries({
+			const queryParams = new URLSearchParams({
 				did: session.payload.did,
 				publicKey: session.signer.publicKey,
-				minExpiration: timestamp,
+				minExpiration: timestamp.toString(),
 			})
-				.map((entry) => entry.join("="))
-				.join("&")
 
-			const res = await fetch(`${this.host}/api/sessions/count?${query}`)
+			const res = await fetch(`${this.host}/api/sessions/count?${queryParams}`)
 			if (res.status !== StatusCodes.OK) {
 				const message = await res.text()
 				throw new Error(`failed to get session count: ${message}`)
