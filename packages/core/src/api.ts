@@ -211,7 +211,7 @@ export function createAPI(app: Canvas): express.Express {
 		}
 	})
 
-	api.get("/subscribe/:model", (req, res) => {
+	api.get("/subscribe", (req, res) => {
 		const pushResults = (results: ModelValue[] | ModelValueWithIncludes[]) => {
 			if (res.closed) {
 				return
@@ -220,9 +220,10 @@ export function createAPI(app: Canvas): express.Express {
 			res.write(`data: ${json.stringify(results)}\n\n`)
 		}
 
-		// TODO: runtime validatation
-		const query: QueryParams = req.body
-		const { id, results } = app.db.subscribe(req.params.model, query, pushResults)
+		// TODO: runtime query validatation
+		assert(typeof req.query.query === "string", "missing query parameter")
+		assert(typeof req.query.model === "string", "missing query parameter")
+		const { id, results } = app.db.subscribe(req.query.model, json.parse(req.query.query), pushResults)
 
 		res.writeHead(StatusCodes.OK, {
 			["Content-Type"]: "text/event-stream",
