@@ -55,7 +55,7 @@ test("create id in quickjs function", async (t) => {
 	const contract = `
 	import { Contract } from "@canvas-js/core/contract"
 
-  export default class MyApp extends Contract {
+	export default class MyApp extends Contract {
 		static topic = "example.xyz"
 
 		static models = {

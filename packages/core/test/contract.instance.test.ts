@@ -47,15 +47,15 @@ test("initialize string contract with instance topic", async (t) => {
 	const contract = `import { Contract } from "@canvas-js/core/contract";
 
 	export default class Blog extends Contract {
-	  static topic = "example.xyz"
+		static topic = "example.xyz"
 		static models = { posts: { id: "primary", creator: "string", content: "string" } }
 		async createPost(content) {
 			await this.db.create("posts", { id: this.id, creator: this.address, content })
 		}
-    constructor(site) {
-      super(site)
-      this.site = site
-    }
+		constructor(site) {
+			super(site)
+			this.site = site
+		}
 	}`
 
 	const app = await Canvas.initialize({

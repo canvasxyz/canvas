@@ -59,19 +59,19 @@ test.skip("create, update, and delete in a string contract with $rules", async (
 	const app = await Canvas.initialize({
 		contract: `
 		export default class {
-      static topic = "example.xyz"
-		  static models = {
-        posts: {
-          $primary: "pk",
-          pk: "string",
-          address: "string",
-          content: "string",
-          $rules: {
-            create: "address === this.did",
-            update: "address === this.did",
-            delete: false,
-          }
-        }
+			static topic = "example.xyz"
+			static models = {
+				posts: {
+					$primary: "pk",
+					pk: "string",
+					address: "string",
+					content: "string",
+					$rules: {
+						create: "address === this.did",
+						update: "address === this.did",
+						delete: false,
+					}
+				}
 			}
 		}`,
 		signers: [new SIWESigner({ signer: wallet })],
