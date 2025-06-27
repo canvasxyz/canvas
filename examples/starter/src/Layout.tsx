@@ -14,7 +14,6 @@ const wsURL =
 const Layout: React.FC<{}> = ({}) => {
 	const { app, ws, error } = useCanvas(wsURL, {
 		signers: [new SIWESigner({ burner: true })],
-		topic: "starter-example.canvas.xyz",
 		contract: Counter,
 	})
 

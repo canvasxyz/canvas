@@ -5,6 +5,7 @@ import { Contract } from "@canvas-js/core/contract"
 
 test("merge and update into a value set by another action", async (t) => {
 	class MyApp extends Contract<typeof MyApp.models> {
+		static topic = "com.example.app"
 		static models = {
 			game: { id: "primary", state: "json", label: "string" },
 		} satisfies ModelSchema
@@ -46,7 +47,6 @@ test("merge and update into a value set by another action", async (t) => {
 	}
 
 	const app = await Canvas.initialize({
-		topic: "com.example.app",
 		contract: MyApp,
 	})
 
@@ -118,7 +118,6 @@ test("merge and get execute in order", async (t) => {
 	}
 
 	const app = await Canvas.initialize({
-		topic: "com.example.app",
 		contract: MyApp,
 	})
 

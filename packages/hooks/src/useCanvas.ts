@@ -143,7 +143,7 @@ export const useCanvas = <
 					// Application just initialized, or contract remains unchanged
 					await Canvas.initialize({
 						...config,
-						topic: config.snapshot ? `${config.topic}#${hashSnapshot(config.snapshot)}` : config.topic,
+						topicOverride: config.snapshot ? `${config.topicOverride}#${hashSnapshot(config.snapshot)}` : config.topicOverride,
 					}).then(assign.bind(null, url))
 				} else if ((await app.db.count("$messages")) > 1 && snapshotRef.current) {
 					// Contract changed, reuse the old snapshot
@@ -152,7 +152,7 @@ export const useCanvas = <
 						...config,
 						reset: true,
 						snapshot,
-						topic: config.snapshot ? `${config.topic}#${hashSnapshot(config.snapshot)}` : config.topic,
+						topicOverride: config.snapshot ? `${config.topicOverride}#${hashSnapshot(config.snapshot)}` : config.topicOverride,
 					}).then(assign.bind(null, url))
 				} else {
 					// Contract changed, make a new snapshot
@@ -161,7 +161,7 @@ export const useCanvas = <
 						...config,
 						reset: true,
 						snapshot,
-						topic: config.snapshot ? `${config.topic}#${hashSnapshot(config.snapshot)}` : config.topic,
+						topicOverride: config.snapshot ? `${config.topicOverride}#${hashSnapshot(config.snapshot)}` : config.topicOverride,
 					}).then(assign.bind(null, url))
 					snapshotRef.current = snapshot
 				}

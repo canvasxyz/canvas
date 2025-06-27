@@ -2,6 +2,8 @@ import type { ModelSchema } from "@canvas-js/core"
 import { Contract } from "@canvas-js/core/contract"
 
 export default class Counter extends Contract<typeof Counter.models> {
+	static topic = "counter.canvas.xyz"
+
 	static models = {
 		counter: {
 			id: "primary",

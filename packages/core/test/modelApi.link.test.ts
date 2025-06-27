@@ -5,6 +5,8 @@ import { Canvas, ModelSchema } from "@canvas-js/core"
 
 test("link and unlink database items", async (t) => {
 	class MyApp extends Contract<typeof MyApp.models> {
+		static topic = "com.example.app"
+
 		static models = {
 			game: { id: "primary", player: "@player[]", manager: "@player[]", observers: "@player[]", status: "json" },
 			player: { id: "primary", game: "@game", status: "json" },
@@ -34,7 +36,6 @@ test("link and unlink database items", async (t) => {
 	}
 
 	const app = await Canvas.initialize({
-		topic: "com.example.app",
 		contract: MyApp,
 	})
 
@@ -67,11 +68,11 @@ test("link and unlink database items", async (t) => {
 
 test("link and unlink database items in a string contract", async (t) => {
 	const app = await Canvas.initialize({
-		topic: "com.example.app",
 		contract: `
     import { Contract } from "@canvas-js/core/contract"
 
     export default class extends Contract {
+		  static topic = "com.example.app"
       static models = {
         game: { id: "primary", player: "@player[]", manager: "@player[]", observers: "@player[]", status: "json" },
         player: { id: "primary", game: "@game", status: "json" },

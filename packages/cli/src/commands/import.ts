@@ -39,7 +39,7 @@ export async function handler(args: Args) {
 	const { baseTopic, location, contract } = await getContractLocation(args)
 	assert(location !== null, "Cannot import to development apps since they do not persist any data")
 
-	const app = await Canvas.initialize({ topic: baseTopic, path: location, contract })
+	const app = await Canvas.initialize({ topicOverride: baseTopic, path: location, contract })
 
 	const rl = readline.createInterface({
 		input: process.stdin,

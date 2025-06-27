@@ -45,7 +45,7 @@ test("create a valid class contract from actions and models", async (t) => {
 	const signer = new SIWESigner({ signer: wallet })
 
 	const app = await Canvas.initialize({
-		topic: "com.example.compat-test",
+	  topicOverride: "com.example.compat-test", // TODO
 		contract: BlogContract,
 		reset: true,
 		signers: [signer],

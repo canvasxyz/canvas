@@ -41,7 +41,6 @@ export const App: React.FC<{}> = ({}) => {
 	const [address, setAddress] = useState<string | null>(null)
 
 	const { app, ws } = useCanvas(wsURL, {
-		topic: "chat-example.canvas.xyz",
 		contract: Chat,
 		signers: [
 			new SIWESigner({ burner: true }),

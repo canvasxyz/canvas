@@ -91,7 +91,7 @@ export class AppInstance {
 
 		const app = await Canvas.initialize({
 			path: process.env.DATABASE_URL ?? location,
-			topic,
+			topicOverride: topic,
 			contract,
 			snapshot,
 			signers: signers ?? [

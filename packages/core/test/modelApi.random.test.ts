@@ -7,6 +7,7 @@ import { PRNGSigner } from "./utils.js"
 
 test("generate random values inside a contract", async (t) => {
 	class MyApp extends Contract<typeof MyApp.models> {
+		static topic = "com.example.app"
 		static models = {}
 
 		async getRandom() {
@@ -16,7 +17,6 @@ test("generate random values inside a contract", async (t) => {
 
 	const app = await Canvas.initialize({
 		contract: MyApp,
-		topic: "com.example.app",
 		signers: [new PRNGSigner(0)],
 	})
 
@@ -49,12 +49,12 @@ test("generate random values inside a string contract", async (t) => {
 	const app = await Canvas.initialize({
 		contract: `
 		export default class {
+      static topic = "com.example.app"
   		static models = {}
      	async getRandom() {
         return this.db.random()
      	}
     }`,
-		topic: "com.example.app",
 		signers: [new PRNGSigner(0)],
 	})
 
