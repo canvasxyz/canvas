@@ -10,14 +10,11 @@ next: false
 <div :class="$style.mainInner">
 
 Canvas is an open-source embedded database, similar to Firebase or
-Supabase, with sync over a peer-to-peer mesh.
+Supabase.
 
 Write your application logic inside the database. Your users'
-interactions are synced instantly with peers. Concurrent changes
+interactions are synced instantly. Concurrent changes
 are merged automatically without central servers.
-
-Use it to build mini-apps, multiplayer games, and decentralized
-networks, using the web stack you already know.
 
 </div>
 
@@ -29,12 +26,12 @@ networks, using the web stack you already know.
   },
   {
     text: 'Cross-database',
-    tooltip: 'Uses SQLite, Postgres, or IndexedDB as the backing data store',
+    tooltip: 'Backed by SQLite, Postgres, or IndexedDB',
     iconName: 'database'
   },
   {
-    text: 'Realtime libp2p',
-    tooltip: 'Instant-sync via libp2p WebSockets',
+    text: 'Realtime',
+    tooltip: 'Instant sync via libp2p WebSockets',
     iconName: 'activity'
   },
   {
@@ -58,7 +55,7 @@ networks, using the web stack you already know.
     iconName: 'crown',
   },
   {
-    text: 'Embedded CRDTs',
+    text: 'CRDTs',
     tooltip: 'Soon: Multiplayer editing using embedded CRDTs',
     iconName: 'guide',
     disabled: true,
@@ -66,12 +63,6 @@ networks, using the web stack you already know.
   {
     text: 'Private Data',
     tooltip: 'Soon: Native end-to-end encrypted data',
-    iconName: 'lock',
-    disabled: true
-  },
-  {
-    text: 'Email Login',
-    tooltip: 'Soon: Login optimized for usability and accessibility',
     iconName: 'lock',
     disabled: true
   },
@@ -112,6 +103,7 @@ networks, using the web stack you already know.
 import { Canvas, Contract, ModelSchema } from "@canvas-js/core"
 
 const Chat = {
+  topic: "chat.example.xyz",
   models:
     messages: {
       id: "primary",
@@ -196,12 +188,15 @@ export const App = () => {
   </div>
   <div :class="$style.colLeft">
 
-Every application is defined as a `Canvas` object.
+Each application is defined as a contract, a JS object which
+defines the distributed backend for your application.
 
-- For simple applications, create a database-style Contract,
-  which defines access control rules.
-- For complex applications, create a Class Contract, with
-  custom actions and mutators.
+There are two types of contracts:
+
+- Model contracts give you a Firebase-style database
+  for simple applications.
+- Class contracts give you custom actions, with read/write
+  access to a database.
 
 Once you have a contract, you can run it from the command line:
 
@@ -214,9 +209,6 @@ canvas run contract.ts --topic example.xyz
 This starts a peer that you can connect to from your browser. By
 default, it will also connect to other servers on the
 application's topic.
-
-Each contract can run inside the browser (using IndexedDB), on your
-desktop (using SQLite), or on servers (using SQLite/Postgres).
 
 Read on to learn how to [authenticate users](/4-identities-auth),
 [upgrade your app](/6-deploying), or [deploy to a

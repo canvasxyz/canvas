@@ -81,8 +81,8 @@
 }
 
 body {
-  font-size: 17px;
-  line-height: 24px;
+  font-size: 16.5px;
+  line-height: 24.25px;
 }
 
 pre {
@@ -318,7 +318,10 @@ pre {
 .VPSidebar .item h2.text,
 .VPSidebar .items .VPLink .text,
 .VPSidebar h3.text {
-  font-size: 16px;
+  font-size: 15.25px;
+}
+.VPSidebarItem .VPLink .text {
+  font-weight: 400 !important;
 }
 
 #VPSidebarNav {
@@ -345,8 +348,8 @@ pre {
 
 .VPNavBarTitle .title {
   font-family: var(--space-font-family);
-  letter-spacing: -0.5px;
-  font-size: 104%;
+  letter-spacing: -0.3px;
+  font-size: 102%;
 }
 
 .VPNavBarTitle .title .logo {
