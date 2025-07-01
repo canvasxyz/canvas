@@ -82,7 +82,7 @@ class Chat extends Contract<typeof Chat.models> {
 }
 
 const app = await Canvas.initialize({
-  topic: "com.example.my-app",
+  topic: "example.xyz",
   contract: Chat,
 })
 

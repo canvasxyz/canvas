@@ -5,7 +5,7 @@ import { Contract } from "@canvas-js/core/contract"
 
 test("snapshot persists data across apps", async (t) => {
 	class MyApp extends Contract<typeof MyApp.models> {
-		static topic = "my-app.example.com"
+		static topic = "example.xyz"
 		static models = {
 			posts: {
 				id: "primary",

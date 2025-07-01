@@ -9,12 +9,12 @@ next: false
 
 <div :class="$style.mainInner">
 
-Canvas is an open-source embedded database, similar to Firebase or
-Supabase.
+Canvas is an open-source, instant-sync embedded database, like
+a fully distributed version of Firebase or Supabase.
 
 Write your application logic inside the database. Your users'
-interactions are synced instantly. Concurrent changes
-are merged automatically without central servers.
+interactions are synced and merged instantly, without any dependencies
+on central servers.
 
 </div>
 
