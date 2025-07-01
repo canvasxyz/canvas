@@ -16,6 +16,6 @@
     ]
   },
   "deploy": {
-    "startCommand": "canvas run examples/encrypted-chat/src/contract.ts --static examples/encrypted-chat/dist --network-explorer --admin 0x34C3A5ea06a3A67229fb21a7043243B0eB3e853f --topic encrypted-chat-example.canvas.xyz"
+    "startCommand": "canvas run examples/encrypted-chat/src/contract.ts --static examples/encrypted-chat/dist --network-explorer --admin 0x34C3A5ea06a3A67229fb21a7043243B0eB3e853f"
   }
 }
