@@ -1,18 +1,11 @@
-import { randomUUID } from "node:crypto"
-import test, { ExecutionContext } from "ava"
+import test from "ava"
 
-import { ethers } from "ethers"
-import { assert } from "@canvas-js/utils"
-
-import type { Action, Message, Session } from "@canvas-js/interfaces"
-import { ed25519 } from "@canvas-js/signatures"
-import { SIWESigner, Eip712Signer } from "@canvas-js/signer-ethereum"
-import { CosmosSigner } from "@canvas-js/signer-cosmos"
 import { Canvas, ModelSchema } from "@canvas-js/core"
 import { Contract } from "@canvas-js/core/contract"
 
 test("merge and update into a value set by another action", async (t) => {
 	class MyApp extends Contract<typeof MyApp.models> {
+		static topic = "com.example.app"
 		static models = {
 			game: { id: "primary", state: "json", label: "string" },
 		} satisfies ModelSchema
@@ -54,7 +47,6 @@ test("merge and update into a value set by another action", async (t) => {
 	}
 
 	const app = await Canvas.initialize({
-		topic: "com.example.app",
 		contract: MyApp,
 	})
 
@@ -101,6 +93,7 @@ test("merge and update into a value set by another action", async (t) => {
 
 test("merge and get execute in order", async (t) => {
 	class MyApp extends Contract<typeof MyApp.models> {
+		static topic = "com.example.app"
 		static models = {
 			test: { id: "primary", foo: "string?", bar: "string?", qux: "string?" },
 		} satisfies ModelSchema
@@ -126,7 +119,6 @@ test("merge and get execute in order", async (t) => {
 	}
 
 	const app = await Canvas.initialize({
-		topic: "com.example.app",
 		contract: MyApp,
 	})
 

@@ -25,17 +25,21 @@ export function createClassContract<
 	A extends Record<string, (db: ModelAPI<any>, ...args: any[]) => any>,
 >(
 	className: string,
+	topic: string,
 	models: M,
 	actions: A,
 ): ContractClass<typeof models, TransformActionParams<typeof actions, typeof models>> & Contract<typeof models> {
 	const transactionalizedActions = transactionalize(actions)
 
 	const DynamicClass = class DynamicClass extends Contract {
+		static get topic() {
+			return topic
+		}
 		static get models() {
 			return models ?? (this as any)._models
 		}
-		constructor(topic: string) {
-			super(topic)
+		constructor() {
+			super()
 			for (const [key, value] of Object.entries(transactionalizedActions)) {
 				Object.defineProperty(this, key, {
 					value: value,

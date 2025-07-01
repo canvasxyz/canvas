@@ -11,6 +11,7 @@ import type {
 
 import { Contract } from "@canvas-js/core/contract"
 import { SignedMessage } from "@canvas-js/gossiplog"
+import { JSValue } from "@canvas-js/utils"
 
 export type RulesInit = { create: string | boolean; update: string | boolean; delete: string | boolean }
 export type ModelInit = DbModelInit<{ $rules?: RulesInit }>
@@ -22,8 +23,9 @@ export type ContractClass<
 	ModelsT extends ModelSchema = ModelSchema,
 	InstanceT extends Contract<ModelsT> = Contract<ModelsT> & Record<string, ContractAction<ModelsT>>,
 > = {
+	topic: string
 	models: ModelsT
-	new (topic: string): InstanceT
+	new (...args: JSValue[]): InstanceT
 }
 
 export type ContractAction<ModelsT extends ModelSchema = ModelSchema, Args extends any[] = any[], Result = any> = (

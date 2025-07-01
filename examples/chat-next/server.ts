@@ -18,6 +18,7 @@ process.on("uncaughtException", (error) => {
 })
 
 class Chat extends Contract<typeof Chat.models> {
+	static topic = "chat-example.canvas.xyz"
 	static models = {
 		message: {
 			id: "primary",
@@ -37,7 +38,6 @@ class Chat extends Contract<typeof Chat.models> {
 nextApp.prepare().then(async () => {
 	const canvasApp = await Canvas.initialize({
 		path: process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/chat_postgres",
-		topic: "chat-example.canvas.xyz",
 		contract: Chat,
 		signers: [new SIWESigner({ readOnly: true })],
 		// bootstrapList: [

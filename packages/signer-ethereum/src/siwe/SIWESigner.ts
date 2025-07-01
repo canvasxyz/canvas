@@ -3,7 +3,7 @@ import * as siwe from "siwe"
 
 import type { Awaitable, Session, AbstractSessionData, DidIdentifier } from "@canvas-js/interfaces"
 import { AbstractSessionSigner, ed25519 } from "@canvas-js/signatures"
-import { assert, DAYS } from "@canvas-js/utils"
+import { assert } from "@canvas-js/utils"
 
 import type { SIWESessionData, SIWEMessage } from "./types.js"
 import {
@@ -42,6 +42,11 @@ export type SIWESignerInit = (
 
 	/** Duration that sessions should be valid for. Default: 14 days. */
 	sessionDuration?: number
+}
+
+function getResourceURI(topic: string) {
+	const [baseTopic, ...rest] = topic.split(":")
+	return rest.length === 0 ? `canvas://${baseTopic}` : `canvas://${baseTopic}#${rest.join(":")}`
 }
 
 export class SIWESigner extends AbstractSessionSigner<SIWESessionData> {
@@ -103,6 +108,8 @@ export class SIWESigner extends AbstractSessionSigner<SIWESessionData> {
 
 		const domain = this.target.getDomain()
 
+		const resourceURI = getResourceURI(topic)
+
 		const siweMessage: SIWEMessage = {
 			version: SIWEMessageVersion,
 			address: walletAddress,
@@ -112,7 +119,7 @@ export class SIWESigner extends AbstractSessionSigner<SIWESessionData> {
 			nonce: nonce,
 			issuedAt: issuedAt,
 			expirationTime: null,
-			resources: [`canvas://${topic}`],
+			resources: [resourceURI],
 		}
 
 		if (duration !== null) {
@@ -150,7 +157,7 @@ export class SIWESigner extends AbstractSessionSigner<SIWESessionData> {
 			uri: publicKey,
 			issuedAt: new Date(timestamp).toISOString(),
 			expirationTime: duration === undefined ? null : new Date(timestamp + duration).toISOString(),
-			resources: [`canvas://${topic}`],
+			resources: [getResourceURI(topic)],
 		}
 
 		const recoveredAddress = verifyMessage(prepareSIWEMessage(siweMessage), hexlify(authorizationData.signature))

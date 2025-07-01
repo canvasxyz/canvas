@@ -9,12 +9,11 @@ import { GossipLogConsumer, AbstractGossipLog, SignedMessage, MessageId } from "
 
 import { assert } from "@canvas-js/utils"
 
-import { ExecutionContext } from "../ExecutionContext.js"
-
 import { View } from "../View.js"
-import { extractRules } from "./rules.js"
+import { ExecutionContext } from "../ExecutionContext.js"
 import { ModelSchema, RulesInit } from "../types.js"
 import { encodeRecordKey, encodeRecordValue, getRecordId, isAction, isSession, isSnapshot } from "../utils.js"
+import { extractRules } from "./rules.js"
 
 export type WriteRecord = {
 	record_id: string
@@ -120,6 +119,7 @@ export abstract class AbstractRuntime {
 	} satisfies ModelSchema
 
 	public abstract readonly topic: string
+
 	public abstract readonly signers: SignerCache
 	public abstract readonly actionNames: string[]
 	public readonly schema: ModelSchema
@@ -143,9 +143,9 @@ export abstract class AbstractRuntime {
 
 	protected abstract execute(context: ExecutionContext): Promise<void | any>
 
-	public abstract getContract(): string
+	public abstract getContract(): string | null
 
-	public abstract close(): Awaitable<void>
+	public abstract close(): void
 
 	public getConsumer(): GossipLogConsumer<Action | Session | Snapshot> {
 		const handleSession = this.handleSession.bind(this)
@@ -231,7 +231,7 @@ export abstract class AbstractRuntime {
 
 		assert(publicKey === signature.publicKey)
 
-		await signer.verifySession(this.topic, message.payload)
+		await signer.verifySession(messageLog.topic, message.payload)
 		const address = signer.getAddressFromDid(did)
 
 		const sessionRecord: SessionRecord = {

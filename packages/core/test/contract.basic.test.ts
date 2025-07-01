@@ -15,6 +15,8 @@ const contract = `
 import { Contract } from "@canvas-js/core/contract"
 
 export default class extends Contract {
+  static topic = "com.example.app"
+
   static models = {
     posts: {
       id: "primary",
@@ -55,7 +57,6 @@ const initSIWEStringContract = async (t: ExecutionContext) => {
 	const signer = new SIWESigner({ burner: true })
 	const app = await Canvas.initialize({
 		contract,
-		topic: "com.example.app",
 		reset: true,
 		signers: [signer],
 	})
@@ -68,7 +69,6 @@ const initEIP712StringContract = async (t: ExecutionContext) => {
 	const signer = new Eip712Signer({ burner: true })
 	const app = await Canvas.initialize({
 		contract,
-		topic: "com.example.app",
 		reset: true,
 		signers: [signer],
 	})
@@ -78,6 +78,8 @@ const initEIP712StringContract = async (t: ExecutionContext) => {
 
 const initSIWEClassContract = async (t: ExecutionContext) => {
 	class MyApp extends Contract<typeof MyApp.models> {
+		static topic = "com.example.app"
+
 		static models = {
 			posts: {
 				id: "primary",
@@ -115,7 +117,6 @@ const initSIWEClassContract = async (t: ExecutionContext) => {
 
 	const signer = ethers.Wallet.createRandom()
 	const app = await Canvas.initialize({
-		topic: "com.example.app",
 		contract: MyApp,
 		signers: [new SIWESigner({ signer })],
 	})
@@ -179,6 +180,7 @@ test("insert a message into an app with multiple signers", async (t) => {
 
 	const getApp = async () => {
 		class MyApp extends Contract<typeof MyApp.models> {
+			static topic = "com.example.app"
 			static models = {} satisfies ModelSchema
 			async createPost(content: string) {
 				//
@@ -186,7 +188,6 @@ test("insert a message into an app with multiple signers", async (t) => {
 		}
 
 		const app = await Canvas.initialize({
-			topic: "test",
 			contract: MyApp,
 			reset: true,
 			signers: [siweSigner, cosmosSigner],
@@ -238,6 +239,7 @@ test("accept a manually encoded session/action with a legacy-style object arg", 
 	const signer = new SIWESigner({ burner: true })
 
 	class MyApp extends Contract<typeof MyApp.models> {
+		static topic = "com.example.app"
 		static models = {} satisfies ModelSchema
 
 		async createMessage(arg: string) {
@@ -247,7 +249,6 @@ test("accept a manually encoded session/action with a legacy-style object arg", 
 
 	const app = await Canvas.initialize({
 		contract: MyApp,
-		topic: "com.example.app",
 		reset: true,
 		signers: [signer],
 	})
@@ -365,7 +366,6 @@ test("call quickjs contract with did uri and wallet address", async (t) => {
 test("open custom modeldb tables", async (t) => {
 	const app = await Canvas.initialize({
 		contract,
-		topic: "com.example.app",
 		schema: { widgets: { id: "primary", name: "string" } },
 	})
 

@@ -6,6 +6,8 @@ import { PRNGSigner } from "./utils.js"
 
 test("create id in host runtime", async (t) => {
 	class MyApp extends Contract<typeof MyApp.models> {
+		static topic = "example.xyz"
+
 		static models = {
 			blobs: { id: "primary" },
 		} satisfies ModelSchema
@@ -18,12 +20,13 @@ test("create id in host runtime", async (t) => {
 	}
 
 	const app = await Canvas.initialize({
-		topic: "example.xyz",
 		contract: MyApp,
 		signers: [new PRNGSigner(0)],
 	})
 
 	t.teardown(() => app.stop())
+
+	t.is(app.topic, "example.xyz.MyApp")
 
 	const { result: result1 } = await app.actions.createBlob()
 	const { result: result2 } = await app.actions.createBlob()
@@ -40,17 +43,21 @@ test("create id in host runtime", async (t) => {
 	])
 
 	t.deepEqual(await app.db.query("blobs"), [
-		{ id: "b1c1b65427bf8349b70cbf29ffda5c56" },
-		{ id: "be909ae8ade0d53f5b4c89208ac4ae9e" },
-		{ id: "32054f3ecc85dcaa5f63abc500c36bf1" },
-		{ id: "dff7e4ecf59dda4ef2db032de8c1675c" },
-		{ id: "37f8d99dce9234cf8173b44dcdad7d35" },
+		{ id: "d9a997ded77d50620921aa305b4b31a0" },
+		{ id: "614d9436b38eea14c672bffe1e44e1e9" },
+		{ id: "1ad52196e967e848401dfaf4be8cde78" },
+		{ id: "c76c2b331f8551cb9b273855c89cb54f" },
+		{ id: "95914be05c6eadd5db6d1353e33bc194" },
 	])
 })
 
 test("create id in quickjs function", async (t) => {
 	const contract = `
-  export default class MyApp {
+	import { Contract } from "@canvas-js/core/contract"
+
+	export default class MyApp extends Contract {
+		static topic = "example.xyz"
+
 		static models = {
 			blobs: { id: "primary" },
 		}
@@ -63,12 +70,13 @@ test("create id in quickjs function", async (t) => {
 	}`
 
 	const app = await Canvas.initialize({
-		topic: "example.xyz",
 		contract: contract,
 		signers: [new PRNGSigner(0)],
 	})
 
 	t.teardown(() => app.stop())
+
+	t.is(app.topic, "example.xyz.MyApp")
 
 	const { result: result1 } = await app.actions.createBlob()
 	const { result: result2 } = await app.actions.createBlob()
@@ -85,10 +93,10 @@ test("create id in quickjs function", async (t) => {
 	])
 
 	t.deepEqual(await app.db.query("blobs"), [
-		{ id: "107e0537ec7b845b2bb1f5d9335e09ee" },
-		{ id: "d6fff063ed0ebb46bcc5e8812201ff94" },
-		{ id: "fce2b44c8df0394f876030814df64a0a" },
-		{ id: "67c5e2f87715c6cd28ef9c5ce2662a8c" },
-		{ id: "0d95a27e137b06f7ebcf3482b9461fa5" },
+		{ id: "d9a997ded77d50620921aa305b4b31a0" },
+		{ id: "614d9436b38eea14c672bffe1e44e1e9" },
+		{ id: "1ad52196e967e848401dfaf4be8cde78" },
+		{ id: "c76c2b331f8551cb9b273855c89cb54f" },
+		{ id: "95914be05c6eadd5db6d1353e33bc194" },
 	])
 })

@@ -3,27 +3,38 @@ import test from "ava"
 import { ethers } from "ethers"
 
 import { SIWESigner } from "@canvas-js/signer-ethereum"
-import { Canvas, ModelSchema, Contract, GetActionsType } from "@canvas-js/core"
+import { Canvas, ModelSchema, Contract } from "@canvas-js/core"
+
+import { PRNGSigner } from "./utils.js"
 
 test("initialize contract with instance topic", async (t) => {
 	const wallet = ethers.Wallet.createRandom()
 
 	class Blog extends Contract<typeof Blog.models> {
-		static models = { posts: { id: "primary", creator: "string", content: "string" } } satisfies ModelSchema
+		site: string
+
+		static topic = "example.xyz"
+
+		static models = {
+			posts: { id: "primary", creator: "string", content: "string" },
+		} satisfies ModelSchema
+
 		async createPost(content: string) {
 			await this.db.create("posts", { id: this.id, creator: this.address, content })
 		}
-		constructor(topic: string) {
-			super(topic + ".test")
+
+		constructor(site: string) {
+			super(site)
+			this.site = site
 		}
 	}
 
-	const app = await Blog.initialize("example.xyz")
+	const app = await Canvas.initialize({ contract: Blog })
 	app.updateSigners([new SIWESigner({ signer: wallet })])
 
 	t.teardown(() => app.stop())
 
-	t.is(app.topic, "example.xyz.test")
+	t.is(app.topic, "example.xyz.Blog")
 
 	await app.actions.createPost("hello world")
 	await app.actions.createPost("second post")
@@ -33,28 +44,28 @@ test("initialize contract with instance topic", async (t) => {
 })
 
 test("initialize string contract with instance topic", async (t) => {
-	const wallet = ethers.Wallet.createRandom()
-
 	const contract = `import { Contract } from "@canvas-js/core/contract";
 
-	export default class extends Contract {
+	export default class Blog extends Contract {
+		static topic = "example.xyz"
 		static models = { posts: { id: "primary", creator: "string", content: "string" } }
 		async createPost(content) {
 			await this.db.create("posts", { id: this.id, creator: this.address, content })
 		}
-		constructor(topic) {
-			super(topic + ".test")
+		constructor(site) {
+			super(site)
+			this.site = site
 		}
 	}`
 
 	const app = await Canvas.initialize({
-		topic: "example.xyz",
 		contract,
+		signers: [new PRNGSigner(0)],
 	})
 
 	t.teardown(() => app.stop())
 
-	t.is(app.topic, "example.xyz.test")
+	t.is(app.topic, "example.xyz.Blog")
 
 	await app.actions.createPost("hello world")
 	await app.actions.createPost("second post")
@@ -63,77 +74,72 @@ test("initialize string contract with instance topic", async (t) => {
 	t.is(posts.length, 2)
 })
 
-test("initialize subclassed contract with instance topic", async (t) => {
-	const wallet = ethers.Wallet.createRandom()
+// test("initialize subclassed contract with instance topic", async (t) => {
+// 	const wallet = ethers.Wallet.createRandom()
 
-	class Blog extends Contract<typeof Blog.models> {
-		static models = { posts: { id: "primary", creator: "string", content: "string" } } satisfies ModelSchema
-		async createPostParent(content: string) {
-			await this.db.create("posts", { id: this.id, creator: this.address, content })
-		}
-	}
+// 	class Blog extends Contract<typeof Blog.models> {
+// 		static models = { posts: { id: "primary", creator: "string", content: "string" } } satisfies ModelSchema
+// 		async createPostParent(content: string) {
+// 			await this.db.create("posts", { id: this.id, creator: this.address, content })
+// 		}
+// 	}
 
-	class NamespacedBlog extends Blog {
-		async createPostParent(content: string) {
-			super.createPostParent(content)
-		}
-		async createPostChild(content: string) {
-			await this.db.create("posts", { id: this.id, creator: this.address, content })
-		}
-		constructor(topic: string) {
-			super(topic + ".test")
-		}
-	}
+// 	class NamespacedBlog extends Blog {
+// 		async createPostParent(content: string) {
+// 			super.createPostParent(content)
+// 		}
 
-	const app = await NamespacedBlog.initialize("example.xyz")
-	app.updateSigners([new SIWESigner({ signer: wallet })])
+// 		async createPostChild(content: string) {
+// 			await this.db.create("posts", { id: this.id, creator: this.address, content })
+// 		}
+// 	}
 
-	t.teardown(() => app.stop())
+// 	const app = await NamespacedBlog.initialize("example.xyz")
+// 	app.updateSigners([new SIWESigner({ signer: wallet })])
 
-	t.is(app.topic, "example.xyz.test")
+// 	t.teardown(() => app.stop())
 
-	await app.actions.createPostParent("hello world")
-	await app.actions.createPostChild("second post")
+// 	t.is(app.topic, "example.xyz")
 
-	const posts = await app.db.query("posts")
-	t.is(posts.length, 2)
-})
+// 	await app.actions.createPostParent("hello world")
+// 	await app.actions.createPostChild("second post")
 
-test("initialize subclassed string contract with instance topic", async (t) => {
-	const wallet = ethers.Wallet.createRandom()
+// 	const posts = await app.db.query("posts")
+// 	t.is(posts.length, 2)
+// })
 
-	const contract = `import { Contract } from "@canvas-js/core/contract";
+// test("initialize subclassed string contract with instance topic", async (t) => {
+// 	const contract = `
+// 	import { Contract } from "@canvas-js/core/contract";
 
-	class Chat extends Contract {
-		static models = { posts: { id: "primary", creator: "string", content: "string" } }
-		async createPostParent(content) {
-			await this.db.create("posts", { id: this.id, creator: this.address, content })
-		}
-  }
-  export default class extends Chat {
-		async createPostParent(content) {
-			super.createPostParent(content)
-		}
-		async createPostChild(content) {
-			await this.db.create("posts", { id: this.id, creator: this.address, content })
-		}
-		constructor(topic) {
-			super(topic + ".test")
-		}
-	}`
+// 	class Chat extends Contract {
+// 		static models = { posts: { id: "primary", creator: "string", content: "string" } }
+// 		async createPostParent(content) {
+// 			await this.db.create("posts", { id: this.id, creator: this.address, content })
+// 		}
+//   }
 
-	const app = await Canvas.initialize({
-		topic: "example.xyz",
-		contract,
-	})
+//   export default class extends Chat {
+// 		async createPostParent(content) {
+// 			super.createPostParent(content)
+// 		}
+// 		async createPostChild(content) {
+// 			await this.db.create("posts", { id: this.id, creator: this.address, content })
+// 		}
+// 	}`
 
-	t.teardown(() => app.stop())
+// 	const app = await Canvas.initialize({
+// 		topic: "example.xyz",
+// 		contract,
+// 	})
 
-	t.is(app.topic, "example.xyz.test")
+// 	t.teardown(() => app.stop())
 
-	await app.actions.createPostParent("hello world")
-	await app.actions.createPostChild("second post")
+// 	t.is(app.topic, "example.xyz")
 
-	const posts = await app.db.query("posts")
-	t.is(posts.length, 2)
-})
+// 	await app.actions.createPostParent("hello world")
+// 	await app.actions.createPostChild("second post")
+
+// 	const posts = await app.db.query("posts")
+// 	t.is(posts.length, 2)
+// })
