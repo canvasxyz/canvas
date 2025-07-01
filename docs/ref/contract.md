@@ -13,6 +13,8 @@ The class syntax is recommended for most applications.
 import { Contract } from "@canvas-js/core/contract"
 
 class Chat extends Contract<typeof Chat.models> {
+  static topic = "chat.example.xyz"
+
   static models = {
     messages: {
       id: "primary",
@@ -29,17 +31,19 @@ class Chat extends Contract<typeof Chat.models> {
 }
 ```
 
-A constructor is optional, but if provided, it should pass the topic to super(). Additionally, actions will only be generated for methods on the contract directly.
+A constructor is optional, but if provided, its arguments will be hashed and appended to the topic.
 
 ```ts
 class NamespacedChat extends Contract<typeof Chat.models> {
+  static topic = "chat.example.xyz"
+
   createMessage(content: string) {
     super(content)
   }
-  constructor(namespace: string) {
-    super(namespace + ".chat.canvas.xyz")
-  }
+  constructor(namespace: string) {}
 }
+
+const app = await NamespacedChat.initialize("mynamespace")
 ```
 
 You can initialize a class contract by providing it to `Canvas.initialize`, or calling `initialize()` on it directly:
@@ -47,12 +51,8 @@ You can initialize a class contract by providing it to `Canvas.initialize`, or c
 ```ts
 const app = await Canvas.initialize({
   contract: Chat,
-  topic: "example.xyz"
+  topic: "override.example.xyz"
 })
-```
-
-```ts
-const app = await NamespacedChat.initialize("mynamespace")
 ```
 
 Once initialized, methods on the contract are called via `this.actions`.

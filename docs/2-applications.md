@@ -14,6 +14,8 @@ The simplest way to get started is to import `@canvas-js/core` and call `Canvas.
 import { Canvas, Contract } from "@canvas-js/core"
 
 class Chat extends Contract<typeof Chat.models> {
+  static topic = "chat.example.xyz"
+
   static models = {
     posts: {
       id: "primary",
@@ -93,6 +95,8 @@ The context object `this` contains the rest of the action metadata, including
 
 ```ts
 class Chat extends Contract<typeof Chat.models> {
+  static topic = "chat.example.xyz"
+
   static models = {
     posts: {
       id: "primary",
@@ -116,6 +120,8 @@ Actions also handle authorization and access control. In the example `deletePost
 
 ```ts
 class Chat extends Contract<typeof Chat.models> {
+  static topic = "chat.example.xyz"
+
   static models = {
     posts: {
       id: "primary",

@@ -14,6 +14,8 @@ import { SIWESigner } from "@canvas-js/signer-ethereum"
 import { Canvas, Contract } from "@canvas-js/core"
 
 class Chat extends Contract<typeof Chat.models> {
+  static topic = "chat.example.xyz"
+
   static models = {
     messages: {
       id: "primary",

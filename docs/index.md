@@ -141,6 +141,8 @@ app.create("messages", {
 import { Canvas, Contract, ModelSchema } from "@canvas-js/core"
 
 class Chat extends Contract<typeof Chat.models> {
+  static topic = "chat.example.xyz"
+
   static models = {
     messages: {
       id: "primary",

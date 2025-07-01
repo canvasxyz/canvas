@@ -14,6 +14,8 @@ import { Contract } from "@canvas-js/core/contract"
 import type { ModelSchema } from "@canvas-js/core"
 
 class Chat extends Contract<typeof Chat.models> {
+  static topic = "chat.example.xyz"
+
   static models = {
     messages: {
       id: "primary",
