@@ -211,6 +211,13 @@ export function createAPI(app: Canvas): express.Express {
 		}
 	})
 
+	const subscriptionResponses = new Set<express.Response>()
+	app.addEventListener("stop", () => {
+		for (const res of subscriptionResponses) {
+			res.destroy()
+		}
+	})
+
 	api.get("/subscribe", (req, res) => {
 		const pushResults = (results: ModelValue[] | ModelValueWithIncludes[]) => {
 			if (res.closed) {
@@ -229,10 +236,16 @@ export function createAPI(app: Canvas): express.Express {
 			["Content-Type"]: "text/event-stream",
 			["Cache-Control"]: "no-cache",
 			["Connection"]: "keep-alive",
+			["Access-Control-Allow-Origin"]: "*",
 		})
 
 		results.then(pushResults, (err) => console.error(err))
-		res.on("close", () => app.db.unsubscribe(id))
+
+		subscriptionResponses.add(res)
+		res.on("close", () => {
+			app.db.unsubscribe(id)
+			subscriptionResponses.delete(res)
+		})
 	})
 
 	return api
