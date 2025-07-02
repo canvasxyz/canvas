@@ -27,7 +27,7 @@ export default function Home() {
 	}, [])
 
 	const [address, setAddress] = useState<string | null>(null)
-	const [client, setClient] = useState(new Client(burnerWallet, "/api", topic))
+	const [client, setClient] = useState(new Client("/api", { topic, signers: [burnerWallet] }))
 
 	const [messages, setMessages] = useState<ChatMessage[]>([])
 	const [inputValue, setInputValue] = useState<string>("")
@@ -41,7 +41,7 @@ export default function Home() {
 					const network = await provider.getNetwork()
 
 					const signer = new SIWESigner({ signer: ethSigner, chainId: Number(network.chainId) })
-					setClient(new Client(signer, "/api", topic))
+					setClient(new Client("/api", { topic, signers: [signer] }))
 					setAddress(ethSigner.address)
 				} else {
 					console.log("No accounts connected")
@@ -50,7 +50,7 @@ export default function Home() {
 
 			window.ethereum.on("accountsChanged", (accounts: string[]) => {
 				if (accounts.length === 0) {
-					setClient(new Client(burnerWallet, "/api", topic))
+					setClient(new Client("/api", { topic, signers: [burnerWallet] }))
 					setAddress(null)
 				}
 			})
@@ -86,7 +86,7 @@ export default function Home() {
 			const ethSigner = await provider.getSigner()
 			const network = await provider.getNetwork()
 			const signer = new SIWESigner({ signer: ethSigner, chainId: Number(network.chainId) })
-			setClient(new Client(signer, "/api", topic))
+			setClient(new Client("/api", { topic, signers: [signer] }))
 			setAddress(ethSigner.address)
 		} catch (err) {
 			console.log("err :>> ", err)
