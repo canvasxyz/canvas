@@ -3,6 +3,8 @@ import { Contract } from "@canvas-js/core/contract"
 import { EthEncryptedData } from "@metamask/eth-sig-util"
 
 export default class EncryptedChat extends Contract<typeof EncryptedChat.models> {
+	static topic = "encrypted-chat.canvas.xyz"
+
 	static models = {
 		encryptionKeys: {
 			address: "primary",

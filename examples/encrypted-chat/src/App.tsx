@@ -19,9 +19,8 @@ const getGroupId = (address1: string, address2: string) => {
 	return address1 < address2 ? `${address1},${address2}` : `${address1},${address2}`
 }
 
-const useChat = (topic: string, wallet: ethers.Wallet) => {
+const useChat = (wallet: ethers.Wallet) => {
 	const { app, ws } = useCanvas(wsURL, {
-		topicOverride: topic,
 		signers: [new SIWESigner({ signer: wallet })],
 		contract: EncryptedChat,
 	})
@@ -104,12 +103,9 @@ function Wrapper() {
 }
 
 function App({ wallet1, wallet2 }: { wallet1: ethers.Wallet; wallet2: ethers.Wallet }) {
-	const { app, ws, people, registerEncryptionKey, createEncryptionGroup, sendPrivateMessage } = useChat(
-		"chat-encrypted.canvas.xyz",
-		wallet1,
-	)
+	const { app, ws, people, registerEncryptionKey, createEncryptionGroup, sendPrivateMessage } = useChat(wallet1)
 
-	const { registerEncryptionKey: registerEncryptionKey2 } = useChat("chat-encrypted.canvas.xyz", wallet2)
+	const { registerEncryptionKey: registerEncryptionKey2 } = useChat(wallet2)
 
 	const registration1 = useLiveQuery<typeof EncryptedChat.models, "encryptionKeys">(app, "encryptionKeys", {
 		where: { address: wallet1?.address },
