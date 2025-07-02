@@ -2,20 +2,21 @@
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "npm run build && ./install-prod.sh && VITE_CANVAS_WS_URL=wss://chat-example.canvas.xyz npm run build --workspace=examples/chat",
+    "buildCommand": "npm run build && ./install-prod.sh && npm run build --workspace=examples/chat-next",
     "watchPatterns": [
       "/packages/network-explorer/**",
       "/packages/cli/**",
+      "/packages/client/**",
       "/packages/core/**",
       "/packages/gossiplog/**",
       "/packages/hooks/**",
       "/packages/interfaces/**",
       "/packages/modeldb/**",
       "/packages/signer-*/**",
-      "/examples/chat/**"
+      "/examples/chat-next/**"
     ]
   },
   "deploy": {
-    "startCommand": "canvas run examples/chat/src/contract.ts --static examples/chat/dist --network-explorer --admin 0x34C3A5ea06a3A67229fb21a7043243B0eB3e853f"
+    "startCommand": "npm run start --workspace examples/chat-next"
   }
 }
