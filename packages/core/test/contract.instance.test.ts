@@ -65,7 +65,7 @@ test("initialize string contract with instance topic", async (t) => {
 
 	t.teardown(() => app.stop())
 
-	t.is(app.topic, "example.xyz.Blog")
+	t.is(app.topic, "example.xyz.Blog:a6e8b2267dc3f1042c4c0f01c5ad6449")
 
 	await app.actions.createPost("hello world")
 	await app.actions.createPost("second post")

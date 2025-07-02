@@ -76,7 +76,7 @@ test("create id in quickjs function", async (t) => {
 
 	t.teardown(() => app.stop())
 
-	t.is(app.topic, "example.xyz.MyApp")
+	t.is(app.topic, "example.xyz.MyApp:f74bc1be4c03e131682a3b5bce1630f7")
 
 	const { result: result1 } = await app.actions.createBlob()
 	const { result: result2 } = await app.actions.createBlob()
@@ -93,10 +93,10 @@ test("create id in quickjs function", async (t) => {
 	])
 
 	t.deepEqual(await app.db.query("blobs"), [
-		{ id: "d9a997ded77d50620921aa305b4b31a0" },
-		{ id: "614d9436b38eea14c672bffe1e44e1e9" },
-		{ id: "1ad52196e967e848401dfaf4be8cde78" },
-		{ id: "c76c2b331f8551cb9b273855c89cb54f" },
-		{ id: "95914be05c6eadd5db6d1353e33bc194" },
+		{ id: "81043dbdc0188211931e0a9b9e7e3de5" },
+		{ id: "b805154007751dd95ba58cbcaf49a51a" },
+		{ id: "842df031d2a8a437f564c5bf323dec7c" },
+		{ id: "7a34868a461d6f39ae565d8ad284a566" },
+		{ id: "ce310fc6d36ad2c093e68d42255ae75c" },
 	])
 })
