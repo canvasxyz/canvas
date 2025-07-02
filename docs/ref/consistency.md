@@ -1,6 +1,6 @@
 # Consistency Model
 
-Canvas is a sync engine that allows you to define actions that are arbitrary JavaScript functions, which freely `get`, `set`, and `delete` records in a relational database.
+Canvas gives you a runtime environment that allows you to define actions that are arbitrary JavaScript functions, which freely `get`, `set`, and `delete` records in a relational database.
 
 The two basic guarantees that the runtime provides are:
 

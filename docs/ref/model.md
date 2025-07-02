@@ -1,7 +1,8 @@
 # Model API
 
 Each application comes with a cross-platform relational database, based on [ModelDB](../api/modeldb.md).
-It supports these types in the database:
+
+ModelDB supports these types in the database:
 
 | Type | Description |
 |----------|-------------|
@@ -17,7 +18,7 @@ It supports these types in the database:
 | `@relation[]` | One-to-many reference to the primary keys of another model. Stored as a separate table internally. Foreign keys are not enforced. |
 
 Any property may be made nullable by adding a `?` to the end of the property type.
-Nullable properties must be provided as `null` when a database record is initialized using `db.create` or `db.set`.
+Nullable properties must be provided as `null` when a database record is initialized using `db.create` or `db.set` - they aren't *optional*.
 
 Additionally, each database table can specify these special properties:
 
@@ -48,13 +49,14 @@ The ModelAPI object is available inside actions, and includes APIs for reading a
 | `unlink(modelPath, source, target)` | Removes a link from a relation between two models. | Yes |
 | `transaction(callback)` | Executes operations in an rollback transaction. | |
 
-Link and unlink operations are called with a syntax like `this.db.link("game.player", gameId, playerId)`.
+Link and unlink operations are called with a syntax like:
 
+`this.db.link("game.player", gameId, playerId)`
 
 See ModelAPI in the [API Types](../api/core.md#api) for more information.
 
 ## Transactional-only operations
 
-Transactional-only operations are always required to be run inside a `db.transaction()` block, and will roll back if any of the records they read from have changed.
+Transactional-only operations must run inside a `db.transaction()` block. They will roll back if any of the records they read from have changed.
 
-Consider reviewing the [Transactions](./consistency.md#transactions) document to understand how this works.
+See [Transactions](./consistency.md#transactions) to understand how this works.

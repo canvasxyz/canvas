@@ -56,6 +56,7 @@ export default defineConfig({
 						{ text: "Managing Sessions", link: "/5-managing-sessions" },
 						{ text: "Deploying Peers", link: "/6-deploying" },
 						{ text: "Upgrading Applications", link: "/7-upgrading" },
+						{ text: "Additional Features", link: "/8-extra" },
 					],
 				},
 				{
@@ -65,7 +66,6 @@ export default defineConfig({
 						{ text: "Model API", link: "/ref/model" },
 						// { text: "FAQ", link: "/ref/faq" },
 						{ text: "Consistency Model", link: "/ref/consistency" },
-						{ text: "Experimental Features", link: "/ref/experimental" },
 						{ text: "Roadmap", link: "/ref/roadmap" },
 						{
 							text: "Packages",
