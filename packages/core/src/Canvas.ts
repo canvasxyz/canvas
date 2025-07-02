@@ -133,12 +133,15 @@ export class Canvas<
 		const runtime = await createRuntime(contract as string | ContractClass, args, signers, { runtimeMemoryLimit })
 		assert(namespacePattern.test(runtime.topic), "invalid topic, must match [a-zA-Z0-9\\.\\-]")
 
-		const topicHashComponents: { args?: Uint8Array; snapshot?: Uint8Array } = {}
+		const topicHashComponents: { args?: Uint8Array; snapshot?: Uint8Array; code?: Uint8Array } = {}
 		if (args.length > 0) {
 			topicHashComponents.args = cbor.encode(args)
 		}
 		if (config.snapshot) {
 			topicHashComponents.snapshot = sha256(cbor.encode(config.snapshot))
+		}
+		if (typeof contract === "string") {
+			topicHashComponents.code = sha256(contract)
 		}
 
 		const topicComponents =
