@@ -9,41 +9,40 @@ import type { Config } from "./Canvas.js"
 import { Canvas as Core } from "./Canvas.js"
 
 /**
- * A synchronously loaded proxy for the main Canvas object, that
- * provides deferred calls on `app.actions` and `app.db`.
+ * A synchronously initialized proxy for the main Canvas
+ * class that defers calls on `app.actions` and `app.db`.
  * Other calls will fail with an error until the object is initialized.
  *
  * This can be used in SSR applications that require an immediately
- * usable `Canvas` object: `new Canvas({ ... })`
+ * usable `Canvas` object, with `new Canvas({ ... })`
  */
-export class Canvas<
+export class CanvasSync<
 	ModelsT extends ModelSchema = any,
 	InstanceT extends Contract<ModelsT> = Contract<ModelsT> & Record<string, ContractAction<ModelsT>>,
 > {
-	initPromise: Promise<Core<ModelsT, InstanceT>>
-	ready: boolean
-	app: Core<ModelsT, InstanceT> | undefined
+	initialized?: Promise<Core<ModelsT, InstanceT>>
+	ready?: boolean
+	app?: Core<ModelsT, InstanceT> | undefined
 	actions: any
 	db: any
+	create: any
+	update: any
+	delete: any
 
 	constructor(config: Config<ModelsT, InstanceT>, { disableSSR }: { disableSSR?: boolean } = {}) {
 		this.actions = {} // empty actions stub
 		this.db = {}
 
 		if (disableSSR && typeof window === "undefined") {
-			this.initPromise = Promise.reject()
+			this.initialized = Promise.reject()
 			this.ready = false
 			return
 		}
 
-		// if (typeof config.contract === "string") {
-		// 	throw new Error("unsupported")
-		// }
-
-		this.initPromise = Core.initialize(config)
+		this.initialized = Core.initialize(config)
 		this.ready = false
 
-		this.initPromise.then((app) => {
+		this.initialized.then((app) => {
 			this.ready = true
 			this.app = app
 		})
@@ -51,7 +50,7 @@ export class Canvas<
 		const actionsProxy = new Proxy(this, {
 			get: (innerTarget, action) => {
 				return async (...args: any[]) => {
-					await this.initPromise
+					await this.initialized
 					assert(this.app, "app failed to initialize")
 					assert(typeof action === "string", "action names must be strings")
 					const { [action]: actionAPI } = this.app.actions as Record<string, ActionAPI>
@@ -69,14 +68,14 @@ export class Canvas<
 							queryParams: QueryParams,
 							callback: (results: ModelValue[] | ModelValueWithIncludes[]) => Awaitable<void>,
 						) => {
-							await this.initPromise
+							await this.initialized
 							assert(this.app, "app failed to initialize")
 							return this.app.db.subscribe.call(this.app.db, modelName, queryParams, callback)
 						}
 					return this.app.db.subscribe.bind(this.app.db)
 				}
 				return async (...args: any[]) => {
-					await this.initPromise
+					await this.initialized
 					assert(this.app, "app failed to initialize")
 					assert(typeof call === "string", "db calls must be strings")
 					assert(call in this.app.db, `invalid db api ${call}`)
@@ -93,7 +92,7 @@ export class Canvas<
 					return actionsProxy
 				} else if (prop === "isProxy") {
 					return true
-				} else if (prop === "initPromise" || prop === "ready") {
+				} else if (prop === "initialized" || prop === "ready") {
 					return target[prop]
 				} else if (!target.app) {
 					throw new Error("@canvas-js/core/sync: only actions and db can be accessed before initialization")
@@ -104,13 +103,8 @@ export class Canvas<
 						: (target.app as any)[prop]
 				}
 			},
-		})
+		}) as any as Core<ModelsT, InstanceT>
 	}
 }
 
-declare module "./synchronous.js" {
-	interface Canvas<
-		ModelsT extends ModelSchema = any,
-		InstanceT extends Contract<ModelsT> = Contract<ModelsT> & Record<string, ContractAction<ModelsT>>,
-	> extends Omit<Core<ModelsT, InstanceT>, "addEventListener" | "removeEventListener" | "dispatchEvent"> {}
-}
+export const Canvas: (new (...args: ConstructorParameters<typeof CanvasSync>) => Core) & { initialized: Promise<Core<any, any>> } = CanvasSync as any;

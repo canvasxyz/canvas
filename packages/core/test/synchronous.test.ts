@@ -3,6 +3,7 @@ import { ethers } from "ethers"
 
 import { SIWESigner } from "@canvas-js/signer-ethereum"
 import { Contract } from "@canvas-js/core/contract"
+import { Canvas as CanvasT } from "@canvas-js/core"
 import { Canvas } from "@canvas-js/core/sync"
 import { ModelSchema } from "@canvas-js/modeldb"
 
@@ -74,7 +75,7 @@ class MyApp extends Contract<typeof MyApp.models> {
 	}
 }
 
-const initStringContract = (t: ExecutionContext) => {
+const initSyncStringContract = (t: ExecutionContext) => {
 	const signer = new SIWESigner({ burner: true })
 	const app = new Canvas({
 		contract,
@@ -83,13 +84,12 @@ const initStringContract = (t: ExecutionContext) => {
 	})
 
 	t.teardown(async () => {
-		await app.initPromise
 		await app.stop()
 	})
 	return { app, signer }
 }
 
-const initInlineContract = (t: ExecutionContext) => {
+const initSyncInlineContract = (t: ExecutionContext) => {
 	const wallet = ethers.Wallet.createRandom()
 	const app = new Canvas({
 		contract: MyApp,
@@ -97,14 +97,13 @@ const initInlineContract = (t: ExecutionContext) => {
 	})
 
 	t.teardown(async () => {
-		await app.initPromise
 		await app.stop()
 	})
 	return { app, wallet }
 }
 
 test("synchronous string contract: apply an action and read a record from the database", async (t) => {
-	const { app } = initStringContract(t)
+	const app: CanvasT = initSyncStringContract(t).app
 
 	const { id, message } = await app.actions.createPost("hello", true, {})
 
@@ -121,7 +120,7 @@ test("synchronous string contract: apply an action and read a record from the da
 })
 
 test("synchronous string contract: create and delete a post", async (t) => {
-	const { app } = initStringContract(t)
+	const app: CanvasT = initSyncStringContract(t).app
 
 	const { id, message } = await app.actions.createPost("hello world", true, { author: "me" })
 
@@ -136,7 +135,7 @@ test("synchronous string contract: create and delete a post", async (t) => {
 })
 
 test("synchronous inline contract: apply an action and read a record from the database", async (t) => {
-	const { app, wallet } = initInlineContract(t)
+	const { app, wallet } = initSyncInlineContract(t)
 
 	const { id, message } = await app.actions.createPost({ content: "hello" })
 
@@ -151,7 +150,7 @@ test("synchronous inline contract: apply an action and read a record from the da
 })
 
 test("synchronous inline contract: create and delete a post", async (t) => {
-	const { app, wallet } = initInlineContract(t)
+	const { app, wallet } = initSyncInlineContract(t)
 
 	const { id, message } = await app.actions.createPost({ content: "hello world" })
 
