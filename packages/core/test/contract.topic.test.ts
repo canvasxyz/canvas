@@ -281,3 +281,41 @@ test("string class contract with args has topic: example.com.Foo:hash(args, code
 
 	t.is(app.topic, `example.com.Foo:${expectedHash}`)
 })
+
+test("inline class contract with undefined name has topic: example.com", async (t) => {
+	const getClass = () => {
+		return class extends Contract {
+			static topic = "example.com"
+			static models = {} satisfies ModelSchema
+		}
+	}
+
+	const app = await Canvas.initialize({
+		contract: getClass(),
+		signers: [new PRNGSigner(0)],
+	})
+	t.teardown(() => app.stop())
+
+	t.is(app.topic, "example.com")
+})
+
+test("string class contract with default name has topic: example.com:hash(code)", async (t) => {
+	const code = `
+		import { Contract } from "@canvas-js/core/contract"
+
+		export default class extends Contract {
+			static topic = "example.com"
+			static models = {}
+		}
+	`
+
+	const expectedHash = computeTopicHash({ code })
+
+	const app = await Canvas.initialize({
+		contract: code,
+		signers: [new PRNGSigner(0)],
+	})
+	t.teardown(() => app.stop())
+
+	t.is(app.topic, `example.com:${expectedHash}`)
+})

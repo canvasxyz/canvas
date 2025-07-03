@@ -73,7 +73,9 @@ export class ClassFunctionRuntime extends AbstractRuntime {
 		}
 
 		const topic =
-			isContractClass(contract) && contract.name !== "default" ? `${contract.topic}.${contract.name}` : contract.topic
+			isContractClass(contract) && contract.name && contract.name !== "default"
+				? `${contract.topic}.${contract.name}`
+				: contract.topic
 
 		return new ClassFunctionRuntime(topic, signers, actionNames, contract.models, contractInstance)
 	}
