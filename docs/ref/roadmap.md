@@ -11,12 +11,13 @@ For past release notes, please see [Github](https://github.com/canvasxyz/canvas/
 - [ ] Support for more efficient sync.
 - [ ] Support for private data.
 
-## 0.16.0 (TBD)
+## 0.16.0 (2026-07-07)
 
-This release changes how topics are specified on applications.
+This release implments a new topic format, so multiple contracts can be used in a single application (for partial replication, separated "rooms", etc.)
 
-- Model contracts now take a `topic` parameter, and class contracts now take a `static topic` parameter.
-- For class contracts, the full libp2p topic used for applications is `example.com.Object`, optionally followed by the hash of the snapshot, code, and/or constructor arguments, e.g. `example.com.Object:e8ae8ec9`.
+- Contracts initialized with `constructor()` args will now have a unique topic based on the hash of the arguments.
+- Model contracts now take a `static topic = "..."` parameter, and class contracts now take a `topic` field.
+- For class contracts, the full libp2p topic used for applications is now `example.com.Object`, optionally followed by the hash of the snapshot, code, and/or constructor arguments, e.g. `example.com.Object:e8ae8ec9...`.
 - Enabled experimental support for browser-to-browser libp2p. To connect to a WebRTC mesh, call `.startLibp2p()` on a Canvas instance in the browser.
 
 ## 0.15.1 (2025-06-05)
