@@ -135,7 +135,7 @@ export class Canvas<
 
 		const topicHashComponents: { args?: Uint8Array; snapshot?: Uint8Array; code?: Uint8Array } = {}
 		if (args.length > 0) {
-			topicHashComponents.args = cbor.encode(args)
+			topicHashComponents.args = sha256(cbor.encode(args))
 		}
 		if (config.snapshot) {
 			topicHashComponents.snapshot = sha256(cbor.encode(config.snapshot))

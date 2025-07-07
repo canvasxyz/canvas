@@ -11,7 +11,7 @@ function computeTopicHash(components: { args?: any[]; code?: string; snapshot?: 
 	const topicHashComponents: { args?: Uint8Array; snapshot?: Uint8Array; code?: Uint8Array } = {}
 
 	if (components.args && components.args.length > 0) {
-		topicHashComponents.args = cbor.encode(components.args)
+		topicHashComponents.args = sha256(cbor.encode(components.args))
 	}
 	if (components.snapshot) {
 		topicHashComponents.snapshot = sha256(cbor.encode(components.snapshot))
