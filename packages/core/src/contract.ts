@@ -33,7 +33,7 @@ export class Contract<ModelsT extends ModelSchema = ModelSchema> implements Acti
 		throw new Error("cannot access this.id outside an action handler")
 	}
 
-	public get did(): string {
+	public get did(): `did:${string}` {
 		throw new Error("cannot access this.did outside an action handler")
 	}
 

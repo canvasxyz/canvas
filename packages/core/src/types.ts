@@ -79,7 +79,7 @@ export type ModelAPI<ModelTypes extends Record<string, ModelValue> = Record<stri
 export type ActionContext<ModelTypes extends Record<string, ModelValue> = Record<string, ModelValue>> = {
 	db: ModelAPI<ModelTypes>
 	id: string
-	did: string
+	did: `did:${string}`
 	address: string
 	blockhash: string | null
 	timestamp: number
