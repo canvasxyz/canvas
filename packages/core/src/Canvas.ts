@@ -287,7 +287,8 @@ export class Canvas<
 			app.syncStatus = "offline"
 		})
 
-		app.messageLog.addEventListener("error", () => {
+		app.messageLog.addEventListener("error", ({ detail: { error } }) => {
+			app.log.error("sync error: %O", error)
 			app.syncStatus = "error"
 		})
 
