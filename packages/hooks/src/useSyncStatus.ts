@@ -10,7 +10,7 @@ export const useSyncStatus = (app: Canvas | null | undefined) => {
 	useEffect(() => {
 		if (!app) return
 
-		const updateState = async () => {
+		const updateSyncStatus = async () => {
 			if (syncStatus !== app.syncStatus) {
 				setTimeout(() => setSyncStatus(app.syncStatus))
 			}
@@ -30,20 +30,20 @@ export const useSyncStatus = (app: Canvas | null | undefined) => {
 			}
 		}
 
-		updateState()
+		updateSyncStatus()
 
-		app.messageLog.addEventListener("connect", updateState)
-		app.messageLog.addEventListener("disconnect", updateState)
-		app.messageLog.addEventListener("sync:status", updateState)
-		app.messageLog.addEventListener("message", updateState)
-		app.messageLog.addEventListener("peer:update", updateState)
+		app.messageLog.addEventListener("connect", updateSyncStatus)
+		app.messageLog.addEventListener("disconnect", updateSyncStatus)
+		app.messageLog.addEventListener("sync:status", updateSyncStatus)
+		app.messageLog.addEventListener("message", updateSyncStatus)
+		app.messageLog.addEventListener("peer:update", updateSyncStatus)
 
 		return () => {
-			app.messageLog.removeEventListener("connect", updateState)
-			app.messageLog.removeEventListener("disconnect", updateState)
-			app.messageLog.removeEventListener("sync:status", updateState)
-			app.messageLog.removeEventListener("message", updateState)
-			app.messageLog.removeEventListener("peer:update", updateState)
+			app.messageLog.removeEventListener("connect", updateSyncStatus)
+			app.messageLog.removeEventListener("disconnect", updateSyncStatus)
+			app.messageLog.removeEventListener("sync:status", updateSyncStatus)
+			app.messageLog.removeEventListener("message", updateSyncStatus)
+			app.messageLog.removeEventListener("peer:update", updateSyncStatus)
 		}
 	}, [app])
 

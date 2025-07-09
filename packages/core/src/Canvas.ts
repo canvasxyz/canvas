@@ -73,8 +73,8 @@ export interface CanvasEvents extends GossipLogEvents<MessageType> {
 export type CanvasLogEvent = CustomEvent<SignedMessage<MessageType>>
 
 /**
- * Sync state, only available on the client.
- * - Offline is the initial state.
+ * Sync status, only available on the client.
+ * - Offline is the initial status.
  * - Starting means the client has a WebSocket connection, but has not received heads to sync to.
  * - In progress means the client has started a Merkle sync, but has not run to completion.
  * - Complete means a sync has run to completion. *Not* debounced. The server may new actions during a sync.
