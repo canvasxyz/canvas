@@ -1,0 +1,10 @@
+{
+	"exclude": ["lib"],
+	"include": [".", "lexicons/**/*.json"],
+	"extends": "../../../tsconfig.base.json",
+	"compilerOptions": {
+		"rootDir": ".",
+		"outDir": "lib"
+	},
+	"references": [{ "path": "../." }, { "path": "../../interfaces" }]
+}
