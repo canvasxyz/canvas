@@ -3,6 +3,7 @@
 	"include": [".", "lexicons/**/*.json"],
 	"extends": "../../../tsconfig.base.json",
 	"compilerOptions": {
+		"module": "nodenext",
 		"rootDir": ".",
 		"outDir": "lib"
 	},

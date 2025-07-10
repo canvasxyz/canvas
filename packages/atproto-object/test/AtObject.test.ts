@@ -1,11 +1,9 @@
 import test from "ava"
 
-import { AtObject, DeriveType } from "@canvas-js/atproto-object"
+import { AtObject } from "@canvas-js/atproto-object"
 
-import entry from "./lexicons/com/whtwnd/blog/entry.json"
-import post from "./lexicons/app/bsky/feed/post.json"
-import { images, external, record, recordWithMedia } from "./lexicons/app/bsky/embed/index.js"
-import defs from "./lexicons/com/atproto/label/defs.json"
+import entry from "./lexicons/com/whtwnd/blog/entry.json" with { type: "json" }
+import post from "./lexicons/app/bsky/feed/post.json" with { type: "json" }
 
 const replyPattern = /at:\/\/%s\/com.whtwnd.blog.entry\/%s/
 
