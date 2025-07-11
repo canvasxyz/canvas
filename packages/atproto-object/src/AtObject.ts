@@ -1,7 +1,7 @@
 import type { AtConfig, AtInit, JetstreamEvent } from "./types.js"
 import { getConfig } from "./utils.js"
 
-import WebSocket from 'ws'
+import WebSocket from "ws"
 import debug from "weald"
 import PQueue from "p-queue"
 
@@ -25,15 +25,15 @@ export class AtObject {
 		const config = getConfig(init)
 
 		const dbConfig = {
-			models: mapValues(config, () => ({ rkey: "primary", record: "json" } as const)),
+			models: mapValues(config, () => ({ rkey: "primary", record: "json" }) as const),
 			version: {
-				"atobject": 1
+				atobject: 1,
 			},
 			// TODO: do we need an initial upgrade?
 			upgrade: undefined,
 			initialUpgradeVersion: undefined,
 			initialUpgradeSchema: undefined,
-			reset: true
+			reset: true,
 		}
 
 		if (path?.startsWith("postgres://")) {
@@ -45,112 +45,119 @@ export class AtObject {
 		}
 	}
 
-	private constructor(config: Record<string, AtConfig>, db: AbstractModelDB) {		
+	private constructor(config: Record<string, AtConfig>, db: AbstractModelDB) {
 		this.config = config
 		this.db = db
 		this.log = debug.log
 		this.handlerQueue = new PQueue({ concurrency: 1 })
 	}
 
-	listen(endpoint: string, options: {
-		cursor?: string
-		wantedDids?: string[]
-		compress?: boolean
-		onError?: (error: Error) => void
-		onConnect?: () => void
-		onDisconnect?: () => void
-	} = {}) {
+	listen(
+		endpoint: string,
+		options: {
+			cursor?: string
+			wantedDids?: string[]
+			compress?: boolean
+			onError?: (error: Error) => void
+			onConnect?: () => void
+			onDisconnect?: () => void
+		} = {},
+	) {
 		const url = new URL(endpoint)
-		
-		if (url.pathname === '/') {
-			url.pathname = '/subscribe'
+
+		if (url.pathname === "/") {
+			url.pathname = "/subscribe"
 		}
 
-		const wantedCollections = Object.values(this.config).map(config => config.nsid)
-		
+		const wantedCollections = Object.values(this.config).map((config) => config.nsid)
+
 		if (wantedCollections.length > 0) {
-			wantedCollections.forEach(collection => {
-				url.searchParams.append('wantedCollections', collection)
+			wantedCollections.forEach((collection) => {
+				url.searchParams.append("wantedCollections", collection)
 			})
 		}
-		
+
 		if (options.wantedDids && options.wantedDids.length > 0) {
-			options.wantedDids.forEach(did => {
-				url.searchParams.append('wantedDids', did)
+			options.wantedDids.forEach((did) => {
+				url.searchParams.append("wantedDids", did)
 			})
 		}
-		
+
 		if (options.cursor) {
-			url.searchParams.set('cursor', options.cursor)
+			url.searchParams.set("cursor", options.cursor)
 		}
-		
+
 		if (options.compress) {
-			url.searchParams.set('compress', 'true')
+			url.searchParams.set("compress", "true")
 		}
 
 		this.connect(url.toString(), options)
 	}
 
-	private connect(url: string, options: {
-		onError?: (error: Error) => void
-		onConnect?: () => void
-		onDisconnect?: () => void
-	}) {
+	private connect(
+		url: string,
+		options: {
+			onError?: (error: Error) => void
+			onConnect?: () => void
+			onDisconnect?: () => void
+		},
+	) {
 		const log = this.log
 		try {
 			this.ws = new WebSocket(url)
-			
+
 			this.ws.onopen = () => {
-				log('Connected to Jetstream')
+				log("Connected to Jetstream")
 				this.reconnectAttempts = 0
 				this.reconnectDelay = 1000
 				options.onConnect?.()
 			}
-			
+
 			this.ws.onmessage = (event) => {
 				let data: JetstreamEvent
 				try {
-					log('data: %O', event.data)
+					log("data: %O", event.data)
 					data = JSON.parse(event.data.toString())
 				} catch (error) {
-					log('Error parsing Jetstream event: %O', error)
+					log("Error parsing Jetstream event: %O", error)
 					options.onError?.(error as Error)
 					return
 				}
 				this.handleEvent(data)
 			}
-			
+
 			this.ws.onclose = (event) => {
-				log('Jetstream connection closed: %i, %O', event.code, event.reason)
+				log("Jetstream connection closed: %i, %O", event.code, event.reason)
 				options.onDisconnect?.()
-				
+
 				// Attempt to reconnect unless explicitly closed
 				if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
 					this.reconnectAttempts++
-					log(`Reconnecting in ${this.reconnectDelay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`)
-					
+					log(
+						`Reconnecting in ${this.reconnectDelay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`,
+					)
+
 					setTimeout(() => {
 						this.connect(url, options)
 					}, this.reconnectDelay)
-					
+
 					// Exponential backoff with jitter
 					this.reconnectDelay = Math.min(this.reconnectDelay * 2 + Math.random() * 1000, 30000)
 				}
 			}
-			
+
 			this.ws.onerror = (error) => {
-				log('Jetstream WebSocket error: %O', error)
-				options.onError?.(new Error('WebSocket connection error'))
+				log("Jetstream WebSocket error: %O", error)
+				options.onError?.(new Error("WebSocket connection error"))
 			}
-			
 		} catch (error) {
-			log('Error creating WebSocket connection: %O', error)
+			log("Error creating WebSocket connection: %O", error)
 			options.onError?.(error as Error)
 		}
 	}
 
 	private handleEvent(event: JetstreamEvent) {
-		if (event.kind !== 'commit' || !event.commit) return
+		if (event.kind !== "commit" || !event.commit) return
 
 		const { commit } = event
 		const { collection, rkey, record, operation } = commit
@@ -168,11 +175,11 @@ export class AtObject {
 				}
 
 				if (config.handler) {
-					const recordData = operation === 'delete' ? null : record
+					const recordData = operation === "delete" ? null : record
 					const db = this.createDbProxy(table)
 					this.handlerQueue.add(() => config.handler?.(collection, rkey, recordData, db))
 				} else {
-					if (operation === 'delete') {
+					if (operation === "delete") {
 						this.db.delete(table, rkey)
 						this.log(`DB DELETE ${table}.${rkey}`)
 					} else {
@@ -197,13 +204,13 @@ export class AtObject {
 			delete: (key: string) => {
 				this.log(`DB DELETE ${table}.${key}`)
 				return this.db.delete(table, key)
-			}
+			},
 		}
 	}
 
 	disconnect() {
 		if (this.ws) {
-			this.ws.close(1000, 'Manual disconnect')
+			this.ws.close(1000, "Manual disconnect")
 			this.ws = undefined
 		}
 	}
