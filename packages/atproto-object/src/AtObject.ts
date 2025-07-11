@@ -1,21 +1,16 @@
 import type { AtConfig, AtInit, JetstreamEvent } from "./types.js"
-import { getConfig } from "./utils.js"
+import { getConfig, findPdsEndpoint } from "./utils.js"
+import { parseCarFile } from "./repo.js"
 
 import WebSocket from "ws"
 import debug from "weald"
 import PQueue from "p-queue"
-import { CarReader } from "@ipld/car"
-import * as cbor from "@ipld/dag-cbor"
-import { CID } from "multiformats"
 import { AtprotoHandleResolverNode } from "@atproto-labs/handle-resolver-node"
 
 import { ModelDB as SqliteModelDB } from "@canvas-js/modeldb-sqlite"
 import { ModelDB as PostgresModelDB } from "@canvas-js/modeldb-pg"
 import { AbstractModelDB } from "@canvas-js/modeldb"
 import { mapValues } from "@canvas-js/utils"
-
-type MSTNode = { l: CID; e: MSTEntry[] }
-type MSTEntry = { p: number; k: Uint8Array; v?: CID; t?: CID }
 
 export class AtObject {
 	public db: AbstractModelDB
@@ -235,24 +230,34 @@ export class AtObject {
 
 	private async backfillIdentifier(identifier: string): Promise<void> {
 		try {
-			this.log("Backfilling identifier: %s", identifier)
-
-			// Resolve handle to DID if needed
 			const did = await this.resolveIdentifier(identifier)
 			if (!did) {
 				this.log("Failed to resolve identifier: %s", identifier)
 				return
 			}
 
-			// Find PDS endpoint for this DID
-			const pdsEndpoint = await this.findPdsEndpoint(did)
+			const pdsEndpoint = await findPdsEndpoint(did)
 			if (!pdsEndpoint) {
 				this.log("Failed to find PDS endpoint for DID: %s", did)
 				return
 			}
 
-			// Fetch repository data
-			await this.syncRepository(did, pdsEndpoint)
+			// Fetch repository using com.atproto.sync.getRepo
+			const repoUrl = `${pdsEndpoint}/xrpc/com.atproto.sync.getRepo?did=${encodeURIComponent(did)}`
+			const response = await fetch(repoUrl, {
+				method: "GET",
+				signal: AbortSignal.timeout(30000), // TODO: timeout for repo sync
+			})
+
+			if (!response.ok) {
+				throw new Error(`Failed to fetch repository: ${response.status} ${response.statusText}`)
+			}
+
+			const carBytes = await response.arrayBuffer()
+			const records = await parseCarFile(new Uint8Array(carBytes))
+			for (const record of records) {
+				await this.handleBackfillRecord(did, record)
+			}
 			this.log("Successfully backfilled %s (%s)", identifier, did)
 		} catch (error) {
 			this.log("Error backfilling %s: %O", identifier, error)
@@ -279,192 +284,7 @@ export class AtObject {
 		}
 	}
 
-	private async findPdsEndpoint(did: string): Promise<string | null> {
-		try {
-			// For did:plc, fetch from PLC directory
-			if (did.startsWith("did:plc:")) {
-				const plcUrl = `https://plc.directory/${did}`
-				const response = await fetch(plcUrl, {
-					method: "GET",
-					headers: { "User-Agent": "AtObject/1.0" },
-					signal: AbortSignal.timeout(5000),
-				})
-
-				if (response.ok) {
-					const didDoc = await response.json()
-					if (didDoc.service) {
-						for (const service of didDoc.service) {
-							if (service.id === "#atproto_pds" && service.serviceEndpoint) {
-								return service.serviceEndpoint
-							}
-						}
-					}
-				}
-			}
-
-			// For did:web, resolve using the DID web method
-			if (did.startsWith("did:web:")) {
-				const domain = did.replace("did:web:", "").replace(/:/g, "/")
-				const webUrl = `https://${domain}/.well-known/did.json`
-				const response = await fetch(webUrl, {
-					method: "GET",
-					headers: { "User-Agent": "AtObject/1.0" },
-					signal: AbortSignal.timeout(5000),
-				})
-
-				if (response.ok) {
-					const didDoc = await response.json()
-					if (didDoc.service) {
-						for (const service of didDoc.service) {
-							if (service.id === "#atproto_pds" && service.serviceEndpoint) {
-								return service.serviceEndpoint
-							}
-						}
-					}
-				}
-			}
-		} catch (error) {
-			this.log("Error resolving DID %s: %O", did, error)
-			return null
-		}
-		return null
-	}
-
-	private async syncRepository(did: string, pdsEndpoint: string): Promise<void> {
-		try {
-			// Fetch repository using com.atproto.sync.getRepo
-			const repoUrl = `${pdsEndpoint}/xrpc/com.atproto.sync.getRepo?did=${encodeURIComponent(did)}`
-			const response = await fetch(repoUrl, {
-				method: "GET",
-				headers: { "User-Agent": "AtObject/1.0" },
-				signal: AbortSignal.timeout(30000), // Longer timeout for repo sync
-			})
-
-			if (!response.ok) {
-				throw new Error(`Failed to fetch repository: ${response.status} ${response.statusText}`)
-			}
-
-			const carBytes = await response.arrayBuffer()
-			await this.processRepositoryData(did, new Uint8Array(carBytes))
-		} catch (error) {
-			this.log("Error syncing repository for %s: %O", did, error)
-			throw error
-		}
-	}
-
-	private async processRepositoryData(did: string, carBytes: Uint8Array): Promise<void> {
-		try {
-			// Parse CAR file and extract records
-			const records = await this.parseCarFile(carBytes)
-
-			// Process each record according to our configuration
-			for (const record of records) {
-				await this.processRecord(did, record)
-			}
-		} catch (error) {
-			this.log("Error processing repository data for %s: %O", did, error)
-			throw error
-		}
-	}
-
-	private async parseCarFile(carBytes: Uint8Array): Promise<Array<{ collection: string; rkey: string; record: any }>> {
-		const records: Array<{ collection: string; rkey: string; record: any }> = []
-
-		try {
-			const car = await CarReader.fromBytes(carBytes)
-			const [root] = await car.getRoots()
-			const block = await car.get(root)
-
-			if (!block) {
-				throw new Error("Invalid CAR file: missing root block")
-			}
-
-			const commit = cbor.decode<{ data: CID }>(block.bytes)
-
-			// Walk the MST to extract all records
-			const extractedRecords = await this.walkMST(car, commit.data)
-			records.push(...extractedRecords)
-		} catch (error) {
-			this.log("Error parsing CAR file: %O", error)
-			throw error
-		}
-
-		return records
-	}
-
-	private async walkMST(
-		car: CarReader,
-		rootCid: CID,
-		prefix = "",
-	): Promise<Array<{ collection: string; rkey: string; record: any }>> {
-		const records: Array<{ collection: string; rkey: string; record: any }> = []
-		const decoder = new TextDecoder()
-
-		try {
-			const block = await car.get(rootCid)
-			if (!block) {
-				return records
-			}
-
-			const node = cbor.decode<MSTNode>(block.bytes)
-
-			// Process entries in this node
-			let currentKey = ""
-			for (const entry of node.e) {
-				// Reconstruct the key
-				currentKey = currentKey.slice(0, entry.p) + decoder.decode(entry.k)
-
-				// If this entry has a value, it's a record
-				if (entry.v) {
-					const recordBlock = await car.get(entry.v)
-					if (recordBlock) {
-						const recordData = cbor.decode<any>(recordBlock.bytes)
-						const { collection, rkey } = this.parseRecordKey(currentKey)
-						if (collection && rkey) {
-							records.push({
-								collection,
-								rkey,
-								record: recordData,
-							})
-						}
-					}
-				}
-
-				// If this entry has a tree pointer, recursively process it
-				if (entry.t) {
-					const subRecords = await this.walkMST(car, entry.t, currentKey)
-					records.push(...subRecords)
-				}
-			}
-
-			// Process the left pointer if it exists
-			if (node.l) {
-				const leftRecords = await this.walkMST(car, node.l, prefix)
-				records.push(...leftRecords)
-			}
-		} catch (error) {
-			this.log("Error walking MST: %O", error)
-		}
-
-		return records
-	}
-
-	private parseRecordKey(key: string): { collection: string | null; rkey: string | null } {
-		// AT Protocol record keys are in the format: collection/rkey
-		const parts = key.split("/")
-		if (parts.length >= 2) {
-			return {
-				collection: parts[0],
-				rkey: parts[1],
-			}
-		}
-		return {
-			collection: null,
-			rkey: null,
-		}
-	}
-
-	private async processRecord(did: string, record: { collection: string; rkey: string; record: any }): Promise<void> {
+	private async handleBackfillRecord(did: string, record: { collection: string; rkey: string; record: any }): Promise<void> {
 		const { collection, rkey, record: recordData } = record
 
 		// Check if this collection is one we're tracking
