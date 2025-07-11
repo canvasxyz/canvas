@@ -62,7 +62,6 @@ export class AtObject {
 		endpoint: string,
 		options: {
 			cursor?: string
-			compress?: boolean
 			onError?: (error: Error) => void
 			onConnect?: () => void
 			onDisconnect?: () => void
@@ -83,10 +82,6 @@ export class AtObject {
 
 		if (options.cursor) {
 			url.searchParams.set("cursor", options.cursor)
-		}
-
-		if (options.compress !== false) {
-			url.searchParams.set("compress", "true")
 		}
 
 		this.connect(url.toString(), options)
@@ -206,19 +201,6 @@ export class AtObject {
 		}
 	}
 
-	disconnect() {
-		if (this.ws) {
-			this.ws.close(1000, "Manual disconnect")
-			this.ws = undefined
-		}
-	}
-
-	close() {
-		this.disconnect()
-		this.handlerQueue.clear()
-		this.backfillQueue.clear()
-	}
-
 	public async backfill(identifiers: string[]): Promise<void> {
 		this.log("Starting backfill for %d identifiers", identifiers.length)
 
@@ -311,5 +293,18 @@ export class AtObject {
 				}
 			}
 		}
+	}
+
+	disconnect() {
+		if (this.ws) {
+			this.ws.close(1000, "Manual disconnect")
+			this.ws = undefined
+		}
+	}
+
+	close() {
+		this.disconnect()
+		this.handlerQueue.clear()
+		this.backfillQueue.clear()
 	}
 }

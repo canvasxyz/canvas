@@ -149,3 +149,33 @@ test("listen to jetstream with custom handlers", async (t) => {
 		"has only posts without the letter 'e'",
 	)
 })
+
+test("listen to jetstream with cursor for replay", async (t) => {
+	const cursorTimestamp = (Date.now() - 1000) * 1000
+
+	const firstApp = await AtObject.initialize(["app.bsky.feed.post"], null)
+	firstApp.listen("wss://jetstream1.us-east.bsky.network")
+	await new Promise((resolve) => setTimeout(resolve, 500))
+
+	const firstPosts = await firstApp.db.query("app.bsky.feed.post")
+	firstApp.close()
+
+	t.true(firstPosts.length > 0, "has posts")
+
+	const secondApp = await AtObject.initialize(["app.bsky.feed.post"], null)
+	secondApp.listen("wss://jetstream1.us-east.bsky.network", {
+		cursor: cursorTimestamp.toString(),
+	})
+	t.teardown(() => secondApp.close())
+	await new Promise((resolve) => setTimeout(resolve, 1000))
+
+	const secondPosts = await secondApp.db.query("app.bsky.feed.post")
+	t.true(secondPosts.length >= firstPosts.length, "second session should have at least as many posts as first")
+
+	// All posts from first session should be present
+	const firstPostKeys = new Set(firstPosts.map((p) => p.rkey))
+	const secondPostKeys = new Set(secondPosts.map((p) => p.rkey))
+	for (const rkey of firstPostKeys) {
+		t.true(secondPostKeys.has(rkey), `post with rkey ${rkey} should be replayed`)
+	}
+})
