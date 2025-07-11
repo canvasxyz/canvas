@@ -56,7 +56,6 @@ export class AtObject {
 		endpoint: string,
 		options: {
 			cursor?: string
-			wantedDids?: string[]
 			compress?: boolean
 			onError?: (error: Error) => void
 			onConnect?: () => void
@@ -71,23 +70,15 @@ export class AtObject {
 
 		const wantedCollections = Object.values(this.config).map((config) => config.nsid)
 
-		if (wantedCollections.length > 0) {
-			wantedCollections.forEach((collection) => {
-				url.searchParams.append("wantedCollections", collection)
-			})
-		}
-
-		if (options.wantedDids && options.wantedDids.length > 0) {
-			options.wantedDids.forEach((did) => {
-				url.searchParams.append("wantedDids", did)
-			})
-		}
+		wantedCollections.forEach((collection) => {
+			url.searchParams.append("wantedCollections", collection)
+		})
 
 		if (options.cursor) {
 			url.searchParams.set("cursor", options.cursor)
 		}
 
-		if (options.compress) {
+		if (options.compress !== false) {
 			url.searchParams.set("compress", "true")
 		}
 
