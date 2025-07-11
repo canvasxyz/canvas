@@ -4,15 +4,15 @@ export type AtConfig = {
 	handler?: (nsid: string, rkey: string, post: any, db: any) => void
 }
 
-export type AtInit = string[] | Array<{ table: string, $type: string }> | Record<string, AtConfig | string>
+export type AtInit = string[] | Array<{ table: string; $type: string }> | Record<string, AtConfig | string>
 
 export type JetstreamEvent = {
 	did: string
 	time_us: number
-	kind: 'commit' | 'identity' | 'account'
+	kind: "commit" | "identity" | "account"
 	commit?: {
 		rev: string
-		operation: 'create' | 'update' | 'delete'
+		operation: "create" | "update" | "delete"
 		collection: string
 		rkey: string
 		record?: any
@@ -31,3 +31,13 @@ export type JetstreamEvent = {
 		time: string
 	}
 }
+
+export type FromLexicon<T> = T extends {
+	defs: { main: { record: { properties: infer P; required?: infer Required extends string[] } } }
+}
+	? {
+			[K in keyof P as K extends Required[number] ? K : never]: any
+		} & {
+			[K in keyof P as K extends Required[number] ? never : K]?: any
+		}
+	: any

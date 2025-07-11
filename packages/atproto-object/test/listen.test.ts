@@ -1,18 +1,8 @@
 import test from "ava"
 
-import { AtObject } from "@canvas-js/atproto-object"
+import { AtObject, FromLexicon } from "@canvas-js/atproto-object"
 
 import post from "./lexicons/app/bsky/feed/post.json" with { type: "json" }
-
-type FromLexicon<T> = T extends {
-	defs: { main: { record: { properties: infer P; required?: infer Required extends string[] } } }
-}
-	? {
-			[K in keyof P as K extends Required[number] ? K : never]: any
-		} & {
-			[K in keyof P as K extends Required[number] ? never : K]?: any
-		}
-	: any
 
 type Post = FromLexicon<typeof post>
 
