@@ -21,6 +21,8 @@
 		"@canvas-js/interfaces": "0.16.0",
 		"@canvas-js/modeldb": "^0.16.0",
 		"@canvas-js/utils": "1.0.0",
+		"p-queue": "^8.0.1",
+		"weald": "^1.0.4",
 		"ws": "^8.18.0"
 	},
 	"devDependencies": {

@@ -2,7 +2,6 @@ import test from "ava"
 
 import { AtObject } from "@canvas-js/atproto-object"
 
-import entry from "./lexicons/com/whtwnd/blog/entry.json" with { type: "json" }
 import post from "./lexicons/app/bsky/feed/post.json" with { type: "json" }
 
 type FromLexicon<T> = T extends {
@@ -16,9 +15,8 @@ type FromLexicon<T> = T extends {
 	: any
 
 type Post = FromLexicon<typeof post>
-type Entry = FromLexicon<typeof entry>
 
-test("AtObject can be instantiated", async (t) => {
+test("create AtObject instances", async (t) => {
 	const replyPattern = /at:\/\/%s\/com.whtwnd.blog.entry\/%s/
 
 	// index all records as-is
@@ -64,66 +62,79 @@ test("AtObject can be instantiated", async (t) => {
 	t.pass()
 })
 
-test("atobject listens to jetstream", async (t) => {
+test("listen to jetstream", async (t) => {
 	const app = await AtObject.initialize(["app.bsky.feed.post"], null)
 	app.listen("wss://jetstream1.us-east.bsky.network")
 
-	setTimeout(() => {
-		app.close()
-	}, 500)
+	t.teardown(() => app.close())
+	await new Promise((resolve) => setTimeout(resolve, 500))
+	
+	const posts = await app.db.query("app.bsky.feed.post")
+	t.true(posts.length > 0)
 })
 
-test("atobject listens to jetstream with named tables", async (t) => {
+test("listen to jetstream with named tables", async (t) => {
 	const app = await AtObject.initialize([{ $type: "app.bsky.feed.post", table: "post" }], null)
 	app.listen("wss://jetstream1.us-east.bsky.network")
 
-	setTimeout(() => {
-		app.close()
-	}, 500)
+	t.teardown(() => app.close())
+	await new Promise((resolve) => setTimeout(resolve, 500))
+
+	const posts = await app.db.query("post")
+	t.true(posts.length > 0)
 })
 
-test("atobject listens to jetstream with filters", async (t) => {
+test("listen to jetstream with filters", async (t) => {
+	let seenComment = false
+
 	const app = await AtObject.initialize({
 		comments: {
 			nsid: "app.bsky.feed.post",
 			filter: (nsid: string, rkey: string, post: Post) => {
-				// Only posts that are replies
-				return post.reply != null
+				seenComment = post.reply && post.reply.parent && post.reply.root
+				return seenComment
 			},
-			handler: (nsid: string, rkey: string, post: Post | null, db) => {
-				if (post && post.reply) {
-					console.log(`New comment on: ${post.reply.parent.uri}`)
-					db.set("comments", post)
-				}
-			}
 		}
 	}, null)
 	app.listen("wss://jetstream1.us-east.bsky.network")
 
-	setTimeout(() => {
-		app.close()
-	}, 500)
+	t.teardown(() => app.close())
+	while (!seenComment) {
+		await new Promise((resolve) => setTimeout(resolve, 500))
+	}
+
+	const posts = await app.db.query("comments")
+	
+	t.true(posts.length > 0, "has comments")
+	t.true(posts.every(({ record }) => record.reply !== undefined), "has only comments")
 })
 
-test("atobject listens to jetstream with custom handlers", async (t) => {
+test("listen to jetstream with custom handlers", async (t) => {
+	let seenPost = false
+
 	const app = await AtObject.initialize({
-		posts: "app.bsky.feed.post",
-		entries: {
-			nsid: "com.whtwnd.blog.entry",
-			handler: (nsid: string, rkey: string, entry: Entry | null, db) => {
-				if (entry === null) {
-					console.log(`Blog entry deleted: ${rkey}`)
-					db.delete("entries", rkey)
+		posts: {
+			nsid: "app.bsky.feed.post",
+			handler: async (nsid: string, rkey: string, post: Post, db) => {
+				if (post === null) {
+					await db.delete("posts", rkey)
 				} else {
-					console.log(`New blog entry: ${entry.title}`)
-					db.set("entries", entry)
+					if (post.text.indexOf('e') !== -1) return
+					seenPost = true
+					await db.set("posts", { rkey, record: post })
 				}
-			}
+			},
 		}
 	}, null)
 	app.listen("wss://jetstream1.us-east.bsky.network")
 
-	setTimeout(() => {
-		app.close()
-	}, 500)
+	t.teardown(() => app.close())
+	while (!seenPost) {
+		await new Promise((resolve) => setTimeout(resolve, 500))
+	}
+
+	const posts = await app.db.query("posts")
+	
+	t.true(posts.length > 0, "has posts")
+	t.true(posts.every(({ record }) => record.text.indexOf('e') === -1), "has only posts without the letter 'e'")
 })

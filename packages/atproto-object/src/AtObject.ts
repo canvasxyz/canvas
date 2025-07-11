@@ -2,14 +2,19 @@ import type { AtConfig, AtInit, JetstreamEvent } from "./types.js"
 import { getConfig } from "./utils.js"
 
 import WebSocket from 'ws'
+import debug from "weald"
+import PQueue from "p-queue"
+
 import { ModelDB as SqliteModelDB } from "@canvas-js/modeldb-sqlite"
 import { ModelDB as PostgresModelDB } from "@canvas-js/modeldb-pg"
 import { AbstractModelDB } from "@canvas-js/modeldb"
 import { mapValues } from "@canvas-js/utils"
 
 export class AtObject {
+	public db: AbstractModelDB
 	private config: Record<string, AtConfig>
-	private db: AbstractModelDB
+	private log: typeof debug.log
+	private handlerQueue: PQueue
 
 	private ws?: WebSocket
 	private reconnectAttempts = 0
@@ -43,6 +48,8 @@ export class AtObject {
 	private constructor(config: Record<string, AtConfig>, db: AbstractModelDB) {		
 		this.config = config
 		this.db = db
+		this.log = debug.log
+		this.handlerQueue = new PQueue({ concurrency: 1 })
 	}
 
 	listen(endpoint: string, options: {
@@ -89,35 +96,38 @@ export class AtObject {
 		onConnect?: () => void
 		onDisconnect?: () => void
 	}) {
+		const log = this.log
 		try {
 			this.ws = new WebSocket(url)
 			
 			this.ws.onopen = () => {
-				console.log('Connected to Jetstream')
+				log('Connected to Jetstream')
 				this.reconnectAttempts = 0
 				this.reconnectDelay = 1000
 				options.onConnect?.()
 			}
 			
 			this.ws.onmessage = (event) => {
+				let data: JetstreamEvent
 				try {
-					console.log('data:', event.data)
-					const data: JetstreamEvent = JSON.parse(event.data.toString())
-					this.handleEvent(data)
+					log('data: %O', event.data)
+					data = JSON.parse(event.data.toString())
 				} catch (error) {
-					console.error('Error parsing Jetstream event:', error)
+					log('Error parsing Jetstream event: %O', error)
 					options.onError?.(error as Error)
+					return
 				}
+				this.handleEvent(data)
 			}
 			
 			this.ws.onclose = (event) => {
-				console.log('Jetstream connection closed:', event.code, event.reason)
+				log('Jetstream connection closed: %i, %O', event.code, event.reason)
 				options.onDisconnect?.()
 				
 				// Attempt to reconnect unless explicitly closed
 				if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
 					this.reconnectAttempts++
-					console.log(`Reconnecting in ${this.reconnectDelay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`)
+					log(`Reconnecting in ${this.reconnectDelay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`)
 					
 					setTimeout(() => {
 						this.connect(url, options)
@@ -129,12 +139,12 @@ export class AtObject {
 			}
 			
 			this.ws.onerror = (error) => {
-				console.error('Jetstream WebSocket error:', error)
+				log('Jetstream WebSocket error: %O', error)
 				options.onError?.(new Error('WebSocket connection error'))
 			}
 			
 		} catch (error) {
-			console.error('Error creating WebSocket connection:', error)
+			log('Error creating WebSocket connection: %O', error)
 			options.onError?.(error as Error)
 		}
 	}
@@ -147,18 +157,27 @@ export class AtObject {
 
 		for (const [table, config] of Object.entries(this.config)) {
 			if (config.nsid === collection) {
-				if (config.filter && !config.filter(collection, rkey, record)) {
-					continue
+				if (config.filter) {
+					try {
+						if (!config.filter(collection, rkey, record)) {
+							continue
+						}
+					} catch (err) {
+						continue
+					}
 				}
 
 				if (config.handler) {
 					const recordData = operation === 'delete' ? null : record
-					config.handler(collection, rkey, recordData, this.createDbProxy(table))
+					const db = this.createDbProxy(table)
+					this.handlerQueue.add(() => config.handler?.(collection, rkey, recordData, db))
 				} else {
 					if (operation === 'delete') {
-						console.log(`DB DELETE ${table}.${rkey}`)
+						this.db.delete(table, rkey)
+						this.log(`DB DELETE ${table}.${rkey}`)
 					} else {
-						console.log(`DB SET ${table}.${rkey}:`, record)
+						this.db.set(table, { rkey, record })
+						this.log(`DB SET ${table}.${rkey}: %O`, record)
 					}
 				}
 			}
@@ -167,15 +186,17 @@ export class AtObject {
 
 	private createDbProxy(table: string) {
 		return {
-			set: (key: string, value: any) => {
-				console.log(`DB SET ${table}.${key}:`, value)
+			set: (key: string, record: any) => {
+				this.log(`DB SET ${table}: %O`, record)
+				return this.db.set(table, record)
 			},
 			get: (key: string) => {
-				console.log(`DB GET ${table}.${key}`)
-				return null
+				this.log(`DB GET ${table}.${key}`)
+				return this.db.get(table, key)
 			},
 			delete: (key: string) => {
-				console.log(`DB DELETE ${table}.${key}`)
+				this.log(`DB DELETE ${table}.${key}`)
+				return this.db.delete(table, key)
 			}
 		}
 	}
@@ -189,5 +210,6 @@ export class AtObject {
 
 	close() {
 		this.disconnect()
+		this.handlerQueue.clear()
 	}
 }
