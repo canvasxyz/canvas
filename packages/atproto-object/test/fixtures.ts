@@ -1,0 +1,17 @@
+export const whitewind = [
+	"@mako.dreamshrine.org",
+	"@dio-the-debugger.bsky.social",
+	"@peddrinn.bsky.social",
+	"@psychoparanoik.bsky.social",
+	"@tanzpunk.bsky.social",
+	"@sigumon.bsky.social",
+	"@wikipad.fun",
+	"@adaszpilka.art",
+	"@bnewbold.net",
+	"@adaszpilka.art",
+	"@tkusano.jp",
+	"@ubanis.com",
+	"@boobam.bsky.social",
+	"@moja.blue",
+	"@jaennaet.fi",
+]

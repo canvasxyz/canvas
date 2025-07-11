@@ -18,10 +18,14 @@
 		"test": "ava"
 	},
 	"dependencies": {
-		"@canvas-js/interfaces": "0.16.0"
+		"@canvas-js/interfaces": "0.16.0",
+		"@canvas-js/modeldb": "^0.16.0",
+		"@canvas-js/utils": "1.0.0",
+		"ws": "^8.18.0"
 	},
 	"devDependencies": {
 		"@ava/typescript": "^5.0.0",
+		"@types/ws": "^8.5.12",
 		"ava": "^6.2.0"
 	}
 }
