@@ -14,3 +14,13 @@ test("backfill repos by user", async (t) => {
 	const entries = await app.db.query("entry")
 	t.true(entries.length > 0, "has entries")
 })
+
+test("backfill with firehose", async (t) => {
+	const app = await AtObject.initialize([{ $type: "app.bsky.feed.post", table: "posts" }], null)
+
+	await app.backfill(firehoseUrl, -1000)
+	t.teardown(() => app.close())
+
+	const posts = await app.db.query("posts")
+	t.true(posts.length > 0, "has posts")
+})

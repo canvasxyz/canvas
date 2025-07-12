@@ -18,6 +18,11 @@ import {
 	extractRecordFromCarByPath,
 } from "./repo.js"
 
+// Enable debug namespace programmatically
+if (!process.env.DEBUG) {
+	process.env.DEBUG = "atobject:*"
+}
+
 export class AtObject {
 	public db: AbstractModelDB
 	public firstSeq: number | null
@@ -31,6 +36,7 @@ export class AtObject {
 	private startSeq: number | null = null
 	private progressTimer: NodeJS.Timeout | null = null
 	private startTime: number | null = null
+	private backfillResolve: (() => void) | null = null
 
 	private trace: typeof debug.log
 	private log: typeof debug.log
@@ -118,7 +124,9 @@ export class AtObject {
 		this.wantedCollections = Object.values(config).map((config) => config.nsid)
 		this.db = db
 		this.trace = debug("atobject:trace")
-		this.log = debug("atobject:log")
+		this.log = (message: string, ...args: any[]) => {
+			console.log(`[atobject] ${message}`, ...args)
+		}
 		this.handlerQueue = new PQueue({ concurrency: 1 })
 		this.backfillQueue = new PQueue({ concurrency: 3 }) // Allow some concurrency for backfill operations
 		this.handleResolver = new AtprotoHandleResolverNode()
@@ -140,83 +148,98 @@ export class AtObject {
 
 	async backfill(
 		endpoint: string,
-		cursor: string,
+		cursor: string | number,
 		options: {
 			onError?: (error: Error) => void
 			onConnect?: () => void
 			onDisconnect?: () => void
 		} = {},
-	) {
-		this.log("Getting current cursor to track progress...")
+	): Promise<void> {
+		return new Promise<void>(async (resolve, reject) => {
+			const currentCursor = await AtObject.getCurrentCursor(endpoint)
+			await new Promise((resolve) => setTimeout(resolve, 1000))
 
-		// Get current cursor to track progress
-		const currentCursor = await AtObject.getCurrentCursor(endpoint)
-		const startCursor = parseInt(cursor)
+			let startCursor = typeof cursor === "number" ? cursor : parseInt(cursor, 10)
+			if (startCursor < 0) {
+				startCursor = currentCursor + startCursor
+			}
 
-		this.targetSeq = currentCursor
-		this.startSeq = startCursor
-		this.startTime = Date.now()
+			this.targetSeq = currentCursor
+			this.startSeq = startCursor
+			this.startTime = Date.now()
 
-		const totalRecords = currentCursor - startCursor
-		this.log(
-			"Starting from cursor %d, current cursor is %d (%d records behind)",
-			startCursor,
-			currentCursor,
-			totalRecords,
-		)
+			const totalRecords = currentCursor - startCursor
+			this.log(
+				"Starting from cursor %d, current cursor is %d (%d records behind)",
+				startCursor,
+				currentCursor,
+				totalRecords,
+			)
 
-		// Set up progress tracking timer
-		this.progressTimer = setInterval(() => {
-			if (this.lastSeq !== null && this.targetSeq !== null && this.startSeq !== null && this.startTime !== null) {
-				const recordsLeft = this.targetSeq - this.lastSeq
+			// Store resolve function to call when backfill completes
+			this.backfillResolve = resolve
 
-				if (recordsLeft <= 0) {
-					this.log("✅ Caught up! Now at sequence", this.lastSeq)
-					// Clear progress tracking
-					if (this.progressTimer) {
-						clearInterval(this.progressTimer)
-						this.progressTimer = null
-					}
-					this.targetSeq = null
-					this.startSeq = null
-					this.startTime = null
-				} else {
-					// Calculate progress based on records that will be synced during this run
-					const totalRecords = this.firstSeq !== null ? this.targetSeq - this.firstSeq : this.targetSeq - this.startSeq
-					const processed = this.firstSeq !== null ? this.lastSeq - this.firstSeq : this.lastSeq - this.startSeq
-					const progress = totalRecords > 0 ? (processed / totalRecords) * 100 : 0
+			// Set up progress tracking timer
+			this.progressTimer = setInterval(() => {
+				if (this.lastSeq !== null && this.targetSeq !== null && this.startSeq !== null && this.startTime !== null) {
+					const recordsLeft = this.targetSeq - this.lastSeq
 
-					// Calculate time estimation
-					const elapsedTime = Date.now() - this.startTime
-					const elapsedSeconds = elapsedTime / 1000
-					let timeLeftStr = ""
-
-					if (processed > 0 && elapsedSeconds > 0) {
-						const recordsPerSecond = processed / elapsedSeconds
-						const timeLeftSeconds = recordsLeft / recordsPerSecond
-
-						if (timeLeftSeconds < 60) {
-							timeLeftStr = `~${Math.round(timeLeftSeconds)}s left`
-						} else if (timeLeftSeconds < 3600) {
-							timeLeftStr = `~${Math.round(timeLeftSeconds / 60)}m left`
-						} else {
-							const hours = Math.floor(timeLeftSeconds / 3600)
-							const minutes = Math.round((timeLeftSeconds % 3600) / 60)
-							timeLeftStr = `~${hours}h ${minutes}m left`
+					if (recordsLeft <= 0) {
+						this.log("✅ Caught up! Now at sequence", this.lastSeq)
+						// Clear progress tracking
+						if (this.progressTimer) {
+							clearInterval(this.progressTimer)
+							this.progressTimer = null
 						}
-					}
+						this.targetSeq = null
+						this.startSeq = null
+						this.startTime = null
+					} else {
+						// Calculate progress based on records that will be synced during this run
+						const totalRecords = this.firstSeq !== null ? this.targetSeq - this.firstSeq : this.targetSeq - this.startSeq
+						const processed = this.firstSeq !== null ? this.lastSeq - this.firstSeq : this.lastSeq - this.startSeq
+						const progress = totalRecords > 0 ? (processed / totalRecords) * 100 : 0
 
-					console.log(
-						`📊 Progress: ${processed}/${totalRecords} records processed (${progress.toFixed(1)}%), ${timeLeftStr}`,
-					)
+						// Calculate time estimation
+						const elapsedTime = Date.now() - this.startTime
+						const elapsedSeconds = elapsedTime / 1000
+						let timeLeftStr = ""
+
+						if (processed > 0 && elapsedSeconds > 0) {
+							const recordsPerSecond = processed / elapsedSeconds
+							const timeLeftSeconds = recordsLeft / recordsPerSecond
+
+							if (timeLeftSeconds < 60) {
+								timeLeftStr = `~${Math.round(timeLeftSeconds)}s left`
+							} else if (timeLeftSeconds < 3600) {
+								timeLeftStr = `~${Math.round(timeLeftSeconds / 60)}m left`
+							} else {
+								const hours = Math.floor(timeLeftSeconds / 3600)
+								const minutes = Math.round((timeLeftSeconds % 3600) / 60)
+								timeLeftStr = `~${hours}h ${minutes}m left`
+							}
+						}
+
+						console.log(
+							`📊 Progress: ${processed}/${totalRecords} records processed (${progress.toFixed(1)}%), ${timeLeftStr}`,
+						)
+					}
+				}
+			}, 1000)
+
+			const url = buildFirehoseUrl(endpoint, startCursor.toString())
+			this.log("Connecting to AT Protocol firehose: %s", url)
+
+			const extendedOptions = {
+				...options,
+				onError: (error: Error) => {
+					options.onError?.(error)
+					reject(error)
 				}
 			}
-		}, 1000)
 
-		const url = buildFirehoseUrl(endpoint, cursor)
-		this.log("Connecting to AT Protocol firehose: %s", url)
-
-		this.connectFirehose(url, options)
+			this.connectFirehose(url, extendedOptions)
+		})
 	}
 
 	private connectFirehose(
@@ -228,12 +251,13 @@ export class AtObject {
 		},
 	) {
 		const log = this.log
+		const trace = this.trace
 		try {
 			this.ws = new WebSocket(url)
 			this.ws.binaryType = "arraybuffer"
 
 			this.ws.onopen = () => {
-				log("Connected to AT Protocol firehose")
+				trace("Connected to AT Protocol firehose")
 				this.reconnectAttempts = 0
 				this.reconnectDelay = 1000
 
@@ -264,7 +288,7 @@ export class AtObject {
 				log("Firehose connection closed: %i, %O", event.code, event.reason)
 				options.onDisconnect?.()
 
-				if (event.code !== 1000 && this.reconnectAttempts) {
+				if (event.code !== 1000 && this.reconnectAttempts < 5) {
 					this.reconnectAttempts++
 					log(`Reconnecting in ${this.reconnectDelay}ms (attempt ${this.reconnectAttempts})`)
 
@@ -285,22 +309,22 @@ export class AtObject {
 
 	private async handleFirehoseEvent(event: FirehoseEvent) {
 		if (event.kind === "error") {
-			this.log("Firehose error: %s - %s", event.error.error, event.error.message)
+			this.trace("Firehose error: %s - %s", event.error.error, event.error.message)
 			return
 		}
 
 		if (event.kind === "info") {
-			this.log("Firehose info: %s - %s", event.info.name, event.info.message)
+			this.trace("Firehose info: %s - %s", event.info.name, event.info.message)
 			return
 		}
 
 		if (event.kind === "identity") {
-			this.log("Identity event: %s -> %s", event.identity.did, event.identity.handle)
+			this.trace("Identity event: %s -> %s", event.identity.did, event.identity.handle)
 			return
 		}
 
 		if (event.kind === "account") {
-			this.log("Account event: %s -> active: %s", event.account.did, event.account.active)
+			this.trace("Account event: %s -> active: %s", event.account.did, event.account.active)
 			return
 		}
 
@@ -311,7 +335,20 @@ export class AtObject {
 			}
 			this.lastSeq = event.commit.seq
 
-			this.log(
+			// If we're in backfill mode and have reached our target, close the connection
+			if (this.targetSeq !== null && this.lastSeq >= this.targetSeq) {
+				this.log("✅ Backfill complete! Reached target sequence %d", this.targetSeq)
+				if (this.ws) {
+					this.ws.close(1000, "Backfill complete")
+				}
+				if (this.backfillResolve) {
+					this.backfillResolve()
+					this.backfillResolve = null
+				}
+				return
+			}
+
+			this.trace(
 				"Commit event (%s): %s -> %s",
 				event.commit.seq,
 				event.commit.repo,
@@ -487,7 +524,11 @@ export class AtObject {
 
 	close() {
 		if (this.ws) {
-			this.ws.close(1000, "Manual disconnect")
+			// Check WebSocket state before closing to avoid errors
+			// 0 = CONNECTING, 1 = OPEN, 2 = CLOSING, 3 = CLOSED
+			if (this.ws.readyState === 0 || this.ws.readyState === 1) {
+				this.ws.close(1000, "Manual disconnect")
+			}
 			this.ws = undefined
 		}
 		if (this.reconnectionTimeout) {
@@ -501,6 +542,7 @@ export class AtObject {
 		this.targetSeq = null
 		this.startSeq = null
 		this.startTime = null
+		this.backfillResolve = null
 
 		this.handlerQueue.clear()
 		this.backfillQueue.clear()
