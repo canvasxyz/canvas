@@ -213,7 +213,13 @@ test("listen with cursor", async (t) => {
 	await app2.close()
 
 	// All posts from first session should be present
-	console.log(firstPosts.length, "posts in first pass,", secondPosts.length, "posts in second pass")
+	console.log(
+		"[atobject] Backfill captured",
+		firstPosts.length,
+		"posts in first pass,",
+		secondPosts.length,
+		"posts in second pass",
+	)
 	t.assert(secondPosts.length >= firstPosts.length, "second session should have at least as many posts as first")
 	const firstPostKeys = new Set(firstPosts.map((p) => p.rkey))
 	const secondPostKeys = new Set(secondPosts.map((p) => p.rkey))

@@ -16,7 +16,7 @@ import type { AtObject } from "../AtObject.js"
 
 export class Relay {
 	private atObject: AtObject
-	
+
 	// Progress tracking for backfill
 	private targetSeq: number | null = null
 	private startSeq: number | null = null
@@ -97,7 +97,7 @@ export class Relay {
 		} = {},
 	) {
 		const url = buildFirehoseUrl(endpoint)
-		this.log("Connecting to AT Protocol firehose: %s", url)
+		this.trace("Connecting to AT Protocol firehose: %s", url)
 
 		this.connectFirehose(url, options)
 	}
@@ -125,19 +125,19 @@ export class Relay {
 			this.startTime = Date.now()
 
 			const totalRecords = currentCursor - startCursor
-			this.log(
-				"Starting from cursor %d, current cursor is %d (%d records behind)",
-				startCursor,
-				currentCursor,
-				totalRecords,
-			)
+			this.log("Starting backfill from %d up to %d (%d records)", startCursor, currentCursor, totalRecords)
 
 			// Store resolve function to call when backfill completes
 			this.backfillResolve = resolve
 
 			// Set up progress tracking timer
 			this.progressTimer = setInterval(() => {
-				if (this.atObject.lastSeq !== null && this.targetSeq !== null && this.startSeq !== null && this.startTime !== null) {
+				if (
+					this.atObject.lastSeq !== null &&
+					this.targetSeq !== null &&
+					this.startSeq !== null &&
+					this.startTime !== null
+				) {
 					const recordsLeft = this.targetSeq - this.atObject.lastSeq
 
 					if (recordsLeft <= 0) {
@@ -154,7 +154,10 @@ export class Relay {
 						// Calculate progress based on records that will be synced during this run
 						const totalRecords =
 							this.atObject.firstSeq !== null ? this.targetSeq - this.atObject.firstSeq : this.targetSeq - this.startSeq
-						const processed = this.atObject.firstSeq !== null ? this.atObject.lastSeq - this.atObject.firstSeq : this.atObject.lastSeq - this.startSeq
+						const processed =
+							this.atObject.firstSeq !== null
+								? this.atObject.lastSeq - this.atObject.firstSeq
+								: this.atObject.lastSeq - this.startSeq
 						const progress = totalRecords > 0 ? (processed / totalRecords) * 100 : 0
 
 						// Calculate time estimation
@@ -177,15 +180,15 @@ export class Relay {
 							}
 						}
 
-						console.log(
-							`=Ê Progress: ${processed}/${totalRecords} records processed (${progress.toFixed(1)}%), ${timeLeftStr}`,
+						this.log(
+							`Progress: ${processed}/${totalRecords} records processed (${progress.toFixed(1)}%), ${timeLeftStr}`,
 						)
 					}
 				}
 			}, 1000)
 
 			const url = buildFirehoseUrl(endpoint, startCursor.toString())
-			this.log("Connecting to AT Protocol firehose: %s", url)
+			this.trace("Connecting to AT Protocol firehose: %s", url)
 
 			const extendedOptions = {
 				...options,
@@ -242,7 +245,7 @@ export class Relay {
 			}
 
 			this.ws.onclose = (event) => {
-				log("Firehose connection closed: %i, %O", event.code, event.reason)
+				trace("Firehose connection closed with code %i %s", event.code, event.reason)
 				options.onDisconnect?.()
 
 				if (event.code !== 1000 && this.reconnectAttempts < 5) {
@@ -294,11 +297,11 @@ export class Relay {
 
 			// If we're in backfill mode and have reached our target, close the connection
 			if (this.targetSeq !== null && this.atObject.lastSeq >= this.targetSeq) {
-				this.log(" Backfill complete! Reached target sequence %d", this.targetSeq)
 				if (this.ws) {
 					this.ws.close(1000, "Backfill complete")
 				}
 				if (this.backfillResolve) {
+					this.log("Backfill to %d complete!", this.targetSeq)
 					this.backfillResolve()
 					this.backfillResolve = null
 				}
