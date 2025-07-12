@@ -188,6 +188,7 @@ test("listen with cursor", async (t) => {
 
 	t.true(firstPosts.length > 0, "has posts")
 	t.assert(app1.firstSeq !== null)
+	t.assert(app1.lastSeq !== null)
 
 	const app2 = await AtObject.initialize(
 		{
@@ -203,7 +204,7 @@ test("listen with cursor", async (t) => {
 	t.teardown(() => app2.close())
 
 	app2.backfill(firehoseUrl, app1.firstSeq!.toString())
-	while (!app2.lastSeq) {
+	while (!app2.lastSeq || app2.lastSeq < app1.lastSeq!) {
 		await new Promise<void>((resolve) => setTimeout(resolve, 1000))
 	}
 	await new Promise<void>((resolve) => setTimeout(resolve, 100))
