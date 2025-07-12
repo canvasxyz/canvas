@@ -1,4 +1,4 @@
-import type { AtInit, AtConfig } from "./types.js"
+import type { AtInit, AtConfig } from "../types.js"
 
 export const isStringArray = (arr: unknown): arr is string[] => {
 	return Array.isArray(arr) && arr.every((item: unknown) => typeof item === "string")

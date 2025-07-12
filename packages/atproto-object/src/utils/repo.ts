@@ -2,7 +2,7 @@ import { CarReader } from "@ipld/car"
 import * as cbor from "@ipld/dag-cbor"
 import { CID } from "multiformats"
 import { cborDecodeMulti } from "@atproto/common"
-import type { FirehoseEvent, FirehoseErrorFrame } from "./types.js"
+import type { FirehoseEvent, FirehoseErrorFrame } from "../types.js"
 
 type MSTNode = { l: CID; e: MSTEntry[] }
 type MSTEntry = { p: number; k: Uint8Array; v?: CID; t?: CID }
