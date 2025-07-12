@@ -1,7 +1,3 @@
-import type { AtConfig, AtInit, JetstreamEvent } from "./types.js"
-import { getConfig, findPdsEndpoint } from "./utils.js"
-import { parseCarFile } from "./repo.js"
-
 import WebSocket from "ws"
 import debug from "weald"
 import PQueue from "p-queue"
@@ -12,18 +8,35 @@ import { ModelDB as PostgresModelDB } from "@canvas-js/modeldb-pg"
 import { AbstractModelDB } from "@canvas-js/modeldb"
 import { mapValues } from "@canvas-js/utils"
 
+import type { AtConfig, AtInit, FirehoseEvent } from "./types.js"
+import { getConfig, buildFirehoseUrl } from "./utils.js"
+import {
+	getPdsEndpoint,
+	parseFirehoseFrame,
+	extractCommitOperations,
+	parseCarFile,
+	extractRecordFromCarByPath,
+} from "./repo.js"
+
 export class AtObject {
 	public db: AbstractModelDB
+	public firstSeq: number | null
+	public lastSeq: number | null
+
 	private config: Record<string, AtConfig>
+	private wantedCollections: string[]
+
+	private trace: typeof debug.log
 	private log: typeof debug.log
+
 	private handlerQueue: PQueue
 	private backfillQueue: PQueue
 	private handleResolver: AtprotoHandleResolverNode
 
 	private ws?: WebSocket
 	private reconnectAttempts = 0
-	private maxReconnectAttempts = 5
 	private reconnectDelay = 1000
+	private reconnectionTimeout?: NodeJS.Timeout
 
 	static async initialize(init: AtInit, path: string | null) {
 		const config = getConfig(init)
@@ -50,9 +63,13 @@ export class AtObject {
 	}
 
 	private constructor(config: Record<string, AtConfig>, db: AbstractModelDB) {
+		this.firstSeq = null
+		this.lastSeq = null
 		this.config = config
+		this.wantedCollections = Object.values(config).map((config) => config.nsid)
 		this.db = db
-		this.log = debug.log
+		this.trace = debug("atobject:trace")
+		this.log = debug("atobject:log")
 		this.handlerQueue = new PQueue({ concurrency: 1 })
 		this.backfillQueue = new PQueue({ concurrency: 3 }) // Allow some concurrency for backfill operations
 		this.handleResolver = new AtprotoHandleResolverNode()
@@ -67,27 +84,13 @@ export class AtObject {
 			onDisconnect?: () => void
 		} = {},
 	) {
-		const url = new URL(endpoint)
+		const url = buildFirehoseUrl(endpoint, options.cursor)
+		this.log("Connecting to AT Protocol firehose: %s", url)
 
-		if (url.pathname === "/") {
-			url.pathname = "/subscribe"
-		}
-
-		// TODO: remove this once we switch to firehose, since we want to maintain latest
-		// `rev` values even when a PDS commits operations outside the collections we are tracking.
-		const wantedCollections = Object.values(this.config).map((config) => config.nsid)
-		wantedCollections.forEach((collection) => {
-			url.searchParams.append("wantedCollections", collection)
-		})
-
-		if (options.cursor) {
-			url.searchParams.set("cursor", options.cursor)
-		}
-
-		this.connect(url.toString(), options)
+		this.connectFirehose(url, options)
 	}
 
-	private connect(
+	private connectFirehose(
 		url: string,
 		options: {
 			onError?: (error: Error) => void
@@ -98,49 +101,51 @@ export class AtObject {
 		const log = this.log
 		try {
 			this.ws = new WebSocket(url)
+			this.ws.binaryType = "arraybuffer"
 
 			this.ws.onopen = () => {
-				log("Connected to Jetstream")
+				log("Connected to AT Protocol firehose")
 				this.reconnectAttempts = 0
 				this.reconnectDelay = 1000
+
+				// Clear any pending reconnection timeout
+				if (this.reconnectionTimeout) {
+					clearTimeout(this.reconnectionTimeout)
+					this.reconnectionTimeout = undefined
+				}
+
 				options.onConnect?.()
 			}
 
 			this.ws.onmessage = (event) => {
-				let data: JetstreamEvent
 				try {
-					log("data: %O", event.data)
-					data = JSON.parse(event.data.toString())
+					const data = new Uint8Array(event.data as ArrayBuffer)
+					const firehoseEvent = parseFirehoseFrame(data)
+
+					if (firehoseEvent) {
+						this.handleFirehoseEvent(firehoseEvent)
+					}
 				} catch (error) {
-					log("Error parsing Jetstream event: %O", error)
+					log("Error parsing firehose event: %O", error)
 					options.onError?.(error as Error)
-					return
 				}
-				this.handleEvent(data)
 			}
 
 			this.ws.onclose = (event) => {
-				log("Jetstream connection closed: %i, %O", event.code, event.reason)
+				log("Firehose connection closed: %i, %O", event.code, event.reason)
 				options.onDisconnect?.()
 
-				// Attempt to reconnect unless explicitly closed
-				if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
+				if (event.code !== 1000 && this.reconnectAttempts) {
 					this.reconnectAttempts++
-					log(
-						`Reconnecting in ${this.reconnectDelay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`,
-					)
+					log(`Reconnecting in ${this.reconnectDelay}ms (attempt ${this.reconnectAttempts})`)
 
-					setTimeout(() => {
-						this.connect(url, options)
-					}, this.reconnectDelay)
-
-					// Exponential backoff with jitter
+					this.reconnectionTimeout = setTimeout(() => this.connectFirehose(url, options), this.reconnectDelay)
 					this.reconnectDelay = Math.min(this.reconnectDelay * 2 + Math.random() * 1000, 30000)
 				}
 			}
 
 			this.ws.onerror = (error) => {
-				log("Jetstream WebSocket error: %O", error)
+				log("Firehose WebSocket error: %O", error)
 				options.onError?.(new Error("WebSocket connection error"))
 			}
 		} catch (error) {
@@ -149,35 +154,86 @@ export class AtObject {
 		}
 	}
 
-	private handleEvent(event: JetstreamEvent) {
-		if (event.kind !== "commit" || !event.commit) return
+	private async handleFirehoseEvent(event: FirehoseEvent) {
+		if (event.kind === "error") {
+			this.log("Firehose error: %s - %s", event.error.error, event.error.message)
+			return
+		}
 
-		const { commit } = event
-		const { collection, rkey, record, operation } = commit
+		if (event.kind === "info") {
+			this.log("Firehose info: %s - %s", event.info.name, event.info.message)
+			return
+		}
 
-		for (const [table, config] of Object.entries(this.config)) {
-			if (config.nsid === collection) {
-				if (config.filter) {
-					try {
-						if (!config.filter(collection, rkey, record)) {
-							continue
+		if (event.kind === "identity") {
+			this.log("Identity event: %s -> %s", event.identity.did, event.identity.handle)
+			return
+		}
+
+		if (event.kind === "account") {
+			this.log("Account event: %s -> active: %s", event.account.did, event.account.active)
+			return
+		}
+
+		if (event.kind === "commit") {
+			const { commit } = event
+			if (this.firstSeq === null) {
+				this.firstSeq = event.commit.seq
+			}
+			this.lastSeq = event.commit.seq
+
+			const operations = extractCommitOperations(commit)
+
+			for (const op of operations) {
+				const { collection, rkey, action } = op
+
+				if (this.wantedCollections.indexOf(collection) === -1) continue
+
+				for (const [table, config] of Object.entries(this.config)) {
+					if (config.nsid === collection) {
+						let record: any = null
+						if (action !== "delete" && commit.blocks && commit.blocks.length > 0) {
+							try {
+								record = await extractRecordFromCarByPath(commit.blocks, `${collection}/${rkey}`, this.log)
+							} catch (error) {
+								this.log("Error extracting record from CAR: %O", error)
+								continue
+							}
 						}
-					} catch (err) {
-						continue
-					}
-				}
 
-				if (config.handler) {
-					const recordData = operation === "delete" ? null : record
-					const db = this.createDbProxy(table)
-					this.handlerQueue.add(() => config.handler?.(collection, rkey, recordData, db))
-				} else {
-					if (operation === "delete") {
-						this.db.delete(table, rkey)
-						this.log(`DB DELETE ${table}.${rkey}`)
-					} else {
-						this.db.set(table, { rkey, record })
-						this.log(`DB SET ${table}.${rkey}: %O`, record)
+						this.trace(
+							"New committed op: repo=%s, rev=%s, since=%s, seq=%d, %O %O",
+							commit.repo,
+							commit.rev,
+							commit.since,
+							commit.seq,
+							op,
+							record,
+						)
+
+						if (config.filter) {
+							try {
+								if (!config.filter(collection, rkey, record, commit)) {
+									continue
+								}
+							} catch (err) {
+								continue
+							}
+						}
+
+						if (config.handler) {
+							const recordData = action === "delete" ? null : record
+							const db = this.createDbProxy(table)
+							this.handlerQueue.add(() => config.handler?.call({ commit }, collection, rkey, recordData, db))
+						} else {
+							if (action === "delete") {
+								this.handlerQueue.add(() => this.db.delete(table, rkey))
+								this.trace(`DB DELETE ${table}.${rkey}`)
+							} else if (record) {
+								this.handlerQueue.add(() => this.db.set(table, { rkey, record }))
+								this.trace(`DB SET ${table}.${rkey}: %O`, record)
+							}
+						}
 					}
 				}
 			}
@@ -187,15 +243,15 @@ export class AtObject {
 	private createDbProxy(table: string) {
 		return {
 			set: (key: string, record: any) => {
-				this.log(`DB SET ${table}: %O`, record)
+				this.trace(`DB SET ${table}: %O`, record)
 				return this.db.set(table, record)
 			},
 			get: (key: string) => {
-				this.log(`DB GET ${table}.${key}`)
+				this.trace(`DB GET ${table}.${key}`)
 				return this.db.get(table, key)
 			},
 			delete: (key: string) => {
-				this.log(`DB DELETE ${table}.${key}`)
+				this.trace(`DB DELETE ${table}.${key}`)
 				return this.db.delete(table, key)
 			},
 		}
@@ -218,7 +274,7 @@ export class AtObject {
 				return
 			}
 
-			const pdsEndpoint = await findPdsEndpoint(did)
+			const pdsEndpoint = await getPdsEndpoint(did)
 			if (!pdsEndpoint) {
 				this.log("Failed to find PDS endpoint for DID: %s", did)
 				return
@@ -238,7 +294,7 @@ export class AtObject {
 			const carBytes = await response.arrayBuffer()
 			const records = await parseCarFile(new Uint8Array(carBytes))
 			for (const record of records) {
-				await this.handleBackfillRecord(did, record)
+				await this.handleBackfillRecord(record)
 			}
 			this.log("Successfully backfilled %s (%s)", identifier, did)
 		} catch (error) {
@@ -257,7 +313,6 @@ export class AtObject {
 			let handle = identifier.startsWith("@") ? identifier.slice(1) : identifier
 			handle = handle.toLowerCase().trim()
 
-			// Use the official AT Protocol handle resolver
 			const did = await this.handleResolver.resolve(handle)
 			return did || null
 		} catch (error) {
@@ -266,7 +321,7 @@ export class AtObject {
 		}
 	}
 
-	private async handleBackfillRecord(did: string, record: { collection: string; rkey: string; record: any }): Promise<void> {
+	private async handleBackfillRecord(record: { collection: string; rkey: string; record: any }): Promise<void> {
 		const { collection, rkey, record: recordData } = record
 
 		// Check if this collection is one we're tracking
@@ -283,13 +338,12 @@ export class AtObject {
 					}
 				}
 
-				// Use handler or default storage
 				if (config.handler) {
 					const db = this.createDbProxy(table)
-					await this.handlerQueue.add(() => config.handler?.(collection, rkey, recordData, db))
+					await this.handlerQueue.add(() => config.handler?.call(null, collection, rkey, recordData, db))
 				} else {
 					await this.db.set(table, { rkey, record: recordData })
-					this.log(`DB SET ${table}.${rkey}: %O`, recordData)
+					this.trace(`DB SET ${table}.${rkey}: %O`, recordData)
 				}
 			}
 		}
@@ -299,6 +353,10 @@ export class AtObject {
 		if (this.ws) {
 			this.ws.close(1000, "Manual disconnect")
 			this.ws = undefined
+		}
+		if (this.reconnectionTimeout) {
+			clearTimeout(this.reconnectionTimeout)
+			this.reconnectionTimeout = undefined
 		}
 	}
 

@@ -6,6 +6,8 @@ import post from "./lexicons/app/bsky/feed/post.json" with { type: "json" }
 
 type Post = FromLexicon<typeof post>
 
+const firehoseUrl = "wss://bsky.network"
+
 test("create AtObject instances", async (t) => {
 	const replyPattern = /at:\/\/%s\/com.whtwnd.blog.entry\/%s/
 
@@ -57,33 +59,32 @@ test("create AtObject instances", async (t) => {
 		},
 		null,
 	)
-
 	t.pass()
 })
 
-test("listen to jetstream", async (t) => {
+test("listen to relay", async (t) => {
 	const app = await AtObject.initialize(["app.bsky.feed.post"], null)
-	app.listen("wss://jetstream1.us-east.bsky.network")
+	app.listen(firehoseUrl)
 
 	t.teardown(() => app.close())
-	await new Promise((resolve) => setTimeout(resolve, 500))
+	await new Promise((resolve) => setTimeout(resolve, 1000))
 
 	const posts = await app.db.query("app.bsky.feed.post")
 	t.true(posts.length > 0)
 })
 
-test("listen to jetstream with named tables", async (t) => {
+test("listen with named tables", async (t) => {
 	const app = await AtObject.initialize([{ $type: "app.bsky.feed.post", table: "post" }], null)
-	app.listen("wss://jetstream1.us-east.bsky.network")
+	app.listen(firehoseUrl)
 
 	t.teardown(() => app.close())
-	await new Promise((resolve) => setTimeout(resolve, 500))
+	await new Promise((resolve) => setTimeout(resolve, 1000))
 
 	const posts = await app.db.query("post")
 	t.true(posts.length > 0)
 })
 
-test("listen to jetstream with filters", async (t) => {
+test("listen with filters", async (t) => {
 	let seenComment = false
 
 	const app = await AtObject.initialize(
@@ -98,11 +99,11 @@ test("listen to jetstream with filters", async (t) => {
 		},
 		null,
 	)
-	app.listen("wss://jetstream1.us-east.bsky.network")
+	app.listen(firehoseUrl)
 
 	t.teardown(() => app.close())
 	while (!seenComment) {
-		await new Promise((resolve) => setTimeout(resolve, 500))
+		await new Promise((resolve) => setTimeout(resolve, 1000))
 	}
 
 	const posts = await app.db.query("comments")
@@ -114,7 +115,7 @@ test("listen to jetstream with filters", async (t) => {
 	)
 })
 
-test("listen to jetstream with custom handlers", async (t) => {
+test("listen with custom handlers", async (t) => {
 	let seenPost = false
 
 	const app = await AtObject.initialize(
@@ -134,11 +135,11 @@ test("listen to jetstream with custom handlers", async (t) => {
 		},
 		null,
 	)
-	app.listen("wss://jetstream1.us-east.bsky.network")
+	app.listen(firehoseUrl)
 
 	t.teardown(() => app.close())
 	while (!seenPost) {
-		await new Promise((resolve) => setTimeout(resolve, 500))
+		await new Promise((resolve) => setTimeout(resolve, 1000))
 	}
 
 	const posts = await app.db.query("posts")
@@ -150,32 +151,71 @@ test("listen to jetstream with custom handlers", async (t) => {
 	)
 })
 
-test("listen to jetstream with cursor for replay", async (t) => {
-	const cursorTimestamp = (Date.now() - 1000) * 1000
+test("listen with cursor", async (t) => {
+	let seenPost = false
 
-	const firstApp = await AtObject.initialize(["app.bsky.feed.post"], null)
-	firstApp.listen("wss://jetstream1.us-east.bsky.network")
-	await new Promise((resolve) => setTimeout(resolve, 500))
+	const app1 = await AtObject.initialize(
+		{
+			posts: {
+				nsid: "app.bsky.feed.post",
+				filter: (nsid: string, rkey: string, post: Post) => {
+					seenPost = true
+					return true
+				},
+				handler: async function (nsid: string, rkey: string, post: Post, db) {
+					if (post === null) {
+						await db.delete("posts", rkey)
+					} else {
+						if (post.text.indexOf("e") !== -1) return
+						seenPost = true
+						await db.set("posts", { rkey, record: post })
+					}
+				},
+			},
+		},
+		null,
+	)
+	app1.listen(firehoseUrl)
+	t.teardown(() => app1.close())
 
-	const firstPosts = await firstApp.db.query("app.bsky.feed.post")
-	firstApp.close()
+	while (!seenPost) {
+		await new Promise<void>((resolve) => setTimeout(resolve, 1000))
+	}
+	app1.disconnect()
+
+	const firstPosts = await app1.db.query("posts")
+	await app1.close()
 
 	t.true(firstPosts.length > 0, "has posts")
 
-	const secondApp = await AtObject.initialize(["app.bsky.feed.post"], null)
-	secondApp.listen("wss://jetstream1.us-east.bsky.network", {
-		cursor: cursorTimestamp.toString(),
+	const app2 = await AtObject.initialize(
+		{
+			posts: {
+				nsid: "app.bsky.feed.post",
+				filter: (nsid: string, rkey: string, post: Post) => {
+					return true
+				},
+			},
+		},
+		null,
+	)
+
+	t.assert(app1.firstSeq !== null)
+
+	app2.listen(firehoseUrl, {
+		cursor: app1.firstSeq?.toString(),
 	})
-	t.teardown(() => secondApp.close())
+	t.teardown(() => app2.close())
 	await new Promise((resolve) => setTimeout(resolve, 1000))
 
-	const secondPosts = await secondApp.db.query("app.bsky.feed.post")
-	t.true(secondPosts.length >= firstPosts.length, "second session should have at least as many posts as first")
+	const secondPosts = await app2.db.query("posts")
+	await app2.close()
 
 	// All posts from first session should be present
+	t.assert(secondPosts.length >= firstPosts.length, "second session should have at least as many posts as first")
 	const firstPostKeys = new Set(firstPosts.map((p) => p.rkey))
 	const secondPostKeys = new Set(secondPosts.map((p) => p.rkey))
 	for (const rkey of firstPostKeys) {
-		t.true(secondPostKeys.has(rkey), `post with rkey ${rkey} should be replayed`)
+		t.assert(secondPostKeys.has(rkey), `post with rkey ${rkey} should be replayed`)
 	}
 })
