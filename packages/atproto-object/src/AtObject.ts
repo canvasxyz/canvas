@@ -1,7 +1,5 @@
-import WebSocket from "ws"
 import debug from "weald"
 import PQueue from "p-queue"
-import { AtprotoHandleResolverNode } from "@atproto-labs/handle-resolver-node"
 
 import { ModelDB as SqliteModelDB } from "@canvas-js/modeldb-sqlite"
 import { ModelDB as PostgresModelDB } from "@canvas-js/modeldb-pg"

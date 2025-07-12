@@ -67,7 +67,9 @@ test("listen to relay", async (t) => {
 	app.listen(firehoseUrl)
 
 	t.teardown(() => app.close())
-	await new Promise((resolve) => setTimeout(resolve, 1000))
+	while (!app.lastSeq) {
+		await new Promise((resolve) => setTimeout(resolve, 1000))
+	}
 
 	const posts = await app.db.query("app.bsky.feed.post")
 	t.true(posts.length > 0)
@@ -78,7 +80,9 @@ test("listen with named tables", async (t) => {
 	app.listen(firehoseUrl)
 
 	t.teardown(() => app.close())
-	await new Promise((resolve) => setTimeout(resolve, 1000))
+	while (!app.lastSeq) {
+		await new Promise((resolve) => setTimeout(resolve, 1000))
+	}
 
 	const posts = await app.db.query("post")
 	t.true(posts.length > 0)
@@ -158,10 +162,6 @@ test("listen with cursor", async (t) => {
 		{
 			posts: {
 				nsid: "app.bsky.feed.post",
-				filter: (nsid: string, rkey: string, post: Post) => {
-					seenPost = true
-					return true
-				},
 				handler: async function (nsid: string, rkey: string, post: Post, db) {
 					if (post === null) {
 						await db.delete("posts", rkey)
@@ -181,11 +181,13 @@ test("listen with cursor", async (t) => {
 	while (!seenPost) {
 		await new Promise<void>((resolve) => setTimeout(resolve, 1000))
 	}
+	await new Promise<void>((resolve) => setTimeout(resolve, 100))
 
 	const firstPosts = await app1.db.query("posts")
 	await app1.close()
 
 	t.true(firstPosts.length > 0, "has posts")
+	t.assert(app1.firstSeq !== null)
 
 	const app2 = await AtObject.initialize(
 		{
@@ -198,12 +200,13 @@ test("listen with cursor", async (t) => {
 		},
 		null,
 	)
-
-	t.assert(app1.firstSeq !== null)
+	t.teardown(() => app2.close())
 
 	app2.backfill(firehoseUrl, app1.firstSeq!.toString())
-	t.teardown(() => app2.close())
-	await new Promise((resolve) => setTimeout(resolve, 1500))
+	while (!app2.lastSeq) {
+		await new Promise<void>((resolve) => setTimeout(resolve, 1000))
+	}
+	await new Promise<void>((resolve) => setTimeout(resolve, 100))
 
 	const secondPosts = await app2.db.query("posts")
 	await app2.close()
