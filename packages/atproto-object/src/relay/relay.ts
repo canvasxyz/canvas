@@ -111,10 +111,9 @@ export class Relay {
 			onDisconnect?: () => void
 		} = {},
 	): Promise<void> {
-		return new Promise<void>(async (resolve, reject) => {
-			const currentCursor = await Relay.getCurrentCursor(endpoint)
-			await new Promise((resolve) => setTimeout(resolve, 1000))
-
+		const currentCursor = await Relay.getCurrentCursor(endpoint)
+		await new Promise((resolve) => setTimeout(resolve, 1000))
+		return new Promise<void>((resolve, reject) => {
 			let startCursor = typeof cursor === "number" ? cursor : parseInt(cursor, 10)
 			if (startCursor < 0) {
 				startCursor = currentCursor + startCursor
