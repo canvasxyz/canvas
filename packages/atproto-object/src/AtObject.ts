@@ -26,6 +26,12 @@ export class AtObject {
 	private config: Record<string, AtConfig>
 	private wantedCollections: string[]
 
+	// Progress tracking for backfill
+	private targetSeq: number | null = null
+	private startSeq: number | null = null
+	private progressTimer: NodeJS.Timeout | null = null
+	private startTime: number | null = null
+
 	private trace: typeof debug.log
 	private log: typeof debug.log
 
@@ -62,6 +68,49 @@ export class AtObject {
 		}
 	}
 
+	static async getCurrentCursor(endpoint = "wss://bsky.network", timeout = 10000): Promise<number> {
+		return new Promise((resolve, reject) => {
+			const url = buildFirehoseUrl(endpoint)
+			const ws = new WebSocket(url)
+			ws.binaryType = "arraybuffer"
+
+			const timer = setTimeout(() => {
+				ws.close()
+				reject(new Error("Timeout waiting for firehose event"))
+			}, timeout)
+
+			ws.onmessage = (event) => {
+				try {
+					const data = new Uint8Array(event.data as ArrayBuffer)
+					const firehoseEvent = parseFirehoseFrame(data)
+
+					if (firehoseEvent && firehoseEvent.kind === "commit") {
+						const seq = firehoseEvent.commit.seq
+						clearTimeout(timer)
+						ws.close(1000, "Got sequence number")
+						resolve(seq)
+					}
+				} catch (error) {
+					clearTimeout(timer)
+					ws.close()
+					reject(error)
+				}
+			}
+
+			ws.onclose = (event) => {
+				clearTimeout(timer)
+				if (event.code !== 1000) {
+					reject(new Error(`WebSocket closed unexpectedly: ${event.code} ${event.reason}`))
+				}
+			}
+
+			ws.onerror = (error) => {
+				clearTimeout(timer)
+				reject(new Error("WebSocket connection error"))
+			}
+		})
+	}
+
 	private constructor(config: Record<string, AtConfig>, db: AbstractModelDB) {
 		this.firstSeq = null
 		this.lastSeq = null
@@ -78,13 +127,93 @@ export class AtObject {
 	listen(
 		endpoint: string,
 		options: {
-			cursor?: string
 			onError?: (error: Error) => void
 			onConnect?: () => void
 			onDisconnect?: () => void
 		} = {},
 	) {
-		const url = buildFirehoseUrl(endpoint, options.cursor)
+		const url = buildFirehoseUrl(endpoint)
+		this.log("Connecting to AT Protocol firehose: %s", url)
+
+		this.connectFirehose(url, options)
+	}
+
+	async backfill(
+		endpoint: string,
+		cursor: string,
+		options: {
+			onError?: (error: Error) => void
+			onConnect?: () => void
+			onDisconnect?: () => void
+		} = {},
+	) {
+		this.log("Getting current cursor to track progress...")
+
+		// Get current cursor to track progress
+		const currentCursor = await AtObject.getCurrentCursor(endpoint)
+		const startCursor = parseInt(cursor)
+
+		this.targetSeq = currentCursor
+		this.startSeq = startCursor
+		this.startTime = Date.now()
+
+		const totalRecords = currentCursor - startCursor
+		this.log(
+			"Starting from cursor %d, current cursor is %d (%d records behind)",
+			startCursor,
+			currentCursor,
+			totalRecords,
+		)
+
+		// Set up progress tracking timer
+		this.progressTimer = setInterval(() => {
+			if (this.lastSeq !== null && this.targetSeq !== null && this.startSeq !== null && this.startTime !== null) {
+				const recordsLeft = this.targetSeq - this.lastSeq
+
+				if (recordsLeft <= 0) {
+					this.log("✅ Caught up! Now at sequence", this.lastSeq)
+					// Clear progress tracking
+					if (this.progressTimer) {
+						clearInterval(this.progressTimer)
+						this.progressTimer = null
+					}
+					this.targetSeq = null
+					this.startSeq = null
+					this.startTime = null
+				} else {
+					// Calculate progress based on records that will be synced during this run
+					const totalRecords = this.firstSeq !== null ? this.targetSeq - this.firstSeq : this.targetSeq - this.startSeq
+					const processed = this.firstSeq !== null ? this.lastSeq - this.firstSeq : this.lastSeq - this.startSeq
+					const progress = totalRecords > 0 ? (processed / totalRecords) * 100 : 0
+
+					// Calculate time estimation
+					const elapsedTime = Date.now() - this.startTime
+					const elapsedSeconds = elapsedTime / 1000
+					let timeLeftStr = ""
+
+					if (processed > 0 && elapsedSeconds > 0) {
+						const recordsPerSecond = processed / elapsedSeconds
+						const timeLeftSeconds = recordsLeft / recordsPerSecond
+
+						if (timeLeftSeconds < 60) {
+							timeLeftStr = `~${Math.round(timeLeftSeconds)}s left`
+						} else if (timeLeftSeconds < 3600) {
+							timeLeftStr = `~${Math.round(timeLeftSeconds / 60)}m left`
+						} else {
+							const hours = Math.floor(timeLeftSeconds / 3600)
+							const minutes = Math.round((timeLeftSeconds % 3600) / 60)
+							timeLeftStr = `~${hours}h ${minutes}m left`
+						}
+					}
+
+					console.log(
+						`📊 Progress: ${processed}/${totalRecords} records processed (${progress.toFixed(1)}%), ${timeLeftStr}`,
+					)
+				}
+			}
+		}, 1000)
+
+		const url = buildFirehoseUrl(endpoint, cursor)
 		this.log("Connecting to AT Protocol firehose: %s", url)
 
 		this.connectFirehose(url, options)
@@ -182,6 +311,13 @@ export class AtObject {
 			}
 			this.lastSeq = event.commit.seq
 
+			this.log(
+				"Commit event (%s): %s -> %s",
+				event.commit.seq,
+				event.commit.repo,
+				event.commit.ops.map((c) => c.action + " " + c.path).join(", "),
+			)
+
 			const operations = extractCommitOperations(commit)
 
 			for (const op of operations) {
@@ -257,16 +393,16 @@ export class AtObject {
 		}
 	}
 
-	public async backfill(identifiers: string[]): Promise<void> {
+	public async backfillUsers(identifiers: string[]): Promise<void> {
 		this.log("Starting backfill for %d identifiers", identifiers.length)
 
-		const promises = identifiers.map((identifier) => this.backfillQueue.add(() => this.backfillIdentifier(identifier)))
+		const promises = identifiers.map((identifier) => this.backfillQueue.add(() => this.backfillUser(identifier)))
 
 		await Promise.allSettled(promises)
 		this.log("Backfill completed for %d identifiers", identifiers.length)
 	}
 
-	private async backfillIdentifier(identifier: string): Promise<void> {
+	private async backfillUser(identifier: string): Promise<void> {
 		try {
 			const did = await this.resolveIdentifier(identifier)
 			if (!did) {
@@ -349,7 +485,7 @@ export class AtObject {
 		}
 	}
 
-	disconnect() {
+	close() {
 		if (this.ws) {
 			this.ws.close(1000, "Manual disconnect")
 			this.ws = undefined
@@ -358,10 +494,14 @@ export class AtObject {
 			clearTimeout(this.reconnectionTimeout)
 			this.reconnectionTimeout = undefined
 		}
-	}
+		if (this.progressTimer) {
+			clearInterval(this.progressTimer)
+			this.progressTimer = null
+		}
+		this.targetSeq = null
+		this.startSeq = null
+		this.startTime = null
 
-	close() {
-		this.disconnect()
 		this.handlerQueue.clear()
 		this.backfillQueue.clear()
 	}

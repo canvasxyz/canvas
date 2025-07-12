@@ -19,9 +19,7 @@ export const getConfig = (init: AtInit): Record<string, AtConfig> => {
 	}
 }
 
-/**
- * Build firehose WebSocket URL
- */
+// Build firehose WebSocket URL
 export const buildFirehoseUrl = (baseUrl: string, cursor?: string): string => {
 	const url = new URL(baseUrl)
 

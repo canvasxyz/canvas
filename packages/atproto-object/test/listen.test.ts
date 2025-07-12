@@ -181,7 +181,6 @@ test("listen with cursor", async (t) => {
 	while (!seenPost) {
 		await new Promise<void>((resolve) => setTimeout(resolve, 1000))
 	}
-	app1.disconnect()
 
 	const firstPosts = await app1.db.query("posts")
 	await app1.close()
@@ -202,9 +201,7 @@ test("listen with cursor", async (t) => {
 
 	t.assert(app1.firstSeq !== null)
 
-	app2.listen(firehoseUrl, {
-		cursor: app1.firstSeq?.toString(),
-	})
+	app2.backfill(firehoseUrl, app1.firstSeq!.toString())
 	t.teardown(() => app2.close())
 	await new Promise((resolve) => setTimeout(resolve, 1000))
 
