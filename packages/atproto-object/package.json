@@ -1,6 +1,6 @@
 {
 	"name": "@canvas-js/atproto-object",
-	"version": "0.16.0",
+	"version": "0.16.0-next.9",
 	"author": "Canvas Technologies, Inc. (https://canvas.xyz)",
 	"type": "module",
 	"engines": {
@@ -23,8 +23,8 @@
 		"@atproto/common": "^0.4.11",
 		"@atproto/lexicon": "^0.4.12",
 		"@atproto/xrpc-server": "^0.9.0",
-		"@canvas-js/interfaces": "0.16.0",
-		"@canvas-js/modeldb": "^0.16.0",
+		"@canvas-js/interfaces": "0.16.0-next.9",
+		"@canvas-js/modeldb": "0.16.0-next.9",
 		"@canvas-js/utils": "1.0.0",
 		"@ipld/car": "^5.4.2",
 		"@ipld/dag-cbor": "^9.2.4",
