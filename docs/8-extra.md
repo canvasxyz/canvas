@@ -1,5 +1,65 @@
 # Additional Features
 
+## Next.js Support
+
+Next.js is a widely used framework for full-stack TypeScript apps,
+that gives you a set of shared conventions for creating your frontend
+and backend.
+
+By default, Next.js apps use CLI commands like `next dev` to launch the app.
+
+```
+Backend (/api)   <-----  Next.js server (`next dev`)  <-----  Browser
+                    |
+Frontend (/app)  <---
+```
+
+You can use Canvas with Next.js, by creating a
+[custom server.ts file](https://nextjs.org/docs/pages/guides/custom-server).
+This will replace the `next start` and `next dev` commands with your own
+server, but the rest of your app will remain unchanged.
+
+```
+Next.js API server (`next()`)  <-----  Express server  <-----  Browser
+                                  |
+Canvas class (`new Canvas()`)  <---
+```
+
+First, follow [these instructions](https://nextjs.org/docs/pages/guides/custom-server) to set up a custom server. This will give you a `handle` function that
+you need to call inside an Node.js server.
+
+From there, initialize a Canvas class, and make it available inside the custom server using the `createAPI` method:
+
+```ts
+import { Canvas } from "@canvas-js/core"
+import { createAPI } from "@canvas-js/core/api"
+
+// ...
+
+nextApp.prepare().then(async () => {
+	const canvasApp = await Canvas.initialize({
+		path: process.env.DATABASE_URL,
+		contract: MyApp,
+	})
+
+	const expressApp = express()
+	expressApp.use("/api", createAPI(canvasApp))
+
+  // Next.js handler goes here
+	expressApp.all("*", (req, res) => {
+		return handle(req, res)
+	})
+
+  // expressApp.listen(...)
+})
+```
+
+You'll want to use server.ts as the entry point to your app - and
+start it using a command like `tsx server.ts` or `node server.js`.
+
+Refer to the chat-next example to
+[see how this works](https://github.com/canvasxyz/canvas/blob/main/examples/chat-next/server.ts).
+
 ## Synchronous Loader
 
 In Next.js, React Native, or bundlers targeting earlier versions of
