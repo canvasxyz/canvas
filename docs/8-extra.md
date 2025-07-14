@@ -54,11 +54,26 @@ nextApp.prepare().then(async () => {
 })
 ```
 
-You'll want to use server.ts as the entry point to your app - and
-start it using a command like `tsx server.ts` or `node server.js`.
+To deploy the application, you'll need a cloud provider that can
+support persistent processes, like [Railway](https://railway.app)
+or [Fly.io](https://fly.io).
 
-Refer to the chat-next example to
-[see how this works](https://github.com/canvasxyz/canvas/blob/main/examples/chat-next/server.ts).
+You can deploy to Railway out of the box by updating just the `dev`
+and `start` commands in your package.json:
+
+```
+{
+  "scripts": {
+    "build": "next build",
+    "dev": "tsx server.ts",
+    "lint": "next lint",
+    "start": "NODE_ENV=production tsx server.ts",
+    "typecheck": "npx tsc --watch"
+  },
+}
+```
+
+Refer to the chat-next package for [another example](https://github.com/canvasxyz/canvas/blob/main/examples/chat-next/server.ts).
 
 ## Synchronous Loader
 
