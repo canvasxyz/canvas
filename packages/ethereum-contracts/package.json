@@ -40,7 +40,7 @@
 		"@nomicfoundation/solidity-analyzer-linux-arm64-gnu": "0.1.1",
 		"@nomicfoundation/solidity-analyzer-linux-arm64-musl": "0.1.1",
 		"@nomicfoundation/solidity-analyzer-linux-x64-gnu": "0.1.1",
-		"@nomicfoundation/solidity-analyzer-linux-x64-musl": "0.1.1",
+		"@nomicfoundation/solidity-analyzer-linux-x64-musl": "0.1.2",
 		"@nomicfoundation/solidity-analyzer-win32-arm64-msvc": "0.1.1",
 		"@nomicfoundation/solidity-analyzer-win32-ia32-msvc": "0.1.1",
 		"@nomicfoundation/solidity-analyzer-win32-x64-msvc": "0.1.1"
