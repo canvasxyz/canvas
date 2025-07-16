@@ -22,7 +22,7 @@
 		"@nomicfoundation/hardhat-toolbox": "^2.0.0",
 		"@nomiclabs/hardhat-etherscan": "^3.1.8",
 		"@types/chai": "^4.3.16",
-		"@types/mocha": "^10.0.6",
+		"@types/mocha": "^10.0.10",
 		"chai-as-promised": "^7.1.2",
 		"ethers": "^5.7.2",
 		"hardhat": "^2.22.5",
