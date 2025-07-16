@@ -1,9 +1,18 @@
+import { JSValue } from "@canvas-js/utils"
+import { ModelValue } from "@canvas-js/modeldb"
+
+export type ModelAPI = {
+	get: (model: string, key: string) => Promise<ModelValue<any> | null>
+	set: (model: string, any: JSValue) => Promise<void>
+	delete: (model: string, key: string) => Promise<void>
+}
+
 export type HandlerContext = { commit: FirehoseCommitEvent } | null
 
 export type AtConfig = {
 	nsid: string
 	filter?: (creator: string, rkey: string, post: any, commit?: FirehoseCommitEvent) => boolean
-	handler?: (this: HandlerContext, creator: string, rkey: string, post: any, db: any) => void
+	handler?: (this: HandlerContext, creator: string, rkey: string, post: any, db: ModelAPI) => void
 }
 
 export type AtInit = string[] | Array<{ table: string; $type: string }> | Record<string, AtConfig | string>
