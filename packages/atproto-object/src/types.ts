@@ -2,8 +2,8 @@ export type HandlerContext = { commit: FirehoseCommitEvent } | null
 
 export type AtConfig = {
 	nsid: string
-	filter?: (nsid: string, rkey: string, post: any, commit?: FirehoseCommitEvent) => boolean
-	handler?: (this: HandlerContext, nsid: string, rkey: string, post: any, db: any) => void
+	filter?: (creator: string, rkey: string, post: any, commit?: FirehoseCommitEvent) => boolean
+	handler?: (this: HandlerContext, creator: string, rkey: string, post: any, db: any) => void
 }
 
 export type AtInit = string[] | Array<{ table: string; $type: string }> | Record<string, AtConfig | string>

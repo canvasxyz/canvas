@@ -53,7 +53,7 @@ await app.backfillUsers(users)
 ```ts
 // Track multiple collections
 const app = await AtObject.initialize([
-  "com.whtwnd.blog.entry", 
+  "com.whtwnd.blog.entry",
   "app.bsky.feed.post"
 ], null)
 ```
@@ -73,7 +73,7 @@ const app = await AtObject.initialize({
   entries: "com.whtwnd.blog.entry",
   comments: {
     nsid: "app.bsky.feed.post",
-    filter: (nsid: string, rkey: string, post: Post) => {
+    filter: (creator: string, rkey: string, post: Post) => {
       // Only index posts that are replies
       return post.reply && post.reply.parent && post.reply.root
     }
@@ -86,7 +86,7 @@ const app = await AtObject.initialize({
 const app = await AtObject.initialize({
   posts: {
     nsid: "app.bsky.feed.post",
-    handler: async (nsid: string, rkey: string, post: Post | null, db) => {
+    handler: async (creator: string, rkey: string, post: Post | null, db) => {
       if (post === null) {
         // Handle deletion
         await db.delete("posts", rkey)

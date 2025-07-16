@@ -15,6 +15,26 @@ test("backfill repos by user", async (t) => {
 	t.true(entries.length > 0, "has entries")
 })
 
+test("backfill repos by user, with a handler", async (t) => {
+	const app = await AtObject.initialize(
+		{
+			entries: {
+				nsid: "com.whtwnd.blog.entry",
+				handler: (creator: string, rkey: string, record: any, db: any) => {
+					db.set("entries", { rkey, record })
+				},
+			},
+		},
+		null,
+	)
+
+	await app.backfillUsers(whitewind)
+	t.teardown(() => app.close())
+
+	const entries = await app.db.query("entry")
+	t.true(entries.length > 0, "has entries")
+})
+
 test("backfill with firehose", async (t) => {
 	const app = await AtObject.initialize([{ $type: "app.bsky.feed.post", table: "posts" }], null)
 

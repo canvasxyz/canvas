@@ -356,7 +356,8 @@ export class Relay {
 						if (config.handler) {
 							const recordData = action === "delete" ? null : record
 							const db = this.atObject.createDbProxy(table)
-							this.atObject.handlerQueue.add(() => config.handler?.call({ commit }, collection, rkey, recordData, db))
+							const creator = commit.repo
+							this.atObject.handlerQueue.add(() => config.handler?.call({ commit }, creator, rkey, recordData, db))
 						} else {
 							if (action === "delete") {
 								this.atObject.handlerQueue.add(() => this.atObject.db.delete(table, rkey))
@@ -409,7 +410,7 @@ export class Relay {
 			const carBytes = await response.arrayBuffer()
 			const records = await parseCarFile(new Uint8Array(carBytes))
 			for (const record of records) {
-				await this.handleBackfillRecord(record)
+				await this.handleBackfillRecord(did, record)
 			}
 			this.log("Successfully backfilled %s (%s)", identifier, did)
 		} catch (error) {
@@ -436,7 +437,10 @@ export class Relay {
 		}
 	}
 
-	private async handleBackfillRecord(record: { collection: string; rkey: string; record: any }): Promise<void> {
+	private async handleBackfillRecord(
+		repo: string,
+		record: { collection: string; rkey: string; record: any },
+	): Promise<void> {
 		const { collection, rkey, record: recordData } = record
 
 		// Check if this collection is one we're tracking
@@ -455,7 +459,7 @@ export class Relay {
 
 				if (config.handler) {
 					const db = this.atObject.createDbProxy(table)
-					await this.atObject.handlerQueue.add(() => config.handler?.call(null, collection, rkey, recordData, db))
+					await this.atObject.handlerQueue.add(() => config.handler?.call(null, repo, rkey, recordData, db))
 				} else {
 					await this.atObject.db.set(table, { rkey, record: recordData })
 					this.trace(`DB SET ${table}.${rkey}: %O`, recordData)

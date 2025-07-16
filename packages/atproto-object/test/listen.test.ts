@@ -29,7 +29,7 @@ test("create AtObject instances", async (t) => {
 			entries: "com.whtwnd.blog.entry",
 			comments: {
 				nsid: "app.bsky.feed.post",
-				filter: (nsid: string, rkey: string, post: Post) => {
+				filter: (creator: string, rkey: string, post: Post) => {
 					return replyPattern.test(post.reply["at-uri"])
 				},
 			},
@@ -43,10 +43,10 @@ test("create AtObject instances", async (t) => {
 			entries: "com.whtwnd.blog.entry",
 			comments: {
 				nsid: "app.bsky.feed.post",
-				filter: (nsid: string, rkey: string, post: Post) => {
+				filter: (creator: string, rkey: string, post: Post) => {
 					return replyPattern.test(post.reply["at-uri"])
 				},
-				handler: (nsid: string, rkey: string, post: Post | null, db) => {
+				handler: (creator: string, rkey: string, post: Post | null, db) => {
 					if (post === null) {
 						db.delete("comments", rkey)
 						// ... other custom indexing
@@ -95,7 +95,7 @@ test("listen with filters", async (t) => {
 		{
 			comments: {
 				nsid: "app.bsky.feed.post",
-				filter: (nsid: string, rkey: string, post: Post) => {
+				filter: (creator: string, rkey: string, post: Post) => {
 					seenComment = post.reply && post.reply.parent && post.reply.root
 					return seenComment
 				},
@@ -126,7 +126,7 @@ test("listen with custom handlers", async (t) => {
 		{
 			posts: {
 				nsid: "app.bsky.feed.post",
-				handler: async (nsid: string, rkey: string, post: Post, db) => {
+				handler: async (creator: string, rkey: string, post: Post, db) => {
 					if (post === null) {
 						await db.delete("posts", rkey)
 					} else {
@@ -162,7 +162,7 @@ test("listen with cursor", async (t) => {
 		{
 			posts: {
 				nsid: "app.bsky.feed.post",
-				handler: async function (nsid: string, rkey: string, post: Post, db) {
+				handler: async function (creator: string, rkey: string, post: Post, db) {
 					if (post === null) {
 						await db.delete("posts", rkey)
 					} else {
@@ -194,7 +194,7 @@ test("listen with cursor", async (t) => {
 		{
 			posts: {
 				nsid: "app.bsky.feed.post",
-				filter: (nsid: string, rkey: string, post: Post) => {
+				filter: (creator: string, rkey: string, post: Post) => {
 					return true
 				},
 			},
