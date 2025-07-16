@@ -1,6 +1,6 @@
 import test from "ava"
 
-import { AtObject } from "@canvas-js/atproto-object"
+import { AtObject, ModelAPI } from "@canvas-js/atproto-object"
 import { whitewind } from "./fixtures.js"
 
 const firehoseUrl = "wss://bsky.network"
@@ -20,7 +20,7 @@ test("backfill repos by user, with a handler", async (t) => {
 		{
 			entries: {
 				nsid: "com.whtwnd.blog.entry",
-				handler: (creator: string, rkey: string, record: any, db: any) => {
+				handler: (db: ModelAPI, record: any, creator: string, rkey: string) => {
 					db.set("entries", { rkey, record })
 				},
 			},
@@ -31,7 +31,7 @@ test("backfill repos by user, with a handler", async (t) => {
 	await app.backfillUsers(whitewind)
 	t.teardown(() => app.close())
 
-	const entries = await app.db.query("entry")
+	const entries = await app.db.query("entries")
 	t.true(entries.length > 0, "has entries")
 })
 

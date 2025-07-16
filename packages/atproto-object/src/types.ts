@@ -7,12 +7,18 @@ export type ModelAPI = {
 	delete: (model: string, key: string) => Promise<void>
 }
 
-export type HandlerContext = { commit: FirehoseCommitEvent } | null
+export type HandlerContext = {
+	creator: string
+	rkey: string
+	nsid: string
+	db: ModelAPI
+	commit?: FirehoseCommitEvent
+} | null
 
 export type AtConfig = {
 	nsid: string
-	filter?: (creator: string, rkey: string, post: any, commit?: FirehoseCommitEvent) => boolean
-	handler?: (this: HandlerContext, creator: string, rkey: string, post: any, db: ModelAPI) => void
+	filter?: (record: any, creator: string, rkey: string, commit?: FirehoseCommitEvent) => boolean
+	handler?: (this: HandlerContext, db: ModelAPI, record: any, creator: string, rkey: string) => void
 }
 
 export type AtInit = string[] | Array<{ table: string; $type: string }> | Record<string, AtConfig | string>

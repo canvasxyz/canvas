@@ -345,7 +345,7 @@ export class Relay {
 
 						if (config.filter) {
 							try {
-								if (!config.filter(collection, rkey, record, commit)) {
+								if (!config.filter(record, collection, rkey, commit)) {
 									continue
 								}
 							} catch (err) {
@@ -357,7 +357,9 @@ export class Relay {
 							const recordData = action === "delete" ? null : record
 							const db = this.atObject.createDbProxy(table)
 							const creator = commit.repo
-							this.atObject.handlerQueue.add(() => config.handler?.call({ commit }, creator, rkey, recordData, db))
+							this.atObject.handlerQueue.add(() =>
+								config.handler?.call({ commit, creator, nsid: collection, rkey, db }, db, recordData, creator, rkey),
+							)
 						} else {
 							if (action === "delete") {
 								this.atObject.handlerQueue.add(() => this.atObject.db.delete(table, rkey))
@@ -449,7 +451,7 @@ export class Relay {
 				// Apply filter if configured
 				if (config.filter) {
 					try {
-						if (!config.filter(collection, rkey, recordData)) {
+						if (!config.filter(recordData, collection, rkey)) {
 							continue
 						}
 					} catch (err) {
@@ -459,7 +461,11 @@ export class Relay {
 
 				if (config.handler) {
 					const db = this.atObject.createDbProxy(table)
-					await this.atObject.handlerQueue.add(() => config.handler?.call(null, repo, rkey, recordData, db))
+					const creator = repo
+					const nsid = collection
+					await this.atObject.handlerQueue.add(() =>
+						config.handler?.call({ creator, nsid, rkey, db }, db, recordData, creator, rkey),
+					)
 				} else {
 					await this.atObject.db.set(table, { rkey, record: recordData })
 					this.trace(`DB SET ${table}.${rkey}: %O`, recordData)
