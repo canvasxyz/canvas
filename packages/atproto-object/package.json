@@ -25,6 +25,8 @@
 		"@atproto/xrpc-server": "^0.9.0",
 		"@canvas-js/interfaces": "0.16.0",
 		"@canvas-js/modeldb": "^0.16.0",
+		"@canvas-js/modeldb-sqlite": "^0.16.0",
+		"@canvas-js/modeldb-pg": "^0.16.0",
 		"@canvas-js/utils": "1.0.0",
 		"@ipld/car": "^5.4.2",
 		"@ipld/dag-cbor": "^9.2.4",
