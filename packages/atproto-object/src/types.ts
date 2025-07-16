@@ -1,6 +1,13 @@
 import { JSValue } from "@canvas-js/utils"
 import { ModelValue } from "@canvas-js/modeldb"
 
+// Predicates allow you to index records if they match some field in the database:
+// { $creator: ["users"] } -> db.get("users", creator)
+// { reply: { root: ["users"] } } -> db.get("users", record.reply.root)
+export type Predicate = {
+	[k: string]: Predicate | Array<string>
+}
+
 export type ModelAPI = {
 	get: (model: string, key: string) => Promise<ModelValue<any> | null>
 	set: (model: string, any: JSValue) => Promise<void>
@@ -17,6 +24,7 @@ export type HandlerContext = {
 
 export type AtConfig = {
 	nsid: string
+	predicate?: Predicate
 	filter?: (record: any, creator: string, rkey: string, commit?: FirehoseCommitEvent) => boolean
 	handler?: (this: HandlerContext, db: ModelAPI, record: any, creator: string, rkey: string) => void
 }

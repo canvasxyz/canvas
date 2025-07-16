@@ -155,7 +155,7 @@ test("listen with custom handlers", async (t) => {
 	)
 })
 
-test("listen with cursor", async (t) => {
+test("listen with cursor and predicate", async (t) => {
 	let seenPost = false
 
 	const app1 = await AtObject.initialize(
@@ -190,13 +190,13 @@ test("listen with cursor", async (t) => {
 	t.assert(app1.firstSeq !== null)
 	t.assert(app1.lastSeq !== null)
 
+	//
+	// Reindex starting from app1's cursor, and ensure we see the same posts.
+	//
 	const app2 = await AtObject.initialize(
 		{
 			posts: {
 				nsid: "app.bsky.feed.post",
-				filter: (post: Post, creator: string, rkey: string) => {
-					return true
-				},
 			},
 		},
 		null,
@@ -212,18 +212,45 @@ test("listen with cursor", async (t) => {
 	const secondPosts = await app2.db.query("posts")
 	await app2.close()
 
-	// All posts from first session should be present
-	console.log(
-		"[atobject] Backfill captured",
-		firstPosts.length,
-		"posts in first pass,",
-		secondPosts.length,
-		"posts in second pass",
-	)
 	t.assert(secondPosts.length >= firstPosts.length, "second session should have at least as many posts as first")
 	const firstPostKeys = new Set(firstPosts.map((p) => p.rkey))
 	const secondPostKeys = new Set(secondPosts.map((p) => p.rkey))
 	for (const rkey of firstPostKeys) {
-		t.assert(secondPostKeys.has(rkey), `post with rkey ${rkey} should be replayed`)
+		t.assert(secondPostKeys.has(rkey), `post with rkey ${rkey} should be replayed in second session`)
 	}
+
+	//
+	// Reindex starting from app1's cursor, only accepting posts from users that appeared in our first listen.
+	//
+	const app3 = await AtObject.initialize(
+		{
+			// TODO: Better way to declare tables.
+			wantedRkeys: {
+				nsid: "foo.foo.foo.foo",
+			},
+			posts: {
+				predicate: { $rkey: ["wantedRkeys"] },
+				nsid: "app.bsky.feed.post",
+			},
+		},
+		null,
+	)
+	t.teardown(() => app3.close())
+
+	for (const p of firstPosts) {
+		await app3.db.set("wantedRkeys", { rkey: p.rkey, record: "foo" })
+	}
+
+	app3.backfill(firehoseUrl, app1.firstSeq!.toString())
+
+	while (!app3.lastSeq || app3.lastSeq < app1.lastSeq!) {
+		await new Promise<void>((resolve) => setTimeout(resolve, 1000))
+	}
+	await new Promise<void>((resolve) => setTimeout(resolve, 100))
+
+	const thirdPosts = await app3.db.query("posts")
+	await app3.close()
+
+	const thirdPostKeys = new Set(thirdPosts.map((p) => p.rkey))
+	t.assert(thirdPosts.length === firstPosts.length, "backfill with predicate should yield same posts as first backfill")
 })

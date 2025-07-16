@@ -3,8 +3,9 @@ import debug from "weald"
 import PQueue from "p-queue"
 import { AtprotoHandleResolverNode } from "@atproto-labs/handle-resolver-node"
 
-import type { AtConfig, FirehoseEvent } from "../types.js"
+import type { FirehoseEvent } from "../types.js"
 import { buildFirehoseUrl } from "../utils/utils.js"
+import { resolvePredicateToFilters, matchesAnyFilter } from "../utils/filter.js"
 import {
 	getPdsEndpoint,
 	parseFirehoseFrame,
@@ -343,6 +344,14 @@ export class Relay {
 							record,
 						)
 
+						if (config.predicate) {
+							const filters = resolvePredicateToFilters(config.predicate)
+							const matches = await matchesAnyFilter(filters, record, rkey, commit.repo, this.atObject.db)
+							if (!matches) {
+								continue
+							}
+						}
+
 						if (config.filter) {
 							try {
 								if (!config.filter(record, collection, rkey, commit)) {
@@ -448,7 +457,13 @@ export class Relay {
 		// Check if this collection is one we're tracking
 		for (const [table, config] of Object.entries(this.atObject.config)) {
 			if (config.nsid === collection) {
-				// Apply filter if configured
+				if (config.predicate) {
+					const filters = resolvePredicateToFilters(config.predicate)
+					if (!(await matchesAnyFilter(filters, record, rkey, repo, this.atObject.db))) {
+						continue
+					}
+				}
+
 				if (config.filter) {
 					try {
 						if (!config.filter(recordData, collection, rkey)) {

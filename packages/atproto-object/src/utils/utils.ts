@@ -1,3 +1,4 @@
+import { JSValue } from "@canvas-js/utils"
 import type { AtInit, AtConfig } from "../types.js"
 
 export const isStringArray = (arr: unknown): arr is string[] => {
@@ -32,4 +33,19 @@ export const buildFirehoseUrl = (baseUrl: string, cursor?: string): string => {
 	}
 
 	return url.toString()
+}
+
+// Look up field inside JSValue by path
+export const getValueAtPath = (obj: JSValue, path: string[]): JSValue | null => {
+	let current: JSValue = obj
+	for (const key of path) {
+		if (current == null || typeof current !== "object" || Array.isArray(current)) {
+			return null
+		}
+		if (!(key in current)) {
+			return null
+		}
+		current = (current as Record<string, JSValue>)[key]
+	}
+	return current
 }
