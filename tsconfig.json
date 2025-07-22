@@ -3,8 +3,6 @@
 	"exclude": ["**/vite.config.ts"],
 	"references": [
 		{ "path": "./contracts" },
-		{ "path": "./packages/atproto-object" },
-		{ "path": "./packages/atproto-object/test" },
 		{ "path": "./packages/interfaces" },
 		{ "path": "./packages/interfaces/test" },
 		{ "path": "./packages/vm" },
