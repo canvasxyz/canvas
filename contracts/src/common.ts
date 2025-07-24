@@ -2,6 +2,7 @@ import type { ModelSchema } from "@canvas-js/core"
 import { Contract } from "@canvas-js/core/contract"
 
 export default class Common extends Contract<typeof Common.models> {
+	static topic = "test.common.xyz"
 	static models = {
 		threads: {
 			id: "primary",
