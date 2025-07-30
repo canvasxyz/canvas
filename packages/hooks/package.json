@@ -11,6 +11,8 @@
 	],
 	"exports": {
 		".": "./lib/index.js",
+		"./components": "./lib/components.js",
+		"./auth": "./lib/auth/index.js",
 		"./provider": "./lib/provider/index.js"
 	},
 	"peerDependencies": {

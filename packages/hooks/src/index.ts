@@ -1,3 +1,4 @@
+// components.js
 export { useTick } from "./useTick.js"
 export { useCanvas } from "./useCanvas.js"
 export { useLiveQuery } from "./useLiveQuery.js"
@@ -6,6 +7,7 @@ export { useClock } from "./useClock.js"
 
 export { AppInfo } from "./AppInfo.js"
 
+// auth/index.js
 export { AuthContext, AuthProvider } from "./auth/AuthContext.js"
 export { useSIWE, ConnectSIWEProps } from "./auth/useSIWE.js"
 export { useSIWF, ConnectSIWFProps } from "./auth/useSIWF.js"
