@@ -16,7 +16,7 @@
 		"@canvas-js/interfaces": "0.16.1",
 		"@canvas-js/signatures": "0.16.1",
 		"@canvas-js/utils": "1.0.0",
-		"@cosmjs/amino": "^0.32.3",
+		"@cosmjs/amino": "^0.36.0",
 		"@cosmjs/crypto": "^0.32.3",
 		"@cosmjs/encoding": "^0.32.3",
 		"@ipld/dag-cbor": "^9.2.4",
