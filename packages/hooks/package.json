@@ -25,7 +25,7 @@
 		"@canvas-js/modeldb": "0.16.1",
 		"@canvas-js/modeldb-idb": "0.16.1",
 		"@farcaster/auth-kit": "^0.8.1",
-		"@farcaster/frame-core": "^0.1.8",
+		"@farcaster/frame-core": "^0.3.9",
 		"@farcaster/frame-sdk": "^0.0.61",
 		"@ipld/dag-cbor": "^9.2.4",
 		"@noble/hashes": "^1.8.0"
