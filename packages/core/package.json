@@ -57,7 +57,7 @@
 		"abortable-iterator": "^5.0.1",
 		"aggregate-error": "^5.0.0",
 		"any-signal": "^4.1.1",
-		"chalk": "^5.4.1",
+		"chalk": "^5.6.2",
 		"cors": "^2.8.5",
 		"esbuild": "^0.25.5",
 		"esbuild-wasm": "^0.25.1",
