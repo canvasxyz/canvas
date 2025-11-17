@@ -43,7 +43,7 @@
 		"siwe": "^3.0.0",
 		"stoppable": "^1.1.0",
 		"ws": "^8.18.2",
-		"yargs": "^17.7.2"
+		"yargs": "^18.0.0"
 	},
 	"devDependencies": {
 		"@types/cors": "^2.8.17",
