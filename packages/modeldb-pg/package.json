@@ -19,9 +19,9 @@
 		"@canvas-js/modeldb": "0.16.1",
 		"@canvas-js/utils": "1.0.0",
 		"@ipld/dag-json": "^10.2.5",
-		"@types/pg": "^8.11.11",
+		"@types/pg": "^8.15.5",
 		"@types/pg-cursor": "^2.7.2",
-		"pg": "^8.15.6",
+		"pg": "^8.16.3",
 		"pg-cursor": "^2.15.0"
 	}
 }

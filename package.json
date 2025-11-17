@@ -58,7 +58,7 @@
 		"markdown-it-checkbox": "^1.1.0",
 		"markdown-it-footnote": "^3.0.3",
 		"markdown-it-named-code-blocks": "^0.2.0",
-		"pg": "^8.12.0",
+		"pg": "^8.16.3",
 		"prettier": "^3.5.3",
 		"protons": "^7.6.0",
 		"protons-runtime": "^5.5.0",
